@@ -1,0 +1,243 @@
+from flask import Blueprint, Response, request, abort, session, make_response
+from utility import sanitize, string_to_bool, json_response
+from tables.session_device import SessionDevice
+from redis_helper import RedisSessions
+from tables.session import Session
+from utility import json_response
+from app import socketio
+import logging
+import database
+import json
+from datetime import datetime, timedelta
+from handlers import session_handler
+import wrappers
+import config as cf
+import socketio_helper
+import string
+import csv
+import io
+
+api_routes = Blueprint('session', __name__)
+
+@api_routes.route('/api/v1/sessions', methods=['GET'])
+@wrappers.verify_login(public=True)
+def get_sessions(user, **kwargs):
+    return json_response([session.json() for session in database.get_sessions(owner_id=user['id'])])
+
+@api_routes.route('/api/v1/sessions/<int:session_id>', methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def get_session(session, **kwargs):
+    return json_response(session.json())
+
+@api_routes.route('/api/v1/sessions/<int:session_id>', methods=['PUT'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def update_session(session_id, user, **kwargs):
+    name = request.json.get('name', None)
+    folder= request.json.get('folder', None)
+    if name:
+        valid, message = Session.verify_fields(name=name)
+        if not valid:
+            return json_response({'message': message}, 400)
+    if folder != -1:
+        owned_folder = database.get_folders(id=folder, owner_id=user['id'], first =True)
+        if not owned_folder:
+            return json_response({'message': 'Either the folder does not exist or invalid access'}, 404)
+    session = database.update_session(session_id, name, folder)
+    return json_response(session.json())
+
+@api_routes.route('/api/v1/sessions/<int:session_id>', methods=['DELETE'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def delete_session(session_id, **kwargs):
+    success = database.delete_session(session_id)
+    if success:
+        return json_response()
+    else:
+        return json_response({'message': 'Failed to delete session.'}, 400)
+
+@api_routes.route('/api/v1/sessions', methods=['POST'])
+@wrappers.verify_login(public=True)
+def create_session(user, **kwargs):
+    name = request.json.get('name', 'Session')
+    valid, message = Session.verify_fields(name=name)
+    if not valid:
+        return json_response({'message': message}, 400)
+    devices = request.json.get('devices', [])
+    keyword_list_id = sanitize(request.json.get('keywordListId', None))
+    byod = request.json.get('byod', False)
+    features = request.json.get('features', True)
+    doa = request.json.get('doa', False)
+    folder = request.json.get('folder', None)
+    if folder == -1:
+        folder = None
+    if folder:
+        owned_folder = database.get_folders(id=folder, owner_id=user['id'], first =True)
+        if not owned_folder:
+            return json_response({'message': 'Either the folder does not exist or invalid access'}, 404)
+    new_session = session_handler.create_session(user['id'], name, devices, keyword_list_id, byod, features, doa, folder)
+    return json_response(new_session.json())
+
+@api_routes.route('/api/v1/sessions/byod', methods=['POST'])
+def byod_join_session(**kwargs):
+    name = request.json.get('name', None)
+    passcode = sanitize(request.json.get('passcode', None))
+    if not name or not passcode:
+        return json_response({'message': 'Must supply name and passcode.'}, 400)
+    valid, message = SessionDevice.verify_fields(name=name)
+    if not valid:
+        return json_response({'message': message}, 400)
+    success, data = session_handler.byod_join_session(name, passcode)
+    if success:
+        return json_response(data)
+    else:
+        return json_response({'message': data}, 400)
+
+# Same as /api/sessions/byod but bypasses the passcode.
+@api_routes.route('/api/v1/sessions/<int:session_id>/devices', methods=['POST'])
+@wrappers.verify_login(public=True)
+def device_join_session(session_id, **kwargs):
+    name = request.json.get('name', None)
+    valid, message = SessionDevice.verify_fields(name=name)
+    if not valid:
+        return json_response({'message': message}, 400)
+    success, data = database.create_session_device(session_id, name)
+    if success:
+        RedisSessions.create_device_key(data.processing_key, session_id)
+        return json_response({'session_device': data.json(), 'key': data.processing_key})
+    else:
+        return json_response({'message': data}, 400)
+
+@api_routes.route('/api/v1/sessions/pod', methods=['POST'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access_json
+def pod_join_session(**kwargs):
+    session_id = request.json.get('sessionId', None)
+    pod_id = request.json.get('podId', None)
+    if not session_id or not pod_id:
+        return json_response({'message': 'Must supply sessionId and PodId.'}, 400)
+    success, response = session_handler.pod_join_session(session_id, pod_id)
+    if success:
+        return json_response(response)
+    else:
+        return json_response(response, 400)
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/stop', methods=['POST'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def end_session(session_id, **kwargs):
+    success, data = session_handler.end_session(session_id)
+    if success:
+        return json_response(data.json())
+    else:
+        return json_response({'message': data}, 400)
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/transcripts', methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def session_device_transcripts(session_id, device_id, **kwargs):
+    transcripts = database.get_transcripts(session_device_id=device_id)
+    return json_response([transcript.json() for transcript in transcripts])
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/keywords', methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def session_device_keywords(session_id, device_id, **kwargs):
+    keywords = database.get_keyword_usages(session_device_id=device_id)
+    return json_response([keyword.json() for keyword in keywords])
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:session_device_id>', methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def session_device(session_id, session_device_id, **kwargs):
+        session_device = database.get_session_devices(id=session_device_id)
+        return json_response(session_device.json())
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/devices', methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def session_devices(session_id, **kwargs):
+        devices = database.get_session_devices(session_id=session_id)
+        return json_response([device.json() for device in devices])
+
+@api_routes.route('/api/v1/help_button', methods=['POST'])
+@wrappers.verify_login(allow_key=True)
+def set_help_button(**kwargs):
+    session_device_id = request.json.get('id', None)
+    state = request.json.get('activated', False)
+    if not session_device_id:
+        return json_response({'message': 'Session device ID must be provided.'}, 400)
+
+    session_device = database.get_session_devices(id=session_device_id)
+    if session_device:
+        if session_device.button_pressed != state:
+            session_device.button_pressed = state
+            database.save_changes()
+            room_name = str(session_device.session_id)
+            socketio.emit('device_update', json.dumps(session_device.json()), room=room_name, namespace="/session")
+        return json_response()
+    return json_response({'message': 'Session device not found.'}, 400)
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/passcode', methods=['POST'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def set_session_passcode(session_id, **kwargs):
+    state = request.json.get('state', None)
+    if not state in ['lock', 'unlock', 'refresh']:
+        return json_response({'message': 'Invalid passcode state.'}, 400)
+    session = database.get_sessions(id=session_id)
+    if session:
+        if state == 'lock':
+            session.passcode = None
+            database.save_changes()
+        elif state in ['unlock', 'refresh']:
+            database.generate_session_passcode(session.id)
+        socketio_helper.update_session(session)
+        return json_response(session.json())
+    return json_response({'message': 'Session not found.'}, 404)
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:session_device_id>', methods=['DELETE'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def remove_device_from_session(session_id, session_device_id, **kwargs):
+    delete = string_to_bool(request.args.get('delete', 'false'))
+    session_handler.remove_session_device(session_device_id)
+    if delete:
+        database.delete_session_device(session_device_id)
+        socketio_helper.remove_session_device(session_id, session_device_id)
+    return json_response()
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/export',methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def export_session(session_id, **kwargs):
+    si = io.StringIO()
+    field_names = ['Device ID', 'Device Name', 'Start Time', 'Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty', 'Clout', 'Emotional Tone', 'Direction', 'Word Count']
+    fwrite = csv.DictWriter(si, fieldnames = field_names)
+    fwrite.writeheader()
+    session_devices = database.get_session_devices(session_id=session_id)
+    for session_device in session_devices:
+        transcripts = database.get_transcripts(session_device_id=session_device.id)
+        keywords = database.get_keyword_usages(session_device_id=session_device.id)
+        for t in transcripts:
+            transcript_keywords = [keyword for keyword in keywords if keyword.transcript_id == t.id]
+            fwrite.writerow({'Device ID':session_device.id,
+                'Device Name':session_device.name,
+                'Start Time':str(timedelta(seconds=int(t.start_time))),
+                'Transcript':t.transcript,
+                'Keywords': ', '.join([keyword.keyword for keyword in transcript_keywords]),
+                'Keywords Detected': ', '.join([keyword.word for keyword in transcript_keywords]),
+                'Similarity': ', '.join([str(round((1-keyword.similarity)*100,3)) for keyword in transcript_keywords]),
+                'Analytic Thinking': int(t.analytic_thinking_value),
+                'Authenticity': int(t.authenticity_value),
+                'Certainty': int(t.certainty_value),
+                'Clout': int(t.clout_value),
+                'Emotional Tone': int(t.emotional_tone_value),
+                'Direction': int(t.direction),
+                'Word Count': int(t.word_count)})
+
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = "attachment; filename=export.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output

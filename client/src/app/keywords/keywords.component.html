@@ -1,0 +1,28 @@
+<div class="keyword-container">
+  <ng-container *ngIf="!showGraph">
+    <span *ngFor="let displayKeyword of displayKeywords; let last = last" class="keyword" [style.color]="displayKeyword.color" (click)="showKeywordContext(displayKeyword.transcript_id)">
+      {{displayKeyword.word}}
+      <span *ngIf="!last" class="base">, </span>
+    </span>
+    <div *ngIf="displayKeywords.length == 0" class="no-keywords">No keywords detected</div>
+  </ng-container>
+
+  <ng-container *ngIf="showGraph">
+    <div class="timeline-container">
+      <div class="keyword-timeline" *ngFor="let keyword of session.keywords">
+        <div class="keyword-text">{{keyword}}</div>
+        <div class="keyword-graph">
+          <hr>
+          <div *ngFor="let point of keywordPoints[keyword]" class="keyword-point" [style.left]="point.x + 'px'" [style.background-color]="point.color" (click)="showKeywordContext(point.transcript_id)"></div>
+        </div>
+      </div>
+    </div>
+    <div *ngIf="session.keywords.length == 0" class="no-keywords">No keywords detected</div>
+  </ng-container>
+
+  <div class="graph-menu">
+    <app-context-menu #graphMenu>
+      <div class="menu-item" (click)="toggleGraph(); graphMenu.toggle(false);">{{(showGraph)? 'Show Words': 'Show Timeline'}}</div>
+    </app-context-menu>
+  </div>
+</div>

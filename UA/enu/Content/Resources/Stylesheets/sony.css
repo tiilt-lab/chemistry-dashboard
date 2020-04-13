@@ -1,0 +1,881 @@
+/*<meta />*/
+
+@namespace MadCap url(http://www.madcapsoftware.com/Schemas/MadCap.xsd);
+
+body
+{
+	background-color: transparent;
+	font-size: 0.8125em;
+	font-family: Arial;
+}
+
+h1
+{
+	color: #000000;
+	border-bottom-style: solid;
+	border-bottom-width: 3px;
+	border-bottom-color: var(--appcolor1);
+	font-size: 1.5em;
+}
+
+h2
+{
+	color: #000000;
+	border-bottom-style: solid;
+	border-bottom-width: 3px;
+	border-bottom-color: var(--appcolor1);
+	font-size: 1.5em;
+}
+
+h2.pagebreak
+{
+	color: #000000;
+	border-bottom-style: solid;
+	border-bottom-width: 3px;
+	border-bottom-color: #009CCC;
+	font-size: 1.5em;
+}
+
+h3
+{
+	color: #000000;
+	font-size: 1.25em;
+}
+
+h3.pagebreak
+{
+	color: #000000;
+	font-size: 1.25em;
+}
+
+h3.h3btn
+{
+	background-image: url('../Images/button.gif');
+	background-repeat: no-repeat;
+	font-size: ;
+	padding-left: 14px;
+	color: #000000;
+}
+
+h3.glossary
+{
+	border-bottom-style: solid;
+	border-bottom-width: 2px;
+	border-bottom-color: #009CCC;
+}
+
+h4
+{
+	color: var(--appcolor1);
+}
+
+h4.pagebreak
+{
+	color: var(--appcolor1);
+}
+
+p
+{
+	color: #000000;
+	margin-left: 0;
+	mc-hyphenate: never;
+}
+
+p.pagebreak
+{
+	color: #000000;
+	margin-left: 0;
+	mc-hyphenate: never;
+}
+
+p.note
+{
+	color: #000000;
+	background-repeat: no-repeat;
+	padding-left: 28px;
+	padding-bottom: 5px;
+	background-image: url('../Images/note.png');
+}
+
+p.tip
+{
+	background-repeat: no-repeat;
+	padding-left: 28px;
+	padding-bottom: 5px;
+	background-image: url('../Images/tip.png');
+}
+
+p.warn
+{
+	background-repeat: no-repeat;
+	background-image: url('../Images/warning.png');
+	padding-left: 28px;
+	padding-bottom: 5px;
+}
+
+p.chapter
+{
+	font-weight: bold;
+	font-style: normal;
+	text-align: right;
+	font-size: 24pt;
+	color: #009CCC;
+}
+
+p.bookmark
+{
+	font-weight: bold;
+	font-style: normal;
+	text-align: right;
+	font-size: 24pt;
+	color: #009CCC;
+}
+
+p.footer
+{
+	color: #000000;
+	margin-left: 0;
+	font-size: ;
+	font-family: ;
+	text-transform: uppercase;
+	text-align: right;
+}
+
+p.footerright
+{
+	color: #000000;
+	margin-left: 0;
+	font-size: ;
+	font-family: ;
+	text-transform: uppercase;
+}
+
+ul
+{
+	list-style-type: square;
+}
+
+li
+{
+	font-family: Arial;
+}
+
+ul ul li
+{
+	list-style-type: circle;
+}
+
+ol ol li
+{
+	list-style-type: lower-alpha;
+}
+
+ol ol ul li
+{
+	list-style-type: circle;
+}
+
+ol ol ul ul li
+{
+	list-style-type: square;
+}
+
+div.h3
+{
+	padding-left: 18px;
+}
+
+div.note
+{
+	background-image: url('../Images/note.png');
+	padding-left: 28px;
+	padding-bottom: 5px;
+	background-repeat: no-repeat;
+}
+
+div.tip
+{
+	background-image: url('../Images/tip.png');
+	background-repeat: no-repeat;
+	padding-left: 28px;
+	padding-bottom: 5px;
+}
+
+div.warn
+{
+	background-image: url('../Images/warning.png');
+	background-repeat: no-repeat;
+	padding-left: 28px;
+	padding-bottom: 5px;
+}
+
+div.helpfooter
+{
+	position: fixed;
+	bottom: 0px;
+	width: 99%;
+	height: 60px;
+	padding-top: 6px;
+	background-color: #ffffff;
+	border-top-style: solid;
+	border-top-width: 3px;
+	border-top-color: #009CCC;
+}
+
+div.top-bar	/*Contains the breadcrumbs and toolbar*/
+{
+	padding-top: 6px;
+	border-bottom: 1px solid #d3d3d3;
+	min-height: 30px;
+	/*Min-height is necessary for topics that are not included in a TOC*/
+}
+
+MadCap|breadcrumbsProxy
+{
+	border-bottom: none;
+	font-size: .8em;
+	font-style: italic;
+	mc-breadcrumbs-prefix: 'You are here: ';
+}
+
+/*==Master Page Topic Layout==*/
+
+nav.title-bar	/*Adds bottom border on top navigation bar*/
+{
+	border-bottom: 1px solid #d3d3d3;
+}
+
+div.top-bar	/*Contains the breadcrumbs and toolbar*/
+{
+	border-bottom: 1px solid #d3d3d3;
+	min-height: 50px;
+	/*Min-height is necessary for topics that are not included in a TOC*/
+}
+
+div.search-container
+{
+	padding-bottom: 20px;
+}
+
+/*==Elements for the left side of Master Page layout==*/
+
+div.side-menu	/*This is the div that the menu proxy is contained in*/
+{
+	padding-left: 10px;
+	margin-top: 15px;
+}
+
+div.side-content	/*This is the div for the side-content containing "Search Tips" and the "Contact Support" button*/
+{
+	padding-top: 10px;
+}
+
+MadCap|dropDownHead.side-content	/*Font properties for the "Search Tips" drop-down head */
+{
+	font-size: 1.1em;
+	font-weight: bold;
+}
+
+div.cta	/*Call to action button/Contact Support button*/
+{
+	-moz-border-radius: 60px;
+	-webkit-border-radius: 60px;
+	border-radius: 60px;
+	padding: 2px 0px;
+	border: 1px solid #7469b9;
+	width: 162px;
+	color: #7469b9;
+	transition: all 0.5s cubic-bezier(.25,.8,.25,1);
+	margin-top: 20px;
+}
+
+div.cta:hover	/*When hovering over the CTA button the following properties will apply*/
+{
+	box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+	transform: scale(1.01);
+}
+
+a.cta:link
+{
+	color: #FFF;
+	text-decoration: none;
+}
+
+a.cta:visited
+{
+	color: #FFF;
+	text-decoration: none;
+}
+
+div.topic-layout	/*This is a custom responsive layout row style (div class) in your stylesheet. To provide your own description for this style: (1) Open the stylesheet; (2) Find and select the div class with this name; and (3) In the Comment field, replace this text with your own. For more information on adding comments to styles, see the online Help.*/
+{
+	mc-grid-row: true;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+div.topic-layout::before
+{
+	content: ' ';
+	display: table;
+}
+
+div.topic-layout::after
+{
+	content: ' ';
+	display: table;
+	clear: both;
+}
+
+div.topic-layout > div
+{
+	float: left;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+}
+
+div.topic-layout > div:nth-child(1)	/*Menu Proxy container*/
+{
+	width: 25%;
+	margin-left: 0%;
+	border-right: 1px solid #d3d3d3;
+}
+
+div.topic-layout > div:nth-child(2)
+{
+	width: 73%;
+	margin-left: 2%;
+}
+
+:root
+{
+	--appcolor1: #7878f9;
+	--appcolor2: #8888f9;
+	--appcolor3: #9898f9;
+}
+
+/*===========================================================================================================================================================
+Styles after this point are styles that are for specific mediums. If any additional styles are added to this template they will be listed after mediums.
+[@media tablet] declares styles that will apply when the screen is in tablet view
+[@media mobile] declares styles that will apply when the screen is in mobile view
+===========================================================================================================================================================*/
+
+p.pagebreak
+{
+	page-break-before: avoid;
+}
+
+h4.pagebreak
+{
+	page-break-before: avoid;
+}
+
+h3.pagebreak
+{
+	page-break-before: avoid;
+}
+
+h2.pagebreak
+{
+	page-break-before: avoid;
+}
+
+@media only screen and (max-width: 900px)
+{
+	div.topic-layout > div:nth-child(1)
+	{
+		display: none;
+	}
+
+	div.topic-layout > div:nth-child(2)
+	{
+		width: 98%;
+		margin-left: 2%;
+	}
+}
+
+@media only screen and (max-width: 500px)
+{
+	div.top-bar
+	{
+		min-height: 0;
+	}
+
+	div.topic-layout > div:nth-child(1)
+	{
+		display: none;
+	}
+
+	div.topic-layout > div:nth-child(2)
+	{
+		width: 98%;
+		margin-left: 2%;
+	}
+}
+
+span.uielement
+{
+	font-weight: bold;
+	font-style: normal;
+}
+
+span.emphasis
+{
+	font-style: italic;
+}
+
+span.code
+{
+	font-family: Consolas;
+}
+
+a
+{
+	color: #009CCC;
+}
+
+a.Popup
+{
+	color: #32cd32;
+}
+
+MadCap|xref
+{
+	text-decoration: none;
+	color: #000000;
+	mc-format: '{quote}{u}{paratext}{/u}{quote}';
+	color: var(--appcolor1);
+}
+
+MadCap|xref.period
+{
+	mc-format: '{quote}{u}{paratext}{/u}.{quote}';
+	color: var(--appcolor1);
+}
+
+MadCap|xref.comma
+{
+	mc-format: '{quote}{color #006db3}{u}{paratext}{/u}{/color},{quote}';
+	color: var(--appcolor1);
+}
+
+MadCap|toggler
+{
+	color: #000000;
+	text-decoration: none;
+}
+
+MadCap|toggler:hover
+{
+	color: var(--appcolor2);
+	text-decoration: none;
+}
+
+MadCap|variable.pagenumber
+{
+	color: #ffffff;
+}
+
+tr.Body-Body2 p
+{
+	font-weight: bold;
+}
+
+a:link
+{
+	color: var(--appcolor1);
+}
+
+a:visited
+{
+	color: inherit;
+}
+
+a:hover
+{
+	color: var(--appcolor2);
+}
+
+a:active
+{
+	color: var(--appcolor1);
+}
+
+MadCap|xref:hover
+{
+	color: var(--appcolor2);
+}
+
+MadCap|indexProxy
+{
+	mc-output-support: all;
+}
+
+@media print
+{
+	body
+	{
+		font-weight: normal;
+		font-style: normal;
+		font-size: 10pt;
+		font-family: 'FS Albert Pro Light';
+	}
+
+	h1
+	{
+		border-bottom-width: 0px;
+		margin-top: 20pt;
+		margin-bottom: 6pt;
+		font-family: 'FS Albert Pro';
+		font-weight: normal;
+		mc-hyphenate: never;
+		font-size: 2em;
+	}
+
+	h2
+	{
+		border-bottom-width: 0px;
+		font-family: 'FS Albert Pro';
+		font-weight: normal;
+		margin-top: 20pt;
+		margin-bottom: 6pt;
+	}
+
+	h2.pagebreak
+	{
+		border-bottom-width: 0px;
+		font-family: 'FS Albert Pro';
+		font-weight: normal;
+		margin-top: 20pt;
+		margin-bottom: 6pt;
+		page-break-before: always;
+	}
+
+	h3
+	{
+		font-family: 'FS Albert Pro';
+		font-weight: normal;
+		margin-top: 20pt;
+		margin-bottom: 6pt;
+		mc-heading-level: 0;
+	}
+
+	h3.pagebreak
+	{
+		font-family: 'FS Albert Pro';
+		font-weight: normal;
+		margin-top: 20pt;
+		margin-bottom: 6pt;
+		mc-heading-level: 0;
+		page-break-before: always;
+	}
+
+	h3.glossary
+	{
+		border-bottom-width: 0px;
+		mc-heading-level: 0;
+	}
+
+	h4
+	{
+		color: 000000;
+		mc-heading-level: 0;
+		font-family: 'FS Albert Pro';
+		font-weight: normal;
+		margin-top: 20pt;
+		margin-bottom: 6pt;
+		padding-left: 0px;
+	}
+
+	h4.pagebreak
+	{
+		color: 000000;
+		mc-heading-level: 0;
+		font-family: 'FS Albert Pro';
+		font-weight: normal;
+		margin-top: 20pt;
+		margin-bottom: 6pt;
+		padding-left: 0px;
+		page-break-before: always;
+	}
+
+	h5
+	{
+		mc-heading-level: 0;
+	}
+
+	p
+	{
+		font-size: ;
+	}
+
+	p.pagebreak
+	{
+		font-size: ;
+		page-break-before: always;
+	}
+
+	p.note
+	{
+		page-break-inside: avoid;
+	}
+
+	p.tip
+	{
+		page-break-inside: avoid;
+	}
+
+	p.warn
+	{
+		page-break-inside: avoid;
+	}
+
+	p.bookmark
+	{
+		mc-heading-level: 1;
+	}
+
+	p.footer
+	{
+		font-family: 'FS Albert Pro Light';
+		font-size: 10pt;
+		margin: 0;
+	}
+
+	p.chapter
+	{
+		font-family: ;
+		margin: 0;
+	}
+
+	p.footerright
+	{
+		margin: 0;
+		text-align: right;
+		font-family: 'FS Albert Pro Light';
+		font-size: 10pt;
+	}
+
+	p.TOC1
+	{
+		font-family: 'FS Albert Pro';
+		font-weight: normal;
+	}
+
+	p.IndexHeading
+	{
+		font-size: 11pt;
+		font-family: 'FS Albert Pro';
+		color: #009ccc;
+		text-align: left;
+	}
+
+	p.Index1
+	{
+		margin-bottom: 0em;
+		margin-top: 0em;
+	}
+
+	p.Index2
+	{
+		margin-bottom: 0em;
+		margin-top: 0em;
+	}
+
+	ol li
+	{
+		font-family: 'FS Albert Pro';
+	}
+
+	ol li p
+	{
+		font-family: 'FS Albert Pro Light';
+	}
+
+	li
+	{
+		font-family: 'FS Albert Pro Light';
+		font-size: 10pt;
+		page-break-inside: avoid;
+	}
+
+	MadCap|xref
+	{
+		mc-format: '{quote}{color #009ccc}{paratext}{/color}{quote} on page {page}';
+	}
+
+	MadCap|xref.comma
+	{
+		mc-format: '{quote}{color #009ccc}{paratext}{/color}{quote} on page {page},';
+	}
+
+	MadCap|xref.period
+	{
+		mc-format: '{quote}{color #009ccc}{paratext}{/color}{quote} on page {page}.';
+	}
+
+	div.note
+	{
+		page-break-inside: avoid;
+	}
+
+	div.tip
+	{
+		page-break-inside: avoid;
+	}
+
+	div.warn
+	{
+		page-break-inside: avoid;
+	}
+
+	div.h3
+	{
+		padding-left: 18px;
+	}
+
+	span.uielement
+	{
+		font-family: 'FS Albert Pro Bold';
+		font-weight: normal;
+	}
+
+	MadCap|variable.pagenumber
+	{
+		font-weight: bold;
+		font-style: normal;
+		font-family: 'FS Albert Pro';
+		font-size: 10pt;
+	}
+
+	MadCap|indexProxy
+	{
+		border-top-width: 0px;
+		padding-left: 0px;
+	}
+
+	MadCap|tocProxy
+	{
+		border-top-width: 0px;
+	}
+
+	img
+	{
+		max-width: 5in;
+	}
+
+	a:link
+	{
+		text-decoration: none;
+	}
+
+	th p
+	{
+		font-family: 'FS Albert Pro';
+		font-weight: normal;
+	}
+
+	li th p
+	{
+		font-family: 'FS Albert Pro';
+		font-weight: normal;
+	}
+
+	tr
+	{
+		page-break-inside: auto;
+	}
+
+	tr.Body-Body2 p
+	{
+		font-family: 'FS Albert Pro';
+		font-weight: normal;
+	}
+
+	table
+	{
+		
+	}
+}
+
+@media html5
+{
+	h2.pagebreak
+	{
+		page-break-before: avoid;
+	}
+
+	h3.pagebreak
+	{
+		page-break-before: avoid;
+	}
+
+	h4.pagebreak
+	{
+		page-break-before: avoid;
+	}
+
+	p.pagebreak
+	{
+		page-break-before: avoid;
+	}
+}
+
+p.ksfooterleft
+{
+	color: #000000;
+	margin-left: 0;
+	font-family: ;
+}
+
+p.ksfooterright
+{
+	color: #000000;
+	margin-left: 0;
+	font-family: ;
+	text-align: right;
+}
+
+p.platinum
+{
+	color: #000000;
+	background-repeat: no-repeat;
+	font-size: ;
+	font-family: ;
+	padding-left: 28px;
+	padding-bottom: 5px;
+	background-image: url('../Images/peicon.png');
+}
+
+p.right
+{
+	color: #000000;
+	mc-hyphenate: never;
+	text-align: right;
+	font-size: 8pt;
+}
+
+span.SeeAlsoIndex
+{
+	font-weight: normal;
+	font-style: italic;
+}
+
+span.SeeIndex
+{
+	font-weight: normal;
+	font-style: italic;
+}
+
+a.h3btn:link
+{
+	text-decoration: none;
+	color: #000000;
+}
+
+a.h3btn:hover
+{
+	color: var(--appcolor2);
+	text-decoration: underline;
+}
+

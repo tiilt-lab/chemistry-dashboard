@@ -1,0 +1,87 @@
+<div class="container">
+  <app-header [title]="pageTitle" (backClick)="navigateToSessions()"></app-header>
+
+  <ng-container *ngIf="currentMenu == menus.Settings">
+    <div class="list-container">
+      <span>Discussion name:</span>
+      <input #txtName [(ngModel)]="sessionName" class="text-input" maxlength=64>
+      <div>Folder: </div>
+      <span class="path-container">
+        <input type="text" class="folder-input" name="Location" [placeholder]="folderPath" readonly>
+        <img src="../assets/img/open-folder.svg" id="open-folder-icon" (click)=openDialog(forms.Folder,test)>
+      </span>
+      <label class="dc-checkbox">Allow participant devices
+        <input type="checkbox" checked="checked" [(ngModel)]="byod">
+        <span class="checkmark"></span>
+      </label>
+      <label class="dc-checkbox">Capture discussion direction
+        <input type="checkbox" checked="checked" [(ngModel)]="doa">
+        <span class="checkmark"></span>
+      </label>
+      <label class="dc-checkbox">Analyze discussion features
+        <input type="checkbox" checked="checked" [(ngModel)]="features">
+        <span class="checkmark"></span>
+      </label>
+    </div>
+    <button class="footer-button" (click)="navigateToSessions()">Back</button>
+    <button class="footer-button" (click)="goToKeywords()">Next</button>
+  </ng-container>
+
+  <ng-container *ngIf="currentMenu == menus.Keywords">
+    <div class="list-container">
+      <div class="empty-keyword-list" *ngIf="keywordLists && keywordLists.length == 0">
+        <div class="load-text"> No Keyword Lists </div>
+        <div class="load-text-description"> Tap the button below to make your first keyword list. </div>
+      </div>
+      <div *ngFor="let keywordList of keywordLists" class="keyword-list-button" [class.keywords-selected]="selectedKeywordList == keywordList" (click)="selectedKeywordList = keywordList">
+        <div class="keyword-list-header">
+          <span class="title">{{keywordList.name}}</span>
+          <span class="date"> - {{formatKeywordDate(keywordList.creation_date)}}</span>
+        </div>
+        <div class="keyword-list-keywords">{{keywordList.keywordsText}}</div>
+      </div>
+    </div>
+    <button class="footer-button" (click)="navigateToKeywordLists()">Create Keyword List</button>
+    <button class="footer-button" (click)="goToSettings()">Back</button>
+    <button class="footer-button" (click)="goToDevices()">Next</button>
+  </ng-container>
+
+  <ng-container *ngIf="currentMenu == menus.Devices">
+    <div class="list-container">
+      <div *ngIf="devices.length == 0" class="empty-keyword-list">
+        <div class="load-text"> No Devices </div>
+      </div>
+      <ul *ngIf="devices.length > 0" class="list">
+        <li *ngFor="let device of devices" class="pod-item" (click)="deviceSelected(device);" [class.selected-pod]="selectedDevices.includes(device)">
+          <img class="pod-icon" src="../../assets/img/icon-pod.svg">
+          <div class="pod-text">{{device.name}}</div>
+          <div class="button-container">
+            <button class="pod-button" [class.selected-button]="device.blinking" (click)="blinkPod($event, device)">
+              <svg x="0" y="0" width="20" height="20" viewBox="0 0 512 512" class="light-svg">
+                <use xlink:href="../assets/img/light.svg#light-icon"></use>
+              </svg>
+            </button>
+          </div>
+        </li>
+      </ul>
+    </div>
+    <button class="select-all" (click)="onClickSelectAll()">Select All</button>
+    <button class="footer-button" (click)="goToKeywords()">Back</button>
+    <button class="footer-button" (click)="createSession()">Start Discussion</button>
+  </ng-container>
+</div>
+
+<app-dialog *ngIf="currentForm" (closeDialog)="closeDeleteDialog()">
+  <div *ngIf="currentForm == forms.Error" class="add-dialog">
+    <div class="dialog-heading">Invalid Sesion</div>
+    {{ displayText }}
+    <button class="cancel-button" (click)="closeDialog()">Close</button>
+  </div>
+
+  <div *ngIf="currentForm == forms.Folder" class="dialog-window">
+    <div class=dialog-heading> Select Folder</div>
+    <app-folder-select #folderSelect [folders]="folders" (itemSelected)="receiveEmmitedFolder($event)"></app-folder-select>
+    <button *ngIf="folderSelect.folder" class="dialog-button" (click)="setFolderLocation(folderSelect.folder, folderSelect.breadcrumb)">OK</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+</app-dialog>

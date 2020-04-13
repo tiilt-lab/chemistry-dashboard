@@ -1,0 +1,54 @@
+<div class="container">
+    <app-header [title]="'Overview'" (backClick)="navigateToSessions()" [rightText]="getPasscode()" (rightTextClick)="openDialog(forms.Passcode)" [rightEnabled]="session.recording"></app-header>
+    <div class="list-container">
+        <div class="load-text" *ngIf="sessionDevices === undefined">Loading...</div>
+        <div class="load-text" *ngIf="sessionDevices !== undefined && sessionDevices.length == 0">No pods specified</div>
+        <div *ngFor="let device of sessionDevices" (click)="goToDevice(device)" class="pod-overview-button">
+            <svg class="pod-overview-icon" width="80px" height="80px" viewBox="-40 -40 80 80">
+                <svg x="-8.5" y="-13.5" width="17" height="27" viewBox="0 0 17 27">
+                    <use xlink:href="../assets/img/mic.svg#5" [attr.fill]="(device.connected) ? POD_ON_COLOR : POD_OFF_COLOR"></use>
+                </svg>
+                <svg:circle *ngIf="device.button_pressed" class="svgpulse" x="0" y="0" r="33.5" fill-opacity="0" [attr.stroke]="GLOW_COLOR"></svg:circle>
+                <svg:circle x="0" y="0" r="30.5" fill-opacity="0" stroke-width="3" [attr.stroke]="(device.connected) ? POD_ON_COLOR : POD_OFF_COLOR"></svg:circle>
+            </svg>
+            <div>{{device.name}}</div>
+        </div>
+    </div>
+    <div class="footer">
+        <app-session-toolbar *ngIf='session' [session]="session" (closingSession)="onSessionClosing($event)">
+            <span *ngIf="!session.end_date" class="toolbar-button" (click)="openDialog(forms.AddDevice)">
+                <img class="button-icon" src="../../assets/img/icon-pod.svg">
+                <div class="button-text">Add Pod</div>
+            </span>
+            <span class="toolbar-button" (click)="exportSession()">
+                <img class="button-icon" src="../../assets/img/download.svg">
+                <div class="button-text">Download</div>
+            </span>
+            <span class="toolbar-button" (click)="goToGraph()">
+                    <img class="button-icon" src="../../assets/img/icon-graph.svg">
+                    <div class="button-text">Graph</div>
+                </span>
+        </app-session-toolbar>
+    </div>
+</div>
+
+<app-dialog *ngIf="currentForm" (closeDialog)="closeDeleteDialog()">
+    <div *ngIf="currentForm == forms.AddDevice">
+      <div class="dialog-heading">Add pod to Session</div>
+      <ng-container *ngIf="devices.length > 0">
+            <select #ddDevice class="dropdown-input">
+                <option *ngFor="let device of devices" [value]="device.id">{{device.name}}</option>
+            </select>
+            <button class="basic-button" (click)="addPodToSession(ddDevice.value)">Add</button>
+      </ng-container>
+      <div *ngIf="devices.length == 0" class="unavailable-text">No devices available.</div>
+      <button class="cancel-button" (click)="closeDialog()">Close</button>
+    </div>
+    <div *ngIf="currentForm == forms.Passcode">
+        <div class="dialog-heading">Passcode Settings</div>
+        <button class="basic-button" (click)="setPasscodeState('lock')">Lock</button>
+        <button class="basic-button" (click)="setPasscodeState('unlock')">Unlock</button>
+        <button class="basic-button" (click)="setPasscodeState('refresh')">Refresh</button>
+        <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+    </div>
+</app-dialog>

@@ -1,0 +1,6 @@
+<div class="header-grid">
+    <img *ngIf="!leftText" (click)="backClicked()" class="left" src="../../assets/img/icon-back.svg"/>
+    <div *ngIf="leftText" (click)="backClicked()" class="left">{{leftText}}</div>
+    <div class="center">{{title}}</div>
+    <div (click)="rightTextClicked()" class="right" [class.disabled]="!rightEnabled" >{{rightText}}</div>
+</div>

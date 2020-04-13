@@ -1,0 +1,19 @@
+<div class="container">
+  <app-header [leftText]="'Cancel'" [rightText]="'Save'" [title]="'Edit Keywords'" [rightEnabled]="isValid" (backClick)="goBackToKeywordLists()" (rightTextClick)="saveKeywordList()"></app-header>
+  <ng-container *ngIf="keywordList && keywordListItems">
+    <div class="load-text onload" *ngIf="!keywordList">Loading...</div>
+    <div class="empty-keyword-list" *ngIf="keywordListItems && keywordListItems.length == 0">
+      <div class="load-text">Type a title for your list and click Add Keyword below to add keywords.</div>
+    </div>
+    <input class="keyword-lists-title" placeholder="Enter new list name" type="text" [(ngModel)]="keywordList.name" (keyup)="checkName($event)" maxlength=64>
+    <div class="keyword-lists-container">
+      <div *ngFor="let keyword of keywordListItems; trackBy: trackByFn" class="change-keywords-container">
+        <input #keywordInput touched=true type="text" [(ngModel)]="keyword.keyword" autocomplete="off" (keyup)="checkKeyword(keyword, $event)" maxlength=64>
+        <img width=16 height=16 src="../../assets/img/remove.svg" (click)="removeKeyword(keyword)">
+        <div *ngIf="keyword.error" class="add-new-keywords-status">{{keyword.error}}</div>
+      </div>
+    </div>
+    <button class="basic-button medium-button"(click)="addNewKeyword()">Add Keyword</button>
+  </ng-container>
+</div>
+

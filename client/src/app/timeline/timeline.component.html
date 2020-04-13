@@ -1,0 +1,20 @@
+<div class="timeline-container">
+    <div class="legend">
+        <span class="color-box question"></span>
+        <span class="legend-text">Question</span>
+        <span class="color-box discussion"></span>
+        <span class="legend-text">Discussion</span>
+        <span class="color-box silence"></span>
+        <span class="legend-text">Silence</span>
+    </div>
+    <div class="line"></div>
+    <div class="timeline">
+        <span *ngFor="let transcript of displayTranscripts">
+            <span class="utterance" (click)="openTranscriptDialog(transcript.transcript)" [class.question]="transcript.transcript.question" [style.left.px]="transcript.left" [style.width.px]="transcript.width"></span>
+        </span>
+    </div>
+    <div class="time-textbox">
+        <div class="time-text">{{startText}}</div>
+        <div class="time-text">{{endText}}</div>
+    </div>
+</div>

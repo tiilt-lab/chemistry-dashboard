@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:lastBlockDepth="11" MadCap:lastHeight="132" MadCap:lastWidth="1178">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="description" content="" />
+        <meta name="author" content="" /><title></title>
+<script>
+  document.title = "Discussion Capture Support - " + document.title;
+</script>
+        <link href="../Stylesheets/StylesForHomePage.css" rel="stylesheet" type="text/css" />
+    </head>
+    <body>
+        <div id="contentBody" class="off-canvas-main">
+            <MadCap:bodyProxy />
+            <div>
+                <p> </p>
+                <hr />
+                <p>
+                    <table MadCap:conditions="Default.Online">
+                        <col />
+                        <col />
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <p>&#160;</p>
+                                </td>
+                                <td>
+                                    <p>© 2019 Sony Corporation<br />Revised <MadCap:variable name="System.LongDate" /></p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </p>
+            </div>
+        </div>
+    </body>
+</html>

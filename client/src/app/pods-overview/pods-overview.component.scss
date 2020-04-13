@@ -1,0 +1,32 @@
+@import '../../design-system';
+
+.list-container {
+  display: flex;
+  flex-flow: wrap;
+  justify-content: space-evenly;
+}
+
+.dropdown-input {
+  width: 270px;
+  height: 40px;
+  font-size: 16px;
+}
+
+.basic-button {
+  margin: 10px 0px;
+}
+
+.unavailable-text {
+  text-align: center;
+  color: $solid-light-grey;
+}
+
+.graph-button {
+  color: navy;
+  height: 25px;
+  width: 50px;
+  padding-bottom: 20px;
+  grid-area: right;
+  font-size: 25px;
+  font-weight: bold;
+}
