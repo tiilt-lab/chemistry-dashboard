@@ -4,7 +4,7 @@ echo "Installing Discussion Capture..."
 
 echo "Updating system packages..."
 sudo apt-get update
-sudo apt-get install python3 python3-pip python3-dev python3-venv git nginx
+sudo apt-get install python3 python3-pip python3-dev python3-venv python3-tk git nginx
 echo "Packages updated."
 
 echo "Installing Redis..."
