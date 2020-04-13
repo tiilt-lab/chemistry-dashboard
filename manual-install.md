@@ -28,14 +28,19 @@ exit
 
 Create python3 virtual environment and install packages.
 ```
-cd <directory-where-you-want-discussion-capture>
-git clone https://bitbucket.org/acropolis-athens/chemistry-dashboard
-cd chemistry-dashboard
-python3 -m venv ./
-source bin/activate
+cd server
+python3 -m venv ./venv
+source venv/bin/activate
 pip3 install -r requirements.txt
-pip3 install --upgrade google-cloud-speech
 deactivate
+cd ..
+
+cd audio_processing
+python3 -m venv ./venv
+source venv/bin/activate
+pip3 install -r requirements.txt
+deactivate
+cd ..
 ```
 
 Install angular and build the UI.
@@ -62,8 +67,8 @@ gunzip audio_processing/keyword_detector/models/GoogleNews-vectors-negative300.b
 
 Setup Discussion Capture system services.
 ```
-sudo cp discussion_capture.service /lib/systemd/system/discussion_capture.service
-sudo cp audio_processor.service /lib/systemd/system/audio_processor.service
+sudo cp deploy/discussion_capture.service /lib/systemd/system/discussion_capture.service
+sudo cp deploy/audio_processor.service /lib/systemd/system/audio_processor.service
 sudo systemctl enable discussion_capture
 sudo systemctl enable audio_processor
 ```
@@ -73,4 +78,5 @@ Setup Nginx.
 sudo cp deploy/nginx.conf /etc/nginx/nginx.conf
 sudo cp deploy/nginx-headers.conf /etc/nginx/nginx-headers.conf
 sudo nginx -s reload
+
 ```
