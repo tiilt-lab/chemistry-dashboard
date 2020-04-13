@@ -1,0 +1,20 @@
+---
+
+- name: Install libsndfile1 (for XRAY speaker separation)
+  apt:
+    name: libsndfile1
+    state: present
+
+- name: Reload Core Services
+  systemd:
+    state=restarted
+    name="{{ item }}"
+    enabled=yes
+  with_items:
+    - discussion_capture
+    - audio_processor
+
+- name: restart nginx
+  service:
+    name=nginx
+    state=restarted

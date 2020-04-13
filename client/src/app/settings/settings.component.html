@@ -1,0 +1,229 @@
+<div class="container">
+  <app-header [title]="'Settings'" (backClick)="navigateToHomescreen()"></app-header>
+
+  <div class="section-header">Account Settings</div>
+  <div class="option-button" (click)="openDialog(forms.ChangePassword)">Change Password</div>
+  <ng-container *ngIf="user.isAdmin || user.isSuper">
+    <div class="section-header">Manage Accounts</div>
+    <div class="option-button" (click)="openDialog(forms.ViewUsers, loadUsers=true)">View Users</div>
+    <div class="option-button" (click)="openDialog(forms.AddUser)">Add User</div>
+    <div class="option-button" (click)="openDialog(forms.DeleteUser, loadUsers=true)">Delete User</div>
+    <div class="option-button" (click)="openDialog(forms.UserRole, loadUsers=true)">Change User Role</div>
+    <div class="option-button" (click)="openDialog(forms.LockUser, loadUsers=true)">Lock User</div>
+    <div class="option-button" (click)="openDialog(forms.UnlockUser, loadUsers=true)">Unlock User</div>
+    <div class="option-button" (click)="openDialog(forms.ResetUser, loadUsers=true)">Reset User Password</div>
+  </ng-container>
+  <ng-container *ngIf="user.isSuper">
+    <div class="section-header">Manage Server</div>
+    <div class="option-button" (click)="openDialog(forms.ServerLogs)">Download Server Logs</div>
+    <div class="option-button" (click)="openDialog(forms.DeviceLogs, loadUsers=false, loadDevices=true)">Download Device Logs</div>
+    <div class="option-button" (click)="openDialog(forms.DeleteServerLogs)">Clear Server Logs</div>
+    <div class="option-button" (click)="openDialog(forms.DeleteDeviceLogs, loadUsers=false, loadDevices=true)">Clear Device Logs</div>
+    <div class="option-button" (click)="openDialog(forms.AllowAPI, loadUsers=true)">Allow API Access</div>
+    <div class="option-button" (click)="openDialog(forms.RevokeAPI, loadUsers=true)">Revoke API Access</div>
+  </ng-container>
+</div>
+
+<app-dialog *ngIf="currentForm" (closeDialog)="closeDialog()">
+  <!-- Change Password -->
+  <div *ngIf="currentForm == forms.ChangePassword" class="add-dialog">
+    <div class="dialog-heading">Change Password</div>
+    <div class="input-header">Current password</div>
+    <input #txtCurrent class="field-input" type="password">
+    <div class="input-header">New password</div>
+    <input #txtNew class="field-input" type="password">
+    <div class="input-header">Confirm new password</div>
+    <input #txtConfirm class="field-input" type="password">
+    <div *ngIf="status" class="error-status">{{status}}</div>
+    <button class="basic-button" (click)="changePassword(txtCurrent.value, txtNew.value, txtConfirm.value)">Change Password</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- View Users -->
+  <div *ngIf="currentForm == forms.ViewUsers" class="add-dialog">
+    <div class="dialog-heading">View Users</div>
+    <div class="user-table">
+      <div class="user-row">
+        <span class="user-name bold">Username / Email</span>
+        <span class="user-role bold">Role</span>
+        <span class="user-locked bold">Locked</span>
+        <span class="user-api bold">API</span>
+      </div>
+      <div *ngFor="let u of users" class="user-row">
+        <span class="user-name">{{u.email}}</span>
+        <span class="user-role">{{u.role}}</span>
+        <span class="user-locked">{{u.locked}}</span>
+        <span class="user-api">{{u.api_access}}</span>
+      </div>
+    </div>
+    <button class="cancel-button" (click)="closeDialog()">Close</button>
+  </div>
+
+  <!-- Add User -->
+  <div *ngIf="currentForm == forms.AddUser" class="add-dialog">
+    <div class="dialog-heading">Add User</div>
+    <div class="input-header">Email</div>
+    <input #txtName class="field-input" type="text">
+    <div class="input-header">Role</div>
+    <select #ddRole class="dropdown-input">
+      <option value="user">User</option>
+      <option value="admin">Admin</option>
+    </select>
+    <div *ngIf="status" class="error-status">{{status}}</div>
+    <button class="basic-button" (click)="createUser(txtName.value, ddRole.value)">Create User</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- Delete User -->
+  <div *ngIf="currentForm == forms.DeleteUser" class="add-dialog">
+    <div class="dialog-heading">Delete User</div>
+    <div class="input-header">Select user</div>
+    <select #ddUser class="dropdown-input">
+      <option *ngFor="let u of users" [value]="u.id">{{u.email}}</option>
+    </select>
+    <div *ngIf="status" class="error-status">{{status}}</div>
+    <button class="basic-button" (click)="confirmDeleteUser(ddUser.value)">Delete User</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- Confirm Delete User -->
+  <div *ngIf="currentForm == forms.ConfirmDeleteUser" class="add-dialog">
+    <div class="dialog-heading">Are you sure you want to delete {{userToDelete.email}}?</div>
+    <button class="basic-button" (click)="deleteSelectedUser()">Delete User</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+   <!-- Lock User -->
+   <div *ngIf="currentForm == forms.LockUser" class="add-dialog">
+    <div class="dialog-heading">Lock User</div>
+    <div class="input-header">Select user</div>
+    <select #ddUser class="dropdown-input">
+      <option *ngFor="let u of users" [value]="u.id">{{u.email}}</option>
+    </select>
+    <div *ngIf="status" class="error-status">{{status}}</div>
+    <button class="basic-button" (click)="lockUser(ddUser.value)">Lock User</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- Unlock User -->
+  <div *ngIf="currentForm == forms.UnlockUser" class="add-dialog">
+    <div class="dialog-heading">Unlock User</div>
+    <div class="input-header">Select user</div>
+    <select #ddUser class="dropdown-input">
+      <option *ngFor="let u of users" [value]="u.id">{{u.email}}</option>
+    </select>
+    <div *ngIf="status" class="error-status">{{status}}</div>
+    <button class="basic-button" (click)="unlockUser(ddUser.value)">Unlock User</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- Change User Role -->
+  <div *ngIf="currentForm == forms.UserRole" class="add-dialog">
+    <div class="dialog-heading">Change Role</div>
+    <div class="input-header">Select user</div>
+    <select #ddUser class="dropdown-input">
+      <option *ngFor="let u of users" [value]="u.id">{{u.email}}</option>
+    </select>
+    <div class="input-header">Select role</div>
+    <select #ddRole class="dropdown-input">
+      <option value="user">User</option>
+      <option value="admin">Admin</option>
+    </select>
+    <button class="basic-button" (click)="changeUserRole(ddUser.value, ddRole.value)">Change Role</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- Reset User Password -->
+  <div *ngIf="currentForm == forms.ResetUser" class="add-dialog">
+    <div class="dialog-heading">Reset User Password</div>
+    <div class="input-header">User</div>
+    <select #ddUser class="dropdown-input">
+      <option *ngFor="let u of users" [value]="u.id">{{u.email}}</option>
+    </select>
+    <div *ngIf="status" class="error-status">{{status}}</div>
+    <button class="basic-button" (click)="resetUserPassword(ddUser.value)">Reset Password</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- Download Server Logs -->
+  <div *ngIf="currentForm == forms.ServerLogs" class="add-dialog">
+    <div class="dialog-heading">Download Server Logs</div>
+    <div class="input-header">Select service</div>
+    <select #ddService class="dropdown-input">
+      <option value="dcs">Discussion Capture Server</option>
+      <option value="aps">Audio Processing Service</option>
+    </select>
+    <button class="basic-button" (click)="downloadServerLogs(ddService.value)">Download logs</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- Download Device Logs -->
+  <div *ngIf="currentForm == forms.DeviceLogs" class="add-dialog">
+    <div class="dialog-heading">Download Device Logs</div>
+    <div class="input-header">Select device</div>
+    <select #ddDevice class="dropdown-input">
+      <option *ngFor="let d of devices" [value]="d.id">{{d.name}}</option>
+    </select>
+    <button class="basic-button" (click)="downloadDeviceLogs(ddDevice.value)">Download logs</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- Delete Server Logs -->
+  <div *ngIf="currentForm == forms.DeleteServerLogs" class="add-dialog">
+    <div class="dialog-heading">Clear Server Logs</div>
+    <div class="input-header">Select service</div>
+    <select #ddService class="dropdown-input">
+      <option value="dcs">Discussion Capture Server</option>
+      <option value="aps">Audio Processing Service</option>
+    </select>
+    <button class="basic-button" (click)="deleteServerLogs(ddService.value)">Clear logs</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- Delete Device Logs -->
+  <div *ngIf="currentForm == forms.DeleteDeviceLogs" class="add-dialog">
+    <div class="dialog-heading">Clear Device Logs</div>
+    <div class="input-header">Select device</div>
+    <select #ddDevice class="dropdown-input">
+      <option *ngFor="let d of devices" [value]="d.id">{{d.name}}</option>
+    </select>
+    <button class="basic-button" (click)="deleteDeviceLogs(ddDevice.value)">Clear logs</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- Allow API Access -->
+  <div *ngIf="currentForm == forms.AllowAPI" class="add-dialog">
+    <div class="dialog-heading">Allow API Access</div>
+    <div class="input-header">Select user</div>
+    <select #ddUser class="dropdown-input">
+      <option *ngFor="let u of users" [value]="u.id">{{u.email}}</option>
+    </select>
+    <div *ngIf="status" class="error-status">{{status}}</div>
+    <button class="basic-button" (click)="allowAPIAccess(ddUser.value)">Allow</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- Revoke API Access -->
+  <div *ngIf="currentForm == forms.RevokeAPI" class="add-dialog">
+    <div class="dialog-heading">Revoke API Access</div>
+    <div class="input-header">Select user</div>
+    <select #ddUser class="dropdown-input">
+      <option *ngFor="let u of users" [value]="u.id">{{u.email}}</option>
+    </select>
+    <div *ngIf="status" class="error-status">{{status}}</div>
+    <button class="basic-button" (click)="revokeAPIAccess(ddUser.value)">Revoke</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="currentForm == forms.Loading" class="add-dialog">
+    <div class="dialog-heading">Loading...please wait...</div>
+  </div>
+
+  <!-- Status -->
+  <div *ngIf="currentForm == forms.Status" class="add-dialog">
+    <div class="dialog-heading">{{statusTitle}}</div>
+    <div>{{status}}</div>
+    <button class="cancel-button" (click)="closeDialog()">Close</button>
+  </div>
+</app-dialog>

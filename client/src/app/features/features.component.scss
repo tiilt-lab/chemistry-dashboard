@@ -1,0 +1,118 @@
+@import '../../design-system';
+
+.positive {
+    stroke: $solid-green;
+}
+
+.negative {
+    stroke: $solid-red;
+}
+
+.fill-positive {
+    fill: lighten($solid-green, 25%);
+}
+
+.fill-negative {
+    fill: lighten($solid-red, 35%);
+}
+
+.features-table {
+    table-layout: fixed;
+    width: 343px;
+    border-spacing: 0px;
+
+    th, td {
+        padding: 0;
+        margin: 0;
+        border: 0;
+    }
+
+    th {
+        @include text-maintitle;
+        padding: $stack-M;
+        border-bottom: 1px solid $shadow-blue-alpha;
+    }
+
+    .desc-header {
+        width: 186px;
+    }
+
+    .score-header {
+        width: 59px;
+        padding-right: 24px;
+    }
+
+    .graph-header {
+        width: 74px;
+    }
+
+    th:first-child {
+        text-align: left;
+    }
+
+    td {
+        padding-top: 8px;
+        height: 40px;
+        padding-bottom: 8px;
+    }
+
+    tr:first-child td {
+        padding-top: 16px;
+    }
+
+    .score {
+        width: 59px;
+        padding-right: 24px;
+        text-align: right;
+        font-size: 0px;
+
+        .number {
+            display: inline-block;
+            @include text-title3;
+            padding-right: 4px;
+            position: relative;
+            vertical-align: middle;
+        }
+
+        .direction-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 32px;
+            vertical-align: middle;
+            &.positive {
+                background-image: url('../../assets/img/icon-trending-up.svg');
+            }
+            &.neutral {
+                background-image: url('../../assets/img/icon-trending-neutral.svg');
+            }
+            &.negative {
+                background-image: url('../../assets/img/icon-trending-down.svg');
+            }
+        }
+    }
+
+    .svg {
+        display: block;
+        width: 74px;
+        height: 40px;
+    }
+}
+
+.no-data-span {
+  position: absolute;
+  height: 39.5px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    45deg,
+    $solid-light-grey,
+    $solid-light-grey 5px,
+    $solid-lighter-grey 5px,
+    $solid-lighter-grey 10px
+  );
+}
+
+.info-button {
+    vertical-align: middle;
+    margin-bottom: 2%;
+    cursor: pointer;
+}

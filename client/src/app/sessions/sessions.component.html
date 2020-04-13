@@ -1,0 +1,142 @@
+<div class="container">
+  <app-header [title]="'Manage Discussions'" (backClick)="navigateToHomescreen()"></app-header>
+  <div class="list-container">
+    <div *ngIf="isLoading" class="load-text">Loading...</div>
+    <div *ngIf="!isLoading && sessions.length == 0  && folders.length == 0" class="empty-session-list">
+      <div class="load-text"> No Discussions or Folders </div>
+      <div class="load-text-description"> Tap the buttons below to record your first discussion or create your first folder. </div>
+    </div>
+    <!-- Breadcrumb -->
+    <div class="breadcrumb-container">
+      <div *ngIf="breadcrumbs.length > 0" (click)="goBackToPrevious()">
+        <img src="../assets/img/icon-back.svg" class="breadcrumb-arrow-icon">
+      </div>
+      <span *ngIf="folders.length > 0">
+        <span (click)="displayFolder()" class="crumb-name"> Home</span>
+        <span *ngIf="breadcrumbs.length > 1" class="breadcrumbs"> / . . . / </span>
+        <span *ngIf="breadcrumbs.length == 1" class="breadcrumbs"> / </span>
+        <div *ngIf="breadcrumbs.length > 0" class="crumb-name">{{ breadcrumbs[breadcrumbs.length - 1].name}}</div>
+      </span>
+    </div>
+    <!-- Folders -->
+    <div *ngIf="!isLoading && displayedFolders.length > 0">
+      <ul class="list">
+        <li *ngFor="let folder of displayedFolders" class="folder-item">
+          <img src="../assets/img/folder.svg" class="folder-icon">
+          <div class="folder-title" (click)="displayFolder(folder.id)">{{folder.name}}</div>
+          <div class="folder-options">
+            <app-context-menu>
+              <div class="menu-item" (click)="openFolderDialog(forms.RenameFolder, folder)">Edit Name</div>
+              <div class="menu-item" (click)="openFolderDialog(forms.MoveFolder, folder)"> Move To...</div>
+              <div  class="menu-item red" (click)="openFolderDialog(forms.DeleteFolder, folder)">Delete</div>
+            </app-context-menu>
+          </div>
+        </li>
+      </ul>
+    </div>
+    <!-- Sessions -->
+    <div *ngIf="!isLoading && displayedSessions.length > 0">
+      <ul class="list">
+        <li *ngFor="let session of displayedSessions" class="session-item">
+          <svg x="0" y="0" width="24" height="24" viewBox="0 0 20 30" class="session-icon" [class.active-session]="session.recording">
+              <use xlink:href="../assets/img/mic.svg#5"></use>
+          </svg>
+          <div class="click-mask" (click)="goToSession(session)"></div>
+          <div class="session-title">{{session.title}}</div>
+          <div class="session-date">{{session.formattedDate}}</div>
+          <div class="session-options">
+            <app-context-menu>
+              <div class="menu-item" (click)="openSessionDialog(forms.RenameSession, session)">Edit Name</div>
+              <div class="menu-item" (click)="openSessionDialog(forms.MoveSession, session)"> Move To...</div>
+              <div *ngIf="!session.recording" class="menu-item red" (click)="openSessionDialog(forms.DeleteSession, session)">Delete</div>
+              <div *ngIf="session.recording" class="menu-item red" (click)="endSession(session)">End</div>
+              </app-context-menu>
+            </div>
+          <div class="session-title">{{session.name}}</div>
+        </li>
+      </ul>
+    </div>
+    <div *ngIf="folders.length > 0 || sessions.length > 0">
+      <div *ngIf="displayedFolders.length == 0 && displayedSessions.length == 0">
+        <div class="folder-empty"> Folder Empty </div>
+      </div>
+    </div>
+  </div>
+  <button class="basic-button medium-button" (click)="openFolderDialog(forms.NewFolder)">New Folder</button>
+  <button class="basic-button medium-button" (click)="newRecording()">New Discussion</button>
+</div>
+
+<app-dialog *ngIf="currentForm" (closeDialog)="closeDialog()">
+  <!-- Update Session Name -->
+  <div *ngIf="currentForm == forms.RenameSession" class="dialog-window">
+    <div class="dialog-heading">Update Discussion Name:</div>
+    <input #txtName [value]="selectedSession.title" class="field-input" maxlength="64">
+    <button class="basic-button" (click)="changeSessionName(txtName.value)">Confirm</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- Update Folder Name -->
+  <div *ngIf="currentForm == forms.RenameFolder" class="dialog-window">
+    <div class="dialog-heading">Update Folder Name:</div>
+    <input #txtName [value]="selectedFolder.name" class="field-input" maxlength="64">
+    <button class="basic-button" (click)="changeFolderName(txtName.value)">Confirm</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- Delete Session -->
+  <div *ngIf="currentForm == forms.DeleteSession" class="dialog-window">
+    <div class="dialog-heading">Delete Session</div>
+    <div class="dialog-body">Are you sure you want to permanently delete this session?</div>
+    <button class="delete-button" (click)="deleteSession()">Delete</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+    <!-- Delete Folder -->
+  <div *ngIf="currentForm == forms.DeleteFolder" class="dialog-window">
+    <div class="dialog-heading"> Delete Folder</div>
+    <div class="dialog-body"> Are you sure you want to permanently delete this folder and all of its contents?</div>
+    <button class="delete-button" (click)="deleteFolder()">Delete</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- Add Folder -->
+  <div *ngIf="currentForm == forms.NewFolder" class="dialog-window">
+    <div class="dialog-heading"> Add New Folder</div>
+    <input placeholder="Enter new file name" #txtName [value] class="field-input" maxlength="64">
+    <div *ngIf="!breadcrumbs.length > 0" class="basic-button" (click)="addFolder(txtName.value, null)">Confirm</div>
+    <div *ngIf="breadcrumbs.length > 0" class="basic-button" (click)="addFolder(txtName.value,breadcrumbs[breadcrumbs.length - 1].id)"> Confirm</div>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- Move Folder -->
+  <div *ngIf="currentForm == forms.MoveFolder" class="dialog-window">
+    <div class="dialog-heading">Move Folder</div>
+    <app-folder-select #folderSelect [folders]="selectableFolders"></app-folder-select>
+    <button *ngIf="folderSelect.folder" class="basic-button" (click)="moveFolder(folderSelect.folder)">OK</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- Move Session -->
+  <div *ngIf="currentForm == forms.MoveSession" class="dialog-window">
+    <div class="dialog-heading">Move Discussion</div>
+    <app-folder-select #folderSelect [folders]="selectableFolders"></app-folder-select>
+    <button *ngIf="folderSelect.folder" class="basic-button" (click)="moveSession(folderSelect.folder)">OK</button>
+    <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="currentForm == forms.Loading" class="dialog-window">
+    <div class="dialog-heading">Loading...please wait...</div>
+  </div>
+</app-dialog>
+
+<!--Alerts -->
+<app-dialog *ngIf="showAlert">
+  <div>
+    <div class="dialog-heading">Error</div>
+      <div class=add-dialog>
+        {{alertMessage}}
+      <button class="cancel-button" (click)="closeAlert()">Close</button>
+    </div>
+  </div>
+</app-dialog>

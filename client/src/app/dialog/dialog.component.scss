@@ -1,0 +1,56 @@
+@import '../../design-system';
+
+.dialog-container {
+  position: absolute;
+  padding: $space-XL $space-2XL $space-2XL;
+  max-width: calc(375px - 32px);
+  max-height: 80%;
+  overflow-y: auto;
+  top: 50%;
+  transform: translate(0, -50%);
+  background-color: $solid-ultra-white;
+  border-radius: 8px;
+  box-sizing: border-box;
+  box-shadow: inset 0 -1px 0 1px rgba(0,0,0,0.5), 0 2px 8px 0 $shadow-blue-alpha;
+  opacity: 1;
+}
+
+.dialog-background {
+  z-index: 100;
+  top: 0;
+  height: 100%;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  position: fixed;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.dialog-container ::ng-deep .dialog-heading {
+  text-align: center;
+  margin-top: $space-L;
+  margin-bottom: $space-S;
+  align-items: center;
+  @include text-title3;
+}
+
+.dialog-container ::ng-deep .dialog-body {
+  margin: $space-L 0;
+  text-align: center;
+  @include text-body;
+}
+
+::ng-deep {
+  .dialog-heading {
+    text-align: center;
+    align-items: center;
+    @include text-headline;
+  }
+
+  .dialog-body {
+    margin: 8px 32px;
+    text-align: center;
+    @include text-body;
+  }
+}

@@ -1,0 +1,38 @@
+<div>
+  <table class="features-table">
+    <thead>
+      <tr>
+        <th class="desc-header">Classifier</th>
+        <th class="score-header">Score</th>
+        <th class="graph-header">Graph</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let feature of features">
+        <td>
+         <img (click)="getInfo(feature.name)" class="info-button" src="../../assets/img/question.svg"/>
+          {{ feature.name }}
+        </td>
+        <td class="score">
+          <div class="number">{{ feature.average | number : '1.0-0' }}</div>
+          <div class="direction-indicator" [class.positive]="feature.trend == 1" [class.neutral]="feature.trend == 0"
+          [class.negative]="feature.trend == -1"> </div>
+        </td>
+        <td>
+          <span *ngIf="feature.values.length == 0" class="no-data-span" [style.width.px]="74"></span>
+          <svg viewBox="0 -0.5 74 39.5" class="svg">
+            <path [attr.d]="feature.path" fill="none" [class.positive]="feature.trend >= 0" [class.negative]="feature.trend == -1"></path>
+          </svg>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<app-dialog *ngIf="showFeatureDialog">
+  <div class=add-dialog>
+    <div class="dialog-heading">{{ featureHeader }}</div>
+    {{featureDescription}}
+   <button class="cancel-button" (click)="closeDialog()">Close</button>
+  </div>
+</app-dialog>

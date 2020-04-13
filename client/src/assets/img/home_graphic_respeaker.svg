@@ -1,0 +1,20 @@
+<svg width="146px" height="146px" id="Respeaker" xmlns="http://www.w3.org/2000/svg" viewBox="2 -27 145 145">
+    <title>ReSpeakerGraphic</title>
+    <defs>
+        <linearGradient x1="-33.2875%" y1="-94.4335938%" x2="133.289583%" y2="167.96875%" id="linearGradient-1">
+            <stop stop-color="#764BFF" stop-opacity="0.96" offset="0%"></stop>
+            <stop stop-color="#7BB7F1" offset="100%"></stop>
+        </linearGradient>
+    </defs>
+    <g fill="url(#linearGradient-1)" transform='rotate(-13.3625)'>
+        <path d="M112,60a2,2,0,0,0-2,2,48.05,48.05,0,0,1-48,48,2,2,0,0,0,0,4,52,52,0,0,0,52-52A2,2,0,0,0,112,60Z"/>
+        <path d="M62,10A52,52,0,0,0,10,62a2,2,0,0,0,4,0A48.05,48.05,0,0,1,62,14a2,2,0,0,0,0-4Z"/>
+        <path d="M108,4a12,12,0,0,1,12,12v92a12,12,0,0,1-12,12H16A12,12,0,0,1,4,108V16A12,12,0,0,1,16,4h92m0-4H16A16,16,0,0,0,0,16v92a16,16,0,0,0,16,16h92a16,16,0,0,0,16-16V16A16,16,0,0,0,108,0Z"/>
+        <circle cx="15.81" cy="81.13" r="2"/>
+        <circle cx="26.64" cy="97.36" r="2"/>
+        <circle cx="42.87" cy="108.19" r="2"/>
+        <circle cx="108.19" cy="42.87" r="2"/>
+        <circle cx="97.36" cy="26.64" r="2"/>
+        <circle cx="81.13" cy="15.81" r="2"/>
+    </g>
+</svg>

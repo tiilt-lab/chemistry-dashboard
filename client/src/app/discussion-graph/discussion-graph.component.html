@@ -1,0 +1,81 @@
+<div>
+  <app-header [title]="'Discussion Graph'" (backClick)="navigateToSession()" [rightText]="'Options'" (rightTextClick)="openForms(forms.devices)" class="discussion-graph-header"></app-header>
+</div>
+<div class="page-container">
+  <div class="header-container">
+    <span class="header-spacer"></span>
+    <div *ngFor="let device of displayDevices" class="header-text" (click)="openForms(forms.stats, device)">{{ device.name }}</div>
+  </div>
+  <div class="graph-container">
+    <div class="timeline">
+      <div *ngFor="let timestamp of timestamps" class="timestamp">{{timestamp}}</div>
+    </div>
+    <div *ngFor="let device of displayDevices" class="transcript-column">
+      <div *ngFor="let transcript of device.transcripts" class="transcript" [style.margin-top.px]="(transcript.start_time * 20)" [style.height.px]="transcript.length * 20">
+        <div class="transcript-text">
+          <div *ngIf="transcript.question" class="question-mark" (click)="highlightQuestions(transcript)">?</div>
+          <span *ngIf="transcript.speaker_tag" class="speaker-tag">{{transcript.speaker_tag}}: </span>
+          <ng-container *ngFor="let transcriptData of transcript.transcript">
+            <span *ngIf="transcriptData.matchingKeywords !== null" class="keyword-text" [style.color]="transcriptData.color" [class.question-highlight]="transcriptData.highlight" (click)="openForms(forms.keywords, transcriptData.matchingKeywords)">{{transcriptData.word}}</span>
+            <span *ngIf="transcriptData.matchingKeywords === null" [class.question-highlight]="transcriptData.highlight">{{transcriptData.word}}</span>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<app-dialog *ngIf="currentForm">
+  <!-- Keyword dialog-->
+  <div *ngIf="currentForm === forms.keywords">
+    <div class="dialog-heading">Keyword Data</div>
+    <div class="dialog-body"><span class="bold">Word:</span> {{displayKeywords[0].word}} </div>
+    <div class="dialog-body"><span class="bold">Keywords (Similarity):</span></div>
+    <div class="dialog-body">
+      <span *ngFor="let keyword of displayKeywords; let last = last">
+        {{keyword.keyword}} ({{keyword.similarity}}%){{last ? '' : ','}}
+      </span>
+    </div>
+  </div>
+
+  <!-- Stats dialog-->
+  <div *ngIf="currentForm === forms.stats">
+    <div class=dialog-heading> Statistics for {{ selectedDevice.name }} </div>
+    <div class="basic-button" (click)="toggleGraph(!showGraph, selectedDevice)"> Contributions: {{contributions}}</div>
+    <br>
+    <ng-container *ngIf="showGraph">
+      <div class="graph-box">
+        <svg viewBox="-1 -1 2 2" style="transform: rotate(-90deg)" class="pie-chart">
+          <path [attr.d]="device.path" [style.fill]="device.color" *ngFor="let device of displayDevices" class="pie-piece" (click)="toggleGraph(true, device)" stroke="transparent"/>
+        </svg>
+        <span class="pie-piece-text"> {{ selectedPercent}}% </span>
+      </div>
+      <h3>Key</h3>
+      <div class="graph-legend">
+        <ng-container *ngFor="let device of displayDevices">
+          <div class="color-box" [style.background-color]="device.color"> </div>
+          <div class="name" *ngIf="device.selected" style="font-weight: bold;"> {{device.name}} </div>
+          <div class="name" *ngIf="!device.selected"> {{ device.name}}</div>
+        </ng-container>
+      </div>
+      <div class="individual-stat"> {{ selectedDevice.name }} spoke for {{ selectedPercent }}% of the total conversation of displayed speakers</div>
+      <br>
+    </ng-container>
+    <div class="basic-button" (click)="toggleQuestions()"> Questions: {{ displayQuestions.length }} </div>
+    <br>
+    <div *ngIf='showQuestions' class="question-container">
+      <div *ngFor="let question of displayQuestions" class="question-item">{{ question }}</div>
+      <br>
+    </div>
+  </div>
+
+  <!-- Devices dialog -->
+  <div *ngIf="currentForm === forms.devices">
+    <div class="dialog-heading">Display devices</div>
+    <label *ngFor="let device of sessionDevices" class="dc-checkbox"> {{ device.name }}
+      <input type="checkbox" [(ngModel)]="device.visible" (ngModelChange)="updateGraph()">
+      <span class="checkmark"></span>
+    </label>
+  </div>
+  <div class="delete-button" (click)="closeForm()">Close</div>
+</app-dialog>

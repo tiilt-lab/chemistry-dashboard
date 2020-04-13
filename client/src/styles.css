@@ -1,0 +1,34 @@
+/* You can add global styles to this file, and also import other style files */
+/* NUS-284: Custom font in styles.css is not applied */
+
+@font-face {
+    font-family: 'SST';
+    font-weight: 700;
+    src: url('assets/font/SSTUI/SSTUI-Bold.ttf');
+}
+@font-face {
+    font-family: 'SST';
+    font-weight: 200;
+    src: url('assets/font/SSTUI/SSTUI-Light.ttf');
+}
+@font-face {
+    font-family: 'SST';
+    font-weight: 500;
+    src: url('assets/font/SSTUI/SSTUI-Medium.ttf');
+}
+@font-face {
+    font-family: 'SST';
+    font-weight: 400;
+    src: url('assets/font/SSTUI/SSTUI-Roman.ttf');
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+}
+
+* {
+    font-family: 'SST', sans-serif;
+}

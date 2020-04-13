@@ -1,0 +1,96 @@
+@import '../../design-system';
+@import '../manage-keyword-lists/manage-keyword-lists.component';
+
+.selected-button {
+  fill: $solid-red;
+}
+
+.selected-pod {
+  border-color: $solid-blue !important;
+}
+
+.disabled {
+  background: $solid-light-grey;
+  box-shadow: none !important;
+}
+
+.select-all {
+  width: 100%;
+  border-radius: 26px;
+  border: none;
+  background: transparent;
+  box-sizing: border-box;
+  padding: $inset-squish-M2;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease-in-out;
+  @include text-subhead($text-light-blue);
+  &:focus {
+    outline: 0;
+  }
+}
+
+.dialog-content {
+  display: block;
+}
+
+.dialog-spinner {
+  text-align: center;
+}
+
+.footer-button {
+  @extend .basic-button;
+  margin: 10px 0px;
+  width:374px;
+}
+
+.dialog-button {
+  @extend .basic-button;
+  margin: 10px 0px;
+}
+
+.text-input {
+  font-size: 14px;
+  padding: 0px 10px;
+  margin: 12px 0px;
+  width: 350px;
+  height: 30px;
+  box-shadow: none;
+  border-radius: 5px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: #a7a7a7;
+  outline: none;
+  transition: border-color 0.5s;
+}
+
+.text-input:focus {
+  border-color: #006db3;
+}
+
+.path-container {
+  display: flex;
+  flex-direction: row;
+  width: 375px;
+}
+
+#open-folder-icon {
+  width: 38px;
+  height: auto;
+}
+
+.folder-input {
+  font-size: 14px;
+  padding: 0px 10px;
+  margin: 12px 0px;
+  width: 318px;
+  height: 30px;
+  border-radius: 5px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: #a7a7a7;
+  transition: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  outline:none;
+}

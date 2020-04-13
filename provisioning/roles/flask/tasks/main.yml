@@ -1,0 +1,93 @@
+---
+
+- name: Create Discussion Capture directory layout
+  file:
+    dest: "{{item}}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: www-data
+    mode: "g+w"
+  with_items:
+    - /var/lib/chemistry-dashboard
+    - /var/lib/chemistry-dashboard/client
+    - /var/log/chemistry-dashboard
+
+- name: Link Discussion Capture client
+  file:
+    src: /vagrant/client/dist
+    dest: /var/lib/chemistry-dashboard/client/dist
+    state: link
+    owner: "{{ app_user }}"
+    group: www-data
+    mode: "g+w"
+
+- name: Link Discussion Capture backend
+  file:
+    src: /vagrant/server
+    dest: /var/lib/chemistry-dashboard/server
+    state: link
+    owner: "{{ app_user }}"
+    group: www-data
+    mode: "g+w"
+
+- name: Link Audio Processing backend
+  file:
+    src: /vagrant/audio_processing
+    dest: /var/lib/chemistry-dashboard/audio_processing
+    state: link
+    owner: "{{ app_user }}"
+    group: www-data
+    mode: "g+w"
+
+- name: Link Help Documentation client
+  file:
+    src: /vagrant/UA
+    dest: /var/lib/chemistry-dashboard/UA
+    state: link
+    owner: "{{ app_user }}"
+    group: www-data
+    mode: "g+w"
+
+- name: Create virtualenv and install python requirements (Server)
+  become_user: "{{ app_user }}"
+  pip:
+    virtualenv: /var/lib/chemistry-dashboard/server/venv
+    virtualenv_python: python3.5
+    requirements: /var/lib/chemistry-dashboard/server/requirements.txt
+
+- name: Create virtualenv and install python requirements (Audio Processing Service)
+  become_user: "{{ app_user }}"
+  pip:
+    virtualenv: /var/lib/chemistry-dashboard/audio_processing/venv
+    virtualenv_python: python3.5
+    requirements: /var/lib/chemistry-dashboard/audio_processing/requirements.txt
+
+- name: Create /audio_processing/keyword_detector/models if it does not exist
+  file:
+    path: /var/lib/chemistry-dashboard/audio_processing/keyword_detector/models
+    state: directory
+    mode: 0755
+
+- name: Deploy Fetch Word2Vec model script
+  copy:
+    src: files/get_word2vec_models.sh
+    dest: /var/lib/chemistry-dashboard/audio_processing/keyword_detector/models/get_word2vec_models.sh
+    owner: root
+    group: root
+    mode: 0755
+
+- name: Execute Fetch Word2Vec model script
+  command: sh /var/lib/chemistry-dashboard/audio_processing/keyword_detector/models/get_word2vec_models.sh
+  args:
+    chdir: /var/lib/chemistry-dashboard/audio_processing/keyword_detector/models
+    creates: /var/lib/chemistry-dashboard/audio_processing/keyword_detector/models/GoogleNews-vectors-negative300.bin
+
+- name: Deploy Discussion Capture, Discussion Capture Help, and Audio Processor service configurations
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  with_items:
+    - { src: templates/discussion_capture.service.j2, dest: /etc/systemd/system/discussion_capture.service }
+    - { src: templates/audio_processor.service.j2, dest: /etc/systemd/system/audio_processor.service }
+  notify:
+    - systemd-reload

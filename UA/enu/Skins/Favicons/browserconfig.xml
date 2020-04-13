@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<browserconfig>
+    <msapplication>
+        <tile>
+            <square70x70logo src="/Skins/Favicons/AppIcon.png" />
+        </tile>
+    </msapplication>
+</browserconfig>

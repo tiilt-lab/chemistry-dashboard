@@ -1,0 +1,68 @@
+@import '../../design-system';
+$highlight-keywords: rgba(47%, 47%, 98%, 1);
+$base-keywords: rgba(36%, 36%, 36%, 0.4);
+
+.keyword-container {
+    min-height: 80px;
+    width: 320px;
+}
+
+.keyword {
+    opacity: .75;
+    color: $text-blue;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.no-keywords {
+    opacity: .75;
+    color: $base-keywords;
+    font-weight: bold;
+    line-height: 80px;
+    text-align: center;
+}
+
+.graph-menu {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+}
+
+.timeline-container {
+    position: relative;
+
+    .keyword-timeline {
+        grid-template-columns: 60px 240px;
+        grid-template-rows: 30px;
+        display: grid;
+
+        .keyword-text {
+            grid-column: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 60px;
+            line-height: 30px;
+            font-size: 15px;
+            color: $text-light;
+        }
+
+        .keyword-graph {
+            grid-column: 2;
+            position: relative;
+
+            hr {
+                margin: 15px 0px;
+            }
+
+            .keyword-point {
+                position: absolute;
+                width: 24px;
+                height: 24px;
+                border-radius: 12px;
+                top: 4px;
+                cursor: pointer;
+            }
+        }
+    }
+}
