@@ -8,12 +8,13 @@ Twisted==19.2.0
 autobahn==19.3.3
 google-cloud-speech==1.2.0
 matplotlib==3.0.3
-scikit_learn==0.21.3
+scikit_learn==0.22.1
 hmmlearn==0.2.3
 simplejson==3.16.0
 eyed3==0.8.12
-pydub==0.23.1
-pyAudioAnalysis==0.2.5
-tqdm==4.44.1
+pydub==0.24.0
+pyAudioAnalysis==0.3.6
+tqdm==4.46.0
 colorama==0.4.3
 librosa==0.7.2
+plotly==4.1.1
