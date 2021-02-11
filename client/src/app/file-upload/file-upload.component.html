@@ -1,0 +1,41 @@
+<div class="container">
+  <app-header
+    [title]="'Upload Files'"
+    (backClick)="navigateToHomescreen()"
+  ></app-header>
+  <div class="intro-box">
+    <div class="padding-file"></div>
+    <div class="load-text">Upload files for topic modeling.</div>
+  </div>
+  <form
+    [formGroup]="uploadForm"
+    (ngSubmit)="onSubmit()"
+    action="#"
+    enctype="multipart/form-data"
+  >
+    <div>
+      <!--<input type="file" name="fileUpload" (change)="onFileSelect($event)" />-->
+      <button type="button" class="basic-button small-button" (click)="fileInput.click()">
+        <span>Select File</span>
+        <input #fileInput type="file" (change)="onFileSelect($event)" style="display:none;" />
+        <div class="load-text-description">{{ FileName }}</div>
+      </button>
+      
+    </div>
+    <div>
+      <button type="submit" class="basic-button medium-button">Upload</button>
+    </div>
+  </form>
+  <div>
+    <form [formGroup]="fileForm" (ngSubmit)="createTopicModel()">
+      <label formArrayName="files" *ngFor="let order of filesFormArray.controls; let i = index">
+        <div>
+          <input type="checkbox" [formControlName]="i">
+          {{filesData[i].name}}
+        </div>
+      </label>
+      <button class="basic-button medium-button">Create Topic Model</button>
+    </form>
+  </div>
+  <div></div>
+</div>
