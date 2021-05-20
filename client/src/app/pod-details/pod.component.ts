@@ -48,6 +48,9 @@ export class PodComponent implements OnInit, OnDestroy {
     ngOnInit() {
         this.route.params.subscribe(params => {
             this.sessionDeviceId = +params['sessionDeviceId'];
+            console.log("transcripts");
+            console.log(this.sessionDeviceId);
+            console.log(this.activeSessionService.getSessionDeviceTranscripts(this.sessionDeviceId));
             const sessionSub = this.activeSessionService.getSession().subscribe(e => {
                 this.session = e;
             });
@@ -57,6 +60,8 @@ export class PodComponent implements OnInit, OnDestroy {
                 }
             });
             const transcriptSub = this.activeSessionService.getSessionDeviceTranscripts(this.sessionDeviceId).subscribe(e => {
+                console.log("transcript Sub");
+                console.log(e);
                 this.transcripts = e;
                 this.setRange(this.timeRange);
             });
@@ -79,6 +84,8 @@ export class PodComponent implements OnInit, OnDestroy {
     }
 
     setRange(values: any[]) {
+    	console.log(this.timeRange);
+    	console.log(this.session.length);
         this.timeRange = values;
         this.startTime = Math.round(this.session.length * values[0] * 100) / 100;
         this.endTime = Math.round(this.session.length * values[1] * 100) / 100;
@@ -86,7 +93,10 @@ export class PodComponent implements OnInit, OnDestroy {
     }
 
     generateDispalyTranscripts() {
+    	console.log(this.transcripts);
         this.displayTranscripts = this.transcripts.filter(t => t.start_time >= this.startTime && t.start_time <= this.endTime);
+        console.log("dispaly Transcripts");
+        console.log(this.displayTranscripts);
     }
 
     navigateToSession() {

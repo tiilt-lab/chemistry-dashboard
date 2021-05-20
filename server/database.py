@@ -449,8 +449,9 @@ def add_transcript(session_device_id, start_time, length, transcript, question, 
 def get_transcripts(session_id=None, session_device_id=None, start_time=0, end_time=-1):
     query = db.session.query(Transcript)
     if session_id != None:
-        query = query.filter(SessionDevice.id == Transcript.session_device_id).\
-            filter(SessionDevice.session_id == session_id)
+        query = query.filter(SessionDevice.session_id == session_id)
+	#filter(SessionDevice.id == Transcript.session_device_id).\
+        #    filter(SessionDevice.session_id == session_id)
     if session_device_id != None:
         query = query.filter(Transcript.session_device_id == session_device_id)
     if start_time > 0:

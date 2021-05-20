@@ -24,6 +24,9 @@ def join_session(message):
         session_model = database.get_sessions(id=room, owner_id=user['id'])
         if session_model:
             join_room(str(room))
+            #logging.info(str(room))
+            #logging.info(str(user))
+            #logging.info(database.get_transcripts(session_id=room))
             emit('transcript_digest', json.dumps([transcript.json() for transcript in database.get_transcripts(session_id=room)]))
             emit('room_joined', json.dumps({'success': True if room else False}))
 
