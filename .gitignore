@@ -171,3 +171,4 @@ google-cloud-key.json
 # Audio Processor data
 *.wav
 audio_processing/recordings/
+audio_processing/speaker_diarization/results/
