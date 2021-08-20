@@ -18,3 +18,4 @@ tqdm==4.46.0
 colorama==0.4.3
 librosa==0.7.2
 plotly==4.1.1
+numba==0.48
