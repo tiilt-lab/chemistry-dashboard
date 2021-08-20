@@ -83,9 +83,7 @@ export class ActiveSessionService {
 
     // Initial digest of transcripts.
     this.socket.on('transcript_digest', e => {
-      console.log('digesting');
       const data = JSON.parse(e);
-      console.log(data);
       const transcripts = [];
       for (const transcript of data) {
           transcripts.push(TranscriptModel.fromJson(transcript));

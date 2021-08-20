@@ -9,6 +9,7 @@ import wrappers
 
 api_routes = Blueprint('device', __name__)
 
+
 @api_routes.route('/api/v1/devices/<int:device_id>', methods=['GET'])
 @wrappers.verify_login(public=True)
 def get_device(device_id, **kwargs):
@@ -17,6 +18,7 @@ def get_device(device_id, **kwargs):
         return json_response(device.json())
     else:
         return json_response({'message': 'Device not found.'}, status=404)
+
 
 @api_routes.route('/api/v1/devices/<int:device_id>', methods=['PUT'])
 @wrappers.verify_login(public=True)
@@ -29,6 +31,7 @@ def update_device(device_id, **kwargs):
     device = database.edit_device(device_id, name=name, connected=connected)
     return json_response(device.json())
 
+
 @api_routes.route('/api/v1/devices', methods=['GET'])
 @wrappers.verify_login(public=True)
 def get_devices(**kwargs):
@@ -36,8 +39,10 @@ def get_devices(**kwargs):
     connected = string_to_bool(request.args.get('connected', None))
     in_use = string_to_bool(request.args.get('inUse', None))
     is_pod = string_to_bool(request.args.get('isPod', None))
-    devices = database.get_devices(archived=archived, connected=connected, in_use=in_use, is_pod=is_pod)
+    devices = database.get_devices(
+        archived=archived, connected=connected, in_use=in_use, is_pod=is_pod)
     return json_response([device.json() for device in devices])
+
 
 @api_routes.route('/api/v1/devices', methods=['POST'])
 @wrappers.verify_login(roles=['admin', 'super'], public=True)
@@ -54,6 +59,7 @@ def add_device(**kwargs):
     else:
         return json_response({'message': 'Pod "{0}" is already associated with this mac address.'.format(device.get_name())}, 400)
 
+
 @api_routes.route('/api/v1/devices/<int:device_id>', methods=['DELETE'])
 @wrappers.verify_login(roles=['admin', 'super'], public=True)
 def remove_device(device_id, **kwargs):
@@ -67,6 +73,7 @@ def remove_device(device_id, **kwargs):
 # The following paths are only
 # possible for pod Devices.
 # ----------------------------
+
 
 @api_routes.route('/api/v1/devices/<int:device_id>/blink', methods=['POST'])
 @wrappers.verify_login()

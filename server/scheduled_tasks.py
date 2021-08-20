@@ -22,7 +22,7 @@ scheduler = BackgroundScheduler({
 	},
 	'apscheduler.job_defaults.coalesce': 'false',
 	'apscheduler.job_defaults.max_instances': '3',
-	'apscheduler.timeznoe': 'UTC',
+	'apscheduler.timezone': 'UTC',
 })
 
 # Verifies if session is still active.
