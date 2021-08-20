@@ -4,7 +4,7 @@ echo "Installing Discussion Capture..."
 
 echo "Updating system packages..."
 sudo apt-get update
-sudo apt-get install python3 python3-pip python3-dev python3-venv python3-tk git nginx
+sudo apt-get install python3 python3-pip python3-dev python3-venv git nginx
 echo "Packages updated."
 
 echo "Installing Redis..."
@@ -23,6 +23,8 @@ cd server
 python3 -m venv ./venv
 source venv/bin/activate
 pip3 install -r requirements.txt
+python3 -m spacy download en
+# pip3 install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-2.2.0/en_core_web_sm-2.2.0.tar.gz --no-deps
 deactivate
 cd ..
 echo "Python3 venv setup complete."

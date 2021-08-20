@@ -23,6 +23,9 @@ Create a database in MySQL
 ```
 mysql -u root -p
 CREATE DATABASE discussion_capture;
+CREATE USER 'vagrant'@'localhost' IDENTIFIED BY 'vagrant';
+GRANT ALL PRIVILEGES ON discussion_capture.* TO 'vagrant'@'localhost';
+FLUSH PRIVILEGES;
 exit
 ```
 
@@ -39,6 +42,7 @@ cd audio_processing
 python3 -m venv ./venv
 source venv/bin/activate
 pip3 install -r requirements.txt
+python3 -m spacy download en
 deactivate
 cd ..
 ```
@@ -51,18 +55,14 @@ NOTE: Perfom from chemistry-dashboard directory.
 ```
 mkdir -p audio_processing/keyword_detector/models
 ```
-Then call the following line and take note of the code that is output ("Code: ####").
+Then call the following line
 ```
-wget --save-cookies cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=0B7XkCwpI5KDYNlNUTTlSS21pQmM' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/Code: \1\n/p'
-```
-Using the code from the previous step, call the following line where "CODE" is the code you received.
-```
-wget --load-cookies cookies.txt 'https://docs.google.com/uc?export=download&confirm='CODE'&id=0B7XkCwpI5KDYNlNUTTlSS21pQmM' -O 'audio_processing/keyword_detector/models/GoogleNews-vectors-negative300.bin.gz'
+cd audio_processing/keyword_detector/models
+wget https://s3.amazonaws.com/dl4j-distribution/GoogleNews-vectors-negative300.bin.gz
 ```
 After the download is complete, execute the following lines.
 ```
-rm cookies.txt
-gunzip audio_processing/keyword_detector/models/GoogleNews-vectors-negative300.bin.gz
+gunzip GoogleNews-vectors-negative300.bin.gz
 ```
 
 Setup Discussion Capture system services.
