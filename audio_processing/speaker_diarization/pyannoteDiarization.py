@@ -10,10 +10,10 @@ import csv
 import time
 
 
-def newSpeakerDiarization(x, sample_width, sample_rate, n_channels, path, chunk_num, chunk_length=120):
+def newSpeakerDiarization(data, sample_width, sample_rate, n_channels, path, chunk_num, chunk_length=120):
     '''
         ARGUMENTS:
-            - x             the audio signal as a byte array (np ndarray)
+            - data             the audio signal as a byte array (np ndarray)
             - sample_width  the sample_width (bytes) of the audio signal
             - sample_rate   the sampling rate (Hz) of the audio signal
             - n_channels     the number of channels of the audio signal
@@ -22,22 +22,22 @@ def newSpeakerDiarization(x, sample_width, sample_rate, n_channels, path, chunk_
                             initiate at 0, pass in returned value afterwards
             - chunk_length   the interval in seconds between each time the audio is processed
     '''
-    # start new diarization file
+    # writes new audio file if it's the first chunk
     if chunk_num == 0:
-        new = AudioSegment(data=x.tobytes(),
+        newAudio = AudioSegment(data=data.tobytes(),
                            sample_width=sample_width,
                            frame_rate=sample_rate,
                            channels=n_channels)
-        new.export(path, format='wav')
+        newAudio.export(path, format='wav')
 
     audio = AudioSegment.from_file(path, format='wav')
 
+    # append new audio to old audio stored on file
     if chunk_num != 0:
-        new = AudioSegment(data=x.tobytes(),
+        new = AudioSegment(data=data.tobytes(),
                            sample_width=audio.sample_width,
                            frame_rate=audio.frame_rate,
                            channels=audio.channels)
-        # append new audio to old audio stored on file
         audio = audio + new
         audio.export(path, format='wav')
 

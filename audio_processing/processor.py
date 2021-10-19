@@ -125,7 +125,6 @@ class AudioProcessor:
                 
                 self.speaker_timings = timings
 
-
             # Get Features
             features = None
             if self.config.features:
