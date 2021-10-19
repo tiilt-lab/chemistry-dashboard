@@ -1,3 +1,4 @@
+from datetime import datetime
 import time
 import logging
 import threading
@@ -6,6 +7,7 @@ from features_detector import features_detector
 from keyword_detector import keyword_detector
 from doa.doa_respeaker_v2_6mic_array import calculateDOA
 from speaker_diarization.pyDiarization import speakerDiarization
+from speaker_diarization.pyannoteDiarization import newSpeakerDiarization
 import numpy as np
 import time
 
@@ -16,7 +18,7 @@ class AudioProcessor:
     def __init__(self, audio_buffer, transcript_queue, config):
         self.audio_buffer = audio_buffer
         self.transcript_queue = transcript_queue
-        self.mt_feats = np.array([])
+        # self.mt_feats = np.array([])
         self.speakers = np.array([])
         self.speaker_timings = []
         self.fs = config.sample_rate
@@ -24,6 +26,8 @@ class AudioProcessor:
         self.running = False
         self.asr_complete = False
         self.running_processes = 0
+        self.chunkNum = 0 # only 0 if new audrio processor instance is init per recording
+        self.filename = datetime.now()
 
     def start(self):
         self.running = True
@@ -45,34 +49,10 @@ class AudioProcessor:
             np.savetxt("/var/lib/chemistry-dashboard/audio_processing/speaker_diarization/results/{}.txt".format(time.strftime("%Y%m%d-%H%M%S")), self.speakers)
 
     def send_speaker_taggings(self):
-        # Parse results from speaker list.
-        self.speaker_timings.sort(key=lambda x: x['start'])
-        start_frame = 0
-        results = []
-        for speaker_timing in self.speaker_timings:
-            samples = self.speakers[start_frame:(start_frame + speaker_timing['f_count'])]
-            timing_length = speaker_timing['end'] - speaker_timing['start']
-            sample_length = timing_length / len(samples)
-            current_speaker = None
-            for i in range(0, len(samples)):
-                if not current_speaker or current_speaker['speaker'] != int(samples[i]):
-                    if current_speaker:
-                        results.append(current_speaker)
-                    current_speaker = {
-                        'speaker': int(samples[i]),
-                        'start': speaker_timing['start'] + (i * sample_length),
-                        'end': speaker_timing['start'] + (i * sample_length)
-                    }
-                current_speaker['end'] += sample_length
-            results.append(current_speaker)
-            start_frame += speaker_timing['f_count']
-
-        # Convert results into expected JSON format.
+        # Convert speakertimings into expected JSON format.
         taggings = {}
-        for i in range(0, len(results)):
-            result = results[i]
-            if i != len(results) - 1:
-                result['end'] = results[i+1]['start']
+        for i in range(0, len(self.speaker_timings)):
+            result = self.speaker_timings[i]
             speaker = 'Speaker {0}'.format(result['speaker'])
             timing = [self.float_to_timestamp(result['start']), self.float_to_timestamp(result['end'])]
             if not speaker in taggings:
@@ -137,17 +117,14 @@ class AudioProcessor:
 
             #Perform Speaker Diarization
             if self.config.diarization:
-                temp_speakers, temp_mt_feats, speaker_class_names, diarization_centers = speakerDiarization(audio_data, self.fs, 0, 1.0, .2, .05, 0, False, self.mt_feats)
-                logging.info(temp_speakers)
-                if not (temp_speakers is None) and len(temp_speakers) > 0: # Will be none if nothing was processed.
-                    previous_speaker_frames = len(self.speakers)
-                    self.speakers = temp_speakers
-                    self.mt_feats = temp_mt_feats
-                    self.speaker_timings.append({
-                        'f_count': len(self.speakers) - previous_speaker_frames,
-                        'start': start_time,
-                        'end': end_time
-                    })
+                # audio_data comes from buffer.extract()
+                sample_width = 2 # not sure if this is true
+                n_channels = 1 # how to decide this?
+                n_speakers, timings, self.chunkNum = newSpeakerDiarization(
+                    audio_data, sample_width, self.fs, n_channels, f'dia_{self.filename}.wav', self.chunkNum)
+                
+                self.speaker_timings = timings
+
 
             # Get Features
             features = None
