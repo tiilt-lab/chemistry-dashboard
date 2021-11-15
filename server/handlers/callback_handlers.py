@@ -58,8 +58,12 @@ def process_tagging_data(session_device_id, tagging_data):
         transcript_models.append(transcript_model)
 
     # Replace the transcripts in the database.
-    database.delete_device_transcripts(session_device_id)
-    for transcript_model in transcript_models:
-    	new_transcript = database.add_transcript(session_device_id, transcript_model['start'], transcript_model['length'], transcript_model['transcript'], '?' in transcript_model['transcript'], -1, 0, 0, 0, 0, 0, transcript_model['tag'])
-    	for keyword_model in transcript_model['keywords']:
-    		database.add_keyword_usage(new_transcript.id, keyword_model['word'], keyword_model['keyword'], keyword_model['similarity'])
+    session_device = database.get_session_devices(id=session_device_id)
+
+    if(session_device.in_session):
+        database.delete_device_transcripts(session_device_id)
+    
+        for transcript_model in transcript_models:
+            new_transcript = database.add_transcript(session_device_id, transcript_model['start'], transcript_model['length'], transcript_model['transcript'], '?' in transcript_model['transcript'], -1, 0, 0, 0, 0, 0, transcript_model['tag'])
+            for keyword_model in transcript_model['keywords']:
+    	        database.add_keyword_usage(new_transcript.id, keyword_model['word'], keyword_model['keyword'], keyword_model['similarity'])
