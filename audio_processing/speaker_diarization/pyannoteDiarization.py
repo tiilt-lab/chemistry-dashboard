@@ -1,3 +1,4 @@
+from os import PRIO_PGRP
 from pyannote.core import Segment
 from pyannote.audio.features import RawAudio
 import torch
@@ -24,20 +25,21 @@ def newSpeakerDiarization(data, sample_width, sample_rate, n_channels, path, chu
     '''
     # writes new audio file if it's the first chunk
     if chunk_num == 0:
-        newAudio = AudioSegment(data=data.tobytes(),
+        newAudio = AudioSegment(data=data,
                            sample_width=sample_width,
                            frame_rate=sample_rate,
                            channels=n_channels)
         newAudio.export(path, format='wav')
-
+        print(f"data_0 :{data}")
     audio = AudioSegment.from_file(path, format='wav')
 
     # append new audio to old audio stored on file
     if chunk_num != 0:
-        new = AudioSegment(data=data.tobytes(),
+        new = AudioSegment(data=data,
                            sample_width=audio.sample_width,
                            frame_rate=audio.frame_rate,
                            channels=audio.channels)
+        print(f"data_1 :{data}")
         audio = audio + new
         audio.export(path, format='wav')
 
@@ -46,7 +48,7 @@ def newSpeakerDiarization(data, sample_width, sample_rate, n_channels, path, chu
 
     # no processing occurs if interval is not reached, audio is stored as wav file
     if duration < chunk_length * chunk_num:
-        print("Need more audio first")
+        print("Need more audio first!")
         return -1, -1, chunk_num
 
     # diarization begins
@@ -63,31 +65,30 @@ def newSpeakerDiarization(data, sample_width, sample_rate, n_channels, path, chu
             'start': turn.start,
             'end': turn.end
         })
-
+    # print(f"timings: {timings[0]}")
     return len(speakers), timings, (chunk_num + 1)  
 
 
 # testing code
 if __name__ == "__main__":
 
-    audio_file = AudioSegment.from_file("ES2004a.wav", format='wav')
-    long_audio = audio_file + audio_file + audio_file + audio_file
-    long_audio.export("68min.wav", format='wav')
+    audio_file = AudioSegment.from_file(
+        "../dia_2021-11-18 23:34:52.959396.wav", format='wav')
 
     chunkNum = 0
     for i in range(1):
         print(f'--ROUND {i}--')
         start_time = time.time()
         # f_name = f'chunks/chunk{i}.wav'
-        f_name = '68min.wav'
+        f_name = "../dia_2021-11-18 23:34:52.959396.wav"
         rate, signal = read(f_name)
-        speakers, timings, chunkNum = newSpeakerDiarization(signal, 2, 16000, 1, 'testAudio.wav', chunkNum, 4080)
+        speakers, timings, chunkNum = newSpeakerDiarization(signal, 2, 16000, 1, 'CANDELETETHIS.wav', chunkNum, 60)
 
         print(f'chunk no.: {chunkNum}\nspeakers: {speakers}\n{timings}\n')
         print("--- %s seconds ---" % (time.time() - start_time))
 
         if speakers != -1:
-            with open('testAudio.csv', 'w') as csvfile:
+            with open('CANDELETE.csv', 'w') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=['speaker', 'start', 'end'])
                 writer.writeheader()
                 for data in timings:

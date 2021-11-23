@@ -51,7 +51,7 @@ class AudioProcessor:
     def send_speaker_taggings(self):
         # Convert speakertimings into expected JSON format.
         taggings = {}
-        for i in range(0, len(self.speaker_timings)):
+        for i in range(len(self.speaker_timings)):
             result = self.speaker_timings[i]
             speaker = 'Speaker {0}'.format(result['speaker'])
             timing = [self.float_to_timestamp(result['start']), self.float_to_timestamp(result['end'])]
@@ -78,10 +78,12 @@ class AudioProcessor:
             else:
                 # Gather audio data related to the transcript.
                 words = transcript_data.alternatives[0].words
+                print(f"transcript audio: data {words[0:10]}")
+
                 start_time = words[0].start_time.seconds + (words[0].start_time.nanos / NANO)
                 end_time = words[-1].end_time.seconds + (words[-1].end_time.nanos / NANO)
                 transcript_audio_data = self.audio_buffer.extract(start_time, end_time)
-
+                
                 # Start processing thread for DoA, keywords, feature, etc.
                 self.running_processes += 1
                 transcript_thread = threading.Thread(target=self.process_transcript, args=(transcript_data, transcript_audio_data, start_time, end_time))
@@ -118,10 +120,10 @@ class AudioProcessor:
             #Perform Speaker Diarization
             if self.config.diarization:
                 # audio_data comes from buffer.extract()
-                sample_width = 2 # not sure if this is true
-                n_channels = 1 # how to decide this?
+                sample_width = 1 # not sure if this is true
+                n_channels = self.config.channels # how to decide this?
                 n_speakers, timings, self.chunkNum = newSpeakerDiarization(
-                    audio_data, sample_width, self.fs, n_channels, f'dia_{self.filename}.wav', self.chunkNum)
+                    audio_data, sample_width, self.fs, n_channels, f'speaker_diarization/results/dia_{self.filename}.wav', self.chunkNum)
                 
                 self.speaker_timings = timings
 
