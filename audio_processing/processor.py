@@ -19,7 +19,7 @@ class AudioProcessor:
         self.mt_feats = np.array([])
         self.speakers = np.array([])
         self.speaker_timings = []
-        self.fs = config.sample_rate
+        self.fs = 16000
         self.config = config
         self.running = False
         self.asr_complete = False
