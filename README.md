@@ -63,7 +63,7 @@ Navigate to the folder you would like to install Discussion Capture and perform 
 Note: During the installtion, you will be asked to input a password for the root user for MySQL.  Please enter "root" as the password.
 ```
 $ cd /var/lib
-$ sudo git clone https://bitbucket.org/acropolis-athens/chemistry-dashboard
+$ sudo https://github.com/tiilt-lab/chemistry-dashboard.git
 $ cd chemistry-dashboard
 $ sudo bash install.sh
 ```
