@@ -67,7 +67,7 @@ gunzip GoogleNews-vectors-negative300.bin.gz
 
 Setup the flask app
 ```
-cd ../../server
+cd ../../../server
 source venv/bin/activate
 export FLASK_APP=discussion_capture.py
 flask db upgrade
