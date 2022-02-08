@@ -65,6 +65,16 @@ After the download is complete, execute the following lines.
 gunzip GoogleNews-vectors-negative300.bin.gz
 ```
 
+Setup the flask app
+```
+cd ../../server
+source venv/bin/activate
+export FLASK_APP=discussion_capture.py
+flask db upgrade
+```
+
+Then setup up the front-end by following the README in the client folder
+
 Setup Discussion Capture system services.
 ```
 sudo cp deploy/discussion_capture.service /lib/systemd/system/discussion_capture.service
