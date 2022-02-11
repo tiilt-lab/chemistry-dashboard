@@ -49,11 +49,8 @@ deactivate
 cd ..
 ```
 
-Install angular and build the UI.
-Follow the the "Setup" section of the README.md in the client folder.
-
 Fetch audio processing service models.
-NOTE: Perfom from chemistry-dashboard directory.
+NOTE: Perfom from chemistry-dashboard root directory.
 ```
 mkdir -p audio_processing/keyword_detector/models
 ```
@@ -75,7 +72,7 @@ export FLASK_APP=discussion_capture.py
 flask db upgrade
 ```
 
-Then setup up the front-end by following the README in the client folder
+Then setup up the front-end by following the README in the client folder, chemistry-dashboard/client
 
 Setup Discussion Capture system services.
 ```
