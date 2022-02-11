@@ -41,6 +41,7 @@ cd ..
 cd audio_processing
 python3 -m venv ./venv
 source venv/bin/activate
+pip3 insatll wheel
 pip3 install -r requirements.txt
 python3 -m spacy download en
 deactivate
