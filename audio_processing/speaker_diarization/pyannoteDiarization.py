@@ -24,13 +24,17 @@ def newSpeakerDiarization(data, sample_width, sample_rate, n_channels, path, chu
             - chunk_length   the interval in seconds between each time the audio is processed
     '''
     # writes new audio file if it's the first chunk
+    print(f"stats: {sample_rate} {sample_width} {n_channels}")
+    sample_rate = 16000
+    n_channels = 2
+    chunk_length = 10
     if chunk_num == 0:
         newAudio = AudioSegment(data=data,
                            sample_width=sample_width,
                            frame_rate=sample_rate,
                            channels=n_channels)
         newAudio.export(path, format='wav')
-        print(f"data_0 :{data}")
+        # print(f"data_0 :{data}")
     audio = AudioSegment.from_file(path, format='wav')
 
     # append new audio to old audio stored on file
@@ -39,12 +43,12 @@ def newSpeakerDiarization(data, sample_width, sample_rate, n_channels, path, chu
                            sample_width=audio.sample_width,
                            frame_rate=audio.frame_rate,
                            channels=audio.channels)
-        print(f"data_1 :{data}")
+        # print(f"data_1 :{data}")
         audio = audio + new
         audio.export(path, format='wav')
 
     chunk_num = 1 if chunk_num == 0 else chunk_num
-    duration = audio.duration_seconds
+    duration = audio.duration_seconds # check this to be sure
 
     # no processing occurs if interval is not reached, audio is stored as wav file
     if duration < chunk_length * chunk_num:
@@ -61,13 +65,20 @@ def newSpeakerDiarization(data, sample_width, sample_rate, n_channels, path, chu
     for turn, _, speaker in diarization.itertracks(yield_label=True):
         speakers.add(speaker)   # speakers represented as 'A','B',...,'Z','AA','AB',...
         timings.append({
-            'speaker ': speaker,
+            'speaker': speaker,
             'start': turn.start,
             'end': turn.end
         })
-    # print(f"timings: {timings[0]}")
-    return len(speakers), timings, (chunk_num + 1)  
+    if len(timings) > 0:
+        print(f"timings: {timings[-1]}")
+    if speakers != -1:
+        with open('speaker_diarization/results/speaker_timings.csv', 'w') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=['speaker', 'start', 'end'])
+            writer.writeheader()
+            for data in timings:
+                writer.writerow(data)
 
+    return len(speakers), timings, (chunk_num + 1)  
 
 # testing code
 if __name__ == "__main__":

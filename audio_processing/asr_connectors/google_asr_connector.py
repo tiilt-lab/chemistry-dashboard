@@ -56,10 +56,10 @@ class GoogleASR():
         for response in responses:
             if not response.results:
                 continue
-
             result = response.results[0]
             if not result.alternatives:
                 continue
+            logging.info(f"ASR received {len(result.alternatives[0].words)} words ")
             if result.is_final and len(result.alternatives[0].words) > 0:
                 end_time = result.result_end_time
                 end_time.seconds, end_time.nanos = self.adjust_time(end_time.seconds, end_time.nanos, audio_start_time)

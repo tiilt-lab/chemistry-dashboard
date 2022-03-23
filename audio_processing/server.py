@@ -108,9 +108,10 @@ class ServerProtocol(WebSocketServerProtocol):
             # Convert all audio to pcm_i16le
             data = self.reformat_data(data)
             data = self.resample_data(data)
-            self.audio_buffer.append(data)
+            
             asr_data = self.reduce_channels(1, data)
             self.asr_audio_queue.put(asr_data)
+            self.audio_buffer.append(asr_data)
 
             # Save audio data.
             if cf.record_reduced():
@@ -136,6 +137,7 @@ class ServerProtocol(WebSocketServerProtocol):
             out_data = np.frombuffer(in_data, np.int16, -1)
             secs = len(out_data) / self.config.sample_rate
             samps = int(secs * 16000)
+            # self.config.sample_rate = 16000
             return scipy.signal.resample(out_data, samps).astype(np.int16, copy=False).tobytes()
         else:
             return in_data

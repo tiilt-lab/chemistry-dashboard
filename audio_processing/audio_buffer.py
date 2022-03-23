@@ -8,9 +8,9 @@ class AudioBuffer:
         self.buffer_start = 0
         self.buffer_end = 0
         self.config = config
-        self.sample_rate = self.config.sample_rate
+        self.sample_rate = 16000 #self.config.sample_rate
         self.channels = self.config.channels
-        self.depth = self.config.depth
+        self.depth = 2 # self.config.depth
         self.lock = threading.Lock()
 
     def append(self, data):
@@ -22,9 +22,17 @@ class AudioBuffer:
                 extra_data = int(extra_time * self.sample_rate) * (self.channels * self.depth)
                 self.audio_buffer = self.audio_buffer[extra_data:]
                 self.buffer_start += extra_time
+            # print(f"sr: {self.sample_rate}")
+                
 
     def extract(self, start_time, end_time):
         with self.lock:
             start_byte = int((start_time - self.buffer_start) * self.sample_rate) * (self.channels * self.depth)
             end_byte = int((end_time - self.buffer_start) * self.sample_rate) * (self.channels * self.depth)
+            print(f"buffer start/end: {self.buffer_start}/{self.buffer_end}")
+            print(f"audio buffer start/end time: {start_time}/{end_time}")
+            print(f"audio buffer len: {len(self.audio_buffer)}")
+            print(f"audio buffer start/end byte: {start_byte}/{end_byte}")
+            print(f"audio buffer extracted len: {len(self.audio_buffer[start_byte: end_byte])}")
             return self.audio_buffer[start_byte: end_byte]
+            # return self.audio_buffer

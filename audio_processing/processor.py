@@ -27,7 +27,7 @@ class AudioProcessor:
         self.asr_complete = False
         self.running_processes = 0
         self.chunkNum = 0 # only 0 if new audrio processor instance is init per recording
-        self.filename = datetime.now()
+        self.filename = datetime.now().date() # diarization requires filename to be constant over 1 session
 
     def start(self):
         self.running = True
@@ -78,12 +78,15 @@ class AudioProcessor:
             else:
                 # Gather audio data related to the transcript.
                 words = transcript_data.alternatives[0].words
-                print(f"transcript audio: data {words[0:10]}")
+                last_word = words[-1].word
+                print(f"\nlast word: {last_word}")
 
                 start_time = words[0].start_time.seconds + (words[0].start_time.nanos / NANO)
                 end_time = words[-1].end_time.seconds + (words[-1].end_time.nanos / NANO)
                 transcript_audio_data = self.audio_buffer.extract(start_time, end_time)
                 
+                print(f"audio data in process: {transcript_audio_data[0:10]}")
+
                 # Start processing thread for DoA, keywords, feature, etc.
                 self.running_processes += 1
                 transcript_thread = threading.Thread(target=self.process_transcript, args=(transcript_data, transcript_audio_data, start_time, end_time))
@@ -123,7 +126,7 @@ class AudioProcessor:
                 sample_width = 1 # not sure if this is true
                 n_channels = self.config.channels # how to decide this?
                 n_speakers, timings, self.chunkNum = newSpeakerDiarization(
-                    audio_data, sample_width, self.fs, n_channels, f'speaker_diarization/results/dia_{self.filename}.wav', self.chunkNum)
+                    audio_data, sample_width, self.fs, n_channels, f'speaker_diarization/results/dia_{self.filename}.wav', self.chunkNum, 10)
                 
                 self.speaker_timings = timings
 
