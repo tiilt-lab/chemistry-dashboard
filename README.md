@@ -29,6 +29,15 @@ FLUSH PRIVILEGES;
 exit
 ```
 
+Go to var/lib foloder and pull the git repo
+```
+cd /var/lib/
+sudo git clone https://github.com/tiilt-lab/chemistry-dashboard.git
+chmod 777 -R chemistry-dashboard
+cd chemistry-dashboard
+```
+
+
 Create python3 virtual environment and install packages.
 ```
 cd server
