@@ -3,7 +3,7 @@
 Update system packages
 ```
 sudo apt-get update
-sudo apt-get install python3 python3-pip python3-dev python3-venv python3-tk git sqlite nginx pkg-config libfreetype6-dev libsndfile1
+sudo apt-get install python python3 python3-pip python3-dev python3-venv python3-tk git sqlite nginx pkg-config libfreetype6-dev libsndfile1
 ```
 
 Install Redis
@@ -21,7 +21,7 @@ sudo systemctl enable mysql
 
 Create a database in MySQL
 ```
-mysql -u root -p
+sudo mysql -u root -p
 CREATE DATABASE discussion_capture;
 CREATE USER 'vagrant'@'localhost' IDENTIFIED BY 'vagrant';
 GRANT ALL PRIVILEGES ON discussion_capture.* TO 'vagrant'@'localhost';
