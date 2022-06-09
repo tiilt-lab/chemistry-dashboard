@@ -18,13 +18,20 @@ function LoginPage() {
 
   const checkLogin = ()=>{
     if(document.getElementById("username").value.trim() === ''){
-        setMessage("Please Enter Your Username") 
+        setMessage("Please Enter Your Username") ;
         setShow(true); 
-        console.log('i am here');
-    }
-    // return
+        document.getElementById("username").focus();
+    }else if(document.getElementById("password").value.trim() === ''){
+      setMessage("Please Enter Your Password"); 
+      setShow(true); 
+      document.getElementById("password").focus();
+  } 
+
   }
 
+  const closeDialogBox = ()=>{
+    setShow(false);
+  }
   return (
     <div className="container">
 
@@ -39,7 +46,11 @@ function LoginPage() {
         Sign In
       </button>
 
-      <DialogBox heading={dialogheader} message={message} show={isShow} />
+      <DialogBox 
+      heading={dialogheader} 
+      message={message} 
+      show={isShow} 
+      closedialog={closeDialogBox} />
     </div >
   )
 }

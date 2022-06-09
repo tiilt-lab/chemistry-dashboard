@@ -14,7 +14,7 @@ function DialogBox(props){
   <div className="add-dialog">
       <div className="dialog-heading">{props.heading}</div>
       {props.message}
-     <button className="cancel-button" onClick={props.closeDialog}>Close</button>
+     <button className="cancel-button" onClick={props.closedialog}>Close</button>
    </div>
   </div>
 </div>
