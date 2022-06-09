@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 52.5 (67469) - http://www.bohemiancoding.com/sketch -->
+    <title>atom/icon/icon-forward</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <linearGradient x1="-33.2875%" y1="-94.4335938%" x2="133.289583%" y2="167.96875%" id="linearGradient-1">
+            <stop stop-color="#764BFF" offset="0%"></stop>
+            <stop stop-color="#7BB7F1" offset="100%"></stop>
+        </linearGradient>
+    </defs>
+    <g id="atom/icon/icon-forward" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M17,4 L13,4 L11,4 L7,4 L5.997,4 C5.446,4 5,4.446 5,4.997 L5,6 L5,7 C5,7.552 5.448,8 6,8 C6.552,8 7,7.552 7,7 L7,6 L11,6 L11,18 L8,18 C7.448,18 7,18.448 7,19 C7,19.552 7.448,20 8,20 L11,20 L13,20 L16,20 C16.552,20 17,19.552 17,19 C17,18.448 16.552,18 16,18 L13,18 L13,6 L17,6 L17,7 C17,7.552 17.448,8 18,8 C18.552,8 19,7.552 19,7 L19,6 L19,4.996 C19,4.446 18.554,4 18.004,4 L17,4 Z" id="Fill-1" fill="url(#linearGradient-1)"></path>
+    </g>
+</svg>

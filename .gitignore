@@ -172,3 +172,4 @@ google-cloud-key.json
 *.wav
 audio_processing/recordings/
 audio_processing/speaker_diarization/results/
+/frontend/.gitignore

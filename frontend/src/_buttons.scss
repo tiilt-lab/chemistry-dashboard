@@ -1,0 +1,202 @@
+.medium-button {
+  width: 374px !important;
+  margin: 20px 0px !important;
+}
+
+@mixin red-button1 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 48px;
+    border-radius: 26px;
+    background-color: $solid-red;
+    &:hover {
+        cursor: pointer;
+    }
+}
+
+@mixin base-button {
+  width: 100%;
+  text-align: center;
+  border-radius: 26px;
+  border: none;
+  padding: $inset-squish-M2;
+  box-sizing: border-box;
+  cursor: pointer;
+  box-shadow: 0 0 8px 0 $shadow-blue-alpha, 0 8px 8px -4px $shadow-blue-alpha;
+  transition: box-shadow 0.2s ease-in-out;
+  @include text-subhead($text-white);
+  &:focus {
+    outline: 0;
+  }
+
+  &:hover {
+    box-shadow: 0 0 2px 0 $shadow-blue-alpha, 0 12px 12px -4px $shadow-blue-alpha;
+  }
+
+  &:active {
+    box-shadow: 0 0 2px 0 rgba(57,57,128,0.08), 0 6px 6px -4px rgba(57,57,128,0.24);
+  }
+}
+
+.basic-button {
+  @include base-button;
+  background: $gradient-blue;
+}
+
+.delete-button {
+  @include base-button;
+  background: $solid-red;
+}
+
+.cancel-button {
+  width: 100%;
+  border-radius: 26px;
+  border: none;
+  background: transparent;
+  box-sizing: border-box;
+  padding: $inset-squish-M2;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease-in-out;
+  @include text-subhead($text-light-blue);
+  &:focus {
+    outline: 0;
+  }
+}
+
+.pod-button {
+  border-radius: 18px;
+  border: none;
+  fill: $solid-blue;
+  background: transparent;
+  box-sizing: border-box;
+  padding: $inset-squish-M2;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease-in-out;
+  @include text-subhead($text-light-blue);
+  &:focus {
+    outline: 0;
+  }
+
+  .light-svg {
+    margin-top: 5px;
+  }
+}
+
+.pod-overview-button {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  @include text-headline($text-black);
+  width: 150px;
+  height: 150px;
+  background-color: $solid-white;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  margin-left: 8px;
+  margin-right: 8px;
+  box-shadow: 0 0 2px 0 $shadow-blue-alpha, 0 8px 8px -4px $shadow-blue-alpha;
+  transition: box-shadow 0.2s ease-in-out;
+  &:hover {
+      cursor: pointer;
+      background-color: $solid-ultra-white;
+      box-shadow: 0 0 2px 0 $shadow-blue-alpha, 0 12px 12px -3px $shadow-blue-alpha;
+  }
+  & *::selection {
+      background: none;
+  }
+
+  .pod-overview-icon {
+    margin-top: 15px;
+  }
+}
+
+.svgpulse {
+  animation: svgpulse 1s ease-out infinite
+}
+
+
+@-webkit-keyframes svgpulse {
+  0% {
+      stroke-width: 0;
+      r: 31.5;
+  }
+  15% {
+      stroke-width: 0;
+      r: 31.5;
+  }
+  100% {
+      stroke-width: 8;
+      r: 35.5
+  }
+}
+
+@keyframes svgpulse {
+  0% {
+      stroke-width: 0;
+      r: 31.5;
+  }
+  15% {
+      stroke-width: 0;
+      r: 31.5;
+  }
+  100% {
+      stroke-width: 8;
+      r: 35.5
+  }
+}
+
+
+// Checkbox
+
+.dc-checkbox {
+  display: block;
+  position: relative;
+  margin-bottom: 12px;
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.dc-checkbox input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.checkmark {
+  position: absolute;
+  right: 0;
+  height: 25px;
+  width: 25px;
+  background-color: #eee;
+  border-radius: 50%;
+}
+
+.dc-checkbox input:checked ~ .checkmark {
+  background-color: $solid-blue;
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+.dc-checkbox input:checked ~ .checkmark:after {
+  display: block;
+}
+
+.dc-checkbox .checkmark:after {
+ 	top: 9px;
+	left: 9px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: white;
+}
