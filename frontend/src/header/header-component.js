@@ -12,10 +12,9 @@ function CenterText(props){
    
 function Appheader(props){
     
-
     return(
     <div className="header-grid">
-        <img  onClick={props.nav} alt="mee" className="left" src={backicon}/>
+        <img  onClick={props.nav} alt="back" className="left" src={backicon}/>
         <CenterText title={props.title}/>
     </div>
     )

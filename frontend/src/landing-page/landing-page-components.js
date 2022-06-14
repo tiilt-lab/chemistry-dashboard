@@ -1,13 +1,12 @@
 import {useNavigate} from 'react-router-dom'
 import './landing-page-css.scss';
-import {Instruction} from '../utility_components/utilities'
-import {updateTime} from './landing-page-logic'
+import {Instruction} from '../utilities/utility-components'
+import { updateTime } from '../utilities/helper-functions';
 
 
 const timeOfDay = updateTime();
   
 function Greeting(){
-  
   return <div className="greeting">Good {timeOfDay}!</div>
 }
 

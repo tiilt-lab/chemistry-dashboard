@@ -1,4 +1,3 @@
-
 const updateTime = () =>{
     const today = new Date();
     const curHr = today.getHours();

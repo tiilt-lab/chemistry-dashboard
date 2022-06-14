@@ -1,19 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import {Routes,Route, BrowserRouter} from 'react-router-dom'
-//import './index.css';
-import LandingPageComponent from './landing-page/landing-page-components';
 import reportWebVitals from './reportWebVitals';
-import {LoginPage} from './login/login-component'
+import { PageRouter } from './routes/routes-pages';
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <BrowserRouter> 
-   <Routes>
-    <Route path="/" element={<LandingPageComponent/>}/>
-    <Route path="/login" element={<LoginPage/>}/>
-    </Routes>  
-    </BrowserRouter> 
+     <PageRouter/>
   </React.StrictMode>
 );
 
