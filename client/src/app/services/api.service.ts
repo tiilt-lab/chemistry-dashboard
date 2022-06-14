@@ -142,6 +142,7 @@ export class ApiService {
         )
         .subscribe(
           (response) => {
+            //console.log("i came here 222")
             obs.next(response);
             obs.complete();
           },
