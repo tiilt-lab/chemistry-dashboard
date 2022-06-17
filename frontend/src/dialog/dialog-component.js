@@ -11,7 +11,7 @@ function DialogBox(props){
   return (
     <div className="dialog-background">
   <div className="dialog-container">
-  <div className="add-dialog">
+  <div className={props.itsclass}>
       <div className="dialog-heading">{props.heading}</div>
       {props.message}
      <button className="cancel-button" onClick={props.closedialog}>Close</button>
@@ -21,4 +21,19 @@ function DialogBox(props){
   )
 }
 
-export {DialogBox}
+function WaitingDialog(props){
+  if(!props.show){
+    return(
+      <></>
+    )
+  }
+
+  return(
+    <div className={props.itsclass}>
+        <div className="dialog-heading">{props.heading}</div>
+        {props.message}
+  </div >
+  )
+}
+
+export {DialogBox,WaitingDialog}

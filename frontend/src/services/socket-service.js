@@ -1,14 +1,11 @@
-import { Injectable } from '@angular/core';
-import { ApiService } from './api.service';
-import * as SocketIO from 'socket.io-client';
+import * as SocketIO from  'socket.io-client';
 
-@Injectable()
 export class SocketService {
 
-  constructor(private api: ApiService) { }
+  //api = new ApiService()
 
   // Creates socket connection to server.
-  createSocket(endpoint: string, room: string = null) {
+  createSocket(endpoint, room = null) {
     const socket = SocketIO.connect(window.location.protocol + '//' + window.location.hostname + '/' + endpoint);
     socket.on('connect', e => {
       if (room != null) {

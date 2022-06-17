@@ -35,7 +35,7 @@ const navigate = useNavigate();
 
   <button 
   className="basic-button medium-button" 
-  //onClick = {()=> navigate('/join')} 
+    onClick = {()=> navigate('/join')} 
   > 
   Join Discussion
   </button >
