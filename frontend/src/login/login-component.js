@@ -1,9 +1,8 @@
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Instruction } from '../utilities/utility-components';
 import { Appheader } from '../header/header-component';
 import { DialogBox } from '../dialog/dialog-component';
-//import { useLogin } from '../myhooks/custom-hooks.js';
 import { AuthService } from '../services/auth-service';
 import './login-component.scss';
 
@@ -11,9 +10,21 @@ function LoginPage() {
   const navigate = useNavigate();
   const [isShow, setShow] = useState(false);
   const [message, setMessage] = useState('');
-  //const [loginpara, setLoginPara] = useState(null);
+  const [loginStatus, setLoginStatus] = useState(0)
 
-  //const [error, value] = useLogin("api/v1/login", 'POST', loginpara, true);
+  useEffect(() => {
+    if (loginStatus.status === 200) {
+      return navigate('/home')
+    } else if (loginStatus.status === 400) {
+      setMessage(loginStatus.message);
+      setShow(true);
+    } else if (loginStatus.status === 401) {
+      return navigate('/login')
+    } else if (loginStatus.status === 600) {
+      setMessage("Inavlid Username or Password");
+      setShow(true);
+    }
+  }, [loginStatus, navigate])
 
   const dialogheader = 'Login Failed';
 
@@ -21,8 +32,10 @@ function LoginPage() {
     return navigate(-1)
   }
 
-  //console.log(value)
-  //console.log(error)
+  const closeDialogBox = () => {
+    setShow(false);
+  }
+
   const checkLogin = () => {
     const username = document.getElementById("username").value.trim();
     const password = document.getElementById("password").value.trim();
@@ -35,30 +48,11 @@ function LoginPage() {
       setShow(true);
       document.getElementById("password").focus();
     } else {
-
-      // setLoginPara({
-      //   email: username,
-      //   password: password,
-      // });
-
-      new AuthService().login(username,password).subscribe(
-        (value)=>{ 
-          console.log("i am here 1")
-          console.log(value)
-          return navigate('/home')},
-        (error)=>{
-          console.log("i am here 2")
-          console.log(error.status)
-          console.log(error.message)
-          return navigate('/login')}
-      )
+      new AuthService().login(username, password, setLoginStatus);
     }
 
   }
 
-  const closeDialogBox = () => {
-    setShow(false);
-  }
   return (
     <div className="container">
 
@@ -74,6 +68,7 @@ function LoginPage() {
       </button>
 
       <DialogBox
+        itsclass={"add-dialog"}
         heading={dialogheader}
         message={message}
         show={isShow}

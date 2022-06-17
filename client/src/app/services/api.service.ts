@@ -142,14 +142,19 @@ export class ApiService {
         )
         .subscribe(
           (response) => {
-            //console.log("i came here 222")
+            console.log("i came here 222")
+            console.log(response)
             obs.next(response);
             obs.complete();
           },
           (error) => {
             if (error.status === 401) {
+              console.log("i came here 333")
+              console.log(error)
               this.router.navigateByUrl("/login");
             }
+            console.log("i came here 444")
+            console.log(error)
             obs.error(error);
           }
         );

@@ -52,14 +52,10 @@ function HomeScreen() {
   }
 
   const logout = () => {
-    new AuthService().logout().subscribe(
-      result => {
-       return navigate('/login');
-      },
-      error => {
-        return navigate('/login');
-      }
-    );
+    const ret = new AuthService().logout();
+    ret.then(
+      (response) => { return navigate('/login');},
+      (apiError) => { return navigate('/login');})
   }
 
   return (
@@ -74,12 +70,12 @@ function HomeScreen() {
 
       <div className="home-button" onClick={navigateToHelp}>
         <img alt="help" src={question} className="icon" />
-        <div class="button-text">Help</div>
+        <div className="button-text">Help</div>
       </div>
 
       <div className="home-button" onClick={logout}>
         <img alt="sign out" src={logouticon} className="icon" />
-        <div class="button-text">Sign Out</div>
+        <div className="button-text">Sign Out</div>
       </div>
     </div >
   )

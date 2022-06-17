@@ -21,9 +21,6 @@ export class AuthService {
       password: password,
     };
     const retVal = this.api.post("api/v1/login", body);
-    // console.log("i am here 1")
-    // console.log(retVal)
-    // console.log("i am here 2")
     return retVal.map((response) => {
       console.log(response);
       this._user = UserModel.fromJson(response.json());

@@ -1,22 +1,37 @@
 
-import { ApiService } from "./api.service";
+import { ApiService } from "./api-service";
 import { UserModel } from "../models/user";
 class AuthService{
   
-  login(email, password) {
+  login(email, password, setLoginStatus) {
     const body = {
       email: email,
       password: password,
     };
-    return new ApiService().httpRequestCall("api/v1/login",'POST', body,true);
-  }
+    const fetchRes = new ApiService().httpRequestCall("api/v1/login",'POST', body);
+    fetchRes.then(
+      (response) => { 
+        setLoginStatus(response);
+    },
+    (apiError) =>{ 
+      apiError.status = 600
+      setLoginStatus(apiError);
+    })}
 
   logout() {
-    return  new ApiService().httpRequestCall("api/v1/logout",'POST', {},false);
+    return  new ApiService().httpRequestCall("api/v1/logout",'POST', {});
   }
 
-  me() {
-    return new ApiService().httpRequestCall("api/v1/me",'GET', {},true);
+  me(stateSetter) {
+    const fetchRes = new ApiService().httpRequestCall("api/v1/me",'GET', {});
+    fetchRes.then(
+      (response) => { 
+        stateSetter(response);
+    },
+    (apiError) =>{ 
+      apiError.status = 600
+      stateSetter(apiError);
+    })
   }
 
   changePassword(currentPassword,newPassword,confirmPassword) {
