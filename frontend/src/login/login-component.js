@@ -29,7 +29,7 @@ function LoginPage() {
   const dialogheader = 'Login Failed';
 
   const backClick = () => {
-    return navigate(-1)
+    return navigate('/')
   }
 
   const closeDialogBox = () => {
@@ -56,7 +56,12 @@ function LoginPage() {
   return (
     <div className="container">
 
-      <Appheader title="Sign In" nav={backClick} />
+      <Appheader 
+          title="Sign In" 
+          leftText = {false}
+          rightText = {""}
+          rightEnabled = {false}
+          nav={backClick} />
       <br></br>
       <Instruction instructions="Please enter your username and password." />
 

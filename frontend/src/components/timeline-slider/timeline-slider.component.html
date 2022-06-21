@@ -1,0 +1,8 @@
+<div class="timeline">
+  <div class="timeline-background"></div>
+  <div class="timeline-bar" (mousedown)="grabBar($event)" (touchstart)="grabBar($event)" [style.left]="barLeft" [style.width]="barWidth"></div>
+  <div class="timeline-handle" (mousedown)="grabHandle(0, $event)" (touchstart)="grabHandle(0, $event)" [style.left]="handlePos(0)"></div>
+  <div class="timeline-handle" (mousedown)="grabHandle(1, $event)" (touchstart)="grabHandle(1, $event)" [style.left]="handlePos(1)"></div>
+  <div class="timeline-text" style="left:0px;top:50px;">{{leftText}}</div>
+  <div class="timeline-text" style="right:0px;top:50px;">{{rightText}}</div>
+</div>

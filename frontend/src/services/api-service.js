@@ -50,9 +50,34 @@ export class ApiService {
     })
   }
 
+  delete(apipath, headers){
+    return fetch(this.getEndpoint() + apipath, {
+      method: 'DELETE', // *GET, POST, PUT, DELETE, etc.
+      mode: 'cors', // no-cors, *cors, same-origin
+      //cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
+      credentials: 'include', // include, *same-origin, omit
+      headers: this._generateHeaders(headers),
+      redirect: 'follow', // manual, *follow, error
+      //referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+    })
+  }
+
   post(apipath, data,headers){
     return fetch(this.getEndpoint() + apipath, {
       method: 'POST', // *GET, POST, PUT, DELETE, etc.
+      mode: 'cors', // no-cors, *cors, same-origin
+      //cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
+      credentials: 'include', // include, *same-origin, omit
+      headers: this._generateHeaders(headers),
+      redirect: 'follow', // manual, *follow, error
+      //referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+      body: JSON.stringify(data) // body data type must match "Content-Type" header
+    })
+  }
+
+  put(apipath, data,headers){
+    return fetch(this.getEndpoint() + apipath, {
+      method: 'PUT', // *GET, POST, PUT, DELETE, etc.
       mode: 'cors', // no-cors, *cors, same-origin
       //cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
       credentials: 'include', // include, *same-origin, omit
@@ -69,11 +94,11 @@ export class ApiService {
       if(type === 'POST'){
         fetchcall = this.post(apipath,data,{})
       }else if(type === 'PUT'){
-        fetchcall = this.post(apipath,data,{})
+        fetchcall = this.put(apipath,data,{})
       }else if (type === 'GET'){
         fetchcall = this.get(apipath,{})
       }else if (type === 'DELETE'){
-        fetchcall = this.get(apipath,{})
+        fetchcall = this.delete(apipath,{})
       }
       return fetchcall;
   }
@@ -84,11 +109,11 @@ export class ApiService {
       if(type === 'POST'){
         fetchcall = this.post(apipath,data,headers)
       }else if(type === 'PUT'){
-        fetchcall = this.post(apipath,data,headers)
+        fetchcall = this.put(apipath,data,headers)
       }else if (type === 'GET'){
         fetchcall = this.get(apipath,headers)
       }else if (type === 'DELETE'){
-        fetchcall = this.get(apipath,headers)
+        fetchcall = this.delete(apipath,headers)
       }
       return fetchcall;
   }
