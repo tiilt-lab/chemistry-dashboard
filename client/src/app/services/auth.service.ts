@@ -22,7 +22,6 @@ export class AuthService {
     };
     const retVal = this.api.post("api/v1/login", body);
     return retVal.map((response) => {
-      console.log(response);
       this._user = UserModel.fromJson(response.json());
       return this._user;
     });

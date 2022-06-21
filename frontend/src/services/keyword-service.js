@@ -1,7 +1,4 @@
 import { ApiService } from "./api-service";
-import { KeywordListModel } from "../models/keyword-list";
-import { KeywordListItemModel } from "../models/keyword-list-item";
-import "rxjs/add/operator/map";
 
 export class KeywordService {
    api = new ApiService() 

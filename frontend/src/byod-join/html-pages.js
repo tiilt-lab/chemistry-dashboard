@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Appheader } from '../header/header-component';
 import { Instruction } from '../utilities/utility-components'
-import { DialogBox, WaitingDialog } from "../dialog/dialog-component";
+import { DialogBox, WaitingDialog,DialogBoxTwoOption } from "../dialog/dialog-component";
 import './byod-join-component.scss';
 
 function GlowSVG(props) {
@@ -71,21 +71,7 @@ function LandingPage(props) {
 }
 
 
-function StopRecordingDialogBox(props) {
-    
-    if (!props.show) {
-        return (<></>)
-    }
 
-    return (
-        <div className="dialog-window" >
-            <div className="dialog-heading">Stop Recording</div>
-            <div className="dialog-body">Leaving this page will stop recording. Are you sure you want to continue?</div>
-            <button className="delete-button" onClick={props.navigateToLogin} > Yes</button >
-            <button className="cancel-button" onClick={props.closeDialog} > Cancel</button >
-        </div >
-    )
-}
 
 function DialogBoxes(props) {
     if (!props.globalshow) {
@@ -94,10 +80,12 @@ function DialogBoxes(props) {
 
     return (
         <>
-            <StopRecordingDialogBox
+            <DialogBoxTwoOption
                 show={props.specificshow === 'NavGuard'}
-                closeDialog={props.closeDialog}
-                navigateToLogin = {props.navigateToLogin}
+                heading = {"Stop Recording"}
+                body = {"Leaving this page will stop recording. Are you sure you want to continue?"}
+                deletebuttonaction={props.navigateToLogin}
+                cancelbuttonaction = {props.closeDialog}
             />
 
             <DialogBox
@@ -105,14 +93,14 @@ function DialogBoxes(props) {
                 heading={'Failed to Join'}
                 message={props.displayText}
                 show={props.specificshow === 'JoinError'}
-                closedialog={props.closeDialogBox} />
+                closedialog={props.closeDialog} />
 
             <DialogBox
                 itsclass={"add-dialog"}
                 heading={'Discussion Closed'}
                 message={props.displayText}
                 show={props.specificshow === 'ClosedSession'}
-                closedialog={props.closeDialogBox} />
+                closedialog={props.closeDialog} />
 
             <WaitingDialog
                 itsclass={"add-dialog"}
@@ -127,11 +115,16 @@ function DialogBoxes(props) {
 function ByodJoinPage(props) {
 
     const backClick = () => {
-        return props.navigate(-1)
+        return props.navigate('/')
     }
     return (
         <div className="container">
-            <Appheader title={props.pageTitle} nav={backClick} />
+            <Appheader 
+                title={props.pageTitle}
+                leftText = {false}
+                rightText = {""}
+                rightEnabled = {false}
+                nav={backClick} />
             <LandingPage
                 connected={props.connected}
                 verifyInputAndAudio={props.verifyInputAndAudio}

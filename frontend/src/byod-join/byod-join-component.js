@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SessionService } from '../services/session-service';
-import { ByodJoinPage } from './pages';
+import { ByodJoinPage } from './html-pages';
 import {SessionModel} from '../models/session';
 import {SessionDeviceModel} from '../models/session-device';
 import {ApiService} from '../services/api-service';
@@ -109,6 +109,7 @@ function JoinPage() {
             (response) => {
                 if (response.status === 200) {
                     const json = response.json();
+                    console.log(json,"se first")
                     json['session'] = SessionModel.fromJson(json['session']);
                     json['session_device'] = SessionDeviceModel.fromJson(json['session_device']);
 
