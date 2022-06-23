@@ -8,8 +8,8 @@
 .keyword-list-button {
   grid-template-columns: auto min-content;
   grid-template-areas:
-  'left-top right'
-  'left-bottom right';
+  "left-top right"
+  "left-bottom right";
 
   position: relative;
   display: grid;

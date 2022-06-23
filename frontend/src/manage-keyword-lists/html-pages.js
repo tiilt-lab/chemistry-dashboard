@@ -20,18 +20,6 @@ function KeywordListPage(props) {
             )
         }
     }
-    const twoOptionDialogBox = ()=>{
-        if (props.deleteDialogIsOpen) {
-        return (       
-            <div className="dialog-window" >
-                <div className="dialog-heading">Delete Keyword List</div>
-                <div className="dialog-body">Are you sure you want to permanently delete this keyword list?</div>
-                <button className="delete-button" onClick={props.confirmDeleteKeywordList} > Yes</button >
-                <button className="cancel-button" onClick={props.closeDeleteDialog} > Cancel</button >
-            </div>
-        )
-        }
-    }
 
     const displayKeywordList = () => {
         let comps = []
@@ -66,7 +54,7 @@ function KeywordListPage(props) {
                     rightText={""}
                     rightEnabled={false}
                     nav={props.navigate} />
-                <div className="list-container">
+                <div className="list-container" >
                     {showLoading()}
                     {noKeywordlist()}
                     {displayKeywordList()}
