@@ -1,0 +1,45 @@
+@import '../../design-system';
+
+.menu-container {
+  position: relative;
+}
+
+.dropdown-menu-container {
+  position: absolute;
+  background-color: $solid-ultra-white;
+  right: 0px;
+  width: 200px;
+  border-radius: 4px;
+  box-shadow: 0 0 2px 0 $shadow-blue-alpha, 0 8px 8px -4px $shadow-blue-alpha;
+  z-index: 99;
+  overflow: hidden;
+
+  .menu-item {
+    padding: 0px 10px;
+    line-height: 40px;
+    user-select: none;
+    display: block;
+    cursor: pointer;
+
+    &:active {
+      background-color: $text-light-blue;
+    }
+
+    &:hover {
+      background-color: $solid-light-grey;
+    }
+  }
+
+  .red {
+    color: $text-red;
+  }
+}
+
+.menu-button {
+  background-color: transparent;
+  border: none;
+  outline: none;
+  padding: 15px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
