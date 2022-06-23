@@ -128,7 +128,6 @@ export class ApiService {
     return Observable.create((obs) => {
       if (body instanceof FormData)
         console.log("THis is formData: ", body.get("fileUpload[]"));
-
       this.http
         .request(
           new Request({

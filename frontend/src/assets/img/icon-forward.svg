@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="8px" height="14px" viewBox="0 0 8 14" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 50.2 (55047) - http://www.bohemiancoding.com/sketch -->
+    <title>icon-forward</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <linearGradient x1="-33.2875%" y1="-94.4335938%" x2="133.289583%" y2="167.96875%" id="linearGradient-1">
+            <stop stop-color="#764BFF" offset="0%"></stop>
+            <stop stop-color="#7BB7F1" offset="100%"></stop>
+        </linearGradient>
+    </defs>
+    <g id="Symbols" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="atom/icon/icon-forward" transform="translate(-8.000000, -5.000000)" fill="url(#linearGradient-1)" fill-rule="nonzero">
+            <path d="M15.62,16.72 L11.09,12 L15.62,7.28 C16.1292713,6.75291955 16.1292713,5.91708045 15.62,5.39 C15.384082,5.14238524 15.0570093,5.00224996 14.715,5.00224996 C14.3729907,5.00224996 14.045918,5.14238524 13.81,5.39 L8.38,11.06 C7.87195803,11.5836986 7.87195803,12.4163014 8.38,12.94 L13.81,18.61 C14.045918,18.8576148 14.3729907,18.99775 14.715,18.99775 C15.0570093,18.99775 15.384082,18.8576148 15.62,18.61 C16.1292713,18.0829195 16.1292713,17.2470805 15.62,16.72 Z" id="icon-forward" transform="translate(12.000461, 12.000000) scale(-1, 1) translate(-12.000461, -12.000000) "></path>
+        </g>
+    </g>
+</svg>

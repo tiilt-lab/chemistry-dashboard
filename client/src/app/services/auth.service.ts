@@ -20,7 +20,8 @@ export class AuthService {
       email: email,
       password: password,
     };
-    return this.api.post("api/v1/login", body).map((response) => {
+    const retVal = this.api.post("api/v1/login", body);
+    return retVal.map((response) => {
       this._user = UserModel.fromJson(response.json());
       return this._user;
     });
