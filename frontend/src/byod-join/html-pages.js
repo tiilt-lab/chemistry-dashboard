@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Appheader } from '../header/header-component';
 import { Instruction } from '../utilities/utility-components'
 import { DialogBox, WaitingDialog,DialogBoxTwoOption } from "../dialog/dialog-component";
-import './byod-join-component.scss';
+import './byod-join-component.css';
 
 function GlowSVG(props) {
     if (!props.button_pressed) {

@@ -1,69 +1,51 @@
 import { AppContextMenu } from '../components/context-menu/context-menu-component';
 import { DialogBoxTwoOption } from '../dialog/dialog-component';
 import { Appheader } from '../header/header-component';
-import './manage-keyword-lists-component.scss'
+import style from './manage-keyword-lists.module.css'
+import style2 from '../components/context-menu/contextmenu.module.css'
 
 function KeywordListPage(props) {
 
-    const showLoading = () => {
-        if (!props.keywordLists) {
-            return <div className="load-text onload">Loading...</div>
-        }
-    }
-    const noKeywordlist = () => {
-        if (props.keywordLists && props.keywordLists.length === 0) {
-            return (
-                <div className="empty-keyword-list">
-                    <div className="load-text"> No Keyword Lists </div>
-                    <div className="load-text-description"> Tap the button below to make your first keyword list. </div>
-                </div>
-            )
-        }
-    }
-
-    const displayKeywordList = () => {
-        let comps = []
-        let count = 1
-        let kws
-        for (const keywordList of props.keywordLists) {
-            kws = keywordList.keywords.join(", ");
-            comps.push(
-                <div key={"keyword"+count} className="keyword-list-button" >
-                    <div className="click-mask" onClick={() => { props.keywordListClicked(keywordList) }} ></div >
-                    <div className="keyword-list-header">
-                        <div className="title">{keywordList.name}</div>
-                        <div className="date">{props.formatdate(keywordList.creation_date)}</div>
-                    </div>
-                    <div className="keyword-list-keywords">{kws}</div>
-                    <AppContextMenu className="keyword-list-options">
-                        <div className="menu-item red" onClick={() => { props.deleteKeywordList(keywordList) }}>Delete</div>
-                    </AppContextMenu > 
-                </div>
-            );
-            count = count + 1;
-        }
-        return comps
-    }
     const actualKeywordList = props.keywordLists !== undefined ? props.keywordLists : [];
     return (
         <>
-            <div className="container">
+            <div className={style.container}>
                 <Appheader
                     title={"Manage Keyword Lists"}
                     leftText={false}
                     rightText={""}
                     rightEnabled={false}
                     nav={props.navigate} />
-                <div className="list-container" >
-                    {showLoading()}
-                    {noKeywordlist()}
-                    {displayKeywordList()}
+                <div className={style["list-container" ]}>
+                    {(!props.keywordLists) ? <div className={style["load-text onload"]}>Loading...</div> : <></>}
+                    {(props.keywordLists && props.keywordLists.length === 0) ?
+
+                        <div className={style["empty-keyword-list"]}>
+                            <div className={style["load-text"]}> No Keyword Lists </div>
+                            <div className={style["load-text-description"]}> Tap the button below to make your first keyword list. </div>
+                        </div>
+                        :
+                        <></>}
+                    {props.keywordLists.map((keywordList, count) => (
+                        <div key={"keyword" + count} className={style["keyword-list-button"]} >
+                            <div className={style["click-mask"]} onClick={() => { props.keywordListClicked(keywordList) }} ></div >
+                            <div className={style["keyword-list-header"]}>
+                                <div className={style.title}>{keywordList.name}</div>
+                                <div className={style.date}>{props.formatdate(keywordList.creation_date)}</div>
+                            </div>
+                            <div className={style["keyword-list-keywords"]}>{keywordList.keywords.join(", ")}</div>
+                            <AppContextMenu className={style["keyword-list-options"]}>
+                                <div className={`${style2["menu-item"]} ${style2["red"]}`} onClick={() => { props.deleteKeywordList(keywordList) }}>Delete</div>
+                            </AppContextMenu >
+                        </div>
+                    ))}
+                    {/* {displayKeywordList()} */}
                 </div>
-                <button className="basic-button medium-button" onClick={props.openNewKeywordList} > New Keyword List</button >
-                <button className="basic-button medium-button" onClick={props.createTopicModel}> Create Topic Model</button >
+                <button className={`${style["basic-button"]} ${style["medium-button"]}`} onClick={props.openNewKeywordList} > New Keyword List</button >
+                <button className={`${style["basic-button"]} ${style["medium-button"]}`} onClick={props.createTopicModel}> Create Topic Model</button >
 
             </div>
-        
+
             <DialogBoxTwoOption
                 show={props.deleteDialogIsOpen}
                 heading={"Delete Keyword List"}

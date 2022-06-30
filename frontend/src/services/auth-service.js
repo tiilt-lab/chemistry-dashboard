@@ -1,46 +1,62 @@
 
 import { ApiService } from "./api-service";
 import { UserModel } from "../models/user";
-class AuthService{
-  
-  login(email, password, setLoginStatus) {
+class AuthService {
+
+  login(email, password, setLoginStatus, setAuthObject) {
     const body = {
       email: email,
       password: password,
     };
-    const fetchRes = new ApiService().httpRequestCall("api/v1/login",'POST', body);
+    const fetchRes = new ApiService().httpRequestCall("api/v1/login", 'POST', body);
     fetchRes.then(
-      (response) => { 
+      (response) => {
         setLoginStatus(response);
-    },
-    (apiError) =>{ 
-      apiError.status = 600
-      setLoginStatus(apiError);
-    })}
+        if (response.status === 200) {
+          response.json().then(
+            userobj => {
+              const user = UserModel.fromJson(userobj);
+              setAuthObject(user)
+            }
+          )
+        }
+      },
+      (apiError) => {
+        apiError.status = 600
+        setLoginStatus(apiError);
+      })
+  }
 
   logout() {
-    return  new ApiService().httpRequestCall("api/v1/logout",'POST', {});
+    return new ApiService().httpRequestCall("api/v1/logout", 'POST', {});
   }
 
   me(stateSetter) {
-    const fetchRes = new ApiService().httpRequestCall("api/v1/me",'GET', {});
+    const fetchRes = new ApiService().httpRequestCall("api/v1/me", 'GET', {});
     fetchRes.then(
-      (response) => { 
-        stateSetter(response);
-    },
-    (apiError) =>{ 
-      apiError.status = 600
-      stateSetter(apiError);
-    })
+      (response) => {
+        if (response.status === 200) {
+          response.json().then(
+            userobj => {
+              const user = UserModel.fromJson(userobj);
+              stateSetter(user);
+            }
+          )
+        }
+      },
+      (apiError) => {
+        apiError.status = 600
+        stateSetter("cors error");
+      })
   }
 
-  changePassword(currentPassword,newPassword,confirmPassword) {
+  changePassword(currentPassword, newPassword, confirmPassword) {
     const body = {
       password: currentPassword,
       new: newPassword,
       confirm: confirmPassword,
     };
-    return new ApiService().httpRequestCall("api/v1/password",'POST', body, false);
+    return new ApiService().httpRequestCall("api/v1/password", 'POST', body, false);
   }
 
   createUser(email, role) {
@@ -48,48 +64,48 @@ class AuthService{
       email: email,
       role: role,
     };
-    const val = new ApiService().httpRequestCall("api/v1/admin/users",'POST', body, false);
-    if(val!=null){
+    const val = new ApiService().httpRequestCall("api/v1/admin/users", 'POST', body, false);
+    if (val != null) {
       const json = val;
       json["user"] = UserModel.fromJson(json["user"]);
       return json;
     }
     return val;
-}
+  }
 
-  deleteUser(userId){
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users"+userId,'DELETE', {}), false);
+  deleteUser(userId) {
+    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users" + userId, 'DELETE', {}), false);
   }
 
   getUsers() {
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users",'GET', {}), true);
+    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users", 'GET', {}), true);
   }
 
-  lockUser(userId){
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/lock",'POST', {}),true);
+  lockUser(userId) {
+    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/lock", 'POST', {}), true);
   }
 
   unlockUser(userId) {
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/unlock",'POST', {}),true);
+    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/unlock", 'POST', {}), true);
   }
 
-  changeUserRole(userId, role){
+  changeUserRole(userId, role) {
     const body = {
       role: role,
     };
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/role",'POST', body),true);
+    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/role", 'POST', body), true);
   }
 
   resetUserPassword(userId) {
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/reset",'POST', {}),false);
+    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/reset", 'POST', {}), false);
   }
 
-// Type can be either 'dcs' or 'aps'.
+  // Type can be either 'dcs' or 'aps'.
   getServerLogs(type) {
     const query = {
       log_type: type,
     };
-    const observable = new ApiService().httpRequestCall("api/v1/admin/server/logs",'GET', query);
+    const observable = new ApiService().httpRequestCall("api/v1/admin/server/logs", 'GET', query);
     return observable.map((response) => {
       const jsonData = response.json();
       const dataUrl = jsonData["data"];
@@ -107,49 +123,49 @@ class AuthService{
   }
 
   getDeviceLogs(deviceId) {
-    const observable = new ApiService().httpRequestCall("api/v1/admin/devices/"+deviceId+"/logs",'GET', {});
+    const observable = new ApiService().httpRequestCall("api/v1/admin/devices/" + deviceId + "/logs", 'GET', {});
     return observable.map((response) => {
-        const jsonData = response;
-        const dataUrl = jsonData["data"];
-        fetch(dataUrl)
-          .then((res) => res.blob())
-          .then((blob) => {
-            const blobUrl = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = blobUrl;
-            link.download = "pod_" + deviceId + "_logs.txt";
-            link.click();
-          });
-        return true;
-      });
+      const jsonData = response;
+      const dataUrl = jsonData["data"];
+      fetch(dataUrl)
+        .then((res) => res.blob())
+        .then((blob) => {
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = blobUrl;
+          link.download = "pod_" + deviceId + "_logs.txt";
+          link.click();
+        });
+      return true;
+    });
   }
 
   deleteServerLogs(type) {
     const query = {
       log_type: type,
     };
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/logs",'DELETE', query),false);
+    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/logs", 'DELETE', query), false);
   }
 
   deleteDeviceLogs(deviceId) {
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/devices/"+deviceId+"/logs",'DELETE', {}),false);
+    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/devices/" + deviceId + "/logs", 'DELETE', {}), false);
   }
 
   allowAPIAccess(userId) {
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/"+userId+"/api",'POST', {}),true);
+    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/api", 'POST', {}), true);
   }
 
   revokeAPIAccess(userId) {
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/"+userId+"/api",'DELETE', {}),false);
+    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/api", 'DELETE', {}), false);
   }
 
-getuser(userId) {
-  return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/"+userId,'GET', {}),true);
-}
+  getuser(userId) {
+    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/" + userId, 'GET', {}), true);
+  }
 
 }
 
-export { AuthService}
+export { AuthService }
 
 // @Injectable()
 // export class LoginGuard implements CanActivate {

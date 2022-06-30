@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { updateTime } from '../utilities/helper-functions';
 import { Instruction } from '../utilities/utility-components';
 import { AuthService } from '../services/auth-service';
@@ -12,23 +13,7 @@ import settings from '../assets/img/settings.svg'
 import question from '../assets/img/question.svg'
 import logouticon from '../assets/img/logout.svg'
 
-import './homescreen.component.scss';
-
-const timeOfDay = updateTime();
-
-function Greeting() {
-  return <div className="greeting">Good {timeOfDay}!</div>
-}
-
-function IntroBox() {
-  return (<div className="intro-box">
-    <Greeting />
-    <Instruction instructions="Welcome to the Discussion Capture Dashboard. You can start gathering
-      analytic data by recording a new discussion." />
-  </div>
-  )
-}
-
+import './homescreen.component.css';
 
 function Menus(props) {
   return (
@@ -39,9 +24,11 @@ function Menus(props) {
   )
 }
 
-function HomeScreen() {
+function HomeScreen(props) {
+  const timeOfDay = updateTime();
   const navigate = useNavigate();
-
+  const location = useLocation()
+  
   const navigateToHelp = () => {
     window.open(
       window.location.protocol +
@@ -54,13 +41,17 @@ function HomeScreen() {
   const logout = () => {
     const ret = new AuthService().logout();
     ret.then(
-      (response) => { return navigate('/login');},
-      (apiError) => { return navigate('/login');})
+      (response) => { return navigate('/login'); },
+      (apiError) => { return navigate('/login'); })
   }
 
   return (
     <div className="home-container">
-      <IntroBox />
+      <div className="intro-box">
+      <div className="greeting">Good {timeOfDay}!</div>
+        <Instruction instructions="Welcome to the Discussion Capture Dashboard. You can start gathering
+      analytic data by recording a new discussion." />
+      </div>
       <img alt="speaker" className="logo" src={speaker} />
       <Menus menuIcon={recordicon} menuName="Discussions" route={navigate} path='/sessions' />
       <Menus menuIcon={wordlist} menuName="Keyword" route={navigate} path='/keyword-lists' />
@@ -81,4 +72,4 @@ function HomeScreen() {
   )
 }
 
-export {HomeScreen}
+export { HomeScreen }
