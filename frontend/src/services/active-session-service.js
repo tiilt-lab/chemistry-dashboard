@@ -1,4 +1,4 @@
-import { BehaviorSubject } from 'rxjs/BehaviorSubject';
+import { BehaviorSubject } from 'rxjs' 
 import { SocketService } from './socket-service';
 import { SessionService } from './session-service';
 import { SessionModel } from '../models/session';
