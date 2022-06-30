@@ -19,10 +19,7 @@ function KeywordListItemsComponent() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    //setKeywordListID(keyword_list_id)
-    console.log(keywordListID, "print jjjsj")
     if (keywordListID !== undefined && keywordListID !== '-1') {
-      //console.log("i am inside if")
       new KeywordService().getKeywordList(keywordListID).then(response => {
         if (response.status === 200) {
           const data = response.json()
@@ -30,6 +27,7 @@ function KeywordListItemsComponent() {
             succ => {
               const result = KeywordListModel.fromJson(succ);
               setKeywordList(result);
+              setValidName(true)
             }
           )
 
@@ -175,6 +173,7 @@ function KeywordListItemsComponent() {
         && keywordListItems.filter(k => k.keyword && k.keyword.length !== 0).length > 0);
     }
 
+   
     return ret;
   }
 

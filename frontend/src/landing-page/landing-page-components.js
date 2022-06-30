@@ -1,5 +1,5 @@
 import {useNavigate} from 'react-router-dom'
-import './landing-page-css.scss';
+import './landing-page-css.css';
 import {Instruction} from '../utilities/utility-components'
 import { updateTime } from '../utilities/helper-functions';
 

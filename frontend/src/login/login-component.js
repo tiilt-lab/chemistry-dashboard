@@ -4,17 +4,19 @@ import { Instruction } from '../utilities/utility-components';
 import { Appheader } from '../header/header-component';
 import { DialogBox } from '../dialog/dialog-component';
 import { AuthService } from '../services/auth-service';
-import './login-component.scss';
+import { UserModel } from '../models/user';
+import './login-component.css';
 
 function LoginPage() {
   const navigate = useNavigate();
   const [isShow, setShow] = useState(false);
   const [message, setMessage] = useState('');
   const [loginStatus, setLoginStatus] = useState(0)
+  const [authObject, setAuthObject] = useState(null)
 
   useEffect(() => {
-    if (loginStatus.status === 200) {
-      return navigate('/home')
+    if (loginStatus.status === 200 && authObject !== null) {
+      return navigate('/home') //,{state: authObject}
     } else if (loginStatus.status === 400) {
       setMessage(loginStatus.message);
       setShow(true);
@@ -24,8 +26,9 @@ function LoginPage() {
       setMessage("Inavlid Username or Password");
       setShow(true);
     }
-  }, [loginStatus, navigate])
+  }, [loginStatus,authObject])
 
+  
   const dialogheader = 'Login Failed';
 
   const backClick = () => {
@@ -48,7 +51,7 @@ function LoginPage() {
       setShow(true);
       document.getElementById("password").focus();
     } else {
-      new AuthService().login(username, password, setLoginStatus);
+      new AuthService().login(username, password, setLoginStatus,setAuthObject);
     }
 
   }
@@ -56,12 +59,12 @@ function LoginPage() {
   return (
     <div className="container">
 
-      <Appheader 
-          title="Sign In" 
-          leftText = {false}
-          rightText = {""}
-          rightEnabled = {false}
-          nav={backClick} />
+      <Appheader
+        title="Sign In"
+        leftText={false}
+        rightText={""}
+        rightEnabled={false}
+        nav={backClick} />
       <br></br>
       <Instruction instructions="Please enter your username and password." />
 

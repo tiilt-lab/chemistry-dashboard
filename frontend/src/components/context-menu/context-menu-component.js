@@ -1,4 +1,4 @@
-import './context-menu-component.scss';
+import style from './contextmenu.module.css';
 import optionIcon from "../../assets/img/icon-kebab.svg";
 import { useState } from 'react';
 
@@ -21,15 +21,15 @@ function AppContextMenu(props) {
   const dynamicInnerChild = () => {
     if (!isOpen) {
       return (
-      <div  className="dropdown-menu-container">
+      <div  className={style["dropdown-menu-container"]}>
           {props.children}
       </div>)
         }
     }
 
   return (
-    <div className="menu-container">
-      <button className="menu-button" onClick={()=> toggle(isOpen)}>
+    <div className={style["menu-container"]}>
+      <button className={style["menu-button"]} onClick={()=> toggle(isOpen)}>
         <svg x="0" y="0" width="24" height="24" viewBox="0 0 24 24">
           <use xlinkHref={`${optionIcon}#kebab`}></use>
         </svg>

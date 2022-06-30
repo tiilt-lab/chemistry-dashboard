@@ -1,5 +1,5 @@
 
-import './header-component.scss';
+import './header-component.css'
 import backicon from '../assets/img/icon-back.svg'
    
 function Appheader(props){
