@@ -1,0 +1,64 @@
+<div class="container">
+    <app-header [title]="sessionDevice.name" (backClick)="navigateToSession()" [rightText]="'Options'" (rightTextClick)="openDialog(forms.Options)"></app-header>
+    <div class="overview-container">
+        <br/>
+        <app-section-box heading="Timeline control:">
+            <app-timeline-slider #timeSlider (inputChanged)="setRange($event)"></app-timeline-slider>
+        </app-section-box>
+
+        <app-section-box heading="Discussion timeline:">
+            <app-timeline (clickedTimeline)="onClickedTimeline($event)" [session]="session" [transcripts]="displayTranscripts" [start]="startTime" [end]="endTime"></app-timeline>
+        </app-section-box>
+
+        <app-section-box heading="Discussion direction:">
+            <app-heat-map [session]="session" [transcripts]="displayTranscripts"></app-heat-map>
+        </app-section-box>
+
+        <app-section-box heading="Keyword detection:">
+            <app-keywords [session]="session" [sessionDevice]="sessionDevice" [transcripts]="displayTranscripts" [start]="startTime" [end]="endTime"></app-keywords>
+        </app-section-box>
+
+        <app-section-box heading="Discussion features:">
+            <app-features [session]="session" [transcripts]="displayTranscripts"></app-features>
+        </app-section-box>
+    </div>
+    <app-spinner *ngIf="loading"></app-spinner>
+    <div class="footer">
+        <app-session-toolbar *ngIf='session' [session]="session" (closingSession)="onSessionClosing($event)"></app-session-toolbar>
+    </div>
+</div>
+
+<app-dialog *ngIf="currentForm">
+    <div *ngIf="currentForm == forms.Transcript" class="dialog-content">
+        <div class="dialog-heading">Transcript</div>
+        <div class="dialog-body">{{currentTranscript.transcript}}</div>
+        <div class="dialog-button-container">
+            <button class="dialog-button right-button" (click)="closeDialog()">Close</button>
+            <button class="dialog-button left-button" (click)="seeAllTranscripts()">View All</button>
+        </div>
+    </div>
+    <div *ngIf="currentForm == forms.Options" class="dialog-content">
+        <div class="dialog-heading">Device Options</div>
+        <button class="basic-button" (click)="openDialog(forms.RemoveDevice)">Disconnect Device</button>
+        <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+    </div>
+    <div *ngIf="currentForm == forms.RemoveDevice" class="dialog-content">
+        <div class="dialog-heading">Disconnect Device</div>
+        <ng-container *ngIf="!deleteDeviceToggle">
+            <div class="dialog-body">Are you sure you want to remove this device?</div>
+            <div class="dialog-body">All data will be saved, but the device will be disconnected from the discussion.</div>
+        </ng-container>
+        <ng-container *ngIf="deleteDeviceToggle">
+            <div class="dialog-body">Are you sure you want to delete this device?</div>
+            <div class="dialog-body">All data for this device will be lost and the device will be disconnected.</div>
+        </ng-container>
+        <label class="dc-checkbox">Delete device
+            <input #cbxDelete type="checkbox" [(ngModel)]="deleteDeviceToggle">
+            <span class="checkmark"></span>
+        </label>
+        <div class="dialog-button-container">
+            <button class="basic-button" (click)="removeDeviceFromSession(deleteDeviceToggle)">Confirm</button>
+            <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+        </div>
+    </div>
+</app-dialog>

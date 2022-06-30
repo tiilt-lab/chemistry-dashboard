@@ -1,0 +1,57 @@
+<div class="container">
+  <app-header title="Manage Pods" (backClick)="navigateToHomescreen()"></app-header>
+
+  <div class="list-container">
+    <ul class="list">
+      <li *ngFor="let device of devices" class="pod-item">
+        <svg x="0" y="0" width="20" height="18" viewBox="0 0 20 18" class="pod-icon pod-connected" [class.pod-disconnected]="!device.connected">
+          <use xlink:href="../assets/img/icon-pod.svg#pod-icon"></use>
+        </svg>
+        <div class="pod-text">{{device.name}}</div>
+        <div class="button-container">
+          <button *ngIf="device.connected" class="pod-button" [class.selected-button]="device.blinking" (click)="blinkPod(device)">
+            <svg x="0" y="0" width="20" height="20" viewBox="0 0 512 512" class="light-svg">
+              <use xlink:href="../assets/img/light.svg#light-icon"></use>
+            </svg>
+          </button>
+          <app-context-menu>
+            <div class="menu-item" (click)="openDialog(forms.Rename, device)">Rename</div>
+            <div *ngIf="user.isAdmin || user.isSuper" class="menu-item red" (click)="openDialog(forms.Remove, device)">Remove</div>
+          </app-context-menu>
+        </div>
+      </li>
+    </ul>
+    <div [ngClass]="{ 'loading': loading }" class="load-text onload" *ngIf="devices === undefined">Loading...</div>
+    <div class="empty-pod-list" *ngIf="devices !== undefined && devices.length == 0">
+      <div class="load-text">There are no pods.</div>
+      <div class="load-text-description">Add pods by clicking the button below.</div>
+    </div>
+  </div>
+  <button *ngIf="user.isAdmin || user.isSuper" class="basic-button medium-button" (click)="openDialog(forms.Add)">Add via MAC address</button>
+</div>
+
+<app-dialog *ngIf="currentForm" (closeDialog)="closeDialog()">
+  <div class="dialog-window">
+    <ng-container *ngIf="currentForm == forms.Remove">
+      <div class="dialog-heading">Remove Pod</div>
+      <div class="dialog-body">Are you sure you want to remove this pod?</div>
+      <button class="delete-button" (click)="removeDevice()">Remove</button>
+      <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+    </ng-container>
+    <ng-container *ngIf="currentForm == forms.Add">
+      <div class="dialog-heading">Pod MAC address:</div>
+      <input #macInput class="text-input" type="text" (keydown.enter)="addDevice(macInput.value)" >
+      <div class="input-status-text">{{statusText}}</div>
+      <button class="basic-button" (click)="addDevice(macInput.value)">Add</button>
+      <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+    </ng-container>
+    <ng-container *ngIf="currentForm == forms.Rename">
+      <div class="dialog-heading">Pod Name:</div>
+      <input #nameInput class="text-input" [value]="selectedDevice.name" type="text" (keydown.enter)="renameDevice(nameInput.value)" >
+      <div class="input-status-text">{{statusText}}</div>
+      <button class="basic-button" (click)="renameDevice(nameInput.value)">Rename</button>
+      <button class="cancel-button" (click)="closeDialog()">Cancel</button>
+    </ng-container>
+  </div>
+</app-dialog>
+

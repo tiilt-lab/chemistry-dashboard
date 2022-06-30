@@ -3,18 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { SessionService } from '../services/session-service';
 import { SessionModel } from '../models/session'
 import { FolderModel } from '../models/folder'
-import { DiscussionSessionPage } from './html-pages'
+import { DiscussionSessionPage } from './html-pages';
 
-// enum Forms {
-//   RenameSession = 1,
-//   RenameFolder,
-//   DeleteSession,
-//   DeleteFolder,
-//   NewFolder,
-//   Loading,
-//   MoveSession,
-//   MoveFolder
-// }
 
 function SessionsComponent(props) {
 
