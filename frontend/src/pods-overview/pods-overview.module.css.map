@@ -14,5 +14,5 @@
         "../_color.scss"
     ],
     "names": [],
-    "file": "pods-overview.component.css"
+    "file": "pods-overview.module.css"
 }

@@ -6,11 +6,13 @@ import { ActiveSessionService } from '../services/active-session-service';
 function SessionManagerComponent() {
 
   const [activeSessionService, setActiveSessionService] = useState(new ActiveSessionService());
+  const [initialized, setInitialized] = useState(false)
   const { sessionId } = useParams();
 
   useEffect(() => {
     if (sessionId !== undefined) {
-      activeSessionService.initialize(sessionId);
+      console.log('i always come here ..')
+      activeSessionService.initialize(sessionId,setInitialized);
     }
 
     return () => {
@@ -18,11 +20,13 @@ function SessionManagerComponent() {
     }
   }, [])
 
-  if (!activeSessionService.initialized) {
+
+  if (!initialized) {
     return <></>
   }
 
   return (
+    
     <Outlet context={[activeSessionService, setActiveSessionService]}/>
   )
 

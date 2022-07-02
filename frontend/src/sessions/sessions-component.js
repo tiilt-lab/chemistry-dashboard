@@ -77,12 +77,12 @@ function SessionsComponent(props) {
   },[folders])
 
   const navigateToHomescreen = () => {
-    navigate('/home');
+    navigate('/home',{replace:true});
   }
 
   const newRecording = () => {
     if (currentFolder !== "") {
-      setSearchParam({ folder: currentFolder })
+      navigate('/sessions/new?folder='+currentFolder, {replace:true})
     } else {
       navigate('/sessions/new', {replace:true})
     }

@@ -3,34 +3,26 @@ import { SessionModel } from '../models/session';
 import { DeviceService } from '../services/device-service';
 import { DeviceModel } from '../models/device';
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import {PodsOverviewPages} from './html-pages'
 
-// enum Forms {
-//     Passcode = 1,
-//     AddDevice
-// }
 
 
 function PodsOverviewComponent() {
     const [sessionClosing, setSessionClosing] = useState(false);
     const [openingDialog, setOpeningDialog] = useState(false);
-    const [sessionDevices, setSessionDevices] = useState();
+    const [sessionDevices, setSessionDevices] = useState(null);
     const [session, setSession] = useState(null);
     const [selectedSessionDevice, setSelectedSessionDevice] = useState(null);
     const [subscriptions, setSubscriptions] = useState([]);
     const [devices, setDevices] = useState([])
     const [currentForm, setCurrentForm] = useState("");
     const [activeSessionService, setActiveSessionService] = useOutletContext();
-    const [searchParam, setSearchParam] = useSearchParams();
     const navigate = useNavigate();
-
-    const POD_ON_COLOR = '#FF6655';
-    const POD_OFF_COLOR = '#D0D0D0';
-    const GLOW_COLOR = '#ffc3bd';
 
 
     useEffect(() => {
+        console.log('i am here')
         const sessionSub = activeSessionService.getSession().subscribe(e => {
             setSession(e);
         });
@@ -42,7 +34,7 @@ function PodsOverviewComponent() {
         return () => {
             subscriptions.map(sub => sub.unsubscribe());
         }
-    }, [])
+    }, [activeSessionService.sessionId])
 
 
 
@@ -56,11 +48,10 @@ function PodsOverviewComponent() {
 
     const navigateToSessions = () => {
         if (session.folder) {
-            setSearchParam({ folder: session.folder })
+           navigate('/sessions?folder='+session.folder)
         } else {
             navigate('/sessions', { replace: true })
         }
-        //this.router.navigate(['sessions'], {queryParams: {folder: this.session.folder}});
     }
 
     const openDialog = (form) => {
@@ -68,7 +59,7 @@ function PodsOverviewComponent() {
             const fetchData = new DeviceService().getDevices(false, true, false, true)
             fetchData.then(
                 response => {
-                    if (response == 200) {
+                    if (response.status === 200) {
                         const resp2 = response.json()
                         resp2.then(
                             respdevices => {
@@ -89,12 +80,14 @@ function PodsOverviewComponent() {
     }
 
     const getPasscode = () => {
-        if (session.end_date) {
+        if (session!==null && session.end_date) {
             return 'CLOSED';
-        } else if (session.passcode == null) {
+        } else if (session!==null && session.passcode == null) {
             return 'LOCKED';
-        } else {
+        } else if(session!==null) {
             return session.passcode;
+        }else{
+            return "None"
         }
     }
 
@@ -153,9 +146,22 @@ function PodsOverviewComponent() {
         navigate('/sessions/' + session.id + '/graph');
     }
 
+    const getRightEnabled = ()=>{
+        if(session === null){
+            return false
+        }else if(session !== null){
+            if(session.recording === undefined){
+                return false
+            }else{
+                return session.recording
+            }
+        }
+    }
+
     return (
         <PodsOverviewPages 
-            getPasscode = {getPasscode}
+            righttext = {getPasscode()}
+            rightenabled = {getRightEnabled()}
             session = {session}
             openDialog = {openDialog}
             navigateToSessions = {navigateToSessions}
@@ -167,11 +173,9 @@ function PodsOverviewComponent() {
             closeDialog = {closeDialog}
             setPasscodeState = {setPasscodeState}
             onSessionClosing = {onSessionClosing}
-            POD_ON_COLOR = {POD_ON_COLOR}
-            POD_OFF_COLOR = {POD_OFF_COLOR}
-            GLOW_COLOR = {GLOW_COLOR}
+            devices = {devices}
         />
-    )
+   )
 }
 
 export {PodsOverviewComponent}

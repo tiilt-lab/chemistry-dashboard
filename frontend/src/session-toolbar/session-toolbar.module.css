@@ -655,23 +655,23 @@
           justify-content: center;
 }
 
-.session-toolbar .middle-content ::ng-deep .toolbar-button {
+.session-toolbar .middle-content  .toolbar-button {
   width: 60px;
   cursor: pointer;
 }
 
-.session-toolbar .middle-content ::ng-deep .toolbar-button .button-text {
+.session-toolbar .middle-content  .toolbar-button .button-text {
   font-size: 10px;
   text-align: center;
 }
 
-.session-toolbar .middle-content ::ng-deep .toolbar-button .button-icon {
+.session-toolbar .middle-content .toolbar-button .button-icon {
   width: 40px;
   height: 40px;
   margin: 10px 0px 0px 10px;
 }
 
-.session-toolbar .middle-content ::ng-deep .toolbar-button:hover {
+.session-toolbar .middle-content  .toolbar-button:hover {
   background-color: #E5E5E6;
 }
 

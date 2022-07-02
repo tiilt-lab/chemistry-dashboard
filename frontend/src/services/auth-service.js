@@ -42,6 +42,8 @@ class AuthService {
               stateSetter(user);
             }
           )
+        }else{
+          stateSetter("cors error");
         }
       },
       (apiError) => {
