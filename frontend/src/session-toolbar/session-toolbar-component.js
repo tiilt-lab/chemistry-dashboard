@@ -1,8 +1,8 @@
 import { SessionService } from '../services/session-service';
 import { SessionModel } from '../models/session';
 import { useEffect, useState } from 'react';
-import{useNavigate,useSearchParams} from 'react-router-dom'
-import {AppSessionPage} from './html-pages'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { AppSessionPage } from './html-pages'
 
 function AppSessionToolbar(props) {
     // @Input('session') session: SessionModel;
@@ -33,7 +33,7 @@ function AppSessionToolbar(props) {
     }, [])
 
 
-    const updateTime = () =>{
+    const updateTime = () => {
         // doesn't currently support displaying hours
         const m = Math.floor(props.session.length / 60);
         const s = Math.floor(props.session.length - m * 60);
@@ -46,35 +46,37 @@ function AppSessionToolbar(props) {
         setTimeText(m + ':' + secs_text);
     }
 
-    const onEndSession = () =>{
+    const onEndSession = () => {
         setSessionEnding(true);
         props.onSessionClosing(true)
         //this.closingSession.emit(true);
-        this.sessionService.endSession(this.session.id).subscribe(e => {
-            setSessionEnding(false);
-            if (props.session.folder) {
-                setSearchParam({ folder: props.session.folder })
-            } else {
-                navigate('/sessions', { replace: true })
+        const fetchData = new SessionService().endSession(props.session.id)
+        fetchData.then(response => {
+            if (response.status === 200) {
+                setSessionEnding(false);
+                if (props.session.folder) {
+                    navigate('/sessions?folder='+props.session.folder)
+                    setSearchParam({ folder: props.session.folder })
+                } else {
+                    navigate('/sessions', { replace: true })
+                }
             }
-            //this.router.navigate(['sessions'], { queryParams: { folder: this.session.folder } });
-            //this.sessionEnding = false;
-        });
+        })
     }
 
-    const closeEndDialog = ()=> {
+    const closeEndDialog = () => {
         setSessionEnding(false);
     }
 
-    return(
-        < AppSessionPage 
-        sessionEnding = {sessionEnding}
-        timeText = {timeText}
-        innerhtml = {props.children}
-        session = {props.session}
-        onEndSession = {onEndSession}
+    return (
+        < AppSessionPage
+            sessionEnding={sessionEnding}
+            timeText={timeText}
+            innerhtml={props.children}
+            session={props.session}
+            onEndSession={onEndSession}
         />
     )
 }
 
-export {AppSessionToolbar}
+export { AppSessionToolbar }

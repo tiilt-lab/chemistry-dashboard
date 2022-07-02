@@ -1,4 +1,4 @@
-import { BehaviorSubject } from 'rxjs' 
+import { BehaviorSubject } from 'rxjs'
 import { SocketService } from './socket-service';
 import { SessionService } from './session-service';
 import { SessionModel } from '../models/session';
@@ -19,7 +19,7 @@ export class ActiveSessionService {
     sessionId;
     initialized = false;
 
-    initialize(sessionId) {
+    initialize(sessionId, setSate) {
         if (this.sessionId === sessionId) {
             return;
         }
@@ -28,20 +28,33 @@ export class ActiveSessionService {
         // Call APIs.
         const fetchRes = this.sessionService.getSession(sessionId);
         fetchRes.then((response) => {
-            if(response.status === 200){
-            const session = SessionModel.fromJson(response.json());
-            this.sessionSource.next(session);
-            const fectdev = this.sessionService.getSessionDevices(sessionId)
-            fectdev.then(
-                (response) => {
-                    if(response.status === 200){
-                    const devices = SessionDeviceModel.fromJsonList(response.json())
-                    this.sessionDeviceSource.next(devices);
-                    this.initializeSocket();
-                    this.initialized = true;
-                }},
-                (apierror) => { console.log("file active-session-service: func initialize 1", apierror) }
-            )}},
+            if (response.status === 200) {
+                const respSess = response.json()
+                respSess.then(
+                    session => {
+                        const sessionObj = SessionModel.fromJson(session);
+                        this.sessionSource.next(sessionObj);
+                        const fectdev = this.sessionService.getSessionDevices(sessionId)
+                        fectdev.then(
+                            (response) => {
+                                if (response.status === 200) {
+                                    const respDev = response.json()
+                                    respDev.then(
+                                        devices => {
+                                            const devicesObj = SessionDeviceModel.fromJsonList(devices)
+                                            this.sessionDeviceSource.next(devicesObj);
+                                            this.initializeSocket();
+                                            this.initialized = true;
+                                            setSate(true);
+                                        })
+                                }
+                            },
+                            (apierror) => { console.log("file active-session-service: func initialize 1", apierror) }
+                        )
+                    }
+                )
+            }
+        },
             (apiError) => { console.log("file active-session-service: func initialize 2", apiError) });
     }
 

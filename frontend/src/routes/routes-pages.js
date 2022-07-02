@@ -1,4 +1,4 @@
-import { Routes, Route, BrowserRouter } from 'react-router-dom'
+import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom'
 import LandingPageComponent from '../landing-page/landing-page-components';
 import { LoginPage } from '../login/login-component'
 import {HomeScreen} from '../homescreen/homescreen-component'
@@ -9,6 +9,7 @@ import {SessionsComponent} from '../sessions/sessions-component'
 import {CreateSessionComponent} from '../create-session/create-session-component'
 import {PodsOverviewComponent} from '../pods-overview/pods-overview-component'
 import { SessionManagerComponent } from '../session-manager/session-manager-component';
+import {DiscussionGraphComponent} from '../discussion-graph/discussion-graph-component'
 import {ProtectedRoute} from './protected-route'
 
 function PageRouter() {
@@ -26,10 +27,10 @@ function PageRouter() {
                 <Route path='/sessions' element={<ProtectedRoute component={SessionsComponent}/>}/>
                 <Route path='/sessions/new' element={<ProtectedRoute component={CreateSessionComponent}/>} />
                 <Route path='sessions/:sessionId' element={<ProtectedRoute component={SessionManagerComponent }/>} >
-                    <Route path='' element={<ProtectedRoute component={PodsOverviewComponent }/>} />
+                    <Route path='' element={<Navigate to="overview"  />} />
                     <Route path='overview' element={<ProtectedRoute component={PodsOverviewComponent}/>} />
-                    {/* <Route path='graph' element={<ProtectedRoute component={DiscussionGraphComponent}/>} />
-                    <Route path='pods/:sessionDeviceId' element={<ProtectedRoute component={PodComponent}/>} />
+                    <Route path='graph' element={<ProtectedRoute component={DiscussionGraphComponent}/>} />
+                    {/*<Route path='pods/:sessionDeviceId' element={<ProtectedRoute component={PodComponent}/>} />
                     <Route path='pods/:sessionDeviceId/transcripts' element={<ProtectedRoute component={TranscriptsComponent}/>} />*/}
                 </Route> 
             </Routes>
