@@ -2,13 +2,13 @@ import { similarityToRGB, formatSeconds } from '../globals';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOutletContext } from 'react-router-dom';
-import {DiscussionPage} from './html-pages'
+import { DiscussionPage } from './html-pages'
 
 
 function DiscussionGraphComponent() {
 
   // Server data
-  const [session, setSession] = useState();
+  const [session, setSession] = useState({});
   const [transcripts, setTranscripts] = useState([]);
   const [sessionDevices, setSessionDevices] = useState([]);
   const [contributions, setContributions] = useState();
@@ -16,7 +16,7 @@ function DiscussionGraphComponent() {
   const [showQuestions, setShowQuestions] = useState(false);
   const [showGraph, setShowGraph] = useState(false);
   const [cumulativePercent, setCumulativePercent] = useState(0);
-  const [subscriptions, setSubscriptions] = useState([]);
+  //const [subscriptions, setSubscriptions] = useState([]);
   const [currentForm, setCurrentForm] = useState("");
 
   const [displayKeywords, setDisplayKeywords] = useState()
@@ -29,28 +29,31 @@ function DiscussionGraphComponent() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const deviceSub = activeSessionService.getSessionDevices().subscribe(e => {
-      setSessionDevices(e);
-      e.map(sd => {
+    const deviceSub = activeSessionService.getSessionDevices()
+    if (deviceSub !== undefined) {
+      setSessionDevices(deviceSub);
+      deviceSub.map(sd => {
         sd['visible'] = true;
         sd['transcripts'] = [];
       });
       updateGraph();
-    });
+    };
 
-    const sessionTranscripts = activeSessionService.getTranscripts().subscribe(e => {
-      setTranscripts(e);
+    const sessionTranscripts = activeSessionService.getTranscripts()
+    if (sessionTranscripts !== undefined) {
+      setTranscripts(sessionTranscripts);
       updateGraph();
-    });
+    };
 
-    const sessionModel = activeSessionService.getSession().subscribe(e => {
-      setSession(e);
-    });
-    subscriptions.push(deviceSub, sessionTranscripts, sessionModel);
+    const sessionModel = activeSessionService.getSession();
+    if (sessionModel !== undefined) {
+      setSession(sessionModel);
+    };
+    // subscriptions.push(deviceSub, sessionTranscripts, sessionModel);
 
-    return () => {
-      subscriptions.map(sub => sub.unsubscribe());
-    }
+    // return () => {
+    //   subscriptions.map(sub => sub.unsubscribe());
+    // }
   }, [])
 
 
@@ -72,13 +75,13 @@ function DiscussionGraphComponent() {
     }
   }
 
-  const closeForm = ()=>{
+  const closeForm = () => {
     setCurrentForm("");
     setShowQuestions(false);
     setShowGraph(false);
   }
 
-  const updateGraph = ()=>{
+  const updateGraph = () => {
     if (transcripts.length > 0 && sessionDevices.length > 0) {
       setDisplayDevices([]);
       for (const device of sessionDevices) {
@@ -96,11 +99,11 @@ function DiscussionGraphComponent() {
     }
   }
 
-  const navigateToSession = ()=>{
+  const navigateToSession = () => {
     navigate('/sessions/' + session.id);
   }
 
-  const generateTimestamps = ()=>{
+  const generateTimestamps = () => {
     setTimestamps(['00:00']);
     const lastTranscript = transcripts[transcripts.length - 1];
     const totalSeconds = (lastTranscript.start_time + lastTranscript.length);
@@ -110,7 +113,7 @@ function DiscussionGraphComponent() {
     }
   }
 
-  const parseQuestions = (session_device) =>{
+  const parseQuestions = (session_device) => {
     const contributionsArray = transcripts.filter(transcript => transcript.session_device_id === session_device.id);
     const questionTranscripts = contributionsArray.filter(transcript => transcript.question);
 
@@ -126,7 +129,7 @@ function DiscussionGraphComponent() {
     return questions;
   }
 
-  const createDisplayTranscript = (transcript, highlight = false)=> {
+  const createDisplayTranscript = (transcript, highlight = false) => {
     const sentences = transcript.transcript.match(/([^\.!\?]+[\.!\?]+)|([^\.!\?]+$)/g);
     const words = [];
     for (const sentence of sentences) {
@@ -159,7 +162,7 @@ function DiscussionGraphComponent() {
     };
   }
 
-  const toggleGraph = (open, device = null) =>{
+  const toggleGraph = (open, device = null) => {
     setShowGraph(open);
     if (open) {
       const huedelta = Math.trunc(360 / displayDevices.length);
@@ -179,11 +182,11 @@ function DiscussionGraphComponent() {
     }
   }
 
-  const toggleQuestions = ()=> {
+  const toggleQuestions = () => {
     setShowQuestions(!showQuestions);
   }
 
-  const getSpeakingPercent = (device) =>{
+  const getSpeakingPercent = (device) => {
     setShowGraph(true);
     let totalTime = 0;
     const deviceContribution = transcripts.filter(transcript => transcript.session_device_id === device.id);
@@ -195,7 +198,7 @@ function DiscussionGraphComponent() {
     return rawPercent;
   }
 
-  const getTotalSpeakingTime = ()=> {
+  const getTotalSpeakingTime = () => {
     let allDeviceContributions = 0;
     const validTranscripts = [];
     for (const dev of displayDevices) {
@@ -210,14 +213,14 @@ function DiscussionGraphComponent() {
     return allDeviceContributions;
   }
 
-  const getDisplayPercent = (device)=> {
+  const getDisplayPercent = (device) => {
     const percent = getSpeakingPercent(device);
     const roundedPercent = Math.floor(percent * 100);
     setSelectedPercent(roundedPercent);
     return roundedPercent;
   }
 
-  const setPiePieceProperties = (device)=> {
+  const setPiePieceProperties = (device) => {
     const slice = { percent: this.getSpeakingPercent(device) };
     const [startX, startY] = getCoordinatesForPercent(cumulativePercent);
     this.cumulativePercent += slice.percent;
@@ -232,40 +235,40 @@ function DiscussionGraphComponent() {
     return pathData;
   }
 
-  const getCoordinatesForPercent = (percent)=> {
+  const getCoordinatesForPercent = (percent) => {
     const x = Math.cos(2 * Math.PI * percent);
     const y = Math.sin(2 * Math.PI * percent);
     return [x, y];
   }
 
-  const highlightQuestions = (transcript)=> {
+  const highlightQuestions = (transcript) => {
     transcript['highlight'] = !transcript['highlight'];
     const foundTranscript = transcripts.find(t => t.id === transcript.transcript_id);
     const newTranscript = this.createDisplayTranscript(foundTranscript, transcript['highlight']);
     Object.assign(transcript, newTranscript);
   }
 
-  return(
+  return (
     <DiscussionPage
-        navigateToSession = {navigateToSession}
-        displayDevices = {displayDevices}
-        openForms = {openForms}
-        timestamps = {timestamps}
-        highlightQuestions = {highlightQuestions}
-        currentForm = {currentForm}
-        displayKeywords = {displayKeywords}
-        toggleGraph = {toggleGraph}
-        selectedDevice = {selectedDevice}
-        showGraph = {showGraph}
-        contributions = {contributions}
-        selectedPercent = {selectedPercent}
-        displayQuestions = {displayQuestions}
-        toggleQuestions = {toggleQuestions}
-        showQuestions = {showQuestions}
-        closeForm = {closeForm}
-        updateGraph = {updateGraph}
+      navigateToSession={navigateToSession}
+      displayDevices={displayDevices}
+      openForms={openForms}
+      timestamps={timestamps}
+      highlightQuestions={highlightQuestions}
+      currentForm={currentForm}
+      displayKeywords={displayKeywords}
+      toggleGraph={toggleGraph}
+      selectedDevice={selectedDevice}
+      showGraph={showGraph}
+      contributions={contributions}
+      selectedPercent={selectedPercent}
+      displayQuestions={displayQuestions}
+      toggleQuestions={toggleQuestions}
+      showQuestions={showQuestions}
+      closeForm={closeForm}
+      updateGraph={updateGraph}
     />
   )
 }
 
-export {DiscussionGraphComponent}
+export { DiscussionGraphComponent }

@@ -76,30 +76,30 @@ class AuthService {
   }
 
   deleteUser(userId) {
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users" + userId, 'DELETE', {}), false);
+    return new ApiService().httpRequestCall("api/v1/admin/users" + userId, 'DELETE', {}, false);
   }
 
   getUsers() {
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users", 'GET', {}), true);
+    return new ApiService().httpRequestCall("api/v1/admin/users", 'GET', {}, true);
   }
 
   lockUser(userId) {
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/lock", 'POST', {}), true);
+    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/lock", 'POST', {}, true);
   }
 
   unlockUser(userId) {
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/unlock", 'POST', {}), true);
+    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/unlock", 'POST', {}, true);
   }
 
   changeUserRole(userId, role) {
     const body = {
       role: role,
     };
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/role", 'POST', body), true);
+    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/role", 'POST', body, true);
   }
 
   resetUserPassword(userId) {
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/reset", 'POST', {}), false);
+    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/reset", 'POST', {}, false);
   }
 
   // Type can be either 'dcs' or 'aps'.
@@ -146,45 +146,27 @@ class AuthService {
     const query = {
       log_type: type,
     };
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/logs", 'DELETE', query), false);
+    return new ApiService().httpRequestCall("api/v1/admin/users/logs", 'DELETE', query, false);
   }
 
   deleteDeviceLogs(deviceId) {
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/devices/" + deviceId + "/logs", 'DELETE', {}), false);
+    return new ApiService().httpRequestCall("api/v1/admin/devices/" + deviceId + "/logs", 'DELETE', {}, false);
   }
 
   allowAPIAccess(userId) {
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/api", 'POST', {}), true);
+    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/api", 'POST', {}, true);
   }
 
   revokeAPIAccess(userId) {
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/api", 'DELETE', {}), false);
+    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/api", 'DELETE', {}, false);
   }
 
   getuser(userId) {
-    return this.resolveApiCall(new ApiService().httpRequestCall("api/v1/admin/users/" + userId, 'GET', {}), true);
+    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId, 'GET', {}, true);
   }
 
 }
 
 export { AuthService }
 
-// @Injectable()
-// export class LoginGuard implements CanActivate {
-//   constructor(private authService: AuthService, private router: Router) {}
 
-//   canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot) {
-//     return Observable.create((obs) => {
-//       this.authService.me().subscribe(
-//         (response) => {
-//           obs.next(true);
-//           obs.complete();
-//         },
-//         (error) => {
-//           obs.next(false);
-//           obs.complete();
-//         }
-//       );
-//     });
-//   }
-// }

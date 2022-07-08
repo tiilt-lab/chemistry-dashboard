@@ -39,7 +39,7 @@ function PodsOverviewPages(props){
                                     <use xlinkHref={`${micIcon}#5`}  fill={device.connected ? POD_ON_COLOR : POD_OFF_COLOR}></use>
                                 </svg>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
                                 {device.button_pressed ? <svg><circle className={style.svgpulse} x="0" y="0" r="33.5" fill-opacity="0" stroke={GLOW_COLOR}></circle> </svg> : <></> }
-                                <svg><circle x="0" y="0" r="30.5" fill-opacity="0" stroke-width="3" stroke={device.connected ? POD_ON_COLOR : POD_OFF_COLOR }></circle></svg>
+                                <svg><circle x="0" y="0" r="30.5" fillOpacity="0" strokeWidth="3" stroke={device.connected ? POD_ON_COLOR : POD_OFF_COLOR }></circle></svg>
                             </svg>
                             <div>{device.name}</div>
                         </div>
@@ -50,7 +50,7 @@ function PodsOverviewPages(props){
             </div>
             <div className={style.footer}>
                 {props.session!== null  ?
-                 <AppSessionToolbar  session={props.session} onSessionClosing={props.onSessionClosing}>
+                 <AppSessionToolbar  session={props.session} closingSession={props.onSessionClosing}>
                     
                     {!props.session.end_date ?
                     <span className={style3["toolbar-button"]} onClick={()=> props.openDialog("AddDevice")} >

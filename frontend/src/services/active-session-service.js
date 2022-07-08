@@ -1,4 +1,5 @@
 import { BehaviorSubject } from 'rxjs'
+import { map } from 'rxjs';
 import { SocketService } from './socket-service';
 import { SessionService } from './session-service';
 import { SessionModel } from '../models/session';
@@ -125,24 +126,22 @@ export class ActiveSessionService {
     }
 
     getSession() {
-        return this.sessionSource;
+        return this.sessionSource.getValue();
     }
 
     getSessionDevice(sessionDeviceId) {
-        return this.sessionDeviceSource.map(devices => {
-            return devices.find(d => d.id === sessionDeviceId);
-        });
+        return this.sessionDeviceSource.getValue().find(d =>d.id === parseInt(sessionDeviceId,10));
     }
 
     getSessionDevices() {
-        return this.sessionDeviceSource;
+        return this.sessionDeviceSource.getValue();
     }
 
     getSessionDeviceTranscripts(sessionDeviceId) {
-        return this.transcriptSource.map(ts => ts.filter(t => t.session_device_id === sessionDeviceId)
-            .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1));
+        return this.transcriptSource.getValue().filter(t => t.session_device_id === parseInt(sessionDeviceId,10))
+            .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1);
     }
     getTranscripts() {
-        return this.transcriptSource;
+        return this.transcriptSource.getValue();
     }
 }

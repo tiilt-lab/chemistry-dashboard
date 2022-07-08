@@ -11,7 +11,6 @@ function SessionManagerComponent() {
 
   useEffect(() => {
     if (sessionId !== undefined) {
-      console.log('i always come here ..')
       activeSessionService.initialize(sessionId,setInitialized);
     }
 

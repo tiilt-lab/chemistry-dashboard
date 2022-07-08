@@ -14,7 +14,7 @@ function PodsOverviewComponent() {
     const [sessionDevices, setSessionDevices] = useState(null);
     const [session, setSession] = useState(null);
     const [selectedSessionDevice, setSelectedSessionDevice] = useState(null);
-    const [subscriptions, setSubscriptions] = useState([]);
+    //const [subscriptions, setSubscriptions] = useState([]);
     const [devices, setDevices] = useState([])
     const [currentForm, setCurrentForm] = useState("");
     const [activeSessionService, setActiveSessionService] = useOutletContext();
@@ -22,24 +22,25 @@ function PodsOverviewComponent() {
 
 
     useEffect(() => {
-        console.log('i am here')
-        const sessionSub = activeSessionService.getSession().subscribe(e => {
-            setSession(e);
-        });
-        const deviceSub = activeSessionService.getSessionDevices().subscribe(e => {
-            setSessionDevices(e);
-        });
-        subscriptions.push(sessionSub, deviceSub);
-
-        return () => {
-            subscriptions.map(sub => sub.unsubscribe());
+        const sessionSub = activeSessionService.getSession();
+        if(sessionSub !== undefined) {
+            setSession(sessionSub);
         }
+        const deviceSub = activeSessionService.getSessionDevices()
+        if(sessionSub !== undefined) {
+            setSessionDevices(deviceSub);
+        }
+        // subscriptions.push(sessionSub, deviceSub);
+
+        // return () => {
+        //     subscriptions.map(sub => sub.unsubscribe());
+        // }
     }, [activeSessionService.sessionId])
 
 
 
     const goToDevice = (sessionDevice) => {
-        navigate('/sessions' + session.id + '/pods/' + sessionDevice.id);
+        navigate('/sessions/' + session.id + '/pods/' + sessionDevice.id);
     }
 
     const onSessionClosing = (isClosing) => {

@@ -2,7 +2,7 @@ import { AppContextMenu } from '../components/context-menu/context-menu-componen
 import { DialogBoxTwoOption } from '../dialog/dialog-component';
 import { Appheader } from '../header/header-component';
 import style from './manage-keyword-lists.module.css'
-import style2 from '../components/context-menu/contextmenu.module.css'
+import style2 from '../components/context-menu/context-menu.module.css'
 
 function KeywordListPage(props) {
 

@@ -3,7 +3,7 @@ import { DialogBox,GenericDialogBox } from '../dialog/dialog-component';
 import { Appheader } from '../header/header-component';
 import {AppFolderSelectComponent} from '../components/folder-select/folder-select-component'
 import style from  './sessions.module.css'
-import style2 from '../components/context-menu/contextmenu.module.css'
+import style2 from '../components/context-menu/context-menu.module.css'
 import breadcrumbIcon from '../assets/img/icon-back.svg'
 import folderIcon from "../assets/img/folder.svg"
 import micIcon from '../assets/img/mic.svg'
