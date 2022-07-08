@@ -171,9 +171,8 @@ function SessionsComponent(props) {
         apierror => {
           console.log("sessions-components func: addFolder 1 ", apierror)
         }
-      ).finally(() => {
-        closeDialog();
-      })
+      ).finally(() => closeDialog()
+      )
     }
   }
 

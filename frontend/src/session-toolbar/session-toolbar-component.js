@@ -48,8 +48,7 @@ function AppSessionToolbar(props) {
 
     const onEndSession = () => {
         setSessionEnding(true);
-        props.onSessionClosing(true)
-        //this.closingSession.emit(true);
+        props.closingSession(true)
         const fetchData = new SessionService().endSession(props.session.id)
         fetchData.then(response => {
             if (response.status === 200) {

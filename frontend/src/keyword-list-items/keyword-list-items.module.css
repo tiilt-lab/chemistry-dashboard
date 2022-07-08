@@ -268,7 +268,6 @@
 }
 
 .container {
-  display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
       -ms-flex-direction: column;
@@ -325,11 +324,16 @@
   color: #58585C;
 }
 
+.list-container2 {
+  margin-top: 8px;
+  -ms-flex-line-pack: center;
+      align-content: center;
+}
 
 .list-container {
   max-width: 375px;
-  /* width: 100vh;
-  height: 100vh; */
+  width: 100%;
+  height: 100%;
   overflow: auto;
   margin-top: 8px;
 }
@@ -743,4 +747,4 @@
   -webkit-transform: translate(0, -50%);
           transform: translate(0, -50%);
 }
-/*# sourceMappingURL=keyword-list-items-component.css.map */
+/*# sourceMappingURL=keyword-list-items.module.css.map */

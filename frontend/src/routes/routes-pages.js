@@ -8,8 +8,13 @@ import {KeywordListItemsComponent} from '../keyword-list-items/keyword-list-item
 import {SessionsComponent} from '../sessions/sessions-component'
 import {CreateSessionComponent} from '../create-session/create-session-component'
 import {PodsOverviewComponent} from '../pods-overview/pods-overview-component'
-import { SessionManagerComponent } from '../session-manager/session-manager-component';
+import {SessionManagerComponent} from '../session-manager/session-manager-component';
 import {DiscussionGraphComponent} from '../discussion-graph/discussion-graph-component'
+import {FileUploadComponent} from '../file-upload/file-upload-component'
+import { SettingsComponent } from '../settings/settings-component';
+import { PodComponent } from '../pod-details/pod-component';
+import {TranscriptsComponent} from '../transcripts/transcripts-component'
+import {PodsComponent} from '../pods/pods-component'
 import {ProtectedRoute} from './protected-route'
 
 function PageRouter() {
@@ -18,7 +23,7 @@ function PageRouter() {
         <BrowserRouter>
             <Routes>
                 <Route path="/" element={<LandingPageComponent />} />
-                    <Route path="/login" element={<LoginPage  />} /> 
+                <Route path="/login" element={<LoginPage  />} /> 
                 <Route path="/join" element={<JoinPage />} />
                 <Route path='/home' element={<ProtectedRoute component={HomeScreen} />}/>
                 <Route path='/keyword-lists' element={<ProtectedRoute  component={ManageKeywordListsComponent} />}/>
@@ -30,9 +35,12 @@ function PageRouter() {
                     <Route path='' element={<Navigate to="overview"  />} />
                     <Route path='overview' element={<ProtectedRoute component={PodsOverviewComponent}/>} />
                     <Route path='graph' element={<ProtectedRoute component={DiscussionGraphComponent}/>} />
-                    {/*<Route path='pods/:sessionDeviceId' element={<ProtectedRoute component={PodComponent}/>} />
-                    <Route path='pods/:sessionDeviceId/transcripts' element={<ProtectedRoute component={TranscriptsComponent}/>} />*/}
+                    <Route path='pods/:sessionDeviceId' element={<ProtectedRoute component={PodComponent}/>} />
+                    <Route path='pods/:sessionDeviceId/transcripts' element={<ProtectedRoute component={TranscriptsComponent}/>} />
                 </Route> 
+                <Route path='/file_upload' element={<ProtectedRoute component={FileUploadComponent}/>} />
+                <Route path='/pods' element={<ProtectedRoute component={PodsComponent}/> } />
+                <Route path='/settings' element={<ProtectedRoute component={SettingsComponent}/> } />
             </Routes>
         </BrowserRouter>
     )
