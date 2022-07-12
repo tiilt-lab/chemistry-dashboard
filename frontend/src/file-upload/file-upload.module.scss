@@ -1,0 +1,11 @@
+@import "../design-system";
+
+.instruction {
+  @include text-caption1($text-light);
+  width: 343px;
+}
+
+.padding-file {
+  margin-top: 50px;
+  text-align: center;
+}

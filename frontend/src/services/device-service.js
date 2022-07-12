@@ -1,5 +1,4 @@
 import { ApiService } from "./api-service";
-import "rxjs/add/operator/map";
 
 
 export class DeviceService {

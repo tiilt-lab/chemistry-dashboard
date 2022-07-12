@@ -111,7 +111,7 @@
   <!-- Move Folder -->
   <div *ngIf="currentForm == forms.MoveFolder" class="dialog-window">
     <div class="dialog-heading">Move Folder</div>
-    <app-folder-select #folderSelect [folders]="selectableFolders"></app-folder-select>
+    <app-folder-select #folderSelect [folders]="selectableFolders" (click)= "printdebug(folderSelect.folder)"></app-folder-select>
     <button *ngIf="folderSelect.folder" class="basic-button" (click)="moveFolder(folderSelect.folder)">OK</button>
     <button class="cancel-button" (click)="closeDialog()">Cancel</button>
   </div>
