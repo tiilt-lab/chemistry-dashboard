@@ -1,5 +1,5 @@
 import * as SocketIO from  'socket.io-client';
-
+//import { io } from 'socket.io-client';
 export class SocketService {
 
   //api = new ApiService()
@@ -7,6 +7,7 @@ export class SocketService {
   // Creates socket connection to server.
   createSocket(endpoint, room = null) {
     const socket = SocketIO.connect(window.location.protocol + '//' + window.location.hostname + '/' + endpoint);
+    //const socket = io(window.location.protocol + '//' + window.location.hostname + '/' + endpoint);
     socket.on('connect', e => {
       if (room != null) {
         socket.emit('join_room', {room: room});

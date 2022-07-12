@@ -50,7 +50,7 @@ export class SessionsComponent implements OnInit {
 
       this.sessionService.getFolders().subscribe(folders => {
         this.folders = folders;
-
+        console.log(folders, 'folders ...')
         this.route.queryParams.subscribe(params => {
           const folder = params['folder'];
           this.displayFolder(parseInt(folder, 10));
@@ -296,5 +296,10 @@ export class SessionsComponent implements OnInit {
 
   closeAlert() {
     this.showAlert = false;
+  }
+
+  printdebug(tempVar){
+    console.log(tempVar, 'debugging ...');
+
   }
 }

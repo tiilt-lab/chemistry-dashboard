@@ -20,11 +20,15 @@ export class ApiService {
     );
   }
 
-   _generateHeaders(headers) {
-    let h = {
+   _generateHeaders(headers,data) {
+    let h = {}
+    if(!(data instanceof FormData)){
+      h =  {
         "Content-Type": "application/json",
         "Accept": "application/json"
       };
+    }
+    
       const key = '';
       const val ='';
     for (const property in headers) {
@@ -32,9 +36,9 @@ export class ApiService {
         key = (typeof property === 'string')? property : JSON.stringify(property)
         val = (typeof headers[property] === 'string')? headers[property] : JSON.stringify(headers[property])
         h[key] = val;
+       // h[property] = headers[property];
       }
     }
-
     return h;
   }
 
@@ -68,7 +72,7 @@ export class ApiService {
       mode: 'cors', // no-cors, *cors, same-origin
       //cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
       credentials: 'include', // include, *same-origin, omit
-      headers: this._generateHeaders(headers),
+      headers: this._generateHeaders(headers,data),
       redirect: 'follow', // manual, *follow, error
       //referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
       body: JSON.stringify(data) // body data type must match "Content-Type" header
@@ -81,7 +85,7 @@ export class ApiService {
       mode: 'cors', // no-cors, *cors, same-origin
       //cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
       credentials: 'include', // include, *same-origin, omit
-      headers: this._generateHeaders(headers),
+      headers: this._generateHeaders(headers,data),
       redirect: 'follow', // manual, *follow, error
       //referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
       body: JSON.stringify(data) // body data type must match "Content-Type" header

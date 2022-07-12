@@ -1,13 +1,19 @@
-import './context-menu-component.scss';
+import style from './context-menu.module.css';
 import optionIcon from "../../assets/img/icon-kebab.svg";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 function AppContextMenu(props) {
 
   const [isOpen, setIsopen] = useState(true);
 
+  useEffect(() => {
+    if(props.setcallback!=undefined){
+    props.setcallback(toggle)
+    }
+  }, [])
+
   const toggle = (state) => {
-      setIsopen(!state);
+    setIsopen(!state);
   }
 
   //@HostListener('window:click', ['$event.target'])
@@ -21,21 +27,21 @@ function AppContextMenu(props) {
   const dynamicInnerChild = () => {
     if (!isOpen) {
       return (
-      <div  className="dropdown-menu-container">
+        <div className={style["dropdown-menu-container"]}>
           {props.children}
-      </div>)
-        }
+        </div>)
     }
+  }
 
   return (
-    <div className="menu-container">
-      <button className="menu-button" onClick={()=> toggle(isOpen)}>
+    <div className={style["menu-container"]}>
+      <button className={style["menu-button"]} onClick={() => toggle(isOpen)}>
         <svg x="0" y="0" width="24" height="24" viewBox="0 0 24 24">
           <use xlinkHref={`${optionIcon}#kebab`}></use>
         </svg>
       </button>
-      {dynamicInnerChild()} 
+      {dynamicInnerChild()}
     </div>
   )
 }
-export {AppContextMenu}
+export { AppContextMenu }

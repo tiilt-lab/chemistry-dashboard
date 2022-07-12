@@ -2,16 +2,17 @@ import { KeywordService } from "../services/keyword-service";
 import { KeywordListModel } from '../models/keyword-list';
 import { formatDate } from "../globals";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { KeywordListPage } from './html-pages'
 
 
-function ManageKeywordListsComponent() {
+function ManageKeywordListsComponent(props) {
   const navigate = useNavigate();
   const [deleteDialogIsOpen, setDeleteDialogIsOpen] = useState(false);
   const [keywordListToDelete, setKeywordListToDelete] = useState(null);
   const [keywordLists, setKeywordLists] = useState([]);
   const [topics, setTopics] = useState([]);
+  //const location = useLocation();
 
   const formatdate = formatDate; // Allows the HTML to invoke the function.
 
@@ -40,9 +41,10 @@ function ManageKeywordListsComponent() {
     )
   }, []);
 
+  //console.log(location.state, 'debugging ..')
 
   const openNewKeywordList = () => {
-    return navigate('/keyword-lists/new-keyword-list');
+    return navigate('/keyword-lists/new');
   }
 
   const createTopicModel = () => {
