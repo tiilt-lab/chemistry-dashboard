@@ -8,6 +8,7 @@ from doa.doa_respeaker_v2_6mic_array import calculateDOA
 from speaker_diarization.pyDiarization import speakerDiarization
 import numpy as np
 import time
+from source_seperation import source_seperation_pre_trained
 
 # For converting nano seconds to seconds.
 NANO = 1000000000
@@ -148,7 +149,10 @@ class AudioProcessor:
                         'start': start_time,
                         'end': end_time
                     })
-
+            #Get source seperation
+            if self.config.source_seperation:
+                source_seperation = source_seperation_pre_trained
+                
             # Get Features
             features = None
             if self.config.features:
