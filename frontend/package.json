@@ -10,8 +10,8 @@
     "react-dom": "^18.1.0",
     "react-router-dom": "^6.3.0",
     "react-scripts": "5.0.1",
-    "rxjs": "^7.5.5",
-    "sass": "^1.52.0",
+    "rxjs": "^7.5.6",
+    "sass": "^1.53.0",
     "socket.io-client": "^4.5.1",
     "web-vitals": "^2.1.4"
   },
