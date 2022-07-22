@@ -12,7 +12,7 @@ import style from './pod.module.css'
 import React from 'react'
 
 function PodComponentPages(props) {
-
+console.log(props.displayTranscripts, 'debuging ..')
     return (
         <>
             <div className={style.container}>

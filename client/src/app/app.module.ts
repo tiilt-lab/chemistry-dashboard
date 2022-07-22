@@ -29,6 +29,7 @@ import { TimelineSliderComponent } from "./components/timeline-slider/timeline-s
 import { TranscriptsComponent } from "./transcripts/transcripts.component";
 import { DiscussionGraphComponent } from "./discussion-graph/discussion-graph.component";
 import { FileUploadComponent } from "./file-upload/file-upload.component";
+import { PieChartComponent } from "./pie-chart/pie-chart.component";
 
 // Modules
 import { BrowserModule } from "@angular/platform-browser";
@@ -71,6 +72,7 @@ import { FileUploadService } from "./services/file-upload.service";
     LandingPageComponent,
     LoginComponent,
     ManageKeywordListsComponent,
+    PieChartComponent,
     PodComponent,
     PodsComponent,
     PodsOverviewComponent,
