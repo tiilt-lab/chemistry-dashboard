@@ -5,6 +5,7 @@ import questIcon from "../assets/img/question.svg"
 import React from 'react'
 
 function HeatMapPage(props){
+  //console.log(props, 'props heatmap')
   return(
       <>
       <div className={style["heatmap-container"]} style={props.showTools ? {height:"190px"} : {height:"160px"}}>
@@ -54,8 +55,8 @@ function HeatMapPage(props){
       <img onClick={()=> props.toggleDisplay(true)} className={style["info-button"]} alt='question' src={questIcon}/>
       <div className={style["graph-menu"]}>
       <AppContextMenu  setcallback = {props.setCallbackFunc}>
-          <div className={style["menu-item"]} onClick={()=>{props.setShowTools(!props.showTools); props.callbackfunc(false)}}>{(props.showTools)? 'Hide Tools': 'Show Tools'}</div>
-          <div className={style["menu-item"]} onClick={()=>{props.resetDiagram(); props.callbackfunc(false)}}>Reset</div>
+          <div className={style["menu-item"]} onClick={()=>{props.setShowTools(!props.showTools); if(props.callbackfunc){props.callbackfunc(false)}}}>{(props.showTools)? 'Hide Tools': 'Show Tools'}</div>
+          <div className={style["menu-item"]} onClick={()=>{props.resetDiagram(); if(props.callbackfunc){props.callbackfunc(false)}}}>Reset</div>
         </AppContextMenu>
       </div>
     </div>
