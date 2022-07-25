@@ -3,9 +3,10 @@ import style from './keywords.module.css'
 import {AppContextMenu} from '../components/context-menu/context-menu-component'
 
 function AppKeywordsPage(props) {
+  
   return (
     <div className={style["keyword-container"]}>
-      {props.showGraph ?
+      {!props.showGraph ?
         <React.Fragment>
           {
             props.displayKeywords.map((displayKeyword, index) => (

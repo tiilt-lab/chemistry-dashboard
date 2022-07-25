@@ -1,11 +1,12 @@
 
 import style from './transcripts.module.css'
+import style2 from '../dialog/dialog.module.css'
 import { GenericDialogBox } from '../dialog/dialog-component'
 import {Appheader} from '../header/header-component'
 
 
 function TranscriptComponentPage(props) {
-
+  //console.log(props.transcriptIndex, 'index ...')
   return (
     <>
       <div className={style.container}>
@@ -21,7 +22,7 @@ function TranscriptComponentPage(props) {
         <div className={style["transcript-list"]}>
           {props.displayTranscripts.map((transcript, index) => (
             <div key={index}>
-              <div id={`${transcript.id}`} className={transcript.id == props.transcriptIndex ? `${style["transcript-container"]}` `${style.highlighted}` : style["transcript-container"]} style={{ backgroundColor: `${transcript.doaColor}` }}>
+              <div id={`${transcript.id}`} className={transcript.id === props.transcriptIndex ? `${style["transcript-container"]} ${style.highlighted}` : style["transcript-container"]} style={{ backgroundColor: `${transcript.doaColor}` }}>
                 <div className={style.timestamp}>{props.formatSeconds(transcript.start_time)}</div>
                 <div className={style["transcript-text"]}>
                   {transcript.speaker_tag ? <span className={style.bold}>{transcript.speaker_tag}: </span> : <></>}
@@ -30,11 +31,11 @@ function TranscriptComponentPage(props) {
                       <span key={index}>
                         {transcriptData.matchingKeywords !== null ?
                           <span style={{ color: `${transcriptData.color}` }} onClick={() => props.openKeywordDialog(transcriptData.matchingKeywords)} className={style["highlight-keyword"]}>
-                            {transcriptData.word}
+                            {transcriptData.word+" "}
                           </span>
                           :
                           <></>}
-                        {transcriptData.matchingKeywords === null ? <span>{transcriptData.word}</span> : <></>}
+                        {transcriptData.matchingKeywords === null ? <span>{transcriptData.word+" "}</span> : <></>}
                       </span>
                     ))
                   }
@@ -51,11 +52,11 @@ function TranscriptComponentPage(props) {
 
       <GenericDialogBox show={props.currentForm !== ""} >
         {props.currentForm == "Keyword" ?
-          <div className={style["dialog-box"]}>
-            <div className={style["dialog-heading"]}>Keyword Data</div>
-            <div className={style["dialog-body"]}><span className={style.bold}>Word:</span> {props.dialogKeywords[0].word} </div>
-            <div className={style["dialog-body"]}><span className={style.bold}>Keywords (Similarity):</span></div>
-            <div className={style["dialog-body"]}>
+          <div className={style2["dialog-box"]}>
+            <div className={style2["dialog-heading"]}>Keyword Data</div>
+            <div className={style2["dialog-body"]}><span className={style.bold}>Word:</span> {props.dialogKeywords[0].word} </div>
+            <div className={style2["dialog-body"]}><span className={style.bold}>Keywords (Similarity):</span></div>
+            <div className={style2["dialog-body"]}>
               {
                 props.dialogKeywords.map((keyword, index) => (
                   <span key={index}>
@@ -72,8 +73,8 @@ function TranscriptComponentPage(props) {
         }
 
         {props.currentForm === "Options" ?
-          <div className={style["dialog-box"]}>
-            <div className={style["dialog-heading"]}>Transcript Options</div>
+          <div className={style2["dialog-box"]}>
+            <div className={style2["dialog-heading"]}>Transcript Options</div>
             <br />
             <label className={style["dc-checkbox"]}>Show keywords
               <input type="checkbox" checked={props.showKeywords} value={props.showKeywords} onChange={props.createDisplayTranscripts} />

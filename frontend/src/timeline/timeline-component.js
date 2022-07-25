@@ -7,7 +7,6 @@ function AppTimeline(props) {
     const TIMELINE_LEFT = 16;
     const TIMELINE_WIDTH = 341;
     const MIN_UTTERANCE_WIDTH = 1;
-    console.log(props.transcripts,'trans passed')
     const [_transcripts, setTranscripts] = useState(props.transcripts)
     const [displayTranscripts, setDisplayTranscripts] = useState([]);
     const [previousTranscriptCount, setPreviousTranscriptCount] = useState(0);
@@ -15,7 +14,7 @@ function AppTimeline(props) {
     const [endText, setEndText] = useState('Now');
     const [_start, setStart] = useState();
     const [_end, setEnd] = useState();
-    const [reload, setReload] = useState(false);
+    //const [reload, setReload] = useState(false);
 
     useEffect(() => {
         if (props.transcripts !== undefined) {
@@ -42,14 +41,14 @@ function AppTimeline(props) {
             }
             refreshTimeline();
         }
-        setReload(true)
-    }, [props.transcripts,reload])
+        //setReload(true)
+    }, [props.transcripts])
 
 
     const refreshTimeline = () => {
         const duration = _end - _start;
         const temptranscript = [] 
-        console.log(_transcripts, 'inside refresh ..')
+        if(props.transcripts !== undefined){
         for (const transcript of props.transcripts) {
             const pct_start = (transcript.start_time - _start) / duration;
             const pct_length = transcript.length / duration;
@@ -60,13 +59,14 @@ function AppTimeline(props) {
                 MIN_UTTERANCE_WIDTH), TIMELINE_WIDTH * (1 - pct_start));
                 temptranscript.push(displayTranscript);
         }
+    }
         setDisplayTranscripts(temptranscript);
     }
 
     const openTranscriptDialog = (transcript) => {
         props.clickedTimeline(transcript);
     }
-    console.log(_transcripts, 'dispalytransss...')
+   
 
     return (
         <div className={style["timeline-container"]}>

@@ -105,7 +105,7 @@ function  AppHeatMapComponent(props) {
     }
 
    const segmentChange = (e)=> {
-        const seg = e.value;
+        const seg = e.target.value;
         setSegments(seg)
         setSegmentSize(360 / seg);
         setVectors(calculateVectors());
@@ -113,7 +113,7 @@ function  AppHeatMapComponent(props) {
     }
 
     const offsetChange = (e)=>{
-        const angle = e.value
+        const angle = e.target.value
         setAngleOffset(angle)
         setVectors(calculateVectors());
         calculateDirectionProportions();
@@ -144,6 +144,8 @@ function  AppHeatMapComponent(props) {
             setCallbackFunc = {setCallbackFunc}
             resetDiagram = {resetDiagram}
             showDialog = {showDialog}
+            segments = {segments}
+            angleOffset = {angleOffset}
         />
     )
 }

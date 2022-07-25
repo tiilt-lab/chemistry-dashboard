@@ -22,7 +22,7 @@ function FeaturePage(props){
                                 { feature.name }
                             </td>
                             <td className={style.score}>
-                              <div className={style.number}>{feature.average} | number : '1.0-0' </div>
+                              <div className={style.number}>{Math.round(feature.average)} </div>
                               <div className= {feature.trend == 1 ? `${style["direction-indicator"]} ${style.positive}` : feature.trend == 0 ? `${style["direction-indicator"]} ${style.neutral}` : feature.trend == -1 ? `${style["direction-indicator"]} ${style.negative}` : style["direction-indicator"]} > </div>
                             </td>
                             <td>

@@ -10,7 +10,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import { PodComponentPages } from './html-pages'
 
-import { io } from 'socket.io-client';
 
 
 function PodComponent() {
@@ -19,7 +18,7 @@ function PodComponent() {
     const [session, setSession] = useState({});
     const [transcripts, setTransripts] = useState([]);
     const [displayTranscripts, setDisplayTranscripts] = useState([]);
-    const [currentTranscript, setCurrentTranscript] = useState();
+    const [currentTranscript, setCurrentTranscript] = useState({});
     const [currentForm, setCurrentForm] = useState("");
     const [sessionClosing, setSessionClosing] = useState(false);
     const [subscriptions, setSubscriptions] = useState([]);
@@ -28,63 +27,76 @@ function PodComponent() {
     const [startTime, setStartTime] = useState();
     const [endTime, setEndTime] = useState();
     const [intervalId, setIntervalId] = useState();
+    const [reload, setReload] = useState(false)
     const [activeSessionService, setActiveSessionService] = useOutletContext();
     const { sessionDeviceId } = useParams();
     const navigate = useNavigate()
 
     useEffect(() => {
-        // if (sessionDeviceId !== undefined) {
-        const sessionSub = activeSessionService.getSession();
-        if (sessionSub !== undefined) {
-            setSession(sessionSub);
-        }
-
-        const deviceSub = activeSessionService.getSessionDevice(sessionDeviceId);
-        if (deviceSub !== undefined) {
-            setSessionDevice(deviceSub);
-        }
-        
-        const transcriptSub = activeSessionService.getTranscripts(); 
-        //const transcriptSub = activeSessionService.getSessionDeviceTranscripts(sessionDeviceId,setDisplayTranscripts);
-        // if (transcriptSub !== undefined) {
-        //     setDisplayTranscripts(transcriptSub);
-        transcriptSub.subscribe(e=>{
-            if(e.length > 0){
-                const data = e.filter(t => t.session_device_id === parseInt(sessionDeviceId,10))
-                .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
-                console.log(data,'still debugging ...')
-                setDisplayTranscripts(data)
+        // if (endTime === undefined) {
+        //console.log('i was here')
+        if (Object.keys(session).length <= 0) {
+            const sessionSub = activeSessionService.getSession();
+            if (sessionSub !== undefined) {
+                setSession(sessionSub);
             }
-        })
-        setRange(timeRange);
-        // }
+        }
 
-        //  subscriptions.push(sessionSub, deviceSub, transcriptSub);
-        subscriptions.push(transcriptSub);
-        // }
+        if (Object.keys(sessionDevice).length <= 0) {
+            const deviceSub = activeSessionService.getSessionDevice(sessionDeviceId);
+            if (deviceSub !== undefined) {
+                setSessionDevice(deviceSub);
+            }
+        }
+        if (transcripts.length <= 0) {
+           const transcriptSub = activeSessionService.getTranscripts()
+            //const transcriptSub = activeSessionService.getSessionDeviceTranscripts(sessionDeviceId, setTransripts);
 
-
+            transcriptSub.subscribe(e => {
+                if (Object.keys(e).length !== 0) {
+                    const data = e.filter(t => t.session_device_id === parseInt(sessionDeviceId, 10))
+                        .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
+                    //console.log(data,session, 'still debugging ...')
+                    setTransripts(data)
+                    const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
+                    setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100)
+                    setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100)
+                }
+            })
+            subscriptions.push(transcriptSub);
+        }
 
         // Refresh based on timeslider.
         setIntervalId(setInterval(() => {
-            //setRange(timeRange);
+            //ResetTimeRange(timeRange);
             if (session === undefined || !session.recording) {
                 clearInterval(intervalId);
             }
         }, 2000));
 
-        setRange(timeRange);
-
         return () => {
-            subscriptions.map(sub => sub.unsubscribe());
+            subscriptions.map(sub => {
+                if (sub.closed) {
+                    sub.unsubscribe()
+                }
+            });
             clearInterval(intervalId);
         }
-    }, [displayTranscripts])
+    }, [])
 
-    
+    useEffect(()=>{
+        const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
+        const sTime = Math.round(sessionLen * timeRange[0] * 100) / 100;
+        const eTime = Math.round(sessionLen * timeRange[1] * 100) / 100;
+        setStartTime(sTime)
+        setEndTime(eTime)
+        setDisplayTranscripts(transcripts.filter(t => t.start_time >= sTime && t.start_time <= eTime));
+    },[endTime])
 
-    const setRange = (values) => {
-        const sessionLen = session !== undefined ? session.length : 0;
+    //console.log(session, transcripts, '-', sessionDevice, '-', displayTranscripts, '-', startTime, '-', endTime, '-', 'session .......')
+
+    const ResetTimeRange = (values) => {
+        const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
         setTimeRange(values);
         setStartTime(Math.round(sessionLen * values[0] * 100) / 100);
         setEndTime(Math.round(sessionLen * values[1] * 100) / 100);
@@ -92,6 +104,8 @@ function PodComponent() {
     }
 
     const generateDispalyTranscripts = () => {
+        // console.log(startTime, endTime, 'generate ....')
+        // console.log(transcripts.filter(t => t.start_time >= startTime && t.start_time <= endTime), 'displaytrans')
         setDisplayTranscripts(transcripts.filter(t => t.start_time >= startTime && t.start_time <= endTime));
     }
 
@@ -104,6 +118,7 @@ function PodComponent() {
     }
 
     const seeAllTranscripts = () => {
+        console.log(currentTranscript, 'debugging ...')
         if (currentTranscript !== undefined) {
             navigate('/sessions/' + session.id + '/pods/' + sessionDeviceId + '/transcripts?index=' + currentTranscript.id)
         } else {
@@ -149,10 +164,11 @@ function PodComponent() {
     }
 
     return (
+
         <PodComponentPages
             sessionDevice={sessionDevice}
             navigateToSession={navigateToSession}
-            setRange={setRange}
+            setRange={ResetTimeRange}
             onClickedTimeline={onClickedTimeline}
             session={session}
             displayTranscripts={displayTranscripts}
