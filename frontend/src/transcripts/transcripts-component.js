@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useOutletContext,useParams } from 'react-router-dom';
+import { useNavigate, useOutletContext,useParams, useSearchParams } from 'react-router-dom';
 import { similarityToRGB } from '../globals';
 import {TranscriptComponentPage} from './html-pages'
 
@@ -16,8 +16,8 @@ function TranscriptsComponent(){
   // }
 
   
-  const [sessionDevice, setSessionDevice] = useState();
-  const [session, setSession] = useState();
+  const [sessionDevice, setSessionDevice] = useState({});
+  const [session, setSession] = useState({});
   const [transcripts, setTranscripts] = useState([]);
   const [transcriptIndex, setTranscriptIndex] = useState("");
   const [dialogKeywords, setDialogKeywords] = useState();
@@ -27,14 +27,16 @@ function TranscriptsComponent(){
   const [hasScrolled, setHasScrolled] = useState(false);
   const [showKeywords, setShowKeywords] = useState(true);
   const [showDoA,setShowDoA] = useState(false);
+  const [reload, setReload] = useState(false)
   const [activeSessionService, setActiveSessionService] = useOutletContext();
   const { sessionDeviceId } = useParams(); 
-  const {index} = useParams();
+  const [searchParam, setSearchParam] = useSearchParams();
   const navigate = useNavigate()
   
   useEffect(()=>{
+    const index = searchParam.get('index');
     if(index !== undefined){
-      setTranscriptIndex(index)
+      setTranscriptIndex(parseInt(index, 10))
     }
 
     if(sessionDeviceId !== undefined){
@@ -43,30 +45,47 @@ function TranscriptsComponent(){
         setSession(sessSub);
       }
 
-      if(sessionDeviceId !== undefined){
       const deviceSub = activeSessionService.getSessionDevice(sessionDeviceId)
       if(deviceSub !== undefined){
         setSessionDevice(deviceSub);
       }
 
-      const transcriptSub = activeSessionService.getSessionDeviceTranscripts(sessionDeviceId)
-      if(transcriptSub !== undefined){
-        setTranscripts(transcriptSub);
-        createDisplayTranscripts();
-      }
+      if (transcripts.length <= 0) {
+        const transcriptSub = activeSessionService.getTranscripts()
+         //const transcriptSub = activeSessionService.getSessionDeviceTranscripts(sessionDeviceId, setTransripts);
+
+         transcriptSub.subscribe(e => {
+             if (Object.keys(e).length !== 0) {
+                 const data = e.filter(t => t.session_device_id === parseInt(sessionDeviceId, 10))
+                     .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
+                 setTranscripts(data)
+                 setReload(true)
+             }
+         })
+         subscriptions.push(transcriptSub);
+     }
     }
       
-      //subscriptions.push(deviceSub, transcriptSub);
-    }
     
 
-  // return ()=> {
-  //   subscriptions.map(sub => sub.unsubscribe());
-  // }
+    return () => {
+      subscriptions.map(sub => {
+          if (sub.closed) {
+              sub.unsubscribe()
+          }
+      });
+  }
 },[])
 
-  const createDisplayTranscripts = ()=> {
-    setDisplayTranscripts([]);
+useEffect(()=>{
+  if(reload){
+    createDisplayTranscripts();
+  }
+},[reload])
+
+//console.log(transcripts, displayTranscripts, 'states ... ')
+const createDisplayTranscripts = ()=> {
+    const accdisplaytrans = [];
     for (const transcript of transcripts) {
       const result = [];
       const words = transcript.transcript.split(' ');
@@ -91,9 +110,10 @@ function TranscriptsComponent(){
         });
       }
       transcript['words'] = result;
-      transcript['doaColor'] = (this.showDoA) ? this.angleToColor(transcript.direction) : this.angleToColor(-1);
-      displayTranscripts.push(transcript);
+      transcript['doaColor'] = showDoA ? angleToColor(transcript.direction) : angleToColor(-1);
+      accdisplaytrans.push(transcript);
     }
+    setDisplayTranscripts(accdisplaytrans)
   }
 
   const angleToColor = (angle)=> {
@@ -129,6 +149,7 @@ function TranscriptsComponent(){
   return(
     <TranscriptComponentPage
       sessionDevice = {sessionDevice}
+      currentForm = {currentForm}
       navigateToSession = {navigateToSession}
       displayTranscripts = { displayTranscripts}
       formatSeconds = {formatSeconds}
@@ -138,6 +159,7 @@ function TranscriptsComponent(){
       showDoA = {showDoA}
       transcriptIndex = {transcriptIndex}
       createDisplayTranscripts = {createDisplayTranscripts}
+      openOptionsDialog = {openOptionsDialog}
     />
   )
 }

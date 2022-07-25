@@ -15,7 +15,6 @@ export class SocketService {
         socket.emit('join_room', {room: room});
       }
     });
-    console.log(socket, 'socket service..')
     socket.on('disconnect', e => {});
     socket.on('connecting', e => {});
     socket.on('connect_failed', e => {});

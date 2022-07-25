@@ -6,34 +6,23 @@ import {AppKeywordsPage} from './html-pages'
 
 
 function AppKeywordsComponent(props) {
-  const [_transcripts, setTranscripts] = useState([]);
   const [displayKeywords, setDisplayKeywords] = useState([]);
   const [showGraph, setShowGraph] = useState(false);
   const [keywordPoints, setKeywordPoints] = useState();
   const [timelineWidth, setTimeLineWidth] = useState(240);
-  const [_start, setStart] = useState();
-  const [_end, setEnd]  = useState();
+  const [_start, setStart] = useState(props.start);
+  const [_end, setEnd]  = useState(props.end);
   const [callbackfunc, setCallbackFunc] = useState();
+  const [reload, setReload] = useState(false);
   const navigate = useNavigate()
 
-  // @Input('session') session: SessionModel;
-  // @Input('sessionDevice') sessionDevice: SessionDeviceModel;
+  
   useEffect(()=>{
-  if(props.transcripts !== undefined) {
-    setTranscripts(props.transcripts);
-    refresh();
+  refresh()
+  if(props.transcripts.length > 0){
+    setReload(true)
   }
- 
-  if(props.start !== undefined) {
-    setStart(props.start);
-    refresh();
-  }
-
-  if(props.end !== undefined) {
-    setEnd(props.end);
-    refresh();
-  }
-  },[])
+  },[props.transcripts])
 
   const toggleGraph = ()=> {
     setShowGraph(!showGraph);
@@ -53,14 +42,15 @@ function AppKeywordsComponent(props) {
   // --------
 
   const refreshKeywords = ()=> {
-    setDisplayKeywords([]);
-    for (const transcript of _transcripts) {
+    const dispKeyword = [];
+    for (const transcript of props.transcripts) {
       const words = new Set(transcript.keywords.map(k => k.word));
       words.forEach(word => {
         const highestSimilarity = Math.max(...transcript.keywords.filter(k => k.word === word).map(k => k.similarity));
-        displayKeywords.push({'word': word, 'color': similarityToRGB(highestSimilarity), 'transcript_id': transcript.id});
+        dispKeyword.push({'word': word, 'color': similarityToRGB(highestSimilarity), 'transcript_id': transcript.id});
       });
     }
+    setDisplayKeywords(dispKeyword);
   }
 
   const showKeywordContext = (transcriptId)=> {
@@ -77,7 +67,7 @@ function AppKeywordsComponent(props) {
       keywordPoints[keyword] = [];
     }
 
-    for (const transcript of _transcripts) {
+    for (const transcript of props.transcripts) {
       const duration = _end - _start;
       const keywordTracker = {};
       for (const keywordUsage of transcript.keywords) {

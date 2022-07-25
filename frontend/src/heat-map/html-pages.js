@@ -43,9 +43,9 @@ function HeatMapPage(props){
              <React.Fragment>
              <hr className={style["tool-hr"]}></hr>
              <div className={style["angle-text"]} style={{left:'0px', top:'160px'}}> Zones: {props.segments}</div>
-             <input className={`${style["segment-input"]} ${style["dc-slider"]}`} type="range" defaultValue='8' min='2' max='24' onKeyUp={(event)=> props.segmentChange(event)}  />
+             <input className={`${style["segment-input"]} ${style["dc-slider"]}`} type="range" defaultValue={props.segments} min='2' max='24' onChange={(event)=> props.segmentChange(event)}  />
              <div className={style["angle-text"]} style={{right:'0px', top:'160px'}}>Offset</div>
-             <input className={`${style["offset-input"]} ${style["dc-slider"]}`} type="range"  min='0' max='1' step='0.01' onKeyUp={(event)=> props.offsetChange(event)} />
+             <input className={`${style["offset-input"]} ${style["dc-slider"]}`} type="range"  min='0' max='1' step='0.01' defaultValue={props.angleOffset} onChange={(event)=> props.offsetChange(event)} />
            </React.Fragment>
         :
           <></>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SessionModel } from '../models/session';
 import { TranscriptModel } from '../models/transcript';
 import {FeaturePage} from './html-pages'
@@ -13,12 +13,15 @@ function AppFeaturesComponent(props) {
   // }
   const svgWidth = 74;
   const svgHeight = 39;
-  const [_transcripts, setTranscript] = useState([]);
+  //const [_transcripts, setTranscript] = useState([]);
   const [features, setFeatures] = useState([]);
   const [featureDescription, setFeatureDescription] = useState(null);
   const [featureHeader, setFeatureHeader] = useState(null);
   const [showFeatureDialog, setShowFeatureDialog] = useState(false);
 
+  useEffect(()=>{
+    updateGraphs()
+  },[props.transcripts])
   
   const updateGraphs = ()=> {
     // Create feature array.
@@ -27,7 +30,7 @@ function AppFeaturesComponent(props) {
                         { 'name': 'Clout', 'values': [] },
                         { 'name': 'Authenticity', 'values': [] },
                         { 'name': 'Confusion', 'values': [] }];
-      _transcripts.map(t => {
+      props.transcripts.map(t => {
       valueArrays[0].values.push(t.emotional_tone_value);
       valueArrays[1].values.push(t.analytic_thinking_value);
       valueArrays[2].values.push(t.clout_value);

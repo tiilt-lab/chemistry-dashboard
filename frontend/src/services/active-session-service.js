@@ -141,7 +141,7 @@ export class ActiveSessionService {
             if(Object.keys(e).length !== 0){
                 const data = e.filter(t => t.session_device_id === parseInt(sessionDeviceId,10))
                 .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
-                console.log(data,'still debugging ...')
+                //console.log(data,'still debugging ...')
                 setState(data)
             }
         })
