@@ -40,7 +40,6 @@ export class ActiveSessionService {
   initializeSocket() {
     // Create Socket.
     this.socket = this.socketService.createSocket('session', this.sessionId);
-
     // Update device.
     this.socket.on('device_update', e => {
       const updatedDevice = SessionDeviceModel.fromJson(JSON.parse(e));
