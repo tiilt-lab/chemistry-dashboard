@@ -30,7 +30,7 @@ function AppSessionToolbar(props) {
         return () => {
             clearInterval(intervalId);
         }
-    }, [])
+    }, [props.session])
 
 
     const updateTime = () => {

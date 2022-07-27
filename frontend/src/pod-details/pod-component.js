@@ -8,7 +8,8 @@ import { TranscriptModel } from '../models/transcript';
 import { KeywordUsageModel } from '../models/keyword-usage';
 import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
-import {PodComponentPages} from './html-pages'
+import { PodComponentPages } from './html-pages'
+
 
 
 function PodComponent() {
@@ -17,62 +18,85 @@ function PodComponent() {
     const [session, setSession] = useState({});
     const [transcripts, setTransripts] = useState([]);
     const [displayTranscripts, setDisplayTranscripts] = useState([]);
-    const [currentTranscript, setCurrentTranscript] = useState();
+    const [currentTranscript, setCurrentTranscript] = useState({});
     const [currentForm, setCurrentForm] = useState("");
     const [sessionClosing, setSessionClosing] = useState(false);
-    //const [subscriptions, setSubscriptions] = useState([]);
+    const [subscriptions, setSubscriptions] = useState([]);
     const [deleteDeviceToggle, setDeleteDeviceToggle] = useState(false);
     const [timeRange, setTimeRange] = useState([0, 1]);
     const [startTime, setStartTime] = useState();
     const [endTime, setEndTime] = useState();
     const [intervalId, setIntervalId] = useState();
+    const [reload, setReload] = useState(false)
     const [activeSessionService, setActiveSessionService] = useOutletContext();
     const { sessionDeviceId } = useParams();
     const navigate = useNavigate()
 
-
     useEffect(() => {
-       // if (sessionDeviceId !== undefined) {
+        // if (endTime === undefined) {
+        //console.log('i was here')
+        if (Object.keys(session).length <= 0) {
             const sessionSub = activeSessionService.getSession();
-            if(sessionSub !== undefined){  
+            if (sessionSub !== undefined) {
                 setSession(sessionSub);
             }
+        }
 
+        if (Object.keys(sessionDevice).length <= 0) {
             const deviceSub = activeSessionService.getSessionDevice(sessionDeviceId);
-            if(deviceSub !== undefined){  
+            if (deviceSub !== undefined) {
                 setSessionDevice(deviceSub);
             }
-            
-            const transcriptSub = activeSessionService.getSessionDeviceTranscripts(sessionDeviceId);
-            if(transcriptSub!==undefined){
-                setDisplayTranscripts(transcriptSub);
-                setRange(timeRange);
-            }
+        }
+        if (transcripts.length <= 0) {
+           const transcriptSub = activeSessionService.getTranscripts()
+            //const transcriptSub = activeSessionService.getSessionDeviceTranscripts(sessionDeviceId, setTransripts);
 
-           // subscriptions.push(sessionSub, deviceSub, transcriptSub);
-       // }
-
-
+            transcriptSub.subscribe(e => {
+                if (Object.keys(e).length !== 0) {
+                    const data = e.filter(t => t.session_device_id === parseInt(sessionDeviceId, 10))
+                        .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
+                    //console.log(data,session, 'still debugging ...')
+                    setTransripts(data)
+                    const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
+                    setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100)
+                    setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100)
+                }
+            })
+            subscriptions.push(transcriptSub);
+        }
 
         // Refresh based on timeslider.
         setIntervalId(setInterval(() => {
-            setRange(timeRange);
-            if (session===undefined || !session.recording) {
+            //ResetTimeRange(timeRange);
+            if (session === undefined || !session.recording) {
                 clearInterval(intervalId);
             }
         }, 2000));
 
-        setRange(timeRange);
-
-        // return () => {
-        //     subscriptions.map(sub => sub.unsubscribe());
-        //     clearInterval(intervalId);
-        // }
+        return () => {
+            subscriptions.map(sub => {
+                if (sub.closed) {
+                    sub.unsubscribe()
+                }
+            });
+            clearInterval(intervalId);
+        }
     }, [])
 
+    useEffect(()=>{
+        const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
+        const sTime = Math.round(sessionLen * timeRange[0] * 100) / 100;
+        const eTime = Math.round(sessionLen * timeRange[1] * 100) / 100;
+        setStartTime(sTime)
+        setEndTime(eTime)
+        setDisplayTranscripts(transcripts.filter(t => t.start_time >= sTime && t.start_time <= eTime));
+    },[endTime])
 
-    const setRange = (values) => {
-        const sessionLen = session !== undefined ? session.length : 0;
+    //console.log(session, transcripts, '-', sessionDevice, '-', displayTranscripts, '-', startTime, '-', endTime, '-', 'session .......')
+
+    const ResetTimeRange = (values) => {
+        const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
         setTimeRange(values);
         setStartTime(Math.round(sessionLen * values[0] * 100) / 100);
         setEndTime(Math.round(sessionLen * values[1] * 100) / 100);
@@ -80,6 +104,8 @@ function PodComponent() {
     }
 
     const generateDispalyTranscripts = () => {
+        // console.log(startTime, endTime, 'generate ....')
+        // console.log(transcripts.filter(t => t.start_time >= startTime && t.start_time <= endTime), 'displaytrans')
         setDisplayTranscripts(transcripts.filter(t => t.start_time >= startTime && t.start_time <= endTime));
     }
 
@@ -92,6 +118,7 @@ function PodComponent() {
     }
 
     const seeAllTranscripts = () => {
+        console.log(currentTranscript, 'debugging ...')
         if (currentTranscript !== undefined) {
             navigate('/sessions/' + session.id + '/pods/' + sessionDeviceId + '/transcripts?index=' + currentTranscript.id)
         } else {
@@ -122,43 +149,44 @@ function PodComponent() {
         )
     }
 
-    const onClickedTimeline = (transcript)=> {
+    const onClickedTimeline = (transcript) => {
         setCurrentForm("Transcript");
         setCurrentTranscript(transcript);
     }
 
-    const openDialog = (form)=> {
+    const openDialog = (form) => {
         setDeleteDeviceToggle(false);
         setCurrentForm(form);
     }
 
-    const closeDialog = ()=> {
+    const closeDialog = () => {
         setCurrentForm("");
     }
 
-    return(
-        <PodComponentPages 
-            sessionDevice = {sessionDevice}
-            navigateToSession = {navigateToSession}
-            setRange = {setRange}
-            onClickedTimeline = {onClickedTimeline}
-            session = {session}
-            displayTranscripts = {displayTranscripts}
-            startTime = {startTime}
-            endTime = {endTime}
-            transcripts = {transcripts}
-            loading = {loading}
-            onSessionClosing = {onSessionClosing}
-            currentForm = {currentForm}
-            currentTranscript = {currentTranscript}
-            closeDialog = {closeDialog}
-            seeAllTranscripts = {seeAllTranscripts}
-            openDialog = {openDialog}
-            deleteDeviceToggle = {deleteDeviceToggle}
-            setDeleteDeviceToggle = {setDeleteDeviceToggle}
-            removeDeviceFromSession = {removeDeviceFromSession}
+    return (
+
+        <PodComponentPages
+            sessionDevice={sessionDevice}
+            navigateToSession={navigateToSession}
+            setRange={ResetTimeRange}
+            onClickedTimeline={onClickedTimeline}
+            session={session}
+            displayTranscripts={displayTranscripts}
+            startTime={startTime}
+            endTime={endTime}
+            transcripts={transcripts}
+            loading={loading}
+            onSessionClosing={onSessionClosing}
+            currentForm={currentForm}
+            currentTranscript={currentTranscript}
+            closeDialog={closeDialog}
+            seeAllTranscripts={seeAllTranscripts}
+            openDialog={openDialog}
+            deleteDeviceToggle={deleteDeviceToggle}
+            setDeleteDeviceToggle={setDeleteDeviceToggle}
+            removeDeviceFromSession={removeDeviceFromSession}
         />
     )
 }
 
-export {PodComponent}
+export { PodComponent }

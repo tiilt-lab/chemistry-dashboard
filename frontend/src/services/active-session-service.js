@@ -62,7 +62,6 @@ export class ActiveSessionService {
     initializeSocket() {
         // Create Socket.
         this.socket = this.socketService.createSocket('session', this.sessionId);
-
         // Update device.
         this.socket.on('device_update', e => {
             const updatedDevice = SessionDeviceModel.fromJson(JSON.parse(e));
@@ -130,18 +129,32 @@ export class ActiveSessionService {
     }
 
     getSessionDevice(sessionDeviceId) {
-        return this.sessionDeviceSource.getValue().find(d =>d.id === parseInt(sessionDeviceId,10));
+        return this.sessionDeviceSource.getValue().find(d => d.id === parseInt(sessionDeviceId, 10));
     }
 
     getSessionDevices() {
         return this.sessionDeviceSource.getValue();
     }
 
-    getSessionDeviceTranscripts(sessionDeviceId) {
-        return this.transcriptSource.getValue().filter(t => t.session_device_id === parseInt(sessionDeviceId,10))
-            .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1);
+    getSessionDeviceTranscripts(sessionDeviceId, setState) {
+        this.transcriptSource.subscribe(e=>{
+            if(Object.keys(e).length !== 0){
+                const data = e.filter(t => t.session_device_id === parseInt(sessionDeviceId,10))
+                .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
+                //console.log(data,'still debugging ...')
+                setState(data)
+            }
+        })
+         
+        // console.log(this.transcriptSource.value, 'transcriptss ....')
+        // console.log(this.transcriptSource.getValue(), 'transcriptss888 ....')
+        // return this.transcriptSource.map(ts => ts.filter(t => t.session_device_id === sessionDeviceId)
+        //     .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1));
+        // return this.transcriptSource.getValue().filter(t => t.session_device_id === parseInt(sessionDeviceId,10))
+        //     .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1);
+        return this.transcriptSource
     }
     getTranscripts() {
-        return this.transcriptSource.getValue();
+        return this.transcriptSource;
     }
 }

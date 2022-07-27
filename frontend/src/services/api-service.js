@@ -29,8 +29,8 @@ export class ApiService {
       };
     }
     
-      const key = '';
-      const val ='';
+      let key = '';
+      let val ='';
     for (const property in headers) {
       if (headers.hasOwnProperty(property)) {
         key = (typeof property === 'string')? property : JSON.stringify(property)

@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SessionService } from '../services/session-service';
 import { ByodJoinPage } from './html-pages';
-import {SessionModel} from '../models/session';
-import {SessionDeviceModel} from '../models/session-device';
-import {ApiService} from '../services/api-service';
+import { SessionModel } from '../models/session';
+import { SessionDeviceModel } from '../models/session-device';
+import { ApiService } from '../services/api-service';
 
 
 
@@ -30,11 +30,16 @@ function JoinPage() {
     const [displayText, setDisplayText] = useState("");
     const [pageTitle, setPageTitle] = useState('Join Discussion');
 
+    const [pcode, setPcode] = useState("");
+
     const navigate = useNavigate();
 
     const POD_COLOR = '#FF6655';
     const GLOW_COLOR = '#ffc3bd';
 
+    // useEffect(()=>{
+    //     console.log(currentForm)
+    // },[currentForm])
 
     // Disconnects from websocket server and audio stream.
     const disconnect = (permanent = false) => {
@@ -65,6 +70,7 @@ function JoinPage() {
             ws.close();
             setWs(null);
         }
+
     }
     // ngOnDestroy() {
     //   this.disconnect(true);
@@ -109,15 +115,17 @@ function JoinPage() {
             (response) => {
                 if (response.status === 200) {
                     const json = response.json();
-                    console.log(json,"se first")
-                    json['session'] = SessionModel.fromJson(json['session']);
-                    json['session_device'] = SessionDeviceModel.fromJson(json['session_device']);
+                    //console.log(json,"se first")
+                    json.then(jsonObj => {
+                        const sess = SessionModel.fromJson(jsonObj['session']);
+                        const sessDev = SessionDeviceModel.fromJson(jsonObj['session_device']);
+                        setSession(sess);
+                        setSessionDevice(sessDev);
+                        setKey(jsonObj.key);
+                        handleStream(sessDev);
+                    })
 
-                    setSession(json.session);
-                    setSessionDevice(json.session_device);
-                    setKey(json.key);
-                    handleStream();
-                }else if (response.status === 400 || response.status === 401){
+                } else if (response.status === 400 || response.status === 401) {
                     setDisplayText(response.json()['message']);
                     setCurrentForm('JoinError');
                     disconnect(true);
@@ -134,18 +142,21 @@ function JoinPage() {
     }
 
     // Creates stream with the users audio input.
-    const handleStream = () => {
+    const handleStream = (sessDev) => {
         navigator.mediaDevices.getUserMedia({ audio: true, video: false })
             .then(stream => {
                 setStreamReference(stream);
-                setAudioContext(new ((window).AudioContext || (window).webkitAudioContext)());
-                setSource(audioContext.createMediaStreamSource(stream));
-                setProcessor(audioContext.createScriptProcessor(16384, 1, 1));
+                const audioCont = new ((window).AudioContext || (window).webkitAudioContext)()
+                setAudioContext(audioCont);
+                const src = audioCont.createMediaStreamSource(stream)
+                const proc = audioCont.createScriptProcessor(16384, 1, 1)
+                setSource(src);
+                setProcessor(proc);
 
-                source.connect(processor);
-                processor.connect(audioContext.destination);
+                src.connect(proc);
+                proc.connect(audioCont.destination);
 
-                processor.onaudioprocess = e => {
+                proc.onaudioprocess = e => {
 
                     if (connected && authenticated) {
                         const data = e.inputBuffer.getChannelData(0);
@@ -153,7 +164,7 @@ function JoinPage() {
                     }
                 };
 
-                connect();
+                connect(sessDev);
             }, error => {
                 setDisplayText('Failed to get user audio source.');
                 setCurrentForm('JoinError');
@@ -162,19 +173,21 @@ function JoinPage() {
     }
 
     // Connects to websocket server.
-    const connect = () => {
-        setWs(new WebSocket(new ApiService().getWebsocketEndpoint()));
-        ws.binaryType = 'arraybuffer';
+    const connect = (sessDev) => {
+        const wss = new WebSocket(new ApiService().getWebsocketEndpoint())
+        setWs(wss);
+        wss.binaryType = 'arraybuffer';
 
-        ws.onopen = e => {
+        wss.onopen = e => {
             console.log('[Connected]');
             setConnected(true);
-            setPageTitle(sessionDevice.name);
+            setPageTitle(sessDev.name);
+            setCurrentForm("");
             setReconnectCouner(0);
             requestStart();
         };
 
-            ws.onmessage = e => {
+        wss.onmessage = e => {
             const message = JSON.parse(e.data);
             if (message['type'] === 'start') {
                 setAuthenticated(true);
@@ -190,7 +203,7 @@ function JoinPage() {
             }
         };
 
-        ws.onclose = e => {
+        wss.onclose = e => {
             console.log('[Disconnected]');
             if (!ending) {
                 if (reconnectCounter < 5) {
@@ -198,7 +211,7 @@ function JoinPage() {
                     setReconnectCouner(reconnectCounter + 1);
                     disconnect();
                     setTimeout(() => {
-                    handleStream();
+                        handleStream(sessDev);
                     }, 1000);
                 } else {
                     setDisplayText('Connection to the session has been lost.');
@@ -227,6 +240,7 @@ function JoinPage() {
         };
         context.close();
         ws.send(JSON.stringify(message));
+        
     }
 
     const requestHelp = () => {
@@ -246,7 +260,12 @@ function JoinPage() {
         setCurrentForm("");
     }
 
-    const sessionDevBtnPressed = sessionDevice !== null? sessionDevice.button_pressed: null;
+    const changeTouppercase = (e) => {
+        setPcode(e.target.value.toUpperCase())
+    }
+    
+
+    const sessionDevBtnPressed = sessionDevice !== null ? sessionDevice.button_pressed : null;
 
     return (
         <ByodJoinPage
@@ -260,9 +279,12 @@ function JoinPage() {
             currentForm={currentForm}
             displayText={displayText}
             navigate={navigate}
-            navigateToLogin = {navigateToLogin}
+            navigateToLogin={navigateToLogin}
             pageTitle={pageTitle}
-            requestHelp = {requestHelp}
+            requestHelp={requestHelp}
+            pcode = {pcode}
+            setPcode = {setPcode}
+            changeTouppercase = {changeTouppercase}
         />
     )
 }

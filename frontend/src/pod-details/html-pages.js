@@ -12,7 +12,6 @@ import style from './pod.module.css'
 import React from 'react'
 
 function PodComponentPages(props) {
-
     return (
         <>
             <div className={style.container}>
@@ -50,13 +49,15 @@ function PodComponentPages(props) {
                             session={props.session}
                             sessionDevice={props.sessionDevice}
                             transcripts={props.displayTranscripts}
-                            start={"startTime"}
-                            end={"endTime"}
+                            start={props.startTime}
+                            end={props.endTime}
                         />
                     </AppSectionBoxComponent>
 
                     <AppSectionBoxComponent heading={"Discussion features:"}>
-                        <AppFeaturesComponent session={props.session} transcripts={props.displayTranscripts} />
+                        <AppFeaturesComponent 
+                        session={props.session} 
+                        transcripts={props.displayTranscripts} />
                     </AppSectionBoxComponent>
                 </div>
                 {props.loading() ? <AppSpinner></AppSpinner> : <></>}
@@ -71,8 +72,8 @@ function PodComponentPages(props) {
                         <div className={style["dialog-heading"]}>Transcript</div>
                         <div className={style["dialog-body"]}>{props.currentTranscript.transcript}</div>
                         <div className={style["dialog-button-container"]}>
-                            <button className={`${style["dialog-button"]}` `${style["right-button"]}`} onClick={props.closeDialog}>Close</button>
-                            <button className={`${style["dialog-button"]}` `${style["left-button"]}`} onClick={() => props.seeAllTranscripts()}>View All</button>
+                             <button className={`${style["dialog-button"]} ${style["right-button"]}`} onClick={props.closeDialog}>Close</button>
+                            <button className={`${style["dialog-button"]} ${style["left-button"]}`} onClick={props.seeAllTranscripts}>View All</button>
                         </div>
                     </div>
                     :

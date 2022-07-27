@@ -11,17 +11,22 @@ function  AppHeatMapComponent(props) {
     const [radius, setRadius] = useState(56);
     const [angleOffset, setAngleOffset] = useState(0.5);
     const [segments, setSegments] = useState(8); 
-    const [_transcripts, setTranscripts] = useState([]);
-    const [vectors, setVectors] = useState();
+    const [_transcripts, setTranscripts] = useState(props.transcripts);
+    const [vectors, setVectors] = useState([]);
     const [showTools, setShowTools] = useState(false);
     const [clipPath, setClipPath] = useState("");
     const [segmentPath, setSegmentPath] = useState("");
     const [showDialog, setShowDialog] = useState(false);
     const [callbackfunc, setCallbackFunc] = useState();
+    const [reload, setReload] = useState(false)
 
     useEffect(()=>{
+        if(vectors.length === 0){
         setVectors(calculateVectors())
-    },[])
+        }
+        calculateDirectionProportions();
+        setReload(true)
+    },[reload])
     // @Input('session') session: any;
     // @Input('transcripts')
     // set setTranscripts(value: any) {
@@ -47,7 +52,7 @@ function  AppHeatMapComponent(props) {
         for (let i = 0; i < segments; i++) {
             directionCounts.push(0);
         }
-
+        
         if (_transcripts.length > 0) {
             const doaTranscripts = _transcripts.filter(t => t.direction !== -1);
             const transcriptWeight = 1 / doaTranscripts.length;
@@ -78,12 +83,14 @@ function  AppHeatMapComponent(props) {
     // Draw graph based on segment vectors and segment samples.
     const createHeatMap = (samples)=> {
         let path = '';
+        if (vectors.length > 0) {
         for (let i = 0; i < samples.length; i++) {
             const strength = samples[i] * radius;
             path += [(i === 0) ? 'M' : 'L', vectors[i][0] * strength + radius, vectors[i][1] * strength + radius,
                     'A', strength, strength, 0, 0, 1,
                     vectors[i + 1][0] * strength + radius, vectors[i + 1][1] * strength + radius].join(' ');
         }
+    }
         setClipPath(path);
     }
 
@@ -98,7 +105,7 @@ function  AppHeatMapComponent(props) {
     }
 
    const segmentChange = (e)=> {
-        const seg = e.value;
+        const seg = e.target.value;
         setSegments(seg)
         setSegmentSize(360 / seg);
         setVectors(calculateVectors());
@@ -106,7 +113,7 @@ function  AppHeatMapComponent(props) {
     }
 
     const offsetChange = (e)=>{
-        const angle = e.value
+        const angle = e.target.value
         setAngleOffset(angle)
         setVectors(calculateVectors());
         calculateDirectionProportions();
@@ -137,6 +144,8 @@ function  AppHeatMapComponent(props) {
             setCallbackFunc = {setCallbackFunc}
             resetDiagram = {resetDiagram}
             showDialog = {showDialog}
+            segments = {segments}
+            angleOffset = {angleOffset}
         />
     )
 }
