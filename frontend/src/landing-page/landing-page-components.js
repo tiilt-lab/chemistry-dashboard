@@ -14,7 +14,7 @@ function Greeting(){
 function IntroBox(){
  return( <div className="intro-box">
       <Greeting/>
-      <Instruction instructions="Welcome to Discussion Capture. Please sign in to manage recordings or join a session."/>
+      <Instruction instructions="Welcome to the BLINC platform. Please sign in to manage recordings or join a session."/>
   </div>
  )
 }
