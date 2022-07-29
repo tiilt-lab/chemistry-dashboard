@@ -49,7 +49,7 @@ function HomeScreen(props) {
     <div className="home-container">
       <div className="intro-box">
       <div className="greeting">Good {timeOfDay}!</div>
-        <Instruction instructions="Welcome to the Discussion Capture Dashboard. You can start gathering
+        <Instruction instructions="Welcome to the Building Literacy in N-person Collaborations (BLINC) Dashboard. You can start gathering
       analytic data by recording a new discussion." />
       </div>
       <img alt="speaker" className="logo" src={speaker} />
