@@ -51,7 +51,7 @@ cd audio_processing
 python3 -m venv ./venv
 source venv/bin/activate
 pip3 install spacy
-python3 -m spacy download en
+python3 -m spacy download en_core_web_sm
 pip3 install wheel
 pip3 install -r requirements.txt
 deactivate
