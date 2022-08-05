@@ -150,8 +150,8 @@ class AudioProcessor:
                         'end': end_time
                     })
             #Get source seperation
-            if self.config.source_seperation:
-                source_seperation = source_seperation_pre_trained
+            #if self.config.source_seperation:
+            #    source_seperation = source_seperation_pre_trained
                 
             # Get Features
             features = None
