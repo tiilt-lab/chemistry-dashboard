@@ -89,21 +89,24 @@ function JoinPage() {
             loadWorklet().catch(console.error);
         
     }, [authenticated])
+
     /*useEffect(()=>{
         return ()=>{
             disconnect(true)
         }
     },[])*/
+    
     // Disconnects from websocket server and audio stream.
     const disconnect = (permanent = false) => {
         if (permanent) {
             setEnding(true);
+            setPageTitle('Join Session');
+            setName("")
+            setPcode("")
         }
+
         setConnected(false);
         setAuthenticated(false);
-        setPageTitle('Join Session');
-        setName("")
-        setPcode("")
 
         if (source != null) {
             source.disconnect();
@@ -195,32 +198,7 @@ function JoinPage() {
         )
 
     }
-
-    // Creates stream with the users audio input.
-    const handleStream = () => {
-        //src.connect(proc);
-        //proc.connect(audioCont.destination);
-
-        /*processor.onaudioprocess = e => {
-
-            if (connected && authenticated) {
-                const data = e.inputBuffer.getChannelData(0);
-                ws.send(data.buffer);
-            }
-        };*/
-        
-        //source.connect(processor);
-        //processor.connect(audioContext.destination);
-        //src.start();
-        
-        
-        
-        
-        /*source.onended = function() {
-        }*/
-
-        
-    }
+   
 
     // Connects to websocket server.
     const connect = () => {
@@ -266,7 +244,7 @@ function JoinPage() {
                     console.log('reconnecting ....')
                     setReload(false)
                     setTimeout(() => {
-                        handleStream();
+                        verifyInputAndAudio(name, pcode)
                     }, 1000);
                 } else {
                     setDisplayText('Connection to the session has been lost.');
