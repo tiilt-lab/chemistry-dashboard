@@ -29,7 +29,7 @@ function DialogBoxTwoOption(props) {
   return (
     <div className={style["dialog-background"]}>
       <div className={style["dialog-container"]}>
-        <div className={style["dialog-window"]} >
+        <div className={props.itsclass}>
           <div className={style["dialog-heading"]}>{props.heading}</div>
           <div className={style["dialog-body"]}>{props.body}</div>
           <button className={style["delete-button"]} onClick={props.deletebuttonaction} > Yes</button >

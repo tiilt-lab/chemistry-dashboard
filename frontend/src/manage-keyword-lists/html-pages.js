@@ -48,6 +48,7 @@ function KeywordListPage(props) {
 
             <DialogBoxTwoOption
                 show={props.deleteDialogIsOpen}
+                itsclass = {style["dialog-window"]}
                 heading={"Delete Keyword List"}
                 body={"Are you sure you want to permanently delete this keyword list?"}
                 deletebuttonaction={props.confirmDeleteKeywordList}

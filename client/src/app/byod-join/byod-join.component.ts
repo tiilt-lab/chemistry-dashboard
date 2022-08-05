@@ -207,6 +207,7 @@ export class ByodJoinComponent implements OnDestroy {
       return;
     }
     const context = new ((<any>window).AudioContext || (<any>window).webkitAudioContext)();
+    console.log(context, 'context ....')
     const message = {
       'type': 'start',
       'key': this.key,

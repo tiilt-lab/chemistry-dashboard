@@ -8,6 +8,7 @@ import { ApiService } from '../services/api-service';
 
 
 
+
 function JoinPage() {
 
     // Audio connection data
@@ -17,30 +18,92 @@ function JoinPage() {
     const [streamReference, setStreamReference] = useState(null);
     const [audioContext, setAudioContext] = useState(null);
     const [processor, setProcessor] = useState(null);
+    const [audioSenderProcessor, setAudioSenderProcessor] = useState(null);
     const [source, setSource] = useState(null);
     const [ending, setEnding] = useState(false);
-    const [reconnectCounter, setReconnectCouner] = useState(0);
+    const [reconnectCounter, setReconnectCounter] = useState(0);
 
     // Session data
     const [sessionDevice, setSessionDevice] = useState(null);
     const [session, setSession] = useState(null);
     const [key, setKey] = useState(null);
+    
+    const [sessionService, setSessionService] = useState(new SessionService())
+    const [apiService, setApiService] = useState(new ApiService())
+    
+
 
     const [currentForm, setCurrentForm] = useState("");
     const [displayText, setDisplayText] = useState("");
+    const [reload,setReload] = useState(false)
     const [pageTitle, setPageTitle] = useState('Join Discussion');
 
+    const [name, setName] = useState("");
     const [pcode, setPcode] = useState("");
 
     const navigate = useNavigate();
 
     const POD_COLOR = '#FF6655';
     const GLOW_COLOR = '#ffc3bd';
+    
+   
 
-    // useEffect(()=>{
-    //     console.log(currentForm)
-    // },[currentForm])
+    /*useEffect(()=>{
+        console.log("stream: ", streamReference);
+        if(streamReference !== null && audioContext !== null && name !== "" && pcode !== ""){
+        	
+	};
+        
+    }, [streamReference, audioContext, name, pcode])*/
+    
+    useEffect(()=>{
 
+        
+        console.log("src: ", source);
+        if(source !== null && audioContext !== null && name != "" && pcode != ""){
+           
+           requestAccessKey(name, pcode);
+	    }
+        
+    }, [source, audioContext, name, pcode])
+    
+    useEffect(()=>{
+        console.log("ws: ", ws);
+        if(ws != null) 
+        {
+            connect();
+	    }
+        
+    }, [ws])
+
+    useEffect(() => {
+        console.log("ws before requestStart: ", ws);
+        console.log("context before requestStart: ", audioContext);
+        if(connected)
+            requestStart();
+    }, [connected])
+    
+    useEffect(() => {
+        const loadWorklet = async () => {
+            await audioContext.audioWorklet.addModule('audio-sender-processor.js');
+            const workletProcessor = new AudioWorkletNode(audioContext, 'audio-sender-processor');
+            workletProcessor.port.onmessage = data => {
+                console.log("sending data: ", data)
+                ws.send(JSON.stringify(Array.from(data)));
+            }
+            source.connect(workletProcessor).connect(audioContext.destination);
+            setAudioSenderProcessor(workletProcessor);
+        }
+
+        if(authenticated)
+            loadWorklet().catch(console.error);
+        
+    }, [authenticated])
+    /*useEffect(()=>{
+        return ()=>{
+            disconnect(true)
+        }
+    },[])*/
     // Disconnects from websocket server and audio stream.
     const disconnect = (permanent = false) => {
         if (permanent) {
@@ -49,11 +112,9 @@ function JoinPage() {
         setConnected(false);
         setAuthenticated(false);
         setPageTitle('Join Session');
-        if (processor != null) {
-            processor.onaudioprocess = null;
-            processor.disconnect();
-            setProcessor(null);
-        }
+        setName("")
+        setPcode("")
+
         if (source != null) {
             source.disconnect();
             setSource(null);
@@ -61,6 +122,10 @@ function JoinPage() {
         if (audioContext != null) {
             audioContext.close();
             setAudioContext(null);
+        }
+        if (audioSenderProcessor != null) {
+            audioSenderProcessor.disconnect();
+            setAudioSenderProcessor(null);
         }
         if (streamReference != null) {
             streamReference.getAudioTracks().forEach(track => track.stop());
@@ -78,16 +143,20 @@ function JoinPage() {
 
     // Verifies the users connection input and that the user
     // has a microphone accessible to the browser.
-    const verifyInputAndAudio = (name, passcode) => {
-        if (name === null || name.trim().length === 0) {
-            name = 'User Device';
+    const verifyInputAndAudio = (names, passcode) => {
+        if (names === null || name.trim().length === 0) {
+            names = 'User Device';
         }
+        setName(names);
+        setPcode(passcode);
         try {
             if (navigator.mediaDevices != null) {
                 navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-                    .then(stream => {
-                        stream.getAudioTracks().forEach(track => track.stop());
-                        requestAccessKey(name, passcode);
+                    .then(function(stream) {
+                    	const context = new AudioContext();
+                    	setStreamReference(stream);
+                    	setSource(context.createMediaStreamSource(stream));
+                    	setAudioContext(context);
                     },
                         error => {
                             setDisplayText('Failed to get user audio source.');
@@ -110,19 +179,15 @@ function JoinPage() {
     const requestAccessKey = (names, passcode) => {
         setEnding(false);
         setCurrentForm('Connecting');
-        const fetchData = new SessionService().joinByodSession(names, passcode);
-        fetchData.then(
+        sessionService.joinByodSession(name, pcode).then(
             (response) => {
                 if (response.status === 200) {
-                    const json = response.json();
-                    //console.log(json,"se first")
-                    json.then(jsonObj => {
-                        const sess = SessionModel.fromJson(jsonObj['session']);
-                        const sessDev = SessionDeviceModel.fromJson(jsonObj['session_device']);
-                        setSession(sess);
-                        setSessionDevice(sessDev);
-                        setKey(jsonObj.key);
-                        handleStream(sessDev);
+                    response.json().then(jsonObj => {
+                    	console.log(jsonObj,"reponse first")
+                    	setSession(SessionModel.fromJson(jsonObj['session']));
+                       setSessionDevice(SessionDeviceModel.fromJson(jsonObj['session_device']));
+                       setKey(jsonObj.key);
+                       setWs(new WebSocket(apiService.getWebsocketEndpoint()));
                     })
 
                 } else if (response.status === 400 || response.status === 401) {
@@ -142,82 +207,87 @@ function JoinPage() {
     }
 
     // Creates stream with the users audio input.
-    const handleStream = (sessDev) => {
-        navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-            .then(stream => {
-                setStreamReference(stream);
-                const audioCont = new ((window).AudioContext || (window).webkitAudioContext)()
-                setAudioContext(audioCont);
-                const src = audioCont.createMediaStreamSource(stream)
-                const proc = audioCont.createScriptProcessor(16384, 1, 1)
-                setSource(src);
-                setProcessor(proc);
+    const handleStream = () => {
+        //src.connect(proc);
+        //proc.connect(audioCont.destination);
 
-                src.connect(proc);
-                proc.connect(audioCont.destination);
+        /*processor.onaudioprocess = e => {
 
-                proc.onaudioprocess = e => {
+            if (connected && authenticated) {
+                const data = e.inputBuffer.getChannelData(0);
+                ws.send(data.buffer);
+            }
+        };*/
+        
+        //source.connect(processor);
+        //processor.connect(audioContext.destination);
+        //src.start();
+        
+        
+        
+        
+        /*source.onended = function() {
+        }*/
 
-                    if (connected && authenticated) {
-                        const data = e.inputBuffer.getChannelData(0);
-                        ws.send(data.buffer);
-                    }
-                };
-
-                connect(sessDev);
-            }, error => {
-                setDisplayText('Failed to get user audio source.');
-                setCurrentForm('JoinError');
-                disconnect(true);
-            });
+        
     }
 
     // Connects to websocket server.
-    const connect = (sessDev) => {
-        const wss = new WebSocket(new ApiService().getWebsocketEndpoint())
-        setWs(wss);
-        wss.binaryType = 'arraybuffer';
+    const connect = () => {
+        ws.binaryType = 'arraybuffer';
 
-        wss.onopen = e => {
+        ws.onopen = e => {
             console.log('[Connected]');
             setConnected(true);
-            setPageTitle(sessDev.name);
+            setPageTitle(sessionDevice.name);
+            setReload(true)
             setCurrentForm("");
-            setReconnectCouner(0);
-            requestStart();
         };
 
-        wss.onmessage = e => {
+        ws.onmessage = e => {
             const message = JSON.parse(e.data);
+            console.log("Websocket message: ", message);
             if (message['type'] === 'start') {
                 setAuthenticated(true);
                 closeDialog();
             } else if (message['type'] === 'error') {
                 disconnect(true);
                 setDisplayText('The connection to the session has been closed by the server.');
+                console.log('session closed 2')
                 setCurrentForm('ClosedSession');
+                setReload(false)
             } else if (message['type'] === 'end') {
                 disconnect(true);
                 setDisplayText('The session has been closed by the owner.');
+                console.log('session closed 3')
                 setCurrentForm('ClosedSession');
+                setReload(false)
             }
         };
 
-        wss.onclose = e => {
+        ws.onclose = e => {
             console.log('[Disconnected]');
             if (!ending) {
-                if (reconnectCounter < 5) {
+                console.log(reconnectCounter, 'not ending ...')
+                if (reconnectCounter <= 5) {
                     setCurrentForm('Connecting');
-                    setReconnectCouner(reconnectCounter + 1);
+                    setReconnectCounter(reconnectCounter+1);
                     disconnect();
+                    console.log('reconnecting ....')
+                    setReload(false)
                     setTimeout(() => {
-                        handleStream(sessDev);
+                        handleStream();
                     }, 1000);
                 } else {
                     setDisplayText('Connection to the session has been lost.');
+                    console.log('session closed 1')
                     setCurrentForm('ClosedSession');
+                    setReload(false)
                     disconnect(true);
+                    
                 }
+            }else{
+                console.log('ending ...')
             }
         };
     }
@@ -227,25 +297,26 @@ function JoinPage() {
     // Begin capturing and sending client audio.
     const requestStart = () => {
         if (ws === null) {
+            console.log(ws, 'i am context ....')
             return;
         }
-        const context = new ((window).AudioContext || (window).webkitAudioContext)();
+        console.log(audioContext, 'context ....')
         const message = {
             'type': 'start',
             'key': key,
             'start_time': 0.0,
-            'sample_rate': context.sampleRate,
+            'sample_rate': audioContext.sampleRate,
             'encoding': 'pcm_f32le',
             'channels': 1
         };
-        context.close();
+        console.log("requesting start", message)
         ws.send(JSON.stringify(message));
         
     }
 
     const requestHelp = () => {
         sessionDevice.button_pressed = !sessionDevice.button_pressed;
-        new SessionService().setDeviceButton(sessionDevice.id, sessionDevice.button_pressed, key);
+        sessionService.setDeviceButton(sessionDevice.id, sessionDevice.button_pressed, key);
     }
 
     const navigateToLogin = (confirmed = false) => {

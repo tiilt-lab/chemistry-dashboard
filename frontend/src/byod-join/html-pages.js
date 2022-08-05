@@ -57,6 +57,7 @@ function ByodJoinPage(props) {
 
             <DialogBoxTwoOption
                 show={props.currentForm === 'NavGuard'}
+                itsclass = {style["dialog-window"]}
                 heading={"Stop Recording"}
                 body={"Leaving this page will stop recording. Are you sure you want to continue?"}
                 deletebuttonaction={props.navigateToLogin}
