@@ -46,16 +46,6 @@ function JoinPage() {
     const POD_COLOR = '#FF6655';
     const GLOW_COLOR = '#ffc3bd';
     
-   
-
-    /*useEffect(()=>{
-        console.log("stream: ", streamReference);
-        if(streamReference !== null && audioContext !== null && name !== "" && pcode !== ""){
-        	
-	};
-        
-    }, [streamReference, audioContext, name, pcode])*/
-    
     useEffect(()=>{
 
         
@@ -88,8 +78,8 @@ function JoinPage() {
             await audioContext.audioWorklet.addModule('audio-sender-processor.js');
             const workletProcessor = new AudioWorkletNode(audioContext, 'audio-sender-processor');
             workletProcessor.port.onmessage = data => {
-                console.log("sending data: ", data)
-                ws.send(JSON.stringify(Array.from(data)));
+                console.log("sending data: ", data.data)
+                ws.send(data.data.buffer);
             }
             source.connect(workletProcessor).connect(audioContext.destination);
             setAudioSenderProcessor(workletProcessor);
