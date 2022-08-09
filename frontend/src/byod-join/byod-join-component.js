@@ -142,7 +142,7 @@ function JoinPage() {
             if (navigator.mediaDevices != null) {
                 navigator.mediaDevices.getUserMedia({ audio: true, video: false })
                     .then(function(stream) {
-                    	const context = new AudioContext();
+                    	const context = new AudioContext({latencyHint: 'interactive',  sampleRate : 16000});
                     	setStreamReference(stream);
                     	setSource(context.createMediaStreamSource(stream));
                     	setAudioContext(context);
