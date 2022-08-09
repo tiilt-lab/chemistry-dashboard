@@ -126,7 +126,7 @@ class ServerProtocol(WebSocketServerProtocol):
     def reformat_data(self, in_data):
         if self.config.encoding == 'pcm_f32le':
             out_data = np.frombuffer(in_data, np.float32, -1)
-            return (out_data * 32768.0).astype(np.int16, copy=False).tobytes()
+            return (out_data * 32767.0).astype(np.int16, copy=False).tobytes()
         else:
             return in_data
 
