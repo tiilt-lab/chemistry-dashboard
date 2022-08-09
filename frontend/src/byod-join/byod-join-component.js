@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SessionService } from '../services/session-service';
 import { ByodJoinPage } from './html-pages';
@@ -17,6 +17,7 @@ function JoinPage() {
     const [authenticated, setAuthenticated] = useState(false);
     const [streamReference, setStreamReference] = useState(null);
     const [audioContext, setAudioContext] = useState(null);
+    const [mediaRecorder, setMediaRecorder] = useState(null);
     const [processor, setProcessor] = useState(null);
     const [audioSenderProcessor, setAudioSenderProcessor] = useState(null);
     const [source, setSource] = useState(null);
@@ -27,52 +28,65 @@ function JoinPage() {
     const [sessionDevice, setSessionDevice] = useState(null);
     const [session, setSession] = useState(null);
     const [key, setKey] = useState(null);
-    
+
     const [sessionService, setSessionService] = useState(new SessionService())
     const [apiService, setApiService] = useState(new ApiService())
-    
+
 
 
     const [currentForm, setCurrentForm] = useState("");
     const [displayText, setDisplayText] = useState("");
-    const [reload,setReload] = useState(false)
+    const [reload, setReload] = useState(false)
     const [pageTitle, setPageTitle] = useState('Join Discussion');
 
     const [name, setName] = useState("");
     const [pcode, setPcode] = useState("");
-
+    const [joinwith, setJoinwith] = useState("");
+    const [chunk, setChunk] = useState([])
+    const [isStop, setIsStop] = useState()
+    const [recordedvideo, setRecordedVideo] = useState(null)
     const navigate = useNavigate();
 
     const POD_COLOR = '#FF6655';
     const GLOW_COLOR = '#ffc3bd';
-    
-    useEffect(()=>{
 
-        
+    useEffect(() => {
+
+
         console.log("src: ", source);
-        if(source !== null && audioContext !== null && name != "" && pcode != ""){
-           
-           requestAccessKey(name, pcode);
-	    }
-        
+        if (source !== null && audioContext !== null && name != "" && pcode != "") {
+
+            requestAccessKey(name, pcode);
+        }
+
     }, [source, audioContext, name, pcode])
-    
-    useEffect(()=>{
+
+    useEffect(() => {
         console.log("ws: ", ws);
-        if(ws != null) 
-        {
+        if (ws != null) {
             connect();
-	    }
-        
+        }
+
     }, [ws])
+
+    useEffect(() => {
+        if (mediaRecorder !== null && joinwith === 'Video' && !isStop) {
+            requestAccessKey(name, pcode);
+        }
+
+    }, [reconnectCounter, mediaRecorder, joinwith, isStop])
 
     useEffect(() => {
         console.log("ws before requestStart: ", ws);
         console.log("context before requestStart: ", audioContext);
-        if(connected)
+        if (connected && joinwith === 'Audio')
             requestStart();
+        else if (connected && joinwith === 'Video') {
+            videoPlay();
+        }
+
     }, [connected])
-    
+
     useEffect(() => {
         const loadWorklet = async () => {
             await audioContext.audioWorklet.addModule('audio-sender-processor.js');
@@ -85,17 +99,18 @@ function JoinPage() {
             setAudioSenderProcessor(workletProcessor);
         }
 
-        if(authenticated)
+        if (authenticated)
             loadWorklet().catch(console.error);
-        
+
     }, [authenticated])
 
-    /*useEffect(()=>{
-        return ()=>{
-            disconnect(true)
+    useEffect(() => {
+        if (isStop) {
+            setChunk([])
+            console.log("i am about to stop ", isStop)
         }
-    },[])*/
-    
+    }, [isStop])
+
     // Disconnects from websocket server and audio stream.
     const disconnect = (permanent = false) => {
         if (permanent) {
@@ -136,20 +151,68 @@ function JoinPage() {
 
     // Verifies the users connection input and that the user
     // has a microphone accessible to the browser.
-    const verifyInputAndAudio = (names, passcode) => {
-        if (names === null || name.trim().length === 0) {
+    const verifyInputAndAudio = (names, passcode, joinswith) => {
+        if (names === null || name.length === 0) {
             names = 'User Device';
         }
         setName(names);
         setPcode(passcode);
+        setJoinwith(joinswith);
+        const constraintObj = {}
+        if (joinswith === 'Video') {
+            constraintObj.audio = false
+            constraintObj.video = {
+                facingMode: "user",
+                width: 640, //{ min: 640, ideal: 1280, max: 1920 },
+                height: 480//{ min: 480, ideal: 720, max: 1080 }
+            }
+        } else {
+            constraintObj.audio = true
+            constraintObj.video = false
+        }
+
         try {
+
+            //handle older browsers that might implement getUserMedia in some way
+            if (navigator.mediaDevices === undefined) {
+                navigator.mediaDevices = {};
+                navigator.mediaDevices.getUserMedia = function (constraintObj) {
+                    let getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+                    if (!getUserMedia) {
+                        return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+                    }
+                    return new Promise(function (resolve, reject) {
+                        getUserMedia.call(navigator, constraintObj, resolve, reject);
+                    });
+                }
+            } else {
+                navigator.mediaDevices.enumerateDevices()
+                    .then(devices => {
+                        devices.forEach(device => {
+                            console.log(device.kind.toUpperCase(), device.label);
+                            //, device.deviceId
+                        })
+                    })
+                    .catch(err => {
+                        console.log(err.name, err.message);
+                    })
+            }
+
             if (navigator.mediaDevices != null) {
-                navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-                    .then(function(stream) {
-                    	const context = new AudioContext();
-                    	setStreamReference(stream);
-                    	setSource(context.createMediaStreamSource(stream));
-                    	setAudioContext(context);
+                console.log('i was here 1')
+                navigator.mediaDevices.getUserMedia(constraintObj)
+                    .then(function (stream) {
+                        setStreamReference(stream);
+                        if (joinswith === 'Audio') {
+                            const context = new AudioContext();
+                            setSource(context.createMediaStreamSource(stream));
+                            setAudioContext(context);
+                        } else if (joinswith === 'Video') {
+                            const mediaRec = new MediaRecorder(stream);
+                            setMediaRecorder(mediaRec)
+                            setIsStop(false)
+                        }
+
                     },
                         error => {
                             setDisplayText('Failed to get user audio source.');
@@ -176,11 +239,11 @@ function JoinPage() {
             (response) => {
                 if (response.status === 200) {
                     response.json().then(jsonObj => {
-                    	console.log(jsonObj,"reponse first")
-                    	setSession(SessionModel.fromJson(jsonObj['session']));
-                       setSessionDevice(SessionDeviceModel.fromJson(jsonObj['session_device']));
-                       setKey(jsonObj.key);
-                       setWs(new WebSocket(apiService.getWebsocketEndpoint()));
+                        console.log(jsonObj, "reponse first")
+                        setSession(SessionModel.fromJson(jsonObj['session']));
+                        setSessionDevice(SessionDeviceModel.fromJson(jsonObj['session_device']));
+                        setKey(jsonObj.key);
+                        setWs(new WebSocket(apiService.getWebsocketEndpoint()));
                     })
 
                 } else if (response.status === 400 || response.status === 401) {
@@ -198,7 +261,7 @@ function JoinPage() {
         )
 
     }
-   
+
 
     // Connects to websocket server.
     const connect = () => {
@@ -223,13 +286,11 @@ function JoinPage() {
                 setDisplayText('The connection to the session has been closed by the server.');
                 console.log('session closed 2')
                 setCurrentForm('ClosedSession');
-                setReload(false)
             } else if (message['type'] === 'end') {
                 disconnect(true);
                 setDisplayText('The session has been closed by the owner.');
                 console.log('session closed 3')
                 setCurrentForm('ClosedSession');
-                setReload(false)
             }
         };
 
@@ -239,22 +300,19 @@ function JoinPage() {
                 console.log(reconnectCounter, 'not ending ...')
                 if (reconnectCounter <= 5) {
                     setCurrentForm('Connecting');
-                    setReconnectCounter(reconnectCounter+1);
                     disconnect();
                     console.log('reconnecting ....')
-                    setReload(false)
                     setTimeout(() => {
-                        verifyInputAndAudio(name, pcode)
+                        verifyInputAndAudio(name, pcode, joinwith)
+                        setReconnectCounter(reconnectCounter + 1);
                     }, 1000);
                 } else {
                     setDisplayText('Connection to the session has been lost.');
-                    console.log('session closed 1')
                     setCurrentForm('ClosedSession');
-                    setReload(false)
                     disconnect(true);
-                    
+
                 }
-            }else{
+            } else {
                 console.log('ending ...')
             }
         };
@@ -279,9 +337,30 @@ function JoinPage() {
         };
         console.log("requesting start", message)
         ws.send(JSON.stringify(message));
-        
+
     }
 
+    const videoPlay = () => {
+        let video = document.querySelector('video')
+        video.srcObject = streamReference
+        video.onloadedmetadata = function (ev) {
+            //show in the video element what is being captured by the webcam
+            video.play();
+        };
+        mediaRecorder.ondataavailable = function (ev) {
+            chunk.push(ev.data);
+        }
+        mediaRecorder.onstop = (ev) => {
+            console.log(chunk, 'video chunks')
+            let blob = new Blob(chunk, { 'type': 'video/mp4;' });
+            setIsStop(true)
+            setRecordedVideo(window.URL.createObjectURL(blob))
+            //let videoURL = window.URL.createObjectURL(blob);
+
+           // document.getElementById('video-player').src = videoURL;
+        }
+
+    }
     const requestHelp = () => {
         sessionDevice.button_pressed = !sessionDevice.button_pressed;
         sessionService.setDeviceButton(sessionDevice.id, sessionDevice.button_pressed, key);
@@ -302,7 +381,7 @@ function JoinPage() {
     const changeTouppercase = (e) => {
         setPcode(e.target.value.toUpperCase())
     }
-    
+
 
     const sessionDevBtnPressed = sessionDevice !== null ? sessionDevice.button_pressed : null;
 
@@ -321,16 +400,17 @@ function JoinPage() {
             navigateToLogin={navigateToLogin}
             pageTitle={pageTitle}
             requestHelp={requestHelp}
-            pcode = {pcode}
-            setPcode = {setPcode}
-            changeTouppercase = {changeTouppercase}
+            pcode={pcode}
+            setPcode={setPcode}
+            changeTouppercase={changeTouppercase}
+            joinwith={joinwith}
+            mediaRecorder={mediaRecorder}
+            isStop={isStop}
+            recordedvideo = {recordedvideo}
+
         />
     )
 }
-
-
-
-
 
 
 export { JoinPage }
