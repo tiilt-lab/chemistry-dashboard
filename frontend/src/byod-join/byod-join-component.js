@@ -78,7 +78,7 @@ function JoinPage() {
             await audioContext.audioWorklet.addModule('audio-sender-processor.js');
             const workletProcessor = new AudioWorkletNode(audioContext, 'audio-sender-processor');
             workletProcessor.port.onmessage = data => {
-                console.log("sending data: ", data.data)
+                //console.log("sending data: ", data.data)
                 ws.send(data.data.buffer);
             }
             source.connect(workletProcessor).connect(audioContext.destination);
@@ -90,19 +90,19 @@ function JoinPage() {
         
     }, [authenticated])
 
-    /*useEffect(()=>{
+    useEffect(()=>{
         return ()=>{
             disconnect(true)
         }
-    },[])*/
+    },[])
     
     // Disconnects from websocket server and audio stream.
     const disconnect = (permanent = false) => {
         if (permanent) {
             setEnding(true);
             setPageTitle('Join Session');
-            setName("")
-            setPcode("")
+            setName("");
+            setPcode("");
         }
 
         setConnected(false);
@@ -113,11 +113,6 @@ function JoinPage() {
             setSource(null);
         }
         if (audioContext != null) {
-            audioContext.close();
-            setAudioContext(null);
-        }
-        if (audioSenderProcessor != null) {
-            audioSenderProcessor.disconnect();
             setAudioSenderProcessor(null);
         }
         if (streamReference != null) {
@@ -137,7 +132,8 @@ function JoinPage() {
     // Verifies the users connection input and that the user
     // has a microphone accessible to the browser.
     const verifyInputAndAudio = (names, passcode) => {
-        if (names === null || name.trim().length === 0) {
+        console.log("Name ", names)
+        if (names === null || names.trim().length === 0) {
             names = 'User Device';
         }
         setName(names);
@@ -172,7 +168,7 @@ function JoinPage() {
     const requestAccessKey = (names, passcode) => {
         setEnding(false);
         setCurrentForm('Connecting');
-        sessionService.joinByodSession(name, pcode).then(
+        sessionService.joinByodSession(names, passcode).then(
             (response) => {
                 if (response.status === 200) {
                     response.json().then(jsonObj => {
@@ -207,7 +203,7 @@ function JoinPage() {
         ws.onopen = e => {
             console.log('[Connected]');
             setConnected(true);
-            setPageTitle(sessionDevice.name);
+            setPageTitle(name);
             setReload(true)
             setCurrentForm("");
         };
@@ -300,7 +296,7 @@ function JoinPage() {
     }
 
     const changeTouppercase = (e) => {
-        setPcode(e.target.value.toUpperCase())
+        setPcode(e.target.value.toUpperCase());
     }
     
 
