@@ -61,7 +61,7 @@ function ByodJoinPage(props) {
                     (props.connected && props.joinwith === 'Video' && props.isStop === false) ?
                         <React.Fragment>
                             <div className={style["video-container"]}>
-                                <video controls={true} />
+                                <video controls={true} muted={true}/>
                             </div>
 
                             <button className={`${style["basic-button"]} ${style["medium-button"]}`} onClick={() => { props.mediaRecorder.start(); console.log(props.mediaRecorder.state); }}>Start Recording</button>
