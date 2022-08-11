@@ -160,7 +160,7 @@ function JoinPage() {
         setJoinwith(joinswith);
         const constraintObj = {}
         if (joinswith === 'Video') {
-            constraintObj.audio = false
+            constraintObj.audio = true
             constraintObj.video = {
                 facingMode: "user",
                 width: 640, //{ min: 640, ideal: 1280, max: 1920 },
