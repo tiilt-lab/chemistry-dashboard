@@ -89,10 +89,12 @@ function JoinPage() {
 
     useEffect(() => {
         const loadWorklet = async () => {
+           
             await audioContext.audioWorklet.addModule('audio-sender-processor.js');
             const workletProcessor = new AudioWorkletNode(audioContext, 'audio-sender-processor');
             workletProcessor.port.onmessage = data => {
                 console.log("sending data: ", data.data)
+                console.log("sending data buffer: ", data.data.buffer)
                 ws.send(data.data.buffer);
             }
             source.connect(workletProcessor).connect(audioContext.destination);
@@ -323,7 +325,6 @@ function JoinPage() {
     // Begin capturing and sending client audio.
     const requestStart = () => {
         if (ws === null) {
-            console.log(ws, 'i am context ....')
             return;
         }
         console.log(audioContext, 'context ....')
@@ -348,16 +349,19 @@ function JoinPage() {
             video.play();
         };
         mediaRecorder.ondataavailable = function (ev) {
+            console.log(ev.data, "video data")
+            ev.data.arrayBuffer().then(data=>{
+                console.log(data, "arrayBuffer data")
+            })
+            
             chunk.push(ev.data);
         }
         mediaRecorder.onstop = (ev) => {
-            console.log(chunk, 'video chunks')
+            console.log(chunk.length, 'video chunks')
             let blob = new Blob(chunk, { 'type': 'video/mp4;' });
+            console.log(blob, "blob data")
             setIsStop(true)
             setRecordedVideo(window.URL.createObjectURL(blob))
-            //let videoURL = window.URL.createObjectURL(blob);
-
-           // document.getElementById('video-player').src = videoURL;
         }
 
     }
