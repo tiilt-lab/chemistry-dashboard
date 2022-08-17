@@ -69,7 +69,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 except Exception as e:
                     logging.warning('Error processing json: {0}'.format(e))
 
-    def onClose(self, *args, **kwargs):
+    def onClose(self, *args, **kwargs):  
         self.signal_end()
 
     def process_json(self, data):
