@@ -76,7 +76,7 @@ class ServerProtocol(WebSocketServerProtocol):
         if not 'type' in data:
             logging.warning('Message does not contain "type".')
             return
-        if data['type'] == 'start': 
+        if data['type'] == 'start':  
             valid, result = ProcessingConfig.from_json(data)
             if not valid:
                 self.send_json({'type': 'error', 'message': result})
