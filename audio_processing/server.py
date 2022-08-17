@@ -46,8 +46,11 @@ class ServerProtocol(WebSocketServerProtocol):
 
     def onMessage(self, payload, is_binary):
         self.last_message = time.time()
+        logging.info('testing parameters...')
+        logging.info(is_binary)
         if is_binary:
             try:
+                logging.info(payload)
                 self.process_binary(payload)
             except Exception as e:
                 logging.warning('Error processing binary: {0}'.format(e))
@@ -66,18 +69,18 @@ class ServerProtocol(WebSocketServerProtocol):
                 except Exception as e:
                     logging.warning('Error processing json: {0}'.format(e))
 
-    def onClose(self, *args, **kwargs):
+    def onClose(self, *args, **kwargs): 
         self.signal_end()
 
     def process_json(self, data):
         if not 'type' in data:
             logging.warning('Message does not contain "type".')
             return
-        if data['type'] == 'start':
+        if data['type'] == 'start':  
             valid, result = ProcessingConfig.from_json(data)
             if not valid:
                 self.send_json({'type': 'error', 'message': result})
-                self.signal_end()
+                self.signal_end() 
             else:
                 self.config = result
                 logging.info('Client {0} signalled to started...'.format(self.config.auth_key))
