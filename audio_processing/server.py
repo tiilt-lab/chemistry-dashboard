@@ -80,7 +80,7 @@ class ServerProtocol(WebSocketServerProtocol):
             valid, result = ProcessingConfig.from_json(data)
             if not valid:
                 self.send_json({'type': 'error', 'message': result})
-                self.signal_end()
+                self.signal_end() 
             else:
                 self.config = result
                 logging.info('Client {0} signalled to started...'.format(self.config.auth_key))
