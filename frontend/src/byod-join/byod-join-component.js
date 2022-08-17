@@ -51,9 +51,6 @@ function JoinPage() {
     const GLOW_COLOR = '#ffc3bd';
 
     useEffect(() => {
-
-
-        console.log("src: ", source);
         if (source !== null && audioContext !== null && name != "" && pcode != "") {
 
             requestAccessKey(name, pcode);
@@ -107,7 +104,6 @@ function JoinPage() {
     useEffect(() => {
         if (isStop) {
             setChunk([])
-            console.log("i am about to stop ", isStop)
         }
     }, [isStop])
 
@@ -199,7 +195,6 @@ function JoinPage() {
             }
 
             if (navigator.mediaDevices != null) {
-                console.log('i was here 1')
                 navigator.mediaDevices.getUserMedia(constraintObj)
                     .then(function (stream) {
                         setStreamReference(stream);
@@ -239,7 +234,6 @@ function JoinPage() {
             (response) => {
                 if (response.status === 200) {
                     response.json().then(jsonObj => {
-                        console.log(jsonObj, "reponse first")
                         setSession(SessionModel.fromJson(jsonObj['session']));
                         setSessionDevice(SessionDeviceModel.fromJson(jsonObj['session_device']));
                         setKey(jsonObj.key);
@@ -277,19 +271,16 @@ function JoinPage() {
 
         ws.onmessage = e => {
             const message = JSON.parse(e.data);
-            console.log("Websocket message: ", message);
             if (message['type'] === 'start') {
                 setAuthenticated(true);
                 closeDialog();
             } else if (message['type'] === 'error') {
                 disconnect(true);
                 setDisplayText('The connection to the session has been closed by the server.');
-                console.log('session closed 2')
                 setCurrentForm('ClosedSession');
             } else if (message['type'] === 'end') {
                 disconnect(true);
                 setDisplayText('The session has been closed by the owner.');
-                console.log('session closed 3')
                 setCurrentForm('ClosedSession');
             }
         };
@@ -297,7 +288,6 @@ function JoinPage() {
         ws.onclose = e => {
             console.log('[Disconnected]');
             if (!ending) {
-                console.log(reconnectCounter, 'not ending ...')
                 if (reconnectCounter <= 5) {
                     setCurrentForm('Connecting');
                     disconnect();
@@ -322,19 +312,32 @@ function JoinPage() {
 
     // Begin capturing and sending client audio.
     const requestStart = () => {
+        let message = null
         if (ws === null) {
-            console.log(ws, 'i am context ....')
             return;
         }
-        console.log(audioContext, 'context ....')
-        const message = {
-            'type': 'start',
-            'key': key,
-            'start_time': 0.0,
-            'sample_rate': audioContext.sampleRate,
-            'encoding': 'pcm_f32le',
-            'channels': 1
-        };
+        if (joinwith === 'Audio') {
+            console.log(audioContext.sampleRate, 'sample rate ..')
+            message = {
+                'type': 'start',
+                'key': key,
+                'start_time': 0.0,
+                'sample_rate': audioContext.sampleRate,
+                'encoding': 'pcm_f32le',
+                'channels': 1
+            };
+        } else if (joinwith === 'Video') {
+            console.log(mediaRecorder.audioBitsPerSecond(),mediaRecorder.videoBitsPerSecond(),' audio video bits')
+            message = {
+                'type': 'start',
+                'key': key,
+                'start_time': 0.0,
+                'audio_rate': mediaRecorder.audioBitsPerSecond(),
+                'video_rate' : mediaRecorder.videoBitsPerSecond(),
+                'encoding': 'pcm_f32le',
+                'channels': 1
+            };
+        }
         console.log("requesting start", message)
         ws.send(JSON.stringify(message));
 
