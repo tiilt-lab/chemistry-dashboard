@@ -46,8 +46,11 @@ class ServerProtocol(WebSocketServerProtocol):
 
     def onMessage(self, payload, is_binary):
         self.last_message = time.time()
+        logging.info('testing parameters...')
+        logging.info(is_binary)
         if is_binary:
             try:
+                logging.info(payload)
                 self.process_binary(payload)
             except Exception as e:
                 logging.warning('Error processing binary: {0}'.format(e))
