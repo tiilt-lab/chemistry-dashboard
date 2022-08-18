@@ -99,20 +99,21 @@ function JoinPage() {
             setAudioSenderProcessor(workletProcessor);
         }
 
-        const videoPlay =  async () => {
+        const videoPlay =  () => {
             let video = document.querySelector('video')
             video.srcObject = streamReference
             video.onloadedmetadata = function (ev) {
                 //show in the video element what is being captured by the webcam
                 video.play();
+                mediaRecorder.start(1000); 
+                console.log(mediaRecorder.state);
             };
-            mediaRecorder.start(1000); 
-            console.log(props.mediaRecorder.state);
+            
             mediaRecorder.ondataavailable = function (ev) {
                 console.log(ev.data, "video data")
                 chunk.push(ev.data);
             }
-            mediaRecorder.onstop = (ev) => {
+            mediaRecorder.onstop = async (ev) => {
                 console.log(chunk.length, 'video chunks')
                 let blob = new Blob(chunk, { 'type': 'video/mp4;' });
                 console.log(blob, "blob data")
@@ -126,7 +127,7 @@ function JoinPage() {
         if (authenticated && joinwith === 'Audio')
             loadWorklet().catch(console.error);
         else if (authenticated && joinwith === 'Video')
-            videoPlay().catch(console.error)    
+            videoPlay()    
 
     }, [authenticated])
 
@@ -353,18 +354,20 @@ function JoinPage() {
                 'start_time': 0.0,
                 'sample_rate': audioContext.sampleRate,
                 'encoding': 'pcm_f32le',
-                'channels': 1
+                'channels': 1,
+                'streamdata' : 'audio'
             };
         } else if (joinwith === 'Video') {
-            console.log(mediaRecorder.audioBitsPerSecond(),mediaRecorder.videoBitsPerSecond(),' audio video bits')
+            console.log(mediaRecorder.audioBitsPerSecond,mediaRecorder.videoBitsPerSecond,' audio video bits')
             message = {
                 'type': 'start',
                 'key': key,
                 'start_time': 0.0,
-                'audio_rate': mediaRecorder.audioBitsPerSecond(),
-                'video_rate' : mediaRecorder.videoBitsPerSecond(),
-                'encoding': 'pcm_f32le',
-                'channels': 1
+                'audio_rate': mediaRecorder.audioBitsPerSecond,
+                'video_rate' : mediaRecorder.videoBitsPerSecond,
+                'encoding': 'video/mp4',
+                'channels': 1,
+                'streamdata' : 'video'
             };
         }
         console.log("requesting start", message)
@@ -380,7 +383,7 @@ function JoinPage() {
             video.play();
         };
         mediaRecorder.start(1000); 
-        console.log(props.mediaRecorder.state);
+        console.log(mediaRecorder.state);
         mediaRecorder.ondataavailable = function (ev) {
             console.log(ev.data, "video data")
             ev.data.arrayBuffer().then(data=>{

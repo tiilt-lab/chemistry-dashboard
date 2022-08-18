@@ -21,6 +21,9 @@ def record_reduced():
 def recordings_folder():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['record']['recording_folder']))
 
+def video_recordings_folder():
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['record']['video_recording_folder']))
+
 def asr():
     return str(config['processing']['asr'])
 
