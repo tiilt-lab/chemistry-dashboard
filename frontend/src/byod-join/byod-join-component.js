@@ -111,7 +111,7 @@ function JoinPage() {
             
             mediaRecorder.ondataavailable = async function (ev) {
                 console.log(ev.data, "video data")
-                const bufferdata = await blob.arrayBuffer()
+                const bufferdata = await ev.data.arrayBuffer()
                 ws.send(bufferdata);
                 chunk.push(ev.data);
             }
