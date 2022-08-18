@@ -64,7 +64,7 @@ function ByodJoinPage(props) {
                                 <video controls={true} muted={true}/>
                             </div>
 
-                            <button className={`${style["basic-button"]} ${style["medium-button"]}`} onClick={() => { props.mediaRecorder.start(1000); console.log(props.mediaRecorder.state); }}>Start Recording</button>
+                            {/* <button className={`${style["basic-button"]} ${style["medium-button"]}`} onClick={() => { props.mediaRecorder.start(1000); console.log(props.mediaRecorder.state); }}>Start Recording</button> */}
                             <button className={`${style["basic-button"]} ${style["medium-button"]}`} onClick={() => { props.mediaRecorder.stop(); console.log(props.mediaRecorder.state); }}>Stop Recording</button>
                         </React.Fragment>
                         :

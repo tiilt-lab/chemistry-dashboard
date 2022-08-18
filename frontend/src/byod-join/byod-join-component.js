@@ -76,11 +76,12 @@ function JoinPage() {
     useEffect(() => {
         console.log("ws before requestStart: ", ws);
         console.log("context before requestStart: ", audioContext);
-        if (connected && joinwith === 'Audio')
-            requestStart();
-        else if (connected && joinwith === 'Video') {
-            videoPlay();
-        }
+        requestStart();
+        // if (connected && joinwith === 'Audio')
+        //     requestStart();
+        // else if (connected && joinwith === 'Video') {
+        //     videoPlay();
+        // }
 
     }, [connected])
 
@@ -98,8 +99,34 @@ function JoinPage() {
             setAudioSenderProcessor(workletProcessor);
         }
 
-        if (authenticated)
+        const videoPlay =  async () => {
+            let video = document.querySelector('video')
+            video.srcObject = streamReference
+            video.onloadedmetadata = function (ev) {
+                //show in the video element what is being captured by the webcam
+                video.play();
+            };
+            mediaRecorder.start(1000); 
+            console.log(props.mediaRecorder.state);
+            mediaRecorder.ondataavailable = function (ev) {
+                console.log(ev.data, "video data")
+                chunk.push(ev.data);
+            }
+            mediaRecorder.onstop = (ev) => {
+                console.log(chunk.length, 'video chunks')
+                let blob = new Blob(chunk, { 'type': 'video/mp4;' });
+                console.log(blob, "blob data")
+                const bufferdata = await blob.arrayBuffer()
+                console.log(bufferdata, "arrayBuffer data")
+                setIsStop(true)
+                setRecordedVideo(window.URL.createObjectURL(blob))
+            }
+    
+        }
+        if (authenticated && joinwith === 'Audio')
             loadWorklet().catch(console.error);
+        else if (authenticated && joinwith === 'Video')
+            videoPlay().catch(console.error)    
 
     }, [authenticated])
 
@@ -352,6 +379,8 @@ function JoinPage() {
             //show in the video element what is being captured by the webcam
             video.play();
         };
+        mediaRecorder.start(1000); 
+        console.log(props.mediaRecorder.state);
         mediaRecorder.ondataavailable = function (ev) {
             console.log(ev.data, "video data")
             ev.data.arrayBuffer().then(data=>{
