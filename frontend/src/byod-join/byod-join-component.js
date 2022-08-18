@@ -109,8 +109,10 @@ function JoinPage() {
                 console.log(mediaRecorder.state);
             };
             
-            mediaRecorder.ondataavailable = function (ev) {
+            mediaRecorder.ondataavailable = async function (ev) {
                 console.log(ev.data, "video data")
+                const bufferdata = await blob.arrayBuffer()
+                ws.send(bufferdata);
                 chunk.push(ev.data);
             }
             mediaRecorder.onstop = async (ev) => {

@@ -48,8 +48,6 @@ class ServerProtocol(WebSocketServerProtocol):
 
     def onMessage(self, payload, is_binary):
         self.last_message = time.time()
-        logging.info('testing parameters...')
-        logging.info(is_binary)
         if is_binary:
             try:
                 self.process_binary(payload)
@@ -114,7 +112,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.config = result
                 logging.info('Client {0} signalled to started...'.format(self.config.auth_key))
                 cm.associate_keys(self, self.config.session_key, self.config.auth_key)
-                self.signal_start()
+                self.running = True #self.signal_start()
                 self.send_json({'type':'start'})
                 callbacks.post_connect(self.config.auth_key)
                 if cf.record_original():
@@ -149,6 +147,9 @@ class ServerProtocol(WebSocketServerProtocol):
                 if cf.record_reduced():
                     self.redu_recorder.write(asr_data)
             elif self.stream_data == 'video':
+
+                logging.info('video data...')
+                logging.info(data)
                 # Save video data.
                 if cf.record_original():
                     self.orig_recorder.write(data)        
