@@ -32,7 +32,7 @@ function ByodJoinPage(props) {
                     <></>
                 }
                 {
-                    (props.connected && props.authenticated) ?
+                    (props.connected && props.authenticated && props.joinwith === 'Audio') ?
                         <div className={style["list-container"]}>
                             <div className={style["pod-overview-button"]} onClick={props.requestHelp}>
                                 <svg width="80px" height="80px" style={{ marginTop: "22px" }} viewBox="-40 -40 80 80">
