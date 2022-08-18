@@ -21,8 +21,14 @@ def record_reduced():
 def recordings_folder():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['record']['recording_folder']))
 
+def video_record_original():
+    return str(config['videorecord']['original']) in ['true', 'True', 't', '1']
+
+def video_record_reduced():
+    return str(config['videorecord']['reduced']) in ['true', 'True', 't', '1']
+
 def video_recordings_folder():
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['record']['video_recording_folder']))
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['videorecord']['video_recording_folder']))
 
 def asr():
     return str(config['processing']['asr'])
