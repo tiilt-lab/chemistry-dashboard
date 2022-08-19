@@ -10,10 +10,10 @@ import threading
 import scipy.signal
 import config as cf
 import numpy as np
+import moviepy.editor as mp
 from recorder import WaveRecorder
 from recorder import VidRecorder
 from processing_config import ProcessingConfig
-from processing_config import ProcessingVideoConfig
 from connection_manager import ConnectionManager
 from audio_buffer import AudioBuffer
 from processor import AudioProcessor
@@ -64,19 +64,14 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.send_json({'type': 'error', 'message': 'Payload is not properly formatted JSON.'})
             if valid_json:
                 try:
-                    if data['streamdata'] == 'audio':
-                        self.stream_data = 'audio'
-                        self.process_json_audio_start(data)
-                    elif data['streamdata'] == 'video':
-                        self.stream_data = 'video'
-                        self.process_json_video_start(data)
+                    self.process_json(data)
                 except Exception as e:
                     logging.warning('Error processing json: {0}'.format(e))
 
     def onClose(self, *args, **kwargs): 
         self.signal_end()
 
-    def process_json_audio_start(self, data):
+    def process_json(self, data):
         if not 'type' in data:
             logging.warning('Message does not contain "type".')
             return
@@ -92,48 +87,38 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.signal_start()
                 self.send_json({'type':'start'})
                 callbacks.post_connect(self.config.auth_key)
-                if cf.record_original():
-                    filename = os.path.join(cf.recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
-                    self.orig_recorder = WaveRecorder(filename, self.config.sample_rate, self.config.depth, self.config.channels)
-                if cf.record_reduced():
-                    filename = os.path.join(cf.recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
-                    self.redu_recorder = WaveRecorder(filename, 16000, 2, 1)
+                if data['streamdata'] == 'audio':
+                    self.stream_data = 'audio'
+                    if cf.record_original():
+                        filename = os.path.join(cf.recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
+                        self.orig_recorder = WaveRecorder(filename, self.config.sample_rate, self.config.depth, self.config.channels)
+                    if cf.record_reduced():
+                        filename = os.path.join(cf.recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
+                        self.redu_recorder = WaveRecorder(filename, 16000, 2, 1)
+                elif data['streamdata'] == 'video':
+                    self.stream_data = 'video'
+                    self.temp_video_filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
+                    self.temp_audio_filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempaud".format(self.config.auth_key, str(time.ctime())))
+                    if cf.video_record_original():
+                        filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
+                        self.orig_vid_recorder = VidRecorder(filename,self.temp_video_filename,self.temp_audio_filename)
+                    if cf.video_record_reduced():
+                        filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
+                        self.redu_vid_recorder = VidRecorder(filename,self.temp_video_filename,self.temp_audio_filename)
+    
+    #def process_audio_binary(self,data):
+        
 
-    def process_json_video_start(self, data):
-        if not 'type' in data:
-            logging.warning('Message does not contain "type".')
-            return
-        if data['type'] == 'start':  
-            valid, result = ProcessingVideoConfig.from_json(data)
-            if not valid:
-                self.send_json({'type': 'error', 'message': result})
-                self.signal_end() 
-            else:
-                self.config = result
-                logging.info('Client {0} signalled to started...'.format(self.config.auth_key))
-                cm.associate_keys(self, self.config.session_key, self.config.auth_key)
-                self.running = True #self.signal_start()
-                self.send_json({'type':'start'})
-                callbacks.post_connect(self.config.auth_key)
-                if cf.record_original():
-                    filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
-                    self.orig_vid_recorder = VidRecorder(filename)
-                if cf.record_reduced():
-                    filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
-                    self.redu_vid_recorder = VidRecorder(filename)
+       
 
-        elif data['type'] == 'stop':
-            if(self.running):
-                logging.info('Client {0} signalled to stop...'.format(self.config.auth_key))
-                self.signal_end()
-        else:
-            logging.warning('Unexpected message type: {0}.'.format(data['type']))
+    #def process_video_binary(self,data):
+        
 
     def process_binary(self, data):
         if self.running:
             if self.stream_data == 'audio':
-                # Save audio data.
                 if cf.record_original():
+                    # Save audio data.
                     self.orig_recorder.write(data)
 
                 # Convert all audio to pcm_i16le
@@ -145,11 +130,28 @@ class ServerProtocol(WebSocketServerProtocol):
 
                 # Save audio data.
                 if cf.record_reduced():
-                    self.redu_recorder.write(asr_data)
+                    self.redu_recorder.write(asr_data) 
+                
             elif self.stream_data == 'video':
                 # Save video data.
                 if cf.video_record_original():
-                    self.orig_vid_recorder.write(data)        
+                    self.orig_vid_recorder.write(data)
+
+                #extract audio from video
+                #write video data to a temp video mp4 file
+                self.orig_vid_recorder.write_temp_mp4(data)
+                vidclip = mp.VideoFileClip(self.temp_video_filename+'.mp4')
+                if os.path.isfile(self.self.temp_audio_filename+'.wav'):
+                        os.remove(self.self.temp_audio_filename+'.wav')
+                vidclip.audio.write_audiofile(self.temp_audio_filename+'.wav')
+                audiobyte = self.orig_vid_recorder.read_temp_wav() 
+
+                # Convert all audio to pcm_i16le
+                audiobyte = self.reformat_data(audiobyte)
+                audiobyte = self.resample_data(audiobyte)
+                self.audio_buffer.append(audiobyte)
+                asr_data = self.reduce_channels(1, audiobyte)
+                self.asr_audio_queue.put(asr_data)       
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 
