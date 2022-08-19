@@ -349,7 +349,6 @@ function JoinPage() {
             return;
         }
         if (joinwith === 'Audio') {
-            console.log(audioContext.sampleRate, 'sample rate ..')
             message = {
                 'type': 'start',
                 'key': key,
@@ -360,14 +359,13 @@ function JoinPage() {
                 'streamdata' : 'audio'
             };
         } else if (joinwith === 'Video') {
-            console.log(mediaRecorder.audioBitsPerSecond,mediaRecorder.videoBitsPerSecond,' audio video bits')
             message = {
                 'type': 'start',
                 'key': key,
                 'start_time': 0.0,
-                'audio_rate': mediaRecorder.audioBitsPerSecond,
-                'video_rate' : mediaRecorder.videoBitsPerSecond,
-                'encoding': 'video/mp4',
+                'sample_rate': 44100,
+                'encoding': 'pcm_f32le',
+                'video_encoding': 'video/mp4',
                 'channels': 1,
                 'streamdata' : 'video'
             };
