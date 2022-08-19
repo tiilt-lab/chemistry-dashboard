@@ -105,14 +105,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     if cf.video_record_reduced():
                         filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
                         self.redu_vid_recorder = VidRecorder(filename,self.temp_video_filename,self.temp_audio_filename)
-    
-    #def process_audio_binary(self,data):
-        
-
        
-
-    #def process_video_binary(self,data):
-        
 
     def process_binary(self, data):
         if self.running:
@@ -140,10 +133,13 @@ class ServerProtocol(WebSocketServerProtocol):
                 #extract audio from video
                 #write video data to a temp video mp4 file
                 self.orig_vid_recorder.write_temp_mp4(data)
-                vidclip = mp.VideoFileClip(self.temp_video_filename+'.mp4')
                 if os.path.isfile(self.self.temp_audio_filename+'.wav'):
-                        os.remove(self.self.temp_audio_filename+'.wav')
-                vidclip.audio.write_audiofile(self.temp_audio_filename+'.wav')
+                    os.remove(self.self.temp_audio_filename+'.wav')
+                mp.ffmpeg_tools.ffmpeg_extract_audio(self.temp_video_filename+'.mp4',self.self.temp_audio_filename+'.wav')
+                # vidclip = mp.VideoFileClip(self.temp_video_filename+'.mp4')
+                # if os.path.isfile(self.self.temp_audio_filename+'.wav'):
+                #         os.remove(self.self.temp_audio_filename+'.wav')
+                # vidclip.audio.write_audiofile(self.temp_audio_filename+'.wav')
                 audiobyte = self.orig_vid_recorder.read_temp_wav() 
 
                 # Convert all audio to pcm_i16le
