@@ -11,6 +11,7 @@ import scipy.signal
 import config as cf
 import numpy as np
 import moviepy.editor as mp
+from  moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 from recorder import WaveRecorder
 from recorder import VidRecorder
 from processing_config import ProcessingConfig
@@ -43,6 +44,7 @@ class ServerProtocol(WebSocketServerProtocol):
         self.processor = None
         self.last_message = time.time()
         self.end_signaled = False
+        self.interval = 0
         cm.add(self)
         logging.info('New client connected...')
 
@@ -100,11 +102,11 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.temp_video_filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
                     self.temp_audio_filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempaud".format(self.config.auth_key, str(time.ctime())))
                     if cf.video_record_original():
-                        filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
-                        self.orig_vid_recorder = VidRecorder(filename,self.temp_video_filename,self.temp_audio_filename)
+                        self.filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
+                        self.orig_vid_recorder = VidRecorder(self.filename,self.temp_video_filename,self.temp_audio_filename,cf.video_record_original())
                     if cf.video_record_reduced():
-                        filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
-                        self.redu_vid_recorder = VidRecorder(filename,self.temp_video_filename,self.temp_audio_filename)
+                        self.filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
+                        self.redu_vid_recorder = VidRecorder(self.filename,self.temp_video_filename,self.temp_audio_filename,cf.video_record_original())
        
 
     def process_binary(self, data):
@@ -127,27 +129,41 @@ class ServerProtocol(WebSocketServerProtocol):
                 
             elif self.stream_data == 'video':
                 # Save video data.
-                if cf.video_record_original():
-                    self.orig_vid_recorder.write(data)
+                # if cf.video_record_original():
+                #     self.orig_vid_recorder.write(data)
 
                 #extract audio from video
-                #write video data to a temp video mp4 file
-                self.orig_vid_recorder.write_temp_mp4(data)
-                if os.path.isfile(self.self.temp_audio_filename+'.wav'):
-                    os.remove(self.self.temp_audio_filename+'.wav')
-                mp.ffmpeg_tools.ffmpeg_extract_audio(self.temp_video_filename+'.mp4',self.self.temp_audio_filename+'.wav')
+                #write video data to  video mp4 file
+                self.orig_vid_recorder.write(data)
+
+                if os.path.isfile(self.temp_video_filename+'.mp4'):
+                    os.remove(self.temp_video_filename+'.mp4')
+
+                vid_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
+
+                ffmpeg_extract_subclip(self.filename+'.mp4',self.interval,self.interval+4,self.temp_video_filename+'.mp4')    
+                vidclip = mp.VideoFileClip(self.temp_video_filename+'.mp4')
+                
+                if os.path.isfile(self.temp_audio_filename+'.wav'):
+                    os.remove(self.temp_audio_filename+'.wav')
+
+                vid_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempaud".format(self.config.auth_key, str(time.ctime())))
+                
+                vidclip.audio.write_audiofile(self.temp_audio_filename+'.wav')
+
+                #mp.ffmpeg_tools.fmpeg_extract_audio(self.temp_video_filename+'.mp4',self.temp_audio_filename+'.wav')
                 # vidclip = mp.VideoFileClip(self.temp_video_filename+'.mp4')
                 # if os.path.isfile(self.self.temp_audio_filename+'.wav'):
                 #         os.remove(self.self.temp_audio_filename+'.wav')
                 # vidclip.audio.write_audiofile(self.temp_audio_filename+'.wav')
-                audiobyte = self.orig_vid_recorder.read_temp_wav() 
+                # #audiobyte = self.orig_vid_recorder.read_temp_wav() 
 
-                # Convert all audio to pcm_i16le
-                audiobyte = self.reformat_data(audiobyte)
-                audiobyte = self.resample_data(audiobyte)
-                self.audio_buffer.append(audiobyte)
-                asr_data = self.reduce_channels(1, audiobyte)
-                self.asr_audio_queue.put(asr_data)       
+                # # Convert all audio to pcm_i16le
+                # audiobyte = self.reformat_data(audiobyte)
+                # audiobyte = self.resample_data(audiobyte)
+                # self.audio_buffer.append(audiobyte)
+                # asr_data = self.reduce_channels(1, audiobyte)
+                # self.asr_audio_queue.put(asr_data)       
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 

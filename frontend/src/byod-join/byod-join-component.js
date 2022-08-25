@@ -49,7 +49,7 @@ function JoinPage() {
 
     const POD_COLOR = '#FF6655';
     const GLOW_COLOR = '#ffc3bd';
-
+    const interval = 4000
     useEffect(() => {
         if (source !== null && audioContext !== null && name != "" && pcode != "") {
 
@@ -77,11 +77,6 @@ function JoinPage() {
         console.log("ws before requestStart: ", ws);
         console.log("context before requestStart: ", audioContext);
         requestStart();
-        // if (connected && joinwith === 'Audio')
-        //     requestStart();
-        // else if (connected && joinwith === 'Video') {
-        //     videoPlay();
-        // }
 
     }, [connected])
 
@@ -105,7 +100,7 @@ function JoinPage() {
             video.onloadedmetadata = function (ev) {
                 //show in the video element what is being captured by the webcam
                 video.play();
-                mediaRecorder.start(1000); 
+                mediaRecorder.start(interval); 
                 console.log(mediaRecorder.state);
             };
             
