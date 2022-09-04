@@ -35,7 +35,7 @@ class VidRecorder:
 
     def __init__(self, filename, tempvidfilename, tempaudfilename,is_save):
         #self.dat_filename = filename + '.dat'
-        self.vid_filename = filename + '.mp4'
+        self.vid_filename = filename + '.webm'
         # self.temp_vid_filename =  tempvidfilename + '.mp4'
         # self.temp_aud_filename =  tempaudfilename + '.wav'
         self.closed = False
@@ -48,19 +48,19 @@ class VidRecorder:
         except Exception as e:
             print('Unable to write data to file: {0}'.format(e))
 
-    # def write_temp_mp4(self,data):
-    #     try:
-    #         if os.path.isfile(self.temp_vid_filename):
-    #             os.remove(self.temp_vid_filename)
-
-    #         with open(self.temp_vid_filename, "wb") as out_file:
-    #             out_file.write(data)
-    #     except Exception as e:
-    #         print('Unable to write temp video data to file: {0}'.format(e))        
-
-    def read_temp_wav(self):
+    def write_temp_video(self,data,filename):
         try:
-            with open(self.temp_aud_filename, "rb") as f:
+            # if os.path.isfile(self.temp_vid_filename):
+            #     os.remove(self.temp_vid_filename)
+
+            with open(filename, "wb") as out_file:
+                out_file.write(data)
+        except Exception as e:
+            print('Unable to write temp video data to file: {0}'.format(e))        
+
+    def read_temp_wav(self,filename):
+        try:
+            with open(filename, "rb") as f:
                 byteAudio = f.read()
                 return byteAudio
         except Exception as e:
