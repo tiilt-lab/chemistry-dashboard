@@ -44,7 +44,7 @@ class ServerProtocol(WebSocketServerProtocol):
         self.processor = None
         self.last_message = time.time()
         self.end_signaled = False
-        self.interval = 0
+        self.interval = 15
         cm.add(self)
         logging.info('New client connected...')
 
@@ -98,6 +98,7 @@ class ServerProtocol(WebSocketServerProtocol):
                         filename = os.path.join(cf.recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
                         self.redu_recorder = WaveRecorder(filename, 16000, 2, 1)
                 elif data['streamdata'] == 'video':
+                    self.video_count = 1;
                     self.stream_data = 'video'
                     self.temp_video_filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
                     self.temp_audio_filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempaud".format(self.config.auth_key, str(time.ctime())))
@@ -129,41 +130,31 @@ class ServerProtocol(WebSocketServerProtocol):
                 
             elif self.stream_data == 'video':
                 # Save video data.
-                # if cf.video_record_original():
-                #     self.orig_vid_recorder.write(data)
-
-                #extract audio from video
-                #write video data to  video mp4 file
+                #if cf.video_record_original():
                 self.orig_vid_recorder.write(data)
 
-                if os.path.isfile(self.temp_video_filename+'.mp4'):
-                    os.remove(self.temp_video_filename+'.mp4')
+            
+                temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
+                vidclip = mp.VideoFileClip(self.filename+'.webm')
+                subclips = vidclip.subclip((self.video_count-1)*self.interval,self.video_count*self.interval)
+                subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=44100,nbytes=4, buffersize=180*self.interval,codec='pcm_s32le',bitrate='50k')
+                audioclip = mp.AudioFileClip(temp_aud_file+'.wav',buffersize=180*self.interval,nbytes=4,fps=44100)
 
-                vid_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
-
-                ffmpeg_extract_subclip(self.filename+'.mp4',self.interval,self.interval+4,self.temp_video_filename+'.mp4')    
-                vidclip = mp.VideoFileClip(self.temp_video_filename+'.mp4')
+                for i in range(self.interval):
+                    aud_sub = audioclip.subclip(i,i+1)
+                    logging.info('audio data: -- {0}'.format(aud_sub))
                 
-                if os.path.isfile(self.temp_audio_filename+'.wav'):
-                    os.remove(self.temp_audio_filename+'.wav')
+                self.video_count = self.video_count + 1
 
-                vid_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempaud".format(self.config.auth_key, str(time.ctime())))
-                
-                vidclip.audio.write_audiofile(self.temp_audio_filename+'.wav')
+                #audiobyte = self.orig_vid_recorder.read_temp_wav() 
 
-                #mp.ffmpeg_tools.fmpeg_extract_audio(self.temp_video_filename+'.mp4',self.temp_audio_filename+'.wav')
-                # vidclip = mp.VideoFileClip(self.temp_video_filename+'.mp4')
-                # if os.path.isfile(self.self.temp_audio_filename+'.wav'):
-                #         os.remove(self.self.temp_audio_filename+'.wav')
-                # vidclip.audio.write_audiofile(self.temp_audio_filename+'.wav')
-                # #audiobyte = self.orig_vid_recorder.read_temp_wav() 
-
-                # # Convert all audio to pcm_i16le
+                # Convert all audio to pcm_i16le
                 # audiobyte = self.reformat_data(audiobyte)
                 # audiobyte = self.resample_data(audiobyte)
                 # self.audio_buffer.append(audiobyte)
                 # asr_data = self.reduce_channels(1, audiobyte)
-                # self.asr_audio_queue.put(asr_data)       
+                # self.asr_audio_queue.put(asr_data) 
+                      
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 
