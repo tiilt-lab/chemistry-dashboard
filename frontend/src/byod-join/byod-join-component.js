@@ -51,7 +51,7 @@ function JoinPage() {
 
     const POD_COLOR = '#FF6655';
     const GLOW_COLOR = '#ffc3bd';
-    const interval = 15000
+    const interval = 10000
     useEffect(() => {
         if (source !== null && audioContext !== null && name != "" && pcode != "") {
             requestAccessKey(name, pcode);
@@ -367,7 +367,7 @@ function JoinPage() {
         mediaRec.ondataavailable = async function (ev) {
             console.log(ev.data, "video data")
             const bufferdata = await ev.data.arrayBuffer()
-            fixWebmDuration(ev.data,interval*240,(fixedblob)=>{
+            fixWebmDuration(ev.data,interval*6*60,(fixedblob)=>{
                 ws.send(fixedblob);
                 //chunk.push(ev.data);
                 //setTrackRecording(trackRecording+1) 

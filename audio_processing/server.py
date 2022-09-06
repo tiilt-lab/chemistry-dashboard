@@ -11,7 +11,6 @@ import scipy.signal
 import config as cf
 import numpy as np
 import moviepy.editor as mp
-from  moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 from recorder import WaveRecorder
 from recorder import VidRecorder
 from processing_config import ProcessingConfig
@@ -44,7 +43,7 @@ class ServerProtocol(WebSocketServerProtocol):
         self.processor = None
         self.last_message = time.time()
         self.end_signaled = False
-        self.interval = 15
+        self.interval = 10
         cm.add(self)
         logging.info('New client connected...')
 
@@ -86,20 +85,19 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.config = result
                 logging.info('Client {0} signalled to started...'.format(self.config.auth_key))
                 cm.associate_keys(self, self.config.session_key, self.config.auth_key)
+                self.stream_data = data['streamdata']
                 self.signal_start()
                 self.send_json({'type':'start'})
                 callbacks.post_connect(self.config.auth_key)
-                if data['streamdata'] == 'audio':
-                    self.stream_data = 'audio'
+                if self.stream_data == 'audio':
                     if cf.record_original():
                         filename = os.path.join(cf.recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
                         self.orig_recorder = WaveRecorder(filename, self.config.sample_rate, self.config.depth, self.config.channels)
                     if cf.record_reduced():
                         filename = os.path.join(cf.recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
                         self.redu_recorder = WaveRecorder(filename, 16000, 2, 1)
-                elif data['streamdata'] == 'video':
+                elif self.stream_data == 'video':
                     self.video_count = 1;
-                    self.stream_data = 'video'
                     self.temp_video_filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
                     self.temp_audio_filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempaud".format(self.config.auth_key, str(time.ctime())))
                     if cf.video_record_original():
@@ -116,14 +114,12 @@ class ServerProtocol(WebSocketServerProtocol):
                 if cf.record_original():
                     # Save audio data.
                     self.orig_recorder.write(data)
-
                 # Convert all audio to pcm_i16le
                 data = self.reformat_data(data)
                 data = self.resample_data(data)
                 self.audio_buffer.append(data)
                 asr_data = self.reduce_channels(1, data)
-                self.asr_audio_queue.put(asr_data)
-
+                self.asr_audio_queue.put(asr_data) 
                 # Save audio data.
                 if cf.record_reduced():
                     self.redu_recorder.write(asr_data) 
@@ -132,29 +128,19 @@ class ServerProtocol(WebSocketServerProtocol):
                 # Save video data.
                 #if cf.video_record_original():
                 self.orig_vid_recorder.write(data)
-
+                #logging.info('data sent {0}'.format(data))
             
                 temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
                 vidclip = mp.VideoFileClip(self.filename+'.webm')
                 subclips = vidclip.subclip((self.video_count-1)*self.interval,self.video_count*self.interval)
-                subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=44100,nbytes=4, buffersize=180*self.interval,codec='pcm_s32le',bitrate='50k')
-                audioclip = mp.AudioFileClip(temp_aud_file+'.wav',buffersize=180*self.interval,nbytes=4,fps=44100)
-
-                for i in range(self.interval):
-                    aud_sub = audioclip.subclip(i,i+1)
-                    logging.info('audio data: -- {0}'.format(aud_sub))
-                
+                subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=44100,bitrate='50k') #nbytes=2,codec='pcm_s16le',
+        
+                audiobyte = self.orig_vid_recorder.read_temp_wav(temp_aud_file+'.wav') 
+                #Convert all audio to pcm_i16le
+                self.audio_buffer.append(audiobyte)
+                self.asr_audio_queue.put(audiobyte) 
+                  
                 self.video_count = self.video_count + 1
-
-                #audiobyte = self.orig_vid_recorder.read_temp_wav() 
-
-                # Convert all audio to pcm_i16le
-                # audiobyte = self.reformat_data(audiobyte)
-                # audiobyte = self.resample_data(audiobyte)
-                # self.audio_buffer.append(audiobyte)
-                # asr_data = self.reduce_channels(1, audiobyte)
-                # self.asr_audio_queue.put(asr_data) 
-                      
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 
@@ -192,7 +178,7 @@ class ServerProtocol(WebSocketServerProtocol):
         self.audio_buffer = AudioBuffer(self.config)
         self.asr_audio_queue = queue.Queue()
         self.asr_transcript_queue = queue.Queue()
-        self.asr = GoogleASR(self.asr_audio_queue, self.asr_transcript_queue, self.config)
+        self.asr = GoogleASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data)
         self.asr.start()
         self.processor = AudioProcessor(self.audio_buffer, self.asr_transcript_queue, self.config)
         self.processor.start()
