@@ -1,7 +1,7 @@
 import threading
 
 class AudioBuffer:
-    BUFFER_SIZE = 180 # Max amount of audio data stored in seconds.
+    BUFFER_SIZE = 1800 # Max amount of audio data stored in seconds.
 
     def __init__(self, config):
         self.audio_buffer = bytearray()
