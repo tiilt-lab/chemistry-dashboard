@@ -33,11 +33,8 @@ class WaveRecorder:
 
 class VidRecorder:
 
-    def __init__(self, filename, tempvidfilename, tempaudfilename,is_save):
-        #self.dat_filename = filename + '.dat'
+    def __init__(self, filename, is_save):
         self.vid_filename = filename + '.webm'
-        # self.temp_vid_filename =  tempvidfilename + '.mp4'
-        # self.temp_aud_filename =  tempaudfilename + '.wav'
         self.closed = False
         self.save_video = is_save
 
@@ -47,16 +44,6 @@ class VidRecorder:
                 f.write(data)
         except Exception as e:
             print('Unable to write data to file: {0}'.format(e))
-
-    def write_temp_video(self,data,filename):
-        try:
-            # if os.path.isfile(self.temp_vid_filename):
-            #     os.remove(self.temp_vid_filename)
-
-            with open(filename, "wb") as out_file:
-                out_file.write(data)
-        except Exception as e:
-            print('Unable to write temp video data to file: {0}'.format(e))        
 
     def read_temp_wav(self,filename):
         try:
@@ -69,23 +56,9 @@ class VidRecorder:
     def close(self):
         if not self.closed:
             try:
-                #remove all temp video and audio files
-                if os.path.isfile(self.temp_vid_filename):
-                    os.remove(self.temp_vid_filename)
-
-                if os.path.isfile(self.temp_aud_filename):
-                    os.remove(self.temp_aud_filename)
-
-                #save dat binary file as mp4    
-                # with open(self.dat_filename, "rb") as f:
-                #     all_data = f.read()
-                
                 if not self.save_video and  os.path.isfile(self.vid_filename):
                     os.remove(self.vid_filename)
-
-                # with open(self.vid_filename, "wb") as out_file:
-                #     out_file.write(all_data)  
             except Exception as e:
-              print('Unable to write video data to file: {0}'.format(e))         
+              print('Unable to delete video file: {0}'.format(e))         
             os.remove(self.dat_filename)
             self.closed = True

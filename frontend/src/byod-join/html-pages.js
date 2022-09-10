@@ -6,7 +6,6 @@ import micIcon from '../assets/img/mic.svg'
 
 
 function ByodJoinPage(props) {
-    console.log(props, 'props')
     return (
         <>
             <div className={style.container}>
@@ -58,7 +57,7 @@ function ByodJoinPage(props) {
                         <></>
                 }
                 {
-                    (props.connected && props.joinwith === 'Video' && props.isStop === false) ?
+                    (props.connected && props.joinwith === 'Video') ?
                         <React.Fragment>
                             <div className={style["video-container"]}>
                                 <video controls={true} muted={true}/>
