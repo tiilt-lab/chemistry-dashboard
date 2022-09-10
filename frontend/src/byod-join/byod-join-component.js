@@ -43,10 +43,7 @@ function JoinPage() {
     const [name, setName] = useState("");
     const [pcode, setPcode] = useState("");
     const [joinwith, setJoinwith] = useState("");
-    const [chunk, setChunk] = useState([])
-    const [isStop, setIsStop] = useState(false)
     const [recordedvideo, setRecordedVideo] = useState(null)
-    const [trackRecording, setTrackRecording] = useState()
     const navigate = useNavigate();
 
     const POD_COLOR = '#FF6655';
@@ -60,7 +57,6 @@ function JoinPage() {
     }, [source, audioContext, name, pcode])
 
     useEffect(() => {
-        console.log("ws: ", ws);
         if (ws != null) {
             connect();
         }
@@ -68,15 +64,13 @@ function JoinPage() {
     }, [ws])
 
     useEffect(() => {
-        if ( joinwith === 'Video' && trackRecording === 0) {
+        if ( mediaRecorder !== null && joinwith === 'Video') {
             requestAccessKey(name, pcode);
         }
 
-    }, [reconnectCounter,  joinwith, trackRecording])
+    }, [mediaRecorder,reconnectCounter,  joinwith])
 
     useEffect(() => {
-        console.log("ws before requestStart: ", ws);
-        console.log("context before requestStart: ", audioContext);
         requestStart();
 
     }, [connected])
@@ -87,33 +81,36 @@ function JoinPage() {
             await audioContext.audioWorklet.addModule('audio-sender-processor.js');
             const workletProcessor = new AudioWorkletNode(audioContext, 'audio-sender-processor');
             workletProcessor.port.onmessage = data => {
-                console.log("sending data: ", data.data)
-                console.log("sending data buffer: ", data.data.buffer)
                 ws.send(data.data.buffer);
             }
             source.connect(workletProcessor).connect(audioContext.destination);
             setAudioSenderProcessor(workletProcessor);
         }
 
+        const videoPlay =  () => {
+            let video = document.querySelector('video')
+            video.srcObject = streamReference
+            video.onloadedmetadata = function (ev) {
+                video.play();
+                mediaRecorder.start(interval); 
+                //console.log(mediaRecorder.state);
+            };
+            
+                mediaRecorder.ondataavailable = async function (ev) {
+                const bufferdata = await ev.data.arrayBuffer()
+                fixWebmDuration(ev.data,interval*6*60*24,(fixedblob)=>{
+                    ws.send(fixedblob);
+                })
+            }
+        }
+
         if (authenticated && joinwith === 'Audio')
             loadWorklet().catch(console.error);
         else if (authenticated && joinwith === 'Video')
-            setTrackRecording(trackRecording+1)    
+            videoPlay()    
 
     }, [authenticated])
 
-    useEffect(() => {
-        if (isStop) {
-            setChunk([])
-        }
-    }, [isStop])
-
-    useEffect(()=>{
-        if(trackRecording > 0){
-            console.log('i am here ooo.....')
-            videoPlay()  
-        }
-    },[trackRecording])
     // Disconnects from websocket server and audio stream.
     const disconnect = (permanent = false) => {
         if (permanent) {
@@ -148,14 +145,12 @@ function JoinPage() {
         }
 
     }
-    // ngOnDestroy() {
-    //   this.disconnect(true);
-    // }
+    
 
     // Verifies the users connection input and that the user
     // has a microphone accessible to the browser.
     const verifyInputAndAudio = (names, passcode, joinswith) => {
-        if (names === null || name.length === 0) {
+        if (names === null) {
             names = 'User Device';
         }
         setName(names);
@@ -192,7 +187,7 @@ function JoinPage() {
                 navigator.mediaDevices.enumerateDevices()
                     .then(devices => {
                         devices.forEach(device => {
-                            console.log(device.kind.toUpperCase(), device.label);
+                            //console.log(device.kind.toUpperCase(), device.label);
                             //, device.deviceId
                         })
                     })
@@ -210,10 +205,8 @@ function JoinPage() {
                             setSource(context.createMediaStreamSource(stream));
                             setAudioContext(context);
                         } else if (joinswith === 'Video') {
-                            // const mediaRec = new MediaRecorder(stream);
-                            // setMediaRecorder(mediaRec)
-                            setTrackRecording(0)
-                            //setIsStop(false)
+                            const mediaRec = new MediaRecorder(stream);
+                            setMediaRecorder(mediaRec)
                         }
 
                     },
@@ -347,71 +340,10 @@ function JoinPage() {
                 'streamdata' : 'video'
             };
         }
-        console.log("requesting start", message)
         ws.send(JSON.stringify(message));
 
     }
 
-    const videoPlay =  () => {
-        let video = document.querySelector('video')
-        video.srcObject = streamReference
-        var options = {mimeType: 'video/webm'};
-        const mediaRec = new MediaRecorder(streamReference,options);
-        video.onloadedmetadata = function (ev) {
-            //show in the video element what is being captured by the webcam
-            video.play();
-            mediaRec.start(interval); 
-            console.log(mediaRec.state);
-        };
-        
-        mediaRec.ondataavailable = async function (ev) {
-            console.log(ev.data, "video data")
-            const bufferdata = await ev.data.arrayBuffer()
-            fixWebmDuration(ev.data,interval*6*60,(fixedblob)=>{
-                ws.send(fixedblob);
-                //chunk.push(ev.data);
-                //setTrackRecording(trackRecording+1) 
-            })
-           
-        }
-        // mediaRecorder.onstop = async (ev) => {
-        //     console.log(chunk.length, 'video chunks')
-        //     let blob = new Blob(chunk, { 'type': 'video/mp4;' });
-        //     console.log(blob, "blob data")
-        //     const bufferdata = await blob.arrayBuffer()
-        //     console.log(bufferdata, "arrayBuffer data")
-        //     setIsStop(true)
-        //     setRecordedVideo(window.URL.createObjectURL(blob))
-        // }
-
-    }
-
-    // const videoPlay = () => {
-    //     let video = document.querySelector('video')
-    //     video.srcObject = streamReference
-    //     video.onloadedmetadata = function (ev) {
-    //         //show in the video element what is being captured by the webcam
-    //         video.play();
-    //     };
-    //     mediaRecorder.start(1000); 
-    //     console.log(mediaRecorder.state);
-    //     mediaRecorder.ondataavailable = function (ev) {
-    //         console.log(ev.data, "video data")
-    //         ev.data.arrayBuffer().then(data=>{
-    //             console.log(data, "arrayBuffer data")
-    //         })
-            
-    //         chunk.push(ev.data);
-    //     }
-    //     mediaRecorder.onstop = (ev) => {
-    //         console.log(chunk.length, 'video chunks')
-    //         let blob = new Blob(chunk, { 'type': 'video/mp4;' });
-    //         console.log(blob, "blob data")
-    //         setIsStop(true)
-    //         setRecordedVideo(window.URL.createObjectURL(blob))
-    //     }
-
-    // }
     const requestHelp = () => {
         sessionDevice.button_pressed = !sessionDevice.button_pressed;
         sessionService.setDeviceButton(sessionDevice.id, sessionDevice.button_pressed, key);
@@ -455,8 +387,7 @@ function JoinPage() {
             setPcode={setPcode}
             changeTouppercase={changeTouppercase}
             joinwith={joinwith}
-            // mediaRecorder={mediaRecorder}
-            isStop={isStop}
+            mediaRecorder={mediaRecorder}
             recordedvideo = {recordedvideo}
 
         />
