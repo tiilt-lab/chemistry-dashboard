@@ -1,7 +1,12 @@
 from genericpath import isfile
+import logging
 import numpy as np
 from scipy.io import wavfile
 import os
+import numpy as np
+import cv2
+from video_cartoonizer.cartoonizer import caart
+
 
 class WaveRecorder:
 
@@ -33,8 +38,11 @@ class WaveRecorder:
 
 class VidRecorder:
 
-    def __init__(self, filename, is_save):
+    def __init__(self, filename,samplevid, is_save):
         self.vid_filename = filename + '.webm'
+        self.cart_vid = filename+'_caart'+'.mp4'
+        self.img_file = filename
+        self.read_vid = samplevid+'.mp4'
         self.closed = False
         self.save_video = is_save
 
@@ -53,12 +61,29 @@ class VidRecorder:
         except Exception as e:
             print('Unable to read temp audio data to file: {0}'.format(e))  
 
+    def convert_video_to_cartoon(self,path):
+        video_capture = cv2.VideoCapture(path)
+        out = cv2.VideoWriter(self.cart_vid, cv2.VideoWriter_fourcc(*'H264'), 25, (640, 480),True)
+        still_reading, image = video_capture.read()
+        while still_reading:
+            img=caart(image)
+            vidout=cv2.resize(img,(640,480))
+            out.write(vidout)
+            # read next image
+            still_reading, image = video_capture.read()
+        video_capture.release()
+        cv2.destroyAllWindows()
+
+
     def close(self):
         if not self.closed:
             try:
                 if not self.save_video and  os.path.isfile(self.vid_filename):
                     os.remove(self.vid_filename)
+                else:
+                    #self.convert_video_to_cartoon(self.vid_filename)
+                    pass
             except Exception as e:
-              print('Unable to delete video file: {0}'.format(e))         
-            os.remove(self.dat_filename)
+              logging.info('Unable to delete video file: {0}'.format(e))         
+            
             self.closed = True

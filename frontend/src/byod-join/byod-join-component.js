@@ -333,10 +333,10 @@ function JoinPage() {
                 'type': 'start',
                 'key': key,
                 'start_time': 0.0,
-                'sample_rate': 44100,
-                'encoding': 'pcm_f32le',
+                'sample_rate': 16000,
+                'encoding': 'pcm_f16le',
                 'video_encoding': 'video/mp4',
-                'channels': 1,
+                'channels': 2,
                 'streamdata' : 'video'
             };
         }

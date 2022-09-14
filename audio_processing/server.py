@@ -7,6 +7,8 @@ import shutil
 import logging
 import callbacks
 import threading
+import weakref
+import wave 
 import scipy.signal
 import config as cf
 import numpy as np
@@ -100,10 +102,11 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.video_count = 1;
                     if cf.video_record_original():
                         self.filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
-                        self.orig_vid_recorder = VidRecorder(self.filename,cf.video_record_original())
+                        self.samplevid = os.path.join(cf.video_recordings_folder(), "sample_vid")
+                        self.orig_vid_recorder = VidRecorder(self.filename,self.samplevid,cf.video_record_original())
                     if cf.video_record_reduced():
                         self.filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
-                        self.redu_vid_recorder = VidRecorder(self.filename,cf.video_record_original())
+                        self.redu_vid_recorder = VidRecorder(self.filename,self.samplevid,cf.video_record_original())
        
 
     def process_binary(self, data):
@@ -129,10 +132,11 @@ class ServerProtocol(WebSocketServerProtocol):
                 temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
                 vidclip = mp.VideoFileClip(self.filename+'.webm')
                 subclips = vidclip.subclip((self.video_count-1)*self.interval,self.video_count*self.interval)
-                subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=44100,bitrate='50k') #nbytes=2,codec='pcm_s16le',
+                subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=16000,bitrate='50k') #nbytes=2,codec='pcm_s16le',
         
-                audiobyte = self.orig_vid_recorder.read_temp_wav(temp_aud_file+'.wav') 
-                self.audio_buffer.append(audiobyte)
+                wavObj = wave.open(temp_aud_file+'.wav')
+                self.audio_buffer.append(self.read_bytes_from_wav(wavObj))
+                audiobyte = self.reduce_wav_channel(1,wavObj)
                 self.asr_audio_queue.put(audiobyte) 
 
                 if os.path.isfile(temp_aud_file+'.wav'):
@@ -171,6 +175,25 @@ class ServerProtocol(WebSocketServerProtocol):
             return out_data[channels_wanted::self.config.channels].tobytes()
         else:
             return in_data
+
+    def read_bytes_from_wav(self,wav):
+        wav.setpos(0)
+        sdata = wav.readframes(wav.getnframes())
+        data = np.frombuffer(sdata,dtype=np.dtype('int16'))
+        return data.tobytes()
+
+    def reduce_wav_channel(self,channels_wanted,wav):
+        if channels_wanted < self.config.channels:
+            nch = wav.getnchannels()
+            wav.setpos(0)
+            sdata = wav.readframes(wav.getnframes())
+            data = np.frombuffer(sdata,dtype=np.dtype('int16'))
+            ch_data = data[0::nch]
+            return ch_data.tobytes()
+        else:
+            self.read_bytes_from_wav(wav)
+
+    
 
     def signal_start(self):
         self.audio_buffer = AudioBuffer(self.config)

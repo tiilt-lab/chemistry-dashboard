@@ -1,4 +1,5 @@
 from email.mime import audio
+from http.client import responses
 from google.cloud import speech_v1p1beta1 as speech
 from google.cloud.speech_v1p1beta1 import enums
 from google.cloud.speech_v1p1beta1 import types
@@ -19,7 +20,6 @@ os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/var/lib/chemistry-dashboard/aud
 class GoogleASR():
     STREAM_LIMIT = 55.0
     SAMPLE_RATE = 16000
-    SAMPLE_RATE_WAV = 44100
     DEPTH = 2
 
     def __init__(self, audio_queue, transcript_queue, config,mediatype,interval):
@@ -80,20 +80,17 @@ class GoogleASR():
                 self.transcript_queue.put(result)
 
     def process_wav_responses(self, response, audio_start_time):
-        if not response.results:
-            return
-        
-        result = response.results[0] if response.results[0].alternatives[0].confidence > response.results[1].alternatives[0].confidence else response.results[1]
-        if not result.alternatives:
-            return
-        
-        if  len(result.alternatives[0].words) > 0:
-            for word in result.alternatives[0].words:
-                start = word.start_time
-                end = word.end_time
-                start.seconds, start.nanos = self.adjust_time(start.seconds, start.nanos, audio_start_time)
-                end.seconds, end.nanos = self.adjust_time(end.seconds, end.nanos, audio_start_time)
-            self.transcript_queue.put(result)
+        for result in response.results:
+            if not result.alternatives:
+                return
+            
+            if  len(result.alternatives[0].words) > 0:
+                for word in result.alternatives[0].words:
+                    start = word.start_time
+                    end = word.end_time
+                    start.seconds, start.nanos = self.adjust_time(start.seconds, start.nanos, audio_start_time)
+                    end.seconds, end.nanos = self.adjust_time(end.seconds, end.nanos, audio_start_time)
+                self.transcript_queue.put(result)
 
     def adjust_time(self, seconds, nanos, offset):
         adjusted_time = seconds + (nanos / NANO) + offset
@@ -136,10 +133,10 @@ class GoogleASR():
                 if 'being streamed too fast' in e.message:
                     logging.warning('Audio data is being streamed to fast for client {0}. Attempting to restart connection...'.format(self.config.auth_key))
             except Exception as e:
-                if e.message == 'DNS resolution failed':
+                if hasattr(e, 'message') and e.message == 'DNS resolution failed':
                     logging.critical('Google ASR failed to reach DNS server. Please verify that the default network route has an internet connection.  Shutting down...')
                     break
-                logging.warning('Error in Google ASR Connector for client {0}: {1}'.format(self.config.auth_key, e.message))
+                logging.warning('Error in Google ASR Connector for client {0}: {1}'.format(self.config.auth_key, e))
         logging.info('Google ASR thread stopped for {0}.'.format(self.config.auth_key))
         self.transcript_queue.put(None)
 
@@ -149,12 +146,13 @@ class GoogleASR():
 
         client = speech.SpeechClient()
         recognition_config = types.RecognitionConfig(
-            sample_rate_hertz=GoogleASR.SAMPLE_RATE_WAV,
+            encoding=enums.RecognitionConfig.AudioEncoding.LINEAR16,
+            sample_rate_hertz=GoogleASR.SAMPLE_RATE,
             language_code=language_code,
             enable_word_time_offsets=True,
             enable_automatic_punctuation=True,
-            audio_channel_count = 2,
-            enable_separate_recognition_per_channel = True,
+            audio_channel_count = 1,
+            #enable_separate_recognition_per_channel = True,
             model='video')
         
         # This loop runs to get around the (currently) 65-second time limit for streaming audio recognition.
