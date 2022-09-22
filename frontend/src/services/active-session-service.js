@@ -146,12 +146,6 @@ export class ActiveSessionService {
             }
         })
          
-        // console.log(this.transcriptSource.value, 'transcriptss ....')
-        // console.log(this.transcriptSource.getValue(), 'transcriptss888 ....')
-        // return this.transcriptSource.map(ts => ts.filter(t => t.session_device_id === sessionDeviceId)
-        //     .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1));
-        // return this.transcriptSource.getValue().filter(t => t.session_device_id === parseInt(sessionDeviceId,10))
-        //     .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1);
         return this.transcriptSource
     }
     getTranscripts() {

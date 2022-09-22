@@ -25,6 +25,7 @@ function PageRouter() {
                 <Route path="/" element={<LandingPageComponent />} />
                 <Route path="/login" element={<LoginPage  />} /> 
                 <Route path="/join" element={<JoinPage />} />
+                <Route path="/join/:resetId" element={<JoinPage />} />
                 <Route path='/home' element={<ProtectedRoute component={HomeScreen} />}/>
                 <Route path='/keyword-lists' element={<ProtectedRoute  component={ManageKeywordListsComponent} />}/>
                 <Route path='/keyword-lists/new' element={<ProtectedRoute  component={KeywordListItemsComponent}/>}/>

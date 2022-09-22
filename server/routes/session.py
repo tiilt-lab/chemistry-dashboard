@@ -140,6 +140,14 @@ def session_device_transcripts(session_id, device_id, **kwargs):
     transcripts = database.get_transcripts(session_device_id=device_id)
     return json_response([transcript.json() for transcript in transcripts])
 
+@api_routes.route('/api/v1/sessions/devices/<int:device_id>/transcripts/client', methods=['GET'])
+# @wrappers.verify_login(public=True)
+# @wrappers.verify_session_access
+def session_device_transcripts_for_client(device_id, **kwargs):
+    transcripts = database.get_transcripts(session_device_id=device_id)
+    return json_response([transcript.json() for transcript in transcripts])
+
+
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/keywords', methods=['GET'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access
