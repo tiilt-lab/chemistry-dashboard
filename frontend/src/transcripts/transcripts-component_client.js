@@ -1,89 +1,62 @@
 import { useEffect, useState } from 'react';
+import { SessionService } from '../services/session-service';
 import { useNavigate, useOutletContext,useParams, useSearchParams } from 'react-router-dom';
 import { similarityToRGB } from '../globals';
 import {TranscriptComponentPage} from './html-pages'
 
-function TranscriptsComponent(){
-
-  // @ViewChildren('transcriptElement') set transcriptElements(elements: QueryList<ElementRef>) {
-  //   if (elements && !this.hasScrolled) {
-  //     const match = elements.find(el => el.nativeElement.id === this.transcriptIndex);
-  //     if (match) {
-  //       match.nativeElement.scrollIntoView();
-  //       this.hasScrolled = true;
-  //     }
-  //   }
-  // }
-
-  
-  const [sessionDevice, setSessionDevice] = useState({});
-  const [session, setSession] = useState({});
-  const [transcripts, setTranscripts] = useState([]);
-  const [transcriptIndex, setTranscriptIndex] = useState("");
+function TranscriptsComponentClient(props){
+  const [transcripts, setTransripts] = useState([]);
   const [dialogKeywords, setDialogKeywords] = useState();
   const [currentForm, setCurrentForm] = useState("");
   const [displayTranscripts, setDisplayTranscripts] = useState([]);
-  const [subscriptions, setSubscriptions] = useState([]);
-  const [hasScrolled, setHasScrolled] = useState(false);
   const [showKeywords, setShowKeywords] = useState(true);
   const [showDoA,setShowDoA] = useState(false);
-  const [reload, setReload] = useState(false)
-  const [activeSessionService, setActiveSessionService] = useOutletContext();
-  const { sessionDeviceId } = useParams(); 
-  const [searchParam, setSearchParam] = useSearchParams();
   const navigate = useNavigate()
+  const sessionService = new SessionService()
   
-  useEffect(()=>{
-    const index = searchParam.get('index');
-    if(index !== undefined){
-      setTranscriptIndex(parseInt(index, 10))
+  
+  useEffect(() => {
+    let intervalLoad
+    if ( props.sessionDevice !== null) {
+        fetchTranscript(props.sessionDevice.id)
+
+        intervalLoad = setInterval(() => {
+            fetchTranscript(props.sessionDevice.id)
+        }, 2000)
     }
-
-    if(sessionDeviceId !== undefined){
-      const sessSub = activeSessionService.getSession();
-      if(sessSub !== undefined) {
-        setSession(sessSub);
-      }
-
-      const deviceSub = activeSessionService.getSessionDevice(sessionDeviceId)
-      if(deviceSub !== undefined){
-        setSessionDevice(deviceSub);
-      }
-
-      if (transcripts.length <= 0) {
-        const transcriptSub = activeSessionService.getTranscripts()
-         //const transcriptSub = activeSessionService.getSessionDeviceTranscripts(sessionDeviceId, setTransripts);
-
-         transcriptSub.subscribe(e => {
-             if (Object.keys(e).length !== 0) {
-                 const data = e.filter(t => t.session_device_id === parseInt(sessionDeviceId, 10))
-                     .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
-                 setTranscripts(data)
-                 setReload(true)
-             }
-         })
-         subscriptions.push(transcriptSub);
-     }
-    }
-      
-    
 
     return () => {
-      subscriptions.map(sub => {
-          if (sub.closed) {
-              sub.unsubscribe()
-          }
-      });
-  }
-},[])
+        clearInterval(intervalLoad)
 
-useEffect(()=>{
-  if(reload){
-    createDisplayTranscripts();
-  }
-},[reload])
+    }
 
-//console.log(transcripts, displayTranscripts, 'states ... ')
+  }, [props.sessionDevice])
+
+  useEffect(()=>{
+    if(transcripts.length > 0){
+      createDisplayTranscripts();
+    }
+  },[transcripts.length])
+
+
+const fetchTranscript = async (deviceid) => {
+  try {
+      const response = await sessionService.getSessionDeviceTranscriptsForClient(deviceid)
+
+      if (response.status === 200) {
+          const jsonObj = await response.json()
+          const data = jsonObj.sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
+          setTransripts(data)
+      } else if (response.status === 400 || response.status === 401) {
+          console.log(response, 'no transcript obj fromtranscripts-Component-client.js')
+      }
+
+  } catch (error) {
+      console.log('Transript-component-client error func : requestAccessKey 1', error)
+  }
+
+}
+
 const createDisplayTranscripts = ()=> {
     const accdisplaytrans = [];
     for (const transcript of transcripts) {
@@ -130,7 +103,7 @@ const createDisplayTranscripts = ()=> {
   }
 
   const openOptionsDialog = ()=> {
-    setCurrentForm("Options");
+    setCurrentForm("");
   }
 
   const closeDialog = ()=> {
@@ -143,12 +116,12 @@ const createDisplayTranscripts = ()=> {
   }
 
   const navigateToSession = ()=> {
-    navigate('/sessions/' + session.id + '/pods/' + sessionDeviceId);
+    props.setParentCurrentForm("")
   }
 
   return(
     <TranscriptComponentPage
-      sessionDevice = {sessionDevice}
+      sessionDevice = {props.sessionDevice}
       currentForm = {currentForm}
       navigateToSession = {navigateToSession}
       displayTranscripts = { displayTranscripts}
@@ -157,12 +130,12 @@ const createDisplayTranscripts = ()=> {
       closeDialog = {closeDialog}
       dialogKeywords = {dialogKeywords}
       showDoA = {showDoA}
-      transcriptIndex = {transcriptIndex}
+      transcriptIndex = {props.transcriptIndex}
       createDisplayTranscripts = {createDisplayTranscripts}
       openOptionsDialog = {openOptionsDialog}
-      isenabled = {true}
+      isenabled = {false}
     />
   )
 }
 
-export {TranscriptsComponent}
+export {TranscriptsComponentClient}

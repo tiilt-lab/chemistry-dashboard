@@ -1,20 +1,50 @@
 import React, { useState } from "react";
 import { Appheader } from '../header/header-component';
-import { DialogBox, WaitingDialog, DialogBoxTwoOption } from "../dialog/dialog-component";
+import { DialogBox, WaitingDialog, DialogBoxTwoOption, GenericDialogBox } from "../dialog/dialog-component";
+import { AppSectionBoxComponent } from '../section-box/section-box-component'
+import { AppTimelineSlider } from '../components/timeline-slider/timeline-slider-component'
+import { AppTimeline } from '../timeline/timeline-component'
+import { AppHeatMapComponent } from '../heat-map/heat-map-component'
+import { AppFeaturesComponent } from '../features/features-component'
+import { AppSpinner } from '../spinner/spinner-component'
+import { AppSessionToolbar } from '../session-toolbar/session-toolbar-component'
+import { AppKeywordsComponent } from '../keywords/keywords-component'
+import { TranscriptsComponentClient } from '../transcripts/transcripts-component_client';
+
 import style from './byod-join.module.css';
+import style2 from '../pod-details/pod.module.css'
 import micIcon from '../assets/img/mic.svg'
+import { AppContextMenu } from '../components/context-menu/context-menu-component'
+import iconPod from "../assets/img/icon-pod.svg"
+import lightIcon from "../assets/img/light.svg"
 
 
 function ByodJoinPage(props) {
+    // console.log(props, 'props')
     return (
         <>
+        { (props.currentForm === "gottoselectedtranscript" && Object.keys(props.currentTranscript)) ?
+            <TranscriptsComponentClient
+                sessionDevice={props.sessionDevice}
+                transcriptIndex={props.currentTranscript.id}
+                setParentCurrentForm = {props.setCurrentForm}
+            />
+            :
+            props.currentForm === "gototranscript" ?
+            <TranscriptsComponentClient
+                sessionDevice={props.sessionDevice}
+                transcriptIndex={undefined}
+                setParentCurrentForm = {props.setCurrentForm}
+            />
+            :
             <div className={style.container}>
                 <Appheader
                     title={props.pageTitle}
                     leftText={false}
-                    rightText={""}
-                    rightEnabled={false}
-                    nav={() => props.navigate('/')} />
+                    rightText={"Option"}
+                    rightEnabled={props.joinwith === 'Video'? true : false}
+                    rightTextClick={() => props.joinwith === 'Video'? props.openDialog("Options"): props.openDialog("")}
+                    nav={() => props.navigate('/join')} />
                 {!props.connected ?
                     <React.Fragment>
                         <div className={style.instruction}>Please type your name and passcode to join a discussion.</div>
@@ -31,58 +61,120 @@ function ByodJoinPage(props) {
                     <></>
                 }
                 {
-                    (props.connected && props.authenticated && props.joinwith === 'Audio') ?
-                        <div className={style["list-container"]}>
-                            <div className={style["pod-overview-button"]} onClick={props.requestHelp}>
-                                <svg width="80px" height="80px" style={{ marginTop: "22px" }} viewBox="-40 -40 80 80">
-                                    <svg x="-8.5" y="-13.5" width="17" height="27" viewBox="0 0 17 27">
-                                        <use xlinkHref={`${micIcon}#5`} fill={props.POD_COLOR}></use>
-                                    </svg>
-                                    {props.button_pressed ?
-                                        <svg>
-                                            <circle className={style.svgpulse} x="0" y="0" r="33.5" fill-opacity="0" stroke={props.GLOW_COLOR} />
-                                        </svg>
+                    (props.connected) ?
+                        <>
+                            <div className={style2["overview-container"]}>
+                                <br />
+                                {
+                                    (props.authenticated && props.joinwith === 'Audio') ?
+                                        <AppSectionBoxComponent heading={"Audio control:"} >
+                                            <div className={style["pod-overview-button"]} style={{margin: '0 auto'}} onClick={props.requestHelp}>
+                                                    <svg width="80px" height="80px" style={{ marginTop: "22px" }} viewBox="-40 -40 80 80">
+                                                        <svg x="-8.5" y="-13.5" width="17" height="27" viewBox="0 0 17 27">
+                                                            <use xlinkHref={`${micIcon}#5`} fill={props.POD_COLOR}></use>
+                                                        </svg>
+                                                        {props.button_pressed ?
+                                                            <svg>
+                                                                <circle className={style.svgpulse} x="0" y="0" r="33.5" fill-opacity="0" stroke={props.GLOW_COLOR} />
+                                                            </svg>
+                                                            :
+                                                            <></>
+                                                        }
+                                                        <svg>
+                                                            <circle x="0" y="0" r="30.5" fill-opacity="0" stroke-width="3" stroke={props.POD_COLOR} />
+                                                        </svg>
+                                                    </svg>
+                                                    <div style={{ marginTop: "13px" }}>Help</div>
+                                                </div>
+                                        </AppSectionBoxComponent>
                                         :
                                         <></>
-                                    }
-                                    <svg>
-                                        <circle x="0" y="0" r="30.5" fill-opacity="0" stroke-width="3" stroke={props.POD_COLOR} />
-                                    </svg>
-                                </svg>
-                                <div style={{ marginTop: "13px" }}>Help</div>
+                                }
+
+                                {
+                                    (props.authenticated && props.joinwith === 'Video') ?
+                                        <AppSectionBoxComponent heading={"Video control:"} >
+                                            <div className={style["video-container"]} style={{display: props.preview ? 'block' : 'none' }}>
+                                                <video controls={true} muted={true} />
+                                            </div>
+                                        </AppSectionBoxComponent>
+                                        :
+                                        <></>
+                                }
+                                <AppSectionBoxComponent heading={"Timeline control:"} >
+                                    <AppTimelineSlider id='timeSlider' inputChanged={props.setRange} />
+                                </AppSectionBoxComponent>
+
+                                <AppSectionBoxComponent heading={"Discussion timeline:"}>
+                                    <AppTimeline
+                                        clickedTimeline={props.onClickedTimeline}
+                                        session={props.session}
+                                        transcripts={props.displayTranscripts}
+                                        start={props.startTime}
+                                        end={props.endTime}
+                                    />
+                                </AppSectionBoxComponent>
+
+                                <AppSectionBoxComponent heading={"Discussion direction:"}>
+                                    <AppHeatMapComponent session={props.session} transcripts={props.displayTranscripts} />
+                                </AppSectionBoxComponent>
+
+                                <AppSectionBoxComponent heading={"Keyword detection:"}>
+                                    <AppKeywordsComponent
+                                        session={props.session}
+                                        sessionDevice={props.sessionDevice}
+                                        transcripts={props.displayTranscripts}
+                                        start={props.startTime}
+                                        end={props.endTime}
+                                    />
+                                </AppSectionBoxComponent>
+
+                                <AppSectionBoxComponent heading={"Discussion features:"}>
+                                    <AppFeaturesComponent
+                                        session={props.session}
+                                        transcripts={props.displayTranscripts} />
+                                </AppSectionBoxComponent>
                             </div>
-                        </div>
-
-                        :
-                        <></>
-                }
-                {
-                    (props.connected && props.joinwith === 'Video') ?
-                        <React.Fragment>
-                            <div className={style["video-container"]}>
-                                <video controls={true} muted={true}/>
+                            {props.loading() ? <AppSpinner></AppSpinner> : <></>}
+                            <div className={style2.footer}>
+                                {props.session ? <AppSessionToolbar session={props.session} closingSession={()=> props.disconnect(true)} /> : <></>}
                             </div>
+                        </>
 
-                            {/* <button className={`${style["basic-button"]} ${style["medium-button"]}`} onClick={() => { props.mediaRecorder.start(1000); console.log(props.mediaRecorder.state); }}>Start Recording</button> */}
-                            {/* <button className={`${style["basic-button"]} ${style["medium-button"]}`} onClick={() => { props.mediaRecorder.stop(); console.log(props.mediaRecorder.state); }}>Stop Recording</button> */}
-                        </React.Fragment>
                         :
                         <></>
-
                 }
 
-                {
-                    (props.connected && props.joinwith === 'Video' && props.isStop === true) ?
-                        <div className={style["video-container"]}>
-                            <video id='video-player' controls >
-                                <source src={props.recordedvideo} type="video/mp4" />
-                            </video>
-                        </div>
-                        :
-                        <></>
-
-                }
+                
             </div>
+        }        
+
+            <GenericDialogBox show={props.currentForm !== "" && props.currentForm !== "gottoselectedtranscript" && props.currentForm !== "gototranscript" }>
+                {props.currentForm === "Transcript" ?
+                    <div className={style2["dialog-content"]}>
+                        <div className={style2["dialog-heading"]}>Transcript</div>
+                        <div className={style2["dialog-body"]}>{props.currentTranscript.transcript}</div>
+                        <div className={style2["dialog-button-container"]}>
+                             <button className={`${style2["dialog-button"]} ${style2["right-button"]}`} onClick={props.closeDialog}>Close</button>
+                            <button className={`${style2["dialog-button"]} ${style2["left-button"]}`} onClick={props.seeAllTranscripts}>View All</button>
+                        </div>
+                    </div>
+                    :
+                    <></>
+                }
+
+                {(props.currentForm == "Options" ) ?
+                    <div className={style2["dialog-content"]}>
+                        <div className={style2["dialog-heading"]}>Session Options</div>
+                        <button className={style2["basic-button"]} onClick={props.togglePreview}>{props.previewLabel}</button>
+                        <button className={style2["cancel-button"]} onClick={props.closeDialog}>Cancel</button>
+                    </div>
+                    :
+                    <></>
+                }
+
+                
+            </GenericDialogBox>
 
             <DialogBoxTwoOption
                 show={props.currentForm === 'NavGuard'}
@@ -111,7 +203,7 @@ function ByodJoinPage(props) {
                 itsclass={"add-dialog"}
                 heading={'Connecting...'}
                 message={'Please wait...'}
-                show={props.specificshow === 'Connecting'}
+                show={props.currentForm === 'Connecting'}
             />
         </>
     )

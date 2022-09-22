@@ -63,15 +63,22 @@ class VidRecorder:
 
     def convert_video_to_cartoon(self,path):
         video_capture = cv2.VideoCapture(path)
-        out = cv2.VideoWriter(self.cart_vid, cv2.VideoWriter_fourcc(*'H264'), 25, (640, 480),True)
-        still_reading, image = video_capture.read()
-        while still_reading:
-            img=caart(image)
-            vidout=cv2.resize(img,(640,480))
-            out.write(vidout)
-            # read next image
+        video_capture.set(cv2.CAP_PROP_FRAME_WIDTH,640)
+        video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT,480)
+        out = cv2.VideoWriter(self.cart_vid, cv2.VideoWriter_fourcc(*'mp4v'), 20, (640, 480),True)
+        while (video_capture.isOpened()):   
             still_reading, image = video_capture.read()
+            if still_reading:
+                img=caart(image)
+                vidout=cv2.resize(img,(640,480))
+                out.write(vidout)
+                
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+            else:
+                break    
         video_capture.release()
+        out.release()
         cv2.destroyAllWindows()
 
 
