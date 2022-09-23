@@ -76,7 +76,7 @@ function JoinPage() {
             requestAccessKey(name, pcode);
         }
 
-    }, [mediaRecorder, reconnectCounter, joinwith])
+    }, [mediaRecorder,reconnectCounter, joinwith])
 
 
     useEffect(() => {
@@ -136,7 +136,7 @@ function JoinPage() {
             mediaRecorder.ondataavailable = async function (ev) {
                 const bufferdata = await ev.data.arrayBuffer()
                 fixWebmDuration(ev.data, interval * 6 * 60 * 24, (fixedblob) => {
-                    ws.send(fixedblob);
+                   // ws.send(fixedblob);
                 })
             }
         }
@@ -346,9 +346,10 @@ function JoinPage() {
         };
 
         ws.onclose = e => {
-            console.log('[Disconnected]');
+            console.log('[Disconnected]',ending.value);
             if (!ending.value) {
                 if (reconnectCounter <= 5) {
+                    console.log("i tried reconnecting", reconnectCounter)
                     setCurrentForm('Connecting');
                     disconnect();
                     console.log('reconnecting ....')
@@ -452,8 +453,6 @@ function JoinPage() {
     const generateDispalyTranscripts = () => {
         setDisplayTranscripts(transcripts.filter(t => t.start_time >= startTime && t.start_time <= endTime));
     }
-
-
 
     const seeAllTranscripts = () => {
         if (Object.keys(currentTranscript) > 0  && sessionDevice !== null) {

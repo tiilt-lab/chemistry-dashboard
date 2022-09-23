@@ -39,7 +39,6 @@ export class ApiService {
        // h[property] = headers[property];
       }
     }
-    console.log(h, 'header..')
     return h;
   }
 
