@@ -66,8 +66,7 @@ class AuthService {
       email: email,
       role: role,
     };
-    const val = new ApiService().httpRequestCall("api/v1/admin/users", 'POST', body);
-    return val
+    return new ApiService().httpRequestCall("api/v1/admin/users", 'POST', body);
   }
 
   deleteUser(userId) {
