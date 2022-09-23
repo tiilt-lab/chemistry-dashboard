@@ -58,21 +58,16 @@ class AuthService {
       new: newPassword,
       confirm: confirmPassword,
     };
-    return new ApiService().httpRequestCall("api/v1/password", 'POST', body, false);
+    return new ApiService().httpRequestCall("api/v1/password", 'POST', body);
   }
 
-  createUser(email, role) {
+  async createUser(email, role) {
     const body = {
       email: email,
       role: role,
     };
-    const val = new ApiService().httpRequestCall("api/v1/admin/users", 'POST', body, false);
-    if (val != null) {
-      const json = val;
-      json["user"] = UserModel.fromJson(json["user"]);
-      return json;
-    }
-    return val;
+    const val = new ApiService().httpRequestCall("api/v1/admin/users", 'POST', body);
+    return val
   }
 
   deleteUser(userId) {
