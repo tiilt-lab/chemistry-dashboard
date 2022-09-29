@@ -1,3 +1,4 @@
+import logging
 import threading
 
 class AudioBuffer:
@@ -22,7 +23,7 @@ class AudioBuffer:
                 extra_data = int(extra_time * self.sample_rate) * (self.channels * self.depth)
                 self.audio_buffer = self.audio_buffer[extra_data:]
                 self.buffer_start += extra_time
-
+                
     def extract(self, start_time, end_time):
         with self.lock:
             start_byte = int((start_time - self.buffer_start) * self.sample_rate) * (self.channels * self.depth)

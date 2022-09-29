@@ -44,7 +44,7 @@ function PodsOverviewComponent() {
     }
 
     const onSessionClosing = (isClosing) => {
-        setSessionClosing(isClosing);
+        setSessionClosing(isClosing); 
     }
 
     const navigateToSessions = () => {

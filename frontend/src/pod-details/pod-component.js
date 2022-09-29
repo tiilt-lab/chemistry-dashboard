@@ -56,7 +56,7 @@ function PodComponent() {
                 if (Object.keys(e).length !== 0) {
                     const data = e.filter(t => t.session_device_id === parseInt(sessionDeviceId, 10))
                         .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
-                    //console.log(data,session, 'still debugging ...')
+                    // console.log(data,session, 'testing refresh still debugging ...')
                     setTransripts(data)
                     const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
                     setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100)
@@ -104,8 +104,6 @@ function PodComponent() {
     }
 
     const generateDispalyTranscripts = () => {
-        // console.log(startTime, endTime, 'generate ....')
-        // console.log(transcripts.filter(t => t.start_time >= startTime && t.start_time <= endTime), 'displaytrans')
         setDisplayTranscripts(transcripts.filter(t => t.start_time >= startTime && t.start_time <= endTime));
     }
 
@@ -118,7 +116,6 @@ function PodComponent() {
     }
 
     const seeAllTranscripts = () => {
-        console.log(currentTranscript, 'debugging ...')
         if (currentTranscript !== undefined) {
             navigate('/sessions/' + session.id + '/pods/' + sessionDeviceId + '/transcripts?index=' + currentTranscript.id)
         } else {

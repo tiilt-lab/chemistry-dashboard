@@ -58,48 +58,42 @@ class AuthService {
       new: newPassword,
       confirm: confirmPassword,
     };
-    return new ApiService().httpRequestCall("api/v1/password", 'POST', body, false);
+    return new ApiService().httpRequestCall("api/v1/password", 'POST', body);
   }
 
-  createUser(email, role) {
+  async createUser(email, role) {
     const body = {
       email: email,
       role: role,
     };
-    const val = new ApiService().httpRequestCall("api/v1/admin/users", 'POST', body, false);
-    if (val != null) {
-      const json = val;
-      json["user"] = UserModel.fromJson(json["user"]);
-      return json;
-    }
-    return val;
+    return new ApiService().httpRequestCall("api/v1/admin/users", 'POST', body);
   }
 
   deleteUser(userId) {
-    return new ApiService().httpRequestCall("api/v1/admin/users" + userId, 'DELETE', {}, false);
+    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId, 'DELETE', {});
   }
 
   getUsers() {
-    return new ApiService().httpRequestCall("api/v1/admin/users", 'GET', {}, true);
+    return new ApiService().httpRequestCall("api/v1/admin/users", 'GET', {});
   }
 
   lockUser(userId) {
-    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/lock", 'POST', {}, true);
+    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/lock", 'POST', {});
   }
 
   unlockUser(userId) {
-    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/unlock", 'POST', {}, true);
+    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/unlock", 'POST', {});
   }
 
   changeUserRole(userId, role) {
     const body = {
       role: role,
     };
-    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/role", 'POST', body, true);
+    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/role", 'POST', body);
   }
 
   resetUserPassword(userId) {
-    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/reset", 'POST', {}, false);
+    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/reset", 'POST', {});
   }
 
   // Type can be either 'dcs' or 'aps'.
@@ -107,62 +101,35 @@ class AuthService {
     const query = {
       log_type: type,
     };
-    const observable = new ApiService().httpRequestCall("api/v1/admin/server/logs", 'GET', query);
-    return observable.map((response) => {
-      const jsonData = response.json();
-      const dataUrl = jsonData["data"];
-      fetch(dataUrl)
-        .then((res) => res.blob())
-        .then((blob) => {
-          const blobUrl = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = blobUrl;
-          link.download = type + "_logs.txt";
-          link.click();
-        });
-      return true;
-    });
+    return new ApiService().httpRequestCall("api/v1/admin/server/logs", 'GET', query);
+    
   }
 
   getDeviceLogs(deviceId) {
-    const observable = new ApiService().httpRequestCall("api/v1/admin/devices/" + deviceId + "/logs", 'GET', {});
-    return observable.map((response) => {
-      const jsonData = response;
-      const dataUrl = jsonData["data"];
-      fetch(dataUrl)
-        .then((res) => res.blob())
-        .then((blob) => {
-          const blobUrl = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = blobUrl;
-          link.download = "pod_" + deviceId + "_logs.txt";
-          link.click();
-        });
-      return true;
-    });
+    return new ApiService().httpRequestCall("api/v1/admin/devices/" + deviceId + "/logs", 'GET', {});
   }
 
   deleteServerLogs(type) {
     const query = {
       log_type: type,
     };
-    return new ApiService().httpRequestCall("api/v1/admin/users/logs", 'DELETE', query, false);
+    return new ApiService().httpRequestCall("api/v1/admin/server/logs", 'DELETE', query);
   }
 
   deleteDeviceLogs(deviceId) {
-    return new ApiService().httpRequestCall("api/v1/admin/devices/" + deviceId + "/logs", 'DELETE', {}, false);
+    return new ApiService().httpRequestCall("api/v1/admin/devices/" + deviceId + "/logs", 'DELETE', {});
   }
 
   allowAPIAccess(userId) {
-    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/api", 'POST', {}, true);
+    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/api", 'POST', {});
   }
 
   revokeAPIAccess(userId) {
-    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/api", 'DELETE', {}, false);
+    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/api", 'DELETE', {});
   }
 
   getuser(userId) {
-    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId, 'GET', {}, true);
+    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId, 'GET', {});
   }
 
 }

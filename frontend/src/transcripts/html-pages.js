@@ -6,7 +6,6 @@ import {Appheader} from '../header/header-component'
 
 
 function TranscriptComponentPage(props) {
-  //console.log(props.transcriptIndex, 'index ...')
   return (
     <>
       <div className={style.container}>
@@ -14,7 +13,7 @@ function TranscriptComponentPage(props) {
           title={"Transcripts from" + " " + props.sessionDevice.name}
           leftText={false}
           rightText={"Options"}
-          rightEnabled={true}
+          rightEnabled={props.isenabled}
           rightTextClick={props.openOptionsDialog}
           nav={props.navigateToSession}
         />
