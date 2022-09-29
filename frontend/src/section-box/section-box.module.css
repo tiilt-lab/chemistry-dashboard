@@ -579,7 +579,8 @@
 
 .section-container {
   padding: 16px;
-  width: 341px;
+  /*375px - the 16px left and right padding - 2px left and right border*/
+  width: 375px - 32px - 2px;
   position: relative;
   background-color: #FCFDFF;
   border: 1px solid rgba(112, 120, 181, 0.15);
