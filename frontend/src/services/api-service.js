@@ -122,29 +122,4 @@ export class ApiService {
       return fetchcall;
   }
 
-  // httpRequestCall(apipath, type, data, tomodel) {
-  //   // Default options are marked with *
-  //   //console.log(apipath, data)
-  //   return new Observable((subscriber) => {
-  //     let fetchcall = undefined;
-  //     if(type === 'POST'){
-  //       fetchcall = this.post(apipath,data)
-  //     }else if (type === 'GET'){
-  //       fetchcall = this.get(apipath)
-  //     }
-  //     fetchcall.then(
-  //         (response) => { 
-  //         if(response.status === 200){
-  //           subscriber.next(response);
-  //           subscriber.complete();
-  //         }else{
-  //           subscriber.error(response)
-  //         }
-  //       },
-  //       (apiError) =>{ 
-  //           apiError.status = 600
-  //           subscriber.error(apiError)}
-  //         )
-  //   })
-  // }
 }
