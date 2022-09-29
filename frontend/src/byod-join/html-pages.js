@@ -49,7 +49,7 @@ function ByodJoinPage(props) {
                     <React.Fragment>
                         <div className={style.instruction}>Please type your name and passcode to join a discussion.</div>
                         <div className={style.instruction}>If rejoining a discussion, type the same name you used previously.</div>
-                        <input className={style["text-input"]} name="name" id="name" value={props.name} placeholder="Name" />
+                        <input className={style["text-input"]} id="name" placeholder="Name" />
                         <input className={style["text-input"]} id="passcode" value={props.pcode} placeholder="Passcode (4 characters)" maxLength="4" onInput={(event) => props.changeTouppercase(event)} />
                         <select id="joinwith" className={style["dropdown-input"]}>
                             <option value="Audio">Audio</option>
