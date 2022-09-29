@@ -160,7 +160,6 @@ function JoinPage() {
         }
     }, [preview])
 
-   
     // Disconnects from websocket server and audio stream.
     const disconnect = (permanent = false) => {
         console.log('disconnect called',permanent)
@@ -179,11 +178,6 @@ function JoinPage() {
             setSource(null);
         }
         if (audioContext != null) {
-            audioContext.close();
-            setAudioContext(null);
-        }
-        if (audioSenderProcessor != null) {
-            audioSenderProcessor.disconnect();
             setAudioSenderProcessor(null);
         }
         if (mediaRecorder != null) {
@@ -340,7 +334,7 @@ function JoinPage() {
     const requestAccessKey = (names, passcode) => {
         ending.value = false;
         setCurrentForm('Connecting');
-        sessionService.joinByodSession(name, pcode).then(
+        sessionService.joinByodSession(names, passcode).then(
             (response) => {
                 if (response.status === 200) {
                     response.json().then(jsonObj => {
@@ -375,7 +369,7 @@ function JoinPage() {
         ws.onopen = e => {
             console.log('[Connected]');
             setConnected(true);
-            setPageTitle(sessionDevice.name);
+            setPageTitle(name);
             setReload(true)
             setCurrentForm("");
         };
@@ -539,7 +533,7 @@ function JoinPage() {
     }
 
     const changeTouppercase = (e) => {
-        setPcode(e.target.value.toUpperCase())
+        setPcode(e.target.value.toUpperCase());
     }
 
     const togglePreview = () => {
