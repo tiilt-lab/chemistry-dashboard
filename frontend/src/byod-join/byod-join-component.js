@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { SessionService } from '../services/session-service';
 import { ByodJoinPage } from './html-pages';
 import { SessionModel } from '../models/session';
 import { SessionDeviceModel } from '../models/session-device';
 import { ApiService } from '../services/api-service';
+import fixWebmDuration from "fix-webm-duration"
 
 
 
@@ -17,92 +18,156 @@ function JoinPage() {
     const [authenticated, setAuthenticated] = useState(false);
     const [streamReference, setStreamReference] = useState(null);
     const [audioContext, setAudioContext] = useState(null);
+    const [mediaRecorder, setMediaRecorder] = useState(null);
     const [processor, setProcessor] = useState(null);
     const [audioSenderProcessor, setAudioSenderProcessor] = useState(null);
     const [source, setSource] = useState(null);
-    const [ending, setEnding] = useState(false);
+    const [ending, setEnding] = useState({ value: false });
     const [reconnectCounter, setReconnectCounter] = useState(0);
 
     // Session data
     const [sessionDevice, setSessionDevice] = useState(null);
     const [session, setSession] = useState(null);
     const [key, setKey] = useState(null);
-    
-    const [sessionService, setSessionService] = useState(new SessionService())
-    const [apiService, setApiService] = useState(new ApiService())
-    
+
+    const sessionService = new SessionService()
+    const apiService = new ApiService()
+
+    const [transcripts, setTransripts] = useState([]);
+    const [startTime, setStartTime] = useState();
+    const [endTime, setEndTime] = useState();
+    const [displayTranscripts, setDisplayTranscripts] = useState([]);
+    const [currentTranscript, setCurrentTranscript] = useState({});
+    const [timeRange, setTimeRange] = useState([0, 1]);
 
 
     const [currentForm, setCurrentForm] = useState("");
     const [displayText, setDisplayText] = useState("");
-    const [reload,setReload] = useState(false)
+    const [reload, setReload] = useState(false)
     const [pageTitle, setPageTitle] = useState('Join Discussion');
 
     const [name, setName] = useState("");
     const [pcode, setPcode] = useState("");
-
+    const [joinwith, setJoinwith] = useState("");
+    const [preview, setPreview] = useState(false)
+    const [previewLabel, setPreviewLabel] = useState("Turn On Preview")
     const navigate = useNavigate();
 
     const POD_COLOR = '#FF6655';
     const GLOW_COLOR = '#ffc3bd';
-    
-    useEffect(()=>{
+    const interval = 10000
 
-        
-        console.log("src: ", source);
-        if(source !== null && audioContext !== null && name != "" && pcode != ""){
-           
-           requestAccessKey(name, pcode);
-	    }
-        
+    useEffect(() => {
+        if (source !== null && audioContext !== null && name != "" && pcode != "") {
+            requestAccessKey(name, pcode);
+        }
+
     }, [source, audioContext, name, pcode])
-    
-    useEffect(()=>{
-        console.log("ws: ", ws);
-        if(ws != null) 
-        {
+
+    useEffect(() => {
+        if (ws != null) {
             connect();
-	    }
-        
+        }
+
     }, [ws])
 
     useEffect(() => {
-        console.log("ws before requestStart: ", ws);
-        console.log("context before requestStart: ", audioContext);
-        if(connected)
-            requestStart();
-    }, [connected])
-    
+        if (mediaRecorder !== null && joinwith === 'Video') {
+            requestAccessKey(name, pcode);
+        }
+
+    }, [mediaRecorder,reconnectCounter, joinwith])
+
+
     useEffect(() => {
+        let intervalLoad
+        if (session !== null && sessionDevice !== null) {
+            fetchTranscript(sessionDevice.id)
+
+            intervalLoad = setInterval(() => {
+                fetchTranscript(sessionDevice.id)
+            }, 2000)
+        }
+
+        return () => {
+            clearInterval(intervalLoad)
+
+        }
+
+    }, [session, sessionDevice])
+
+
+    useEffect(() => {
+        if (session !== null) {
+            const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
+            const sTime = Math.round(sessionLen * timeRange[0] * 100) / 100;
+            const eTime = Math.round(sessionLen * timeRange[1] * 100) / 100;
+            setStartTime(sTime)
+            setEndTime(eTime)
+            setDisplayTranscripts(transcripts.filter(t => t.start_time >= sTime && t.start_time <= eTime));
+        }
+    }, [endTime])
+
+
+    useEffect(() => {
+        if(connected){
+            requestStart();
+        }
+    }, [connected])
+
+    useEffect(() => {
+        if(authenticated){
         const loadWorklet = async () => {
+
             await audioContext.audioWorklet.addModule('audio-sender-processor.js');
             const workletProcessor = new AudioWorkletNode(audioContext, 'audio-sender-processor');
             workletProcessor.port.onmessage = data => {
-                //console.log("sending data: ", data.data)
                 ws.send(data.data.buffer);
             }
             source.connect(workletProcessor).connect(audioContext.destination);
             setAudioSenderProcessor(workletProcessor);
         }
 
-        if(authenticated)
+        const videoPlay = () => {
+            let video = document.querySelector('video')
+            video.srcObject = streamReference
+            video.onloadedmetadata = function (ev) {
+                video.play();
+                mediaRecorder.start(interval);
+            };
+
+            mediaRecorder.ondataavailable = async function (ev) {
+                const bufferdata = await ev.data.arrayBuffer()
+                fixWebmDuration(ev.data, interval * 6 * 60 * 24, (fixedblob) => {
+                    ws.send(fixedblob);
+                })
+            }
+        }
+
+        if (authenticated && joinwith === 'Audio'){
             loadWorklet().catch(console.error);
-        
+        }else if (authenticated && joinwith === 'Video'){
+            videoPlay()
+        }
+    }
     }, [authenticated])
 
-    useEffect(()=>{
-        return ()=>{
-            disconnect(true)
+    useEffect(() => {
+        if (preview) {
+            setPreviewLabel("Turn Off Preview")
+        } else {
+            setPreviewLabel("Turn On Preview")
         }
-    },[])
-    
+    }, [preview])
+
     // Disconnects from websocket server and audio stream.
     const disconnect = (permanent = false) => {
+        console.log('disconnect called',permanent)
         if (permanent) {
-            setEnding(true);
-            setPageTitle('Join Session');
-            setName("");
-            setPcode("");
+            setPageTitle('Join Discussion');
+            setName("")
+            setPcode("")
+            ending.value = true;
         }
 
         setConnected(false);
@@ -115,6 +180,11 @@ function JoinPage() {
         if (audioContext != null) {
             setAudioSenderProcessor(null);
         }
+        if (mediaRecorder != null) {
+            mediaRecorder.stop()
+            setMediaRecorder(null)
+        }
+
         if (streamReference != null) {
             streamReference.getAudioTracks().forEach(track => track.stop());
             setStreamReference(null);
@@ -124,34 +194,130 @@ function JoinPage() {
             setWs(null);
         }
 
+
     }
-    // ngOnDestroy() {
-    //   this.disconnect(true);
-    // }
+
 
     // Verifies the users connection input and that the user
     // has a microphone accessible to the browser.
-    const verifyInputAndAudio = (names, passcode) => {
-        console.log("Name ", names)
-        if (names === null || names.trim().length === 0) {
+    const verifyInputAndAudio = async (names, passcode, joinswith) => {
+        if (names === null) {
             names = 'User Device';
         }
         setName(names);
         setPcode(passcode);
+        setJoinwith(joinswith);
+        const constraintObj = {}
+        if (joinswith === 'Video') {
+            constraintObj.audio = true
+            constraintObj.video = {
+                facingMode: "user",
+                width: 150, //{ min: 640, ideal: 1280, max: 1920 },
+                height: 80//{ min: 480, ideal: 720, max: 1080 }
+            }
+        } else {
+            constraintObj.audio = true
+            constraintObj.video = false
+        }
+
         try {
+            //handle older browsers that might implement getUserMedia in some way
+            if (navigator.mediaDevices === undefined) {
+                navigator.mediaDevices = {};
+                navigator.mediaDevices.getUserMedia = function (constraintObj) {
+                    let getUserMedia = navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+                    if (!getUserMedia) {
+                        return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+                    }
+                    return new Promise(function (resolve, reject) {
+                        getUserMedia.call(navigator, constraintObj, resolve, reject);
+                    });
+                }
+            } else {
+                navigator.mediaDevices.enumerateDevices()
+                    .then(devices => {
+                        devices.forEach(device => {
+                            //console.log(device.kind.toUpperCase(), device.label);
+                            //, device.deviceId
+                        })
+                    })
+                    .catch(err => {
+                        console.log(err.name, err.message);
+                    })
+            }
+
             if (navigator.mediaDevices != null) {
-                navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-                    .then(function(stream) {
-                    	const context = new AudioContext({latencyHint: 'interactive',  sampleRate : 16000});
-                    	setStreamReference(stream);
-                    	setSource(context.createMediaStreamSource(stream));
-                    	setAudioContext(context);
-                    },
-                        error => {
-                            setDisplayText('Failed to get user audio source.');
-                            setCurrentForm("JoinError");
-                            disconnect(true);
-                        });
+                const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
+                   // media.then(function (stream) {
+                        setStreamReference(stream);
+                        if (joinswith === 'Audio') {
+                            const context = new AudioContext();
+                            setSource(context.createMediaStreamSource(stream));
+                            setAudioContext(context);
+                        } else if (joinswith === 'Video') {
+                            var opt;
+                            if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+                                opt = { mimeType: 'video/webm; codecs=vp9,opus' };
+                            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+                                opt = { mimeType: 'video/webm; codecs=vp8,opus' };
+                            } else {
+                                opt = { mimeType: 'video/webm' };
+                            }
+
+                            const mediaRec = new MediaRecorder(stream, opt);
+                            setMediaRecorder(mediaRec)
+                        }
+            } else {
+                setDisplayText('No media devices detected.');
+                setCurrentForm('JoinError');
+                disconnect(true);
+            }
+        } catch (ex) {
+            setDisplayText('Failed to get user audio source.');
+            setCurrentForm('JoinError');
+            disconnect(true);
+        }
+    }
+
+    const handleStream =  async () => {
+         
+        const constraintObj = {}
+        if (joinwith === 'Video') {
+            constraintObj.audio = true
+            constraintObj.video = {
+                facingMode: "user",
+                width: 150, //{ min: 640, ideal: 1280, max: 1920 },
+                height: 80//{ min: 480, ideal: 720, max: 1080 }
+            }
+        } else {
+            constraintObj.audio = true
+            constraintObj.video = false
+        }
+
+        try {
+           
+            if (navigator.mediaDevices != null) {
+                const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
+                   // media.then(function (stream) {
+                        setStreamReference(stream);
+                        if (joinwith === 'Audio') {
+                            const context = new AudioContext();
+                            setSource(context.createMediaStreamSource(stream));
+                            setAudioContext(context);
+                        } else if (joinwith === 'Video') {
+                            var opt;
+                            if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+                                opt = { mimeType: 'video/webm; codecs=vp9,opus' };
+                            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+                                opt = { mimeType: 'video/webm; codecs=vp8,opus' };
+                            } else {
+                                opt = { mimeType: 'video/webm' };
+                            }
+
+                            const mediaRec = new MediaRecorder(stream, opt);
+                            setMediaRecorder(mediaRec)
+                        }
+                        setWs(new WebSocket(apiService.getWebsocketEndpoint()));
             } else {
                 setDisplayText('No media devices detected.');
                 setCurrentForm('JoinError');
@@ -166,17 +332,16 @@ function JoinPage() {
 
     // Requests session access from the server.
     const requestAccessKey = (names, passcode) => {
-        setEnding(false);
+        ending.value = false;
         setCurrentForm('Connecting');
         sessionService.joinByodSession(names, passcode).then(
             (response) => {
                 if (response.status === 200) {
                     response.json().then(jsonObj => {
-                    	console.log(jsonObj,"reponse first")
-                    	setSession(SessionModel.fromJson(jsonObj['session']));
-                       setSessionDevice(SessionDeviceModel.fromJson(jsonObj['session_device']));
-                       setKey(jsonObj.key);
-                       setWs(new WebSocket(apiService.getWebsocketEndpoint()));
+                        setSession(SessionModel.fromJson(jsonObj['session']));
+                        setSessionDevice(SessionDeviceModel.fromJson(jsonObj['session_device']));
+                        setKey(jsonObj.key);
+                        setWs(new WebSocket(apiService.getWebsocketEndpoint()));
                     })
 
                 } else if (response.status === 400 || response.status === 401) {
@@ -194,8 +359,9 @@ function JoinPage() {
         )
 
     }
-   
 
+
+    
     // Connects to websocket server.
     const connect = () => {
         ws.binaryType = 'arraybuffer';
@@ -210,72 +376,80 @@ function JoinPage() {
 
         ws.onmessage = e => {
             const message = JSON.parse(e.data);
-            console.log("Websocket message: ", message);
             if (message['type'] === 'start') {
                 setAuthenticated(true);
                 closeDialog();
             } else if (message['type'] === 'error') {
                 disconnect(true);
                 setDisplayText('The connection to the session has been closed by the server.');
-                console.log('session closed 2')
                 setCurrentForm('ClosedSession');
-                setReload(false)
             } else if (message['type'] === 'end') {
                 disconnect(true);
                 setDisplayText('The session has been closed by the owner.');
-                console.log('session closed 3')
                 setCurrentForm('ClosedSession');
-                setReload(false)
             }
         };
-
+    
         ws.onclose = e => {
-            console.log('[Disconnected]');
-            if (!ending) {
-                console.log(reconnectCounter, 'not ending ...')
+            console.log('[Disconnected]',ending.value);
+            if (!ending.value) {
                 if (reconnectCounter <= 5) {
                     setCurrentForm('Connecting');
-                    setReconnectCounter(reconnectCounter+1);
+                    setReconnectCounter(reconnectCounter + 1);
                     disconnect();
                     console.log('reconnecting ....')
-                    setReload(false)
-                    setTimeout(() => {
-                        verifyInputAndAudio(name, pcode)
-                    }, 1000);
+                    setTimeout(handleStream, 10000);
+                    //  setTimeout(() => {
+                    //     console.log('i came in here to reconect..')
+                        // verifyInputAndAudio(name, pcode, joinwith)
+                         
+                        
+                    //  }, 1000);
                 } else {
                     setDisplayText('Connection to the session has been lost.');
-                    console.log('session closed 1')
                     setCurrentForm('ClosedSession');
-                    setReload(false)
                     disconnect(true);
-                    
+
                 }
-            }else{
+            } else {
                 console.log('ending ...')
             }
         };
+       
     }
 
 
 
     // Begin capturing and sending client audio.
     const requestStart = () => {
+        let message = null
         if (ws === null) {
-            console.log(ws, 'i am context ....')
             return;
         }
-        console.log(audioContext, 'context ....')
-        const message = {
-            'type': 'start',
-            'key': key,
-            'start_time': 0.0,
-            'sample_rate': audioContext.sampleRate,
-            'encoding': 'pcm_f32le',
-            'channels': 1
-        };
-        console.log("requesting start", message)
+        if (joinwith === 'Audio') {
+            message = {
+                'type': 'start',
+                'key': key,
+                'start_time': 0.0,
+                'sample_rate': audioContext.sampleRate,
+                'encoding': 'pcm_f32le',
+                'channels': 1,
+                'streamdata': 'audio'
+            };
+        } else if (joinwith === 'Video') {
+            message = {
+                'type': 'start',
+                'key': key,
+                'start_time': 0.0,
+                'sample_rate': 16000,
+                'encoding': 'pcm_f16le',
+                'video_encoding': 'video/mp4',
+                'channels': 2,
+                'streamdata': 'video'
+            };
+        }
         ws.send(JSON.stringify(message));
-        
+
     }
 
     const requestHelp = () => {
@@ -287,8 +461,71 @@ function JoinPage() {
         if (!confirmed && connected) {
             setCurrentForm('NavGuard');
         } else {
-            return navigate('/login');
+            disconnect(true)
+            setCurrentForm("")
+            return navigate('/join');
         }
+    }
+
+    const fetchTranscript = async (deviceid) => {
+        try {
+            const response = await sessionService.getSessionDeviceTranscriptsForClient(deviceid)
+
+            if (response.status === 200) {
+                const jsonObj = await response.json()
+                const data = jsonObj.sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
+                setTransripts(data)
+                const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
+                setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100)
+                setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100)
+
+
+            } else if (response.status === 400 || response.status === 401) {
+                console.log(response, 'no transcript obj')
+            }
+
+        } catch (error) {
+            console.log('byod-join-component error func : requestAccessKey 1', error)
+        }
+
+    }
+
+    const ResetTimeRange = (values) => {
+        if (session !== null) {
+            const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
+            setTimeRange(values);
+            setStartTime(Math.round(sessionLen * values[0] * 100) / 100);
+            setEndTime(Math.round(sessionLen * values[1] * 100) / 100);
+            generateDispalyTranscripts();
+        }
+    }
+
+    const generateDispalyTranscripts = () => {
+        setDisplayTranscripts(transcripts.filter(t => t.start_time >= startTime && t.start_time <= endTime));
+    }
+
+    const seeAllTranscripts = () => {
+        if (Object.keys(currentTranscript) > 0  && sessionDevice !== null) {
+            setCurrentForm("gottoselectedtranscript"); 
+
+        } else if (sessionDevice !== null) {
+            setCurrentForm("gototranscript"); 
+        }
+
+    }
+
+    const loading = () => {
+        return (session === null || transcripts === null);
+    }
+
+
+    const onClickedTimeline = (transcript) => {
+        setCurrentForm("Transcript");
+        setCurrentTranscript(transcript);
+    }
+
+    const openDialog = (form) => {
+        setCurrentForm(form);
     }
 
     const closeDialog = () => {
@@ -298,35 +535,53 @@ function JoinPage() {
     const changeTouppercase = (e) => {
         setPcode(e.target.value.toUpperCase());
     }
-    
 
+    const togglePreview = () => {
+        setCurrentForm('');
+        setPreview(!preview)
+    }
     const sessionDevBtnPressed = sessionDevice !== null ? sessionDevice.button_pressed : null;
 
-    return (
-        <ByodJoinPage
-            connected={connected}
-            authenticated={authenticated}
-            GLOW_COLOR={GLOW_COLOR}
-            POD_COLOR={POD_COLOR}
-            button_pressed={sessionDevBtnPressed}
-            verifyInputAndAudio={verifyInputAndAudio}
-            closeDialog={closeDialog}
-            currentForm={currentForm}
-            displayText={displayText}
-            navigate={navigate}
-            navigateToLogin={navigateToLogin}
-            pageTitle={pageTitle}
-            requestHelp={requestHelp}
-            pcode = {pcode}
-            setPcode = {setPcode}
-            changeTouppercase = {changeTouppercase}
-        />
+    return ( 
+                    <ByodJoinPage
+                        connected={connected}
+                        authenticated={authenticated}
+                        GLOW_COLOR={GLOW_COLOR}
+                        POD_COLOR={POD_COLOR}
+                        button_pressed={sessionDevBtnPressed}
+                        verifyInputAndAudio={verifyInputAndAudio}
+                        closeDialog={closeDialog}
+                        currentForm={currentForm}
+                        displayText={displayText}
+                        navigate={navigate}
+                        navigateToLogin={navigateToLogin}
+                        pageTitle={pageTitle}
+                        requestHelp={requestHelp}
+                        pcode={pcode}
+                        setPcode={setPcode}
+                        changeTouppercase={changeTouppercase}
+                        joinwith={joinwith}
+                        preview={preview}
+                        previewLabel={previewLabel}
+                        togglePreview={togglePreview}
+                        disconnect={disconnect}
+                        sessionDevice={sessionDevice}
+                        setRange={ResetTimeRange}
+                        onClickedTimeline={onClickedTimeline}
+                        session={session}
+                        displayTranscripts={displayTranscripts}
+                        startTime={startTime}
+                        endTime={endTime}
+                        transcripts={transcripts}
+                        loading={loading}
+                        currentTranscript={currentTranscript}
+                        seeAllTranscripts={seeAllTranscripts}
+                        openDialog={openDialog}
+                        setCurrentForm = {setCurrentForm}
+
+                    />
     )
 }
-
-
-
-
 
 
 export { JoinPage }

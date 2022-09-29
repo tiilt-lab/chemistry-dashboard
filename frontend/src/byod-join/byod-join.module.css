@@ -269,6 +269,13 @@
   overflow: auto;
   margin-top: 8px;
 }
+
+.video-container {
+  max-width: 640px;
+  width: 100%;
+  margin-top: 20px;
+}
+
 .list-container .list {
   list-style-type: none;
   padding-inline-start: 0px;
@@ -456,6 +463,21 @@
   font-size: 12px;
   line-height: 20px;
   color: #727278;
+}
+
+.dropdown-input {
+  width: 350px;
+  height: 30px;
+  font-size: 16px;
+  padding: 0px 10px;
+  margin: 12px 0px;
+  box-shadow: none;
+  border-radius: 5px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: #a7a7a7;
+  outline: none;
+  transition: border-color 0.5s;
 }
 
 .text-input {

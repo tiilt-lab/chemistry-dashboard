@@ -71,3 +71,4 @@ class ProcessingConfig:
 
     def is_valid_key(self):
         return RedisSessions.get_device_key(self.auth_key) != None
+ 

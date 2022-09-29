@@ -140,7 +140,7 @@ function SettingComponentPage(props) {
           <div className={style["add-dialog"]}>
             <div className={style["dialog-heading"]}>Lock User</div>
             <div className={style["input-header"]}>Select user</div>
-            <select id='ddUser ' className={style["dropdown-input"]}>
+            <select id='ddUser' className={style["dropdown-input"]}>
               {props.users.map((u, index) => (
                 <option key={index} value={u.id}>{u.email}</option>
               ))}
@@ -227,8 +227,8 @@ function SettingComponentPage(props) {
             <div className={style["dialog-heading"]}>Download Device Logs</div>
             <div className={style["input-header"]}>Select device</div>
             <select id='ddDevice' className={style["dropdown-input"]}>
-              {props.users.map((u, index) => (
-                <option key={index} value={u.id}>{u.email}</option>
+              {props.devices.map((u, index) => (
+                <option key={index} value={u.id}>{u.name}</option>
               ))}
             </select>
             <button className={style["basic-button"]} onClick={() => props.downloadDeviceLogs(document.getElementById('ddDevice').value)}>Download logs</button>
@@ -258,7 +258,7 @@ function SettingComponentPage(props) {
             <div className={style["dialog-heading"]}>Clear Device Logs</div>
             <div className={style["input-header"]}>Select device</div>
             <select id='ddDevice' className={style["dropdown-input"]}>
-              {props.users.map((u, index) => (
+              {props.devices.map((u, index) => (
                 <option key={index} value={u.id}>{u.name}</option>
               ))}
             </select>
