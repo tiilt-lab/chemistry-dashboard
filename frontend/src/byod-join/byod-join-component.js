@@ -110,10 +110,13 @@ function JoinPage() {
 
 
     useEffect(() => {
-        requestStart();
+        if(connected){
+            requestStart();
+        }
     }, [connected])
 
     useEffect(() => {
+        if(authenticated){
         const loadWorklet = async () => {
 
             await audioContext.audioWorklet.addModule('audio-sender-processor.js');
@@ -136,16 +139,17 @@ function JoinPage() {
             mediaRecorder.ondataavailable = async function (ev) {
                 const bufferdata = await ev.data.arrayBuffer()
                 fixWebmDuration(ev.data, interval * 6 * 60 * 24, (fixedblob) => {
-                   // ws.send(fixedblob);
+                    ws.send(fixedblob);
                 })
             }
         }
 
-        if (authenticated && joinwith === 'Audio')
+        if (authenticated && joinwith === 'Audio'){
             loadWorklet().catch(console.error);
-        else if (authenticated && joinwith === 'Video')
+        }else if (authenticated && joinwith === 'Video'){
             videoPlay()
-
+        }
+    }
     }, [authenticated])
 
     useEffect(() => {
@@ -156,8 +160,10 @@ function JoinPage() {
         }
     }, [preview])
 
+   
     // Disconnects from websocket server and audio stream.
     const disconnect = (permanent = false) => {
+        console.log('disconnect called',permanent)
         if (permanent) {
             setPageTitle('Join Discussion');
             setName("")
@@ -200,7 +206,7 @@ function JoinPage() {
 
     // Verifies the users connection input and that the user
     // has a microphone accessible to the browser.
-    const verifyInputAndAudio = (names, passcode, joinswith) => {
+    const verifyInputAndAudio = async (names, passcode, joinswith) => {
         if (names === null) {
             names = 'User Device';
         }
@@ -221,7 +227,6 @@ function JoinPage() {
         }
 
         try {
-
             //handle older browsers that might implement getUserMedia in some way
             if (navigator.mediaDevices === undefined) {
                 navigator.mediaDevices = {};
@@ -248,8 +253,8 @@ function JoinPage() {
             }
 
             if (navigator.mediaDevices != null) {
-                navigator.mediaDevices.getUserMedia(constraintObj)
-                    .then(function (stream) {
+                const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
+                   // media.then(function (stream) {
                         setStreamReference(stream);
                         if (joinswith === 'Audio') {
                             const context = new AudioContext();
@@ -268,13 +273,57 @@ function JoinPage() {
                             const mediaRec = new MediaRecorder(stream, opt);
                             setMediaRecorder(mediaRec)
                         }
+            } else {
+                setDisplayText('No media devices detected.');
+                setCurrentForm('JoinError');
+                disconnect(true);
+            }
+        } catch (ex) {
+            setDisplayText('Failed to get user audio source.');
+            setCurrentForm('JoinError');
+            disconnect(true);
+        }
+    }
 
-                    },
-                        error => {
-                            setDisplayText('Failed to get user audio source.');
-                            setCurrentForm("JoinError");
-                            disconnect(true);
-                        });
+    const handleStream =  async () => {
+         
+        const constraintObj = {}
+        if (joinwith === 'Video') {
+            constraintObj.audio = true
+            constraintObj.video = {
+                facingMode: "user",
+                width: 150, //{ min: 640, ideal: 1280, max: 1920 },
+                height: 80//{ min: 480, ideal: 720, max: 1080 }
+            }
+        } else {
+            constraintObj.audio = true
+            constraintObj.video = false
+        }
+
+        try {
+           
+            if (navigator.mediaDevices != null) {
+                const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
+                   // media.then(function (stream) {
+                        setStreamReference(stream);
+                        if (joinwith === 'Audio') {
+                            const context = new AudioContext();
+                            setSource(context.createMediaStreamSource(stream));
+                            setAudioContext(context);
+                        } else if (joinwith === 'Video') {
+                            var opt;
+                            if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+                                opt = { mimeType: 'video/webm; codecs=vp9,opus' };
+                            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+                                opt = { mimeType: 'video/webm; codecs=vp8,opus' };
+                            } else {
+                                opt = { mimeType: 'video/webm' };
+                            }
+
+                            const mediaRec = new MediaRecorder(stream, opt);
+                            setMediaRecorder(mediaRec)
+                        }
+                        setWs(new WebSocket(apiService.getWebsocketEndpoint()));
             } else {
                 setDisplayText('No media devices detected.');
                 setCurrentForm('JoinError');
@@ -317,6 +366,8 @@ function JoinPage() {
 
     }
 
+
+    
     // Connects to websocket server.
     const connect = () => {
         ws.binaryType = 'arraybuffer';
@@ -344,19 +395,22 @@ function JoinPage() {
                 setCurrentForm('ClosedSession');
             }
         };
-
+    
         ws.onclose = e => {
             console.log('[Disconnected]',ending.value);
             if (!ending.value) {
                 if (reconnectCounter <= 5) {
-                    console.log("i tried reconnecting", reconnectCounter)
                     setCurrentForm('Connecting');
+                    setReconnectCounter(reconnectCounter + 1);
                     disconnect();
                     console.log('reconnecting ....')
-                    setTimeout(() => {
-                        verifyInputAndAudio(name, pcode, joinwith)
-                        setReconnectCounter(reconnectCounter + 1);
-                    }, 1000);
+                    setTimeout(handleStream, 10000);
+                    //  setTimeout(() => {
+                    //     console.log('i came in here to reconect..')
+                        // verifyInputAndAudio(name, pcode, joinwith)
+                         
+                        
+                    //  }, 1000);
                 } else {
                     setDisplayText('Connection to the session has been lost.');
                     setCurrentForm('ClosedSession');
@@ -413,7 +467,9 @@ function JoinPage() {
         if (!confirmed && connected) {
             setCurrentForm('NavGuard');
         } else {
-            return navigate('/login');
+            disconnect(true)
+            setCurrentForm("")
+            return navigate('/join');
         }
     }
 

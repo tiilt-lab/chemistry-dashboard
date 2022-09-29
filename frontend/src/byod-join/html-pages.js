@@ -44,7 +44,7 @@ function ByodJoinPage(props) {
                     rightText={"Option"}
                     rightEnabled={props.joinwith === 'Video'? true : false}
                     rightTextClick={() => props.joinwith === 'Video'? props.openDialog("Options"): props.openDialog("")}
-                    nav={() => props.navigate('/join')} />
+                    nav={() => props.navigateToLogin()} />
                 {!props.connected ?
                     <React.Fragment>
                         <div className={style.instruction}>Please type your name and passcode to join a discussion.</div>
@@ -181,7 +181,7 @@ function ByodJoinPage(props) {
                 itsclass={style["dialog-window"]}
                 heading={"Stop Recording"}
                 body={"Leaving this page will stop recording. Are you sure you want to continue?"}
-                deletebuttonaction={props.navigateToLogin}
+                deletebuttonaction={()=>props.navigateToLogin(true)}
                 cancelbuttonaction={props.closeDialog}
             />
 
