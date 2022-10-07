@@ -3,7 +3,7 @@ import style from './timeline-slider.module.css'
 
 function AppTimelineSlider(props) {
   const [currentSliderId, setCurrentSliderId] = useState(null);
-  const [curPos, setCurPos] = useState();
+  const [curPos, setCurPos] = useState(0);
   const [sliderValues, setSliderValues] = useState([0.0, 1.0]);
   const TIMELINE_WIDTH = 280;
   const HANDLE_WIDTH = 20;
@@ -30,7 +30,7 @@ function AppTimelineSlider(props) {
       releaseHandle(null);
     }
     setCurrentSliderId(handleId);
-    if (e instanceof TouchEvent) {
+    if (window.TouchEvent && e instanceof TouchEvent) {
       setCurPos(e.changedTouches[0].clientX);
       document.addEventListener('touchend', releaseHandle);
       document.addEventListener('touchmove', moveHandle);
@@ -43,8 +43,8 @@ function AppTimelineSlider(props) {
 
   const moveHandle = (e) => {
     let change = 0;
-    if (e instanceof TouchEvent) {
-      change = e.changedTouches[0].clientX - this.curPos;
+    if (window.TouchEvent && e instanceof TouchEvent) {
+      change = e.changedTouches[0].clientX - curPos;
       setCurPos(e.changedTouches[0].clientX);
     } else {
       change = e.clientX - curPos;
@@ -61,7 +61,7 @@ function AppTimelineSlider(props) {
   }
 
   const releaseHandle = (e) => {
-    if (e instanceof TouchEvent) {
+    if (window.TouchEvent && e instanceof TouchEvent) {
       document.removeEventListener('touchend', releaseHandle);
       document.removeEventListener('touchmove', moveHandle);
     } else {
@@ -85,10 +85,11 @@ function AppTimelineSlider(props) {
   }
 
   const grabBar = (e) => {
+
     if (currentSliderId != null) {
       releaseHandle(null);
     }
-    if (e instanceof TouchEvent) {
+    if (window.TouchEvent && e instanceof TouchEvent) {
       setCurPos(e.changedTouches[0].clientX);
       document.addEventListener('touchend', releaseBar);
       document.addEventListener('touchmove', moveBar);
@@ -101,7 +102,7 @@ function AppTimelineSlider(props) {
 
   const moveBar = (e) => {
     let change = 0;
-    if (e instanceof TouchEvent) {
+    if (window.TouchEvent && e instanceof TouchEvent) {
       change = e.changedTouches[0].clientX - curPos;
       setCurPos(e.changedTouches[0].clientX);
     } else {
@@ -120,7 +121,7 @@ function AppTimelineSlider(props) {
   }
 
   const releaseBar = (e) => {
-    if (e instanceof TouchEvent) {
+    if (window.TouchEvent && e instanceof TouchEvent) {
       document.removeEventListener('touchend', releaseBar);
       document.removeEventListener('touchmove', moveBar);
     } else {
