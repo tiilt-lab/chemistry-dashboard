@@ -13,6 +13,7 @@ function AppKeywordsComponent(props) {
   const [_start, setStart] = useState(props.start);
   const [_end, setEnd]  = useState(props.end);
   const [callbackfunc, setCallbackFunc] = useState();
+  const [showDialog, setShowDialog] = useState(false);
   const [reload, setReload] = useState(false);
   const navigate = useNavigate()
 
@@ -27,6 +28,10 @@ function AppKeywordsComponent(props) {
   const toggleGraph = ()=> {
     setShowGraph(!showGraph);
     refresh();
+  }
+  
+  const toggleDisplay = (show)=> {
+        setShowDialog(show);
   }
 
   const refresh = ()=> {
@@ -50,7 +55,7 @@ function AppKeywordsComponent(props) {
         dispKeyword.push({'word': word, 'color': similarityToRGB(highestSimilarity), 'transcript_id': transcript.id});
       });
     }
-    setDisplayKeywords(dispKeyword);
+    setDisplayKeywords(dispKeyword.reverse());
   }
 
   const showKeywordContext = (transcriptId)=> {
@@ -111,6 +116,8 @@ function AppKeywordsComponent(props) {
         callbackfunc = {callbackfunc}
         setCallbackFunc = {setCallbackFunc}
         toggleGraph = {toggleGraph}
+        toggleDisplay = {toggleDisplay}
+        showDialog = {showDialog}
     />
   )
 }

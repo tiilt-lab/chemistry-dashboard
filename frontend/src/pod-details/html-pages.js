@@ -10,6 +10,7 @@ import { AppKeywordsComponent } from '../keywords/keywords-component'
 import { Appheader } from '../header/header-component'
 import style from './pod.module.css'
 import React from 'react'
+import {isMobile} from 'react-device-detect'
 
 function PodComponentPages(props) {
     return (
@@ -24,7 +25,7 @@ function PodComponentPages(props) {
                     nav={props.navigateToSession}
                 />
 
-                <div className={style["overview-container"]}>
+                <div className={style[isMobile ? "overview-container-mobile" : "overview-container-desktop"]}>
                     <br />
                     <AppSectionBoxComponent heading={"Timeline control:"} >
                         <AppTimelineSlider id='timeSlider' inputChanged={props.setRange} />
@@ -39,11 +40,8 @@ function PodComponentPages(props) {
                             end={props.endTime}
                         />
                     </AppSectionBoxComponent>
-
-                    <AppSectionBoxComponent heading={"Discussion direction:"}>
-                        <AppHeatMapComponent session={props.session} transcripts={props.displayTranscripts} />
-                    </AppSectionBoxComponent>
-
+                    
+                    
                     <AppSectionBoxComponent heading={"Keyword detection:"}>
                         <AppKeywordsComponent
                             session={props.session}
@@ -127,4 +125,3 @@ function PodComponentPages(props) {
     )
 }
 export { PodComponentPages }
-
