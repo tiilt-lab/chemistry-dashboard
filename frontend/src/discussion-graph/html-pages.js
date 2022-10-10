@@ -5,7 +5,6 @@ import { Appheader } from '../header/header-component'
 import React from 'react'
 
 function DiscussionPage(props){
-
   return(
   <>
     <div>

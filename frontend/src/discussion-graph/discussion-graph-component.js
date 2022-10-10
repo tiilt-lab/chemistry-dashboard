@@ -56,7 +56,6 @@ function DiscussionGraphComponent() {
     // }
   }, [])
 
-
   const openForms = (form, data = null) => {
     setCurrentForm(form);
     if (currentForm === "stats") {

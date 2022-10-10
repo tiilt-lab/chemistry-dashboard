@@ -646,4 +646,11 @@
   top: 4px;
   cursor: pointer;
 }
+
+.info-button {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  cursor: pointer;
+}
 /*# sourceMappingURL=keywords.module.css.map */
