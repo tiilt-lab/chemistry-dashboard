@@ -1,6 +1,6 @@
 Fixes/Features # .
 
-Changes propose:
+Changes proposed:
  -
  -
  -
