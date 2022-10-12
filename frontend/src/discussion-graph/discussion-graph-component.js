@@ -39,8 +39,7 @@ function DiscussionGraphComponent() {
         sd['visible'] = true;
         sd['transcripts'] = [];
       });
-      //setReload(true);
-      //updateGraph();
+      
     };
 
     const sessionModel = activeSessionService.getSession();
@@ -60,14 +59,7 @@ function DiscussionGraphComponent() {
        subscriptions.push(transcriptSub);
    }
 
-    // const sessionTranscripts = activeSessionService.getTranscripts()
-    // if (sessionTranscripts !== undefined) {
-    //   setTranscripts(sessionTranscripts);
-    //   setReload(true);
-    //   //updateGraph();
-    // };
-    // subscriptions.push(deviceSub, sessionTranscripts, sessionModel);
-
+    
     return () => {
       subscriptions.map(sub => {
           if (sub.closed) {
