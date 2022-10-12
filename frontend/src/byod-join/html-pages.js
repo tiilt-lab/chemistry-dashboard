@@ -121,11 +121,13 @@ function ByodJoinPage(props) {
 
                                 <AppSectionBoxComponent heading={"Keyword detection:"}>
                                     <AppKeywordsComponent
+                                        clickedKeyword={props.onClickedKeyword}
                                         session={props.session}
                                         sessionDevice={props.sessionDevice}
                                         transcripts={props.displayTranscripts}
                                         start={props.startTime}
                                         end={props.endTime}
+                                        fromclient={true}
                                     />
                                 </AppSectionBoxComponent>
 
