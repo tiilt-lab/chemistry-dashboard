@@ -463,7 +463,7 @@ function JoinPage() {
         } else {
             disconnect(true)
             setCurrentForm("")
-            return navigate('/join');
+            return navigate('/');
         }
     }
 
@@ -524,6 +524,11 @@ function JoinPage() {
         setCurrentTranscript(transcript);
     }
 
+    const onClickedKeyword = (transcript) => {
+        setCurrentTranscript(transcript);
+        setCurrentForm("gottoselectedtranscript"); 
+    }
+
     const openDialog = (form) => {
         setCurrentForm(form);
     }
@@ -568,6 +573,7 @@ function JoinPage() {
                         sessionDevice={sessionDevice}
                         setRange={ResetTimeRange}
                         onClickedTimeline={onClickedTimeline}
+                        onClickedKeyword={onClickedKeyword}
                         session={session}
                         displayTranscripts={displayTranscripts}
                         startTime={startTime}
