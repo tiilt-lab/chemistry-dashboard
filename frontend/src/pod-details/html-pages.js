@@ -64,7 +64,9 @@ function PodComponentPages(props) {
                     <AppSectionBoxComponent heading={"Radar chart:"}>
                         <AppRadarComponent 
                         session={props.session} 
-                        transcripts={props.displayTranscripts} />
+                        transcripts={props.displayTranscripts}
+                        start={props.startTime}
+                        end={props.endTime} />
                     </AppSectionBoxComponent>
                     
                 </div>

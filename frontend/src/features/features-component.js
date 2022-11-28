@@ -26,14 +26,13 @@ function AppFeaturesComponent(props) {
   const updateGraphs = ()=> {
     //////attempt to change this into d3 radar chart before making a folder for this
     //general format of my data (time-independent)
-    let radfeatures = [];
+    /*let radfeatures = [];
     let raddata = props.transcripts;
     let analytical_sum = 0;
     let authenticity_sum = 0;
     let certainty_sum = 0;
     let clout_sum = 0;
     let emotional_sum = 0;
-    console.log(props.transcripts);
     for (const i in raddata) {
       analytical_sum += parseInt(raddata[i].analytic_thinking_value);
       authenticity_sum += parseInt(raddata[i].authenticity_value);
@@ -48,8 +47,8 @@ function AppFeaturesComponent(props) {
     radfeatures.push({"axis": "Certainty", "value": Math.round(100*certainty_sum/total_sum)/100});
     radfeatures.push({"axis": "Clout", "value": Math.round(100*clout_sum/total_sum)/100});
     radfeatures.push({"axis": "Emotional", "value": Math.round(100*emotional_sum/total_sum)/100});
-    //console.log([radfeatures]);
-  
+    //console.log([radfeatures]);*/
+    
     // Create feature array.
     const valueArrays = [{ 'name': 'Emotional tone', 'values': [] },
                         { 'name': 'Analytic thinking', 'values': [] },
