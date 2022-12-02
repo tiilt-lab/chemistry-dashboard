@@ -59,7 +59,11 @@ function AppKeywordsComponent(props) {
   }
 
   const showKeywordContext = (transcriptId)=> {
-    navigate('/sessions/'+props.session.id+ '/pods/'+props.sessionDevice.id+ '/transcripts?index='+transcriptId);
+    if(props.fromclient){
+      props.clickedKeyword(transcriptId)
+    }else{
+      navigate('/sessions/'+props.session.id+ '/pods/'+props.sessionDevice.id+ '/transcripts?index='+transcriptId);
+    }
   }
 
   // --------

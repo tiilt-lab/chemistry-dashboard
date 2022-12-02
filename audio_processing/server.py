@@ -7,10 +7,14 @@ import shutil
 import logging
 import callbacks
 import threading
+import weakref
+import wave 
 import scipy.signal
 import config as cf
 import numpy as np
+import moviepy.editor as mp
 from recorder import WaveRecorder
+from recorder import VidRecorder
 from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager
 from audio_buffer import AudioBuffer
@@ -41,6 +45,7 @@ class ServerProtocol(WebSocketServerProtocol):
         self.processor = None
         self.last_message = time.time()
         self.end_signaled = False
+        self.interval = 10
         cm.add(self)
         logging.info('New client connected...')
 
@@ -66,55 +71,78 @@ class ServerProtocol(WebSocketServerProtocol):
                 except Exception as e:
                     logging.warning('Error processing json: {0}'.format(e))
 
-    def onClose(self, *args, **kwargs):
+    def onClose(self, *args, **kwargs): 
         self.signal_end()
 
     def process_json(self, data):
         if not 'type' in data:
             logging.warning('Message does not contain "type".')
             return
-        if data['type'] == 'start':
+        if data['type'] == 'start':  
             valid, result = ProcessingConfig.from_json(data)
             if not valid:
                 self.send_json({'type': 'error', 'message': result})
-                self.signal_end()
+                self.signal_end() 
             else:
                 self.config = result
                 logging.info('Client {0} signalled to started...'.format(self.config.auth_key))
                 cm.associate_keys(self, self.config.session_key, self.config.auth_key)
+                self.stream_data = data['streamdata']
                 self.signal_start()
                 self.send_json({'type':'start'})
                 callbacks.post_connect(self.config.auth_key)
-                if cf.record_original():
-                    filename = os.path.join(cf.recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
-                    self.orig_recorder = WaveRecorder(filename, self.config.sample_rate, self.config.depth, self.config.channels)
-                if cf.record_reduced():
-                    filename = os.path.join(cf.recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
-                    self.redu_recorder = WaveRecorder(filename, 16000, 2, 1)
-
-        elif data['type'] == 'stop':
-            if(self.running):
-                logging.info('Client {0} signalled to stop...'.format(self.config.auth_key))
-                self.signal_end()
-        else:
-            logging.warning('Unexpected message type: {0}.'.format(data['type']))
+                if self.stream_data == 'audio':
+                    if cf.record_original():
+                        filename = os.path.join(cf.recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
+                        self.orig_recorder = WaveRecorder(filename, self.config.sample_rate, self.config.depth, self.config.channels)
+                    if cf.record_reduced():
+                        filename = os.path.join(cf.recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
+                        self.redu_recorder = WaveRecorder(filename, 16000, 2, 1)
+                elif self.stream_data == 'video':
+                    self.video_count = 1;
+                    if cf.video_record_original():
+                        self.filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
+                        self.samplevid = os.path.join(cf.video_recordings_folder(), "sample_vid")
+                        self.orig_vid_recorder = VidRecorder(self.filename,self.samplevid,cf.video_record_original())
+                    if cf.video_record_reduced():
+                        self.filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
+                        self.redu_vid_recorder = VidRecorder(self.filename,self.samplevid,cf.video_record_original())
+       
 
     def process_binary(self, data):
         if self.running:
-            # Save audio data.
-            if cf.record_original():
-                self.orig_recorder.write(data)
+            if self.stream_data == 'audio':
+                if cf.record_original():
+                    # Save audio data.
+                    self.orig_recorder.write(data)
+                # Convert all audio to pcm_i16le
+                data = self.reformat_data(data)
+                data = self.resample_data(data)
+                self.audio_buffer.append(data)
+                asr_data = self.reduce_channels(1, data)
+                self.asr_audio_queue.put(asr_data) 
+                # Save audio data.
+                if cf.record_reduced():
+                    self.redu_recorder.write(asr_data) 
+                
+            elif self.stream_data == 'video':
+                
+                self.orig_vid_recorder.write(data)
+            
+                temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
+                vidclip = mp.VideoFileClip(self.filename+'.webm')
+                subclips = vidclip.subclip((self.video_count-1)*self.interval,self.video_count*self.interval)
+                subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=16000,bitrate='50k') #nbytes=2,codec='pcm_s16le',
+        
+                wavObj = wave.open(temp_aud_file+'.wav')
+                self.audio_buffer.append(self.read_bytes_from_wav(wavObj))
+                audiobyte = self.reduce_wav_channel(1,wavObj)
+                self.asr_audio_queue.put(audiobyte) 
 
-            # Convert all audio to pcm_i16le
-            data = self.reformat_data(data)
-            data = self.resample_data(data)
-            self.audio_buffer.append(data)
-            asr_data = self.reduce_channels(1, data)
-            self.asr_audio_queue.put(asr_data)
-
-            # Save audio data.
-            if cf.record_reduced():
-                self.redu_recorder.write(asr_data)
+                if os.path.isfile(temp_aud_file+'.wav'):
+                    os.remove(temp_aud_file+'.wav')
+              
+                self.video_count = self.video_count + 1
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 
@@ -148,11 +176,30 @@ class ServerProtocol(WebSocketServerProtocol):
         else:
             return in_data
 
+    def read_bytes_from_wav(self,wav):
+        wav.setpos(0)
+        sdata = wav.readframes(wav.getnframes())
+        data = np.frombuffer(sdata,dtype=np.dtype('int16'))
+        return data.tobytes()
+
+    def reduce_wav_channel(self,channels_wanted,wav):
+        if channels_wanted < self.config.channels:
+            nch = wav.getnchannels()
+            wav.setpos(0)
+            sdata = wav.readframes(wav.getnframes())
+            data = np.frombuffer(sdata,dtype=np.dtype('int16'))
+            ch_data = data[0::nch]
+            return ch_data.tobytes()
+        else:
+            self.read_bytes_from_wav(wav)
+
+    
+
     def signal_start(self):
         self.audio_buffer = AudioBuffer(self.config)
         self.asr_audio_queue = queue.Queue()
         self.asr_transcript_queue = queue.Queue()
-        self.asr = GoogleASR(self.asr_audio_queue, self.asr_transcript_queue, self.config)
+        self.asr = GoogleASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data,self.interval)
         self.asr.start()
         self.processor = AudioProcessor(self.audio_buffer, self.asr_transcript_queue, self.config)
         self.processor.start()
@@ -180,6 +227,8 @@ class ServerProtocol(WebSocketServerProtocol):
         # Begin Post Processing
         if cf.record_reduced():
             self.redu_recorder.close()
+        if cf.video_record_original():
+            self.orig_vid_recorder.close()
         if cf.record_original():
             self.orig_recorder.close()
             if self.config.tag:

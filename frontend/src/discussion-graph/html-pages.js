@@ -5,6 +5,7 @@ import { Appheader } from '../header/header-component'
 import React from 'react'
 
 function DiscussionPage(props){
+  // console.log(props)
   return(
   <>
     <div>
@@ -40,17 +41,20 @@ function DiscussionPage(props){
       props.displayDevices.map((device, index)=>(
         <div  key={index} className={style["transcript-column"]} >
           {
-            props.device.transcripts.map((transcript,index)=>(
+            device.transcripts.map((transcript,index)=>(
               <div key={index} className={style.transcript} style={{marginTop: `${transcript.start_time * 20}`+"px" , height: `${transcript.length * 20}`+"px"}} >
-                  <div className={style["tr]anscript-text"]}>
+                  <div className={style["transcript-text"]}>
                       {transcript.question ? <div className={style["question-mark"]} onClick={()=> props.highlightQuestions(transcript)}>?</div> : <></>}
                       {transcript.speaker_tag ?  <span className={style["speaker-tag"]}>{transcript.speaker_tag}: </span> : <></> }
-                        { transcript.transcript.map((transcriptData, index)=>{
+                        { transcript.transcript.map((transcriptData, index)=>(
+                          
                           <React.Fragment key={index}>
-                            {(transcriptData.matchingKeywords !== null) ? <span className={transcriptData.highlight ? `${style["keyword-text"]} ${style["question-highlight"]}` : style["keyword-text"]} style={{color: `${transcriptData.color}`}} onClick={()=> props.openForms("keywords", transcriptData.matchingKeywords)}>{transcriptData.word}</span> : <></> }
-                            {(transcriptData.matchingKeywords === null) ? <span className={transcriptData.highlight? style["question-highlight"] : ""}> {transcriptData.word} </span> : <></> }
+                            {(transcriptData.matchingKeywords !== null) ? <span className={transcriptData.highlight ? `${style["keyword-text"]} ${style["question-highlight"]}` : style["keyword-text"]} style={{color: `${transcriptData.color}`}} onClick={()=> props.openForms("keywords", transcriptData.matchingKeywords)}>{transcriptData.word}</span> 
+                            : 
+                            <span className={transcriptData.highlight? style["question-highlight"] : ""}> {transcriptData.word} </span> }
+      
                           </React.Fragment>
-                        })
+                        ))
                       
                         }
                     </div>
