@@ -4,6 +4,7 @@ import { AppTimelineSlider } from '../components/timeline-slider/timeline-slider
 import { AppTimeline } from '../timeline/timeline-component'
 import { AppHeatMapComponent } from '../heat-map/heat-map-component'
 import { AppFeaturesComponent } from '../features/features-component'
+import { AppRadarComponent } from '../radar/radar-component'
 import { AppSpinner } from '../spinner/spinner-component'
 import { AppSessionToolbar } from '../session-toolbar/session-toolbar-component'
 import { AppKeywordsComponent } from '../keywords/keywords-component'
@@ -57,6 +58,15 @@ function PodComponentPages(props) {
                         session={props.session} 
                         transcripts={props.displayTranscripts} />
                     </AppSectionBoxComponent>
+                    
+                    <AppSectionBoxComponent heading={"Radar chart:"}>
+                        <AppRadarComponent 
+                        session={props.session} 
+                        transcripts={props.displayTranscripts}
+                        start={props.startTime}
+                        end={props.endTime} />
+                    </AppSectionBoxComponent>
+                    
                 </div>
                 {props.loading() ? <AppSpinner></AppSpinner> : <></>}
                 <div className={style.footer}>

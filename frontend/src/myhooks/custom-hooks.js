@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import {ApiService} from '../services/api.service';
+import {ApiService} from '../services/api-service';
+import React from 'react';
+import * as d3 from 'd3';
 
 function useLogin(apipath , type,data,tomodel){
     const [value,setValue] = useState();
@@ -14,4 +16,16 @@ function useLogin(apipath , type,data,tomodel){
     return [error,value];
 }
 
-export {useLogin}
+const useD3 = (renderChartFn, dependencies) => {
+    const ref = React.useRef();
+
+    React.useEffect(() => {
+        renderChartFn(d3.select(ref.current));
+        return () => {};
+      }, dependencies);
+    return ref;
+}
+
+
+
+export {useLogin, useD3}
