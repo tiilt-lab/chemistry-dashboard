@@ -68,7 +68,6 @@ function DiscussionGraphComponent() {
       });
   }
   }, [])
-
   useEffect(()=>{
     if(reload){
       updateGraph();
