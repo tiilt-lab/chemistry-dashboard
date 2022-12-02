@@ -1,18 +1,20 @@
 import React from 'react'
 import style from './keywords.module.css'
+import {DialogBox} from '../dialog/dialog-component'
+import questIcon from "../assets/img/question.svg"
 import {AppContextMenu} from '../components/context-menu/context-menu-component'
 
 function AppKeywordsPage(props) {
-  
   return (
+    <>
     <div className={style["keyword-container"]}>
       {!props.showGraph ?
         <React.Fragment>
           {
-            props.displayKeywords.map((displayKeyword, index) => (
+            props.displayKeywords.slice(0, props.displayKeywords.length < 25 ?  props.displayKeywords.length : 25).map((displayKeyword, index) => (
               <span key={index} className={style["keyword"]} style={{ color: `${displayKeyword.color}` }} onClick={() => props.showKeywordContext(displayKeyword.transcript_id)}>
                 {displayKeyword.word}
-                {index !== (Object.keys(props.displayKeywords).length - 1) ? <span className={style["base"]}>, </span> : <></>}
+                {index !== ((props.displayKeywords.length < 25 ?  props.displayKeywords.length : 25) - 1) ? <span className={style["base"]}>, </span> : <></>}
               </span>
             ))
           }
@@ -49,12 +51,27 @@ function AppKeywordsPage(props) {
         :
         <></>
       }
+      <img onClick={()=> props.toggleDisplay(true)} className={style["info-button"]} alt='question' src={questIcon}/>
       <div className={style["graph-menu"]}>
         <AppContextMenu setcallback={props.setCallbackFunc}>
           <div className={style["menu-item"]} onClick={() => { props.toggleGraph(); props.callbackfunc(false); }}>{(props.showGraph) ? 'Show Words' : 'Show Timeline'}</div>
+          
         </AppContextMenu>
       </div>
     </div>
+    
+    <DialogBox 
+        show = {props.showDialog}
+        heading = {'Keywords'}
+        message = {props.displayKeywords.map((displayKeyword, index) => (
+              <span key={index} className={style["keyword"]} style={{ color: `${displayKeyword.color}` }} onClick={() => props.showKeywordContext(displayKeyword.transcript_id)}>
+                {displayKeyword.word}
+                {index !== (Object.keys(props.displayKeywords).length - 1) ? <span className={style["base"]}>, </span> : <></>}
+              </span>
+            ))}
+        closedialog = {()=> props.toggleDisplay(false)}
+     /> 
+     </>
   )
 }
 
