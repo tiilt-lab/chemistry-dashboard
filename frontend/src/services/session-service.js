@@ -48,6 +48,10 @@ class SessionService {
         return this.api.httpRequestCall(`api/v1/sessions/${sessionId}/devices/${sessionDeviceId}/transcripts`,'GET',{});
     }
 
+    getSessionDeviceTranscriptsForClient(sessionDeviceId, startTime = 0) {
+        return this.api.httpRequestCall(`api/v1/sessions/devices/${sessionDeviceId}/transcripts/client`,'GET',{});
+    }
+
     setDeviceButton(sessionDeviceId, pressed, key) {
         const body = {
         'id': sessionDeviceId,
