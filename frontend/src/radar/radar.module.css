@@ -1,0 +1,29 @@
+.radar-container {
+  min-height: 80px;
+  width: 100%;
+  overflow: auto;
+  position: absolute;
+  margin-top: 60px;
+  height: calc(100% - 60px);
+  display: grid;
+  grid-template-columns: auto;
+  grid-template-rows: 40px auto;
+  grid-template-areas:
+    "header"
+    "graph";
+}
+
+.radar-contain-a {
+  min-height: 80px;
+  width: 100%;
+}
+
+.radar-contain {
+  position: relative;
+}
+
+.radar-contain-b {
+  height: 180px;
+  width: 340px;
+  position: relative;
+}
