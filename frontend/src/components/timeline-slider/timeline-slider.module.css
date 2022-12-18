@@ -604,7 +604,7 @@
   height: 30px;
   top: 10px;
   left: 10px;
-  width: 280px;
+  /*width: 280px;*/
   border-radius: 5px;
   background-color: #CACACE;
 }

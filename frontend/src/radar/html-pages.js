@@ -1,16 +1,14 @@
-import { useD3 } from '../myhooks/custom-hooks';
+import { useD3, adjDim } from '../myhooks/custom-hooks';
 import React from 'react';
 import * as d3 from 'd3';
 import style from './radar.module.css';
 
 
 function RadarPage(props){
-   //not really sure abt what to make width/height/margin/radius in relation to viewport
-   
    //basic config
-   const width = 340;
-   const height = 200;
-   const margin = 10;
+   const width = adjDim(340);
+   const height = adjDim(200);
+   const margin = adjDim(10);
    const radius = (height-(margin*2)) / 2;
    
    const data = props.features;
