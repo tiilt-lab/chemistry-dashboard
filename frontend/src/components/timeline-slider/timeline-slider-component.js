@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import style from './timeline-slider.module.css'
+import style from './timeline-slider.module.css';
+import { adjDim } from '../../myhooks/custom-hooks';
 
 function AppTimelineSlider(props) {
   const [currentSliderId, setCurrentSliderId] = useState(null);
   const [curPos, setCurPos] = useState(0);
   const [sliderValues, setSliderValues] = useState([0.0, 1.0]);
-  const TIMELINE_WIDTH = 280;
-  const HANDLE_WIDTH = 20;
+  const TIMELINE_WIDTH = adjDim(280);
+  const HANDLE_WIDTH = adjDim(20);
 
 
   useEffect(() => {
@@ -22,7 +23,7 @@ function AppTimelineSlider(props) {
   // -----------
 
   const handlePos = (handleId) => {
-    return (sliderValues[handleId] * 280) + 'px';
+    return (sliderValues[handleId] * TIMELINE_WIDTH) + 'px';
   }
 
   const grabHandle = (handleId, e) => {
@@ -133,7 +134,8 @@ function AppTimelineSlider(props) {
 
   return (
     <div className={style.timeline}>
-      <div className={style["timeline-background"]}></div>
+      <div className={style["timeline-background"]}
+      style={{ width: adjDim(280) + 'px',}}></div>
       <div className={style["timeline-bar"]} onMouseDown={(event) => grabBar(event)} onTouchStart={(event) => grabBar(event)} style={{ left: barLeft(), width: barWidth() }}></div>
       <div className={style["timeline-handle"]} onMouseDown={(event) => grabHandle(0, event)} onTouchStart={(event) => grabHandle(0, event)} style={{ left: handlePos(0) }}></div>
       <div className={style["timeline-handle"]} onMouseDown={(event) => grabHandle(1, event)} onTouchStart={(event) => grabHandle(1, event)} style={{ left: handlePos(1) }}></div>

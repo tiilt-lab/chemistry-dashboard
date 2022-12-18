@@ -595,7 +595,7 @@
 
 .features-table {
   table-layout: fixed;
-  width: 343px;
+  /*width: 343px;*/
   border-spacing: 0px;
 }
 
@@ -616,16 +616,16 @@
 }
 
 .features-table .desc-header {
-  width: 186px;
+  /*width: 186px;*/
 }
 
 .features-table .score-header {
-  width: 59px;
-  padding-right: 24px;
+  /*width: 59px;*/
+  /*padding-right: 24px;*/
 }
 
 .features-table .graph-header {
-  width: 74px;
+  /*width: 74px;*/
 }
 
 .features-table th:first-child {
@@ -643,8 +643,8 @@
 }
 
 .features-table .score {
-  width: 59px;
-  padding-right: 24px;
+  /*width: 59px;*/
+  /*padding-right: 24px;*/
   text-align: right;
   font-size: 0px;
 }
@@ -653,7 +653,7 @@
   display: inline-block;
   font-family: 'SST', sans-serif;
   font-weight: 500;
-  font-size: 22px;
+  /*font-size: 22px;*/
   line-height: 32px;
   color: #2B2B2E;
   padding-right: 4px;
@@ -682,7 +682,7 @@
 
 .features-table .svg {
   display: block;
-  width: 74px;
+  /*width: 74px;*/
   height: 40px;
 }
 

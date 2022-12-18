@@ -3,14 +3,16 @@ import {DialogBox} from '../dialog/dialog-component'
 import style from './heat-map.module.css'
 import questIcon from "../assets/img/question.svg"
 import React from 'react'
+import { adjDim } from '../myhooks/custom-hooks';
 
 function HeatMapPage(props){
   //console.log(props, 'props heatmap')
   return(
       <>
-      <div className={style["heatmap-container"]} style={props.showTools ? {height:"190px"} : {height:"160px"}}>
-      <svg className={style.graph} height="112" width="112">
-        <radialGradient id="heatGradient" cx="56" cy="56" gradientUnits="userSpaceOnUse">
+      <div className={style["heatmap-container"]} style={{height: (props.showTools ? "190px" : "160px"), width: adjDim(340) + 'px',}}>
+      <svg className={style.graph} 
+      style={{ width: adjDim(112) + 'px', height: adjDim(112) + 'px', left: adjDim(114) + 'px',}}>
+        <radialGradient id="heatGradient" cx={adjDim(56) + ""} cy={adjDim(56) + ""} gradientUnits="userSpaceOnUse">
           <stop offset="17%" stopColor="#9ddaf4"/>
           <stop offset="17%" stopColor="#c1c7f0"/>
           <stop offset="29%" stopColor="#c1c7f0"/>
@@ -23,28 +25,28 @@ function HeatMapPage(props){
           <stop offset="84%" stopColor="#f47c69"/>
           <stop offset="100%" stopColor="#f47c69"/>
         </radialGradient>
-        <g transform="rotate(-90, 56, 56)">
+        <g transform={"rotate(-90, " + adjDim(56) + ", " + adjDim(56) + ")"}>
           <path d={props.clipPath} fill="url(#heatGradient)"/>
           <path d={props.segmentPath} fill="none" strokeWidth="1" stroke="rgb(222,222,222)"/>
         </g>
-        <circle cx="56" cy="56" r="56" stroke="#E8E9EB" strokeWidth="1" fillOpacity="0"/>
-        <circle cx="56" cy="56" r="52" stroke="#E8E9EB" strokeWidth="1" fillOpacity="0"/>
-        <circle cx="56" cy="56" r="47" stroke="#E8E9EB" strokeWidth="1" fillOpacity="0"/>
-        <circle cx="56" cy="56" r="40" stroke="#E8E9EB" strokeWidth="1" fillOpacity="0"/>
-        <circle cx="56" cy="56" r="29" stroke="#E8E9EB" strokeWidth="1" fillOpacity="0"/>
-        <circle cx="56" cy="56" r="16" stroke="#E8E9EB" strokeWidth="1" fillOpacity="0"/>
+        <circle cx={adjDim(56) + ""} cy={adjDim(56) + ""} r= {adjDim(56) + ""} stroke="#E8E9EB" strokeWidth="1" fillOpacity="0"/>
+        <circle cx={adjDim(56) + ""} cy={adjDim(56) + ""} r= {adjDim(52) + ""} stroke="#E8E9EB" strokeWidth="1" fillOpacity="0"/>
+        <circle cx={adjDim(56) + ""} cy={adjDim(56) + ""} r= {adjDim(47) + ""} stroke="#E8E9EB" strokeWidth="1" fillOpacity="0"/>
+        <circle cx={adjDim(56) + ""} cy={adjDim(56) + ""} r= {adjDim(40) + ""} stroke="#E8E9EB" strokeWidth="1" fillOpacity="0"/>
+        <circle cx={adjDim(56) + ""} cy={adjDim(56) + ""} r= {adjDim(29) + ""} stroke="#E8E9EB" strokeWidth="1" fillOpacity="0"/>
+        <circle cx={adjDim(56) + ""} cy={adjDim(56) + ""} r= {adjDim(16) + ""} stroke="#E8E9EB" strokeWidth="1" fillOpacity="0"/>
       </svg>
 
-      <div className={style["angle-text"]} style={{right:"156px", top:"0px"}}>front</div>
-      <div className={style["angle-text"]} style={{left:"234px", top:"70px"}}>right</div>
-      <div className={style["angle-text"]} style={{right:"157px", top:"136px"}}>back</div>
-      <div className={style["angle-text"]} style={{right:"237px", top:"71px"}}>left</div>
+      <div className={style["angle-text"]} style={{right: adjDim(156) + "px", top:"0px"}}>front</div>
+      <div className={style["angle-text"]} style={{left: adjDim(234) + "px", top:"70px"}}>right</div>
+      <div className={style["angle-text"]} style={{right: adjDim(157) + "px", top:"136px"}}>back</div>
+      <div className={style["angle-text"]} style={{right: adjDim(237) + "px", top:"71px"}}>left</div>
       {props.showTools ?
              <React.Fragment>
              <hr className={style["tool-hr"]}></hr>
              <div className={style["angle-text"]} style={{left:'0px', top:'160px'}}> Zones: {props.segments}</div>
-             <input className={`${style["segment-input"]} ${style["dc-slider"]}`} type="range" defaultValue={props.segments} min='2' max='24' onChange={(event)=> props.segmentChange(event)}  />
-             <div className={style["angle-text"]} style={{right:'0px', top:'160px'}}>Offset</div>
+             <input className={`${style["segment-input"]} ${style["dc-slider"]}`} style = {{width: adjDim(100) + 'px',}} type="range" defaultValue={props.segments} min='2' max='24' onChange={(event)=> props.segmentChange(event)}  />
+             <div className={style["angle-text"]} style={{right:'0px', top:'160px'}} style = {{width: adjDim(100) + 'px',}} >Offset</div>
              <input className={`${style["offset-input"]} ${style["dc-slider"]}`} type="range"  min='0' max='1' step='0.01' defaultValue={props.angleOffset} onChange={(event)=> props.offsetChange(event)} />
            </React.Fragment>
         :

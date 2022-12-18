@@ -579,7 +579,7 @@
 
 .keyword-container {
   min-height: 80px;
-  width: 320px;
+  /*width: 320px;*/
 }
 
 .keyword {

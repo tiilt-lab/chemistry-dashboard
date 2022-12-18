@@ -2,7 +2,8 @@ import { SessionService } from '../services/session-service';
 import { TranscriptModel } from '../models/transcript';
 import { sin, cos } from '../globals';
 import { useEffect, useState } from 'react';
-import {HeatMapPage} from './html-pages'
+import {HeatMapPage} from './html-pages';
+import { adjDim } from '../myhooks/custom-hooks';
 
 
 function  AppHeatMapComponent(props) {
@@ -86,9 +87,9 @@ function  AppHeatMapComponent(props) {
         if (vectors.length > 0) {
         for (let i = 0; i < samples.length; i++) {
             const strength = samples[i] * radius;
-            path += [(i === 0) ? 'M' : 'L', vectors[i][0] * strength + radius, vectors[i][1] * strength + radius,
-                    'A', strength, strength, 0, 0, 1,
-                    vectors[i + 1][0] * strength + radius, vectors[i + 1][1] * strength + radius].join(' ');
+            path += [(i === 0) ? 'M' : 'L', adjDim(vectors[i][0] * strength + radius), adjDim(vectors[i][1] * strength + radius),
+                    'A', adjDim(strength), adjDim(strength), 0, 0, 1,
+                    adjDim(vectors[i + 1][0] * strength + radius), adjDim(vectors[i + 1][1] * strength + radius)].join(' ');
         }
     }
         setClipPath(path);
@@ -96,10 +97,11 @@ function  AppHeatMapComponent(props) {
 
     const createSegmentLines = ()=> {
         let path = '';
+        let rad = radius;
         for (let i = 0; i < vectors.length; i++) {
             const vector = vectors[i];
-            path += ['M', vector[0] + radius, vector[1] + radius,
-                    'L', vector[0] * radius + radius, vector[1] * radius + radius].join(' ');
+            path += ['M', adjDim(vector[0] + rad), adjDim(vector[1] + rad),
+                    'L', adjDim(vector[0] * rad + rad), adjDim(vector[1] * rad + rad)].join(' ');
         }
         setSegmentPath(path);
     }
