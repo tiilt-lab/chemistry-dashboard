@@ -578,14 +578,15 @@
   cursor: pointer;
 }
 
-.overview-container-desktop {
-  width: 800px;
+
+.overview-container-small {
+  width: 100%;
   height: 100%;
   overflow: auto;
-  column-count: 2;
 }
 
-.overview-container-mobile {
+.overview-container-large {
+
   width: 400px;
   height: 100%;
   overflow: auto;

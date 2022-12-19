@@ -1,12 +1,13 @@
 import { AppContextMenu } from '../components/context-menu/context-menu-component';
 import { DialogBox,GenericDialogBox } from '../dialog/dialog-component';
 import { Appheader } from '../header/header-component';
-import {AppFolderSelectComponent} from '../components/folder-select/folder-select-component'
-import style from  './sessions.module.css'
-import style2 from '../components/context-menu/context-menu.module.css'
-import breadcrumbIcon from '../assets/img/icon-back.svg'
-import folderIcon from "../assets/img/folder.svg"
-import micIcon from '../assets/img/mic.svg'
+import {AppFolderSelectComponent} from '../components/folder-select/folder-select-component';
+import style from  './sessions.module.css';
+import style2 from '../components/context-menu/context-menu.module.css';
+import breadcrumbIcon from '../assets/img/icon-back.svg';
+import folderIcon from "../assets/img/folder.svg";
+import micIcon from '../assets/img/mic.svg';
+import { adjDim } from '../myhooks/custom-hooks';
 
 function DiscussionSessionPage(props) {
   //console.log(props.breadcrumbs, 'breadcrumbs..')
@@ -20,7 +21,7 @@ function DiscussionSessionPage(props) {
         rightEnabled={false}
         nav={props.navigateToHomescreen} />
 
-      <div className={style["list-container"]}>
+      <div className={style["list-container"]} style = {{"max-width": adjDim(375) + 'px',}}>
         {props.isLoading ? <div className={style["load-text"]}>Loading...</div> : <></>}
         {(!props.isLoading && props.sessions.length === 0 && props.folders.length === 0)
           ?
@@ -39,10 +40,10 @@ function DiscussionSessionPage(props) {
             : <></>}
           {props.folders.length > 0 ?
             <>
-              <span onClick={props.goBackToPrevious} className={style["crumb-name"]} > Home</span >
+              <span onClick={props.goBackToPrevious} className={style["crumb-name"]} style = {{"max-width": adjDim(240) + 'px',}} > Home</span >
               {props.breadcrumbs.length > 1 ? <span className={style.breadcrumbs} > / . . . / </span > : <></>}
               {props.breadcrumbs.length === 1 ? <span className={style["breadcrumbs"]} > / </span > : <></>}
-              {props.breadcrumbs.length > 0 ? <div className={style["crumb-name"]} > {props.breadcrumbs[props.breadcrumbs.length - 1].name}</div > : <></>}
+              {props.breadcrumbs.length > 0 ? <div className={style["crumb-name"]} style = {{"max-width": adjDim(240) + 'px',}} > {props.breadcrumbs[props.breadcrumbs.length - 1].name}</div > : <></>}
             </ >
             :
             <></>
@@ -76,10 +77,10 @@ function DiscussionSessionPage(props) {
               <ul className={style.list}>
                 {props.displayedSessions.map((session,index) => (
                   <li key={index} className={style["session-item"]}>
-                    <svg x="0" y="0" width="24" height="24" viewBox="0 0 20 30" className={session.recording ? style['active-sesion'] : style["session-icon"] } >
+                    <svg x="0" y="0" width={adjDim(24) + ""} height={adjDim(24) + ""} viewBox="0 0 20 30" className={session.recording ? style['active-sesion'] : style["session-icon"] } >
                       <use xlinkHref={`${micIcon}#5`}></use>
                     </svg>
-                    <div className={style["click-mask"]} onClick={() => { props.goToSession(session) }} ></div >
+                    <div className={style["click-mask"]} style = {{width: adjDim(310) + 'px',}} onClick={() => { props.goToSession(session) }} ></div >
                     <div className={style["session-title"]}>{session.title}</div>
                     <div className={style["session-date"]}>{session.formattedDate}</div>
                     <div className={style["session-options"]}>
@@ -114,13 +115,13 @@ function DiscussionSessionPage(props) {
             <></>
         }
       </div>
-      <button className={`${style["basic-button"]} ${style["medium-button"]}`} onClick={() => props.openFolderDialog("NewFolder")}>New Folder</button>
-      <button className={`${style["basic-button"]} ${style["medium-button"]}`} onClick={props.newRecording}>New Discussion</button>
+      <button className={`${style["basic-button"]} ${style["medium-button"]}`} onClick={() => props.openFolderDialog("NewFolder")}  style = {{width: adjDim(374) + 'px',}}>New Folder</button>
+      <button className={`${style["basic-button"]} ${style["medium-button"]}`} onClick={props.newRecording} style = {{width: adjDim(374) + 'px',}}>New Discussion</button>
     </div>
   
 <GenericDialogBox show ={props.currentForm !== ""} >
   {(props.currentForm === "RenameSession") ?
-  <div  className={style["dialog-window"]} >
+  <div  className={style["dialog-window"]} style = {{"min-width": adjDim(270) + 'px',}}>
     <div className={style["dialog-heading"]}>Update Discussion Name:</div>
     <input id='txtName' value= {props.selectedSession.title} className={style["field-input"]} maxLength = "64" />
   <button className={style["basic-button"]} onClick={() => props.changeSessionName(document.getElementById('txtName').value)} > Confirm</button >
@@ -131,7 +132,7 @@ function DiscussionSessionPage(props) {
   }
 
   {(props.currentForm === "RenameFolder")?
-  <div className={style["dialog-window"]} >
+  <div className={style["dialog-window"]} style = {{"min-width": adjDim(270) + 'px',}} >
     <div className={style["dialog-heading"]}>Update Folder Name:</div>
     <input id='txtName' defaultValue = {props.selectedFolder.name} className={style["field-input"]} maxLength = "64" />
   <button className={style["basic-button"]} onClick={() => {props.changeFolderName(document.getElementById('txtName').value)}} > Confirm</button >
@@ -142,7 +143,7 @@ function DiscussionSessionPage(props) {
 }
 
  {(props.currentForm === "DeleteSession")?
-  <div className={style["dialog-window"]} >
+  <div className={style["dialog-window"]} style = {{"min-width": adjDim(270) + 'px',}} >
     <div className={style["dialog-heading"]}>Delete Session</div>
     <div className={style["dialog-body"]}>Are you sure you want to permanently delete this session?</div>
     <button className={style["delete-button"]} onClick={props.deleteSession} > Delete</button >
@@ -153,7 +154,7 @@ function DiscussionSessionPage(props) {
 }
 
   {(props.currentForm === "DeleteFolder")?
-  <div className={style["dialog-window"]} >
+  <div className={style["dialog-window"]} style = {{"min-width": adjDim(270) + 'px',}} >
     <div className={style["dialog-heading"]}> Delete Folder</div>
     <div className={style["dialog-body"]}> Are you sure you want to permanently delete this folder and all of its contents?</div>
     <button className={style["delete-button"]} onClick={props.deleteFolder} > Delete</button >
@@ -164,7 +165,7 @@ function DiscussionSessionPage(props) {
   }
 
   {(props.currentForm === "NewFolder")?
-  <div className={style["dialog-window"]} >"
+  <div className={style["dialog-window"]} style = {{"min-width": adjDim(270) + 'px',}} >"
     <div className={style["dialog-heading"]}> Add New Folder</div>
     <input placeholder="Enter new file name" id='txtName' className={style["field-input"]} maxLength = "64" />
   { (!props.breadcrumbs.length > 0) ? <div className={style["basic-button"]} onClick={() => props.addFolder(document.getElementById('txtName').value, null)} > Confirm</div >
@@ -178,7 +179,7 @@ function DiscussionSessionPage(props) {
   }
 
   {(props.currentForm === "MoveFolder") ?
-  <div className={style["dialog-window"]} >
+  <div className={style["dialog-window"]} style = {{"min-width": adjDim(270) + 'px',}} >
     <div className={style["dialog-heading"]}>Move Folder</div>
     <AppFolderSelectComponent
         selectableFolders = {props.selectableFolders}
@@ -194,7 +195,7 @@ function DiscussionSessionPage(props) {
   }
 
   {(props.currentForm === "MoveSession") ?
-  <div className={style["dialog-window"]} >
+  <div className={style["dialog-window"]} style = {{"min-width": adjDim(270) + 'px',}} >
     <div className={style["dialog-heading"]}>Move Discussion</div>
     <AppFolderSelectComponent
       selectableFolders = {props.selectableFolders}
@@ -209,7 +210,7 @@ function DiscussionSessionPage(props) {
   <></>}
 
   {(props.currentForm === "Loading")?
-  <div className={style["dialog-window"]} >
+  <div className={style["dialog-window"]} style = {{"min-width": adjDim(270) + 'px',}} >
     <div className={style["dialog-heading"]}>Loading...please wait...</div>
   </div >
   :

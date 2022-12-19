@@ -578,9 +578,9 @@
 }
 
 .timeline-container {
-  height: 104px;
   display: -webkit-box;
   display: -ms-flexbox;
+  height: 104px;
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
@@ -594,9 +594,9 @@
 .legend {
   display: -webkit-box;
   display: -ms-flexbox;
-  display: flex;
   min-height: 28px;
   max-height: 28px;
+  display: flex;
   width: 100%;
   -webkit-box-align: start;
       -ms-flex-align: start;
@@ -658,10 +658,10 @@
 .timeline {
   display: -webkit-box;
   display: -ms-flexbox;
-  display: flex;
   min-height: 32px;
-  width: 100%;
   margin-top: 16px;
+  display: flex;
+  width: 100%;
   background-color: #FCFDFF;
   -ms-flex-item-align: start;
       align-self: flex-start;

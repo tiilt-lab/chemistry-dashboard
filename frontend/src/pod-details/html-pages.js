@@ -9,6 +9,7 @@ import { AppSpinner } from '../spinner/spinner-component'
 import { AppSessionToolbar } from '../session-toolbar/session-toolbar-component'
 import { AppKeywordsComponent } from '../keywords/keywords-component'
 import { Appheader } from '../header/header-component'
+import { isLargeScreen } from '../myhooks/custom-hooks';
 import style from './pod.module.css'
 import React from 'react'
 import {isMobile} from 'react-device-detect'
@@ -26,7 +27,7 @@ function PodComponentPages(props) {
                     nav={props.navigateToSession}
                 />
 
-                <div className={style[isMobile ? "overview-container-mobile" : "overview-container-desktop"]}>
+                <div className={isLargeScreen() ? style["overview-container-large"] : style["overview-container-small"]}>
                     <br />
                     <AppSectionBoxComponent heading={"Timeline control:"} >
                         <AppTimelineSlider id='timeSlider' inputChanged={props.setRange} />

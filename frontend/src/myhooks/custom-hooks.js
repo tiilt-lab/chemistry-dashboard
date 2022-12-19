@@ -26,6 +26,12 @@ const useD3 = (renderChartFn, dependencies) => {
     return ref;
 }
 
+const isLargeScreen = () => {
+    return window.innerWidth >= 400;
+}
 
+const adjDim = (n) => {
+    return isLargeScreen() ? n : (window.innerWidth * n / 400);
+}
 
-export {useLogin, useD3}
+export {useLogin, useD3, isLargeScreen, adjDim}

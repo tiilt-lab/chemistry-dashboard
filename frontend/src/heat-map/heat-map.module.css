@@ -578,14 +578,14 @@
 }
 
 .heatmap-container {
-  width: 340px;
+  /*width: 340px;*/
   position: relative;
 }
 
 .graph {
   position: absolute;
   top: 23px;
-  left: 114px;
+  /*left: 114px*/;
 }
 
 .angle-text {
@@ -607,14 +607,14 @@
   position: absolute;
   left: 0px;
   top: 185px;
-  width: 100px;
+  /*width: 100px;*/
 }
 
 .offset-input {
   position: absolute;
   right: 0px;
   top: 185px;
-  width: 100px;
+  /*width: 100px;*/
 }
 
 .tool-hr {
