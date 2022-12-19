@@ -1,5 +1,5 @@
 .medium-button {
-  width: 374px !important;
+  /*width: 374px !important;*/
   margin: 20px 0px !important;
 }
 
@@ -327,7 +327,7 @@
 
 
 .list-container {
-  max-width: 375px;
+  /*max-width: 375px;*/
   width: 100vh;
   height: 100vh;
   overflow: auto;
@@ -526,7 +526,7 @@
 .breadcrumb-container .crumb-name {
   color: #7878FA;
   text-overflow: ellipsis;
-  max-width: 240px;
+  /*max-width: 240px;*/
   white-space: nowrap;
   display: inline-block;
   height: 18px;
@@ -583,12 +583,12 @@
   top: 0px;
   left: 0px;
   height: 100%;
-  width: 310px;
+  /*width: 310px;*/
   cursor: pointer;
 }
 
 .dialog-window {
-  min-width: 270px;
+  /*min-width: 270px;*/
 }
 
 .basic-button {

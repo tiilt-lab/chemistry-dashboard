@@ -1,6 +1,7 @@
 import style from './timeline.module.css'
 import { formatSeconds } from '../globals';
 import { useEffect, useState } from 'react';
+import { adjDim } from '../myhooks/custom-hooks';
 
 
 function AppTimeline(props) {
@@ -54,9 +55,9 @@ function AppTimeline(props) {
             const pct_length = transcript.length / duration;
             const displayTranscript = {};
             displayTranscript['transcript'] = transcript;
-            displayTranscript['left'] = pct_start * TIMELINE_WIDTH + TIMELINE_LEFT;
-            displayTranscript['width'] = Math.min(Math.max(pct_length * TIMELINE_WIDTH,
-                MIN_UTTERANCE_WIDTH), TIMELINE_WIDTH * (1 - pct_start));
+            displayTranscript['left'] = adjDim(pct_start * TIMELINE_WIDTH + TIMELINE_LEFT);
+            displayTranscript['width'] = adjDim(Math.min(Math.max(pct_length * TIMELINE_WIDTH,
+                MIN_UTTERANCE_WIDTH), TIMELINE_WIDTH * (1 - pct_start)));
                 temptranscript.push(displayTranscript);
         }
     }
