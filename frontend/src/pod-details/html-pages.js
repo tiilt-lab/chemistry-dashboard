@@ -12,6 +12,7 @@ import { Appheader } from '../header/header-component'
 import { isLargeScreen } from '../myhooks/custom-hooks';
 import style from './pod.module.css'
 import React from 'react'
+import {isMobile} from 'react-device-detect'
 
 function PodComponentPages(props) {
     return (
@@ -41,11 +42,8 @@ function PodComponentPages(props) {
                             end={props.endTime}
                         />
                     </AppSectionBoxComponent>
-
-                    <AppSectionBoxComponent heading={"Discussion direction:"}>
-                        <AppHeatMapComponent session={props.session} transcripts={props.displayTranscripts} />
-                    </AppSectionBoxComponent>
-
+                    
+                    
                     <AppSectionBoxComponent heading={"Keyword detection:"}>
                         <AppKeywordsComponent
                             session={props.session}
@@ -138,4 +136,3 @@ function PodComponentPages(props) {
     )
 }
 export { PodComponentPages }
-
