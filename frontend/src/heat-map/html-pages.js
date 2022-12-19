@@ -6,7 +6,6 @@ import React from 'react'
 import { adjDim } from '../myhooks/custom-hooks';
 
 function HeatMapPage(props){
-  //console.log(props, 'props heatmap')
   return(
       <>
       <div className={style["heatmap-container"]} style={{height: (props.showTools ? "190px" : "160px"), width: adjDim(340) + 'px',}}>

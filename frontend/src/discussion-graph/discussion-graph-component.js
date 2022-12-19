@@ -25,8 +25,11 @@ function DiscussionGraphComponent() {
   const [timestamps, setTimestamps] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState();
   const [selectedPercent, setSelectedPercent] = useState();
+  const [reload,setReload] = useState();
   const [activeSessionService, setActiveSessionService] = useOutletContext();
   const navigate = useNavigate()
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [trigger, setTrigger] = useState(0)
 
   useEffect(() => {
     const deviceSub = activeSessionService.getSessionDevices()
@@ -36,42 +39,62 @@ function DiscussionGraphComponent() {
         sd['visible'] = true;
         sd['transcripts'] = [];
       });
-      updateGraph();
-    };
-
-    const sessionTranscripts = activeSessionService.getTranscripts()
-    if (sessionTranscripts !== undefined) {
-      setTranscripts(sessionTranscripts);
-      updateGraph();
+      
     };
 
     const sessionModel = activeSessionService.getSession();
     if (sessionModel !== undefined) {
       setSession(sessionModel);
     };
-    // subscriptions.push(deviceSub, sessionTranscripts, sessionModel);
 
-    // return () => {
-    //   subscriptions.map(sub => sub.unsubscribe());
-    // }
+    if (transcripts.length <= 0) {
+      const transcriptSub = activeSessionService.getTranscripts()
+      
+       transcriptSub.subscribe(e => {
+           if (Object.keys(e).length !== 0) {
+               setTranscripts(e)
+               setReload(true);
+           }
+       })
+       subscriptions.push(transcriptSub);
+   }
+
+    
+    return () => {
+      subscriptions.map(sub => {
+          if (sub.closed) {
+              sub.unsubscribe()
+          }
+      });
+  }
   }, [])
+  useEffect(()=>{
+    if(reload){
+      updateGraph();
+    }
+  },[reload])
 
+  useEffect(()=>{
+    if(trigger > 0){
+      console.log('reloaded page')
+    }
+  },[trigger])
 
-  const openForms = (form, data = null) => {
+  const openForms = (form, device = null) => {
     setCurrentForm(form);
-    if (currentForm === "stats") {
-      setSelectedDevice(data);
+    if (form === "stats") {
+      setSelectedDevice(device);
       let totalTime = 0;
-      const contributionsArray = transcripts.filter(transcript => transcript.session_device_id === selectedDevice.id);
+      const contributionsArray = transcripts.filter(transcript => transcript.session_device_id === device.id);
       setContributions(contributionsArray.length);
       for (let i = 0; i < contributionsArray.length; i++) {
         const transcript = contributionsArray[i];
         totalTime += transcript.length;
       }
       setSpeakingTime(totalTime);
-      setDisplayQuestions(parseQuestions(selectedDevice));
-    } else if (currentForm === "keywords") {
-      setDisplayKeywords(data);
+      setDisplayQuestions(parseQuestions(device));
+    } else if (form === "keywords") {
+      setDisplayKeywords(device);
     }
   }
 
@@ -83,19 +106,21 @@ function DiscussionGraphComponent() {
 
   const updateGraph = () => {
     if (transcripts.length > 0 && sessionDevices.length > 0) {
-      setDisplayDevices([]);
+      let displayDev = [];
       for (const device of sessionDevices) {
         if (device['visible']) {
-          displayDevices.push(device); // This will not work if user has deactivated some devices!!
+          displayDev.push(device); // This will not work if user has deactivated some devices!!
         }
       }
       for (const transcript of transcripts) {
-        const matchingDevice = displayDevices.find(d => d.id === transcript.session_device_id);
+        const matchingDevice = displayDev.find(d => d.id === transcript.session_device_id);
         if (matchingDevice != null) {
           matchingDevice['transcripts'].push(createDisplayTranscript(transcript));
         }
       }
+      setDisplayDevices(displayDev);
       generateTimestamps();
+      
     }
   }
 
@@ -104,13 +129,14 @@ function DiscussionGraphComponent() {
   }
 
   const generateTimestamps = () => {
-    setTimestamps(['00:00']);
+    const timesta = ['00:00'];
     const lastTranscript = transcripts[transcripts.length - 1];
     const totalSeconds = (lastTranscript.start_time + lastTranscript.length);
     const stepSize = 5;
     for (let i = stepSize; i < totalSeconds; i += stepSize) {
-      timestamps.push(formatSeconds(i));
+      timesta.push(formatSeconds(i));
     }
+    setTimestamps(timesta)
   }
 
   const parseQuestions = (session_device) => {
@@ -221,12 +247,12 @@ function DiscussionGraphComponent() {
   }
 
   const setPiePieceProperties = (device) => {
-    const slice = { percent: this.getSpeakingPercent(device) };
+    const slice = { percent: getSpeakingPercent(device) };
     const [startX, startY] = getCoordinatesForPercent(cumulativePercent);
-    this.cumulativePercent += slice.percent;
-    const [endX, endY] = getCoordinatesForPercent(cumulativePercent);
+    const cummulative = cumulativePercent + slice.percent;
+    const [endX, endY] = getCoordinatesForPercent(cummulative);
     const largeArcFlag = slice.percent > .5 ? 1 : 0;
-
+    setCumulativePercent(cummulative)
     const pathData = [
       `M ${startX} ${startY}`,
       `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
@@ -244,8 +270,9 @@ function DiscussionGraphComponent() {
   const highlightQuestions = (transcript) => {
     transcript['highlight'] = !transcript['highlight'];
     const foundTranscript = transcripts.find(t => t.id === transcript.transcript_id);
-    const newTranscript = this.createDisplayTranscript(foundTranscript, transcript['highlight']);
+    const newTranscript = createDisplayTranscript(foundTranscript, transcript['highlight']);
     Object.assign(transcript, newTranscript);
+    setTrigger(trigger+1)
   }
 
   return (
