@@ -12,7 +12,7 @@ import { Appheader } from '../header/header-component'
 import { isLargeScreen } from '../myhooks/custom-hooks';
 import style from './pod.module.css'
 import React from 'react'
-import {isMobile} from 'react-device-detect'
+//import {isMobile} from 'react-device-detect'
 
 function PodComponentPages(props) {
     return (
