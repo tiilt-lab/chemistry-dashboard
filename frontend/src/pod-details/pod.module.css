@@ -586,11 +586,9 @@
 }
 
 .overview-container-large {
-
   width: 400px;
   height: 100%;
   overflow: auto;
-  column-count: 1;
 }
 
 .time-button-container {
