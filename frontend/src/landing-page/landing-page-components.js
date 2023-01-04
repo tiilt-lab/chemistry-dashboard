@@ -2,6 +2,7 @@ import {useNavigate} from 'react-router-dom'
 import './landing-page-css.css';
 import {Instruction} from '../utilities/utility-components'
 import { updateTime } from '../utilities/helper-functions';
+import { isLargeScreen } from '../myhooks/custom-hooks';
 
 
 const timeOfDay = updateTime();
@@ -27,14 +28,14 @@ const navigate = useNavigate();
   return (
   <div className="container">
   <IntroBox/>
-  <button className="basic-button medium-button"
+  <button className={isLargeScreen() ? "basic-button medium-button" : "basic-button small-button"} 
    onClick={()=> navigate('/login')}
   >
   Sign In
   </button>
 
   <button 
-  className="basic-button medium-button" 
+  className={isLargeScreen() ? "basic-button medium-button" : "basic-button small-button"}  
     onClick = {()=> navigate('/join')} 
   > 
   Join Discussion

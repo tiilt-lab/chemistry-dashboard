@@ -10,6 +10,7 @@ import { AppSpinner } from '../spinner/spinner-component'
 import { AppSessionToolbar } from '../session-toolbar/session-toolbar-component'
 import { AppKeywordsComponent } from '../keywords/keywords-component'
 import { TranscriptsComponentClient } from '../transcripts/transcripts-component_client';
+import { adjDim, isLargeScreen } from '../myhooks/custom-hooks';
 
 import style from './byod-join.module.css';
 import style2 from '../pod-details/pod.module.css'
@@ -47,15 +48,16 @@ function ByodJoinPage(props) {
                     nav={() => props.navigateToLogin()} />
                 {!props.connected ?
                     <React.Fragment>
-                        <div className={style.instruction}>Please type your name and passcode to join a discussion.</div>
-                        <div className={style.instruction}>If rejoining a discussion, type the same name you used previously.</div>
-                        <input className={style["text-input"]} id="name" placeholder="Name" />
-                        <input className={style["text-input"]} id="passcode" value={props.pcode} placeholder="Passcode (4 characters)" maxLength="4" onInput={(event) => props.changeTouppercase(event)} />
-                        <select id="joinwith" className={style["dropdown-input"]}>
+                        <div className={style.instruction} style={{width: adjDim(343) + 'px',}}>Please type your name and passcode to join a discussion.</div>
+                        <div className={style.instruction} style={{width: adjDim(343) + 'px',}}>If rejoining a discussion, type the same name you used previously.</div>
+                        <input className={style["text-input"]}  style={{width: adjDim(330) + 'px',}} id="name" placeholder="Name" />
+                        <input className={style["text-input"]}  style={{width: adjDim(330) + 'px',}} id="passcode" value={props.pcode} placeholder="Passcode (4 characters)" maxLength="4" onInput={(event) => props.changeTouppercase(event)} />
+                        <select id="joinwith" className={style["dropdown-input"]}  style={{width: adjDim(350) + 'px',}}>
                             <option value="Audio">Audio</option>
                             <option value="Video">Video</option>
                         </select>
-                        <button className={`${style["basic-button"]} ${style["medium-button"]}`} onClick={() => props.verifyInputAndAudio(document.getElementById("name").value.trim(), document.getElementById("passcode").value.trim(), document.getElementById("joinwith").value.trim())}>Join Discussion</button>
+                        <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} 
+                        onClick={() => props.verifyInputAndAudio(document.getElementById("name").value.trim(), document.getElementById("passcode").value.trim(), document.getElementById("joinwith").value.trim())}>Join Discussion</button>
                     </React.Fragment>
                     :
                     <></>

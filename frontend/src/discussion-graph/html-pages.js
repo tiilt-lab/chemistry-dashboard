@@ -5,7 +5,7 @@ import { Appheader } from '../header/header-component'
 import React from 'react'
 
 function DiscussionPage(props){
-  // console.log(props)
+  //console.log(props.displayDevices);
   return(
   <>
     <div>
@@ -14,7 +14,7 @@ function DiscussionPage(props){
         leftText={false}
         rightText={"Options"}
         rightEnabled={true}
-        rightTextClick={()=>{props.openForms("devices")}}
+        rightTextClick={()=>{props.openForms("checkbox", props.selectedDevice)}}
         nav={props.navigateToSession} 
         headerclass={"discussion-graph-header"}
       />
@@ -67,7 +67,7 @@ function DiscussionPage(props){
   </div>
 </div>
 
- <GenericDialogBox show = {props.currentForm !== ""}>
+ <GenericDialogBox show = {props.currentForm !== ""} checkBox = {props.currentForm} displayDevices = {props.displayDevices} changeCheck = {props.changeCheck} setDisplayDevices = {props.setDisplayDevices}>
    {/* Keyword dialog */}
    {(props.currentForm === "keywords") ?
      <div>
@@ -157,6 +157,7 @@ function DiscussionPage(props){
             <></>
           }
         </div>
+        
       :
         <></>
     }     

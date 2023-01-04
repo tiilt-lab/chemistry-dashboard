@@ -1,11 +1,12 @@
 import style from './file-upload.module.css'
 import { Appheader } from '../header/header-component'
+import { isLargeScreen } from '../myhooks/custom-hooks';
 
 function FileUploadPage(props) {
   return (
     <div className={style.container}>
       <Appheader
-        title={"Upload Files'"}
+        title={"Upload Files"}
         leftText={false}
         rightText={""}
         rightEnabled={false}
@@ -24,7 +25,7 @@ function FileUploadPage(props) {
         </div>
       </form>
       <div>
-        <button className={`${style["basic-button"]} ${style["medium-button"]}`} onClick={props.createTopicModel}>
+        <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.createTopicModel}>
           Create Topic Model
         </button>
       </div>
