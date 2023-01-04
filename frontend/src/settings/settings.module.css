@@ -683,7 +683,7 @@
   -webkit-box-pack: start;
       -ms-flex-pack: start;
           justify-content: flex-start;
-  width: 300px;
+  /*width: 300px;*/
   height: 40px;
   -webkit-box-align: center;
       -ms-flex-align: center;

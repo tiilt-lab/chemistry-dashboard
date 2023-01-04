@@ -2,6 +2,7 @@ import style from './settings.module.css'
 import { Appheader } from '../header/header-component'
 import { GenericDialogBox } from '../dialog/dialog-component'
 import React from 'react'
+import { adjDim } from '../myhooks/custom-hooks';
 
 
 function SettingComponentPage(props) {
@@ -17,17 +18,17 @@ function SettingComponentPage(props) {
         />
 
         <div className={style["section-header"]}>Account Settings</div>
-        <div className={style["option-button"]} onClick={() => props.openDialog("ChangePassword")}>Change Password</div>
+        <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("ChangePassword")}>Change Password</div>
         {(props.user.isAdmin || props.user.isSuper) ?
           <React.Fragment>
             <div className={style["section-header"]}>Manage Accounts</div>
-            <div className={style["option-button"]} onClick={() => props.openDialog("ViewUsers", true)}>View Users</div>
-            <div className={style["option-button"]} onClick={() => props.openDialog("AddUser")}>Add User</div>
-            <div className={style["option-button"]} onClick={() => props.openDialog("DeleteUser", true)}>Delete User</div>
-            <div className={style["option-button"]} onClick={() => props.openDialog("UserRole", true)}>Change User Role</div>
-            <div className={style["option-button"]} onClick={() => props.openDialog("LockUser", true)}>Lock User</div>
-            <div className={style["option-button"]} onClick={() => props.openDialog("UnlockUser", true)}>Unlock User</div>
-            <div className={style["option-button"]} onClick={() => props.openDialog("ResetUser", true)}>Reset User Password</div>
+            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("ViewUsers", true)}>View Users</div>
+            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("AddUser")}>Add User</div>
+            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("DeleteUser", true)}>Delete User</div>
+            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("UserRole", true)}>Change User Role</div>
+            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("LockUser", true)}>Lock User</div>
+            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("UnlockUser", true)}>Unlock User</div>
+            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("ResetUser", true)}>Reset User Password</div>
           </React.Fragment>
           :
           <></>
@@ -36,12 +37,12 @@ function SettingComponentPage(props) {
         {(props.user.isSuper) ?
           <React.Fragment>
             <div className={style["section-header"]}>Manage Server</div>
-            <div className={style["option-button"]} onClick={() => props.openDialog("ServerLogs")}>Download Server Logs</div>
-            <div className={style["option-button"]} onClick={() => props.openDialog("DeviceLogs", false, true)}>Download Device Logs</div>
-            <div className={style["option-button"]} onClick={() => props.openDialog("DeleteServerLogs")}>Clear Server Logs</div>
-            <div className={style["option-button"]} onClick={() => props.openDialog("DeleteDeviceLogs", false, true)}>Clear Device Logs</div>
-            <div className={style["option-button"]} onClick={() => props.openDialog("AllowAPI", true)}>Allow API Access</div>
-            <div className={style["option-button"]} onClick={() => props.openDialog("RevokeAPI", true)}>Revoke API Access</div>
+            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("ServerLogs")}>Download Server Logs</div>
+            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("DeviceLogs", false, true)}>Download Device Logs</div>
+            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("DeleteServerLogs")}>Clear Server Logs</div>
+            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("DeleteDeviceLogs", false, true)}>Clear Device Logs</div>
+            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("AllowAPI", true)}>Allow API Access</div>
+            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("RevokeAPI", true)}>Revoke API Access</div>
           </React.Fragment>
           :
           <></>

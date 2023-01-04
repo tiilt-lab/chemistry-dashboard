@@ -118,6 +118,15 @@ function DiscussionGraphComponent() {
           matchingDevice['transcripts'].push(createDisplayTranscript(transcript));
         }
       }
+      /*let minWidth = 300;
+      if ((window.innerWidth / displayDev.length) < minWidth) {
+        //figure out the dropdown part now
+        displayDev = displayDev.slice(0, 1);
+        //displayDev = displayDev.slice(0, Math.floor(window.innerWidth / minWidth));
+      }*/
+      for (const device of displayDev) {
+        device.checked = true;
+      }
       setDisplayDevices(displayDev);
       generateTimestamps();
       
@@ -274,6 +283,13 @@ function DiscussionGraphComponent() {
     Object.assign(transcript, newTranscript);
     setTrigger(trigger+1)
   }
+  
+  const changeCheck = (arr, index) => {
+    console.log(index);
+    let newarr = arr;
+    newarr[index].checked = !newarr[index].checked;
+    return newarr;
+  }
 
   return (
     <DiscussionPage
@@ -284,6 +300,8 @@ function DiscussionGraphComponent() {
       highlightQuestions={highlightQuestions}
       currentForm={currentForm}
       displayKeywords={displayKeywords}
+      setDisplayDevices = {setDisplayDevices}
+      changeCheck = {changeCheck}
       toggleGraph={toggleGraph}
       selectedDevice={selectedDevice}
       showGraph={showGraph}

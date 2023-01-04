@@ -1,6 +1,11 @@
 .medium-button {
-  width: 374px !important;
   margin: 20px 0px !important;
+  width: 374px !important;
+}
+
+.small-button {
+  margin: 20px 0px !important;
+  width: 100% !important;
 }
 
 .basic-button {
@@ -609,7 +614,7 @@
   font-size: 12px;
   line-height: 20px;
   color: #727278;
-  width: 343px;
+  /*width: 343px;*/
 }
 
 .medium-button {

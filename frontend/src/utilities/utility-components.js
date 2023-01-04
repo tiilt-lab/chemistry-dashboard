@@ -1,7 +1,8 @@
+import { adjDim } from '../myhooks/custom-hooks';
 
 function Instruction(props){
     return(
-    <div className="instruction">
+    <div className="instruction" style = {{width: adjDim(343) + 'px',}}>
       {props.instructions}
       </div>
     )
