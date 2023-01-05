@@ -68,6 +68,7 @@ function DiscussionGraphComponent() {
       });
   }
   }, [])
+
   useEffect(()=>{
     if(reload){
       updateGraph();
@@ -127,6 +128,7 @@ function DiscussionGraphComponent() {
       for (const device of displayDev) {
         device.checked = true;
       }
+      
       setDisplayDevices(displayDev);
       generateTimestamps();
       
@@ -285,10 +287,10 @@ function DiscussionGraphComponent() {
   }
   
   const changeCheck = (arr, index) => {
-    console.log(index);
     let newarr = arr;
     newarr[index].checked = !newarr[index].checked;
-    return newarr;
+    setDisplayDevices(newarr);
+    setTrigger(trigger+1)
   }
 
   return (
