@@ -59,7 +59,7 @@ function WaitingDialog(props) {
 }
 
 function GenericDialogBox(props) {
-  console.log(props);
+  
   if (!props.show) {
     return (
       <></>
@@ -71,7 +71,7 @@ function GenericDialogBox(props) {
           <div className={style["dialog-container-expanded"]}>
             {props.displayDevices.map((device, index) => (
               <label className={style["dc-checkbox"]}>{device.name}
-                  <input type="checkbox" checked={device.checked} value={device.checked}  onChange={(props.setDisplayDevices(props.changeCheck(props.displayDevices, index)))} />
+                  <input type="checkbox" checked={device.checked} value={device.checked} onChange={() => props.changeCheck(props.displayDevices, index)}  />
                   <span className={style.checkmark}></span>
               </label>))}
             {props.children} 
