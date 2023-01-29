@@ -7,7 +7,7 @@ import { AppSessionPage } from './html-pages'
 function AppSessionToolbar(props) {
     // @Input('session') session: SessionModel;
     // @Output() closingSession = new EventEmitter<boolean>();
-
+    
     const [timeText, setTimeText] = useState('');
     const [sessionEnding, setSessionEnding] = useState();
     const [intervalId, setInterValid] = useState();
@@ -17,23 +17,21 @@ function AppSessionToolbar(props) {
 
 
     useEffect(() => {
+        console.log(props.session.length,'session length')
         const intvalId = setInterval(() => {
             updateTime();
-            if (!props.session.recording) {
-                clearInterval(intervalId);
-            }
         }, 1000);
         setInterValid(intvalId)
         updateTime();
-
         //destroy function
         return () => {
-            clearInterval(intervalId);
+            clearInterval(intvalId);
         }
     }, [props.session])
 
 
     const updateTime = () => {
+        //console.log(props.session.length,'session length')
         // doesn't currently support displaying hours
         const m = Math.floor(props.session.length / 60);
         const s = Math.floor(props.session.length - m * 60);
