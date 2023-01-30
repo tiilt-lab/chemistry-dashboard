@@ -114,12 +114,12 @@ class VidRecorder:
 
         sortedfiles = [int(f.split(".")[0]) for f in os.listdir(self.vid_img_dir)]
         sortedfiles.sort()
-        #base_dir = os.path.join(os.getcwd(),"audio_processing/"+self.vid_img_dir)
-       
+    
         file_path = [os.path.join(self.vid_img_dir,str(fp)+".png") for fp in sortedfiles] 
         video = ImageSequenceClip(file_path,fps=29)
-        audio_clip = AudioFileClip(self.wav_filename).set_duration(video.duration) 
-        video.set_audio(audio_clip)
+        audio_clip = AudioFileClip(self.wav_filename)
+        new_audio_clip = CompositeAudioClip([audio_clip])
+        video.audio = new_audio_clip
         video.write_videofile(self.cart_vid)
 
 
@@ -134,6 +134,7 @@ class VidRecorder:
                     for file in os.listdir(self.vid_img_dir):
                         os.remove(os.path.join(self.vid_img_dir,file))
                     os.rmdir(self.vid_img_dir)
+                    os.remove(self.wav_filename)
                     
             except Exception as e:
               logging.info('Unable to delete video file: {0}'.format(e))         
