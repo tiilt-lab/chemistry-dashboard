@@ -101,12 +101,15 @@ class ServerProtocol(WebSocketServerProtocol):
                 elif self.stream_data == 'video':
                     self.video_count = 1;
                     if cf.video_record_original():
+                        aud_filename = os.path.join(cf.video_recordings_folder(), "{0}_({1})_audio".format(self.config.auth_key, str(time.ctime())))
                         self.filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
-                        self.samplevid = os.path.join(cf.video_recordings_folder(), "sample_vid")
-                        self.orig_vid_recorder = VidRecorder(self.filename,self.samplevid,cf.video_record_original())
+                        self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_({1})".format(self.config.auth_key, str(time.ctime())))
+                        self.orig_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1)
                     if cf.video_record_reduced():
+                        aud_filename = os.path.join(cf.video_recordings_folder(), "{0}_({1})_audio".format(self.config.auth_key, str(time.ctime())))
                         self.filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
-                        self.redu_vid_recorder = VidRecorder(self.filename,self.samplevid,cf.video_record_original())
+                        self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_({1})".format(self.config.auth_key, str(time.ctime())))
+                        self.redu_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1)
        
 
     def process_binary(self, data):
@@ -138,6 +141,9 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.audio_buffer.append(self.read_bytes_from_wav(wavObj))
                 audiobyte = self.reduce_wav_channel(1,wavObj)
                 self.asr_audio_queue.put(audiobyte) 
+
+                # Save audio data.
+                self.orig_vid_recorder.write_audio(audiobyte)
 
                 if os.path.isfile(temp_aud_file+'.wav'):
                     os.remove(temp_aud_file+'.wav')
