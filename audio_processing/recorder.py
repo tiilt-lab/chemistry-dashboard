@@ -130,7 +130,7 @@ class VidRecorder:
                     os.remove(self.vid_filename)
                 else:
                     self.convert_video_to_cartoon(self.vid_filename)
-                    #rmove all the imgae frames
+                    #remove all the imgae frames
                     for file in os.listdir(self.vid_img_dir):
                         os.remove(os.path.join(self.vid_img_dir,file))
                     os.rmdir(self.vid_img_dir)
