@@ -26,12 +26,12 @@ def post_file(user_id, **kwargs):
             logging.info(filename)
             if filename != '':
                 logging.info("This file has file name")
-                if not os.path.exists("/vagrant/uploads"):
-                    os.makedirs("/vagrant/uploads/")
-                if not os.path.exists("/vagrant/uploads/{}".format(user_id)):
-                    os.makedirs("/vagrant/uploads/{}".format(user_id))
+                if not os.path.exists("uploads"):
+                    os.makedirs("uploads/")
+                if not os.path.exists("uploads/{}".format(user_id)):
+                    os.makedirs("uploads/{}".format(user_id))
                 fileUploaded.save(os.path.join(
-                    "/vagrant/uploads/{}".format(user_id), filename))
+                    "uploads/{}".format(user_id), filename))
     return json_response()
 
 
@@ -39,7 +39,7 @@ def post_file(user_id, **kwargs):
 @wrappers.verify_login(public=True)
 def get_topics(user, **kwargs):
     id2word, texts, corpus = topicmodeling.generate_corpus(
-        "/vagrant/uploads/{}".format(user['id']), [""])
+        "uploads/{}".format(user['id']), [""])
     topicModel = topicmodeling.generate_topic_model(id2word, texts, corpus, 5)
     response = [topic[1] for topic in topicModel.print_topics()]
     logging.info(response)

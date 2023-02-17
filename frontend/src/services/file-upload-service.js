@@ -8,6 +8,6 @@ export class FileUploadService {
   }
 
   getTopics() {
-    return this.api.get("api/v1/topics",'GET',{});
+    return this.api.httpRequestCall("api/v1/topics",'GET',{});
   }
 }
