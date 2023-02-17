@@ -4,7 +4,7 @@ export class FileUploadService {
   api = new ApiService()
 
   uploadFile(url, formData){
-    return this.api.httpRequestCall(url,'POST', formData);
+    return this.api.postFiles(url, formData);
   }
 
   getTopics() {

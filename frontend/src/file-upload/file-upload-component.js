@@ -6,7 +6,7 @@ import {FileUploadPage} from './html-pages'
 function FileUploadComponent(props){
   const [user, setUser] = useState();
   const [selectedFile, setSelectedFile] = useState(null);
-  const [myFiles, setMyfile] = useState([]);
+  const [myFiles, setMyfiles] = useState([]);
   const [topics, setTopics] = useState([]);
   const navigate = useNavigate();
 
@@ -18,12 +18,14 @@ function FileUploadComponent(props){
   },[])
 
   const onFileSelect = (event) =>{
+    const files = []
     if (event.target.files.length > 0) {
       for (var i = 0; i < event.target.files.length; i++) {
         const file = event.target.files[i];
         // this.uploadForm.get("fileUpload").setValue(file);
-        myFiles.push(file);
+        files.push(file);
       }
+      setMyfiles(files)
     }
   }
 
@@ -53,16 +55,16 @@ function FileUploadComponent(props){
     )
   }
 
-  const onSubmit = ()=> {
+  const onSubmit = (e)=> {
+    e.preventDefault();
     const formData = new FormData();
     for (var i = 0; i < myFiles.length; i++) {
       console.log("My files: ", myFiles[i]);
-      formData.append("fileUpload[]", myFiles[i], myFiles[i].name);
+      formData.append("fileUpload[]", myFiles[i]);
     }
     console.log("formData: ", formData.get("fileUpload[]"));
     const URL = `api/v1/uploads/${props.userdata.id}`;
-    const fetchData = new FileUploadService().uploadFile(URL, formData)
-    fetchData.then(
+    new FileUploadService().uploadFile(URL, formData).then(
       response=>{
         if(response.status === 200){
           response.json().then(
