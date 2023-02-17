@@ -4,10 +4,10 @@ export class FileUploadService {
   api = new ApiService()
 
   uploadFile(url, formData){
-    return this.api.httpRequestCall(url,'POST', formData);
+    return this.api.postFiles(url, formData);
   }
 
   getTopics() {
-    return this.api.get("api/v1/topics",'GET',{});
+    return this.api.httpRequestCall("api/v1/topics",'GET',{});
   }
 }
