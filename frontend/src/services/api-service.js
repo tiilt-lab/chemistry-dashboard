@@ -79,6 +79,19 @@ export class ApiService {
     })
   }
 
+  postFiles(apipath, data){
+    return fetch(this.getEndpoint() + apipath, {
+      method: 'POST', // *GET, POST, PUT, DELETE, etc.
+      mode: 'cors', // no-cors, *cors, same-origin
+      //cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
+      credentials: 'include', // include, *same-origin, omit
+      headers: this._generateHeaders({},data),
+      redirect: 'follow', // manual, *follow, error
+      //referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+      body: data // body data type must match "Content-Type" header
+    })
+  }
+
   put(apipath, data,headers){
     return fetch(this.getEndpoint() + apipath, {
       method: 'PUT', // *GET, POST, PUT, DELETE, etc.
