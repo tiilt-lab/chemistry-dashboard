@@ -176,3 +176,4 @@ audio_processing/recordings/
 audio_processing/videorecordings/
 audio_processing/speaker_diarization/results/
 /frontend/.gitignore
+uploads
