@@ -14,7 +14,6 @@ from gensim.utils import simple_preprocess
 from gensim.models import CoherenceModel
 from collections import Counter
 from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.lda import LDA
 
 # spacy for lemmatization
 import spacy
@@ -195,7 +194,7 @@ def visualize_topic_model(lda_model, corpus, id2word):
     vis
 
 def ntopwlst(model, features, ntopwords):
-    '''Create a list of the top topc words'''
+    '''Create a list of the top keywords words'''
     output = []
     for topic_idx, topic in enumerate(model.components_): 
         output.append(str(topic_idx))
@@ -226,7 +225,7 @@ def format_topics_sentences(ldamodel, corpus, texts):
 ntopwords = 5
 count_vect=CountVectorizer()
 tf_feature_names = count_vect.get_feature_names()
-topwds = ntopwlst(LDA, tf_feature_names, ntopwords)
+
 
 pdf = process_file_pdf('Seeing the Unseen - Depression 1 Page Handout + References.pdf')
 disc = process_file_csv('cstalk (1).csv')
