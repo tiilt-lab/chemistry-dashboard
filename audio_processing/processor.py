@@ -9,6 +9,7 @@ from speaker_diarization.pyDiarization import speakerDiarization
 import numpy as np
 import time
 #from source_seperation import source_seperation_pre_trained
+from server.topic_modeling.topicmodeling import get_topics_with_prob
 
 # For converting nano seconds to seconds.
 NANO = 1000000000
@@ -129,7 +130,12 @@ class AudioProcessor:
             keywords = None
             if self.config.keywords:
                 keywords = keyword_detector.detect_keywords(transcript_text, self.config.keywords)
-
+            
+            # Get Topics
+            topics = None
+            if self.config.topics:
+                topics = get_topics_with_prob(transcript_text)
+                
             # Get DoA
             doa = None
             if self.config.doa and self.config.channels == 6:

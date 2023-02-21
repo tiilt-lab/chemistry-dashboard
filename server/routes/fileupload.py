@@ -37,10 +37,12 @@ def post_file(user_id, **kwargs):
 
 @api_routes.route('/api/v1/topics', methods=['GET'])
 @wrappers.verify_login(public=True)
+
 def get_topics(user, **kwargs):
     id2word, texts, corpus = topicmodeling.generate_corpus(
         "uploads/{}".format(user['id']), [""])
     topicModel = topicmodeling.generate_topic_model(id2word, texts, corpus, 5)
     response = [topic[1] for topic in topicModel.print_topics()]
+    print(response)
     logging.info(response)
     return json_response(response)
