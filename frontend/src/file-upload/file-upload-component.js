@@ -9,6 +9,7 @@ function FileUploadComponent(props){
   const [myFiles, setMyfile] = useState([]);
   const [topics, setTopics] = useState([]);
   const navigate = useNavigate();
+  
 
   useEffect(()=> {
     if (props.userdata !== undefined && Object.keys(props.userdata).length !==0) {
@@ -29,6 +30,10 @@ function FileUploadComponent(props){
 
   const navigateToHomescreen = ()=> {
     navigate('/home');
+  }
+  
+  const navigateToTopics = () => {
+    navigate('/topic-list');
   }
 
   const createTopicModel = ()=> {
@@ -84,6 +89,7 @@ function FileUploadComponent(props){
         createTopicModel = {createTopicModel}
         onFileSelect = {onFileSelect}
         onSubmit = {onSubmit}
+        navigateToTopics = {navigateToTopics}
       />
   )
 }

@@ -579,6 +579,7 @@
 
 .menu-container {
   position: relative;
+  direction: rtl;
 }
 
 .dropdown-menu-container {
@@ -602,6 +603,7 @@
           user-select: none;
   display: block;
   cursor: pointer;
+  direction: ltr;
 }
 
 .dropdown-menu-container .menu-item:active {

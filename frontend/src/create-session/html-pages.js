@@ -43,8 +43,8 @@ function CreateSessionPage(props) {
                 <span className={style.checkmark}></span>
               </label>
             </div>
-            <button className={style["footer-button"]} style = {{width: adjDim(374) + 'px',}} onClick={props.navigateToSessions} >Back</button>
-            <button className={style["footer-button"]} style = {{width: adjDim(374) + 'px',}} onClick={props.goToKeywords}>Next</button>
+            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.navigateToSessions} >Back</button>
+            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.goToKeywords}>Next</button>
           </React.Fragment>
           :
           <></>
@@ -73,9 +73,9 @@ function CreateSessionPage(props) {
               }
             </div>
 
-            <button className={style["footer-button"]} onClick={props.navigateToKeywordLists}>Create Keyword List</button>
-            <button className={style["footer-button"]} onClick={props.goToSettings}>Back</button>
-            <button className={style["footer-button"]} onClick={props.goToDevices}>Next</button>
+            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.navigateToKeywordLists}>Create Keyword List</button>
+            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.goToSettings}>Back</button>
+            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.goToDevices}>Next</button>
           </React.Fragment>
           :
           <></>
@@ -113,8 +113,8 @@ function CreateSessionPage(props) {
 
             </div>
             <button className={style["select-all"]} onClick={props.onClickSelectAll}>Select All</button>
-            <button className={style["footer-button"]} onClick={props.goToKeywords}>Back</button>
-            <button className={style["footer-button"]} onClick={props.createSession}>Start Discussion</button>
+            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.goToKeywords}>Back</button>
+            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.createSession}>Start Discussion</button>
           </React.Fragment>
           :
           <></>
