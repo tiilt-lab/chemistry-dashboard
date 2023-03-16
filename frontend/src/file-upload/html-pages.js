@@ -4,6 +4,7 @@ import { isLargeScreen } from '../myhooks/custom-hooks';
 
 function FileUploadPage(props) {
   return (
+  <>
     <div className={style.container}>
       <Appheader
         title={"Upload Files"}
@@ -29,7 +30,13 @@ function FileUploadPage(props) {
           Create Topic Model
         </button>
       </div>
+      <div>
+        <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.navigateToTopics}>
+          See Topics
+        </button>
+      </div>
     </div>
+   </>
   )
 }
 

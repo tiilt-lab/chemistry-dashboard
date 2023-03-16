@@ -3,7 +3,7 @@ import { KeywordService } from '../services/keyword-service';
 import { KeywordListItemModel } from '../models/keyword-list-item';
 import { KeywordListModel } from '../models/keyword-list';
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { KeywordListPages } from './html-pages'
 
 
@@ -17,6 +17,7 @@ function KeywordListItemsComponent() {
   const [keywordListID, setKeywordListID] = useState(keyword_list_id);
   const [keyworderror, setKeywordError] = useState("")
   const navigate = useNavigate();
+  const location = useLocation();  
 
   useEffect(() => {
     if (keywordListID !== undefined && keywordListID !== '-1') {
@@ -178,7 +179,12 @@ function KeywordListItemsComponent() {
   }
 
   const goBackToKeywordLists = () => {
-    return navigate('/keyword-lists');
+    if (location.pathname == '/keyword-lists/new-session') {
+      //save keyword list too
+      navigate('/sessions/new', {state: location.state});
+    } else {
+      navigate('/keyword-lists');
+    }
   }
   
   return (

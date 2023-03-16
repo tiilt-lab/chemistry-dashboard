@@ -71,7 +71,7 @@ function GenericDialogBox(props) {
           <div className={style["dialog-container-expanded"]}>
             {props.displayDevices.map((device, index) => (
               <label className={style["dc-checkbox"]}>{device.name}
-                  <input type="checkbox" checked={device.checked} value={device.checked} onChange={() => props.changeCheck(props.displayDevices, index)}  />
+                  <input type="checkbox" checked={device.checked} value={device.checked} onChange={() => props.changeCheck(index)}  />
                   <span className={style.checkmark}></span>
               </label>))}
             {props.children} 

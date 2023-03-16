@@ -46,6 +46,14 @@ function ManageKeywordListsComponent(props) {
   const openNewKeywordList = () => {
     return navigate('/keyword-lists/new');
   }
+  
+  const tempFunction = () => {
+    //using this in place of createTopicModel now, seeing what happens
+    console.log("Inside the function");
+    //then try to change
+    navigate("/file_upload");
+  }
+ 
 
   const createTopicModel = () => {
     const fetchData = new KeywordService().getTopics();
@@ -122,6 +130,7 @@ function ManageKeywordListsComponent(props) {
       openNewKeywordList={openNewKeywordList}
       createTopicModel={createTopicModel}
       confirmDeleteKeywordList={confirmDeleteKeywordList}
+      tempFunction = {tempFunction}
     />
   )
 }

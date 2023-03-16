@@ -27,15 +27,20 @@ function AppTimelineSlider(props) {
   }
 
   const grabHandle = (handleId, e) => {
+    console.log("Grabbed handle");
+    console.log(handleId);
+    console.log(currentSliderId);
     if (currentSliderId != null) {
       releaseHandle(null);
     }
     setCurrentSliderId(handleId);
     if (window.TouchEvent && e instanceof TouchEvent) {
+      console.log("TouchEvent");
       setCurPos(e.changedTouches[0].clientX);
       document.addEventListener('touchend', releaseHandle);
       document.addEventListener('touchmove', moveHandle);
     } else {
+      console.log("Not TouchEvent");
       setCurPos(e.clientX);
       document.addEventListener('mouseup', releaseHandle);
       document.addEventListener('mousemove', moveHandle);
@@ -43,6 +48,7 @@ function AppTimelineSlider(props) {
   }
 
   const moveHandle = (e) => {
+    console.log("Moving handle");
     let change = 0;
     if (window.TouchEvent && e instanceof TouchEvent) {
       change = e.changedTouches[0].clientX - curPos;
@@ -52,10 +58,15 @@ function AppTimelineSlider(props) {
       setCurPos(e.clientX);
     }
 
+    console.log(currentSliderId); //is null
     if (currentSliderId === 0) {
+      console.log("Changing left");
+      console.log(change);
       sliderValues[0] = Math.min(Math.max(0, (sliderValues[0] * TIMELINE_WIDTH) + change),
         (sliderValues[1] * TIMELINE_WIDTH) - HANDLE_WIDTH) / TIMELINE_WIDTH;
     } else {
+      console.log("Changing right");
+      console.log(change);
       sliderValues[1] = Math.min(Math.max((sliderValues[0] * TIMELINE_WIDTH) + HANDLE_WIDTH,
         (sliderValues[1] * TIMELINE_WIDTH) + change), TIMELINE_WIDTH) / TIMELINE_WIDTH;
     }
@@ -86,7 +97,8 @@ function AppTimelineSlider(props) {
   }
 
   const grabBar = (e) => {
-
+    console.log("Grabbed bar");
+    console.log(currentSliderId);
     if (currentSliderId != null) {
       releaseHandle(null);
     }
@@ -110,6 +122,7 @@ function AppTimelineSlider(props) {
       change = e.clientX - curPos;
       setCurPos(e.clientX);
     }
+    console.log(change);
     if (change < 0) {
       const newPos = Math.max(0, sliderValues[0] * TIMELINE_WIDTH + change) / TIMELINE_WIDTH;
       sliderValues[1] -= Math.abs(sliderValues[0] - newPos);
