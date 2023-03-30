@@ -1,18 +1,19 @@
+//change the route (both in and out of page)
 import { AppContextMenu } from '../components/context-menu/context-menu-component';
 import { DialogBoxTwoOption } from '../dialog/dialog-component';
 import { Appheader } from '../header/header-component';
-import style from './manage-keyword-lists.module.css'
-import style2 from '../components/context-menu/context-menu.module.css'
+import style from './manage-topic-models.module.css';
+import style2 from '../components/context-menu/context-menu.module.css';
 import { isLargeScreen } from '../myhooks/custom-hooks';
 
-function KeywordListPage(props) {
+function ManageTopicsPage(props) {
 
     const actualKeywordList = props.keywordLists !== undefined ? props.keywordLists : [];
     return (
         <>
             <div className={style.container}>
                 <Appheader
-                    title={"Manage Keyword Lists"}
+                    title={"Manage Topic Models"}
                     leftText={false}
                     rightText={""}
                     rightEnabled={false}
@@ -43,10 +44,7 @@ function KeywordListPage(props) {
                     {/* {displayKeywordList()} */}
                 </div>
                 <div>
-                  <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.openNewKeywordList} > New Keyword List</button >
-                </div>
-                <div>
-                  <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.createTopicModel}> Create Topic Model</button >
+                  <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.navFileUpload}> Create Topic Model</button >
                 </div>
 
             </div>
@@ -63,4 +61,4 @@ function KeywordListPage(props) {
     )
 }
 
-export { KeywordListPage }
+export { ManageTopicsPage }

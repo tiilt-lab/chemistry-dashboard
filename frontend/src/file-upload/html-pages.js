@@ -1,6 +1,6 @@
 import style from './file-upload.module.css'
 import { Appheader } from '../header/header-component'
-import { isLargeScreen } from '../myhooks/custom-hooks';
+import { isLargeScreen, adjDim } from '../myhooks/custom-hooks';
 
 function FileUploadPage(props) {
   return (
@@ -11,7 +11,7 @@ function FileUploadPage(props) {
         leftText={false}
         rightText={""}
         rightEnabled={false}
-        nav={props.navigateToHomescreen}
+        nav={props.navTopicModels}
       />
       <div className={style["intro-box"]}>
         <div className={style["padding-file"]}></div>
@@ -26,12 +26,12 @@ function FileUploadPage(props) {
         </div>
       </form>
       <div>
-        <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.createTopicModel}>
+        <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} style = {{width: adjDim(374) + 'px',}} onClick={props.createTopicModel}>
           Create Topic Model
         </button>
       </div>
       <div>
-        <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.navigateToTopics}>
+        <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} style = {{width: adjDim(374) + 'px',}} onClick={props.navigateToTopics}>
           See Topics
         </button>
       </div>

@@ -11,7 +11,7 @@ function TopicListPage(props) {
 	  <>
 	    <div className={style.container}>
 	      <Appheader
-		title={"Upload Files"}
+		title={"Topic List"}
 		leftText={false}
 		rightText={""}
 		rightEnabled={false}
@@ -46,7 +46,7 @@ function TopicListPage(props) {
 		<div className={style.container}>
 		<input id="txtName" className={style["text-input"]} style = {{width: adjDim(279) + 'px',}} defaultValue={props.topicListStruct[props.showedInd].tname} onKeyUp={(event) => props.setCurrInput(event.target.value)} maxLength='64' />
 		<div>
-		<button className={style["basic-button"]} onClick={() => {props.setTopicName()}} >Confirm</button >
+		<button className={style["basic-button"]} style = {{width: adjDim(343) + 'px',}} onClick={() => {props.setTopicName()}} >Confirm</button >
 		</div>
 		{(props.changedName) ? "Name changed to " + props.topicListStruct[props.showedInd].tname : ""}
 		</div>
@@ -56,7 +56,11 @@ function TopicListPage(props) {
 		<div className={style.container}>
 		  {"Are you sure you want to go forward with the following topics: " + props.getSelectNameList()}
 		  <div>
-		    <button className={style["basic-button"]} onClick={() => {console.log("Submitted topic TODO")}} >Submit Topics</button >
+		    {"If yes, select a name for your topics."}
+		    <input id="txtName" className={style["text-input"]} style = {{width: adjDim(279) + 'px',}} defaultValue={""} onKeyUp={(event) => props.setNameInput(event.target.value)} maxLength='64' />
+		  </div>
+		  <div>
+		    <button className={style["basic-button"]} style = {{width: adjDim(343) + 'px',}} onClick={() => {props.saveNewModel()}} >Submit Topics</button >
 		  </div>
 		</div>
 		</React.Fragment> : 
@@ -64,7 +68,7 @@ function TopicListPage(props) {
 		<div className={style.container}>
 		  {"Are you sure you want to go back? All topics will be lost."}
 		  <div>
-		    <button className={style["basic-button"]} onClick={() => {props.navigateToFileUpload()}} >Yes</button >
+		    <button className={style["basic-button"]} style = {{width: adjDim(343) + 'px',}} onClick={() => {props.navigateToFileUpload()}} >Yes</button >
 		  </div>
 		</div>
 		</React.Fragment>)}

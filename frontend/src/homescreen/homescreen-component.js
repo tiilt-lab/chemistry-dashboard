@@ -58,7 +58,7 @@ function HomeScreen(props) {
       <Menus menuIcon={recordicon} menuName="Discussions" route={navigate} path='/sessions' />
       <Menus menuIcon={wordlist} menuName="Keyword" route={navigate} path='/keyword-lists' />
       <Menus menuIcon={pod} menuName="Pods" route={navigate} path='/pods' />
-      <Menus menuIcon={trending} menuName="Topic Modeling" route={navigate} path='/file_upload' />
+      <Menus menuIcon={trending} menuName="Topic Modeling" route={navigate} path='/topic-models' />
       <Menus menuIcon={settings} menuName="Settings" route={navigate} path='/Settings' />
 
       <div className="home-button" style = {{width: adjDim(311) + 'px',}} onClick={navigateToHelp}>
