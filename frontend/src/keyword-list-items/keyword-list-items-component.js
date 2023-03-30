@@ -1,4 +1,3 @@
-
 import { KeywordService } from '../services/keyword-service';
 import { KeywordListItemModel } from '../models/keyword-list-item';
 import { KeywordListModel } from '../models/keyword-list';
@@ -79,6 +78,8 @@ function KeywordListItemsComponent() {
       return;
     }
     const keywords = keywordListItems.filter(item => item.keyword != null).map(item => item.keyword);
+    console.log(keywordList.name);
+    console.log(keywords);
     if (keywordListID === '-1') {
       new KeywordService().createKeywordList(keywordList.name, keywords).then(
         response => {

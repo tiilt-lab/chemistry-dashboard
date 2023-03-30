@@ -2,6 +2,8 @@ import {useState,useEffect} from 'react'
 import { useNavigate } from 'react-router-dom';
 import { FileUploadService } from "../services/file-upload-service";
 import {TopicListPage} from './html-pages'
+//temp, should make a model service too
+import { KeywordService } from '../services/keyword-service';
 
 function TopicListComponent(props){
   const [user, setUser] = useState();
@@ -28,6 +30,7 @@ function TopicListComponent(props){
   const [currInput, setCurrInput] = useState("");
   const [changedName, setChangedName] = useState(false);
   const [trigger, setTrigger] = useState(0);
+  const [nameInput, setNameInput] = useState("");
   
 
   useEffect(()=> {
@@ -74,6 +77,7 @@ function TopicListComponent(props){
       setShowedInd(ind);
       setChangedName(false);
     }
+    console.log("Clicked toggle");
   }
   
   const stringFormat = (kwds, kwdprobs, onRight) => {
@@ -91,6 +95,7 @@ function TopicListComponent(props){
     let temp = topicListStruct;
     temp[count].clicked = !temp[count].clicked;
     setTopicListStruct(temp);
+    console.log("Clicked box");
     setTrigger(trigger+1);
   }
   
@@ -107,14 +112,61 @@ function TopicListComponent(props){
     }
     return str;
   }
+  
+  const navTopicModels = () => {
+    navigate('/topic-models');
+  }
+  
+  const isValid = () => {
+    //list of topics can't be empty, and neither can the name. add 
+    return topicListStruct.filter(tlist => tlist.clicked) != [] && nameInput != "";
+  }
+  
+  const saveNewModel = () => {
+    if (!isValid()) {
+      return;
+    }
+    const topics = topicListStruct.filter(tlist => tlist.clicked).map(tlist => tlist.tname);
+    //so far only for creation, but need to update it soon (aka if (keywordListID === '-1'))
+    console.log(nameInput);
+    console.log(topics);
+    new KeywordService().createKeywordList(nameInput, topics).then(
+      response => {
+        if (response.status === 200) {
+          navTopicModels();
+        } else {
+          alert(response.json()['message']);
+        }
+      },
+      apierror => {
+        console.log("Keyword-items-components func: saveKeywordList 2 ", apierror)
+      });
+    /*
+    } else {
+      new KeywordService().updateKeywordList(keywordListID, keywordList.name, keywords).then(
+        response => {
+          if (response.status === 200) {
+            navTopicModels();
+          } else {
+            alert(response.json()['message']);
+          }
+        },
+        apierror => {
+          console.log("Keyword-items-components func: saveKeywordList 3 ", apierror)
+        });
+    }*/
+  }
+  
 
   return(
       <TopicListPage
         navigateToFileUpload = {navigateToFileUpload}
+        saveNewModel = {saveNewModel}
         showDialog = {showDialog}
         showedInd = {showedInd}
         toggleDisplay = {toggleDisplay}
         setCurrInput = {setCurrInput}
+        setNameInput = {setNameInput}
         stringFormat = {stringFormat}
         setTopicName = {setTopicName}
         changedName = {changedName}

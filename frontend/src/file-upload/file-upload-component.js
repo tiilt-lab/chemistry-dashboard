@@ -28,8 +28,8 @@ function FileUploadComponent(props){
     }
   }
 
-  const navigateToHomescreen = ()=> {
-    navigate('/home');
+  const navTopicModels = ()=> {
+    navigate('/topic-models');
   }
   
   const navigateToTopics = () => {
@@ -85,7 +85,7 @@ function FileUploadComponent(props){
 
   return(
       <FileUploadPage
-        navigateToHomescreen = {navigateToHomescreen}
+        navTopicModels = {navTopicModels}
         createTopicModel = {createTopicModel}
         onFileSelect = {onFileSelect}
         onSubmit = {onSubmit}

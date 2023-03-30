@@ -15,6 +15,7 @@ import { SettingsComponent } from '../settings/settings-component';
 import { PodComponent } from '../pod-details/pod-component';
 import {TranscriptsComponent} from '../transcripts/transcripts-component'
 import {TopicListComponent} from '../topic-list/topic-list-component'
+import {ManageTopicModelsComponent} from '../manage-topic-models/manage-topic-models-component'
 import {PodsComponent} from '../pods/pods-component'
 import {ProtectedRoute} from './protected-route'
 
@@ -40,6 +41,7 @@ function PageRouter() {
                     <Route path='pods/:sessionDeviceId' element={<ProtectedRoute component={PodComponent}/>} />
                     <Route path='pods/:sessionDeviceId/transcripts' element={<ProtectedRoute component={TranscriptsComponent}/>} />
                 </Route> 
+                <Route path='/topic-models' element={<ProtectedRoute component={ManageTopicModelsComponent}/>} />
                 <Route path='/file_upload' element={<ProtectedRoute component={FileUploadComponent}/>} />
                 <Route path='/topic-list' element={<ProtectedRoute component={TopicListComponent}/>} />
                 <Route path='/pods' element={<ProtectedRoute component={PodsComponent}/> } />
