@@ -1,7 +1,7 @@
 requests==2.21.0
 numpy==1.22.3
 scipy==1.4.1
-redis==3.2.1
+redis==4.4.4
 nltk==3.6.6
 gensim==3.7.2
 Twisted==22.2.0
