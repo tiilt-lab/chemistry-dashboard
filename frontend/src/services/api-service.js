@@ -67,10 +67,6 @@ export class ApiService {
   }
 
   post(apipath, data,headers){
-    //console.log(this.getEndpoint());
-    console.log(data);
-    console.log(this._generateHeaders(headers,data));
-    console.log(JSON.stringify(data));
     return fetch(this.getEndpoint() + apipath, {
       method: 'POST', // *GET, POST, PUT, DELETE, etc.
       mode: 'cors', // no-cors, *cors, same-origin

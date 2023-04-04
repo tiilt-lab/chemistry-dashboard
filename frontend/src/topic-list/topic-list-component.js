@@ -2,8 +2,9 @@ import {useState,useEffect} from 'react'
 import { useNavigate } from 'react-router-dom';
 import { FileUploadService } from "../services/file-upload-service";
 import {TopicListPage} from './html-pages'
-//temp, should make a model service too
-import { KeywordService } from '../services/keyword-service';
+//trying this out
+import { TopicModelService } from "../services/topicmodel-service";
+import { KeywordService } from "../services/keyword-service";
 
 function TopicListComponent(props){
   const [user, setUser] = useState();
@@ -17,7 +18,7 @@ function TopicListComponent(props){
     for (let i = 0; i < array_testing.length; i++) {
       let j = i + 1;
       let temptopic = [];
-      temptopic.tname = "Topic " + j;
+      temptopic.tname = "Topic" + j;
       temptopic.clicked = false;
       temptopic.prob = array_testing[i][0];
       temptopic.kwds = array_testing[i][1][0];
@@ -60,8 +61,8 @@ function TopicListComponent(props){
   }
   
   const setTopicName = () => {
-    //(temporarily) excluding duplicate values
-    if (currInput != '' && notDupeCurrInput()) {
+    //(temporarily) excluding duplicate values and spaces in topic names
+    if (currInput != '' && notDupeCurrInput() && !currInput.includes(" ")) {
        let temparr = topicListStruct;
        temparr[showedInd].tname = currInput;
        setTopicListStruct(temparr);
@@ -76,8 +77,8 @@ function TopicListComponent(props){
     if (currDia == "rename") {
       setShowedInd(ind);
       setChangedName(false);
+      toggleClicked(ind);
     }
-    console.log("Clicked toggle");
   }
   
   const stringFormat = (kwds, kwdprobs, onRight) => {
@@ -95,7 +96,6 @@ function TopicListComponent(props){
     let temp = topicListStruct;
     temp[count].clicked = !temp[count].clicked;
     setTopicListStruct(temp);
-    console.log("Clicked box");
     setTrigger(trigger+1);
   }
   
@@ -128,8 +128,6 @@ function TopicListComponent(props){
     }
     const topics = topicListStruct.filter(tlist => tlist.clicked).map(tlist => tlist.tname);
     //so far only for creation, but need to update it soon (aka if (keywordListID === '-1'))
-    console.log(nameInput);
-    console.log(topics);
     new KeywordService().createKeywordList(nameInput, topics).then(
       response => {
         if (response.status === 200) {
