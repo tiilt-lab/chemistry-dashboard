@@ -27,7 +27,7 @@ function TopicListPage(props) {
 		  </div>
 		  <div className={style["model-list-elements-one"]}>{props.stringFormat(testArr.kwds, testArr.kwdprobs, false)}</div>
 		  <div className={style["model-list-elements-two"]}>{props.stringFormat(testArr.kwds, testArr.kwdprobs, true)}</div>
-		  <AppContextMenu className={style["model-list-options"]}>
+		  <AppContextMenu className={style["model-list-options"]} reverseToggle = {() => props.toggleClicked(count)}>
 		    <div className={`${style2["menu-item"]} ${style2["menu-item"]}`} onClick={() => {props.toggleDisplay(true, "rename", count)}}>Rename</div>
 		  </AppContextMenu >
 		</div>

@@ -2,11 +2,14 @@ import style from './context-menu.module.css';
 import optionIcon from "../../assets/img/icon-kebab.svg";
 import { useState, useEffect } from 'react';
 import React from 'react';
+import { useLocation } from 'react-router-dom';
+
 
 function AppContextMenu(props) {
   //ask about this: using this link https://www.codedaily.io/tutorials/Create-a-Dropdown-in-React-that-Closes-When-the-Body-is-Clicked
   let container = React.createRef();
   const [isOpen, setIsopen] = useState(true);
+  let location = useLocation();
 
   useEffect(() => {
     if(props.setcallback!=undefined){
@@ -18,6 +21,10 @@ function AppContextMenu(props) {
 
   const toggle = (state) => {
     setIsopen(!state);
+    //prevent triggering click interaction
+    if (location.pathname == "/topic-list") {
+      props.reverseToggle();
+    }
   }
   
   

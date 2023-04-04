@@ -1,4 +1,5 @@
 import { KeywordService } from "../services/keyword-service";
+import { TopicModelService } from "../services/topicmodel-service";
 import { KeywordListModel } from '../models/keyword-list';
 import { formatDate } from "../globals";
 import { useEffect, useState } from "react";
