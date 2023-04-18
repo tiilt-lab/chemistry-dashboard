@@ -29,6 +29,7 @@ function TopicListComponent(props){
   }
   const [topicListStruct, setTopicListStruct] = useState(makeTopicListStruct());
   const [currInput, setCurrInput] = useState("");
+  const [wrongInput, setWrongInput] = useState(false);
   const [changedName, setChangedName] = useState(false);
   const [trigger, setTrigger] = useState(0);
   const [nameInput, setNameInput] = useState("");
@@ -61,12 +62,18 @@ function TopicListComponent(props){
   }
   
   const setTopicName = () => {
-    //(temporarily) excluding duplicate values and spaces in topic names
-    if (currInput != '' && notDupeCurrInput() && !currInput.includes(" ")) {
-       let temparr = topicListStruct;
-       temparr[showedInd].tname = currInput;
-       setTopicListStruct(temparr);
-       setChangedName(true);
+    if (currInput != '' && notDupeCurrInput()) {
+      //regex match
+      if (/^\w+$/.test(currInput)) {
+        let temparr = topicListStruct;
+        temparr[showedInd].tname = currInput;
+        setTopicListStruct(temparr);
+        setChangedName(true);
+        setWrongInput(false);
+      } else {
+        setChangedName(false);
+        setWrongInput(true);
+      }
     }
     setTrigger(trigger + 1);
   }
@@ -77,6 +84,7 @@ function TopicListComponent(props){
     if (currDia == "rename") {
       setShowedInd(ind);
       setChangedName(false);
+      setWrongInput(false);
       toggleClicked(ind);
     }
   }
@@ -167,6 +175,7 @@ function TopicListComponent(props){
         setNameInput = {setNameInput}
         stringFormat = {stringFormat}
         setTopicName = {setTopicName}
+        wrongInput = {wrongInput}
         changedName = {changedName}
         currentDialog = {currentDialog}
         topicListStruct = {topicListStruct}
