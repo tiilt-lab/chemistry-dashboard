@@ -48,7 +48,8 @@ function TopicListPage(props) {
 		<div>
 		<button className={style["basic-button"]} style = {{width: adjDim(343) + 'px',}} onClick={() => {props.setTopicName()}} >Confirm</button >
 		</div>
-		{(props.changedName) ? "Name changed to " + props.topicListStruct[props.showedInd].tname : ""}
+		  {(props.wrongInput) ? "There can only be letters or numbers in your topic name." : ""}
+		  {(props.changedName) ? "Name changed to " + props.topicListStruct[props.showedInd].tname : ""}
 		</div>
 		</React.Fragment>
 		: (props.currentDialog == 'submit' ? 
