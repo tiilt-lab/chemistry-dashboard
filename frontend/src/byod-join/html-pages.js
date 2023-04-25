@@ -117,10 +117,6 @@ function ByodJoinPage(props) {
                                     />
                                 </AppSectionBoxComponent>
 
-                                <AppSectionBoxComponent heading={"Discussion direction:"}>
-                                    <AppHeatMapComponent session={props.session} transcripts={props.displayTranscripts} />
-                                </AppSectionBoxComponent>
-
                                 <AppSectionBoxComponent heading={"Keyword detection:"}>
                                     <AppKeywordsComponent
                                         clickedKeyword={props.onClickedKeyword}
