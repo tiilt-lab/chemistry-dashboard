@@ -8,6 +8,7 @@ function AppTimelineSlider(props) {
   const [sliderValues, setSliderValues] = useState([0.0, 1.0]);
   const TIMELINE_WIDTH = adjDim(280);
   const HANDLE_WIDTH = adjDim(20);
+  //const [trigger, setTrigger] = useState(0);
 
 
   useEffect(() => {
@@ -27,20 +28,17 @@ function AppTimelineSlider(props) {
   }
 
   const grabHandle = (handleId, e) => {
-    console.log("Grabbed handle");
-    console.log(handleId);
-    console.log(currentSliderId);
     if (currentSliderId != null) {
       releaseHandle(null);
     }
-    setCurrentSliderId(handleId);
+    setCurrentSliderId((oldId) => {
+      return handleId;
+    });
     if (window.TouchEvent && e instanceof TouchEvent) {
-      console.log("TouchEvent");
       setCurPos(e.changedTouches[0].clientX);
       document.addEventListener('touchend', releaseHandle);
       document.addEventListener('touchmove', moveHandle);
     } else {
-      console.log("Not TouchEvent");
       setCurPos(e.clientX);
       document.addEventListener('mouseup', releaseHandle);
       document.addEventListener('mousemove', moveHandle);
@@ -48,28 +46,26 @@ function AppTimelineSlider(props) {
   }
 
   const moveHandle = (e) => {
-    console.log("Moving handle");
-    let change = 0;
-    if (window.TouchEvent && e instanceof TouchEvent) {
-      change = e.changedTouches[0].clientX - curPos;
-      setCurPos(e.changedTouches[0].clientX);
-    } else {
-      change = e.clientX - curPos;
-      setCurPos(e.clientX);
-    }
-
-    console.log(currentSliderId); //is null
-    if (currentSliderId === 0) {
-      console.log("Changing left");
-      console.log(change);
-      sliderValues[0] = Math.min(Math.max(0, (sliderValues[0] * TIMELINE_WIDTH) + change),
-        (sliderValues[1] * TIMELINE_WIDTH) - HANDLE_WIDTH) / TIMELINE_WIDTH;
-    } else {
-      console.log("Changing right");
-      console.log(change);
-      sliderValues[1] = Math.min(Math.max((sliderValues[0] * TIMELINE_WIDTH) + HANDLE_WIDTH,
-        (sliderValues[1] * TIMELINE_WIDTH) + change), TIMELINE_WIDTH) / TIMELINE_WIDTH;
-    }
+    const newPos = window.TouchEvent && e instanceof TouchEvent ? e.changedTouches[0].clientX : e.clientX;
+    setCurPos((prevPos) => {
+      const change = newPos - prevPos;
+      if (currentSliderId === 0) {
+        setSliderValues((prevValues) => {
+          const newValues = [...prevValues];
+          newValues[0] = Math.min(Math.max(0, (newValues[0] * TIMELINE_WIDTH) + change),
+        (newValues[1] * TIMELINE_WIDTH) - HANDLE_WIDTH) / TIMELINE_WIDTH;
+          return newValues;
+        });
+      } else {
+        setSliderValues((prevValues) => {
+          const newValues = [...prevValues];
+          newValues[1] = Math.min(Math.max((newValues[0] * TIMELINE_WIDTH) + HANDLE_WIDTH,
+        (newValues[1] * TIMELINE_WIDTH) + change), TIMELINE_WIDTH) / TIMELINE_WIDTH;
+          return newValues;
+        });
+      }
+      return newPos;
+    });
   }
 
   const releaseHandle = (e) => {
@@ -81,7 +77,7 @@ function AppTimelineSlider(props) {
       document.removeEventListener('mousemove', moveHandle);
     }
     sendUpdate();
-    setCurrentSliderId(null);
+    //setCurrentSliderId(null);
   }
 
   // -----------
@@ -97,8 +93,6 @@ function AppTimelineSlider(props) {
   }
 
   const grabBar = (e) => {
-    console.log("Grabbed bar");
-    console.log(currentSliderId);
     if (currentSliderId != null) {
       releaseHandle(null);
     }
@@ -114,24 +108,26 @@ function AppTimelineSlider(props) {
   }
 
   const moveBar = (e) => {
-    let change = 0;
-    if (window.TouchEvent && e instanceof TouchEvent) {
-      change = e.changedTouches[0].clientX - curPos;
-      setCurPos(e.changedTouches[0].clientX);
-    } else {
-      change = e.clientX - curPos;
-      setCurPos(e.clientX);
-    }
-    console.log(change);
-    if (change < 0) {
-      const newPos = Math.max(0, sliderValues[0] * TIMELINE_WIDTH + change) / TIMELINE_WIDTH;
-      sliderValues[1] -= Math.abs(sliderValues[0] - newPos);
-      sliderValues[0] = newPos;
-    } else if (change > 0) {
-      const newPos = Math.min(sliderValues[1] * TIMELINE_WIDTH + change, TIMELINE_WIDTH) / TIMELINE_WIDTH;
-      sliderValues[0] += Math.abs(sliderValues[1] - newPos);
-      sliderValues[1] = newPos;
-    }
+    const newPos = window.TouchEvent && e instanceof TouchEvent ? e.changedTouches[0].clientX : e.clientX;
+    setCurPos((prevPos) => {
+      const change = newPos - prevPos;
+      if (change < 0) {
+        setSliderValues((prevValues) => {
+          const newValues = [...prevValues];
+          newValues[0] = Math.max(0, prevValues[0] * TIMELINE_WIDTH + change) / TIMELINE_WIDTH;
+          newValues[1] -= Math.abs(prevValues[0] - newValues[0]);
+          return newValues;
+        });
+      } else if (change > 0) {
+        setSliderValues((prevValues) => {
+          const newValues = [...prevValues];
+          newValues[1] = Math.min(prevValues[1] * TIMELINE_WIDTH + change, TIMELINE_WIDTH) / TIMELINE_WIDTH;
+          newValues[0] += Math.abs(prevValues[1] - newValues[1]);
+          return newValues;
+        });
+      }
+      return newPos;
+    });
   }
 
   const releaseBar = (e) => {
