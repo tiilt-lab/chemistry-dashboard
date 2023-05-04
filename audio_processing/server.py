@@ -111,6 +111,18 @@ class ServerProtocol(WebSocketServerProtocol):
 
     def process_binary(self, data):
         if self.running:
+            #create class arr that stores audio 
+            #do source seperation on each segment of audio (30 sec) which already come in splits 
+            #connects different segments using speaker verification (first, test out if this works)
+            #take two audio speakers (compare curr to prev) and then apply that to speaker verification, 
+            """
+            1. Source seperation: 
+            previous: 1 speaker
+            after applying source seperation: 3 speakers 
+
+            speaker verification: compare previous with after applying souce seperation to see if there is any matches, true, false 
+            if true, then continue to 
+            """
             if self.stream_data == 'audio':
                 if cf.record_original():
                     # Save audio data.

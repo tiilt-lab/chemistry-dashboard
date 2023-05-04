@@ -9,7 +9,7 @@ from speaker_diarization.pyDiarization import speakerDiarization
 import numpy as np
 import time
 from source_seperation import source_seperation_pre_trained
-from server.topic_modeling.topicmodeling import get_topics_with_prob
+# from server.topic_modeling.topicmodeling import get_topics_with_prob
 
 # For converting nano seconds to seconds.
 NANO = 1000000000
