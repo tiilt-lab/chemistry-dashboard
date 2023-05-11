@@ -16,6 +16,8 @@ function AppTimelineSlider(props) {
   }, [])
 
   const sendUpdate = () => {
+    console.log("Slider values sent from slider component");
+    console.log(sliderValues);
     props.inputChanged(sliderValues);
   }
 
@@ -24,6 +26,7 @@ function AppTimelineSlider(props) {
   // -----------
 
   const handlePos = (handleId) => {
+    console.log(sliderValues);
     return (sliderValues[handleId] * TIMELINE_WIDTH) + 'px';
   }
 
@@ -102,32 +105,43 @@ function AppTimelineSlider(props) {
       document.addEventListener('touchmove', moveBar);
     } else {
       setCurPos(e.clientX);
-      document.addEventListener('mouseup', releaseBar);
       document.addEventListener('mousemove', moveBar);
+      document.addEventListener('mouseup', releaseBar);
     }
   }
 
   const moveBar = (e) => {
+    //console.log("Sliding");
+    console.log(sliderValues);
     const newPos = window.TouchEvent && e instanceof TouchEvent ? e.changedTouches[0].clientX : e.clientX;
     setCurPos((prevPos) => {
+      //console.log("curPos render");
       const change = newPos - prevPos;
       if (change < 0) {
         setSliderValues((prevValues) => {
+          //console.log("sliderValue render");
           const newValues = [...prevValues];
           newValues[0] = Math.max(0, prevValues[0] * TIMELINE_WIDTH + change) / TIMELINE_WIDTH;
           newValues[1] -= Math.abs(prevValues[0] - newValues[0]);
+          //sendUpdate();
+          //console.log(newValues);
           return newValues;
         });
       } else if (change > 0) {
         setSliderValues((prevValues) => {
+          //console.log("sliderValue render");
           const newValues = [...prevValues];
           newValues[1] = Math.min(prevValues[1] * TIMELINE_WIDTH + change, TIMELINE_WIDTH) / TIMELINE_WIDTH;
           newValues[0] += Math.abs(prevValues[1] - newValues[1]);
+          //sendUpdate();
+          //console.log(newValues);
+          console.log(sliderValues);
           return newValues;
         });
       }
       return newPos;
     });
+    //sendUpdate();
   }
 
   const releaseBar = (e) => {
