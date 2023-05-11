@@ -15,6 +15,10 @@ import React from 'react'
 //import {isMobile} from 'react-device-detect'
 
 function PodComponentPages(props) {
+    /*console.log("Start time");
+    console.log(props.startTime);
+    console.log("End time");
+    console.log(props.endTime);*/
     return (
         <>
             <div className={style.container}>
