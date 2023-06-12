@@ -8,8 +8,13 @@ from doa.doa_respeaker_v2_6mic_array import calculateDOA
 from speaker_diarization.pyDiarization import speakerDiarization
 import numpy as np
 import time
+<<<<<<< HEAD
 #from source_seperation import source_seperation_pre_trained
 #from server.topic_modeling.topicmodeling import get_topics_with_prob
+=======
+from source_seperation import source_seperation_pre_trained
+from server.topic_modeling.topicmodeling import get_topics_with_prob
+>>>>>>> 8ccda594b4a0dbd20b0d3b9467678aebe4f29d1a
 
 # For converting nano seconds to seconds.
 NANO = 1000000000
@@ -155,9 +160,6 @@ class AudioProcessor:
                         'start': start_time,
                         'end': end_time
                     })
-            #Get source seperation
-            #if self.config.source_seperation:
-            #    source_seperation = source_seperation_pre_trained
                 
             # Get Features
             features = None
@@ -174,6 +176,10 @@ class AudioProcessor:
 
             else:
                 logging.warning('Processing results FAILED to post for client {0} (Processing time: {1})'.format(self.config.auth_key, processing_time))
+
+            #Get source seperation
+            if self.config.source_seperation:
+               source_seperation = source_seperation_pre_trained(audio_data)
 
         except Exception as e:
             logging.error('Processing FAILED for client {0}: {1}'.format(self.config.auth_key, e))
