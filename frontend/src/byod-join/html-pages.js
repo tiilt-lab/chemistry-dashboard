@@ -115,10 +115,6 @@ function ByodJoinPage(props) {
                                     />
                                 </AppSectionBoxComponent>
 
-                                <AppSectionBoxComponent heading={"Discussion direction:"}>
-                                    <AppHeatMapComponent session={props.session} transcripts={props.displayTranscripts} />
-                                </AppSectionBoxComponent>
-
                                 <AppSectionBoxComponent heading={"Keyword detection:"}>
                                     <AppKeywordsComponent
                                         clickedKeyword={props.onClickedKeyword}
@@ -138,8 +134,8 @@ function ByodJoinPage(props) {
                                 </AppSectionBoxComponent>
 
                                 <AppSectionBoxComponent heading={"Radar chart:"}>
-                                    <AppRadarComponent 
-                                    session={props.session} 
+                                    <AppRadarComponent
+                                    session={props.session}
                                     transcripts={props.displayTranscripts}
                                     start={props.startTime}
                                     end={props.endTime} />
@@ -155,9 +151,9 @@ function ByodJoinPage(props) {
                         <></>
                 }
 
-                
+
             </div>
-        }        
+        }
 
             <GenericDialogBox show={props.currentForm !== "" && props.currentForm !== "gottoselectedtranscript" && props.currentForm !== "gototranscript" }>
                 {props.currentForm === "Transcript" ?
@@ -183,7 +179,7 @@ function ByodJoinPage(props) {
                     <></>
                 }
 
-                
+
             </GenericDialogBox>
 
             <DialogBoxTwoOption

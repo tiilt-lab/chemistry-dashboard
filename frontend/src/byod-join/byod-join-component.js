@@ -57,6 +57,8 @@ function JoinPage() {
     const GLOW_COLOR = '#ffc3bd';
     const interval = 10000
 
+    let wakeLock;
+
     useEffect(() => {
         if (source !== null && audioContext !== null && name != "" && pcode != "") {
             requestAccessKey(name, pcode);
@@ -170,6 +172,7 @@ function JoinPage() {
             ending.value = true;
         }
 
+        releaseWakeLock();
         setConnected(false);
         setAuthenticated(false);
 
@@ -280,7 +283,7 @@ function JoinPage() {
     }
 
     const handleStream =  async () => {
-         
+
         const constraintObj = {}
         if (joinwith === 'Video') {
             constraintObj.audio = true
@@ -295,7 +298,7 @@ function JoinPage() {
         }
 
         try {
-           
+
             if (navigator.mediaDevices != null) {
                 const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
                    // media.then(function (stream) {
@@ -361,7 +364,7 @@ function JoinPage() {
     }
 
 
-    
+
     // Connects to websocket server.
     const connect = () => {
         ws.binaryType = 'arraybuffer';
@@ -372,6 +375,7 @@ function JoinPage() {
             setPageTitle(name);
             setReload(true)
             setCurrentForm("");
+            acquireWakeLock();
         };
 
         ws.onmessage = e => {
@@ -389,7 +393,7 @@ function JoinPage() {
                 setCurrentForm('ClosedSession');
             }
         };
-    
+
         ws.onclose = e => {
             console.log('[Disconnected]',ending.value);
             if (!ending.value) {
@@ -402,8 +406,8 @@ function JoinPage() {
                     //  setTimeout(() => {
                     //     console.log('i came in here to reconect..')
                         // verifyInputAndAudio(name, pcode, joinwith)
-                         
-                        
+
+
                     //  }, 1000);
                 } else {
                     setDisplayText('Connection to the session has been lost.');
@@ -415,7 +419,7 @@ function JoinPage() {
                 console.log('ending ...')
             }
         };
-       
+
     }
 
 
@@ -506,10 +510,10 @@ function JoinPage() {
 
     const seeAllTranscripts = () => {
         if (Object.keys(currentTranscript) > 0  && sessionDevice !== null) {
-            setCurrentForm("gottoselectedtranscript"); 
+            setCurrentForm("gottoselectedtranscript");
 
         } else if (sessionDevice !== null) {
-            setCurrentForm("gototranscript"); 
+            setCurrentForm("gototranscript");
         }
 
     }
@@ -526,7 +530,7 @@ function JoinPage() {
 
     const onClickedKeyword = (transcript) => {
         setCurrentTranscript(transcript);
-        setCurrentForm("gottoselectedtranscript"); 
+        setCurrentForm("gottoselectedtranscript");
     }
 
     const openDialog = (form) => {
@@ -545,9 +549,38 @@ function JoinPage() {
         setCurrentForm('');
         setPreview(!preview)
     }
+
+
+    const acquireWakeLock = async () => {
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        console.log('Wake lock is activated.');
+        wakeLock.addEventListener("release", () => {
+          // the wake lock has been released
+          console.log("Wake Lock has been released");
+        });
+        document.addEventListener("visibilitychange", async () => {
+          if (wakeLock !== null && document.visibilityState === "visible") {
+            wakeLock = await navigator.wakeLock.request("screen");
+          }
+        });
+      } catch (err) {
+        console.log(err);
+      }
+    }
+
+    const releaseWakeLock = async () => {
+      try {
+        wakeLock.release();
+        console.log('Wake lock has been released.');
+      } catch (err) {
+        console.log(err);
+      }
+    }
+
     const sessionDevBtnPressed = sessionDevice !== null ? sessionDevice.button_pressed : null;
 
-    return ( 
+    return (
                     <ByodJoinPage
                         connected={connected}
                         authenticated={authenticated}

@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from pprint import pprint
 from collections import defaultdict
-from tf_idf import tfidf
+#from tf_idf import tfidf
 
 # Gensim
 import gensim
@@ -37,7 +37,7 @@ warnings.filterwarnings("ignore",category=DeprecationWarning)
 #TODO:
 #Let the user choose topic names and percentage of the topic discusses in the conversation
 #Track the usage of topic during the conversation
-#Over time: the number of times, people that they have used this particular topic 
+#Over time: the number of times, people that they have used this particular topic
 
 from nltk.corpus import stopwords
 stop_words = []#stopwords.words('english')
@@ -46,21 +46,21 @@ stop_words = []#stopwords.words('english')
 mallet_path = '~/mallet-2.0.8/bin/mallet' # update this path
 def add_stop_words(words):
     stop_words.extend(words)
-    
+
 def sent_to_words(sentences):
     for sentence in sentences:
         yield(gensim.utils.simple_preprocess(str(sentence), deacc=True))  # deacc=True removes punctuations
-        
+
 def generate_bigram(data_words):
     bigram = gensim.models.Phrases(data_words, min_count=5, threshold=100) # higher threshold fewer phrases.
     bigram_mod = gensim.models.phrases.Phraser(bigram)
-    
+
     return [bigram_mod[doc] for doc in data_words]
 
 def generate_trigram(data_words, bigram):
     trigram = gensim.models.Phrases(bigram[data_words], threshold=100)
     trigram_mod = gensim.models.phrases.Phraser(trigram)
-    
+
     return trigram, trigram_mod
 
 def compute_coherence_values(dictionary, corpus, texts, limit, start=2, step=3):
@@ -87,7 +87,7 @@ def compute_coherence_values(dictionary, corpus, texts, limit, start=2, step=3):
             coherencemodel = CoherenceModel(model=model, texts=texts, dictionary=dictionary, coherence='c_v')
             coherence_values.append(coherencemodel.get_coherence())
 
-        return model_list, coherence_values 
+        return model_list, coherence_values
 
 def process_file_pdf(file_url):
     data = []
@@ -96,7 +96,7 @@ def process_file_pdf(file_url):
             text = page.extract_text()
             text.rstrip('\n')
             data.append(text)
-                
+
     data = [re.sub('\S*@\S*\s?', '', sent) for sent in data]
 
     # Remove new line characters
@@ -104,7 +104,7 @@ def process_file_pdf(file_url):
 
     # Remove distracting single quotes
     data = [re.sub("\'", "", sent) for sent in data]
-    
+
     return data;
 
 def process_file_csv(file_path):
@@ -117,8 +117,8 @@ def process_file_csv(file_path):
 
     # Remove distracting single quotes
     data = [re.sub("\'", "", sent) for sent in data]
-    
-    return data 
+
+    return data
 
 def generate_corpus(data):
     data_words = list(sent_to_words(data))
@@ -126,12 +126,12 @@ def generate_corpus(data):
     extra_stop_words = add_stop_words(stop_words)
     if extra_stop_words:
         stop_words = stop_words + extra_stop_words
-    
+
     def lemmatization(texts, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV']):
         """https://spacy.io/api/annotation"""
         texts_out = []
         for sent in texts:
-            doc = nlp(" ".join(sent)) 
+            doc = nlp(" ".join(sent))
             texts_out.append([token.lemma_ for token in doc if token.pos_ in allowed_postags])
         return texts_out
 
@@ -154,9 +154,9 @@ def generate_corpus(data):
 
     # Term Document Frequency
     corpus = [id2word.doc2bow(text) for text in texts]
-    
+
     return id2word, texts, corpus
-    
+
 def generate_topic_model(id2word, texts, corpus, number_of_topics):
 
     [[(id2word[id], freq) for id, freq in cp] for cp in corpus[:1]]
@@ -185,7 +185,7 @@ def find_optimal_num_topics(id2word, data_lemmatized, corpus, number_of_topics):
         if cv > maxCoherence:
             maxCoherence = cv
             maxM = m
-        
+
     return maxM
 
 def visualize_topic_model(lda_model, corpus, id2word):
@@ -196,7 +196,7 @@ def visualize_topic_model(lda_model, corpus, id2word):
 def ntopwlst(model, features, ntopwords):
     '''Create a list of the top keywords words'''
     output = []
-    for topic_idx, topic in enumerate(model.components_): 
+    for topic_idx, topic in enumerate(model.components_):
         output.append(str(topic_idx))
         output += [features[i] for i in topic.argsort()[:-ntopwords - 1:-1]]
     return output
@@ -211,7 +211,7 @@ def format_topics_sentences(ldamodel, corpus, texts):
     sent_topics_df = pd.DataFrame()
     for i, row in enumerate(ldamodel[corpus]):
         for j, (topic_num, prop_topic) in enumerate(row):
-            if j == 0: 
+            if j == 0:
                 wp = ldamodel.show_topic(topic_num)
                 topic_keywords = ", ".join([word for word, prop in wp])
                 sent_topics_df = sent_topics_df.append(pd.Series([int(topic_num), round(prop_topic,4), topic_keywords]), ignore_index=True)
@@ -220,8 +220,8 @@ def format_topics_sentences(ldamodel, corpus, texts):
     sent_topics_df.columns = ['Dominant_Topic', 'Perc_Contribution', 'Topic_Keywords']
     contents = pd.Series(texts)
     sent_topics_df = pd.concat([sent_topics_df, contents], axis=1)
-    return sent_topics_df 
-
+    return sent_topics_df
+'''
 ntopwords = 5
 count_vect=CountVectorizer()
 tf_feature_names = count_vect.get_feature_names()
@@ -246,6 +246,7 @@ ldamodel = generate_topic_model(id2word, texts, corpus, number_of_topics)
 df_topic_sents_keywords = format_topics_sentences(ldamodel=ldamodel, corpus=corpus, texts=disc)
 df_topic_csv = df_topic_sents_keywords.reset_index()
 df_topic_csv.columns = ['Document_No', 'Dominant_Topic', 'Topic_Perc_Contrib', 'Topic_Keywords', 'Text']
+'''
 
 # Get Topics and their Prob
 def get_topics_with_prob(texts):
@@ -260,9 +261,9 @@ def get_topics_with_prob(texts):
             print("Topic words and their associated probability: ")
             wp = ldamodel.show_topic(topic_num)
             topic_keywords = ", ".join([word for word, prop in wp])
-            
+
             for word, prop in wp:
                 print(word, prop)
 
-print(get_topics_with_prob(texts))
+#print(get_topics_with_prob(texts))
 
