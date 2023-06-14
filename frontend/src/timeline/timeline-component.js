@@ -18,13 +18,6 @@ function AppTimeline(props) {
     //const [reload, setReload] = useState(false);
 
     useEffect(() => {
-    
-    	/*console.log("Start time in timeline");
-    	console.log(props.start);
-    	console.log("End time in timeline");
-    	console.log(props.end);
-    	console.log("Transcripts in timeline");
-    	console.log(props.transcripts);*/
     	
         if (props.transcripts !== undefined) {
             setTranscripts(props.transcripts);

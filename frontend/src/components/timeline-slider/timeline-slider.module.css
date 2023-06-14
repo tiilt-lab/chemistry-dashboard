@@ -618,4 +618,43 @@
   color: #2B2B2E;
   opacity: 0.5;
 }
+
+
+.slider {
+  width: 100%;
+  height: 10px;
+  background-color: #cdd9ed;
+  margin-top: 20px;
+}
+
+.slider .thumb {
+  width: 100px;
+  height: 100px;
+  cursor: pointer;
+  background: #ff0000;
+  border-radius: 50%;
+  border: 2px solid #275efe;
+}
+
+/*.slider-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ReactSlider {
+  width: 300px;
+  height: 10px;
+  margin: 10px;
+  background-color: #d3d3d3;
+}
+
+.ReactSlider .slider-handle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #4CAF50;
+}*/
+
+
 /*# sourceMappingURL=timeline-slider.module.css.map */
