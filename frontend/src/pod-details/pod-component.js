@@ -93,23 +93,23 @@ function PodComponent() {
         //console.log("Start and end times changed endtime useeffect");
         setStartTime(sTime)
         setEndTime(eTime)
-        //console.log("Display transcript render time");
-        //console.log(transcripts.filter(t => t.start_time >= sTime && t.start_time <= eTime));
-        //console.log(sTime);
-        //console.log(eTime);
         setDisplayTranscripts(transcripts.filter(t => t.start_time >= sTime && t.start_time <= eTime));
         /*setDisplayTranscripts((past) => {
           return transcripts.filter(t => t.start_time >= sTime && t.start_time <= eTime);
         });*/
     },[endTime])
+    
+    useEffect(()=>{
+    if(displayTranscripts){
+      console.log('reloaded page')
+    }
+  },[displayTranscripts])
 
     //console.log(session, transcripts, '-', sessionDevice, '-', displayTranscripts, '-', startTime, '-', endTime, '-', 'session .......')
 
     const ResetTimeRange = (values) => {
         const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
         setTimeRange(values);
-        console.log("sendUpdate should call this");
-        console.log(values);
         setStartTime(Math.round(sessionLen * values[0] * 100) / 100);
         setEndTime(Math.round(sessionLen * values[1] * 100) / 100);
         generateDispalyTranscripts();
