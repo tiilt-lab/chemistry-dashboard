@@ -25,7 +25,7 @@ import matplotlib.pyplot as plt
 
 
 import PyPDF2
-import pdfreader
+#import pdfreader
 
 # Enable logging for gensim - optional
 import logging

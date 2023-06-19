@@ -233,7 +233,7 @@ class ServerProtocol(WebSocketServerProtocol):
         # Begin Post Processing
         if cf.record_reduced():
             self.redu_recorder.close()
-        if cf.video_record_original():
+        if cf.video_record_original() and self.stream_data == 'video':
             self.orig_vid_recorder.close()
         if cf.record_original():
             self.orig_recorder.close()
