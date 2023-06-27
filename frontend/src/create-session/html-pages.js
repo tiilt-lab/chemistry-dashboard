@@ -7,6 +7,7 @@ import style2 from '../dialog/dialog.module.css'
 import openFolderIcon from '../assets/img/open-folder.svg'
 import podIcon from "../assets/img/icon-pod.svg"
 import lightIcon from "../assets/img/light.svg"
+import { adjDim } from '../myhooks/custom-hooks';
 
 function CreateSessionPage(props) {
   return (
@@ -23,10 +24,10 @@ function CreateSessionPage(props) {
           <React.Fragment >
             <div className={style["list-container"]}>
               <div>Discussion name:</div>
-              <input id="txtName" className={style["text-input"]} defaultValue={props.sessionName} onKeyUp={(event) => props.setSessionName(event.target.value)} maxLength='64' />
+              <input id="txtName" className={style["text-input"]} style = {{width: adjDim(350) + 'px',}} defaultValue={props.sessionName} onKeyUp={(event) => props.setSessionName(event.target.value)} maxLength='64' />
               <div>Folder: </div>
-              <span className={style["path-container"]}>
-                <input type="text" className={style["folder-input"]} name="Location" placeholder={props.folderPath} readOnly />
+              <span className={style["path-container"]} style = {{width: adjDim(375) + 'px',}}>
+                <input type="text" className={style["folder-input"]} style = {{width: adjDim(318) + 'px',}} name="Location" placeholder={props.folderPath} readOnly />
                 <img src={openFolderIcon} id={style["open-folder-icon"]} onClick={() => props.openDialog("Folder", "test")} />
               </span>
               <label className={style["dc-checkbox"]}>Allow participant devices
@@ -42,8 +43,8 @@ function CreateSessionPage(props) {
                 <span className={style.checkmark}></span>
               </label>
             </div>
-            <button className={style["footer-button"]} onClick={props.navigateToSessions} >Back</button>
-            <button className={style["footer-button"]} onClick={props.goToKeywords}>Next</button>
+            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.navigateToSessions} >Back</button>
+            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.goToKeywords}>Next</button>
           </React.Fragment>
           :
           <></>
@@ -72,9 +73,9 @@ function CreateSessionPage(props) {
               }
             </div>
 
-            <button className={style["footer-button"]} onClick={props.navigateToKeywordLists}>Create Keyword List</button>
-            <button className={style["footer-button"]} onClick={props.goToSettings}>Back</button>
-            <button className={style["footer-button"]} onClick={props.goToDevices}>Next</button>
+            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.navigateToKeywordLists}>Create Keyword List</button>
+            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.goToSettings}>Back</button>
+            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.goToDevices}>Next</button>
           </React.Fragment>
           :
           <></>
@@ -112,8 +113,8 @@ function CreateSessionPage(props) {
 
             </div>
             <button className={style["select-all"]} onClick={props.onClickSelectAll}>Select All</button>
-            <button className={style["footer-button"]} onClick={props.goToKeywords}>Back</button>
-            <button className={style["footer-button"]} onClick={props.createSession}>Start Discussion</button>
+            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.goToKeywords}>Back</button>
+            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.createSession}>Start Discussion</button>
           </React.Fragment>
           :
           <></>

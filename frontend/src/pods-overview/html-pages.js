@@ -5,6 +5,7 @@ import style3 from '../session-toolbar/session-toolbar.module.css'
 import {Appheader} from '../header/header-component'
 import { GenericDialogBox } from '../dialog/dialog-component'
 import {AppSessionToolbar} from '../session-toolbar/session-toolbar-component'
+import { adjDim } from '../myhooks/custom-hooks'
 
 import micIcon from '../assets/img/mic.svg'
 import iconPod from '../assets/img/icon-pod.svg'
@@ -54,18 +55,18 @@ function PodsOverviewPages(props){
                     
                     {!props.session.end_date ?
                     <span className={style3["toolbar-button"]} onClick={()=> props.openDialog("AddDevice")} >
-                        <img alt='icon-pod' className={style3["button-icon"]} src={iconPod} />
-                        <div className={style3["button-text"]}>Add Pod</div>
+                        <img alt='icon-pod' className={style3["button-icon"]} style={{width: adjDim(40) + "px",}} src={iconPod} />
+                        <div className={style3["button-text"]} style={{"font-size": adjDim(10) + "px",}}>Add Pod</div>
                     </span>
                     :
                     <></>}
                     <span className={style3["toolbar-button"]} onClick={props.exportSession} >
-                        <img  alt='download' className={style3["button-icon"]} src={downloadIcon} />
-                        <div className={style3["button-text"]}>Download</div>
+                        <img  alt='download' className={style3["button-icon"]} style={{width: adjDim(40) + "px",}} src={downloadIcon} />
+                        <div className={style3["button-text"]} style={{"font-size": adjDim(10) + "px",}}>Download</div>
                     </span>
                     <span className={style3["toolbar-button"]} onClick={props.goToGraph}>
-                            <img alt='graph' className={style3["button-icon"]} src={iconGraph} />
-                            <div className={style3["button-text"]}>Graph</div>
+                            <img alt='graph' className={style3["button-icon"]} style={{width: adjDim(40) + "px",}} src={iconGraph} />
+                            <div className={style3["button-text"]} style={{"font-size": adjDim(10) + "px",}}>Graph</div>
                     </span>
                 </AppSessionToolbar> 
                 :

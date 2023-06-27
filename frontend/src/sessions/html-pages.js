@@ -10,7 +10,6 @@ import micIcon from '../assets/img/mic.svg';
 import { adjDim } from '../myhooks/custom-hooks';
 
 function DiscussionSessionPage(props) {
-  //console.log(props.breadcrumbs, 'breadcrumbs..')
   return (
     <>
     <div className={style.container}>
@@ -123,7 +122,7 @@ function DiscussionSessionPage(props) {
   {(props.currentForm === "RenameSession") ?
   <div  className={style["dialog-window"]} style = {{"min-width": adjDim(270) + 'px',}}>
     <div className={style["dialog-heading"]}>Update Discussion Name:</div>
-    <input id='txtName' value= {props.selectedSession.title} className={style["field-input"]} maxLength = "64" />
+    <input id='txtName' defaultValue= {props.selectedSession.title} className={style["field-input"]} maxLength = "64" />
   <button className={style["basic-button"]} onClick={() => props.changeSessionName(document.getElementById('txtName').value)} > Confirm</button >
     <button className={style["cancel-button"]} onClick={props.closeDialog}> Cancel</button >
   </div >

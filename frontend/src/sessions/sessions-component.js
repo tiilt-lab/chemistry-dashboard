@@ -364,7 +364,7 @@ function SessionsComponent(props) {
   const openSessionDialog = (newForm, selectedSession) => {
     setCurrentForm(newForm);
     setSelectedSession(selectedSession);
-    if (currentForm === "MoveSession") {
+    if (newForm === "MoveSession") {
       setSelectableFolders(folders);
     }
   }

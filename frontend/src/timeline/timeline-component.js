@@ -18,6 +18,7 @@ function AppTimeline(props) {
     //const [reload, setReload] = useState(false);
 
     useEffect(() => {
+    	
         if (props.transcripts !== undefined) {
             setTranscripts(props.transcripts);
             refreshTimeline();

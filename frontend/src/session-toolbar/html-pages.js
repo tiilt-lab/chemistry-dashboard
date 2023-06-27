@@ -3,13 +3,14 @@ import style2 from '../dialog/dialog.module.css'
 import {GenericDialogBox} from '../dialog/dialog-component'
 import {AppSpinner} from '../spinner/spinner-component'
 import React from 'react'
+import { adjDim } from '../myhooks/custom-hooks'
 
 function AppSessionPage(props){
 
     return(
         <>
         <div className={props.sessionEnding ? `${style["footer-bar"]} ${style["dialog-blur"]}`: style["footer-bar"]} >
-            <div className={style["session-toolbar"]}>
+            <div className={style["session-toolbar"]} style={{"grid-template-columns": adjDim(120) + "px auto " + adjDim(120) + "px",}}>
                 <span className={style["session-time"]}>
                     <div className={style.time}>{props.timeText}</div>
                     <div className={style.info}>Total duration</div>

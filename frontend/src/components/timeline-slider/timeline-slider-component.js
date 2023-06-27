@@ -1,13 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import style from './timeline-slider.module.css';
 import { adjDim } from '../../myhooks/custom-hooks';
+//import ReactSlider from 'react-slider';
 
 function AppTimelineSlider(props) {
+  /*
+  DEFAULT CODE
   const [currentSliderId, setCurrentSliderId] = useState(null);
   const [curPos, setCurPos] = useState(0);
   const [sliderValues, setSliderValues] = useState([0.0, 1.0]);
   const TIMELINE_WIDTH = adjDim(280);
   const HANDLE_WIDTH = adjDim(20);
+  //const [trigger, setTrigger] = useState(0);
 
 
   useEffect(() => {
@@ -15,6 +19,8 @@ function AppTimelineSlider(props) {
   }, [])
 
   const sendUpdate = () => {
+    console.log("Slider values sent from slider component");
+    console.log(sliderValues);
     props.inputChanged(sliderValues);
   }
 
@@ -23,6 +29,7 @@ function AppTimelineSlider(props) {
   // -----------
 
   const handlePos = (handleId) => {
+    console.log(sliderValues);
     return (sliderValues[handleId] * TIMELINE_WIDTH) + 'px';
   }
 
@@ -30,7 +37,9 @@ function AppTimelineSlider(props) {
     if (currentSliderId != null) {
       releaseHandle(null);
     }
-    setCurrentSliderId(handleId);
+    setCurrentSliderId((oldId) => {
+      return handleId;
+    });
     if (window.TouchEvent && e instanceof TouchEvent) {
       setCurPos(e.changedTouches[0].clientX);
       document.addEventListener('touchend', releaseHandle);
@@ -43,22 +52,26 @@ function AppTimelineSlider(props) {
   }
 
   const moveHandle = (e) => {
-    let change = 0;
-    if (window.TouchEvent && e instanceof TouchEvent) {
-      change = e.changedTouches[0].clientX - curPos;
-      setCurPos(e.changedTouches[0].clientX);
-    } else {
-      change = e.clientX - curPos;
-      setCurPos(e.clientX);
-    }
-
-    if (currentSliderId === 0) {
-      sliderValues[0] = Math.min(Math.max(0, (sliderValues[0] * TIMELINE_WIDTH) + change),
-        (sliderValues[1] * TIMELINE_WIDTH) - HANDLE_WIDTH) / TIMELINE_WIDTH;
-    } else {
-      sliderValues[1] = Math.min(Math.max((sliderValues[0] * TIMELINE_WIDTH) + HANDLE_WIDTH,
-        (sliderValues[1] * TIMELINE_WIDTH) + change), TIMELINE_WIDTH) / TIMELINE_WIDTH;
-    }
+    const newPos = window.TouchEvent && e instanceof TouchEvent ? e.changedTouches[0].clientX : e.clientX;
+    setCurPos((prevPos) => {
+      const change = newPos - prevPos;
+      if (currentSliderId === 0) {
+        setSliderValues((prevValues) => {
+          const newValues = [...prevValues];
+          newValues[0] = Math.min(Math.max(0, (newValues[0] * TIMELINE_WIDTH) + change),
+        (newValues[1] * TIMELINE_WIDTH) - HANDLE_WIDTH) / TIMELINE_WIDTH;
+          return newValues;
+        });
+      } else {
+        setSliderValues((prevValues) => {
+          const newValues = [...prevValues];
+          newValues[1] = Math.min(Math.max((newValues[0] * TIMELINE_WIDTH) + HANDLE_WIDTH,
+        (newValues[1] * TIMELINE_WIDTH) + change), TIMELINE_WIDTH) / TIMELINE_WIDTH;
+          return newValues;
+        });
+      }
+      return newPos;
+    });
   }
 
   const releaseHandle = (e) => {
@@ -70,7 +83,7 @@ function AppTimelineSlider(props) {
       document.removeEventListener('mousemove', moveHandle);
     }
     sendUpdate();
-    setCurrentSliderId(null);
+    //setCurrentSliderId(null);
   }
 
   // -----------
@@ -86,7 +99,6 @@ function AppTimelineSlider(props) {
   }
 
   const grabBar = (e) => {
-
     if (currentSliderId != null) {
       releaseHandle(null);
     }
@@ -96,29 +108,43 @@ function AppTimelineSlider(props) {
       document.addEventListener('touchmove', moveBar);
     } else {
       setCurPos(e.clientX);
-      document.addEventListener('mouseup', releaseBar);
       document.addEventListener('mousemove', moveBar);
+      document.addEventListener('mouseup', releaseBar);
     }
   }
 
   const moveBar = (e) => {
-    let change = 0;
-    if (window.TouchEvent && e instanceof TouchEvent) {
-      change = e.changedTouches[0].clientX - curPos;
-      setCurPos(e.changedTouches[0].clientX);
-    } else {
-      change = e.clientX - curPos;
-      setCurPos(e.clientX);
-    }
-    if (change < 0) {
-      const newPos = Math.max(0, sliderValues[0] * TIMELINE_WIDTH + change) / TIMELINE_WIDTH;
-      sliderValues[1] -= Math.abs(sliderValues[0] - newPos);
-      sliderValues[0] = newPos;
-    } else if (change > 0) {
-      const newPos = Math.min(sliderValues[1] * TIMELINE_WIDTH + change, TIMELINE_WIDTH) / TIMELINE_WIDTH;
-      sliderValues[0] += Math.abs(sliderValues[1] - newPos);
-      sliderValues[1] = newPos;
-    }
+    //console.log("Sliding");
+    console.log(sliderValues);
+    const newPos = window.TouchEvent && e instanceof TouchEvent ? e.changedTouches[0].clientX : e.clientX;
+    setCurPos((prevPos) => {
+      //console.log("curPos render");
+      const change = newPos - prevPos;
+      if (change < 0) {
+        setSliderValues((prevValues) => {
+          //console.log("sliderValue render");
+          const newValues = [...prevValues];
+          newValues[0] = Math.max(0, prevValues[0] * TIMELINE_WIDTH + change) / TIMELINE_WIDTH;
+          newValues[1] -= Math.abs(prevValues[0] - newValues[0]);
+          //sendUpdate();
+          //console.log(newValues);
+          return newValues;
+        });
+      } else if (change > 0) {
+        setSliderValues((prevValues) => {
+          //console.log("sliderValue render");
+          const newValues = [...prevValues];
+          newValues[1] = Math.min(prevValues[1] * TIMELINE_WIDTH + change, TIMELINE_WIDTH) / TIMELINE_WIDTH;
+          newValues[0] += Math.abs(prevValues[1] - newValues[1]);
+          //sendUpdate();
+          //console.log(newValues);
+          console.log(sliderValues);
+          return newValues;
+        });
+      }
+      return newPos;
+    });
+    //sendUpdate();
   }
 
   const releaseBar = (e) => {
@@ -134,14 +160,111 @@ function AppTimelineSlider(props) {
 
   return (
     <div className={style.timeline}>
-      <div className={style["timeline-background"]}
+
+      <ReactSlider
+    //className="timeline-background"
+    //thumbClassName="timeline-handle"
+    //trackClassName="example-track"
+    defaultValue={[0, 100]}
+    //ariaLabel={['Lower thumb', 'Upper thumb']}
+    //ariaValuetext={state => `Thumb value ${state.valueNow}`}
+    onChange = {(vals) => {sendUpdate(vals)}}
+    //onAfterChange = {(vals) => {sendUpdate(vals)}}
+    renderThumb={(props, state) => <div {...props}>{state.valueNow}</div>}
+    //pearling
+    minDistance={10}
+/>
+
+      <div className={style["timeline-text"]} style={{ left: "0px", top: "50px" }}>{props.leftText}</div>
+      <div className={style["timeline-text"]} style={{ right: "0px", top: "50px" }}>{props.rightText}</div>
+    </div>
+  )*/
+  
+  /* In btwn the timeline background and timeline text
+<div className={style["timeline-background"]}
       style={{ width: adjDim(280) + 'px',}}></div>
-      <div className={style["timeline-bar"]} onMouseDown={(event) => grabBar(event)} onTouchStart={(event) => grabBar(event)} style={{ left: barLeft(), width: barWidth() }}></div>
+<div className={style["timeline-bar"]} onMouseDown={(event) => grabBar(event)} onTouchStart={(event) => grabBar(event)} style={{ left: barLeft(), width: barWidth() }}></div>
       <div className={style["timeline-handle"]} onMouseDown={(event) => grabHandle(0, event)} onTouchStart={(event) => grabHandle(0, event)} style={{ left: handlePos(0) }}></div>
       <div className={style["timeline-handle"]} onMouseDown={(event) => grabHandle(1, event)} onTouchStart={(event) => grabHandle(1, event)} style={{ left: handlePos(1) }}></div>
+      
+<ReactSlider
+    //className="timeline-background"
+    //thumbClassName="timeline-handle"
+    //trackClassName="example-track"
+    defaultValue={[0, 100]}
+    //ariaLabel={['Lower thumb', 'Upper thumb']}
+    //ariaValuetext={state => `Thumb value ${state.valueNow}`}
+    onChange = {(vals) => {sendUpdate(vals)}}
+    //onAfterChange = {(vals) => {sendUpdate(vals)}}
+    renderThumb={(props, state) => <div {...props}>{state.valueNow}</div>}
+    //pearling
+    minDistance={10}
+/>*/
+  
+  //TRY NEW CODE HERE
+  
+  const [min, setMin] = useState(0.0);
+  const [max, setMax] = useState(1.0);
+  const TIMELINE_WIDTH = adjDim(280);
+  const HANDLE_WIDTH = adjDim(20);
+  const timelineBackgroundRef = useRef(null);
+  
+  useEffect(() => {
+    let sliderValues = [min, max];
+    props.inputChanged(sliderValues);
+  }, [])
+
+  const sendUpdate = () => {
+    let sliderValues = [min, max];
+    props.inputChanged(sliderValues);
+  }
+  
+  const handlePos = (handleId) => {
+    let sliderValues = [min, max];
+    return (sliderValues[handleId] * TIMELINE_WIDTH) + 'px';
+  }
+  
+  const barLeft = () => {
+    return ((min * TIMELINE_WIDTH) + (HANDLE_WIDTH / 2)) + 'px';
+  }
+
+  const barWidth = () => {
+    return ((max - min) * TIMELINE_WIDTH) + 'px';
+  }
+  
+  const moveHandle = (handleId, e) => {
+    //calculate distance of left of screen to left of timeline
+    const element = timelineBackgroundRef.current;
+    const rect = element.getBoundingClientRect();
+    const offset = rect.x;
+    //so position of your mouse in respect to the timeline
+    const newVal = e.clientX - offset;
+    if (handleId == 0 && (max * TIMELINE_WIDTH) >= newVal + HANDLE_WIDTH) {
+      let val = Math.min(Math.max(0, newVal),
+      (max * TIMELINE_WIDTH) - HANDLE_WIDTH) / TIMELINE_WIDTH;
+      setMin(val);
+    }
+    if (handleId == 1 && newVal >= (min * TIMELINE_WIDTH) + HANDLE_WIDTH) {
+      let val = Math.min(Math.max((min * TIMELINE_WIDTH) + HANDLE_WIDTH,
+      newVal), TIMELINE_WIDTH) / TIMELINE_WIDTH;
+      setMax(val);
+    }
+    sendUpdate();
+  }
+    
+  
+  return (
+    <div className={style.timeline}>
+      <div className={style["timeline-background"]}
+      style={{ width: adjDim(280) + 'px',}} ref={timelineBackgroundRef}></div>
+      <div className={style["timeline-bar"]} style={{ left: barLeft(), width: barWidth() }}></div>
+      <div className={style["timeline-handle"]} onMouseMove={(event) => moveHandle(0, event)} style={{ left: handlePos(0) }}></div>
+      <div className={style["timeline-handle"]} onMouseMove={(event) => moveHandle(1, event)} style={{ left: handlePos(1) }}></div>
       <div className={style["timeline-text"]} style={{ left: "0px", top: "50px" }}>{props.leftText}</div>
       <div className={style["timeline-text"]} style={{ right: "0px", top: "50px" }}>{props.rightText}</div>
     </div>
   )
+  
 }
 export { AppTimelineSlider }
+

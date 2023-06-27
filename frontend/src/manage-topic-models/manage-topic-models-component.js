@@ -1,12 +1,13 @@
 import { KeywordService } from "../services/keyword-service";
+import { TopicModelService } from "../services/topicmodel-service";
 import { KeywordListModel } from '../models/keyword-list';
 import { formatDate } from "../globals";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { KeywordListPage } from './html-pages'
+import { ManageTopicsPage } from './html-pages'
 
 
-function ManageKeywordListsComponent(props) {
+function ManageTopicModelsComponent(props) {
   const navigate = useNavigate();
   const [deleteDialogIsOpen, setDeleteDialogIsOpen] = useState(false);
   const [keywordListToDelete, setKeywordListToDelete] = useState(null);
@@ -47,13 +48,9 @@ function ManageKeywordListsComponent(props) {
     return navigate('/keyword-lists/new');
   }
   
-  const tempFunction = () => {
-    //using this in place of createTopicModel now, seeing what happens
-    console.log("Inside the function");
-    //then try to change
+  const navFileUpload = () => {
     navigate("/file_upload");
   }
- 
 
   const createTopicModel = () => {
     const fetchData = new KeywordService().getTopics();
@@ -119,7 +116,7 @@ function ManageKeywordListsComponent(props) {
   // }
 
   return (
-    <KeywordListPage
+    <ManageTopicsPage
       formatdate={formatdate}
       deleteDialogIsOpen={deleteDialogIsOpen}
       closeDeleteDialog={closeDeleteDialog}
@@ -130,9 +127,9 @@ function ManageKeywordListsComponent(props) {
       openNewKeywordList={openNewKeywordList}
       createTopicModel={createTopicModel}
       confirmDeleteKeywordList={confirmDeleteKeywordList}
-      tempFunction = {tempFunction}
+      navFileUpload = {navFileUpload}
     />
   )
 }
 
-export { ManageKeywordListsComponent }
+export { ManageTopicModelsComponent }

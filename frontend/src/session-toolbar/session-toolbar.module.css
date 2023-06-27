@@ -630,7 +630,7 @@
 
 .session-toolbar {
   -ms-grid-columns: 120px auto 120px;
-      grid-template-columns: 120px auto 120px;
+      /*grid-template-columns: 120px auto 120px*/;
       grid-template-areas: 'left middle right';
   display: -ms-grid;
   display: grid;

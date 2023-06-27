@@ -5,7 +5,7 @@ import { Appheader } from '../header/header-component'
 import React from 'react'
 
 function DiscussionPage(props){
-  // console.log(props)
+  
   return(
   <>
     <div>
@@ -14,7 +14,7 @@ function DiscussionPage(props){
         leftText={false}
         rightText={"Options"}
         rightEnabled={true}
-        rightTextClick={()=>{props.openForms("devices")}}
+        rightTextClick={()=>{props.openForms("checkbox", props.selectedDevice)}}
         nav={props.navigateToSession} 
         headerclass={"discussion-graph-header"}
       />
@@ -23,7 +23,7 @@ function DiscussionPage(props){
   <div className={style["header-container"]}>
     <span className={style["header-spacer"]}></span>
     {
-      props.displayDevices.map((device, index)=>(
+      props.checkedDevices().map((device, index)=>(
         <div  key={index} className={style["header-text"]} onClick={()=> props.openForms("stats", device)}>{ device.name }</div>
       ))
     } 
@@ -38,7 +38,7 @@ function DiscussionPage(props){
     </div>
 
     {
-      props.displayDevices.map((device, index)=>(
+      props.checkedDevices().map((device, index)=>(
         <div  key={index} className={style["transcript-column"]} >
           {
             device.transcripts.map((transcript,index)=>(
@@ -67,7 +67,8 @@ function DiscussionPage(props){
   </div>
 </div>
 
- <GenericDialogBox show = {props.currentForm !== ""}>
+ <GenericDialogBox show = {props.currentForm !== ""} checkBox = {props.currentForm} displayDevices = {props.displayDevices} changeCheck = {props.changeCheck} >
+   
    {/* Keyword dialog */}
    {(props.currentForm === "keywords") ?
      <div>
@@ -97,7 +98,7 @@ function DiscussionPage(props){
               <React.Fragment>
                 <div className={style["graph-box"]}>
                   <svg viewBox="-1 -1 2 2" style={{transform: "rotate(-90deg)"}} className={style["pie-chart"]}>
-                    {props.displayDevices.map((device, index)=>(
+                    {props.checkedDevices().map((device, index)=>(
                       <path d= {device.path} fill={device.color}  className={style["pie-piece"]} onClick={()=> props.toggleGraph(true, device)} stroke="transparent" ></path>
                     ))
                     } 
@@ -106,7 +107,7 @@ function DiscussionPage(props){
                 </div> 
                 <h3>Key</h3>
                 <div className={style["graph-legend"]}>
-                    { props.displayDevices.map((device, index)=>(
+                    { props.checkedDevices().map((device, index)=>(
                       <React.Fragment key={index}>
                          <div className={style["color-box"]} style={{backgroundColor: `${device.color}`}}> </div>
                         {device.selected ? <div className={style.name}  style={{fontWeight: "bold"}}> {device.name} </div> : <></> }
@@ -157,6 +158,7 @@ function DiscussionPage(props){
             <></>
           }
         </div>
+        
       :
         <></>
     }     

@@ -46,7 +46,6 @@ function WaitingDialog(props) {
       <></>
     )
   }
-
   return (
     <div className={style["dialog-background"]}>
       <div className={style["dialog-container"]}>
@@ -60,9 +59,24 @@ function WaitingDialog(props) {
 }
 
 function GenericDialogBox(props) {
+  
   if (!props.show) {
     return (
       <></>
+    )
+  }
+  if (props.checkBox == "checkbox") {
+    return (
+        <div className={style["dialog-background"]}>
+          <div className={style["dialog-container-expanded"]}>
+            {props.displayDevices.map((device, index) => (
+              <label className={style["dc-checkbox"]}>{device.name}
+                  <input type="checkbox" checked={device.checked} value={device.checked} onChange={() => props.changeCheck(index)}  />
+                  <span className={style.checkmark}></span>
+              </label>))}
+            {props.children} 
+          </div>
+        </div>
     )
   }
   return (

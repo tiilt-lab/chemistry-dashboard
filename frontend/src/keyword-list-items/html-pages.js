@@ -3,6 +3,7 @@ import style from './keyword-list-items.module.css';
 import { Appheader } from '../header/header-component';
 import removeicon from '../assets/img/remove.svg'
 import React from 'react';
+import { isLargeScreen } from '../myhooks/custom-hooks';
 
 function KeywordListPages(props) {
 
@@ -37,7 +38,7 @@ function KeywordListPages(props) {
               </div>
               ))}
             </div>
-            <button className={`${style["basic-button"]} ${style["medium-button"]}`} onClick={props.addNewKeyword}>Add Keyword</button>
+            <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.addNewKeyword}>Add Keyword</button>
           </React.Fragment>
           :
           <></>
