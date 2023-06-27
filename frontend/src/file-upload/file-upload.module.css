@@ -3,6 +3,11 @@
   margin: 20px 0px !important;
 }
 
+.small-button {
+  margin: 20px 0px !important;
+  /*width: 100% !important;*/
+}
+
 .basic-button {
   width: 100%;
   text-align: center;

@@ -591,7 +591,7 @@
   overflow: auto;
   position: absolute;
   margin-top: 60px;
-  height: calc(100% - 60px);
+  height: calc(100% - 116px);
   width: 100%;
   display: -ms-grid;
   display: grid;
@@ -622,7 +622,7 @@
   line-height: 40px;
   text-align: center;
   overflow: hidden;
-  min-width: 300px;
+  min-width: 250px;
   max-width: 500px;
   -webkit-box-flex: 1;
       -ms-flex-positive: 1;
@@ -676,7 +676,7 @@
 
 .graph-container .transcript-column {
   position: relative;
-  min-width: 300px;
+  min-width: 250px;
   max-width: 500px;
   -webkit-box-flex: 1;
       -ms-flex-positive: 1;

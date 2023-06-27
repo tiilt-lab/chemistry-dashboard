@@ -608,7 +608,7 @@
   font-size: 12px;
   line-height: 20px;
   color: #727278;
-  width: 343px;
+  /*width: 343px;*/
 }
 
 .home-button {
@@ -622,7 +622,7 @@
   -webkit-box-pack: start;
       -ms-flex-pack: start;
           justify-content: flex-start;
-  width: 311px;
+  /*width: 311px;*/
   height: 64px;
   -webkit-box-align: center;
       -ms-flex-align: center;

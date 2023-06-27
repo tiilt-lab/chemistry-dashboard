@@ -59,6 +59,7 @@ function PodComponent() {
                     // console.log(data,session, 'testing refresh still debugging ...')
                     setTransripts(data)
                     const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
+                    //console.log("Start and end times changed default useeffect");
                     setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100)
                     setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100)
                 }
@@ -68,6 +69,7 @@ function PodComponent() {
 
         // Refresh based on timeslider.
         setIntervalId(setInterval(() => {
+            //console.log("Fetched onto pod-component");
             //ResetTimeRange(timeRange);
             if (session === undefined || !session.recording) {
                 clearInterval(intervalId);
@@ -88,10 +90,20 @@ function PodComponent() {
         const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
         const sTime = Math.round(sessionLen * timeRange[0] * 100) / 100;
         const eTime = Math.round(sessionLen * timeRange[1] * 100) / 100;
+        //console.log("Start and end times changed endtime useeffect");
         setStartTime(sTime)
         setEndTime(eTime)
         setDisplayTranscripts(transcripts.filter(t => t.start_time >= sTime && t.start_time <= eTime));
+        /*setDisplayTranscripts((past) => {
+          return transcripts.filter(t => t.start_time >= sTime && t.start_time <= eTime);
+        });*/
     },[endTime])
+    
+    useEffect(()=>{
+    if(displayTranscripts){
+      console.log('reloaded page')
+    }
+  },[displayTranscripts])
 
     //console.log(session, transcripts, '-', sessionDevice, '-', displayTranscripts, '-', startTime, '-', endTime, '-', 'session .......')
 

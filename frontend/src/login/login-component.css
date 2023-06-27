@@ -3,6 +3,11 @@
   margin: 20px 0px !important;
 }
 
+.small-button {
+  margin: 20px 0px !important;
+  width: 100% !important;
+}
+
 .basic-button {
   width: 100%;
   text-align: center;
@@ -601,7 +606,7 @@
   font-size: 14px;
   padding: 0px 10px;
   margin: 12px 0px;
-  width: 320px;
+  /*width: 320px;*/
   height: 30px;
   -webkit-box-shadow: none;
           box-shadow: none;

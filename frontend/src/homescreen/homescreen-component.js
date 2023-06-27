@@ -13,11 +13,13 @@ import settings from '../assets/img/settings.svg'
 import question from '../assets/img/question.svg'
 import logouticon from '../assets/img/logout.svg'
 
+import { adjDim } from '../myhooks/custom-hooks';
+
 import './homescreen.component.css';
 
 function Menus(props) {
   return (
-    <div className="home-button" onClick={() => props.route(props.path)}>
+    <div className="home-button" style = {{width: adjDim(311) + 'px',}} onClick={() => props.route(props.path)}>
       <img alt={props.menuName} src={props.menuIcon} className="icon" />
       <div className="button-text">{props.menuName}</div>
     </div>
@@ -56,15 +58,15 @@ function HomeScreen(props) {
       <Menus menuIcon={recordicon} menuName="Discussions" route={navigate} path='/sessions' />
       <Menus menuIcon={wordlist} menuName="Keyword" route={navigate} path='/keyword-lists' />
       <Menus menuIcon={pod} menuName="Pods" route={navigate} path='/pods' />
-      <Menus menuIcon={trending} menuName="Topic Modeling" route={navigate} path='/file_upload' />
+      <Menus menuIcon={trending} menuName="Topic Modeling" route={navigate} path='/topic-models' />
       <Menus menuIcon={settings} menuName="Settings" route={navigate} path='/Settings' />
 
-      <div className="home-button" onClick={navigateToHelp}>
+      <div className="home-button" style = {{width: adjDim(311) + 'px',}} onClick={navigateToHelp}>
         <img alt="help" src={question} className="icon" />
         <div className="button-text">Help</div>
       </div>
 
-      <div className="home-button" onClick={logout}>
+      <div className="home-button" style = {{width: adjDim(311) + 'px',}} onClick={logout}>
         <img alt="sign out" src={logouticon} className="icon" />
         <div className="button-text">Sign Out</div>
       </div>

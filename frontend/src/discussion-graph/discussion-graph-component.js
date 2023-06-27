@@ -49,7 +49,6 @@ function DiscussionGraphComponent() {
 
     if (transcripts.length <= 0) {
       const transcriptSub = activeSessionService.getTranscripts()
-      
        transcriptSub.subscribe(e => {
            if (Object.keys(e).length !== 0) {
                setTranscripts(e)
@@ -68,6 +67,7 @@ function DiscussionGraphComponent() {
       });
   }
   }, [])
+
   useEffect(()=>{
     if(reload){
       updateGraph();
@@ -118,9 +118,11 @@ function DiscussionGraphComponent() {
           matchingDevice['transcripts'].push(createDisplayTranscript(transcript));
         }
       }
+      for (const device of displayDev) {
+        device.checked = true;
+      }
       setDisplayDevices(displayDev);
-      generateTimestamps();
-      
+      generateTimestamps(getLastTime(displayDev));
     }
   }
 
@@ -128,15 +130,30 @@ function DiscussionGraphComponent() {
     navigate('/sessions/' + session.id);
   }
 
-  const generateTimestamps = () => {
+  const generateTimestamps = (lastTranscript) => {
+    //a fix of the timestamp mistake
     const timesta = ['00:00'];
-    const lastTranscript = transcripts[transcripts.length - 1];
-    const totalSeconds = (lastTranscript.start_time + lastTranscript.length);
+    /*const lastTranscript = transcripts[transcripts.length - 1];
+    const totalSeconds = (lastTranscript.start_time + lastTranscript.length);*/
+    const totalSeconds = (lastTranscript[0] + lastTranscript[1]);
     const stepSize = 5;
     for (let i = stepSize; i < totalSeconds; i += stepSize) {
       timesta.push(formatSeconds(i));
     }
     setTimestamps(timesta)
+  }
+  
+  const getLastTime = (displayDev) => {
+    let times = displayDev.map(dev => (dev.transcripts.length == 0) ? [0, 0] : [(dev.transcripts[dev.transcripts.length - 1].start_time), (dev.transcripts[dev.transcripts.length - 1].length)]);
+    let max = 0;
+    let maxarr = [0, 0];
+    for (const t of times) {
+      if (t[0] > max) { 
+        max = t[0]; 
+        maxarr = t;
+      }
+    }
+    return maxarr;
   }
 
   const parseQuestions = (session_device) => {
@@ -274,6 +291,17 @@ function DiscussionGraphComponent() {
     Object.assign(transcript, newTranscript);
     setTrigger(trigger+1)
   }
+  
+  const changeCheck = (index) => {
+    let newarr = displayDevices;
+    newarr[index].checked = !newarr[index].checked;
+    setDisplayDevices(newarr);
+    setTrigger(trigger+1)
+  }
+  
+  const checkedDevices = () => {
+    return displayDevices.filter(device => device.checked);
+  }
 
   return (
     <DiscussionPage
@@ -284,6 +312,9 @@ function DiscussionGraphComponent() {
       highlightQuestions={highlightQuestions}
       currentForm={currentForm}
       displayKeywords={displayKeywords}
+      setDisplayDevices = {setDisplayDevices}
+      changeCheck = {changeCheck}
+      checkedDevices = {checkedDevices}
       toggleGraph={toggleGraph}
       selectedDevice={selectedDevice}
       showGraph={showGraph}

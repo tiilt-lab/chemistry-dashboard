@@ -5,6 +5,7 @@ import { GenericDialogBox } from '../dialog/dialog-component'
 import iconPod from "../assets/img/icon-pod.svg"
 import lightIcon from "../assets/img/light.svg"
 import React from 'react'
+import { isLargeScreen } from '../myhooks/custom-hooks';
 
 function PodComponentPage(props) {
 
@@ -57,7 +58,7 @@ function PodComponentPage(props) {
             <></>
           }
         </div>
-        {props.user.isAdmin || props.user.isSuper ? <button className={`${style["basic-button"]} ${style["medium-button"]}`} onClick={() => props.openDialog("Add")}>Add via MAC address</button> : <></>}
+        {props.user.isAdmin || props.user.isSuper ? <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={() => props.openDialog("Add")}>Add via MAC address</button> : <></>}
       </div>
 
       <GenericDialogBox show={props.currentForm !== ""}>

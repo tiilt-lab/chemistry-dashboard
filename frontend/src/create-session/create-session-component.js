@@ -8,11 +8,15 @@ import { SessionModel } from '../models/session'
 import { FolderModel } from '../models/folder';
 import { useEffect, useState } from 'react';
 import {CreateSessionPage} from './html-pages'
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 
 
 function CreateSessionComponent(props) {
   const BLINK_DELAY = 15000;
+  //Previous state
+  const location = useLocation();
+  const prevState = location.state;
+  const changedState = prevState != null;
   // Page Data
   const [user, setUser] = useState(null);
   const [devices, setDevices] = useState([]);
@@ -26,14 +30,14 @@ function CreateSessionComponent(props) {
   const [displayText, setDisplayText] = useState('');
 
   // Session Data
-  const [sessionName, setSessionName] = useState('');
-  const [byod, setByod] = useState(true);
-  const [doa, setDoa] = useState(true);
-  const [features, setFeatures] = useState(true);
+  const [sessionName, setSessionName] = useState(changedState ? prevState.sessionName : '');
+  const [byod, setByod] = useState(changedState ? prevState.byod : true);
+  const [doa, setDoa] = useState(changedState ? prevState.doa : true);
+  const [features, setFeatures] = useState(changedState ? prevState.features : true);
   const [selectedKeywordList, setSelectedKeywordList] = useState(null);
   const [selectedDevices, setSelectedDevices] = useState([]);
-  const [folder, setFolder] = useState(-1);
-  const [folderPath, setFolderPath] = useState('Home');
+  const [folder, setFolder] = useState(changedState ? prevState.folder : -1);
+  const [folderPath, setFolderPath] = useState(changedState ? prevState.folderPath : 'Home');
   const [folders, setFolders] = useState([]);
   const [folderSelect, setFolderSelect] = useState(null)
   const [breadCrumbSelect, setBreadCrumbSelect] = useState(null)
@@ -101,7 +105,8 @@ function CreateSessionComponent(props) {
               setFolders(folderresult);
               const paramfolder = searchParam.get('folder');
               const passedFolderId = +parseInt(paramfolder, 10);
-              if (passedFolderId > -1) {
+              if (folder > 0) {
+              } else if (passedFolderId > -1) {
                 setFolderLocation(passedFolderId, buildBreadcrumbs(passedFolderId));
               } else {
                 setFolderLocation(passedFolderId, folderPath);
@@ -278,7 +283,7 @@ function CreateSessionComponent(props) {
   }
 
   const navigateToKeywordLists = () =>{
-    navigate('/keyword-lists/new');
+    navigate('/keyword-lists/new-session', {state: {sessionName: sessionName, byod: byod, features: features, doa: doa, folder: folder, folderPath: folderPath}});
   }
 
   const openDialog = (form, text)=> {

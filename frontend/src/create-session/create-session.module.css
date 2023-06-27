@@ -1322,7 +1322,7 @@
 
 .footer-button {
   margin: 10px 0px;
-  width: 374px;
+  /*width: 374px;*/
 }
 
 .dialog-button {
@@ -1333,7 +1333,7 @@
   font-size: 14px;
   padding: 0px 10px;
   margin: 12px 0px;
-  width: 350px;
+  /*width: 350px;*/
   height: 30px;
   -webkit-box-shadow: none;
           box-shadow: none;
@@ -1358,7 +1358,7 @@
   -webkit-box-direction: normal;
       -ms-flex-direction: row;
           flex-direction: row;
-  width: 375px;
+  /*width: 375px;*/
 }
 
 #open-folder-icon {
@@ -1370,7 +1370,7 @@
   font-size: 14px;
   padding: 0px 10px;
   margin: 12px 0px;
-  width: 318px;
+  /*width: 318px;*/
   height: 30px;
   border-radius: 5px;
   border-style: solid;
