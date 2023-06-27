@@ -130,12 +130,12 @@ class AudioProcessor:
             keywords = None
             if self.config.keywords:
                 keywords = keyword_detector.detect_keywords(transcript_text, self.config.keywords)
-            
+
             # Get Topics
             topics = None
             #if self.config.topics:
             #    topics = get_topics_with_prob(transcript_text)
-                
+
             # Get DoA
             doa = None
             if self.config.doa and self.config.channels == 6:
@@ -155,7 +155,7 @@ class AudioProcessor:
                         'start': start_time,
                         'end': end_time
                     })
-                
+
             # Get Features
             features = None
             if self.config.features:
