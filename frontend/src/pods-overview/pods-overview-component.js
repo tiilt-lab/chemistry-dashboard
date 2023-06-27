@@ -44,7 +44,7 @@ function PodsOverviewComponent() {
     }
 
     const onSessionClosing = (isClosing) => {
-        setSessionClosing(isClosing); 
+        setSessionClosing(isClosing);
     }
 
     const navigateToSessions = () => {
@@ -120,18 +120,21 @@ function PodsOverviewComponent() {
         const fetchData = new SessionService().downloadSessionReport(session.id, session.title)
         fetchData.then(
             response => {
-                if (response.status === 200) {
-                    const anchor = document.createElement('a');
-                    anchor.href = 'data:attachment/csv;charset=utf-8,' + encodeURI((response)._body)
-                        anchor.download = session.title + '.csv';
-                    anchor.click();
-                    console.log('Download successful.')
-                    //return true;
-                    {/* const resp = response.json()
-                    resp.then() */}
-                } else {
-                    alert('Failed to download session report.');
-                }
+              if (response.status === 200) {
+                response.text().then(csvData => {
+                  const anchor = document.createElement('a');
+                  anchor.href = 'data:attachment/csv;charset=utf-8,' + encodeURI(csvData)
+                  anchor.download = session.title + '.csv';
+                  anchor.click();
+                  console.log(csvData);
+                  console.log('Download successful.');
+                  //return true;
+                  /* {const resp = response.json()
+                  resp.then() }*/
+                });
+              } else {
+                alert('Failed to download session report.');
+              }
             },
             apierror => {
                 console.log("pods-overview-components func: exportsession 1 ", apierror)
@@ -160,7 +163,7 @@ function PodsOverviewComponent() {
     }
 
     return (
-        <PodsOverviewPages 
+        <PodsOverviewPages
             righttext = {getPasscode()}
             rightenabled = {getRightEnabled()}
             session = {session}
