@@ -8,13 +8,8 @@ from doa.doa_respeaker_v2_6mic_array import calculateDOA
 from speaker_diarization.pyDiarization import speakerDiarization
 import numpy as np
 import time
-<<<<<<< HEAD
 #from source_seperation import source_seperation_pre_trained
 #from server.topic_modeling.topicmodeling import get_topics_with_prob
-=======
-from source_seperation import source_seperation_pre_trained
-from server.topic_modeling.topicmodeling import get_topics_with_prob
->>>>>>> 8ccda594b4a0dbd20b0d3b9467678aebe4f29d1a
 
 # For converting nano seconds to seconds.
 NANO = 1000000000
@@ -135,12 +130,12 @@ class AudioProcessor:
             keywords = None
             if self.config.keywords:
                 keywords = keyword_detector.detect_keywords(transcript_text, self.config.keywords)
-            
+
             # Get Topics
             topics = None
             #if self.config.topics:
             #    topics = get_topics_with_prob(transcript_text)
-                
+
             # Get DoA
             doa = None
             if self.config.doa and self.config.channels == 6:
@@ -160,7 +155,7 @@ class AudioProcessor:
                         'start': start_time,
                         'end': end_time
                     })
-                
+
             # Get Features
             features = None
             if self.config.features:
