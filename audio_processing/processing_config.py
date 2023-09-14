@@ -50,7 +50,7 @@ class ProcessingConfig:
         # Check if tagging is requested and is possible.
         tag = data.get('tag', False) and cf.record_original() and channels == 2
         # Check if diarization is requested and possible.
-        diarization = data.get('tag', False) and channels == 6
+        diarization = data.get('tag', False)
 
         # Check if auth is required and if key is valid.
         session_key = RedisSessions.get_device_key(auth_key)
@@ -71,4 +71,4 @@ class ProcessingConfig:
 
     def is_valid_key(self):
         return RedisSessions.get_device_key(self.auth_key) != None
- 
+
