@@ -5,7 +5,7 @@ import callbacks
 from features_detector import features_detector
 from keyword_detector import keyword_detector
 from doa.doa_respeaker_v2_6mic_array import calculateDOA
-from speaker_diarization.pyDiarization import clusterEmbeddings, embedSignal, speakerDiarization
+from speaker_diarization.pyDiarization import clusterEmbeddings, embedSignal
 import numpy as np
 import time
 #from source_seperation import source_seperation_pre_trained
