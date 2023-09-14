@@ -254,7 +254,7 @@ function JoinPage() {
                    // media.then(function (stream) {
                         setStreamReference(stream);
                         if (joinswith === 'Audio') {
-                            const context = new AudioContext();
+                            const context = new AudioContext({sampleRate:16000});
                             setSource(context.createMediaStreamSource(stream));
                             setAudioContext(context);
                         } else if (joinswith === 'Video') {
@@ -304,7 +304,7 @@ function JoinPage() {
                    // media.then(function (stream) {
                         setStreamReference(stream);
                         if (joinwith === 'Audio') {
-                            const context = new AudioContext();
+                            const context = new AudioContext({sampleRate:16000});
                             setSource(context.createMediaStreamSource(stream));
                             setAudioContext(context);
                         } else if (joinwith === 'Video') {
@@ -438,7 +438,8 @@ function JoinPage() {
                 'sample_rate': audioContext.sampleRate,
                 'encoding': 'pcm_f32le',
                 'channels': 1,
-                'streamdata': 'audio'
+                'streamdata': 'audio',
+                'tag': true
             };
         } else if (joinwith === 'Video') {
             message = {

@@ -5,7 +5,7 @@ import callbacks
 from features_detector import features_detector
 from keyword_detector import keyword_detector
 from doa.doa_respeaker_v2_6mic_array import calculateDOA
-from speaker_diarization.pyDiarization import speakerDiarization
+from speaker_diarization.pyDiarization import clusterEmbeddings, embedSignal, speakerDiarization
 import numpy as np
 import time
 #from source_seperation import source_seperation_pre_trained
@@ -20,9 +20,12 @@ class AudioProcessor:
         self.transcript_queue = transcript_queue
         self.mt_feats = np.array([])
         self.speakers = np.array([])
+        self.signal = np.array([])
+        self.max_speakers = 10
+        self.embeddings = []
         self.speaker_timings = []
-        self.fs = 16000
         self.config = config
+        self.fs = 16000
         self.running = False
         self.asr_complete = False
         self.running_processes = 0
@@ -39,6 +42,8 @@ class AudioProcessor:
         self.running = False
 
     def __complete_callback(self):
+        logging.info("completing callback")
+        logging.info(self.config.diarization)
         if self.config.diarization:
             try:
                 self.send_speaker_taggings()
@@ -47,27 +52,16 @@ class AudioProcessor:
             np.savetxt("/var/lib/chemistry-dashboard/audio_processing/speaker_diarization/results/{}.txt".format(time.strftime("%Y%m%d-%H%M%S")), self.speakers)
 
     def send_speaker_taggings(self):
-        # Parse results from speaker list.
-        self.speaker_timings.sort(key=lambda x: x['start'])
-        start_frame = 0
+        # Parse results from embeddings list.
+        #self.embeddings.sort(key=lambda x: x['start'])
         results = []
-        for speaker_timing in self.speaker_timings:
-            samples = self.speakers[start_frame:(start_frame + speaker_timing['f_count'])]
-            timing_length = speaker_timing['end'] - speaker_timing['start']
-            sample_length = timing_length / len(samples)
-            current_speaker = None
-            for i in range(0, len(samples)):
-                if not current_speaker or current_speaker['speaker'] != int(samples[i]):
-                    if current_speaker:
-                        results.append(current_speaker)
-                    current_speaker = {
-                        'speaker': int(samples[i]),
-                        'start': speaker_timing['start'] + (i * sample_length),
-                        'end': speaker_timing['start'] + (i * sample_length)
-                    }
-                current_speaker['end'] += sample_length
-            results.append(current_speaker)
-            start_frame += speaker_timing['f_count']
+        self.speakers, speaker_class_names, cls_ctrs = clusterEmbeddings(self.embeddings, self.max_speakers)
+        for i in range(0, len(self.speakers)):
+          results.append({
+              'speaker': self.speakers[i],
+              'start': self.embeddings[i]['start'],
+              'end': self.embeddings[i]['end']
+          })
 
         # Convert results into expected JSON format.
         taggings = {}
@@ -82,7 +76,11 @@ class AudioProcessor:
             else:
                 taggings[speaker].append(timing)
         logging.info(taggings) # DEBUG: Prints the converted speaker timings.
-        callbacks.post_tagging(self.config.auth_key, taggings)
+        taggings_posted = callbacks.post_tagging(self.config.auth_key, taggings)
+        if taggings_posted:
+            logging.info('Processing results posted successfully for tagging {0} '.format(self.config.auth_key))
+        else:
+            logging.info('Processing results FAILED to post for {0} '.format(self.config.auth_key))
 
     def float_to_timestamp(self, t):
         hours = int(t / 3600)
@@ -103,6 +101,7 @@ class AudioProcessor:
                 start_time = words[0].start_time.seconds + (words[0].start_time.nanos / NANO)
                 end_time = words[-1].end_time.seconds + (words[-1].end_time.nanos / NANO)
                 transcript_audio_data = self.audio_buffer.extract(start_time, end_time)
+
 
                 # Start processing thread for DoA, keywords, feature, etc.
                 self.running_processes += 1
@@ -144,17 +143,14 @@ class AudioProcessor:
 
             #Perform Speaker Diarization
             if self.config.diarization:
-                temp_speakers, temp_mt_feats, speaker_class_names, diarization_centers = speakerDiarization(audio_data, self.fs, 0, 1.0, .2, .05, 0, False, self.mt_feats)
-                logging.info(temp_speakers)
-                if not (temp_speakers is None) and len(temp_speakers) > 0: # Will be none if nothing was processed.
-                    previous_speaker_frames = len(self.speakers)
-                    self.speakers = temp_speakers
-                    self.mt_feats = temp_mt_feats
-                    self.speaker_timings.append({
-                        'f_count': len(self.speakers) - previous_speaker_frames,
-                        'start': start_time,
-                        'end': end_time
-                    })
+                embedding = embedSignal(audio_data)
+                self.embeddings.append({
+                    'embedding': embedding,
+                    'start': start_time,
+                    'end': end_time,
+                })
+                if(len(self.embeddings) > 3):
+                  self.send_speaker_taggings()
 
             # Get Features
             features = None
@@ -173,8 +169,8 @@ class AudioProcessor:
                 logging.warning('Processing results FAILED to post for client {0} (Processing time: {1})'.format(self.config.auth_key, processing_time))
 
             #Get source seperation
-            if self.config.source_seperation:
-               source_seperation = source_seperation_pre_trained(audio_data)
+            #if self.config.source_seperation:
+            #   source_seperation = source_seperation_pre_trained(audio_data)
 
         except Exception as e:
             logging.error('Processing FAILED for client {0}: {1}'.format(self.config.auth_key, e))
