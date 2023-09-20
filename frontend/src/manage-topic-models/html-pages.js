@@ -30,7 +30,7 @@ function ManageTopicsPage(props) {
                         <></>}
                     {props.topicModels.map((topicModel, count) => (
                         <div key={"keyword" + count} className={style["keyword-list-button"]} >
-                            <div className={style["click-mask"]} onClick={() => { props.keywordListClicked(topicModel) }} ></div >
+                            <div className={style["click-mask"]} onClick={() => { props.navFileUpload() }} ></div >
                             <div className={style["keyword-list-header"]}>
                                 <div className={style.title}>{topicModel.name}</div>
                                 <div className={style.date}>{props.formatdate(topicModel.creation_date)}</div>
@@ -54,7 +54,7 @@ function ManageTopicsPage(props) {
                 itsclass = {style["dialog-window"]}
                 heading={"Delete Topic Model"}
                 body={"Are you sure you want to permanently delete this topic model?"}
-                deletebuttonaction={props.confirmDeleteKeywordList}
+                deletebuttonaction={props.confirmDeleteTopicModel}
                 cancelbuttonaction={props.closeDeleteDialog}
             />
         </>

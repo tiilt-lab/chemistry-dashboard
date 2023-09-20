@@ -19,8 +19,7 @@ export class TopicModelService {
     return this.api.httpRequestCall('api/v1/topic_models','GET',{})
   }
 
-  deleteTopicModel(id){
-    return
+  deleteTopicModel(topicModelID){
+    return this.api.httpRequestCall("api/v1/topic_models/"+topicModelID,'DELETE',{});
   }
-
 }

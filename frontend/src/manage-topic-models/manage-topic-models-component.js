@@ -43,10 +43,6 @@ function ManageTopicModelsComponent(props) {
 
   //console.log(location.state, 'debugging ..')
 
-  const openNewKeywordList = () => {
-    return navigate('/keyword-lists/new');
-  }
-
   const navFileUpload = () => {
     navigate("/file_upload");
   }
@@ -123,7 +119,6 @@ function ManageTopicModelsComponent(props) {
       navigate={navigateToHomeScreen}
       keywordListClicked={keywordListClicked}
       deleteTopicModel={deleteTopicModel}
-      openNewKeywordList={openNewKeywordList}
       createTopicModel={createTopicModel}
       confirmDeleteTopicModel={confirmDeleteTopicModel}
       navFileUpload = {navFileUpload}

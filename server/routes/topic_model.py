@@ -78,4 +78,17 @@ def save_topic_model(user, **kwargs):
 def get_topic_models(user, **kwargs):
   return json_response([topic_model.json() for topic_model in database.get_topic_models(owner_id=user['id'])])
 
+@api_routes.route('/api/v1/topic_models/<int:topic_model_id>', methods=['DELETE'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_topic_model_access
+
+def deleteTopicModel(topic_model_id, **kwargs):
+  topic_model = database.get_topic_models(id=topic_model_id)
+  file_name = "{}_{}".format(topic_model.owner_id, topic_model.id)
+  os.remove(os.path.join("topicModels", file_name))
+  success = database.delete_topic_model(topic_model_id)
+  if success:
+      return json_response()
+  else:
+      return json_response('Failed to delete topic model.', 400)
 
