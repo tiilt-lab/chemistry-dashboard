@@ -58,23 +58,24 @@ def get_topics(user, **kwargs):
 
 def save_topic_model(user, **kwargs):
   new_name = request.json.get('name', None)
+  summary = request.json.get('summary', None)
+
   valid, message = TopicModel.verify_fields(
     name=new_name)
   if not valid:
     return json_response({'message': message}, 400)
   if new_name != None:
-    new_topic_model = database.add_topic_model(user['id'], new_name)
+    new_topic_model = database.add_topic_model(user['id'], new_name, summary)
     file_name = "{}_{}".format(new_topic_model.owner_id, new_topic_model.id)
     os.rename(os.path.join("topicModels", "tempModel"), os.path.join("topicModels", file_name))
     return json_response(new_topic_model.json())
   else:
     return json_response({'message': 'Must provide "name".'}, status=400)
 
-@api_routes.route('/api/v1/topics', methods=['DELETE'])
+@api_routes.route('/api/v1/topic_models', methods=['GET'])
 @wrappers.verify_login(public=True)
-def delete_temp_model(**kwargs):
-    success = os.remove(os.path.join("topicModels", "tempModel"))
-    if success:
-        return json_response()
-    else:
-        return json_response('Failed to delete temp model.', 400)
+
+def get_topic_models(user, **kwargs):
+  return json_response([topic_model.json() for topic_model in database.get_topic_models(owner_id=user['id'])])
+
+

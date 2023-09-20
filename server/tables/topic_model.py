@@ -8,6 +8,7 @@ class TopicModel(db.Model):
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     creation_date = db.Column(db.DateTime, nullable=False)
     name = db.Column(db.String(64))
+    summary = db.Column(db.String(8000))
 
     NAME_MAX_LENGTH = 64
     NAME_CHARS = 'a-zA-Z0-9\': '
@@ -15,10 +16,11 @@ class TopicModel(db.Model):
     def __hash__(self):
         return hash((self.id))
 
-    def __init__(self, owner_id, name):
+    def __init__(self, owner_id, name, summary):
         self.owner_id = owner_id
         self.creation_date = datetime.utcnow()
         self.name = name
+        self.summary = summary
 
     def get_name(self):
         if not self.name:
@@ -31,6 +33,7 @@ class TopicModel(db.Model):
             id=self.id,
             creation_date=str(self.creation_date) + ' UTC',
             name=self.get_name(),
+            summary=self.summary
         )
 
     @staticmethod
