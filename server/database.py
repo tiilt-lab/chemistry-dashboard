@@ -46,19 +46,22 @@ def get_topic_models(owner_id = None, id = None, name = None):
   return query.all()
 
 
-def add_topic_model(user_id, name):
-  topic_model = TopicModel(user_id, name)
+def add_topic_model(user_id, name, summary):
+  topic_model = TopicModel(user_id, name, summary)
   db.session.add(topic_model)
   db.session.commit()
   return topic_model
 
-def update_topic_model(topic_model_id, name=None):
+def update_topic_model(topic_model_id, name=None, summary=None):
     topic_model = get_topic_models(id=topic_model_id)
     if topic_model:
         if name != None:
             topic_model.name = name
         db.session.commit()
         return topic_model
+    if summary:
+      topic_model.summary = summary
+      return topic_model
     return None
 
 def delete_topic_model(topic_model_id):

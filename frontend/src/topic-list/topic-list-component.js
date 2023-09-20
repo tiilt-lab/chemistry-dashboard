@@ -1,14 +1,16 @@
 import {useState,useEffect} from 'react'
 import { useNavigate } from 'react-router-dom';
+import {useLocation} from 'react-router-dom';
 import { FileUploadService } from "../services/file-upload-service";
 import {TopicListPage} from './html-pages'
 //trying this out
-import { TopicModelService } from "../services/topicmodel-service";
+import { TopicModelService } from "../services/topic-model-service";
 import { KeywordService } from "../services/keyword-service";
 
 function TopicListComponent(props){
   const [user, setUser] = useState();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showDialog, setShowDialog] = useState(false);
   const [currentDialog, setCurrentDialog] = useState("");
   const [showedInd, setShowedInd] = useState(-1);
@@ -33,7 +35,12 @@ function TopicListComponent(props){
   const [changedName, setChangedName] = useState(false);
   const [trigger, setTrigger] = useState(0);
   const [nameInput, setNameInput] = useState("");
-  
+
+
+  const [topics, setTopics] = useState(location.state.topics)
+
+  console.log(topics)
+
 
   useEffect(()=> {
     if (props.userdata !== undefined && Object.keys(props.userdata).length !==0) {
@@ -41,7 +48,7 @@ function TopicListComponent(props){
       console.log("Current User: ", props.userdata);
     }
   },[])
-  
+
   useEffect(()=>{
     if(trigger > 0){
       console.log('reloaded page')
@@ -51,7 +58,7 @@ function TopicListComponent(props){
   const navigateToFileUpload = ()=> {
     navigate('/file_upload');
   }
-  
+
   const notDupeCurrInput = () => {
     for (let i = 0; i < topicListStruct.length; i++) {
       if (topicListStruct[i].tname == currInput) {
@@ -60,7 +67,7 @@ function TopicListComponent(props){
     }
     return true;
   }
-  
+
   const setTopicName = () => {
     if (currInput != '' && notDupeCurrInput()) {
       //regex match
@@ -77,7 +84,7 @@ function TopicListComponent(props){
     }
     setTrigger(trigger + 1);
   }
-  
+
   const toggleDisplay = (bool, currDia, ind) => {
     setShowDialog(bool);
     setCurrentDialog(currDia);
@@ -88,7 +95,7 @@ function TopicListComponent(props){
       toggleClicked(ind);
     }
   }
-  
+
   const stringFormat = (kwds, kwdprobs, onRight) => {
     let inner = [];
     //assumption of even number
@@ -99,14 +106,14 @@ function TopicListComponent(props){
     }
     return inner.join("\n");
   }
-  
+
   const toggleClicked = (count) => {
     let temp = topicListStruct;
     temp[count].clicked = !temp[count].clicked;
     setTopicListStruct(temp);
     setTrigger(trigger+1);
   }
-  
+
   const getSelectNameList = () => {
     let temp = [];
     for (let i = 0; i < topicListStruct.length; i++) {
@@ -120,23 +127,20 @@ function TopicListComponent(props){
     }
     return str;
   }
-  
+
   const navTopicModels = () => {
     navigate('/topic-models');
   }
-  
+
   const isValid = () => {
-    //list of topics can't be empty, and neither can the name. add 
+    //list of topics can't be empty, and neither can the name. add
     return topicListStruct.filter(tlist => tlist.clicked) != [] && nameInput != "";
   }
-  
+
   const saveNewModel = () => {
-    if (!isValid()) {
-      return;
-    }
-    const topics = topicListStruct.filter(tlist => tlist.clicked).map(tlist => tlist.tname);
+    //const topics = topicListStruct.filter(tlist => tlist.clicked).map(tlist => tlist.tname);
     //so far only for creation, but need to update it soon (aka if (keywordListID === '-1'))
-    new KeywordService().createKeywordList(nameInput, topics).then(
+    new TopicModelService().saveTopicModel(nameInput, topics).then(
       response => {
         if (response.status === 200) {
           navTopicModels();
@@ -162,7 +166,7 @@ function TopicListComponent(props){
         });
     }*/
   }
-  
+
 
   return(
       <TopicListPage
