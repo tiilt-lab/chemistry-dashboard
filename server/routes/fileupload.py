@@ -1,5 +1,5 @@
 from flask import Blueprint, Response, jsonify, request, abort, session
-from server.tables.topic_model import TopicModel
+from tables.topic_model import TopicModel
 from utility import sanitize, json_response
 from werkzeug.utils import secure_filename
 import topic_modeling.topicmodeling as topicmodeling
@@ -69,3 +69,12 @@ def save_topic_model(user, **kwargs):
     return json_response(new_topic_model.json())
   else:
     return json_response({'message': 'Must provide "name".'}, status=400)
+
+@api_routes.route('/api/v1/topics', methods=['DELETE'])
+@wrappers.verify_login(public=True)
+def delete_temp_model(**kwargs):
+    success = os.remove(os.path.join("topicModels", "tempModel"))
+    if success:
+        return json_response()
+    else:
+        return json_response('Failed to delete temp model.', 400)
