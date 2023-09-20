@@ -4,7 +4,6 @@ from sqlalchemy import or_, and_, desc
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql.expression import func
 import requests
-from server.tables.topic_model import TopicModel
 from utility import sanitize
 from datetime import datetime, timedelta
 import random
