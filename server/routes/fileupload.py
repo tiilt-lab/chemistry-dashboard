@@ -1,4 +1,5 @@
 from flask import Blueprint, Response, jsonify, request, abort, session
+from server.tables.topic_model import TopicModel
 from utility import sanitize, json_response
 from werkzeug.utils import secure_filename
 import topic_modeling.topicmodeling as topicmodeling
@@ -42,7 +43,29 @@ def get_topics(user, **kwargs):
     id2word, texts, corpus = topicmodeling.generate_corpus(
         "uploads/{}".format(user['id']), [""])
     topicModel = topicmodeling.generate_topic_model(id2word, texts, corpus, 5)
+
+    if not os.path.exists("topicModels"):
+      os.makedirs("topicModels")
+    topicModel.save(os.path.join("topicModels", "tempModel"))
+
     response = [topic[1] for topic in topicModel.print_topics()]
-    print(response)
     logging.info(response)
     return json_response(response)
+
+
+@api_routes.route('/api/v1/topics', methods=['POST'])
+@wrappers.verify_login(public=True)
+
+def save_topic_model(user, **kwargs):
+  new_name = request.json.get('name', None)
+  valid, message = TopicModel.verify_fields(
+    name=new_name)
+  if not valid:
+    return json_response({'message': message}, 400)
+  if new_name != None:
+    new_topic_model = database.add_topic_model(user['id'], new_name)
+    file_name = "{}_{}".format(new_topic_model.owner_id, new_topic_model.id)
+    os.rename(os.path.join("topicModels", "tempModel"), os.path.join("topicModels", file_name))
+    return json_response(new_topic_model.json())
+  else:
+    return json_response({'message': 'Must provide "name".'}, status=400)
