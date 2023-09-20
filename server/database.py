@@ -4,6 +4,7 @@ from sqlalchemy import or_, and_, desc
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql.expression import func
 import requests
+from server.tables.topic_model import TopicModel
 from utility import sanitize
 from datetime import datetime, timedelta
 import random
@@ -22,6 +23,7 @@ from tables.keyword import Keyword
 from tables.user import User
 from tables.api_client import APIClient
 from tables.folder import Folder
+from tables.topic_model import TopicModel
 
 # Saves changes made to database (models)
 def save_changes():
@@ -29,6 +31,41 @@ def save_changes():
 
 def close_session():
     db.session.remove()
+
+# -------------------------
+# Topic Models
+# -------------------------
+
+def get_topic_models(owner_id = None, id = None, name = None):
+  query = db.session.query(TopicModel)
+  if owner_id != None:
+      query = query.filter(TopicModel.owner_id == owner_id)
+  if id != None:
+      return query.filter(TopicModel.id == id).first()
+  if name != None:
+      return query.filter(TopicModel.name == name).first()
+  return query.all()
+
+
+def add_topic_model(user_id, name):
+  topic_model = TopicModel(user_id, name)
+  db.session.add(topic_model)
+  db.session.commit()
+  return topic_model
+
+def update_topic_model(topic_model_id, name=None):
+    topic_model = get_topic_models(id=topic_model_id)
+    if topic_model:
+        if name != None:
+            topic_model.name = name
+        db.session.commit()
+        return topic_model
+    return None
+
+def delete_topic_model(topic_model_id):
+  db.session.query(TopicModel).filter(TopicModel.id == topic_model_id).delete(synchronize_session='fetch')
+  db.session.commit()
+  return True
 
 # -------------------------
 # Keyword (Session keywords)
