@@ -36,7 +36,7 @@ def post_file(user_id, **kwargs):
 
 
 @api_routes.route('/api/v1/topics', methods=['GET'])
-@wrappers.verify_login(public=True)
+@wrappers.verify_login()
 def get_topics(user, **kwargs):
     id2word, texts, corpus = topicmodeling.generate_corpus(
         "/vagrant/uploads/{}".format(user['id']), [""])

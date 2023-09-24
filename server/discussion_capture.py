@@ -16,6 +16,7 @@ from routes.callback import api_routes as callback_api
 from routes.admin import api_routes as admin_api
 from routes.folder import api_routes as folder_api
 
+
 app.register_blueprint(admin_api)
 app.register_blueprint(auth_api)
 app.register_blueprint(session_api)
@@ -23,6 +24,7 @@ app.register_blueprint(device_api)
 app.register_blueprint(keyword_api)
 app.register_blueprint(callback_api)
 app.register_blueprint(folder_api)
+
 
 def main():
 	# Set device connection status to false
