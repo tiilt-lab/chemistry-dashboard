@@ -5,7 +5,7 @@ import callbacks
 from features_detector import features_detector
 from keyword_detector import keyword_detector
 from doa.doa_respeaker_v2_6mic_array import calculateDOA
-from speaker_diarization.pyDiarization import clusterEmbeddings, embedSignal
+from speaker_diarization.pyDiarization import clusterEmbeddings, clusterSpectralEmbeddings, embedSignal, getSpectralEmbeddings
 import numpy as np
 import time
 #from source_seperation import source_seperation_pre_trained
@@ -54,8 +54,11 @@ class AudioProcessor:
     def send_speaker_taggings(self):
         # Parse results from embeddings list.
         #self.embeddings.sort(key=lambda x: x['start'])
+        logging.info("tagging")
         results = []
-        self.speakers, speaker_class_names, cls_ctrs = clusterEmbeddings(self.embeddings, self.max_speakers)
+        spectralEmbeddings, n_speakers = getSpectralEmbeddings(self.embeddings)
+        self.speakers, speaker_class_names, cls_ctrs = clusterSpectralEmbeddings(spectralEmbeddings, n_speakers)
+        logging.info("Tagged")
         for i in range(0, len(self.speakers)):
           results.append({
               'speaker': self.speakers[i],

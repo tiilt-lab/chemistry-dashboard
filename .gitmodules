@@ -1,0 +1,3 @@
+[submodule "audio_processing/speaker_diarization/speechbrain"]
+	path = audio_processing/speaker_diarization/speechbrain
+	url = https://github.com/speechbrain/speechbrain.git
