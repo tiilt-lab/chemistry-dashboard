@@ -14,33 +14,61 @@ function TopicListComponent(props){
   const [showDialog, setShowDialog] = useState(false);
   const [currentDialog, setCurrentDialog] = useState("");
   const [showedInd, setShowedInd] = useState(-1);
+  
+  //here temporarily now that we have our actual topic model data to use
   const array_testing = [[0.9, [["depression", "health", "anxiety", "stress", "score","depression", "health", "anxiety", "stress", "score"], [0.1231, 0.00032, 0.3231, 0.7452, 0.9995,0.1231, 0.00032, 0.3231, 0.7452, 0.9995]]], [0.01, [["school", "homework", "deadline", "test", "gpa","depression", "health", "anxiety", "stress", "score"], [0.1231, 0.00032, 0.3231, 0.7452, 0.9995,0.1231, 0.00032, 0.3231, 0.7452, 0.9995]]], [0.015, [["fall", "spring", "winter", "summer", "seasons","depression", "health", "anxiety", "stress", "score"], [0.1231, 0.00032, 0.3231, 0.7452, 0.9995,0.1231, 0.00032, 0.3231, 0.7452, 0.9995]]], [0.02, [["jan", "feb", "march", "april", "may","depression", "health", "anxiety", "stress", "score"], [0.1231, 0.00032, 0.3231, 0.7452, 0.9995,0.1231, 0.00032, 0.3231, 0.7452, 0.9995]]], [0.35, [["skiing", "ice", "snow", "snowboard", "mountain","depression", "health", "anxiety", "stress", "score"], [0.1231, 0.00032, 0.3231, 0.7452, 0.9995,0.1231, 0.00032, 0.3231, 0.7452, 0.9995]]]];
-  const makeTopicListStruct = () => {
+  const makeTopicListStruct_TEMP = () => {
     let topics = [];
     for (let i = 0; i < array_testing.length; i++) {
       let j = i + 1;
       let temptopic = [];
       temptopic.tname = "Topic" + j;
       temptopic.clicked = false;
-      temptopic.prob = array_testing[i][0];
       temptopic.kwds = array_testing[i][1][0];
       temptopic.kwdprobs = array_testing[i][1][1];
       topics.push(temptopic);
     }
     return topics;
   }
-  const [topicListStruct, setTopicListStruct] = useState(makeTopicListStruct());
+  
+  //what we should actually have
+  
+  const makeTopicListStruct = (topicStr) => {
+    let topics = []
+    let allTopics = topicStr.split(",");
+    let numTopics = 5;
+    let numSubTopics = 10;
+    for (let i = 0; i < numTopics; i++) {
+    	let l = i + 1;
+    	let temptopic = [];
+        temptopic.tname = "Topic" + l;
+    	let subTopics = allTopics[i].split("+");
+    	let kwdprobs = [];
+    	let kwds = [];
+    	for (let j = 0; j < numSubTopics; j++) {
+    	  let numNames = subTopics[j].split("*");
+    	  let num = numNames[0].trim();
+    	  kwdprobs.push(parseFloat(num));
+    	  let name = numNames[1].trim();
+    	  name = name.slice(1, name.length - 1);
+    	  kwds.push(name);
+    	}
+    	temptopic.kwdprobs = kwdprobs;
+    	temptopic.kwds = kwds;
+    	topics.push(temptopic);
+    }
+    return topics;
+  }
+  
+  const [topicListStruct, setTopicListStruct] = useState((location.state === null) ? makeTopicListStruct_TEMP() : makeTopicListStruct(location.state.topics));
   const [currInput, setCurrInput] = useState("");
   const [wrongInput, setWrongInput] = useState(false);
   const [changedName, setChangedName] = useState(false);
   const [trigger, setTrigger] = useState(0);
   const [nameInput, setNameInput] = useState("");
-
-
-  const [topics, setTopics] = useState(location.state.topics)
-
-  console.log(topics)
-
+  
+  //need to change
+  const [topics, setTopics] = useState((location.state === null) ? array_testing : location.state.topics)
 
   useEffect(()=> {
     if (props.userdata !== undefined && Object.keys(props.userdata).length !==0) {
@@ -140,7 +168,7 @@ function TopicListComponent(props){
   const saveNewModel = () => {
     //const topics = topicListStruct.filter(tlist => tlist.clicked).map(tlist => tlist.tname);
     //so far only for creation, but need to update it soon (aka if (keywordListID === '-1'))
-    new TopicModelService().saveTopicModel(nameInput, topics).then(
+    new TopicModelService().saveTopicModel(nameInput, "String").then(
       response => {
         if (response.status === 200) {
           navTopicModels();

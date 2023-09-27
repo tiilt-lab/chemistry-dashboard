@@ -23,7 +23,6 @@ function TopicListPage(props) {
 		<div key={"model" + count} className={testArr.clicked ? `${style["model-selected"]} ${style["model-list-button"]}` : style["model-list-button"]} onClick={() => props.toggleClicked(count)}>
 		  <div className={style["model-list-header"]}>
 		    <div className={style.title}>{testArr.tname}</div>
-		    <div className={style.date}>{testArr.prob}</div>
 		  </div>
 		  <div className={style["model-list-elements-one"]}>{props.stringFormat(testArr.kwds, testArr.kwdprobs, false)}</div>
 		  <div className={style["model-list-elements-two"]}>{props.stringFormat(testArr.kwds, testArr.kwdprobs, true)}</div>
