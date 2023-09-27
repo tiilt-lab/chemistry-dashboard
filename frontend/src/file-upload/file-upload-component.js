@@ -49,6 +49,8 @@ function FileUploadComponent(props){
             (topics) => {
               var topicString = ""
               setTopics(topics);
+              console.log("ALL TOPICS")
+              console.log(topics)
               for (const topic of topics) {
                 console.log("Topic: ", topic);
                 topicString += topic + ",";
