@@ -475,6 +475,12 @@ def create_pod_session_device(session_id, device_id):
     db.session.commit()
     return True, session_device
 
+def setEmbeddingsFile(session_device, embeddings):
+    session_device.embeddings = embeddings
+    db.session.commit()
+    return True
+
+
 # -------------------------
 # Transcript
 # -------------------------
@@ -484,6 +490,11 @@ def add_transcript(session_device_id, start_time, length, transcript, question, 
     db.session.add(transcript)
     db.session.commit()
     return transcript
+
+def set_speaker_tag(transcript, tag):
+    transcript.speaker_tag = tag
+    db.session.commit()
+    return True
 
 def get_transcripts(session_id=None, session_device_id=None, start_time=0, end_time=-1):
     query = db.session.query(Transcript)
