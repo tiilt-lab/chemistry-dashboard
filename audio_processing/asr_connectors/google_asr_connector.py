@@ -15,7 +15,7 @@ import threading
 NANO = 1000000000
 
 # Path for google asr credentials.
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/var/lib/chemistry-dashboard/audio_processing/asr_connectors/google-cloud-key.json'
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/home/blinc/chemistry-dashboard/audio_processing/asr_connectors/google-cloud-key.json'
 
 class GoogleASR():
     STREAM_LIMIT = 55.0
