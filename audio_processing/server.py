@@ -59,6 +59,7 @@ class ServerProtocol(WebSocketServerProtocol):
         else:
             valid_json = False
             try:
+                # logging.info('got here 2')
                 payload = payload.decode('utf-8')
                 data = json.loads(payload)
                 valid_json = True
@@ -91,8 +92,12 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.signal_start()
                 self.send_json({'type':'start'})
                 callbacks.post_connect(self.config.auth_key)
+                # res = callbacks.post_connect(self.config.auth_key)
+                # logging.info('checking connected.')
+                # logging.info(res)
                 if self.stream_data == 'audio':
                     if cf.record_original():
+                        # logging.info('got here 3')
                         filename = os.path.join(cf.recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
                         self.orig_recorder = WaveRecorder(filename, self.config.sample_rate, self.config.depth, self.config.channels)
                     if cf.record_reduced():
@@ -272,7 +277,7 @@ if __name__ == '__main__':
     auth_connections.start(5.0)
     factory = WebSocketServerFactory()
     factory.protocol = ServerProtocol
-    reactor.listenTCP(9000, factory)
+    reactor.listenTCP(9002, factory)
     logging.info('Audio Processing Service started.')
     reactor.run()
     logging.info('Audio Processing Service ended.')

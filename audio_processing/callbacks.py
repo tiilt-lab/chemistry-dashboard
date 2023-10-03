@@ -43,9 +43,13 @@ def post_connect(source):
         'time': str(datetime.utcnow())
     }
     try:
+        logging.info('end point')
+        logging.info(config.connect_callback())
         response = requests.post(config.connect_callback(), json=connection)
+        logging.info(response.status_code)
         return response.status_code == 200
     except Exception as e:
+        logging.info('connect callback failed: {0}'.format(e))
         return False
 
 def post_disconnect(source):
