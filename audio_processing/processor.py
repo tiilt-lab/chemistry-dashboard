@@ -94,28 +94,21 @@ class AudioProcessor:
     def process(self):
         logging.info('Processing thread started for {0}.'.format(self.config.auth_key))
         while not self.asr_complete:
-            logging.info('process 1')
             transcript_data = self.transcript_queue.get()
-            logging.info('process stuck')
             if transcript_data is None:
-                logging.info('process 2')
                 self.asr_complete = True
             else:
-                logging.info('process 3')
                 # Gather audio data related to the transcript.
                 words = transcript_data.alternatives[0].words
                 start_time = words[0].start_time.seconds + (words[0].start_time.nanos / NANO)
                 end_time = words[-1].end_time.seconds + (words[-1].end_time.nanos / NANO)
                 transcript_audio_data = self.audio_buffer.extract(start_time, end_time)
-                logging.info('process 4')
                 # Start processing thread for DoA, keywords, feature, etc.
                 self.running_processes += 1
                 transcript_thread = threading.Thread(target=self.process_transcript, args=(transcript_data, transcript_audio_data, start_time, end_time))
                 transcript_thread.daemon = True
                 transcript_thread.start()
-                logging.info('process 5')
         if self.running_processes == 0:
-            logging.info('process 6')
             self.__complete_callback()
         logging.info('Processing thread stopped for {0}.'.format(self.config.auth_key))
 
@@ -124,12 +117,10 @@ class AudioProcessor:
         try:
             processing_timer = time.time()
             words = transcript_data.alternatives[0].words
-            logging.info('process transcript 1')
             # Get Transcripts and Questions
             transcript_text = None
             questions = None
             if self.config.transcribe:
-                logging.info('process transcript 2')
                 transcript_text = transcript_data.alternatives[0].transcript
                 questions = features_detector.detect_questions(transcript_text)
 
@@ -167,12 +158,10 @@ class AudioProcessor:
             features = None
             if self.config.features:
                 features = features_detector.detect_features(transcript_text)
-            logging.info('process transcript 4')
             processing_time = time.time() - processing_timer
             start_time += self.config.start_offset
             end_time += self.config.start_offset
             success = callbacks.post_transcripts(self.config.auth_key, start_time, end_time, transcript_text, doa, questions, keywords, features)
-            logging.info('process transcript 5')
             if success:
                 logging.info('Processing results posted successfully for client {0} (Processing time: {1}) @ {2}'.format(self.config.auth_key, processing_time, start_time))
 

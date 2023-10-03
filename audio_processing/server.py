@@ -59,7 +59,6 @@ class ServerProtocol(WebSocketServerProtocol):
         else:
             valid_json = False
             try:
-                # logging.info('got here 2')
                 payload = payload.decode('utf-8')
                 data = json.loads(payload)
                 valid_json = True
