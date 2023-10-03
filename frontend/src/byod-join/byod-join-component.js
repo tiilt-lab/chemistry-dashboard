@@ -225,6 +225,7 @@ function JoinPage() {
 
         try {
             //handle older browsers that might implement getUserMedia in some way
+    
             if (navigator.mediaDevices === undefined) {
                 navigator.mediaDevices = {};
                 navigator.mediaDevices.getUserMedia = function (constraintObj) {
@@ -298,7 +299,7 @@ function JoinPage() {
         }
 
         try {
-
+           
             if (navigator.mediaDevices != null) {
                 const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
                    // media.then(function (stream) {
