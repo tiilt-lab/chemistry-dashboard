@@ -30,6 +30,7 @@ function JoinPage() {
     const [session, setSession] = useState(null);
     const [key, setKey] = useState(null);
 
+
     const sessionService = new SessionService()
     const apiService = new ApiService()
 
@@ -439,7 +440,8 @@ function JoinPage() {
                 'encoding': 'pcm_f32le',
                 'channels': 1,
                 'streamdata': 'audio',
-                'tag': true
+                'tag': true,
+                'embeddingsFile': sessionDevice.embeddings
             };
         } else if (joinwith === 'Video') {
             message = {
@@ -450,7 +452,9 @@ function JoinPage() {
                 'encoding': 'pcm_f16le',
                 'video_encoding': 'video/mp4',
                 'channels': 2,
-                'streamdata': 'video'
+                'streamdata': 'video',
+                'tag' : false,
+                'embeddingsFile': sessionDevice.embeddings
             };
         }
         ws.send(JSON.stringify(message));

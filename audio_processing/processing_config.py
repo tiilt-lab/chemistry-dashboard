@@ -5,7 +5,7 @@ import logging
 import config as cf
 
 class ProcessingConfig:
-    def __init__(self, auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, transcribe, keywords, doa, features, tag, diarization):
+    def __init__(self, auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, transcribe, keywords, doa, features, tag, diarization, embeddingsFile):
         self.auth_key = auth_key
         self.session_key = session_key
         self.server_start = server_start
@@ -20,6 +20,7 @@ class ProcessingConfig:
         self.features = features
         self.tag = tag
         self.diarization = True # Default to true for testing.
+        self.embeddingsFile = embeddingsFile
 
     @staticmethod
     def from_json(data):
@@ -51,6 +52,7 @@ class ProcessingConfig:
         tag = data.get('tag', False) and cf.record_original() and channels == 2
         # Check if diarization is requested and possible.
         diarization = data.get('tag', False)
+        embeddingsFile = data.get('embeddingsFile', None)
 
         # Check if auth is required and if key is valid.
         session_key = RedisSessions.get_device_key(auth_key)
@@ -67,7 +69,7 @@ class ProcessingConfig:
             logging.warning('Invalid key sent by device.')
             return False, "Invalid key."
 
-        return True, ProcessingConfig(auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, transcribe, keywords, doa, features, tag, diarization)
+        return True, ProcessingConfig(auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, transcribe, keywords, doa, features, tag, diarization, embeddingsFile)
 
     def is_valid_key(self):
         return RedisSessions.get_device_key(self.auth_key) != None

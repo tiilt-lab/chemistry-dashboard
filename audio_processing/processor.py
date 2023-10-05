@@ -23,6 +23,7 @@ class AudioProcessor:
         self.signal = np.array([])
         self.max_speakers = 10
         self.embeddings = []
+        self.embeddingsFile = None
         self.speaker_timings = []
         self.config = config
         self.fs = 16000
@@ -82,7 +83,7 @@ class AudioProcessor:
         '''
         processing_time = time.time() - processing_timer
         logging.info(taggings) # DEBUG: Prints the converted speaker timings.
-        taggings_posted = callbacks.post_tagging(self.config.auth_key, taggings)
+        taggings_posted = callbacks.post_tagging(self.config.auth_key, taggings, self.embeddingsFile)
         if taggings_posted:
             logging.info('Processing results posted successfully for tagging {0} (Processing time: {1})'.format(self.config.auth_key, processing_time))
         else:
@@ -97,6 +98,7 @@ class AudioProcessor:
 
     def process(self):
         logging.info('Processing thread started for {0}.'.format(self.config.auth_key))
+        self.embeddingsFile = self.config.embeddingsFile
         while not self.asr_complete:
             transcript_data = self.transcript_queue.get()
             if transcript_data is None:
@@ -149,12 +151,17 @@ class AudioProcessor:
 
             #Perform Speaker Diarization
             if self.config.diarization:
+                if len(self.embeddings) == 0 and self.embeddingsFile != None:
+                    self.embeddings = np.load(self.embeddingsFile).tolist()
+                elif self.embeddingsFile == None:
+                    self.embeddingsFile = time.strftime("%Y%m%d-%H%M%S")+".npy"
                 embedding = embedSignal(audio_data)
                 self.embeddings.append({
                     'embedding': embedding,
                     'start': start_time + self.config.start_offset,
                     'end': end_time + self.config.start_offset,
                 })
+                np.save(self.embeddingsFile, np.array(self.embeddings))
 
             # Get Features
             features = None
