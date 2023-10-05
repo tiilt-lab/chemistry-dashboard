@@ -23,6 +23,7 @@ class AudioProcessor:
         self.signal = np.array([])
         self.max_speakers = 10
         self.embeddings = []
+        self.embeddingsFile = None
         self.speaker_timings = []
         self.config = config
         self.fs = 16000
@@ -54,6 +55,7 @@ class AudioProcessor:
     def send_speaker_taggings(self):
         # Parse results from embeddings list.
         #self.embeddings.sort(key=lambda x: x['start'])
+        processing_timer = time.time()
         logging.info("tagging")
         results = []
         spectralEmbeddings, n_speakers = getSpectralEmbeddings(self.embeddings)
@@ -61,29 +63,31 @@ class AudioProcessor:
         logging.info("Tagged")
         for i in range(0, len(self.speakers)):
           results.append({
-              'speaker': self.speakers[i],
+              'speaker': 'Speaker {0}'.format(self.speakers[i]),
               'start': self.embeddings[i]['start'],
               'end': self.embeddings[i]['end']
           })
 
         # Convert results into expected JSON format.
         taggings = {}
+        taggings["results"] = results
+        '''
         for i in range(0, len(results)):
             result = results[i]
-            if i != len(results) - 1:
-                result['end'] = results[i+1]['start']
             speaker = 'Speaker {0}'.format(result['speaker'])
             timing = [self.float_to_timestamp(result['start']), self.float_to_timestamp(result['end'])]
             if not speaker in taggings:
                 taggings[speaker] = [timing]
             else:
                 taggings[speaker].append(timing)
+        '''
+        processing_time = time.time() - processing_timer
         logging.info(taggings) # DEBUG: Prints the converted speaker timings.
-        taggings_posted = callbacks.post_tagging(self.config.auth_key, taggings)
+        taggings_posted = callbacks.post_tagging(self.config.auth_key, taggings, self.embeddingsFile)
         if taggings_posted:
-            logging.info('Processing results posted successfully for tagging {0} '.format(self.config.auth_key))
+            logging.info('Processing results posted successfully for tagging {0} (Processing time: {1})'.format(self.config.auth_key, processing_time))
         else:
-            logging.info('Processing results FAILED to post for {0} '.format(self.config.auth_key))
+            logging.info('Processing results FAILED to post for tagging {0} '.format(self.config.auth_key))
 
     def float_to_timestamp(self, t):
         hours = int(t / 3600)
@@ -94,6 +98,7 @@ class AudioProcessor:
 
     def process(self):
         logging.info('Processing thread started for {0}.'.format(self.config.auth_key))
+        self.embeddingsFile = self.config.embeddingsFile
         while not self.asr_complete:
             transcript_data = self.transcript_queue.get()
             if transcript_data is None:
@@ -146,14 +151,17 @@ class AudioProcessor:
 
             #Perform Speaker Diarization
             if self.config.diarization:
+                if len(self.embeddings) == 0 and self.embeddingsFile != None:
+                    self.embeddings = np.load(self.embeddingsFile).tolist()
+                elif self.embeddingsFile == None:
+                    self.embeddingsFile = time.strftime("%Y%m%d-%H%M%S")+".npy"
                 embedding = embedSignal(audio_data)
                 self.embeddings.append({
                     'embedding': embedding,
-                    'start': start_time,
-                    'end': end_time,
+                    'start': start_time + self.config.start_offset,
+                    'end': end_time + self.config.start_offset,
                 })
-                if(len(self.embeddings) > 3):
-                  self.send_speaker_taggings()
+                np.save(self.embeddingsFile, np.array(self.embeddings))
 
             # Get Features
             features = None
@@ -167,6 +175,8 @@ class AudioProcessor:
 
             if success:
                 logging.info('Processing results posted successfully for client {0} (Processing time: {1}) @ {2}'.format(self.config.auth_key, processing_time, start_time))
+                if self.config.diarization and (len(self.embeddings) > 3):
+                  self.send_speaker_taggings()
 
             else:
                 logging.warning('Processing results FAILED to post for client {0} (Processing time: {1})'.format(self.config.auth_key, processing_time))
