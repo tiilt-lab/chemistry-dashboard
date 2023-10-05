@@ -113,7 +113,9 @@ def add_tagging(**kwargs):
 	content = request.get_json()
 	key = content['source']
 	tagging_data = content['tagging']
+	embeddingsFile = content['embeddingsFile']
 	session_device = database.get_session_devices(processing_key=key)
 	if session_device:
 		callback_handlers.process_tagging_data(session_device.id, tagging_data)
+		session_device.embeddings = embeddingsFile
 	return json_response()

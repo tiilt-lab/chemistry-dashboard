@@ -475,11 +475,13 @@ def create_pod_session_device(session_id, device_id):
     db.session.commit()
     return True, session_device
 
-def setEmbeddingsFile(id, embeddings):
-    session_device = get_session_devices(id=id)
+def setEmbeddingsFile(processing_key, embeddings):
+    session_device = get_session_devices(processing_key=processing_key)
     session_device.embeddings = embeddings
     db.session.commit()
     return True
+
+
 
 
 # -------------------------
