@@ -89,13 +89,27 @@ def compute_coherence_values(dictionary, corpus, texts, limit, start=2, step=3):
 
         return model_list, coherence_values
 
-def process_file_pdf(file_url):
+def process_file(file_url):
     data = []
-    pdf = PyPDF2.PdfReader(file_url)
-    for page in pdf.pages:
-            text = page.extract_text()
-            text.rstrip('\n')
-            data.append(text)
+    if file_url.endswith(".pdf"):
+      pdf = PyPDF2.PdfFileReader(file_url)
+      for page in pdf.pages:
+              text = page.extractText()
+              text.rstrip('\n')
+              data.append(text)
+
+    elif file_url.endswith(".csv"):
+      df = pd.read_csv(file_url)
+      data = list(df['Transcript'])
+
+    else:
+      with open (file_url, "r") as myfile:
+            #add the line without any newline characters
+            for line in myfile:
+                currentLine = line.rstrip('\n')
+                if currentLine != "" and currentLine != " ":
+                    data.append(currentLine)
+
 
     data = [re.sub('\S*@\S*\s?', '', sent) for sent in data]
 
@@ -107,25 +121,24 @@ def process_file_pdf(file_url):
 
     return data;
 
-def process_file_csv(file_path):
-    df = pd.read_csv(file_path)
-    data = list(df['Transcript'])
-    data = [re.sub('\S*@\S*\s?', '', sent) for sent in data]
-
-    # Remove new line characters
-    data = [re.sub('\s+', ' ', sent) for sent in data]
-
-    # Remove distracting single quotes
-    data = [re.sub("\'", "", sent) for sent in data]
-
-    return data
-
-def generate_corpus(data):
-    data_words = list(sent_to_words(data))
+def generate_corpus(file_url, extra_stop_words):
     stop_words = ['from', 'subject', 're', 'edu', 'use']
     extra_stop_words = add_stop_words(stop_words)
     if extra_stop_words:
-        stop_words = stop_words + extra_stop_words
+      stop_words = stop_words + extra_stop_words
+
+    add_stop_words(stop_words)
+
+    data = []
+
+    if (os.path.isdir(file_url)):
+        for subdir, dirs, files in os.walk(file_url):
+            for file in files:
+                filepath = subdir + os.sep + file
+                if filepath.endswith(".txt") or filepath.endswith(".pdf"):
+                    data = data + process_file(filepath)
+    else:
+        data = process_file(file_url)
 
     def lemmatization(texts, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV']):
         """https://spacy.io/api/annotation"""
@@ -135,7 +148,7 @@ def generate_corpus(data):
             texts_out.append([token.lemma_ for token in doc if token.pos_ in allowed_postags])
         return texts_out
 
-    data_words_nostops = [[word for word in simple_preprocess(str(doc)) if word not in stop_words] for doc in data_words]
+    data_words_nostops = [[word for word in simple_preprocess(str(doc)) if word not in stop_words] for doc in data]
     data_words_bigrams = generate_bigram(data_words_nostops)
 
     nlp = spacy.load("en_core_web_sm", disable=['parser', 'ner'])

@@ -1,7 +1,7 @@
 import { ApiService } from "./api-service";
 
 export class KeywordService {
-   api = new ApiService() 
+   api = new ApiService()
 
   getKeywordList(keywordListID){
     return this.api.httpRequestCall("api/v1/keyword_lists/" + keywordListID,'GET',{});
@@ -9,10 +9,6 @@ export class KeywordService {
 
   getKeywordLists() {
     return this.api.httpRequestCall("api/v1/keyword_lists",'GET',{});
-  }
-
-  getTopics(){
-    return this.api.httpRequestCall("api/v1/topics",'GET',{});
   }
 
   createKeywordList(name, keywords) {

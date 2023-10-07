@@ -2,6 +2,7 @@ import {useState,useEffect} from 'react'
 import { useNavigate } from 'react-router-dom';
 import { FileUploadService } from "../services/file-upload-service";
 import {FileUploadPage} from './html-pages'
+import { TopicModelService } from "../services/topic-model-service";
 
 function FileUploadComponent(props){
   const [user, setUser] = useState();
@@ -9,7 +10,7 @@ function FileUploadComponent(props){
   const [myFiles, setMyfiles] = useState([]);
   const [topics, setTopics] = useState([]);
   const navigate = useNavigate();
-  
+
 
   useEffect(()=> {
     if (props.userdata !== undefined && Object.keys(props.userdata).length !==0) {
@@ -33,23 +34,26 @@ function FileUploadComponent(props){
   const navTopicModels = ()=> {
     navigate('/topic-models');
   }
-  
+
   const navigateToTopics = () => {
     navigate('/topic-list');
   }
 
   const createTopicModel = ()=> {
-    const fetchData = new FileUploadService().getTopics()
+    const fetchData = new TopicModelService().getTopicModel()
     fetchData.then(
       response=>{
         if(response.status === 200){
           const repJson = response.json()
           repJson.then(
-            (resptopics) => {
-              setTopics(resptopics);
-              for (const topic of resptopics) {
+            (topics) => {
+              var topicString = ""
+              setTopics(topics);
+              for (const topic of topics) {
                 console.log("Topic: ", topic);
+                topicString += topic + ",";
               }
+              navigate('/topic-list', {state: {topics:topicString}});
             }
           )
         }

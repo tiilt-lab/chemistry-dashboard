@@ -21,3 +21,7 @@ plotly==4.1.1
 numba==0.48
 moviepy==1.0.2
 opencv-python==4.6.0.66
+sklearn
+torch
+torchaudio
+speechbrain

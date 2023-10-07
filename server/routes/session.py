@@ -158,8 +158,11 @@ def session_device_keywords(session_id, device_id, **kwargs):
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:session_device_id>', methods=['GET'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access
-def session_device(session_id, session_device_id, **kwargs):
-        session_device = database.get_session_devices(id=session_device_id)
+def session_device(session_id, session_device_id, processing_key, **kwargs):
+        if session_device_id:
+          session_device = database.get_session_devices(id=session_device_id)
+        elif processing_key:
+          session_device = database.get_session_devices(processing_key=processing_key)
         return json_response(session_device.json())
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices', methods=['GET'])
