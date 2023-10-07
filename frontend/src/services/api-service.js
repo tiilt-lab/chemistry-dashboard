@@ -7,6 +7,7 @@ export class ApiService {
 
   getEndpoint() {
     return (
+      // window.location.protocol + "//" + window.location.host.split(":")[0] + "/"
       window.location.protocol + "//" + window.location.host + "/"
     );
   }
@@ -15,7 +16,8 @@ export class ApiService {
     return (
       this.getWSSProtocol() +
       "//" +
-      window.location.host+
+      // window.location.host.split(":")[0] +
+      window.location.host +
       "/audio_socket"
     );
   }
