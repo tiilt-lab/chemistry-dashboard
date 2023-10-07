@@ -8,6 +8,7 @@ from doa.doa_respeaker_v2_6mic_array import calculateDOA
 from speaker_diarization.pyDiarization import speakerDiarization
 import numpy as np
 import time
+import config as cf
 #from source_seperation import source_seperation_pre_trained
 #from server.topic_modeling.topicmodeling import get_topics_with_prob
 
@@ -26,6 +27,7 @@ class AudioProcessor:
         self.running = False
         self.asr_complete = False
         self.running_processes = 0
+        cf.initialize()
 
     def start(self):
         self.running = True
@@ -44,7 +46,7 @@ class AudioProcessor:
                 self.send_speaker_taggings()
             except Exception as ex:
                 logging.info(ex)
-            np.savetxt("/var/lib/chemistry-dashboard/audio_processing/speaker_diarization/results/{}.txt".format(time.strftime("%Y%m%d-%H%M%S")), self.speakers)
+            np.savetxt(cf.root_dir()+"chemistry-dashboard/audio_processing/speaker_diarization/results/{}.txt".format(time.strftime("%Y%m%d-%H%M%S")), self.speakers)
 
     def send_speaker_taggings(self):
         # Parse results from speaker list.

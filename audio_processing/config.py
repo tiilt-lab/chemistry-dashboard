@@ -47,3 +47,6 @@ def connect_callback():
 
 def disconnect_callback():
     return str(config['output']['disconnect_callback'])
+
+def root_dir():
+    return str(config['rootpath']['root_dir'])
