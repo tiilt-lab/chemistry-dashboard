@@ -1,6 +1,6 @@
 import { KeywordService } from "../services/keyword-service";
-import { TopicModelService } from "../services/topicmodel-service";
-import { KeywordListModel } from '../models/keyword-list';
+import { TopicModelService } from "../services/topic-model-service";
+import { TopicModelModel } from '../models/topic-model';
 import { formatDate } from "../globals";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -10,50 +10,45 @@ import { ManageTopicsPage } from './html-pages'
 function ManageTopicModelsComponent(props) {
   const navigate = useNavigate();
   const [deleteDialogIsOpen, setDeleteDialogIsOpen] = useState(false);
-  const [keywordListToDelete, setKeywordListToDelete] = useState(null);
-  const [keywordLists, setKeywordLists] = useState([]);
+  const [topicModelToDelete, setTopicModelToDelete] = useState(null);
+  const [topicModels, setTopicModels] = useState([]);
   const [topics, setTopics] = useState([]);
   //const location = useLocation();
 
   const formatdate = formatDate; // Allows the HTML to invoke the function.
 
   useEffect(() => {
-    const fetchData = new KeywordService().getKeywordLists();
+    const fetchData = new TopicModelService().getTopicModels();
     fetchData.then(
       (response) => {
         if (response.status === 200) {
           const resp = response.json()
           resp.then(
             (result) => {
-              let keywordss = '';
-              const kwordLists = KeywordListModel.fromJsonList(result)
-              setKeywordLists(kwordLists)
-              
+              const topModels = TopicModelModel.fromJsonList(result)
+              setTopicModels(topModels)
+              console.log(topicModels)
             },
-            (err) => { console.log('ManageKeywordListsComponent error func : useeffect 122' ,err) })
+            (err) => { console.log('ManageTopicModelsComponent error func : useeffect 122' ,err) })
 
         } else {
-          console.log('ManageKeywordListsComponent error func : useeffect 1', response)
+          console.log('ManageTopicModelsComponent error func : useeffect 1', response)
         }
       },
       (apierror) => {
-        console.log('ManageKeywordListsComponent error func : useeffect 2', apierror)
+        console.log('ManageTopicModelsComponent error func : useeffect 2', apierror)
       }
     )
   }, []);
 
   //console.log(location.state, 'debugging ..')
 
-  const openNewKeywordList = () => {
-    return navigate('/keyword-lists/new');
-  }
-  
   const navFileUpload = () => {
     navigate("/file_upload");
   }
 
   const createTopicModel = () => {
-    const fetchData = new KeywordService().getTopics();
+    const fetchData = new TopicModelService().getTopics();
     fetchData.then(
       (response) => {
         if (response.status === 200) {
@@ -62,11 +57,11 @@ function ManageTopicModelsComponent(props) {
             console.log("Topic: ", topic);
           }
         } else {
-          console.log('ManageKeywordListsComponent error func : createTopicModel 1', response)
+          console.log('ManageTopicModelComponent error func : createTopicModel 1', response)
         }
       },
       (apierror) => {
-        console.log('ManageKeywordListsComponent error func : createTopicModel 2', apierror)
+        console.log('ManageTopicModelComponent error func : createTopicModel 2', apierror)
       }
     )
   }
@@ -84,25 +79,25 @@ function ManageTopicModelsComponent(props) {
   }
 
   // Open confirmation dialog.
-  const deleteKeywordList = (keywordList) => {
-    setKeywordListToDelete(keywordList);
+  const deleteTopicModel = (topicmodel) => {
+    setTopicModelToDelete(topicmodel);
     setDeleteDialogIsOpen(true);
   }
 
   // Deletes a keyword list.  Called from confirmation dialog.
-  const confirmDeleteKeywordList = () => {
-    const fetchData = new KeywordService().deleteKeywordList(keywordListToDelete.id)
+  const confirmDeleteTopicModel = () => {
+    const fetchData = new TopicModelService().deleteTopicModel(topicModelToDelete.id)
     fetchData.then(
       (result) => {
-        const filtered = keywordLists.filter(
-          (kl) => kl.id !== keywordListToDelete.id
+        const filtered = topicModels.filter(
+          (kl) => kl.id !== topicModelToDelete.id
         );
-        setKeywordLists(filtered)
-        setKeywordListToDelete(null);
+        setTopicModels(filtered)
+        setTopicModelToDelete(null);
         closeDeleteDialog();
       },
       (apierror) => {
-        console.log("ManageKeywordListsComponent error func: confirmDeleteKeywordList, Failed to delete keyword list.", apierror);
+        console.log("ManageTopicModelsComponent error func: confirmDeleteTopicModels, Failed to delete topic model.", apierror);
         closeDeleteDialog();
       }
     );
@@ -120,13 +115,12 @@ function ManageTopicModelsComponent(props) {
       formatdate={formatdate}
       deleteDialogIsOpen={deleteDialogIsOpen}
       closeDeleteDialog={closeDeleteDialog}
-      keywordLists={keywordLists}
+      topicModels={topicModels}
       navigate={navigateToHomeScreen}
       keywordListClicked={keywordListClicked}
-      deleteKeywordList={deleteKeywordList}
-      openNewKeywordList={openNewKeywordList}
+      deleteTopicModel={deleteTopicModel}
       createTopicModel={createTopicModel}
-      confirmDeleteKeywordList={confirmDeleteKeywordList}
+      confirmDeleteTopicModel={confirmDeleteTopicModel}
       navFileUpload = {navFileUpload}
     />
   )

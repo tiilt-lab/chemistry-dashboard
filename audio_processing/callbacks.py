@@ -25,10 +25,11 @@ def post_transcripts(source, start_time, end_time, transcript, doa, questions, k
     except Exception as e:
         return False
 
-def post_tagging(source, tag):
+def post_tagging(source, tag, embeddingsFile):
     result = {
         'source': source,
-        'tagging': tag
+        'tagging': tag,
+        'embeddingsFile': embeddingsFile
     }
     try:
         response = requests.post(config.tagging_callback(),json=result)

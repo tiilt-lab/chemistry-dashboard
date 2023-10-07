@@ -8,7 +8,7 @@ import { isLargeScreen } from '../myhooks/custom-hooks';
 
 function ManageTopicsPage(props) {
 
-    const actualKeywordList = props.keywordLists !== undefined ? props.keywordLists : [];
+    const actualTopicModels = props.topicModels !== undefined ? props.topicModels : [];
     return (
         <>
             <div className={style.container}>
@@ -19,25 +19,25 @@ function ManageTopicsPage(props) {
                     rightEnabled={false}
                     nav={props.navigate} />
                 <div className={style["list-container" ]}>
-                    {(!props.keywordLists) ? <div className={style["load-text onload"]}>Loading...</div> : <></>}
-                    {(props.keywordLists && props.keywordLists.length === 0) ?
+                    {(!props.topicModels) ? <div className={style["load-text onload"]}>Loading...</div> : <></>}
+                    {(props.topicModels && props.topicModels.length === 0) ?
 
                         <div className={style["empty-keyword-list"]}>
-                            <div className={style["load-text"]}> No Keyword Lists </div>
-                            <div className={style["load-text-description"]}> Tap the button below to make your first keyword list. </div>
+                            <div className={style["load-text"]}> No Topic Models </div>
+                            <div className={style["load-text-description"]}> Tap the button below to make your first topic model. </div>
                         </div>
                         :
                         <></>}
-                    {props.keywordLists.map((keywordList, count) => (
+                    {props.topicModels.map((topicModel, count) => (
                         <div key={"keyword" + count} className={style["keyword-list-button"]} >
-                            <div className={style["click-mask"]} onClick={() => { props.keywordListClicked(keywordList) }} ></div >
+                            <div className={style["click-mask"]} onClick={() => { props.navFileUpload() }} ></div >
                             <div className={style["keyword-list-header"]}>
-                                <div className={style.title}>{keywordList.name}</div>
-                                <div className={style.date}>{props.formatdate(keywordList.creation_date)}</div>
+                                <div className={style.title}>{topicModel.name}</div>
+                                <div className={style.date}>{props.formatdate(topicModel.creation_date)}</div>
                             </div>
-                            <div className={style["keyword-list-keywords"]}>{keywordList.keywords.join(", ")}</div>
+                            <div className={style["keyword-list-keywords"]}>{topicModel.summary}</div>
                             <AppContextMenu className={style["keyword-list-options"]}>
-                                <div className={`${style2["menu-item"]} ${style2["red"]}`} onClick={() => { props.deleteKeywordList(keywordList) }}>Delete</div>
+                                <div className={`${style2["menu-item"]} ${style2["red"]}`} onClick={() => { props.deleteTopicModel(topicModel) }}>Delete</div>
                             </AppContextMenu >
                         </div>
                     ))}
@@ -52,9 +52,9 @@ function ManageTopicsPage(props) {
             <DialogBoxTwoOption
                 show={props.deleteDialogIsOpen}
                 itsclass = {style["dialog-window"]}
-                heading={"Delete Keyword List"}
-                body={"Are you sure you want to permanently delete this keyword list?"}
-                deletebuttonaction={props.confirmDeleteKeywordList}
+                heading={"Delete Topic Model"}
+                body={"Are you sure you want to permanently delete this topic model?"}
+                deletebuttonaction={props.confirmDeleteTopicModel}
                 cancelbuttonaction={props.closeDeleteDialog}
             />
         </>

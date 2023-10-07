@@ -22,6 +22,7 @@ from tables.keyword import Keyword
 from tables.user import User
 from tables.api_client import APIClient
 from tables.folder import Folder
+from tables.topic_model import TopicModel
 
 # Saves changes made to database (models)
 def save_changes():
@@ -29,6 +30,44 @@ def save_changes():
 
 def close_session():
     db.session.remove()
+
+# -------------------------
+# Topic Models
+# -------------------------
+
+def get_topic_models(owner_id = None, id = None, name = None):
+  query = db.session.query(TopicModel)
+  if owner_id != None:
+      query = query.filter(TopicModel.owner_id == owner_id)
+  if id != None:
+      return query.filter(TopicModel.id == id).first()
+  if name != None:
+      return query.filter(TopicModel.name == name).first()
+  return query.all()
+
+
+def add_topic_model(user_id, name, summary):
+  topic_model = TopicModel(user_id, name, summary)
+  db.session.add(topic_model)
+  db.session.commit()
+  return topic_model
+
+def update_topic_model(topic_model_id, name=None, summary=None):
+    topic_model = get_topic_models(id=topic_model_id)
+    if topic_model:
+        if name != None:
+            topic_model.name = name
+        db.session.commit()
+        return topic_model
+    if summary:
+      topic_model.summary = summary
+      return topic_model
+    return None
+
+def delete_topic_model(topic_model_id):
+  db.session.query(TopicModel).filter(TopicModel.id == topic_model_id).delete(synchronize_session='fetch')
+  db.session.commit()
+  return True
 
 # -------------------------
 # Keyword (Session keywords)
@@ -436,6 +475,15 @@ def create_pod_session_device(session_id, device_id):
     db.session.commit()
     return True, session_device
 
+def setEmbeddingsFile(processing_key, embeddings):
+    session_device = get_session_devices(processing_key=processing_key)
+    session_device.embeddings = embeddings
+    db.session.commit()
+    return True
+
+
+
+
 # -------------------------
 # Transcript
 # -------------------------
@@ -445,6 +493,11 @@ def add_transcript(session_device_id, start_time, length, transcript, question, 
     db.session.add(transcript)
     db.session.commit()
     return transcript
+
+def set_speaker_tag(transcript, tag):
+    transcript.speaker_tag = tag
+    db.session.commit()
+    return True
 
 def get_transcripts(session_id=None, session_device_id=None, start_time=0, end_time=-1):
     query = db.session.query(Transcript)
