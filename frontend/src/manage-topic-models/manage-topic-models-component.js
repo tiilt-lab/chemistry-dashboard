@@ -26,8 +26,16 @@ function ManageTopicModelsComponent(props) {
           resp.then(
             (result) => {
               const topModels = TopicModelModel.fromJsonList(result)
+              for (let i = 0; i < topModels.length; i++) {
+                let split = topModels[i].summary.split("\n");
+                if (split.length > 1) {
+                  topModels[i].summary = split[0];
+                  //but it's not just this. you have to go and select the topics that were selected
+                  //then interaction where you can print the data if it exists for each topic
+                  topModels[i].data = split[1];
+                }
+              }
               setTopicModels(topModels)
-              console.log(topicModels)
             },
             (err) => { console.log('ManageTopicModelsComponent error func : useeffect 122' ,err) })
 
@@ -45,6 +53,14 @@ function ManageTopicModelsComponent(props) {
 
   const navFileUpload = () => {
     navigate("/file_upload");
+  }
+  
+  const navTopicList = (dataToPrint, topicNames, title) => {
+    if (typeof dataToPrint !== "undefined") {
+       navigate('/topic-list', {state: {topics:dataToPrint, names:topicNames.replace(/ /g, ''), title:title}});
+    } else {
+      console.log("Can't load model");
+    }
   }
 
   const createTopicModel = () => {
@@ -64,10 +80,6 @@ function ManageTopicModelsComponent(props) {
         console.log('ManageTopicModelComponent error func : createTopicModel 2', apierror)
       }
     )
-  }
-
-  const keywordListClicked = (keywordList) => {
-    return navigate("/keyword-lists/" + keywordList.id);
   }
 
   const navigateToHomeScreen = () => {
@@ -117,11 +129,11 @@ function ManageTopicModelsComponent(props) {
       closeDeleteDialog={closeDeleteDialog}
       topicModels={topicModels}
       navigate={navigateToHomeScreen}
-      keywordListClicked={keywordListClicked}
       deleteTopicModel={deleteTopicModel}
       createTopicModel={createTopicModel}
       confirmDeleteTopicModel={confirmDeleteTopicModel}
       navFileUpload = {navFileUpload}
+      navTopicList = {navTopicList}
     />
   )
 }

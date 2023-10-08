@@ -11,30 +11,34 @@ function TopicListPage(props) {
 	  <>
 	    <div className={style.container}>
 	      <Appheader
-		title={"Topic List"}
+		title={props.editMode ? "Topic List" : props.viewTitle}
 		leftText={false}
 		rightText={""}
 		rightEnabled={false}
 		//needs to be something to navigate, an issue
-		nav={() => {props.toggleDisplay(true, "close", -1)}}
+		nav={() => {props.editMode ? props.toggleDisplay(true, "close", -1) : props.navTopicModels()}}
 	      />
 	      <div className={style["list-container"]}>
 	      {props.topicListStruct.map((testArr, count) => (
-		<div key={"model" + count} className={testArr.clicked ? `${style["model-selected"]} ${style["model-list-button"]}` : style["model-list-button"]} onClick={() => props.toggleClicked(count)}>
+		<div key={"model" + count} className={testArr.clicked ? `${style["model-selected"]} ${style["model-list-button"]}` : style["model-list-button"]} onClick={() => props.editMode ? props.toggleClicked(count) : null}>
 		  <div className={style["model-list-header"]}>
 		    <div className={style.title}>{testArr.tname}</div>
 		  </div>
 		  <div className={style["model-list-elements-one"]}>{props.stringFormat(testArr.kwds, testArr.kwdprobs, false)}</div>
 		  <div className={style["model-list-elements-two"]}>{props.stringFormat(testArr.kwds, testArr.kwdprobs, true)}</div>
-		  <AppContextMenu className={style["model-list-options"]} reverseToggle = {() => props.toggleClicked(count)}>
+		  {props.editMode ? 
+		  (<AppContextMenu className={style["model-list-options"]} reverseToggle = {() => props.toggleClicked(count)}>
 		    <div className={`${style2["menu-item"]} ${style2["menu-item"]}`} onClick={() => {props.toggleDisplay(true, "rename", count)}}>Rename</div>
-		  </AppContextMenu >
+		  </AppContextMenu >)
+		  : null}
 		</div>
 		))}
 	      </div>
-	      <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={() => {props.toggleDisplay(true, "submit", -1)}}>
+	      {props.editMode ? 
+	      (<button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={() => {props.toggleDisplay(true, "submit", -1)}}>
 		  Submit
-	    </button>
+	      </button>)
+	      : null}
 	    </div>
 	    
 	    <DialogBox 
@@ -54,7 +58,7 @@ function TopicListPage(props) {
 		: (props.currentDialog == 'submit' ? 
 		<React.Fragment>
 		<div className={style.container}>
-		  {"Are you sure you want to go forward with the following topics: " + props.getSelectNameList()}
+		  {"Are you sure you want to go forward with the following topics: " + props.getSelectNameList(true)}
 		  <div>
 		    {"If yes, select a name for your topics."}
 		    <input id="txtName" className={style["text-input"]} style = {{width: adjDim(279) + 'px',}} defaultValue={""} onKeyUp={(event) => props.setNameInput(event.target.value)} maxLength='64' />
