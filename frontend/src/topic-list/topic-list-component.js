@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {useLocation} from 'react-router-dom';
 import { FileUploadService } from "../services/file-upload-service";
 import {TopicListPage} from './html-pages'
-//trying this out
 import { TopicModelService } from "../services/topic-model-service";
 import { KeywordService } from "../services/keyword-service";
 
@@ -14,38 +13,27 @@ function TopicListComponent(props){
   const [showDialog, setShowDialog] = useState(false);
   const [currentDialog, setCurrentDialog] = useState("");
   const [showedInd, setShowedInd] = useState(-1);
+  const [editMode, setEditMode] = useState(location.state.names === undefined);
+  const [viewTitle, setViewTitle] = useState(location.state.title);
   
-  //here temporarily now that we have our actual topic model data to use
-  const array_testing = [[0.9, [["depression", "health", "anxiety", "stress", "score","depression", "health", "anxiety", "stress", "score"], [0.1231, 0.00032, 0.3231, 0.7452, 0.9995,0.1231, 0.00032, 0.3231, 0.7452, 0.9995]]], [0.01, [["school", "homework", "deadline", "test", "gpa","depression", "health", "anxiety", "stress", "score"], [0.1231, 0.00032, 0.3231, 0.7452, 0.9995,0.1231, 0.00032, 0.3231, 0.7452, 0.9995]]], [0.015, [["fall", "spring", "winter", "summer", "seasons","depression", "health", "anxiety", "stress", "score"], [0.1231, 0.00032, 0.3231, 0.7452, 0.9995,0.1231, 0.00032, 0.3231, 0.7452, 0.9995]]], [0.02, [["jan", "feb", "march", "april", "may","depression", "health", "anxiety", "stress", "score"], [0.1231, 0.00032, 0.3231, 0.7452, 0.9995,0.1231, 0.00032, 0.3231, 0.7452, 0.9995]]], [0.35, [["skiing", "ice", "snow", "snowboard", "mountain","depression", "health", "anxiety", "stress", "score"], [0.1231, 0.00032, 0.3231, 0.7452, 0.9995,0.1231, 0.00032, 0.3231, 0.7452, 0.9995]]]];
-  const makeTopicListStruct_TEMP = () => {
-    let topics = [];
-    for (let i = 0; i < array_testing.length; i++) {
-      let j = i + 1;
-      let temptopic = [];
-      temptopic.tname = "Topic" + j;
-      temptopic.clicked = false;
-      temptopic.kwds = array_testing[i][1][0];
-      temptopic.kwdprobs = array_testing[i][1][1];
-      topics.push(temptopic);
-    }
-    return topics;
-  }
-  
-  //what we should actually have
-  
+  //parses the inputted string for topic models into a data structure we can use
   const makeTopicListStruct = (topicStr) => {
     let topics = []
     let allTopics = topicStr.split(",");
-    let numTopics = 5;
-    let numSubTopics = 10;
-    for (let i = 0; i < numTopics; i++) {
+    let allNames = editMode ? [] : location.state.names.split(",");
+    const SUBTOPICLEN = 10;  //right now this is a norm
+    for (let i = 0; i < allTopics.length; i++) {
     	let l = i + 1;
     	let temptopic = [];
-        temptopic.tname = "Topic" + l;
+        temptopic.tname = editMode ? ("Topic" + l) : allNames[i];
+        temptopic.clicked = false;
     	let subTopics = allTopics[i].split("+");
+    	if (subTopics.length != SUBTOPICLEN) {
+    	  continue;
+    	}
     	let kwdprobs = [];
     	let kwds = [];
-    	for (let j = 0; j < numSubTopics; j++) {
+    	for (let j = 0; j < SUBTOPICLEN; j++) {
     	  let numNames = subTopics[j].split("*");
     	  let num = numNames[0].trim();
     	  kwdprobs.push(parseFloat(num));
@@ -60,15 +48,12 @@ function TopicListComponent(props){
     return topics;
   }
   
-  const [topicListStruct, setTopicListStruct] = useState((location.state === null) ? makeTopicListStruct_TEMP() : makeTopicListStruct(location.state.topics));
+  const [topicListStruct, setTopicListStruct] = useState(makeTopicListStruct(location.state.topics));
   const [currInput, setCurrInput] = useState("");
   const [wrongInput, setWrongInput] = useState(false);
   const [changedName, setChangedName] = useState(false);
   const [trigger, setTrigger] = useState(0);
   const [nameInput, setNameInput] = useState("");
-  
-  //need to change
-  const [topics, setTopics] = useState((location.state === null) ? array_testing : location.state.topics)
 
   useEffect(()=> {
     if (props.userdata !== undefined && Object.keys(props.userdata).length !==0) {
@@ -142,7 +127,7 @@ function TopicListComponent(props){
     setTrigger(trigger+1);
   }
 
-  const getSelectNameList = () => {
+  const getSelectNameList = (inQuestion) => {
     let temp = [];
     for (let i = 0; i < topicListStruct.length; i++) {
       if (topicListStruct[i].clicked) {
@@ -150,10 +135,21 @@ function TopicListComponent(props){
       }
     }
     let str = temp.join(", ");
-    if (str.length > 0) {
+    if (str.length > 0 && inQuestion) {
       str += "?";
     }
     return str;
+  }
+  
+  const getUnparsedSubtopics = (topicStr) => {
+    let allTopics = topicStr.split(",");
+    let temp = []
+    for (let i = 0; i < topicListStruct.length; i++) {
+      if (topicListStruct[i].clicked) {
+        temp.push(allTopics[i]);
+      }
+    }
+    return temp.join(",");
   }
 
   const navTopicModels = () => {
@@ -168,7 +164,7 @@ function TopicListComponent(props){
   const saveNewModel = () => {
     //const topics = topicListStruct.filter(tlist => tlist.clicked).map(tlist => tlist.tname);
     //so far only for creation, but need to update it soon (aka if (keywordListID === '-1'))
-    new TopicModelService().saveTopicModel(nameInput, "String").then(
+    new TopicModelService().saveTopicModel(nameInput, (location.state === null) ? "Nothing here" : (getSelectNameList(false) + "\n" + getUnparsedSubtopics(location.state.topics))).then(
       response => {
         if (response.status === 200) {
           navTopicModels();
@@ -213,6 +209,9 @@ function TopicListComponent(props){
         topicListStruct = {topicListStruct}
         toggleClicked = {toggleClicked}
         getSelectNameList = {getSelectNameList}
+        editMode = {editMode}
+        navTopicModels = {navTopicModels}
+        viewTitle = {viewTitle}
       />
   )
 }
