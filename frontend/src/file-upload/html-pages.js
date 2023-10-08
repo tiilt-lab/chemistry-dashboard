@@ -27,12 +27,7 @@ function FileUploadPage(props) {
       </form>
       <div>
         <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} style = {{width: adjDim(374) + 'px',}} onClick={props.createTopicModel}>
-          Create Topic Model
-        </button>
-      </div>
-      <div>
-        <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} style = {{width: adjDim(374) + 'px',}} onClick={props.navigateToTopics}>
-          See Topics
+          View Topic Model
         </button>
       </div>
     </div>
