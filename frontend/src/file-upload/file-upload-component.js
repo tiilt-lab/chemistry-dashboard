@@ -35,10 +35,6 @@ function FileUploadComponent(props){
     navigate('/topic-models');
   }
 
-  const navigateToTopics = () => {
-    navigate('/topic-list');
-  }
-
   const createTopicModel = ()=> {
     const fetchData = new TopicModelService().getTopicModel()
     fetchData.then(
@@ -62,6 +58,7 @@ function FileUploadComponent(props){
       },
       apierror=>{
         console.log('Fileuploadcomponent error func : createTopicModel 1', apierror)
+        //should put some sort of alert here for the user
       }
     )
   }
@@ -97,7 +94,6 @@ function FileUploadComponent(props){
         createTopicModel = {createTopicModel}
         onFileSelect = {onFileSelect}
         onSubmit = {onSubmit}
-        navigateToTopics = {navigateToTopics}
       />
   )
 }
