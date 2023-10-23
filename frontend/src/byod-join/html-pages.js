@@ -145,7 +145,7 @@ function ByodJoinPage(props) {
                             </div>
                             {props.loading() ? <AppSpinner></AppSpinner> : <></>}
                             <div className={style2.footer}>
-                                {props.session ? <AppSessionToolbar session={props.session} closingSession={()=> props.disconnect(true)} /> : <></>}
+                                {props.session ? <AppSessionToolbar session={props.session} sessionDevice={props.sessionDevice}  closingSession={()=> props.disconnect(true)} /> : <></>}
                             </div>
                         </>
 

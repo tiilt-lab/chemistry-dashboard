@@ -1,7 +1,7 @@
 import { SessionService } from '../services/session-service';
 import { SessionModel } from '../models/session';
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { AppSessionPage } from './html-pages'
 
 function AppSessionToolbar(props) {
@@ -13,6 +13,7 @@ function AppSessionToolbar(props) {
     const [intervalId, setInterValid] = useState();
     const [searchParam, setSearchParam] = useSearchParams();
     const navigate = useNavigate();
+    const location = useLocation()
 
 
 
@@ -45,17 +46,23 @@ function AppSessionToolbar(props) {
     }
 
     const onEndSession = () => {
+        // do smth diff for just deleting one thing, I think I have it tho
+        let deleteDevice = location.pathname == '/join';
         setSessionEnding(true);
-        props.closingSession(true)
-        const fetchData = new SessionService().endSession(props.session.id)
+        props.closingSession(true);
+        const fetchData = deleteDevice ? (new SessionService().removeDeviceFromSession(props.session.id, props.sessionDevice.id, true)) : (new SessionService().endSession(props.session.id));
         fetchData.then(response => {
             if (response.status === 200) {
                 setSessionEnding(false);
-                if (props.session.folder) {
-                    navigate('/sessions?folder='+props.session.folder)
-                    setSearchParam({ folder: props.session.folder })
+                if (deleteDevice) {
+                    navigate('/join')
                 } else {
-                    navigate('/sessions', { replace: true })
+                    if (props.session.folder) {
+                        navigate('/sessions?folder='+props.session.folder)
+                        setSearchParam({ folder: props.session.folder })
+                } else {
+                        navigate('/sessions', { replace: true })
+                    }
                 }
             }
         })
