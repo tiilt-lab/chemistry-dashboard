@@ -97,7 +97,8 @@ function ByodJoinPage(props) {
                                     (props.authenticated && props.joinwith === 'Video') ?
                                         <AppSectionBoxComponent heading={"Video control:"} >
                                             <div className={style["video-container"]} style={{display: props.preview ? 'block' : 'none' }}>
-                                                <video controls={true} muted={true} />
+                                                <video controls={true} muted={true} style={{ marginLeft: "20px" }} />
+                                                <img  style={{ marginLeft: "12px" }}  width="150" height="80" src={props.apiEndpoint+'api/v1/sessions/'+props.session.id+'/devices/'+props.sessionDevice.id+'/auth/'+props.authKey+'/streamimages'} />
                                             </div>
                                         </AppSectionBoxComponent>
                                         :

@@ -19,6 +19,7 @@ from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager
 from audio_buffer import AudioBuffer
 from processor import AudioProcessor
+from video_cartoonizer.videoprocessor import VideoProcessor
 from datetime import datetime
 from redis_helper import RedisSessions
 from twisted.python import log
@@ -29,6 +30,7 @@ from asr_connectors.google_asr_connector import GoogleASR
 from features_detector import features_detector
 from keyword_detector import keyword_detector
 from speaker_tagging import speaker_tagging
+from video_cartoonizer.cartoonizer import Videotoonify
 
 cm = ConnectionManager()
 
@@ -43,9 +45,11 @@ class ServerProtocol(WebSocketServerProtocol):
         self.asr_transcript_queue = None
         self.asr = None
         self.processor = None
+        self.video_processor = None
         self.last_message = time.time()
         self.end_signaled = False
         self.interval = 10
+        self.video_cartoonify = None
         cm.add(self)
         logging.info('New client connected...')
 
@@ -85,13 +89,9 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.signal_end()
             else:
                 self.config = result
-                logging.info('Client {0} signalled to started...'.format(self.config.auth_key))
                 cm.associate_keys(self, self.config.session_key, self.config.auth_key)
                 self.stream_data = data['streamdata']
-                self.signal_start()
-                self.send_json({'type':'start'})
-                callbacks.post_connect(self.config.auth_key)
-               
+                
                 if self.stream_data == 'audio':
                     if cf.record_original():
                         filename = os.path.join(cf.recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
@@ -100,18 +100,32 @@ class ServerProtocol(WebSocketServerProtocol):
                         filename = os.path.join(cf.recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
                         self.redu_recorder = WaveRecorder(filename, 16000, 2, 1)
                 elif self.stream_data == 'video':
-                    self.video_count = 1;
+                    self.video_count = 1
                     if cf.video_record_original():
-                        aud_filename = os.path.join(cf.video_recordings_folder(), "{0}_({1})_audio".format(self.config.auth_key, str(time.ctime())))
-                        self.filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
-                        self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_({1})".format(self.config.auth_key, str(time.ctime())))
-                        self.orig_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1)
+                        #initalize video cartoonifer object
+                        # self.video_cartoonify  = Videotoonify()
+                        # self.video_cartoonify.initialize()
+                        aud_filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_audio".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, datetime.today().strftime("%Y-%m-%d")))
+                        self.filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_orig".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, datetime.today().strftime("%Y-%m-%d")))
+                        self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_{1}_{2}_({3})".format(self.config.auth_key,self.config.sessionId,self.config.deviceId,  datetime.today().strftime('%Y-%m-%d')))
+                        self.orig_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,self.video_processor,cf.video_record_original(),16000, 2, 1)
+                        
+                        if cf.video_cartoonize():
+                            self.video_queue = queue.Queue()
+                            self.video_processor = VideoProcessor(self.video_queue,self.config,self.frame_dir,self.filename,aud_filename,16000, 2,1)
+                            self.video_processor.initialize()
+                            logging.info('video cartoonizer finished  initialization')
+                       
                     if cf.video_record_reduced():
-                        aud_filename = os.path.join(cf.video_recordings_folder(), "{0}_({1})_audio".format(self.config.auth_key, str(time.ctime())))
-                        self.filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
-                        self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_({1})".format(self.config.auth_key, str(time.ctime())))
+                       
+                        aud_filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_audio".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, datetime.today().strftime("%Y-%m-%d")))
+                        self.filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_redu".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, datetime.today().strftime("%Y-%m-%d")))
+                        self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_{1}_{2}_({3})".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, datetime.today().strftime('%Y-%m-%d')))
                         self.redu_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1)
 
+                self.signal_start()
+                self.send_json({'type':'start'})
+                callbacks.post_connect(self.config.auth_key)
 
     def process_binary(self, data):
         if self.running:
@@ -130,21 +144,28 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.redu_recorder.write(asr_data)
 
             elif self.stream_data == 'video':
-
-                self.orig_vid_recorder.write(data)
+                if cf.video_record_original():
+                    self.orig_vid_recorder.write(data)
 
                 temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
                 vidclip = mp.VideoFileClip(self.filename+'.webm')
                 subclips = vidclip.subclip((self.video_count-1)*self.interval,self.video_count*self.interval)
+                logging.info('determine type for subclip {0}'.format(type(subclips)))
                 subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=16000,bitrate='50k') #nbytes=2,codec='pcm_s16le',
 
                 wavObj = wave.open(temp_aud_file+'.wav')
                 self.audio_buffer.append(self.read_bytes_from_wav(wavObj))
                 audiobyte = self.reduce_wav_channel(1,wavObj)
                 self.asr_audio_queue.put(audiobyte)
+                
+                if cf.video_cartoonize():
+                    self.video_queue.put(subclips.iter_frames())
+                    logging.info('i just inserted video data')
 
-                # Save audio data.
-                self.orig_vid_recorder.write_audio(audiobyte)
+                # Save audio data only if cartoonization is activated.
+                # as we need to merge the audio data with the carttonized video
+                if cf.video_cartoonize():
+                    self.orig_vid_recorder.write_audio(audiobyte)
 
                 if os.path.isfile(temp_aud_file+'.wav'):
                     os.remove(temp_aud_file+'.wav')
@@ -210,6 +231,8 @@ class ServerProtocol(WebSocketServerProtocol):
         self.asr.start()
         self.processor = AudioProcessor(self.audio_buffer, self.asr_transcript_queue, self.config)
         self.processor.start()
+        if cf.video_cartoonize():
+            self.video_processor.start()
         self.running = True
 
     def send_close(self, message):
@@ -223,6 +246,10 @@ class ServerProtocol(WebSocketServerProtocol):
             self.asr.stop()
         if self.processor:
             self.processor.stop()
+
+        if self.video_processor:
+            self.video_processor.stop()
+
         if self.config:
             callbacks.post_disconnect(self.config.auth_key)
             cm.remove(self, self.config.session_key, self.config.auth_key)

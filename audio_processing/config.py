@@ -27,6 +27,9 @@ def video_record_original():
 def video_record_reduced():
     return str(config['videorecord']['reduced']) in ['true', 'True', 't', '1']
 
+def video_cartoonize():
+    return str(config['videocartoonize']['cartoonize']) in ['true', 'True', 't', '1']
+
 def video_recordings_folder():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['videorecord']['video_recording_folder']))
 
