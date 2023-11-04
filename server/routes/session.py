@@ -16,6 +16,7 @@ import socketio_helper
 import string
 import csv
 import io
+import os
 
 api_routes = Blueprint('session', __name__)
 
@@ -252,3 +253,39 @@ def export_session(session_id, **kwargs):
     output.headers["Content-Disposition"] = "attachment; filename=export.csv"
     output.headers["Content-type"] = "text/csv"
     return output
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/auth/<auth_id>/streamimages')
+def stream_cartonized_images(session_id, device_id,auth_id, **kwargs):
+    try:
+        filePath  = os.path.dirname(os.path.abspath(__file__)) 
+        os.chdir(filePath)
+        os.chdir("../../audio_processing/videorecordings")
+        loading_img_Path = os.path.join(os.getcwd(),'loading_img')
+        loading_frame = read_image(os.path.join(loading_img_Path,'loading.png'))
+        cartoon_img_path  = os.path.join(os.getcwd(),"vid_img_frames_{0}_{1}_{2}_({3})".format(auth_id,session_id,device_id, datetime.today().strftime('%Y-%m-%d')))
+
+        return Response(gen(loading_frame,cartoon_img_path),
+                        mimetype='multipart/x-mixed-replace; boundary=frame')
+    except Exception as e:
+        logging.error('Error occured while streaming cartoonized image: {0}'.format(e))
+
+
+def gen(loading_frame,cartoon_img_path):
+    current_index = 1
+    dir_content = []
+    while True:
+        if os.path.exists(cartoon_img_path):
+            dir_content = os.listdir(cartoon_img_path)
+
+        if len(dir_content) == 0:
+             yield (b'--frame\r\n'
+               b'Content-Type: image/png\r\n\r\n' + loading_frame + b'\r\n')
+        else:     
+            while current_index <= len(dir_content):
+                frame =read_image(os.path.join(cartoon_img_path,str(current_index)+'.png'))
+                yield (b'--frame\r\n'
+                    b'Content-Type: image/png\r\n\r\n' + frame + b'\r\n')
+                current_index = current_index +1
+
+def read_image(filepath):
+    return  open(filepath , 'rb').read()

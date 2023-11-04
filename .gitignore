@@ -172,8 +172,30 @@ google-cloud-key.json
 *.wav
 *.ogg
 *.tmp
+
 audio_processing/recordings/
 audio_processing/videorecordings/
 audio_processing/speaker_diarization/results/
-/frontend/.gitignore
+audio_processing/VToonify/
+audio_processing/video_cartoonizer/checkpoint/
+audio_processing/video_cartoonizer/data/
+audio_processing/video_cartoonizer/environment/
+audio_processing/video_cartoonizer/ninja-linux.zip
+audio_processing/video_cartoonizer/notebooks/
+audio_processing/video_cartoonizer/output/
+audio_processing/video_cartoonizer/smooth_parsing_map.py
+audio_processing/video_cartoonizer/style_transfer.py
+audio_processing/video_cartoonizer/train_vtoonify_d.py
+audio_processing/video_cartoonizer/train_vtoonify_t.py
+audio_processing/video_cartoonizer/vtoonify_model.py
 uploads
+
+/server/config.ini
+/frontend/.gitignore
+
+# pretrained
+pretrained_ecapa
+#npy file
+*.npy
+
+.gitignore

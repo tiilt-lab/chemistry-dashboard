@@ -442,7 +442,9 @@ function JoinPage() {
                 'channels': 1,
                 'streamdata': 'audio',
                 'tag': true,
-                'embeddingsFile': sessionDevice.embeddings
+                'embeddingsFile': sessionDevice.embeddings,
+                'deviceid':sessionDevice.id,
+                'sessionid': session.id
             };
         } else if (joinwith === 'Video') {
             message = {
@@ -455,7 +457,9 @@ function JoinPage() {
                 'channels': 2,
                 'streamdata': 'video',
                 'tag' : false,
-                'embeddingsFile': sessionDevice.embeddings
+                'embeddingsFile': sessionDevice.embeddings,
+                'deviceid':sessionDevice.id,
+                'sessionid': session.id
             };
         }
         ws.send(JSON.stringify(message));
@@ -623,6 +627,8 @@ function JoinPage() {
                         seeAllTranscripts={seeAllTranscripts}
                         openDialog={openDialog}
                         setCurrentForm = {setCurrentForm}
+                        apiEndpoint = {apiService.getEndpoint()}
+                        authKey = {key}
 
                     />
     )
