@@ -149,7 +149,7 @@ def clusterSpectralEmbeddings(embeddings, n_speakers):
   cluster_centers = []
 
 
-  k_means = sklearn.cluster.KMeans(n_clusters=(n_speakers), n_init=10, init='random')
+  k_means = sklearn.cluster.KMeans(n_clusters=n_speakers, n_init=10, init='random')
   k_means.fit(embeddings.T)
   cls = k_means.labels_
   means = k_means.cluster_centers_
@@ -157,7 +157,7 @@ def clusterSpectralEmbeddings(embeddings, n_speakers):
   cluster_labels.append(cls)
   cluster_centers.append(means)
 
-  class_names = ["speaker{0:d}".format(c) for c in range(n_speakers+1)]
+  class_names = ["speaker{0:d}".format(c) for c in range(n_speakers)]
 
   return cls, class_names, cluster_centers
 
