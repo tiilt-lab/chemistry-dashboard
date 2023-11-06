@@ -58,9 +58,10 @@ function AppSessionToolbar(props) {
                     navigate('/join')
                 } else {
                     if (props.session.folder) {
-                        navigate('/sessions?folder='+props.session.folder)
-                        setSearchParam({ folder: props.session.folder })
-                } else {
+                    	 // works now, just had to switch the lines
+                    	 setSearchParam({ folder: props.session.folder })
+                        navigate('/sessions?folder=' + props.session.folder);
+                    } else {
                         navigate('/sessions', { replace: true })
                     }
                 }

@@ -1,10 +1,11 @@
 import {useState,useEffect} from 'react'
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FileUploadService } from "../services/file-upload-service";
 import {FileUploadPage} from './html-pages'
 import { TopicModelService } from "../services/topic-model-service";
 
 function FileUploadComponent(props){
+  const location = useLocation();
   const [user, setUser] = useState();
   const [selectedFile, setSelectedFile] = useState(null);
   const [myFiles, setMyfiles] = useState([]);
@@ -45,13 +46,19 @@ function FileUploadComponent(props){
             (topics) => {
               var topicString = ""
               setTopics(topics);
-              console.log("ALL TOPICS")
-              console.log(topics)
               for (const topic of topics) {
                 console.log("Topic: ", topic);
                 topicString += topic + ",";
               }
-              navigate('/topic-list', {state: {topics:topicString}});
+              if (location.pathname == '/file_upload/new-session') {
+                const combinedState = {
+                  ...location.state,
+                  topics: topicString,
+                };
+                navigate('/topic-list/new-session', { state: combinedState });
+              } else {
+                navigate('/topic-list', {state: {topics:topicString}});
+              }
             }
           )
         }

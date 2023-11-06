@@ -319,8 +319,9 @@ def get_sessions(id=None, owner_id=None, active=None, folder_ids=None, passcode=
         return query.first()
     return query.all()
 
-def create_session(user_id, keyword_list_id, name="Unnamed", folder=None):
-    session = Session(user_id,name, folder)
+def create_session(user_id, keyword_list_id, topic_model_id, name="Unnamed", folder=None):
+    # TODO get the topic model from the db and somehow add it to the discussion.
+    session = Session(user_id, name, folder)
     db.session.add(session)
     keyword_list_items = get_keyword_list_items(keyword_list_id, owner_id=user_id)
     keywords = []

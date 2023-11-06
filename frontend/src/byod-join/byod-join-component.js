@@ -479,8 +479,12 @@ function JoinPage() {
     const fetchTranscript = async (deviceid) => {
         try {
             const response = await sessionService.getSessionDeviceTranscriptsForClient(deviceid)
+            
+            console.log("FETCHING TRANSCRIPT");
 
             if (response.status === 200) {
+                console.log("Fetched transcript");
+                console.log(transcripts);
                 const jsonObj = await response.json()
                 const data = jsonObj.sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
                 setTransripts(data)
