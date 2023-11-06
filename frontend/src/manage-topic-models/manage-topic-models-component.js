@@ -2,6 +2,7 @@ import { KeywordService } from "../services/keyword-service";
 import { TopicModelService } from "../services/topic-model-service";
 import { TopicModelModel } from '../models/topic-model';
 import { formatDate } from "../globals";
+import { unpackTopModels } from '../myhooks/custom-hooks';
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ManageTopicsPage } from './html-pages'
@@ -12,7 +13,7 @@ function ManageTopicModelsComponent(props) {
   const [deleteDialogIsOpen, setDeleteDialogIsOpen] = useState(false);
   const [topicModelToDelete, setTopicModelToDelete] = useState(null);
   const [topicModels, setTopicModels] = useState([]);
-  const [topics, setTopics] = useState([]);
+  //const [topics, setTopics] = useState([]);
   //const location = useLocation();
 
   const formatdate = formatDate; // Allows the HTML to invoke the function.
@@ -25,17 +26,8 @@ function ManageTopicModelsComponent(props) {
           const resp = response.json()
           resp.then(
             (result) => {
-              const topModels = TopicModelModel.fromJsonList(result)
-              for (let i = 0; i < topModels.length; i++) {
-                let split = topModels[i].summary.split("\n");
-                if (split.length > 1) {
-                  topModels[i].summary = split[0];
-                  //but it's not just this. you have to go and select the topics that were selected
-                  //then interaction where you can print the data if it exists for each topic
-                  topModels[i].data = split[1];
-                }
-              }
-              setTopicModels(topModels)
+              const topModels = TopicModelModel.fromJsonList(result);
+              setTopicModels(unpackTopModels(topModels));
             },
             (err) => { console.log('ManageTopicModelsComponent error func : useeffect 122' ,err) })
 
@@ -63,6 +55,7 @@ function ManageTopicModelsComponent(props) {
     }
   }
 
+  /*
   const createTopicModel = () => {
     const fetchData = new TopicModelService().getTopics();
     fetchData.then(
@@ -81,6 +74,7 @@ function ManageTopicModelsComponent(props) {
       }
     )
   }
+  */
 
   const navigateToHomeScreen = () => {
     return navigate("/home");
@@ -130,7 +124,7 @@ function ManageTopicModelsComponent(props) {
       topicModels={topicModels}
       navigate={navigateToHomeScreen}
       deleteTopicModel={deleteTopicModel}
-      createTopicModel={createTopicModel}
+      //createTopicModel={createTopicModel}
       confirmDeleteTopicModel={confirmDeleteTopicModel}
       navFileUpload = {navFileUpload}
       navTopicList = {navTopicList}
