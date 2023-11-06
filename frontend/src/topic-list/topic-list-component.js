@@ -1,6 +1,5 @@
 import {useState,useEffect} from 'react'
-import { useNavigate } from 'react-router-dom';
-import {useLocation} from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FileUploadService } from "../services/file-upload-service";
 import {TopicListPage} from './html-pages'
 import { TopicModelService } from "../services/topic-model-service";
@@ -153,7 +152,11 @@ function TopicListComponent(props){
   }
 
   const navTopicModels = () => {
-    navigate('/topic-models');
+    if (location.pathname == '/topic-list/new-session') {
+      navigate('/sessions/new', {state: location.state});
+    } else {
+      navigate('/topic-models');
+    }
   }
 
   const isValid = () => {
