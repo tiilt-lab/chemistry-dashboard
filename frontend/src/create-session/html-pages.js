@@ -43,8 +43,10 @@ function CreateSessionPage(props) {
                 <span className={style.checkmark}></span>
               </label>
             </div>
-            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.navigateToSessions} >Back</button>
-            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.goToKeywords}>Next</button>
+            <div className={style["button-side-container"]}>
+              <button className={style["footer-button"]} style={{width: adjDim(374/2) + 'px', 'margin-right': '5px',}} onClick={props.navigateToSessions} >Back</button>
+              <button className={style["footer-button"]} style={{width: adjDim(374/2) + 'px', 'margin-left': '5px',}} onClick={props.goToKeywords}>Next</button>
+             </div>
           </React.Fragment>
           :
           <></>
@@ -62,7 +64,7 @@ function CreateSessionPage(props) {
               }
               {
                 props.keywordLists.map((keywordList, index) => (
-                  <div key={index} className={props.selectedKeywordList === keywordList ? `${style["keywords-selected"]} ${style["keyword-list-button"]}` : style["keyword-list-button"]} onClick={() => props.setSelectedKeywordList(keywordList)}>
+                  <div key={index} className={props.selectedKeywordList === keywordList ? `${style["keywords-selected"]} ${style["keyword-list-button"]}` : style["keyword-list-button"]} onClick={() => props.setSelectedKeywordList(props.selectedKeywordList === keywordList ? null : keywordList)}>
                     <div className={style["keyword-list-header"]} >
                       <span className={style.title}>{keywordList.name}</span>
                       <span className={style.date}> - {props.formatKeywordDate(keywordList.creation_date)}</span>
@@ -74,8 +76,44 @@ function CreateSessionPage(props) {
             </div>
 
             <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.navigateToKeywordLists}>Create Keyword List</button>
-            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.goToSettings}>Back</button>
-            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.goToDevices}>Next</button>
+            <div className={style["button-side-container"]}>
+              <button className={style["footer-button"]} style={{width: adjDim(374/2) + 'px', 'margin-right': '5px',}} onClick={props.goToSettings}>Back</button>
+              <button className={style["footer-button"]} style={{width: adjDim(374/2) + 'px', 'margin-left': '5px',}} onClick={props.goToTopModels}>Next</button>
+            </div>
+          </React.Fragment>
+          :
+          <></>
+        }
+        
+        {(props.currentMenu == "TopModels") ?
+          <React.Fragment>
+            <div className={style["list-container"]}>
+              {(props.topicModels && props.topicModels.length == 0) ?
+                <div className={style["empty-keyword-list"]} >
+                  <div className={style["load-text"]} > No Topic Models </div>
+                  <div className={style["load-text-description"]} > Tap the button below to make your first topic model. </div>
+                </div>
+                :
+                <></>
+              }
+              {
+                props.topicModels.map((topicModel, index) => (
+                  <div key={index} className={props.selectedTopicModel === topicModel ? `${style["keywords-selected"]} ${style["keyword-list-button"]}` : style["keyword-list-button"]} onClick={() => props.setSelectedTopicModel(props.selectedTopicModel === topicModel ? null : topicModel)}>
+                    <div className={style["keyword-list-header"]} >
+                      <span className={style.title}>{topicModel.name}</span>
+                      <span className={style.date}> - {props.formatKeywordDate(topicModel.creation_date)}</span>
+                    </div>
+                    <div className={style["keyword-list-keywords"]} >{topicModel.summary}</div>
+                  </div>
+                ))
+              }
+            </div>
+
+            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.navigateToFileUpload}>Create Topic Model</button>
+            <div className={style["button-side-container"]}>
+              <button className={style["footer-button"]} style={{width: adjDim(374/2) + 'px', 'margin-right': '5px',}} onClick={props.goToKeywords}>Back</button>
+              <button className={style["footer-button"]} style={{width: adjDim(374/2) + 'px', 'margin-left': '5px',}} onClick={props.goToDevices}>Next</button>
+            </div>
           </React.Fragment>
           :
           <></>
@@ -113,7 +151,7 @@ function CreateSessionPage(props) {
 
             </div>
             <button className={style["select-all"]} onClick={props.onClickSelectAll}>Select All</button>
-            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.goToKeywords}>Back</button>
+            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.goToTopModels}>Back</button>
             <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.createSession}>Start Discussion</button>
           </React.Fragment>
           :
@@ -152,5 +190,5 @@ function CreateSessionPage(props) {
   )
 }
 
-export { CreateSessionPage }
+export { CreateSessionPage } 
 

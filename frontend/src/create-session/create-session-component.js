@@ -1,11 +1,14 @@
 import { DeviceService } from '../services/device-service';
 import { SessionService } from '../services/session-service';
 import { KeywordService } from '../services/keyword-service';
+import { TopicModelService } from "../services/topic-model-service";
 import { formatDate } from '../globals';
 import { DeviceModel } from '../models/device'
 import { KeywordListModel } from '../models/keyword-list'
 import { SessionModel } from '../models/session'
 import { FolderModel } from '../models/folder';
+import { TopicModelModel } from '../models/topic-model';
+import { unpackTopModels } from '../myhooks/custom-hooks';
 import { useEffect, useState } from 'react';
 import {CreateSessionPage} from './html-pages'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
@@ -21,6 +24,7 @@ function CreateSessionComponent(props) {
   const [user, setUser] = useState(null);
   const [devices, setDevices] = useState([]);
   const [keywordLists, setKeywordLists] = useState([]);
+  const [topicModels, setTopicModels] = useState([]);
 
   //menus = Menus;
   const [currentMenu, setCurrentMenu] = useState('Settings');
@@ -35,6 +39,7 @@ function CreateSessionComponent(props) {
   const [doa, setDoa] = useState(changedState ? prevState.doa : true);
   const [features, setFeatures] = useState(changedState ? prevState.features : true);
   const [selectedKeywordList, setSelectedKeywordList] = useState(null);
+  const [selectedTopicModel, setSelectedTopicModel] = useState(null);
   const [selectedDevices, setSelectedDevices] = useState([]);
   const [folder, setFolder] = useState(changedState ? prevState.folder : -1);
   const [folderPath, setFolderPath] = useState(changedState ? prevState.folderPath : 'Home');
@@ -119,6 +124,27 @@ function CreateSessionComponent(props) {
         console.log("create-session-components func: useEffect 3 ", apierror)
       }
     )
+    
+    const fetchData4 = new TopicModelService().getTopicModels();
+    fetchData4.then(
+      (response) => {
+        if (response.status === 200) {
+          const resp = response.json()
+          resp.then(
+            (result) => {
+              const topModels = TopicModelModel.fromJsonList(result);
+              setTopicModels(unpackTopModels(topModels));
+            },
+            (err) => { console.log('CreateSessionComponent error func : useeffect 122' ,err) })
+
+        } else {
+          console.log('CreateSessionComponent error func : useeffect 1', response)
+        }
+      },
+      (apierror) => {
+        console.log('CreateSessionComponent error func : useeffect 2', apierror)
+      }
+    )
 
     goToSettings();
 
@@ -171,7 +197,8 @@ function CreateSessionComponent(props) {
     } else {
       const deviceIds = selectedDevices.map(d => d.id);
       const keywordListId = (selectedKeywordList) ? selectedKeywordList.id : null;
-      const fetchData = new SessionService().createNewSession(sessionName, deviceIds, keywordListId,byod, features, doa, folder)
+      const topicModelId = (selectedTopicModel) ? selectedTopicModel.id : null;
+      const fetchData = new SessionService().createNewSession(sessionName, deviceIds, keywordListId, topicModelId, byod, features, doa, folder)
       fetchData.then(
         response=>{
           if(response.status === 200){
@@ -267,6 +294,11 @@ function CreateSessionComponent(props) {
     setCurrentMenu("Keywords");
     setPageTitle('Create Discussion: Keywords');
   }
+  
+  const goToTopModels = ()=> {
+    setCurrentMenu("TopModels");
+    setPageTitle('Create Discussion: Topic Models');
+  }
 
   const goToSettings = ()=> {
     setCurrentMenu("Settings");
@@ -281,9 +313,13 @@ function CreateSessionComponent(props) {
   const navigateToSessions = ()=> {
     navigate('/sessions');
   }
-
+  
   const navigateToKeywordLists = () =>{
     navigate('/keyword-lists/new-session', {state: {sessionName: sessionName, byod: byod, features: features, doa: doa, folder: folder, folderPath: folderPath}});
+  }
+  
+  const navigateToFileUpload = () => {
+    navigate('/file_upload/new-session', {state: {sessionName: sessionName, byod: byod, features: features, doa: doa, folder: folder, folderPath: folderPath}});
   }
 
   const openDialog = (form, text)=> {
@@ -313,8 +349,12 @@ function CreateSessionComponent(props) {
     keywordLists = {keywordLists}
     selectedKeywordList = {selectedKeywordList}
     setSelectedKeywordList = {setSelectedKeywordList}
+    topicModels = {topicModels}
+    selectedTopicModel = {selectedTopicModel}
+    setSelectedTopicModel = {setSelectedTopicModel}
     formatKeywordDate = {formatKeywordDate}
     navigateToKeywordLists = {navigateToKeywordLists}
+    navigateToFileUpload = {navigateToFileUpload}
     goToSettings = {goToSettings}
     goToDevices = {goToDevices}
     devices = {devices}
@@ -333,6 +373,7 @@ function CreateSessionComponent(props) {
     setFolderSelect = {setFolderSelect}
     breadCrumbSelect = {breadCrumbSelect}
     setBreadCrumbSelect = {setBreadCrumbSelect}
+    goToTopModels = {goToTopModels}
     />
   )
 }
