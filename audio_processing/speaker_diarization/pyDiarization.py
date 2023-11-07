@@ -21,10 +21,9 @@ from sklearn.metrics import silhouette_score
 import torchaudio
 from speechbrain.pretrained import SpeakerRecognition
 from sklearn.metrics.pairwise import cosine_similarity
+import scipy.spatial as sp
 
-def embedSignal(x):
-  store_embeddings = False
-  verification = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="./pretrained_ecapa")
+def embedSignal(x, verification):
 
   np_signal = np.frombuffer(x, dtype=np.dtype('int16'))
   signal = torch.from_numpy(np_signal)
@@ -91,18 +90,23 @@ def getSpectralEmbeddings(embeddings_list):
     else:
       embeddings = np.append(embeddings, emb['embedding'], axis=0)
 
-  cos_sim = cosine_similarity(embeddings)
+  logging.info("Embeddings shape")
+  logging.info(embeddings.shape)
+  cos_sim = sp.distance.cdist(embeddings, embeddings, "cosine")
   r = []
   U = []
   S = []
   e = []
 
+  logging.info("cos_sim calculated")
   #attempt to find best p
-  for p in range(1, max(2,int(cos_sim.shape[0]/10))):
+  for p in range(1, max(2,int(cos_sim.shape[0]/4))):
 
     Ap = np.zeros(cos_sim.shape)
+
+    #p-neighbor row-binarization
     for row in range(0, cos_sim.shape[0]):
-      indices = np.argpartition(cos_sim[row], p)[-p:]
+      indices = np.argsort(cos_sim[row])[-p:]
       Ap[row][indices] = 1
 
     # Symmetrization
@@ -115,25 +119,28 @@ def getSpectralEmbeddings(embeddings_list):
     # Singular Value Decomposition
     Up, Sp, Vhp = np.linalg.svd(Lp)
     U.append(Up)
-    S.append(Sp)
-    # eigengap Vector
+    # Ascending order
     Sp = np.flip(Sp)
+    S.append(Sp)
 
+
+    # eigengap Vector
     ep = []
     for i in range(1, len(Sp)):
       ep.append(Sp[i] - Sp[i - 1])
 
     e.append(ep)
     # Normalized Maximum Eigengap(NME)
-    gp = np.max(ep) / np.max(Sp)
+    gp = np.max(ep) / Sp[-1]
     rp = p / gp
     r.append(rp)
 
   bestP = np.argmin(r)
-  n_speakers = np.argmax(e[bestP])+1
+  n_speakers = np.argmax(e[bestP])
 
   spectralEmbeddings = U[bestP][:, :n_speakers].T
 
+  logging.info("got spectral embeddings")
   return spectralEmbeddings, n_speakers
 
 def clusterSpectralEmbeddings(embeddings, n_speakers):
