@@ -13,6 +13,7 @@ class SessionDevice(db.Model):
     connected = db.Column(db.Boolean, nullable=False)
     removed = db.Column(db.Boolean, nullable=False, default=False) # If the device was removed from the session by the owner.
     button_pressed = db.Column(db.Boolean, nullable=False)
+    embeddings = db.Column(db.String(64))
 
     UniqueConstraint('session_id', 'name', name='unique_session_name')
 
@@ -30,6 +31,7 @@ class SessionDevice(db.Model):
         self.connected = False
         self.removed = False
         self.button_pressed = False
+        self.embeddings =  None
 
     def create_key(self):
         self.processing_key = '{0}-{1}'.format(self.id, str(uuid.uuid4()))
@@ -42,7 +44,8 @@ class SessionDevice(db.Model):
             name=self.name,
             connected=self.connected,
             removed=self.removed,
-            button_pressed=self.button_pressed
+            button_pressed=self.button_pressed,
+            embeddings=self.embeddings
         )
 
     @staticmethod
