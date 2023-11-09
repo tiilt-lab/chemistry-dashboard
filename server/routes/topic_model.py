@@ -7,6 +7,7 @@ import logging
 import database
 import wrappers
 import os
+from joblib import dump, load
 
 
 api_routes = Blueprint('fileupload', __name__)
@@ -46,7 +47,7 @@ def get_topics(user, **kwargs):
 
     if not os.path.exists("topicModels"):
       os.makedirs("topicModels")
-    topicModel.save(os.path.join("topicModels", "tempModel"))
+    dump(topicModel, os.path.join("topicModels", "tempModel"))
 
     response = [topic[1] for topic in topicModel.print_topics()]
     logging.info(response)
@@ -85,10 +86,10 @@ def get_topic_models(user, **kwargs):
 def deleteTopicModel(topic_model_id, **kwargs):
   topic_model = database.get_topic_models(id=topic_model_id)
   file_name = "{}_{}".format(topic_model.owner_id, topic_model.id)
-  os.remove(os.path.join("topicModels", file_name))
   success = database.delete_topic_model(topic_model_id)
   if success:
-      return json_response()
+    os.remove(os.path.join("topicModels", file_name))
+    return json_response()
   else:
-      return json_response('Failed to delete topic model.', 400)
+    return json_response('Failed to delete topic model.', 400)
 
