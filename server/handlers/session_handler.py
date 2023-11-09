@@ -20,6 +20,8 @@ def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod
         'features': features,
         'keywords': keywords,
         'doa': doa,
+        'topic_model': topic_model_id,
+        'owner': user_id
     }
     RedisSessions.create_session(session.id, config)
     if devices:
