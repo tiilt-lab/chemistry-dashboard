@@ -155,15 +155,28 @@ class AudioProcessor:
 
             # Get Topics
             topics = None
+            topic_id = -1
             if self.topic_model:
-              logging.info("text for topic modeling")
+              logging.info("Text for topic modeling")
               logging.info(transcript_text)
               preprocessed = preprocess_transcript(transcript_text, [""])
+              logging.info("Preprocessed")
+              logging.info(preprocessed)
+              logging.info(self.topic_model.id2word)
               text2bow = self.topic_model.id2word.doc2bow(preprocessed)
-              topics = self.topic_model[text2bow]
-              logging.info("Topics distribution: ")
-              logging.info(topics)
-            #    topics = get_topics_with_prob(transcript_text)
+              logging.info("Corpus")
+              logging.info(text2bow)
+              if len(text2bow):
+                topics = self.topic_model[text2bow]
+                logging.info("Topics distribution: ")
+                logging.info(topics)
+                #    topics = get_topics_with_prob(transcript_text)
+                if len(topics) > 0:
+                    max = 0
+                    for topic in topics:
+                        if topic[1] > max:
+                            topic_id = topic[0]
+              logging.info(topic_id)
 
 
             # Get DoA
@@ -197,7 +210,7 @@ class AudioProcessor:
             processing_time = time.time() - processing_timer
             start_time += self.config.start_offset
             end_time += self.config.start_offset
-            success = callbacks.post_transcripts(self.config.auth_key, start_time, end_time, transcript_text, doa, questions, keywords, features)
+            success = callbacks.post_transcripts(self.config.auth_key, start_time, end_time, transcript_text, doa, questions, keywords, features, topic_id)
 
             if success:
                 logging.info('Processing results posted successfully for client {0} (Processing time: {1}) @ {2}'.format(self.config.auth_key, processing_time, start_time))
