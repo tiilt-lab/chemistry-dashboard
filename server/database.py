@@ -489,8 +489,8 @@ def setEmbeddingsFile(processing_key, embeddings):
 # Transcript
 # -------------------------
 
-def add_transcript(session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, tag=None):
-    transcript = Transcript(session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, tag)
+def add_transcript(session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id ,tag=None):
+    transcript = Transcript(session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id, tag)
     db.session.add(transcript)
     db.session.commit()
     return transcript

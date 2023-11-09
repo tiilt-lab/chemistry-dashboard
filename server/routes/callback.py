@@ -73,6 +73,7 @@ def add_transcript(**kwargs):
 	#     'questions': [str]
 	#     'keywords': [keyword]
 	#     'features': features object
+  #     'topic_id': int
 	# }
 	content = request.get_json()
 	key = content.get('source', '')
@@ -87,6 +88,7 @@ def add_transcript(**kwargs):
 	if keywords is None:
 		keywords = []
 	features = content.get('features', {})
+	topic_id = content.get('topic_id', -1)
 	emotional_tone = features.get('emotional_tone_value', 0)
 	analytic_thinking = features.get('analytic_thinking_value', 0)
 	clout = features.get('clout_value', 0)
@@ -97,7 +99,7 @@ def add_transcript(**kwargs):
 	if session_device:
 		logging.info('Transcript received for session device {0} on session {1}.'.format(session_device.id, session_device.session_id))
 		# Add data to database.
-		transcript = database.add_transcript(session_device.id, start_time, end_time - start_time, transcript, len(questions) > 0, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty)
+		transcript = database.add_transcript(session_device.id, start_time, end_time - start_time, transcript, len(questions) > 0, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id)
 		added_keywords = []
 		for keyword in keywords:
 			added_keywords.append(database.add_keyword_usage(transcript.id, keyword['word'], keyword['keyword'], keyword['similarity']))

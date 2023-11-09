@@ -4,7 +4,7 @@ import os
 from datetime import datetime
 import logging
 
-def post_transcripts(source, start_time, end_time, transcript, doa, questions, keywords, features):
+def post_transcripts(source, start_time, end_time, transcript, doa, questions, keywords, features, topic_id):
     result = {
         'source': source,
         'start_time': start_time,
@@ -19,6 +19,9 @@ def post_transcripts(source, start_time, end_time, transcript, doa, questions, k
         result['keywords'] = keywords
     if features:
         result['features'] = features
+    if topic_id:
+        result['topic_id'] = topic_id
+    logging.info(result)
     try:
         response = requests.post(config.processing_callback(), json=result)
         return response.status_code == 200
