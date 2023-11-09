@@ -1,4 +1,5 @@
 import time
+import os
 import logging
 import threading
 import callbacks
@@ -9,6 +10,9 @@ from speaker_diarization.pyDiarization import clusterEmbeddings, clusterSpectral
 import numpy as np
 from speechbrain.pretrained import SpeakerRecognition
 import time
+from gensim.models.ldamodel import LdaModel
+from joblib import load
+from topic_modeling.topic_modeling import preprocess_transcript
 #from source_seperation import source_seperation_pre_trained
 #from server.topic_modeling.topicmodeling import get_topics_with_prob
 
@@ -32,6 +36,7 @@ class AudioProcessor:
         self.running = False
         self.asr_complete = False
         self.running_processes = 0
+        self.topic_model = None
 
     def start(self):
         self.running = True
@@ -39,6 +44,10 @@ class AudioProcessor:
         self.running_processes = 0
         self.processing_thread = threading.Thread(target=self.process)
         self.processing_thread.daemon = True
+        if self.config.topic_model:
+            logging.info("Loading Topic Model")
+            self.topic_model = load(os.path.join("topicModels", f'{self.config.owner}_{self.config.topic_model}'))
+            logging.info("Loading successful")
         self.processing_thread.start()
 
     def stop(self):
@@ -146,8 +155,16 @@ class AudioProcessor:
 
             # Get Topics
             topics = None
-            #if self.config.topics:
+            if self.topic_model:
+              logging.info("text for topic modeling")
+              logging.info(transcript_text)
+              preprocessed = preprocess_transcript(transcript_text, [""])
+              text2bow = self.topic_model.id2word.doc2bow(preprocessed)
+              topics = self.topic_model[text2bow]
+              logging.info("Topics distribution: ")
+              logging.info(topics)
             #    topics = get_topics_with_prob(transcript_text)
+
 
             # Get DoA
             doa = None
@@ -170,9 +187,6 @@ class AudioProcessor:
                     'start': start_time + self.config.start_offset,
                     'end': end_time + self.config.start_offset,
                 })
-                logging.info("Embeddings: ")
-                logging.info(len(self.embeddings))
-                logging.info(self.embeddings)
                 np.save(self.embeddingsFile, np.array(self.embeddings))
 
             # Get Features

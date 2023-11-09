@@ -479,7 +479,7 @@ function JoinPage() {
     const fetchTranscript = async (deviceid) => {
         try {
             const response = await sessionService.getSessionDeviceTranscriptsForClient(deviceid)
-            
+
             console.log("FETCHING TRANSCRIPT");
 
             if (response.status === 200) {
