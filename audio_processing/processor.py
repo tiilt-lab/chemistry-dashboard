@@ -1,4 +1,5 @@
 import time
+import os
 import logging
 import threading
 import callbacks
@@ -7,7 +8,11 @@ from keyword_detector import keyword_detector
 from doa.doa_respeaker_v2_6mic_array import calculateDOA
 from speaker_diarization.pyDiarization import clusterEmbeddings, clusterSpectralEmbeddings, embedSignal, getSpectralEmbeddings
 import numpy as np
+from speechbrain.pretrained import SpeakerRecognition
 import time
+from gensim.models.ldamodel import LdaModel
+from joblib import load
+from topic_modeling.topic_modeling import preprocess_transcript
 #from source_seperation import source_seperation_pre_trained
 #from server.topic_modeling.topicmodeling import get_topics_with_prob
 
@@ -23,12 +28,15 @@ class AudioProcessor:
         self.signal = np.array([])
         self.max_speakers = 10
         self.embeddings = []
+        self.embeddingsFile = None
+        self.diarization_model = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="./pretrained_ecapa")
         self.speaker_timings = []
         self.config = config
         self.fs = 16000
         self.running = False
         self.asr_complete = False
         self.running_processes = 0
+        self.topic_model = None
 
     def start(self):
         self.running = True
@@ -36,6 +44,10 @@ class AudioProcessor:
         self.running_processes = 0
         self.processing_thread = threading.Thread(target=self.process)
         self.processing_thread.daemon = True
+        if self.config.topic_model:
+            logging.info("Loading Topic Model")
+            self.topic_model = load(os.path.join("topicModels", f'{self.config.owner}_{self.config.topic_model}'))
+            logging.info("Loading successful")
         self.processing_thread.start()
 
     def stop(self):
@@ -54,36 +66,43 @@ class AudioProcessor:
     def send_speaker_taggings(self):
         # Parse results from embeddings list.
         #self.embeddings.sort(key=lambda x: x['start'])
+        processing_timer = time.time()
         logging.info("tagging")
         results = []
         spectralEmbeddings, n_speakers = getSpectralEmbeddings(self.embeddings)
         self.speakers, speaker_class_names, cls_ctrs = clusterSpectralEmbeddings(spectralEmbeddings, n_speakers)
         logging.info("Tagged")
+        logging.info(n_speakers)
+        logging.info(self.speakers)
+        logging.info(len(self.embeddings))
         for i in range(0, len(self.speakers)):
           results.append({
-              'speaker': self.speakers[i],
+              'speaker': 'Speaker {0}'.format(self.speakers[i]),
               'start': self.embeddings[i]['start'],
               'end': self.embeddings[i]['end']
-          })
-
+        })
+        logging.info("created results array")
+        logging.info(results)
         # Convert results into expected JSON format.
         taggings = {}
+        taggings["results"] = results
+        '''
         for i in range(0, len(results)):
             result = results[i]
-            if i != len(results) - 1:
-                result['end'] = results[i+1]['start']
             speaker = 'Speaker {0}'.format(result['speaker'])
             timing = [self.float_to_timestamp(result['start']), self.float_to_timestamp(result['end'])]
             if not speaker in taggings:
                 taggings[speaker] = [timing]
             else:
                 taggings[speaker].append(timing)
+        '''
+        processing_time = time.time() - processing_timer
         logging.info(taggings) # DEBUG: Prints the converted speaker timings.
-        taggings_posted = callbacks.post_tagging(self.config.auth_key, taggings)
+        taggings_posted = callbacks.post_tagging(self.config.auth_key, taggings, self.embeddingsFile)
         if taggings_posted:
-            logging.info('Processing results posted successfully for tagging {0} '.format(self.config.auth_key))
+            logging.info('Processing results posted successfully for tagging {0} (Processing time: {1})'.format(self.config.auth_key, processing_time))
         else:
-            logging.info('Processing results FAILED to post for {0} '.format(self.config.auth_key))
+            logging.info('Processing results FAILED to post for tagging {0} '.format(self.config.auth_key))
 
     def float_to_timestamp(self, t):
         hours = int(t / 3600)
@@ -94,6 +113,7 @@ class AudioProcessor:
 
     def process(self):
         logging.info('Processing thread started for {0}.'.format(self.config.auth_key))
+        self.embeddingsFile = self.config.embeddingsFile
         while not self.asr_complete:
             transcript_data = self.transcript_queue.get()
             if transcript_data is None:
@@ -135,8 +155,29 @@ class AudioProcessor:
 
             # Get Topics
             topics = None
-            #if self.config.topics:
-            #    topics = get_topics_with_prob(transcript_text)
+            topic_id = -1
+            if self.topic_model:
+              logging.info("Text for topic modeling")
+              logging.info(transcript_text)
+              preprocessed = preprocess_transcript(transcript_text, [""])
+              logging.info("Preprocessed")
+              logging.info(preprocessed)
+              logging.info(self.topic_model.id2word)
+              text2bow = self.topic_model.id2word.doc2bow(preprocessed)
+              logging.info("Corpus")
+              logging.info(text2bow)
+              if len(text2bow):
+                topics = self.topic_model[text2bow]
+                logging.info("Topics distribution: ")
+                logging.info(topics)
+                #    topics = get_topics_with_prob(transcript_text)
+                if len(topics) > 0:
+                    max = 0
+                    for topic in topics:
+                        if topic[1] > max:
+                            topic_id = topic[0]
+              logging.info(topic_id)
+
 
             # Get DoA
             doa = None
@@ -146,14 +187,20 @@ class AudioProcessor:
 
             #Perform Speaker Diarization
             if self.config.diarization:
-                embedding = embedSignal(audio_data)
+                if len(self.embeddings) == 0 and self.embeddingsFile != None:
+                    try:
+                      self.embeddings = np.load(self.embeddingsFile).tolist()
+                    except:
+                      self.embeddings = []
+                elif self.embeddingsFile == None:
+                    self.embeddingsFile = time.strftime("%Y%m%d-%H%M%S")+".npy"
+                embedding = embedSignal(audio_data, self.diarization_model)
                 self.embeddings.append({
                     'embedding': embedding,
-                    'start': start_time,
-                    'end': end_time,
+                    'start': start_time + self.config.start_offset,
+                    'end': end_time + self.config.start_offset,
                 })
-                if(len(self.embeddings) > 3):
-                  self.send_speaker_taggings()
+                np.save(self.embeddingsFile, np.array(self.embeddings))
 
             # Get Features
             features = None
@@ -163,10 +210,12 @@ class AudioProcessor:
             processing_time = time.time() - processing_timer
             start_time += self.config.start_offset
             end_time += self.config.start_offset
-            success = callbacks.post_transcripts(self.config.auth_key, start_time, end_time, transcript_text, doa, questions, keywords, features)
+            success = callbacks.post_transcripts(self.config.auth_key, start_time, end_time, transcript_text, doa, questions, keywords, features, topic_id)
 
             if success:
                 logging.info('Processing results posted successfully for client {0} (Processing time: {1}) @ {2}'.format(self.config.auth_key, processing_time, start_time))
+                if self.config.diarization and (len(self.embeddings) > 3):
+                  self.send_speaker_taggings()
 
             else:
                 logging.warning('Processing results FAILED to post for client {0} (Processing time: {1})'.format(self.config.auth_key, processing_time))
