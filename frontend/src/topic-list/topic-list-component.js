@@ -68,7 +68,11 @@ function TopicListComponent(props){
   },[trigger])
 
   const navigateToFileUpload = ()=> {
-    navigate('/file_upload');
+    if (location.pathname == '/topic-list/new-session') {
+      navigate('/file_upload/new-session', {state: location.state});
+    } else {
+      navigate('/file_upload');
+    }
   }
 
   const notDupeCurrInput = () => {
