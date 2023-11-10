@@ -33,7 +33,11 @@ function FileUploadComponent(props){
   }
 
   const navTopicModels = ()=> {
-    navigate('/topic-models');
+    if (location.pathname == '/file_upload/new-session') {
+      navigate('/sessions/new', {state: location.state});
+    } else {
+      navigate('/topic-models');
+    }
   }
 
   const createTopicModel = ()=> {
