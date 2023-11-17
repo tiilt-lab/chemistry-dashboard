@@ -480,13 +480,11 @@ function JoinPage() {
         try {
             const response = await sessionService.getSessionDeviceTranscriptsForClient(deviceid)
 
-            console.log("FETCHING TRANSCRIPT");
-
             if (response.status === 200) {
-                console.log("Fetched transcript");
-                console.log(transcripts);
                 const jsonObj = await response.json()
                 const data = jsonObj.sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
+                console.log("transcripts in byodjoin");
+                console.log(data);
                 setTransripts(data)
                 const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
                 setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100)

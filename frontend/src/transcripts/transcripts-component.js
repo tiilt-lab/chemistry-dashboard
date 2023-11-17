@@ -33,6 +33,8 @@ function TranscriptsComponent(){
   const [searchParam, setSearchParam] = useSearchParams();
   const navigate = useNavigate()
   
+  const colorTopicDict = ['hsl(0, 100%, 100%)', 'hsl(151, 58%, 87%)', 'hsl(109, 67%, 92%)', 'hsl(49, 94%, 93%)', 'hsl(34, 100%, 89%)', 'hsl(30, 79%, 85%)'];
+  
   useEffect(()=>{
     const index = searchParam.get('index');
     if(index !== undefined){
@@ -110,15 +112,15 @@ const createDisplayTranscripts = ()=> {
         });
       }
       transcript['words'] = result;
-      transcript['doaColor'] = showDoA ? angleToColor(transcript.direction) : angleToColor(-1);
+      transcript['doaColor'] = showDoA ? angleToColor(transcript.direction, transcript.topic_id) : angleToColor(-1, transcript.topic_id);
       accdisplaytrans.push(transcript);
     }
     setDisplayTranscripts(accdisplaytrans)
   }
 
-  const angleToColor = (angle)=> {
+  const angleToColor = (angle, id)=> {
     if (angle === -1) {
-      return 'hsl(0, 100%, 100%)';
+      return colorTopicDict[id + 1];
     } else {
       return 'hsl(' + angle + ', 100%, 95%)';
     }
