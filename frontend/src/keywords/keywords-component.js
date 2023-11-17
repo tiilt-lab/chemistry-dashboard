@@ -21,6 +21,8 @@ function AppKeywordsComponent(props) {
   useEffect(()=>{
   refresh()
   if(props.transcripts.length > 0){
+    console.log("transcripts in kwd");
+    console.log(props.transcripts);
     setReload(true)
   }
   },[props.transcripts])
