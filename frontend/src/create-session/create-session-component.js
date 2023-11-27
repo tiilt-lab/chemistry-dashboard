@@ -27,8 +27,8 @@ function CreateSessionComponent(props) {
   const [topicModels, setTopicModels] = useState([]);
 
   //menus = Menus;
-  const [currentMenu, setCurrentMenu] = useState('Settings');
-  const [pageTitle, setPageTitle] = useState('Create Session');
+  const [currentMenu, setCurrentMenu] = useState(changedState ? prevState.currentMenu : 'Settings');
+  const [pageTitle, setPageTitle] = useState(changedState ? prevState.pageTitle : 'Create Session');
   //forms = Forms;
   const [currentForm, setCurrentForm] = useState("");
   const [displayText, setDisplayText] = useState('');
@@ -38,8 +38,8 @@ function CreateSessionComponent(props) {
   const [byod, setByod] = useState(changedState ? prevState.byod : true);
   const [doa, setDoa] = useState(changedState ? prevState.doa : true);
   const [features, setFeatures] = useState(changedState ? prevState.features : true);
-  const [selectedKeywordList, setSelectedKeywordList] = useState(null);
-  const [selectedTopicModel, setSelectedTopicModel] = useState(null);
+  const [selectedKeywordList, setSelectedKeywordList] = useState(changedState ? prevState.selectedKeywordList : null);
+  const [selectedTopicModel, setSelectedTopicModel] = useState(changedState ? prevState.selectedTopicModel : null);
   const [selectedDevices, setSelectedDevices] = useState([]);
   const [folder, setFolder] = useState(changedState ? prevState.folder : -1);
   const [folderPath, setFolderPath] = useState(changedState ? prevState.folderPath : 'Home');
@@ -48,8 +48,8 @@ function CreateSessionComponent(props) {
   const [breadCrumbSelect, setBreadCrumbSelect] = useState(null)
   const navigate = useNavigate();
   const [searchParam, setSearchParam] = useSearchParams()
-
-
+  
+  
 
   useEffect(() => {
     setUser(props.userdata);
@@ -146,7 +146,9 @@ function CreateSessionComponent(props) {
       }
     )
 
-    goToSettings();
+    if (!changedState) {
+      goToSettings();
+    }
 
     return () => {
       const blinkingDevices = devices.filter(p => p.blinking === true);
@@ -315,11 +317,15 @@ function CreateSessionComponent(props) {
   }
   
   const navigateToKeywordLists = () =>{
-    navigate('/keyword-lists/new-session', {state: {sessionName: sessionName, byod: byod, features: features, doa: doa, folder: folder, folderPath: folderPath}});
+    navigate('/keyword-lists/new-session', getStateInfo());
   }
   
   const navigateToFileUpload = () => {
-    navigate('/file_upload/new-session', {state: {sessionName: sessionName, byod: byod, features: features, doa: doa, folder: folder, folderPath: folderPath}});
+    navigate('/file_upload/new-session', getStateInfo());
+  }
+  
+  const getStateInfo = () => {
+    return {state: {sessionName: sessionName, byod: byod, features: features, doa: doa, folder: folder, folderPath: folderPath, currentMenu: currentMenu, pageTitle: pageTitle, selectedKeywordList: selectedKeywordList, selectedTopicModel: selectedTopicModel}};
   }
 
   const openDialog = (form, text)=> {
