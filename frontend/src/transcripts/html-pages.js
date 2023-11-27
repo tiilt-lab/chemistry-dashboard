@@ -4,7 +4,6 @@ import style2 from '../dialog/dialog.module.css'
 import { GenericDialogBox } from '../dialog/dialog-component'
 import {Appheader} from '../header/header-component'
 
-
 function TranscriptComponentPage(props) {
   return (
     <>
@@ -83,6 +82,11 @@ function TranscriptComponentPage(props) {
               <input type="checkbox" checked={props.showDoA} value={props.showDoA} onChange={props.createDisplayTranscripts} />
               <span className={style["checkmark"]}></span>
             </label>
+            <svg
+              ref={props.legendRef}
+              width = {100}
+              height = {100 + (10 * 2)}>
+            </svg>
             <br />
             <button className={style["delete-button"]} onClick={props.closeDialog}>Close</button>
           </div>

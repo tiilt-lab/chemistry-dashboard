@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext,useParams, useSearchParams } from 'react-router-dom';
 import { similarityToRGB } from '../globals';
 import {TranscriptComponentPage} from './html-pages'
+import { useD3 } from '../myhooks/custom-hooks';
+import * as d3 from 'd3';
 
 function TranscriptsComponent(){
 
@@ -147,6 +149,41 @@ const createDisplayTranscripts = ()=> {
   const navigateToSession = ()=> {
     navigate('/sessions/' + session.id + '/pods/' + sessionDeviceId);
   }
+  
+  const legendRef = useD3(
+       (svg) => {
+         const data = ["No topic", "1", "2", "3", "4", "5"];
+         // Create a color scale
+         const colorScale = d3.scaleOrdinal()
+           .domain(data)
+           .range(colorTopicDict.map((c) => d3.hsl(c)));
+
+         // Create legend
+         const legend = svg
+          .selectAll(".legend")
+          .data(data)
+          .enter()
+          .append("g")
+          .attr("class", "legend")
+          .attr("transform", (d, i) => `translate(0, ${i * 20})`);
+       
+        // Add colored rectangles to the legend
+        legend
+          .append("rect")
+          .attr("width", 18)
+          .attr("height", 18)
+          .style("fill", (d) => colorScale(d));
+
+        // Add text labels to the legend
+        legend
+          .append("text")
+          .attr("x", 24)
+          .attr("y", 9)
+          .attr("dy", ".35em")
+          .style("text-anchor", "start")
+          .text((d) => d);
+        }
+  )  
 
   return(
     <TranscriptComponentPage
@@ -163,6 +200,7 @@ const createDisplayTranscripts = ()=> {
       createDisplayTranscripts = {createDisplayTranscripts}
       openOptionsDialog = {openOptionsDialog}
       isenabled = {true}
+      legendRef = {legendRef}
     />
   )
 }

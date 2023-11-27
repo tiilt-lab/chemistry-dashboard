@@ -27,6 +27,7 @@ function ManageTopicModelsComponent(props) {
           resp.then(
             (result) => {
               const topModels = TopicModelModel.fromJsonList(result);
+              console.log(topModels);
               setTopicModels(unpackTopModels(topModels));
             },
             (err) => { console.log('ManageTopicModelsComponent error func : useeffect 122' ,err) })
