@@ -19,10 +19,10 @@ function FileUploadPage(props) {
       </div>
       <form onSubmit={props.onSubmit} action="#" encType="multipart/form-data">
         <div>
-        <label for="file-upload" className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} style = {{'margin-right': adjDim(374 / 2) + 'px',}} name="fileUpload" multiple onChange={props.onFileSelect} >
+        <label for="file-upload" className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} style = {{'margin-right': adjDim(374 / 2) + 'px',}}>
     		Select File
 	</label>
-	<input id="file-upload" type="file"/>
+	<input id="file-upload" type="file" name="fileUpload" multiple onChange={props.onFileSelect} />
 	</div>
         <div>
           <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} style = {{width: '110px', 'margin-right': adjDim(374 / 2) + 'px',}} type="submit">Upload</button>
