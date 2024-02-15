@@ -3,23 +3,23 @@ import threading
 import numpy as np
 import cv2
 import os
-import dlib
 import torch
-from torchvision import transforms
 import torch.nn.functional as F
 from tqdm import tqdm
-from .model.vtoonify import VToonify
-from .model.bisenet.model import BiSeNet
 from .model.encoder.align_all_parallel import align_face
-from .util import save_image, load_image, visualize, load_psp_standalone, get_video_crop_parameter, tensor2cv2
+from .util import  get_video_crop_parameter
 from moviepy.editor import *
 from scipy.io import wavfile
 import logging
+import callbacks
+import time
 
 class VideoProcessor:
-    def __init__(self,video_queue,config,vid_img_dir,video_filename,aud_filename,sample_rate,depth,channels):
+    def __init__(self,cartoon_model,video_queue,frame_queue,cartoon_image_queue,config,vid_img_dir,video_filename,aud_filename,sample_rate,depth,channels):
         self.config = config
         self.video_queue = video_queue
+        self.frame_queue = frame_queue
+        self.cartoon_image_queue = cartoon_image_queue
         self.vid_img_dir = vid_img_dir
         self.dat_filename = aud_filename + '.dat'
         self.wav_filename = aud_filename + '.wav'
@@ -29,63 +29,15 @@ class VideoProcessor:
         self.sample_rate = sample_rate
         self.frame_count = 1
         self.running_processes = 0
-        self.base_path = os.path.dirname(os.path.abspath(__file__))
-        self.style_id = 26
-        self.style_degree = 0.5
-        self.color_transfer = False
-        self.ckpt = os.path.join( self.base_path,'checkpoint/vtoonify_d_cartoon/vtoonify_s_d.pt')
-        self.scale_image = True
-        self.style_encoder_path = os.path.join(self.base_path,'checkpoint/encoder.pt')
-        self.exstyle_path =None
-        self.faceparsing_path = os.path.join( self.base_path,'checkpoint/faceparsing.pth')
-        self.cpu = False
-        self.backbone = 'dualstylegan' #"dualstylegan | toonify"
-        self.padding = [120,120,120,120]
-        self.batch_sizet = 4
+        self.frame_array = []
+        self.cartoon_model = cartoon_model
         self.lock = threading.Lock()
         
-
-    def initialize(self):
-       
+        logging.info('vid directory is {0}'.format(self.vid_img_dir))
         if not os.path.exists(self.vid_img_dir):
             os.mkdir(self.vid_img_dir)
-        if self.exstyle_path is None:
-            self.exstyle_path = os.path.join( self.base_path,'checkpoint/vtoonify_d_cartoon', 'exstyle_code.npy')
-
-        self.scale_image = True
-        device = "cpu" if self.cpu else "cuda"
-    
-        self.transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.5, 0.5, 0.5],std=[0.5,0.5,0.5]),])
-    
-        self.vtoonify = VToonify(backbone = self.backbone)
-        self.vtoonify.load_state_dict(torch.load(self.ckpt, map_location=lambda storage, loc: storage)['g_ema'])
-        self.vtoonify.to(device)
-        self.parsingpredictor = BiSeNet(n_classes=19)
-        self.parsingpredictor.load_state_dict(torch.load(self.faceparsing_path, map_location=lambda storage, loc: storage))
-        self.parsingpredictor.to(device).eval()
-
-        modelname = os.path.join( self.base_path,'checkpoint/shape_predictor_68_face_landmarks.dat')
-        self.face_detector_model = os.path.join( self.base_path,'checkpoint/mmod_human_face_detector.dat')
-
-        if not os.path.exists(modelname):
-            import wget, bz2
-            wget.download('http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2', modelname+'.bz2')
-            zipfile = bz2.BZ2File(modelname+'.bz2')
-            data = zipfile.read()
-            open(modelname, 'wb').write(data) 
-        self.landmarkpredictor = dlib.shape_predictor(modelname)
-
-        self.pspencoder = load_psp_standalone(self.style_encoder_path, device)
-
-        if self.backbone == 'dualstylegan':
-            self.exstyles = np.load(self.exstyle_path, allow_pickle='TRUE').item()
-            stylename = list(self.exstyles.keys())[self.style_id]
-            self.exstyle = torch.tensor(self.exstyles[stylename]).to(device)
-            with torch.no_grad(): 
-                self.exstyle = self.vtoonify.zplus2wplus(self.exstyle)    
-
+        
+        
     def start(self):
         self.running = True
         self.vid_pro_thread = threading.Thread(target=self.processing, name="vdeo-data-cartoonization")
@@ -128,102 +80,155 @@ class VideoProcessor:
         os.remove(self.dat_filename)
 
 
-    def convert_image(self,frame,savetopath,width,height):
+    def convert_image(self,frames,savetopath,width,height):
         with self.lock:
-            logging.info('i have the lock')
-            device = "cpu" if self.cpu else "cuda"
+            # logging.info('i have the lock')
+            device = "cpu" if self.cartoon_model.cpu else "cuda"
             kernel_1d = np.array([[0.125],[0.375],[0.375],[0.125]])
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            #logging.info('variable name device has value  {0}'.format(device))
-            if self.scale_image:
-                try:
-                    paras,h,w,scale = get_video_crop_parameter(cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY), self.landmarkpredictor, self.face_detector_model,self.padding)
-                    
-                    if paras is not None:
-                        if scale <= 0.75:
-                            frame = cv2.sepFilter2D(frame, -1, kernel_1d, kernel_1d)
-                        if scale <= 0.375:
-                            frame = cv2.sepFilter2D(frame, -1, kernel_1d, kernel_1d) 
+            for frame_index, frame in enumerate(frames):
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                #logging.info('variable name device has value  {0}'.format(device))
+                if self.cartoon_model.scale_image:
+                    try:
+                        paras,h,w,scale = get_video_crop_parameter(cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY), self.cartoon_model.landmarkpredictor, self.cartoon_model.face_detector_model,self.cartoon_model.padding)
+                        
+                        if paras is not None:
+                            if scale <= 0.75:
+                                frame = cv2.sepFilter2D(frame, -1, kernel_1d, kernel_1d)
+                            if scale <= 0.375:
+                                frame = cv2.sepFilter2D(frame, -1, kernel_1d, kernel_1d) 
 
-                        resized_frame = cv2.resize(frame, (w, h),interpolation=cv2.INTER_AREA)
+                            resized_frame = cv2.resize(frame, (w, h),interpolation=cv2.INTER_AREA)
 
-                        for index, para in enumerate(paras):
-                            top,bottom,left,right = para
-                            
-                            face = resized_frame[top:bottom, left:right] #cv2.resize(frame, (w, h),interpolation=cv2.INTER_AREA)[top:bottom, left:right]        
-                            try:
-                                with torch.no_grad():
-                                    I = align_face(face,self.landmarkpredictor,self.face_detector_model)
-                                    I = self.transform(I).unsqueeze(dim=0).to(device)
-                                    s_w = self.pspencoder(I)
-                                    s_w = self.vtoonify.zplus2wplus(s_w)
-                                    if self.vtoonify.backbone == 'dualstylegan':
-                                        if self.color_transfer:
-                                            s_w = self.exstyle
-                                        else:
-                                            s_w[:,:7] = self.exstyle[:,:7]
-
-                                    x = self.transform(face).unsqueeze(dim=0).to(device)
-                                    # parsing network works best on 512x512 images, so we predict parsing maps on upsmapled frames
-                                    # followed by downsampling the parsing maps
-                                    x_p = F.interpolate(self.parsingpredictor(2*(F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=False)))[0], 
-                                                        scale_factor=0.5, recompute_scale_factor=False).detach()
-                                    # we give parsing maps lower weight (1/16)
-                                    inputs = torch.cat((x, x_p/16.), dim=1)
-                                    # d_s has no effect when backbone is toonify
-        
-                                    y_tilde = self.vtoonify(inputs, s_w.repeat(inputs.size(0), 1, 1), d_s = self.style_degree)        
+                            for index, para in enumerate(paras):
+                                top,bottom,left,right = para
                                 
-                                    y_tilde = torch.clamp(y_tilde, -1, 1)
+                                face = resized_frame[top:bottom, left:right]       
+                                try:
+                                    with torch.no_grad():
+                                        I = align_face(face,self.cartoon_model.landmarkpredictor,self.cartoon_model.face_detector_model)
+                                        I = self.cartoon_model.transform(I).unsqueeze(dim=0).to(device)
+                                        s_w = self.cartoon_model.pspencoder(I)
+                                        s_w = self.cartoon_model.vtoonify.zplus2wplus(s_w)
+                                        if self.cartoon_model.vtoonify.backbone == 'dualstylegan':
+                                            if self.cartoon_model.color_transfer:
+                                                s_w = self.cartoon_model.exstyle
+                                            else:
+                                                s_w[:,:7] = self.cartoon_model.exstyle[:,:7]
+
+                                        x = self.cartoon_model.transform(face).unsqueeze(dim=0).to(device)
+                                        # parsing network works best on 512x512 images, so we predict parsing maps on upsmapled frames
+                                        # followed by downsampling the parsing maps
+                                        x_p = F.interpolate(self.cartoon_model.parsingpredictor(2*(F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=False)))[0], 
+                                                            scale_factor=0.5, recompute_scale_factor=False).detach()
+                                        # we give parsing maps lower weight (1/16)
+                                        inputs = torch.cat((x, x_p/16.), dim=1)
+                                        # d_s has no effect when backbone is toonify
+            
+                                        y_tilde = self.cartoon_model.vtoonify(inputs, s_w.repeat(inputs.size(0), 1, 1), d_s = self.cartoon_model.style_degree)        
                                     
+                                        y_tilde = torch.clamp(y_tilde, -1, 1)
+                                        
 
-                                    cartooned_image =((y_tilde[0].cpu().cpu().numpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8) 
-                                    
-                                    resized_img = cv2.resize(cartooned_image, (face.shape[1], face.shape[0]), interpolation = cv2.INTER_AREA)
-                                    
-                                    resized_frame[top:bottom, left:right,:] = resized_img
+                                        cartooned_image =((y_tilde[0].cpu().cpu().numpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8) 
+                                        
+                                        resized_img = cv2.resize(cartooned_image, (face.shape[1], face.shape[0]), interpolation = cv2.INTER_AREA)
+                                        
+                                        resized_frame[top:bottom, left:right,:] = resized_img
 
-                            except Exception as e: 
-                                logging.info('exception occured while converting video to cartoon: {0}'.format(e))
-                                continue   
+                                except Exception as e: 
+                                    logging.info('exception occured while converting video to cartoon: {0}'.format(e))
+                                    continue   
 
-                        cv2.imwrite(savetopath,cv2.resize(resized_frame, (width,height), interpolation = cv2.INTER_AREA))
-                        #logging.info('cartoonized image saved to : {}'.format(savetopath)) 
-                    else:
-                        cv2.imwrite(savetopath,cv2.resize(frame, (width,height), interpolation = cv2.INTER_AREA))
-                        #logging.info('original image saved to : {}'.format(savetopath)) 
+                            # push resized_frame to queue   
+                            # self.cartoon_image_queue.put(resized_frame)   
+                            # logging.info('i put cartoonized image into its queue')
+                            if savetopath is None:
+                                success, encoded_frame =  cv2.imencode('.png', resized_frame)
+                                if success:
+                                    callbacks.post_cartoonized_image(self.config.auth_key,self.config.sessionId,self.config.deviceId, encoded_frame.tobytes())       
+                            
+                            if savetopath is not None:
+                                cv2.imwrite(savetopath[frame_index],cv2.resize(resized_frame, (width,height), interpolation = cv2.INTER_AREA))
+                        else:
+                            if savetopath is not None:
+                                cv2.imwrite(savetopath[frame_index],cv2.resize(frame, (width,height), interpolation = cv2.INTER_AREA))
 
-                except Exception as e: 
-                    logging.info('exception occured in the entire convert image: {0}'.format(e))  
-
-            # Check if this was the final process of the transmission.
-            self.running_processes -= 1
-            if (not self.running) and self.running_processes == 0:
-                logging.info('i eventually called complete_callback from convert_image')
-                self.__complete_callback()  
-            logging.info('i am done with the lock')           
+                    except Exception as e: 
+                        logging.info('exception occured in the entire convert image: {0}'.format(e))  
+            if savetopath is not None:
+                # Check if this was the final process of the transmission.
+                self.running_processes -= 1
+                if (not self.running) and self.running_processes == 0 and self.video_queue.empty():
+                    logging.info('i eventually called complete_callback from convert_image')
+                    self.__complete_callback()  
+                    # logging.info('i am done with the lock')           
 
     def processing(self):
         logging.info('frame cartoonization thread started for {0}.'.format(self.config.auth_key))
-       
-        while self.running:
+        frame_processing_thread = None
+        while self.running or not self.video_queue.empty():
             try:
                 subclip_frames = None if self.video_queue.empty() else self.video_queue.get(block=False)
-                
+            
                 if subclip_frames is not None:
-                    logging.info('sublic frames is {0}'.format(subclip_frames))
+                    subclib_frame_count = 0
+                    frame_batch = []
                     for frame in subclip_frames:
+                        subclib_frame_count =  subclib_frame_count + 1
                         frame = cv2.resize(frame, (500,375),interpolation=cv2.INTER_AREA)
-                        frame_name = os.path.join(self.vid_img_dir, "{0}".format(self.frame_count))
-                        self.running_processes += 1
-                        #self.convert_image(frame,frame_name+".png",500,375)
-                        transcript_thread = threading.Thread(target=self.convert_image, args=(frame,frame_name+".png",500,375))
-                        transcript_thread.daemon = True
-                        transcript_thread.start()
-                        self.frame_count = self.frame_count + 1
-            except Exception as e:
-                logging.warning('Exception thrown while extracting video byte data {0} {1}'.format(e, self.config.auth_key))
+                        self.frame_array.append(frame)
+                        if self.frame_count % 29 == 0:
+                            frame_batch.append(frame)
+                            if (len(frame_batch) >= 9):
+                                frame_processing_thread = threading.Thread(target=self.convert_image, args=(frame_batch,None,500,375))
+                                frame_processing_thread.daemon = True
+                                frame_processing_thread.start()
+                                frame_batch = []
+                                # time.sleep(3)
+                            # self.convert_image(frame,None,500,375)
 
+                        self.frame_count = self.frame_count + 1  
+
+                        # we just need 290 frames of the 10 sec chunks, and break if the frames capture  is more than 290    
+                        if  subclib_frame_count > 300:
+                            break
+
+
+                # frame = None if self.frame_queue.empty() else self.frame_queue.get(block=False)
+                
+                # if frame is not None:
+                #     logging.info('i got frame inside frame queue')
+                #     frame = cv2.resize(frame, (500,375),interpolation=cv2.INTER_AREA)
+                #     frame_name = os.path.join(self.vid_img_dir, "{0}".format(self.frame_count))
+                #     self.running_processes += 1
+                #     logging.info('i am about to start conversion')
+                #     self.convert_image(frame,frame_name+".png",500,375)
+                #     self.frame_count = self.frame_count + 1
+            
+            except Exception as e:
+                logging.warning('Exception thrown while extracting image subclib {0} {1}'.format(e, self.config.auth_key))
+
+        logging.info('frame cartoonization thread stopped for {0}.'.format(self.config.auth_key))
+
+        # end the tr
+        if frame_processing_thread is not None:
+            frame_processing_thread.join()
+        # convert all image to cartoon and save
+        Post_frame_batch = []
+        post_frame_name = []
+        for index,  s_frame in enumerate(self.frame_array):
+            Post_frame_batch.append(s_frame)
+            post_frame_name.append(os.path.join(self.vid_img_dir, "{0}.{1}".format(index+1,'png')))
+            if (len(Post_frame_batch) >= 20):
+                self.running_processes += 1
+                save_frame_thread = threading.Thread(target=self.convert_image, args=(Post_frame_batch,post_frame_name,500,375))
+                save_frame_thread.daemon = True
+                save_frame_thread.start()
+                Post_frame_batch =  [] 
+                post_frame_name = []     
      
+        # logging.info('i eventually called complete_callback')
+        # self.__complete_callback() 
         logging.info('frame cartoonization thread stopped for {0}.'.format(self.config.auth_key))
           

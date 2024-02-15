@@ -149,7 +149,7 @@ class AudioProcessor:
                 doa = calculateDOA(start_time, audio_data, word_timings, 16000, self.config.channels, self.config.depth)
 
             #Perform Speaker Diarization
-            if self.config.diarization:
+            if self.config.diarization == False:
                 if len(self.embeddings) == 0 and self.embeddingsFile != None:
                     self.embeddings = np.load(self.embeddingsFile).tolist()
                 elif self.embeddingsFile == None:

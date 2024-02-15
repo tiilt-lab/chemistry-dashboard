@@ -75,7 +75,7 @@ function JoinPage() {
     }, [ws])
 
     useEffect(() => {
-        if (mediaRecorder !== null && joinwith === 'Video') {
+        if (mediaRecorder !== null && (joinwith === 'Video' || joinwith ==='Videocartoonify')) {
             requestAccessKey(name, pcode);
         }
 
@@ -149,7 +149,7 @@ function JoinPage() {
 
         if (authenticated && joinwith === 'Audio'){
             loadWorklet().catch(console.error);
-        }else if (authenticated && joinwith === 'Video'){
+        }else if (authenticated && (joinwith === 'Video' || joinwith === 'Videocartoonify')){
             videoPlay()
         }
     }
@@ -212,7 +212,7 @@ function JoinPage() {
         setPcode(passcode);
         setJoinwith(joinswith);
         const constraintObj = {}
-        if (joinswith === 'Video') {
+        if (joinswith === 'Video' || joinswith === 'Videocartoonify') {
             constraintObj.audio = true
             constraintObj.video = {
                 facingMode: "user",
@@ -259,7 +259,7 @@ function JoinPage() {
                             const context = new AudioContext({sampleRate:16000});
                             setSource(context.createMediaStreamSource(stream));
                             setAudioContext(context);
-                        } else if (joinswith === 'Video') {
+                        } else if (joinswith === 'Video' || joinswith === 'Videocartoonify') {
                             var opt;
                             if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
                                 opt = { mimeType: 'video/webm; codecs=vp9,opus' };
@@ -278,6 +278,7 @@ function JoinPage() {
                 disconnect(true);
             }
         } catch (ex) {
+            console.log(ex)
             setDisplayText('Failed to get user audio source.');
             setCurrentForm('JoinError');
             disconnect(true);
@@ -287,7 +288,7 @@ function JoinPage() {
     const handleStream =  async () => {
 
         const constraintObj = {}
-        if (joinwith === 'Video') {
+        if (joinwith === 'Video' || joinwith === 'Videocartoonify') {
             constraintObj.audio = true
             constraintObj.video = {
                 facingMode: "user",
@@ -309,7 +310,7 @@ function JoinPage() {
                             const context = new AudioContext({sampleRate:16000});
                             setSource(context.createMediaStreamSource(stream));
                             setAudioContext(context);
-                        } else if (joinwith === 'Video') {
+                        } else if (joinwith === 'Video' || joinwith === 'Videocartoonify') {
                             var opt;
                             if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
                                 opt = { mimeType: 'video/webm; codecs=vp9,opus' };
@@ -329,6 +330,7 @@ function JoinPage() {
                 disconnect(true);
             }
         } catch (ex) {
+            console.log(ex)
             setDisplayText('Failed to get user audio source.');
             setCurrentForm('JoinError');
             disconnect(true);
@@ -460,6 +462,22 @@ function JoinPage() {
                 'embeddingsFile': sessionDevice.embeddings,
                 'deviceid':sessionDevice.id,
                 'sessionid': session.id
+            };
+        }else if (joinwith === 'Videocartoonify'){
+            message = {
+                'type': 'start',
+                'key': key,
+                'start_time': 0.0,
+                'sample_rate': 16000,
+                'encoding': 'pcm_f16le',
+                'video_encoding': 'video/mp4',
+                'channels': 2,
+                'streamdata': 'video',
+                'tag' : false,
+                'embeddingsFile': sessionDevice.embeddings,
+                'deviceid':sessionDevice.id,
+                'sessionid': session.id,
+                'Video_cartoonify' : true
             };
         }
         ws.send(JSON.stringify(message));

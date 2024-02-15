@@ -43,8 +43,8 @@ function ByodJoinPage(props) {
                     title={props.pageTitle}
                     leftText={false}
                     rightText={"Option"}
-                    rightEnabled={props.joinwith === 'Video'? true : false}
-                    rightTextClick={() => props.joinwith === 'Video'? props.openDialog("Options"): props.openDialog("")}
+                    rightEnabled={(props.joinwith === 'Video' || props.joinwith === 'Videocartoonify')? true : false}
+                    rightTextClick={() => (props.joinwith === 'Video' || props.joinwith === 'Videocartoonify')? props.openDialog("Options"): props.openDialog("")}
                     nav={() => props.navigateToLogin()} />
                 {!props.connected ?
                     <React.Fragment>
@@ -55,6 +55,7 @@ function ByodJoinPage(props) {
                         <select id="joinwith" className={style["dropdown-input"]}  style={{width: adjDim(350) + 'px',}}>
                             <option value="Audio">Audio</option>
                             <option value="Video">Video</option>
+                            <option value="Videocartoonify">Video(Cartoon)</option>
                         </select>
                         <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} 
                         onClick={() => props.verifyInputAndAudio(document.getElementById("name").value.trim(), document.getElementById("passcode").value.trim(), document.getElementById("joinwith").value.trim())}>Join Discussion</button>
@@ -95,6 +96,17 @@ function ByodJoinPage(props) {
 
                                 {
                                     (props.authenticated && props.joinwith === 'Video') ?
+                                        <AppSectionBoxComponent heading={"Video control:"} >
+                                            <div className={style["video-container"]} style={{display: props.preview ? 'block' : 'none' }}>
+                                                <video controls={true} muted={true} style={{ marginLeft: "20px" }} />
+                                               </div>
+                                        </AppSectionBoxComponent>
+                                        :
+                                        <></>
+                                }
+
+{
+                                    (props.authenticated && props.joinwith === 'Videocartoonify') ?
                                         <AppSectionBoxComponent heading={"Video control:"} >
                                             <div className={style["video-container"]} style={{display: props.preview ? 'block' : 'none' }}>
                                                 <video controls={true} muted={true} style={{ marginLeft: "20px" }} />

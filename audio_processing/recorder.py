@@ -39,7 +39,7 @@ class WaveRecorder:
 
 class VidRecorder:
 
-    def __init__(self, filename,aud_filename,vid_img_dir,video_cartoonify, is_save,sample_rate,depth,channels):
+    def __init__(self, filename,aud_filename,vid_img_dir, is_save,sample_rate,depth,channels):
         self.vid_filename = filename + '.webm'
         self.cart_vid = filename+'_caart'+'.mp4'
         self.img_file = filename
@@ -51,8 +51,6 @@ class VidRecorder:
         self.sample_rate = sample_rate
         self.depth = depth
         self.channels = channels
-        self.video_cartoonify = video_cartoonify
-        # os.mkdir(self.vid_img_dir)
 
     def write_audio(self, data):
         try:
@@ -85,63 +83,11 @@ class VidRecorder:
         wavfile.write(self.wav_filename, self.sample_rate, all_data)
         os.remove(self.dat_filename)
 
-    def convert_video_to_cartoon(self,path):
-        # convert audio to wav
-        logging.info('i called the convert video inside while 1')
-        self.convert_dat_to_wav()
-
-        #start cartoonization
-        video_capture = cv2.VideoCapture(path)
-        video_capture.set(cv2.CAP_PROP_FRAME_WIDTH,500)
-        video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT,375)
-        #out = cv2.VideoWriter(self.cart_vid, cv2.VideoWriter_fourcc(*'mp4v'), 20, (640, 480),True)
-        currentframe = 1
-        while (video_capture.isOpened()):   
-            still_reading, image = video_capture.read()
-            if still_reading:
-                frame_name = os.path.join(self.vid_img_dir, "{0}".format(currentframe))
-                logging.info('i called the convert video inside while')
-                self.video_cartoonify.convert_image(image,frame_name+".png",500,375)
-                #logging.info('image converted: {0}'.format(currentframe))  
-                # img=caart(image)
-                # cv2.imwrite(frame_name+".png",img)
-                # vidout=cv2.resize(img,(640,480))
-                # out.write(vidout)
-                
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-            else:
-                break  
-            currentframe+=1
-        video_capture.release()
-        #out.release()
-        cv2.destroyAllWindows()
-
-        sortedfiles = [int(f.split(".")[0]) for f in os.listdir(self.vid_img_dir)]
-        sortedfiles.sort()
-    
-        file_path = [os.path.join(self.vid_img_dir,str(fp)+".png") for fp in sortedfiles] 
-        video = ImageSequenceClip(file_path,fps=29)
-        audio_clip = AudioFileClip(self.wav_filename)
-        new_audio_clip = CompositeAudioClip([audio_clip])
-        video.audio = new_audio_clip
-        video.write_videofile(self.cart_vid)
-
-
     def close(self):
         if not self.closed:
             try:
                 if not self.save_video and  os.path.isfile(self.vid_filename):
-                    os.remove(self.vid_filename)
-                else:
-                    pass
-                    #self.convert_video_to_cartoon(self.vid_filename)
-                    #remove all the imgae frames
-                    # for file in os.listdir(self.vid_img_dir):
-                    #     os.remove(os.path.join(self.vid_img_dir,file))
-                    # os.rmdir(self.vid_img_dir)
-                    # os.remove(self.wav_filename)
-                    
+                    os.remove(self.vid_filename)        
             except Exception as e:
               logging.info('Unable to delete video file: {0}'.format(e))         
             
