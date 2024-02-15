@@ -51,5 +51,8 @@ def connect_callback():
 def disconnect_callback():
     return str(config['output']['disconnect_callback'])
 
+def cartoonize_image_callback():
+    return str(config['output']['cartoonize_image_callback'])
+
 def root_dir():
     return str(config['rootpath']['root_dir'])
