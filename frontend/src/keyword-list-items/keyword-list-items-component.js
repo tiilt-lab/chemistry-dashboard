@@ -146,7 +146,7 @@ function KeywordListItemsComponent() {
     if (new_keyword.length === 0) {
       keyword.error = true
       setKeywordError('Your keyword is empty.');
-    } else if (!new_keyword.match('^[A-Za-z0-9\']+$')) {
+    } else if (!new_keyword.match('^[A-Za-z0-9\u00C0-\u017F\']+$')) {
       keyword.error = true
       setKeywordError('Your keyword contains one or more invalid characters. Please only use alphabets and numbers.'
         + ' Spaces and special characters are not allowed.');

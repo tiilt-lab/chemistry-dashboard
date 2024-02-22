@@ -55,18 +55,15 @@ function PodsOverviewPages(props){
                     
                     {!props.session.end_date ?
                     <span className={style3["toolbar-button"]} onClick={()=> props.openDialog("AddDevice")} >
-                        <img alt='icon-pod' className={style3["button-icon"]} style={{width: adjDim(40) + "px",}} src={iconPod} />
-                        <div className={style3["button-text"]} style={{"font-size": adjDim(10) + "px",}}>Add Pod</div>
+                        <img alt='icon-pod' title="Add Pod" className={style3["button-icon"]} style={{width: adjDim(40) + "px",}} src={iconPod} />
                     </span>
                     :
                     <></>}
                     <span className={style3["toolbar-button"]} onClick={props.exportSession} >
-                        <img  alt='download' className={style3["button-icon"]} style={{width: adjDim(40) + "px",}} src={downloadIcon} />
-                        <div className={style3["button-text"]} style={{"font-size": adjDim(10) + "px",}}>Download</div>
+                        <img  alt='download' title="Download" className={style3["button-icon"]} style={{width: adjDim(40) + "px",}} src={downloadIcon} />
                     </span>
                     <span className={style3["toolbar-button"]} onClick={props.goToGraph}>
-                            <img alt='graph' className={style3["button-icon"]} style={{width: adjDim(40) + "px",}} src={iconGraph} />
-                            <div className={style3["button-text"]} style={{"font-size": adjDim(10) + "px",}}>Graph</div>
+                            <img alt='graph' title="Graph" className={style3["button-icon"]} style={{width: adjDim(40) + "px",}} src={iconGraph} />
                     </span>
                 </AppSessionToolbar> 
                 :
@@ -101,6 +98,7 @@ function PodsOverviewPages(props){
     { props.currentForm === "Passcode" ?
     <div>
         <div className={style2["dialog-heading"]}>Passcode Settings</div>
+        <button className={style["basic-button"]} onClick={()=> props.copyPasscode()}>Copy</button>
         <button className={style["basic-button"]} onClick={()=> props.setPasscodeState('lock')}>Lock</button>
         <button className={style["basic-button"]} onClick={()=> props.setPasscodeState('unlock')}>Unlock</button>
         <button className={style["basic-button"]} onClick= {()=> props.setPasscodeState('refresh')}>Refresh</button>
