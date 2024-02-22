@@ -49,6 +49,7 @@ function JoinPage() {
 
     const [name, setName] = useState("");
     const [pcode, setPcode] = useState("");
+    const [wrongInput, setWrongInput] = useState(false);
     const [joinwith, setJoinwith] = useState("");
     const [preview, setPreview] = useState(false)
     const [previewLabel, setPreviewLabel] = useState("Turn On Preview")
@@ -483,8 +484,6 @@ function JoinPage() {
             if (response.status === 200) {
                 const jsonObj = await response.json()
                 const data = jsonObj.sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
-                console.log("transcripts in byodjoin");
-                console.log(data);
                 setTransripts(data)
                 const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
                 setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100)
@@ -549,7 +548,13 @@ function JoinPage() {
     }
 
     const changeTouppercase = (e) => {
-        setPcode(e.target.value.toUpperCase());
+        let val = e.target.value.toUpperCase();
+        if (val.length <= 4) {
+          setWrongInput(false);
+        } else {
+          setWrongInput(true);
+        }
+        setPcode(val);
     }
 
     const togglePreview = () => {
@@ -604,6 +609,7 @@ function JoinPage() {
                         requestHelp={requestHelp}
                         pcode={pcode}
                         setPcode={setPcode}
+                        wrongInput={wrongInput}
                         changeTouppercase={changeTouppercase}
                         joinwith={joinwith}
                         preview={preview}

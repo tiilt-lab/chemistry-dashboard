@@ -34,7 +34,6 @@ function PodComponent() {
 
     useEffect(() => {
         // if (endTime === undefined) {
-        //console.log('i was here')
         if (Object.keys(session).length <= 0) {
             const sessionSub = activeSessionService.getSession();
             if (sessionSub !== undefined) {
@@ -100,10 +99,11 @@ function PodComponent() {
     },[endTime])
     
     useEffect(()=>{
-    if(displayTranscripts){
-      console.log('reloaded page')
-    }
-  },[displayTranscripts])
+       if(displayTranscripts){
+          console.log('reloaded page')
+       }
+     },[displayTranscripts])
+     
 
     //console.log(session, transcripts, '-', sessionDevice, '-', displayTranscripts, '-', startTime, '-', endTime, '-', 'session .......')
 
@@ -171,6 +171,14 @@ function PodComponent() {
     const closeDialog = () => {
         setCurrentForm("");
     }
+    
+    const toggleDeleteVal = (val) => {
+        console.log("HERE");
+        setDeleteDeviceToggle(!val); 
+        console.log("also here");
+    }
+    
+    const toggleDeleteValFalse = () => {toggleDeleteVal(false)}
 
     return (
 
@@ -192,7 +200,7 @@ function PodComponent() {
             seeAllTranscripts={seeAllTranscripts}
             openDialog={openDialog}
             deleteDeviceToggle={deleteDeviceToggle}
-            setDeleteDeviceToggle={setDeleteDeviceToggle}
+            toggleDeleteValFalse={toggleDeleteValFalse}
             removeDeviceFromSession={removeDeviceFromSession}
         />
     )
