@@ -15,13 +15,10 @@ function SessionManagerComponent() {
       activeSessionService.initialize(sessionId,setInitialized);
     }
     
-    console.log("HERE 4");
     //THROWS ERROR AROUND HERE
 
     return () => {
-      console.log("HERE 5");
       activeSessionService.close();
-      console.log("HERE 6");
     }
   }, [])
 
