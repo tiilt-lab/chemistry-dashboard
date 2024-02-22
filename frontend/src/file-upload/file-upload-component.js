@@ -10,6 +10,11 @@ function FileUploadComponent(props){
   const [selectedFile, setSelectedFile] = useState(null);
   const [myFiles, setMyfiles] = useState([]);
   const [topics, setTopics] = useState([]);
+  const [fileStatus, setFileStatus] = useState({})
+  const [selectStr, setSelectStr] = useState("No files selected")
+  const [uploadStr, setUploadStr] = useState("No files uploaded")
+  const [uploadFlag, setUploadFlag] = useState(false)
+  const [watchOutFlag, setWatchOutFlag] = useState(false)
   const navigate = useNavigate();
 
 
@@ -26,9 +31,15 @@ function FileUploadComponent(props){
       for (var i = 0; i < event.target.files.length; i++) {
         const file = event.target.files[i];
         // this.uploadForm.get("fileUpload").setValue(file);
-        files.push(file);
+        // handling duplicates
+        if (!myFiles.includes(file)) {
+          files.push(file);
+          changeFileStatus(file['name'], false);
+        }
       }
-      setMyfiles(files)
+      //keep all files together
+      setMyfiles(myFiles.concat(files))
+      updateFileStatusText();
     }
   }
 
@@ -41,6 +52,11 @@ function FileUploadComponent(props){
   }
 
   const createTopicModel = ()=> {
+    // you have to upload something in order to proceed
+    if (uploadFlag == false){
+      setWatchOutFlag(true);
+      return
+    }
     const fetchData = new TopicModelService().getTopicModel()
     fetchData.then(
       response=>{
@@ -77,9 +93,12 @@ function FileUploadComponent(props){
   const onSubmit = (e)=> {
     e.preventDefault();
     const formData = new FormData();
-    for (var i = 0; i < myFiles.length; i++) {
-      console.log("My files: ", myFiles[i]);
-      formData.append("fileUpload[]", myFiles[i]);
+    // upload only unuploaded things 
+    let filesToUpload = myFiles.filter(file => !fileStatus[file['name']])
+    for (var i = 0; i < filesToUpload.length; i++) {
+      console.log("My files: ", filesToUpload[i]);
+      formData.append("fileUpload[]", filesToUpload[i]);
+      changeFileStatus(filesToUpload[i]['name'], true);
     }
     console.log("formData: ", formData.get("fileUpload[]"));
     const URL = `api/v1/uploads/${props.userdata.id}`;
@@ -89,6 +108,9 @@ function FileUploadComponent(props){
           response.json().then(
             (result) => {
               console.log(result);
+              updateFileStatusText();
+              setUploadFlag(true);
+              setWatchOutFlag(false);
             }
           )
         }
@@ -98,6 +120,31 @@ function FileUploadComponent(props){
       }
     )
   }
+  
+  // code for making sure that the user can see the names of the uploaded files
+  const changeFileStatus = (fileName, status) => {
+    // status is a bool determining if it's been uploaded or not
+    let fs = fileStatus;
+    fs[fileName] = status;
+    setFileStatus(fs);
+  }
+  
+  const updateFileStatusText = () => {
+    let selectedFiles = Object.keys(fileStatus).filter(key => fileStatus[key] === false);
+    let uploadedFiles = Object.keys(fileStatus).filter(key => fileStatus[key] === true);
+    // update selected user feedback
+    if (selectedFiles.length == 0) {
+      setSelectStr("No files selected");
+    } else {
+      setSelectStr("Selected: " + selectedFiles.join(', '));
+    }
+    // update uploaded user feedback
+    if (uploadedFiles.length == 0) {
+      setUploadStr("No files uploaded");
+    } else {
+      setUploadStr("Uploaded: " + uploadedFiles.join(', '));
+    }
+  }
 
   return(
       <FileUploadPage
@@ -105,6 +152,9 @@ function FileUploadComponent(props){
         createTopicModel = {createTopicModel}
         onFileSelect = {onFileSelect}
         onSubmit = {onSubmit}
+        selectStr = {selectStr}
+        uploadStr = {uploadStr}
+        watchOutFlag = {watchOutFlag}
       />
   )
 }
