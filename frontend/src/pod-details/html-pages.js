@@ -121,7 +121,7 @@ function PodComponentPages(props) {
                             <></>
                         }
                         <label className={style["dc-checkbox"]}>Delete device
-                            <input id='cbxDelete' type="checkbox" style = {{"opacity": 1,}} checked={props.deleteDeviceToggle} onChange={props.toggleDeleteValFalse} />
+                            <input id='cbxDelete' type="checkbox" checked={props.deleteDeviceToggle} value={props.deleteDeviceToggle} onChange={() => props.setDeleteDeviceToggle(!props.deleteDeviceToggle)} />
                             <span className={style["checkmark"]}></span>
                         </label>
                         <div className={style["dialog-button-container"]}>
