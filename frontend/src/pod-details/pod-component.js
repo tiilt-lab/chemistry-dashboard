@@ -27,7 +27,7 @@ function PodComponent() {
     const [startTime, setStartTime] = useState();
     const [endTime, setEndTime] = useState();
     const [intervalId, setIntervalId] = useState();
-    const [reload, setReload] = useState(false)
+    const [trigger, setTrigger] = useState(0)
     const [activeSessionService, setActiveSessionService] = useOutletContext();
     const { sessionDeviceId } = useParams();
     const navigate = useNavigate()
@@ -104,6 +104,12 @@ function PodComponent() {
        }
      },[displayTranscripts])
      
+     useEffect(()=>{
+       if(trigger > 0){
+          console.log('reloaded page')
+       }
+     },[trigger])
+     
 
     //console.log(session, transcripts, '-', sessionDevice, '-', displayTranscripts, '-', startTime, '-', endTime, '-', 'session .......')
 
@@ -176,6 +182,8 @@ function PodComponent() {
         console.log("HERE");
         setDeleteDeviceToggle(!val); 
         console.log("also here");
+        setTrigger(trigger + 1);
+        console.log("HERE TOO");
     }
     
     const toggleDeleteValFalse = () => {toggleDeleteVal(false)}
@@ -200,7 +208,7 @@ function PodComponent() {
             seeAllTranscripts={seeAllTranscripts}
             openDialog={openDialog}
             deleteDeviceToggle={deleteDeviceToggle}
-            toggleDeleteValFalse={toggleDeleteValFalse}
+            setDeleteDeviceToggle={setDeleteDeviceToggle}
             removeDeviceFromSession={removeDeviceFromSession}
         />
     )
