@@ -78,10 +78,6 @@ function TranscriptComponentPage(props) {
               <input type="checkbox" checked={props.showKeywords} value={props.showKeywords} onChange={props.createDisplayTranscripts} />
               <span className={style["checkmark"]}></span>
             </label>
-            <label className={style["dc-checkbox"]}>Show direction of arrival
-              <input type="checkbox" checked={props.showDoA} value={props.showDoA} onChange={props.createDisplayTranscripts} />
-              <span className={style["checkmark"]}></span>
-            </label>
             <svg
               ref={props.legendRef}
               width = {100}

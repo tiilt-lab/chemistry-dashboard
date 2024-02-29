@@ -34,10 +34,6 @@ function CreateSessionPage(props) {
                 <input type="checkbox" checked={props.byod} value={props.byod} onChange={() => props.setByod(!props.byod)} />
                 <span className={style.checkmark}></span>
               </label>
-              <label className={style["dc-checkbox"]}>Capture discussion direction
-                <input type="checkbox" checked={props.doa} value={props.doa} onChange={() => props.setDoa(!props.doa)} />
-                <span className={style.checkmark}></span>
-              </label>
               <label className={style["dc-checkbox"]}>Analyze discussion features
                 <input type="checkbox" checked={props.features} value={props.features} onChange={() => props.setFeatures(!props.features)} />
                 <span className={style.checkmark}></span>
