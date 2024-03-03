@@ -257,7 +257,7 @@ def export_session(session_id, **kwargs):
     output.headers["Content-type"] = "text/csv"
     return output
 
-@api_routes.route('/api/v1/sessions/getdevicekey', methods=['POST'])
+@api_routes.route('/api/v1/sessions/getredissessionkey', methods=['POST'])
 @wrappers.verify_local
 def get_device_key(**kwargs):
     content = request.get_json()
@@ -267,7 +267,7 @@ def get_device_key(**kwargs):
     else:
         return json_response({'message': "key cannot be authenticated"}, 400)
 
-@api_routes.route('/api/v1/sessions/getsessionconfig', methods=['POST'])
+@api_routes.route('/api/v1/sessions/getredissessionconfig', methods=['POST'])
 @wrappers.verify_local
 def get_session_config(**kwargs):
     content = request.get_json()

@@ -64,7 +64,7 @@ class ProcessingConfig:
 
         # Check if auth is required and if key is valid.
         try:
-            session_key = callbacks.get_redis_device_key(auth_key)
+            session_key = callbacks.get_redis_session_key(auth_key)
             if session_key:
                 session_config = json.loads(callbacks.get_redis_session_config(session_key))
                 server_start = datetime.strptime(session_config.get('server_start', None), "%Y-%m-%d %H:%M:%S")
