@@ -257,6 +257,26 @@ def export_session(session_id, **kwargs):
     output.headers["Content-type"] = "text/csv"
     return output
 
+@api_routes.route('/api/v1/sessions/getdevicekey', methods=['POST'])
+@wrappers.verify_local
+def get_device_key(**kwargs):
+    content = request.get_json()
+    redis_key = RedisSessions.get_device_key(content['auth_key'])
+    if redis_key:
+        return json_response({'redis_key': redis_key})
+    else:
+        return json_response({'message': "key cannot be authenticated"}, 400)
+
+@api_routes.route('/api/v1/sessions/getsessionconfig', methods=['POST'])
+@wrappers.verify_local
+def get_session_config(**kwargs):
+    content = request.get_json()
+    redis_session = RedisSessions.get_session_config(content['session_key'])
+    if redis_session:
+        return json_response({'redis_session_key': redis_session})
+    else:
+        return json_response({'message': "Session key cannot be authenticated"}, 400)
+        
 @api_routes.route('/api/v1/session/addcartoonizedimage', methods=['POST'])
 @wrappers.verify_local
 def add_cartoonized_image(**kwargs):

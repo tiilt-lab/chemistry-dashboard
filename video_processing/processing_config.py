@@ -1,5 +1,6 @@
 from datetime import datetime
 from redis_helper import RedisSessions
+import callbacks
 import json
 import logging
 import config as cf
@@ -62,17 +63,19 @@ class ProcessingConfig:
         videocartoonify = data.get('Video_cartoonify',False) and cf.video_cartoonize()
 
         # Check if auth is required and if key is valid.
-        session_key = RedisSessions.get_device_key(auth_key)
-        if session_key:
-            RedisSessions.get_session_config(session_key)
-            session_config = json.loads(RedisSessions.get_session_config(session_key))
-            server_start = datetime.strptime(session_config.get('server_start', None), "%Y-%m-%d %H:%M:%S")
-            start_offset = max((datetime.utcnow() - server_start).total_seconds() - offset, 0.0)
-        else:
-            logging.warning('Invalid key sent by device.')
-            return False, "Invalid key."
+        try:
+            session_key = callbacks.get_redis_device_key(auth_key)
+            if session_key:
+                session_config = json.loads(callbacks.get_redis_session_config(session_key))
+                server_start = datetime.strptime(session_config.get('server_start', None), "%Y-%m-%d %H:%M:%S")
+                start_offset = max((datetime.utcnow() - server_start).total_seconds() - offset, 0.0)
+            else:
+                logging.warning('Invalid key sent by device.')
+                return False, "Invalid key."
 
-        return True, ProcessingConfig(auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, embeddingsFile,sessionId,deviceId,videocartoonify)
+            return True, ProcessingConfig(auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, embeddingsFile,sessionId,deviceId,videocartoonify)
+        except Exception as e:
+            return False, "could not verify auth_key"
 
     def is_valid_key(self):
         return RedisSessions.get_device_key(self.auth_key) != None
