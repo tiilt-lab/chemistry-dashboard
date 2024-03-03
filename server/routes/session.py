@@ -260,7 +260,7 @@ def export_session(session_id, **kwargs):
 @api_routes.route('/api/v1/session/addcartoonizedimage', methods=['POST'])
 @wrappers.verify_local
 def add_cartoonized_image(**kwargs):
-    # logging.info('Received cartoonized image ...')
+    logging.info('Received cartoonized image ...')
     content = request.get_json()
     queue_key = '{0}_{1}_{2}'.format(content['source'],content['sessionid'],content['deviceid'])
 
@@ -277,7 +277,7 @@ def stream_cartonized_images(session_id, device_id,auth_id, **kwargs):
     try:
         filePath  = os.path.dirname(os.path.abspath(__file__)) 
         os.chdir(filePath)
-        os.chdir("../../audio_processing/videorecordings")
+        os.chdir("../../video_processing/videorecordings")
         loading_img_Path = os.path.join(os.getcwd(),'loading_img')
         loading_frame = read_image(os.path.join(loading_img_Path,'loading.png'))
         queue_key = '{0}_{1}_{2}'.format(auth_id,session_id,device_id)
@@ -301,20 +301,7 @@ def gen(loading_frame,queue_key):
         elif not image_queue_dict[queue_key].empty():
             data = image_queue_dict[queue_key].get(block=False)
             yield (b'--frame\r\n'
-            b'Content-Type: image/png\r\n\r\n' +  base64.b64decode(data['image']) + b'\r\n')
-        
-        # if queue_key in  image_queue_dict.keys():
-        #     if not image_queue_dict[queue_key].empty() and image_queue_dict[queue_key].qsize() > 10:
-        #         data = image_queue_dict[queue_key].get(block=False)
-        #         yield (b'--frame\r\n'
-        #        b'Content-Type: image/png\r\n\r\n' +  base64.b64decode(data['image']) + b'\r\n')
-        #     else:
-        #         yield (b'--frame\r\n'
-        #             b'Content-Type: image/png\r\n\r\n' + loading_frame + b'\r\n')
-        # else:
-        #     pass
-        #     # yield (b'--frame\r\n'
-        #     #    b'Content-Type: image/png\r\n\r\n' + loading_frame + b'\r\n')            
+            b'Content-Type: image/png\r\n\r\n' +  base64.b64decode(data['image']) + b'\r\n')         
 
 def read_image(filepath):
     return  open(filepath , 'rb').read()

@@ -19,7 +19,6 @@ from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager
 from audio_buffer import AudioBuffer
 from processor import AudioProcessor
-from video_cartoonizer.videoprocessor import VideoProcessor
 from datetime import datetime
 from redis_helper import RedisSessions
 from twisted.python import log
@@ -30,10 +29,8 @@ from asr_connectors.google_asr_connector import GoogleASR
 from features_detector import features_detector
 from keyword_detector import keyword_detector
 from speaker_tagging import speaker_tagging
-from video_cartoonizer.video_cartoonify_loader import VideoCartoonifyLoader
 
 cm = ConnectionManager()
-cartoon_model = VideoCartoonifyLoader()
 
 class ServerProtocol(WebSocketServerProtocol):
 
@@ -46,8 +43,6 @@ class ServerProtocol(WebSocketServerProtocol):
         self.asr_transcript_queue = None
         self.asr = None
         self.processor = None
-        self.cartoon_model = cartoon_model
-        self.video_processor = None
         self.last_message = time.time()
         self.end_signaled = False
         self.interval = 10
@@ -102,29 +97,12 @@ class ServerProtocol(WebSocketServerProtocol):
                         self.redu_recorder = WaveRecorder(filename, 16000, 2, 1)
                 elif self.stream_data == 'video':
                     self.video_count = 1
-                    if cf.video_record_original():
-                        aud_filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_audio".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, str(time.ctime())))
-                        self.filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_orig".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, str(time.ctime())))
-                        self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_{1}_{2}_({3})".format(self.config.auth_key,self.config.sessionId,self.config.deviceId,  str(time.ctime())))
-                        self.orig_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1)
+                    self.filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_orig".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, str(time.ctime())))
+                    self.orig_vid_recorder = VidRecorder(self.filename,16000, 2, 1)
                         
-                        if self.config.videocartoonify:
-                            self.video_queue = queue.Queue()
-                            self.frame_queue = None
-                            self.cartoon_image_queue = None
-                            self.video_processor = VideoProcessor(self.cartoon_model,self.video_queue,self.frame_queue,self.cartoon_image_queue,self.config,self.frame_dir,self.filename,aud_filename,16000, 2,1)
-                            
-                            
-                       
-                    if cf.video_record_reduced():
-                       
-                        aud_filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_audio".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, datetime.today().strftime("%Y-%m-%d")))
-                        self.filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_redu".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, datetime.today().strftime("%Y-%m-%d")))
-                        self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_{1}_{2}_({3})".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, datetime.today().strftime('%Y-%m-%d')))
-                        self.redu_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1)
-
                 self.signal_start()
                 self.send_json({'type':'start'})
+                logging.info('Audio process connected')
                 callbacks.post_connect(self.config.auth_key)
 
     def process_binary(self, data):
@@ -142,10 +120,9 @@ class ServerProtocol(WebSocketServerProtocol):
                 # Save audio data.
                 if cf.record_reduced():
                     self.redu_recorder.write(asr_data)
-
+                logging.info('Audio binary recieved')
             elif self.stream_data == 'video':
-                if cf.video_record_original():
-                    self.orig_vid_recorder.write(data)
+                self.orig_vid_recorder.write(data)
 
                 temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
                 vidclip = mp.VideoFileClip(self.filename+'.webm')
@@ -156,20 +133,12 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.audio_buffer.append(self.read_bytes_from_wav(wavObj))
                 audiobyte = self.reduce_wav_channel(1,wavObj)
                 self.asr_audio_queue.put(audiobyte)
-                
-                if self.config.videocartoonify:
-                    self.video_queue.put(subclips.iter_frames())
-                    logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
-
-                # Save audio data only if cartoonization is activated.
-                # as we need to merge the audio data with the carttonized video
-                if self.config.videocartoonify:
-                    self.orig_vid_recorder.write_audio(audiobyte)
 
                 if os.path.isfile(temp_aud_file+'.wav'):
                     os.remove(temp_aud_file+'.wav')
 
                 self.video_count = self.video_count + 1
+                logging.info('video binary recieved')
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 
@@ -230,10 +199,6 @@ class ServerProtocol(WebSocketServerProtocol):
         self.asr.start()
         self.processor = AudioProcessor(self.audio_buffer, self.asr_transcript_queue, self.config)
         self.processor.start()
-        if self.video_processor:
-            self.video_processor.start()
-            # self.frameprocessor.start()
-            # self.post_cartoon_image_callback.start()
         self.running = True
 
     def send_close(self, message):
@@ -246,16 +211,7 @@ class ServerProtocol(WebSocketServerProtocol):
         if self.asr:
             self.asr.stop()
         if self.processor:
-            self.processor.stop()
-
-        if  self.video_processor:
-            self.video_processor.stop()
-
-        # if self.frameprocessor:
-        #     self.frameprocessor.stop()
-
-        # if self.post_cartoon_image_callback:
-        #     self.frameprocessor.stop()        
+            self.processor.stop()      
 
         if self.config:
             callbacks.post_disconnect(self.config.auth_key)
@@ -268,7 +224,7 @@ class ServerProtocol(WebSocketServerProtocol):
         # Begin Post Processing
         if cf.record_reduced():
             self.redu_recorder.close()
-        if cf.video_record_original() and self.stream_data == 'video':
+        if self.stream_data == 'video':
             self.orig_vid_recorder.close()
         if cf.record_original():
             self.orig_recorder.close()
@@ -299,9 +255,6 @@ if __name__ == '__main__':
     log_console.setFormatter(log_format)
     logger.addHandler(log_console)
 
-    # Initialize cartoonify
-    if cf.video_cartoonize:
-        cartoon_model.load_model()
     # Run Server
     logging.info('Starting Audio Processing Service...')
     features_detector.initialize()

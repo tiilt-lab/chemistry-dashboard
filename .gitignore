@@ -174,20 +174,21 @@ google-cloud-key.json
 *.tmp
 
 audio_processing/recordings/
-audio_processing/videorecordings/
+video_processing/videorecordings/
 audio_processing/speaker_diarization/results/
-audio_processing/VToonify/
-audio_processing/video_cartoonizer/checkpoint/
-audio_processing/video_cartoonizer/data/
-audio_processing/video_cartoonizer/environment/
-audio_processing/video_cartoonizer/ninja-linux.zip
-audio_processing/video_cartoonizer/notebooks/
-audio_processing/video_cartoonizer/output/
-audio_processing/video_cartoonizer/smooth_parsing_map.py
-audio_processing/video_cartoonizer/style_transfer.py
-audio_processing/video_cartoonizer/train_vtoonify_d.py
-audio_processing/video_cartoonizer/train_vtoonify_t.py
-audio_processing/video_cartoonizer/vtoonify_model.py
+video_processing/VToonify/
+video_processing/video_cartoonizer/checkpoint/
+video_processing/video_cartoonizer/data/
+video_processing/video_cartoonizer/environment/
+video_processing/video_cartoonizer/ninja-linux.zip
+video_processing/video_cartoonizer/notebooks/
+video_processing/video_cartoonizer/output/
+video_processing/video_cartoonizer/smooth_parsing_map.py
+video_processing/video_cartoonizer/style_transfer.py
+video_processing/video_cartoonizer/train_vtoonify_d.py
+video_processing/video_cartoonizer/train_vtoonify_t.py
+video_processing/video_cartoonizer/vtoonify_model.py
+video_processing/dlib
 uploads
 
 /server/config.ini

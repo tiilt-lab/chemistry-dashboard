@@ -13,7 +13,6 @@ function SessionManagerComponent() {
     if (sessionId !== undefined) {
       activeSessionService.initialize(sessionId,setInitialized);
     }
-
     return () => {
       activeSessionService.close();
     }
