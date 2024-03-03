@@ -37,8 +37,8 @@ def cartoonize_image_callback():
 def root_dir():
     return str(config['rootpath']['root_dir'])
 
-def redis_device_key_callback():
-    return host_server_address()+listening_port()+'/api/v1/sessions/getdevicekey' 
+def redis_session_key_callback():
+    return host_server_address()+listening_port()+str(config['output']['redis_get_session_key_callback'])
 
 def redis_session_config_callback():
-    return host_server_address()+listening_port()+'/api/v1/sessions/getsessionconfig' 
+    return host_server_address()+listening_port()+str(config['output']['redis_get_session_config_callback']) 

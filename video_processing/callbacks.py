@@ -21,12 +21,12 @@ def post_cartoonized_image(source, sessionId,deviceId, byteimage):
         logging.info('cartoonize image callback  failed: {0}'.format(e))
         return False
 
-def get_redis_device_key(auth_key):
+def get_redis_session_key(auth_key):
     payload = {
         'auth_key': auth_key
     }
     try:
-        response = requests.post(config.redis_device_key_callback(),json=payload)
+        response = requests.post(config.redis_session_key_callback(),json=payload)
         if response.status_code == 200:
             data = response.json()
             return data['redis_key']
