@@ -1,5 +1,5 @@
 [Unit]
-Description=Discussion Capture Server
+Description=Audio Processing Service
 After=network-online.target
 StartLimitIntervalSec=0
 
@@ -11,7 +11,7 @@ RestartSec=1
 LimitRTPRIO=99
 LimitRTTIME=infinity
 WorkingDirectory=/home/tde3218/chemistry-dashboard/
-ExecStart=/home/tde3218/chemistry-dashboard/server/venv/bin/python3 server/discussion_capture.py
+ExecStart= /home/tde3218/chemistry-dashboard/video_processing/venv/bin/python3 video_processing/server.py
 
 [Install]
 WantedBy=multi-user.target

@@ -12,13 +12,19 @@ export class ApiService {
     );
   }
 
-  getWebsocketEndpoint() {
+  getAudioWebsocketEndpoint() {
     return (
       this.getWSSProtocol() +
       "//" +
       // window.location.host.split(":")[0] +
       window.location.host +
       "/audio_socket"
+    );
+  }
+
+  getVideoWebsocketEndpoint() {
+    return (
+      "ws://129.105.44.121:8080/video_socket"
     );
   }
 
