@@ -25,8 +25,20 @@ def video_cartoonize():
 def video_recordings_folder():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['videorecord']['video_recording_folder']))
 
+def host_server_address():
+    return str(config['output']['host_server_address'])
+
+def listening_port():
+    return str(config['output']['listening_port'])
+
 def cartoonize_image_callback():
-    return str(config['output']['cartoonize_image_callback'])
+    return host_server_address()+listening_port()+str(config['output']['cartoonize_image_callback'])
 
 def root_dir():
     return str(config['rootpath']['root_dir'])
+
+def redis_device_key_callback():
+    return host_server_address()+listening_port()+'/api/v1/sessions/getdevicekey' 
+
+def redis_session_config_callback():
+    return host_server_address()+listening_port()+'/api/v1/sessions/getsessionconfig' 
