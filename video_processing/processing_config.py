@@ -78,5 +78,5 @@ class ProcessingConfig:
             return False, "could not verify auth_key"
 
     def is_valid_key(self):
-        return RedisSessions.get_device_key(self.auth_key) != None
+        return callbacks.get_redis_session_key(self.auth_key) != None
 

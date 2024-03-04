@@ -32,10 +32,10 @@ def get_redis_session_key(auth_key):
             return data['redis_key']
         else:
             logging.info('get_redis_device_key  failed: {0}'.format(response))  
-            return False 
+            return None 
     except Exception as e:
         logging.info('get_redis_device_key  failed: {0}'.format(e))
-        return False        
+        return None        
  
 
 def get_redis_session_config(session_key):
@@ -49,7 +49,7 @@ def get_redis_session_config(session_key):
             return data['redis_session_key']
         else:
             logging.info('get_redis_session_config callback  failed: {0}'.format(response))  
-            return False 
+            return None 
     except Exception as e:
         logging.info('get_redis_session_config callback  failed: {0}'.format(e))
-        return False  
+        return None  
