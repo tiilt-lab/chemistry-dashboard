@@ -723,7 +723,8 @@ function JoinPage() {
                         seeAllTranscripts={seeAllTranscripts}
                         openDialog={openDialog}
                         setCurrentForm = {setCurrentForm}
-                        apiEndpoint = {apiService.getEndpoint()}
+                        videoApiEndpoint = {apiService.getVideoServerEndpoint()}
+
                         authKey = {key}
 
                     />
