@@ -258,7 +258,6 @@ def export_session(session_id, **kwargs):
     return output
 
 @api_routes.route('/api/v1/sessions/getredissessionkey', methods=['POST'])
-@wrappers.verify_local
 def get_device_key(**kwargs):
     content = request.get_json()
     redis_key = RedisSessions.get_device_key(content['auth_key'])
@@ -268,7 +267,6 @@ def get_device_key(**kwargs):
         return json_response({'message': "key cannot be authenticated"}, 400)
 
 @api_routes.route('/api/v1/sessions/getredissessionconfig', methods=['POST'])
-@wrappers.verify_local
 def get_session_config(**kwargs):
     content = request.get_json()
     redis_session = RedisSessions.get_session_config(content['session_key'])
