@@ -7,8 +7,13 @@ export class ApiService {
 
   getEndpoint() {
     return (
-      // window.location.protocol + "//" + window.location.host.split(":")[0] + "/"
       window.location.protocol + "//" + window.location.host + "/"
+    );
+  }
+
+  getVideoServerEndpoint() {
+    return (
+      "http://129.105.44.121:8080/"
     );
   }
 
