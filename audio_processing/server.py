@@ -85,12 +85,9 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.signal_end()
             else:
                 self.config = result
-                logging.info('Client {0} signalled to started...'.format(self.config.auth_key))
                 cm.associate_keys(self, self.config.session_key, self.config.auth_key)
                 self.stream_data = data['streamdata']
-                self.signal_start()
-                self.send_json({'type':'start'})
-                callbacks.post_connect(self.config.auth_key)
+                
                 if self.stream_data == 'audio':
                     if cf.record_original():
                         filename = os.path.join(cf.recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
@@ -99,18 +96,14 @@ class ServerProtocol(WebSocketServerProtocol):
                         filename = os.path.join(cf.recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
                         self.redu_recorder = WaveRecorder(filename, 16000, 2, 1)
                 elif self.stream_data == 'video':
-                    self.video_count = 1;
-                    if cf.video_record_original():
-                        aud_filename = os.path.join(cf.video_recordings_folder(), "{0}_({1})_audio".format(self.config.auth_key, str(time.ctime())))
-                        self.filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
-                        self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_({1})".format(self.config.auth_key, str(time.ctime())))
-                        self.orig_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1)
-                    if cf.video_record_reduced():
-                        aud_filename = os.path.join(cf.video_recordings_folder(), "{0}_({1})_audio".format(self.config.auth_key, str(time.ctime())))
-                        self.filename = os.path.join(cf.video_recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
-                        self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_({1})".format(self.config.auth_key, str(time.ctime())))
-                        self.redu_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1)
-
+                    self.video_count = 1
+                    self.filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_orig".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, str(time.ctime())))
+                    self.orig_vid_recorder = VidRecorder(self.filename,16000, 2, 1)
+                        
+                self.signal_start()
+                self.send_json({'type':'start'})
+                logging.info('Audio process connected')
+                callbacks.post_connect(self.config.auth_key)
 
     def process_binary(self, data):
         if self.running:
@@ -127,9 +120,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 # Save audio data.
                 if cf.record_reduced():
                     self.redu_recorder.write(asr_data)
-
             elif self.stream_data == 'video':
-
                 self.orig_vid_recorder.write(data)
 
                 temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
@@ -142,13 +133,11 @@ class ServerProtocol(WebSocketServerProtocol):
                 audiobyte = self.reduce_wav_channel(1,wavObj)
                 self.asr_audio_queue.put(audiobyte)
 
-                # Save audio data.
-                self.orig_vid_recorder.write_audio(audiobyte)
-
                 if os.path.isfile(temp_aud_file+'.wav'):
                     os.remove(temp_aud_file+'.wav')
 
                 self.video_count = self.video_count + 1
+                logging.info('video binary recieved')
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 
@@ -221,7 +210,8 @@ class ServerProtocol(WebSocketServerProtocol):
         if self.asr:
             self.asr.stop()
         if self.processor:
-            self.processor.stop()
+            self.processor.stop()      
+
         if self.config:
             callbacks.post_disconnect(self.config.auth_key)
             cm.remove(self, self.config.session_key, self.config.auth_key)
@@ -233,7 +223,7 @@ class ServerProtocol(WebSocketServerProtocol):
         # Begin Post Processing
         if cf.record_reduced():
             self.redu_recorder.close()
-        if cf.video_record_original() and self.stream_data == 'video':
+        if self.stream_data == 'video':
             self.orig_vid_recorder.close()
         if cf.record_original():
             self.orig_recorder.close()
@@ -274,7 +264,7 @@ if __name__ == '__main__':
     auth_connections.start(5.0)
     factory = WebSocketServerFactory()
     factory.protocol = ServerProtocol
-    reactor.listenTCP(9000, factory)
+    reactor.listenTCP(9002, factory)
     logging.info('Audio Processing Service started.')
     reactor.run()
     logging.info('Audio Processing Service ended.')

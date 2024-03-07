@@ -13,8 +13,10 @@ import fixWebmDuration from "fix-webm-duration"
 function JoinPage() {
 
     // Audio connection data
-    const [ws, setWs] = useState(null);
-    const [connected, setConnected] = useState(false);
+    const [audiows, setAudioWs] = useState(null);
+    const [videows, setVideoWs] = useState(null);
+    const [audioconnected, setAudioConnected] = useState(false);
+    const [videoconnected, setVideoConnected] = useState(false);
     const [authenticated, setAuthenticated] = useState(false);
     const [streamReference, setStreamReference] = useState(null);
     const [audioContext, setAudioContext] = useState(null);
@@ -68,14 +70,26 @@ function JoinPage() {
     }, [source, audioContext, name, pcode])
 
     useEffect(() => {
-        if (ws != null) {
-            connect();
+        if (audiows != null) {
+            console.log('called connect_audio_processor_service')
+            connect_audio_processor_service();
         }
 
-    }, [ws])
+        
+
+    }, [audiows])
 
     useEffect(() => {
-        if (mediaRecorder !== null && joinwith === 'Video') {
+        
+        if (videows != null) {
+            console.log('called connect_video_processor_service')
+            connect_video_processor_service();
+        }
+
+    }, [videows])
+
+    useEffect(() => {
+        if (mediaRecorder !== null && (joinwith === 'Video' || joinwith ==='Videocartoonify')) {
             requestAccessKey(name, pcode);
         }
 
@@ -113,10 +127,13 @@ function JoinPage() {
 
 
     useEffect(() => {
-        if(connected){
-            requestStart();
+        if(audioconnected && !videoconnected){
+            requestStartAudioProcessing();
         }
-    }, [connected])
+        if(audioconnected && videoconnected){
+            requestStartVideoProcessing();
+        }
+    }, [audioconnected,videoconnected])
 
     useEffect(() => {
         if(authenticated){
@@ -125,7 +142,7 @@ function JoinPage() {
             await audioContext.audioWorklet.addModule('audio-sender-processor.js');
             const workletProcessor = new AudioWorkletNode(audioContext, 'audio-sender-processor');
             workletProcessor.port.onmessage = data => {
-                ws.send(data.data.buffer);
+                audiows.send(data.data.buffer);
             }
             source.connect(workletProcessor).connect(audioContext.destination);
             setAudioSenderProcessor(workletProcessor);
@@ -142,14 +159,15 @@ function JoinPage() {
             mediaRecorder.ondataavailable = async function (ev) {
                 const bufferdata = await ev.data.arrayBuffer()
                 fixWebmDuration(ev.data, interval * 6 * 60 * 24, (fixedblob) => {
-                    ws.send(fixedblob);
+                    videows.send(fixedblob);
+                    audiows.send(fixedblob);
                 })
             }
         }
 
         if (authenticated && joinwith === 'Audio'){
             loadWorklet().catch(console.error);
-        }else if (authenticated && joinwith === 'Video'){
+        }else if (authenticated && (joinwith === 'Video' || joinwith === 'Videocartoonify')){
             videoPlay()
         }
     }
@@ -174,7 +192,8 @@ function JoinPage() {
         }
 
         releaseWakeLock();
-        setConnected(false);
+        setAudioConnected(false);
+        setVideoConnected(false);
         setAuthenticated(false);
 
         if (source != null) {
@@ -193,9 +212,13 @@ function JoinPage() {
             streamReference.getAudioTracks().forEach(track => track.stop());
             setStreamReference(null);
         }
-        if (ws != null) {
-            ws.close();
-            setWs(null);
+        if (audiows != null) {
+            audiows.close();
+            setAudioWs(null);
+        }
+        if (videows != null) {
+            videows.close();
+            setVideoWs(null);
         }
 
 
@@ -212,7 +235,7 @@ function JoinPage() {
         setPcode(passcode);
         setJoinwith(joinswith);
         const constraintObj = {}
-        if (joinswith === 'Video') {
+        if (joinswith === 'Video' || joinswith === 'Videocartoonify') {
             constraintObj.audio = true
             constraintObj.video = {
                 facingMode: "user",
@@ -226,6 +249,7 @@ function JoinPage() {
 
         try {
             //handle older browsers that might implement getUserMedia in some way
+    
             if (navigator.mediaDevices === undefined) {
                 navigator.mediaDevices = {};
                 navigator.mediaDevices.getUserMedia = function (constraintObj) {
@@ -258,7 +282,7 @@ function JoinPage() {
                             const context = new AudioContext({sampleRate:16000});
                             setSource(context.createMediaStreamSource(stream));
                             setAudioContext(context);
-                        } else if (joinswith === 'Video') {
+                        } else if (joinswith === 'Video' || joinswith === 'Videocartoonify') {
                             var opt;
                             if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
                                 opt = { mimeType: 'video/webm; codecs=vp9,opus' };
@@ -277,6 +301,7 @@ function JoinPage() {
                 disconnect(true);
             }
         } catch (ex) {
+            console.log(ex)
             setDisplayText('Failed to get user audio source.');
             setCurrentForm('JoinError');
             disconnect(true);
@@ -286,7 +311,7 @@ function JoinPage() {
     const handleStream =  async () => {
 
         const constraintObj = {}
-        if (joinwith === 'Video') {
+        if (joinwith === 'Video' || joinwith === 'Videocartoonify') {
             constraintObj.audio = true
             constraintObj.video = {
                 facingMode: "user",
@@ -299,7 +324,7 @@ function JoinPage() {
         }
 
         try {
-
+           
             if (navigator.mediaDevices != null) {
                 const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
                    // media.then(function (stream) {
@@ -308,7 +333,7 @@ function JoinPage() {
                             const context = new AudioContext({sampleRate:16000});
                             setSource(context.createMediaStreamSource(stream));
                             setAudioContext(context);
-                        } else if (joinwith === 'Video') {
+                        } else if (joinwith === 'Video' || joinwith === 'Videocartoonify') {
                             var opt;
                             if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
                                 opt = { mimeType: 'video/webm; codecs=vp9,opus' };
@@ -320,14 +345,16 @@ function JoinPage() {
 
                             const mediaRec = new MediaRecorder(stream, opt);
                             setMediaRecorder(mediaRec)
+                            setVideoWs(new WebSocket(apiService.getVideoWebsocketEndpoint())); //video
                         }
-                        setWs(new WebSocket(apiService.getWebsocketEndpoint()));
+                        setAudioWs(new WebSocket(apiService.getAudioWebsocketEndpoint()));
             } else {
                 setDisplayText('No media devices detected.');
                 setCurrentForm('JoinError');
                 disconnect(true);
             }
         } catch (ex) {
+            console.log(ex)
             setDisplayText('Failed to get user audio source.');
             setCurrentForm('JoinError');
             disconnect(true);
@@ -345,7 +372,12 @@ function JoinPage() {
                         setSession(SessionModel.fromJson(jsonObj['session']));
                         setSessionDevice(SessionDeviceModel.fromJson(jsonObj['session_device']));
                         setKey(jsonObj.key);
-                        setWs(new WebSocket(apiService.getWebsocketEndpoint()));
+                        setAudioWs(new WebSocket(apiService.getAudioWebsocketEndpoint()));
+                        
+                        //activate video websocket also if user joins with video
+                        if (joinwith === 'Video' || joinwith === 'Videocartoonify') { 
+                            setVideoWs(new WebSocket(apiService.getVideoWebsocketEndpoint())); 
+                        }
                     })
 
                 } else if (response.status === 400 || response.status === 401) {
@@ -366,20 +398,20 @@ function JoinPage() {
 
 
 
-    // Connects to websocket server.
-    const connect = () => {
-        ws.binaryType = 'arraybuffer';
+    // Connects to audio processor websocket server.
+    const connect_audio_processor_service = () => {
+        audiows.binaryType = 'arraybuffer';
 
-        ws.onopen = e => {
-            console.log('[Connected]');
-            setConnected(true);
+        audiows.onopen = e => {
+            console.log('[Connected audio processor service]');
+            setAudioConnected(true);
             setPageTitle(name);
             setReload(true)
             setCurrentForm("");
             acquireWakeLock();
         };
 
-        ws.onmessage = e => {
+        audiows.onmessage = e => {
             const message = JSON.parse(e.data);
             if (message['type'] === 'start') {
                 setAuthenticated(true);
@@ -395,7 +427,7 @@ function JoinPage() {
             }
         };
 
-        ws.onclose = e => {
+        audiows.onclose = e => {
             console.log('[Disconnected]',ending.value);
             if (!ending.value) {
                 if (reconnectCounter <= 5) {
@@ -404,12 +436,6 @@ function JoinPage() {
                     disconnect();
                     console.log('reconnecting ....')
                     setTimeout(handleStream, 10000);
-                    //  setTimeout(() => {
-                    //     console.log('i came in here to reconect..')
-                        // verifyInputAndAudio(name, pcode, joinwith)
-
-
-                    //  }, 1000);
                 } else {
                     setDisplayText('Connection to the session has been lost.');
                     setCurrentForm('ClosedSession');
@@ -423,12 +449,42 @@ function JoinPage() {
 
     }
 
+    // Connects to video processor websocket server.
+    const connect_video_processor_service = () => {
+        videows.binaryType = 'arraybuffer';
+
+        videows.onopen = e => {
+            console.log('[Connected to video processor services]');
+            setVideoConnected(true);
+        };
+
+        videows.onmessage = e => {
+            const message = JSON.parse(e.data);
+            if (message['type'] === 'start') {
+                setAuthenticated(true);
+                closeDialog();
+            } else if (message['type'] === 'error') {
+                disconnect(true);
+                setDisplayText('The connection to the session has been closed by the server.');
+                setCurrentForm('ClosedSession');
+            } else if (message['type'] === 'end') {
+                disconnect(true);
+                setDisplayText('The session has been closed by the owner.');
+                setCurrentForm('ClosedSession');
+            }
+        };
+
+        videows.onclose = e => {
+            console.log('[Disconnected]',ending.value);
+        };
+
+    }
 
 
     // Begin capturing and sending client audio.
-    const requestStart = () => {
+    const requestStartAudioProcessing = () => {
         let message = null
-        if (ws === null) {
+        if (audiows === null) {
             return;
         }
         if (joinwith === 'Audio') {
@@ -441,9 +497,11 @@ function JoinPage() {
                 'channels': 1,
                 'streamdata': 'audio',
                 'tag': true,
-                'embeddingsFile': sessionDevice.embeddings
+                'embeddingsFile': sessionDevice.embeddings,
+                'deviceid':sessionDevice.id,
+                'sessionid': session.id
             };
-        } else if (joinwith === 'Video') {
+        } else if (joinwith === 'Video' || joinwith === 'Videocartoonify') {
             message = {
                 'type': 'start',
                 'key': key,
@@ -453,11 +511,54 @@ function JoinPage() {
                 'video_encoding': 'video/mp4',
                 'channels': 2,
                 'streamdata': 'video',
-                'tag' : false,
-                'embeddingsFile': sessionDevice.embeddings
+                'embeddingsFile': sessionDevice.embeddings,
+                'deviceid':sessionDevice.id,
+                'sessionid': session.id
             };
         }
-        ws.send(JSON.stringify(message));
+        audiows.send(JSON.stringify(message));
+
+    }
+
+    // Begin capturing and sending client video.
+    const requestStartVideoProcessing = () => {
+        let message = null
+        if (videows === null) {
+            return;
+        }
+        if (joinwith === 'Video') {
+            message = {
+                'type': 'start',
+                'key': key,
+                'start_time': 0.0,
+                'sample_rate': 16000,
+                'encoding': 'pcm_f16le',
+                'video_encoding': 'video/mp4',
+                'channels': 2,
+                'streamdata': 'video',
+                'embeddingsFile': sessionDevice.embeddings,
+                'deviceid':sessionDevice.id,
+                'sessionid': session.id
+            };
+        }else if(joinwith === 'Videocartoonify') {
+            message = {
+                'type': 'start',
+                'key': key,
+                'start_time': 0.0,
+                'sample_rate': 16000,
+                'encoding': 'pcm_f16le',
+                'video_encoding': 'video/mp4',
+                'channels': 2,
+                'streamdata': 'video',
+                'embeddingsFile': sessionDevice.embeddings,
+                'deviceid':sessionDevice.id,
+                'sessionid': session.id,
+                'Video_cartoonify' : true
+            };
+        }
+        
+        
+        videows.send(JSON.stringify(message));
 
     }
 
@@ -467,7 +568,7 @@ function JoinPage() {
     }
 
     const navigateToLogin = (confirmed = false) => {
-        if (!confirmed && connected) {
+        if (!confirmed && (audioconnected || videoconnected)) {
             setCurrentForm('NavGuard');
         } else {
             disconnect(true)
@@ -587,7 +688,7 @@ function JoinPage() {
 
     return (
                     <ByodJoinPage
-                        connected={connected}
+                        connected={audioconnected}
                         authenticated={authenticated}
                         GLOW_COLOR={GLOW_COLOR}
                         POD_COLOR={POD_COLOR}
@@ -622,6 +723,9 @@ function JoinPage() {
                         seeAllTranscripts={seeAllTranscripts}
                         openDialog={openDialog}
                         setCurrentForm = {setCurrentForm}
+                        videoApiEndpoint = {apiService.getVideoServerEndpoint()}
+
+                        authKey = {key}
 
                     />
     )

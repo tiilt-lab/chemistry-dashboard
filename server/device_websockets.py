@@ -165,7 +165,7 @@ def run_server():
     ConnectionManager()
     factory = WebSocketServerFactory()
     factory.protocol = ServerProtocol
-    reactor.listenTCP(9001, factory, interface='127.0.0.1')
+    reactor.listenTCP(9003, factory, interface='127.0.0.1')
     thread = threading.Thread(target=reactor.run, kwargs={'installSignalHandlers': False})
     thread.daemon = True
     thread.start()
