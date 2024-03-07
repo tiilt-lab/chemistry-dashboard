@@ -172,6 +172,7 @@ google-cloud-key.json
 *.wav
 *.ogg
 *.tmp
+*.npy
 
 audio_processing/recordings/
 video_processing/videorecordings/
@@ -191,7 +192,6 @@ video_processing/video_cartoonizer/vtoonify_model.py
 video_processing/dlib
 uploads
 
-/server/config.ini
 /frontend/.gitignore
 
 # pretrained
@@ -200,3 +200,4 @@ pretrained_ecapa
 *.npy
 
 .gitignore
+topicModels

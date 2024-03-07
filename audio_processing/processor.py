@@ -7,6 +7,7 @@ from keyword_detector import keyword_detector
 from doa.doa_respeaker_v2_6mic_array import calculateDOA
 from speaker_diarization.pyDiarization import clusterEmbeddings, clusterSpectralEmbeddings, embedSignal, getSpectralEmbeddings
 import numpy as np
+from speechbrain.pretrained import SpeakerRecognition
 import time
 import config as cf
 #from source_seperation import source_seperation_pre_trained
@@ -25,6 +26,7 @@ class AudioProcessor:
         self.max_speakers = 10
         self.embeddings = []
         self.embeddingsFile = None
+        self.diarization_model = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="./pretrained_ecapa")
         self.speaker_timings = []
         self.config = config
         self.fs = 16000
@@ -63,13 +65,17 @@ class AudioProcessor:
         spectralEmbeddings, n_speakers = getSpectralEmbeddings(self.embeddings)
         self.speakers, speaker_class_names, cls_ctrs = clusterSpectralEmbeddings(spectralEmbeddings, n_speakers)
         logging.info("Tagged")
+        logging.info(n_speakers)
+        logging.info(self.speakers)
+        logging.info(len(self.embeddings))
         for i in range(0, len(self.speakers)):
           results.append({
               'speaker': 'Speaker {0}'.format(self.speakers[i]),
               'start': self.embeddings[i]['start'],
               'end': self.embeddings[i]['end']
-          })
-
+        })
+        logging.info("created results array")
+        logging.info(results)
         # Convert results into expected JSON format.
         taggings = {}
         taggings["results"] = results
@@ -151,15 +157,21 @@ class AudioProcessor:
             #Perform Speaker Diarization
             if self.config.diarization == False:
                 if len(self.embeddings) == 0 and self.embeddingsFile != None:
-                    self.embeddings = np.load(self.embeddingsFile).tolist()
+                    try:
+                      self.embeddings = np.load(self.embeddingsFile).tolist()
+                    except:
+                      self.embeddings = []
                 elif self.embeddingsFile == None:
                     self.embeddingsFile = time.strftime("%Y%m%d-%H%M%S")+".npy"
-                embedding = embedSignal(audio_data)
+                embedding = embedSignal(audio_data, self.diarization_model)
                 self.embeddings.append({
                     'embedding': embedding,
                     'start': start_time + self.config.start_offset,
                     'end': end_time + self.config.start_offset,
                 })
+                logging.info("Embeddings: ")
+                logging.info(len(self.embeddings))
+                logging.info(self.embeddings)
                 np.save(self.embeddingsFile, np.array(self.embeddings))
 
             # Get Features
