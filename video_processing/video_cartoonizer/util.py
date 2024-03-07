@@ -194,7 +194,7 @@ def get_video_crop_parameter(filepath, predictor, model, padding=[200,200,200,20
         right = min(round(center[0] + padding[1]), w) // 8 * 8
         top = max(round(center[1] - padding[2]), 0) // 8 * 8
         bottom = min(round(center[1] + padding[3]), h) // 8 * 8
-        paras.append([top,bottom,left,right])
+        paras.append([top,bottom,left,right,lm])
 
     return paras,h,w,scale
 

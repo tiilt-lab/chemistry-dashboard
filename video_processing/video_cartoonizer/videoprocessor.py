@@ -47,6 +47,7 @@ class VideoProcessor:
 
     def stop(self):
         self.running = False
+        self.vid_pro_thread.join()
 
     def __complete_callback(self):
         try:
@@ -82,7 +83,6 @@ class VideoProcessor:
 
     def convert_image(self,frames,savetopath,width,height):
         with self.lock:
-            # logging.info('i have the lock')
             device = "cpu" if self.cartoon_model.cpu else "cuda"
             kernel_1d = np.array([[0.125],[0.375],[0.375],[0.125]])
             for frame_index, frame in enumerate(frames):
@@ -101,12 +101,12 @@ class VideoProcessor:
                             resized_frame = cv2.resize(frame, (w, h),interpolation=cv2.INTER_AREA)
 
                             for index, para in enumerate(paras):
-                                top,bottom,left,right = para
+                                top,bottom,left,right,lm = para
                                 
                                 face = resized_frame[top:bottom, left:right]       
                                 try:
                                     with torch.no_grad():
-                                        I = align_face(face,self.cartoon_model.landmarkpredictor,self.cartoon_model.face_detector_model)
+                                        I = align_face(face,lm)
                                         I = self.cartoon_model.transform(I).unsqueeze(dim=0).to(device)
                                         s_w = self.cartoon_model.pspencoder(I)
                                         s_w = self.cartoon_model.vtoonify.zplus2wplus(s_w)
@@ -140,9 +140,6 @@ class VideoProcessor:
                                     logging.info('exception occured while converting video to cartoon: {0}'.format(e))
                                     continue   
 
-                            # push resized_frame to queue   
-                            # self.cartoon_image_queue.put(resized_frame)   
-                            # logging.info('i put cartoonized image into its queue')
                             if savetopath is None:
                                 success, encoded_frame =  cv2.imencode('.png', resized_frame)
                                 if success:
@@ -163,6 +160,7 @@ class VideoProcessor:
                     logging.info('i eventually called complete_callback from convert_image')
                     self.__complete_callback()  
                     # logging.info('i am done with the lock')           
+      
 
     def processing(self):
         logging.info('frame cartoonization thread started for {0}.'.format(self.config.auth_key))
@@ -176,6 +174,10 @@ class VideoProcessor:
                     frame_batch = []
                     for frame in subclip_frames:
                         subclib_frame_count =  subclib_frame_count + 1
+                        # if frame_shape[1] > frame_shape[0]:
+                        #     dim = (500,375)
+                        # else:
+                        #      dim = (375,500)   
                         frame = cv2.resize(frame, (500,375),interpolation=cv2.INTER_AREA)
                         self.frame_array.append(frame)
                         if self.frame_count % 29 == 0:
@@ -185,8 +187,7 @@ class VideoProcessor:
                                 frame_processing_thread.daemon = True
                                 frame_processing_thread.start()
                                 frame_batch = []
-                                # time.sleep(3)
-                            # self.convert_image(frame,None,500,375)
+                                
 
                         self.frame_count = self.frame_count + 1  
 
@@ -194,17 +195,6 @@ class VideoProcessor:
                         if  subclib_frame_count > 300:
                             break
 
-
-                # frame = None if self.frame_queue.empty() else self.frame_queue.get(block=False)
-                
-                # if frame is not None:
-                #     logging.info('i got frame inside frame queue')
-                #     frame = cv2.resize(frame, (500,375),interpolation=cv2.INTER_AREA)
-                #     frame_name = os.path.join(self.vid_img_dir, "{0}".format(self.frame_count))
-                #     self.running_processes += 1
-                #     logging.info('i am about to start conversion')
-                #     self.convert_image(frame,frame_name+".png",500,375)
-                #     self.frame_count = self.frame_count + 1
             
             except Exception as e:
                 logging.warning('Exception thrown while extracting image subclib {0} {1}'.format(e, self.config.auth_key))

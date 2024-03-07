@@ -281,7 +281,6 @@ def add_cartoonized_image(**kwargs):
     logging.info('Received cartoonized image ...')
     content = request.get_json()
     queue_key = '{0}_{1}_{2}'.format(content['source'],content['sessionid'],content['deviceid'])
-
     if queue_key in image_queue_dict.keys():
         image_queue_dict[queue_key].put(content)
     else:
@@ -310,8 +309,8 @@ def gen(loading_frame,queue_key):
     while True:
         if not start:
             if  queue_key in  image_queue_dict.keys(): 
-                #logging.info('qsize is {0}'.format(image_queue_dict[queue_key].qsize()))
-                if image_queue_dict[queue_key].qsize() >= 10:
+                logging.info('qsize is {0}'.format(image_queue_dict[queue_key].qsize()))
+                if image_queue_dict[queue_key].qsize() >= 1:
                     start = True
             yield (b'--frame\r\n'
                     b'Content-Type: image/png\r\n\r\n' + loading_frame + b'\r\n')    

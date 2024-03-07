@@ -32,13 +32,13 @@ def listening_port():
     return str(config['output']['listening_port'])
 
 def cartoonize_image_callback():
-    return host_server_address()+listening_port()+str(config['output']['cartoonize_image_callback'])
+    return str(config['output']['cartoonize_image_callback'])
 
 def root_dir():
     return str(config['rootpath']['root_dir'])
 
 def redis_session_key_callback():
-    return host_server_address()+listening_port()+str(config['output']['redis_get_session_key_callback'])
+    return str(config['output']['redis_get_session_key_callback'])
 
 def redis_session_config_callback():
-    return host_server_address()+listening_port()+str(config['output']['redis_get_session_config_callback']) 
+    return str(config['output']['redis_get_session_config_callback']) 
