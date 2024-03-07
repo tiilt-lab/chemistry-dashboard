@@ -7,16 +7,29 @@ export class ApiService {
 
   getEndpoint() {
     return (
-      window.location.protocol + "//" + window.location.host.split(":")[0] + "/"
+      window.location.protocol + "//" + window.location.host + "/"
     );
   }
 
-  getWebsocketEndpoint() {
+  getVideoServerEndpoint() {
+    return (
+      "http://129.105.44.121:8080/"
+    );
+  }
+
+  getAudioWebsocketEndpoint() {
     return (
       this.getWSSProtocol() +
       "//" +
-      window.location.host.split(":")[0] +
+      // window.location.host.split(":")[0] +
+      window.location.host +
       "/audio_socket"
+    );
+  }
+
+  getVideoWebsocketEndpoint() {
+    return (
+      "ws://129.105.44.121:8080/video_socket"
     );
   }
 
@@ -67,7 +80,7 @@ export class ApiService {
   }
 
   post(apipath, data,headers){
-    return fetch(this.getEndpoint() + apipath, {
+   return  fetch(this.getEndpoint() + apipath, {
       method: 'POST', // *GET, POST, PUT, DELETE, etc.
       mode: 'cors', // no-cors, *cors, same-origin
       //cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached

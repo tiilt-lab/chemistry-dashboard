@@ -1,0 +1,17 @@
+[Unit]
+Description=Audio Processing Service
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Group=www-data
+Type=simple
+Restart=always
+RestartSec=1
+LimitRTPRIO=99
+LimitRTTIME=infinity
+WorkingDirectory=/home/tde3218/chemistry-dashboard/
+ExecStart= /home/tde3218/chemistry-dashboard/video_processing/venv/bin/python3 video_processing/server.py
+
+[Install]
+WantedBy=multi-user.target

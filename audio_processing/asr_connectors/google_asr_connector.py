@@ -10,13 +10,15 @@ import time
 import math
 import logging
 import threading
+import config as cf
 
 # For converting nano seconds to seconds.
 NANO = 1000000000
 
 # Path for google asr credentials.
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/var/lib/chemistry-dashboard/audio_processing/asr_connectors/google-cloud-key.json'
-
+cf.initialize()
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = cf.root_dir()+'chemistry-dashboard/audio_processing/asr_connectors/google-cloud-key.json'
+os.environ['GRPC_DNS_RESOLVER'] = 'native'
 class GoogleASR():
     STREAM_LIMIT = 55.0
     SAMPLE_RATE = 16000
@@ -112,7 +114,7 @@ class GoogleASR():
             enable_automatic_punctuation=True,
             model='video')
         streaming_config = types.StreamingRecognitionConfig(
-            config=recognition_config,
+            config= recognition_config,
             interim_results=False)
 
         # This loop runs to get around the (currently) 65-second time limit for streaming audio recognition.
