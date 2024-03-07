@@ -120,7 +120,6 @@ class ServerProtocol(WebSocketServerProtocol):
                 # Save audio data.
                 if cf.record_reduced():
                     self.redu_recorder.write(asr_data)
-                logging.info('Audio binary recieved')
             elif self.stream_data == 'video':
                 self.orig_vid_recorder.write(data)
 

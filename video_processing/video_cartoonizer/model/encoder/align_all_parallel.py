@@ -90,15 +90,15 @@ def get_landmark(filepath, predictor,model):
     
     return lm
 
-def align_face(filepath, predictor,model):
+def align_face(filepath,lm):
     """
     :param filepath: str
     :return: PIL Image
     """
 
-    lm = get_landmark(filepath, predictor,model)
-    if lm is None:
-        return None    
+    # lm = get_landmark(filepath, predictor,model)
+    # if lm is None:
+    #     return None    
     
     lm_chin = lm[0: 17]  # left-right
     lm_eyebrow_left = lm[17: 22]  # left-right
