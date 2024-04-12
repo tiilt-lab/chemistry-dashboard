@@ -64,28 +64,21 @@ class AudioProcessor:
             np.savetxt("/var/lib/chemistry-dashboard/audio_processing/speaker_diarization/results/{}.txt".format(time.strftime("%Y%m%d-%H%M%S")), self.speakers)
 
     def send_speaker_taggings(self):
-        # Parse results from embeddings list.
-        #self.embeddings.sort(key=lambda x: x['start'])
         processing_timer = time.time()
-        logging.info("tagging")
         results = []
         spectralEmbeddings, n_speakers = getSpectralEmbeddings(self.embeddings)
         self.speakers, speaker_class_names, cls_ctrs = clusterSpectralEmbeddings(spectralEmbeddings, n_speakers)
-        logging.info("Tagged")
-        logging.info(n_speakers)
-        logging.info(self.speakers)
-        logging.info(len(self.embeddings))
         for i in range(0, len(self.speakers)):
           results.append({
               'speaker': 'Speaker {0}'.format(self.speakers[i]),
               'start': self.embeddings[i]['start'],
               'end': self.embeddings[i]['end']
         })
-        logging.info("created results array")
-        logging.info(results)
+
         # Convert results into expected JSON format.
         taggings = {}
         taggings["results"] = results
+
         '''
         for i in range(0, len(results)):
             result = results[i]
@@ -100,7 +93,7 @@ class AudioProcessor:
         logging.info(taggings) # DEBUG: Prints the converted speaker timings.
         taggings_posted = callbacks.post_tagging(self.config.auth_key, taggings, self.embeddingsFile)
         if taggings_posted:
-            logging.info('Processing results posted successfully for tagging {0} (Processing time: {1})'.format(self.config.auth_key, processing_time))
+            logging.info('Tagging results posted successfully for  {0} (Processing time: {1})'.format(self.config.auth_key, processing_time))
         else:
             logging.info('Processing results FAILED to post for tagging {0} '.format(self.config.auth_key))
 
