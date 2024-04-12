@@ -13,6 +13,7 @@ import time
 from gensim.models.ldamodel import LdaModel
 from joblib import load
 from topic_modeling.topic_modeling import preprocess_transcript
+import config as cf
 #from source_seperation import source_seperation_pre_trained
 #from server.topic_modeling.topicmodeling import get_topics_with_prob
 
@@ -37,6 +38,7 @@ class AudioProcessor:
         self.asr_complete = False
         self.running_processes = 0
         self.topic_model = None
+        cf.initialize()
 
     def start(self):
         self.running = True
@@ -61,7 +63,7 @@ class AudioProcessor:
                 self.send_speaker_taggings()
             except Exception as ex:
                 logging.info(ex)
-            np.savetxt("/var/lib/chemistry-dashboard/audio_processing/speaker_diarization/results/{}.txt".format(time.strftime("%Y%m%d-%H%M%S")), self.speakers)
+            np.savetxt(cf.root_dir()+"chemistry-dashboard/audio_processing/speaker_diarization/results/{}.txt".format(time.strftime("%Y%m%d-%H%M%S")), self.speakers)
 
     def send_speaker_taggings(self):
         processing_timer = time.time()
@@ -117,8 +119,6 @@ class AudioProcessor:
                 start_time = words[0].start_time.seconds + (words[0].start_time.nanos / NANO)
                 end_time = words[-1].end_time.seconds + (words[-1].end_time.nanos / NANO)
                 transcript_audio_data = self.audio_buffer.extract(start_time, end_time)
-
-
                 # Start processing thread for DoA, keywords, feature, etc.
                 self.running_processes += 1
                 transcript_thread = threading.Thread(target=self.process_transcript, args=(transcript_data, transcript_audio_data, start_time, end_time))
@@ -133,7 +133,6 @@ class AudioProcessor:
         try:
             processing_timer = time.time()
             words = transcript_data.alternatives[0].words
-
             # Get Transcripts and Questions
             transcript_text = None
             questions = None
@@ -179,7 +178,7 @@ class AudioProcessor:
                 doa = calculateDOA(start_time, audio_data, word_timings, 16000, self.config.channels, self.config.depth)
 
             #Perform Speaker Diarization
-            if self.config.diarization:
+            if self.config.diarization == False:
                 if len(self.embeddings) == 0 and self.embeddingsFile != None:
                     try:
                       self.embeddings = np.load(self.embeddingsFile).tolist()
@@ -199,12 +198,10 @@ class AudioProcessor:
             features = None
             if self.config.features:
                 features = features_detector.detect_features(transcript_text)
-
             processing_time = time.time() - processing_timer
             start_time += self.config.start_offset
             end_time += self.config.start_offset
             success = callbacks.post_transcripts(self.config.auth_key, start_time, end_time, transcript_text, doa, questions, keywords, features, topic_id)
-
             if success:
                 logging.info('Processing results posted successfully for client {0} (Processing time: {1}) @ {2}'.format(self.config.auth_key, processing_time, start_time))
                 if self.config.diarization and (len(self.embeddings) > 3):
