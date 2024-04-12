@@ -58,8 +58,10 @@ $ sudo apt install cudnn-local-repo-ubuntu2204-8.8.1.3_1.0-1_amd64.deb
 $ sudo cp /var/cudnn-local-repo-ubuntu2204-8.8.1.3/cudnn-local-*-keyring.gpg /usr/share/keyrings/
 ```
 # Finally, to verify the installation, check
-nvidia-smi
-nvcc -V
+```
+$ nvidia-smi
+$ nvcc -V
+```
 
 Create a database in MySQL
 ```
