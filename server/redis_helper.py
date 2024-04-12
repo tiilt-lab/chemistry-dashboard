@@ -83,6 +83,9 @@ class RedisSessions:
         redis_key = RedisSessions.make_auth_redis_key(processing_key)
         r.delete(redis_key)
 
+    @staticmethod
+    def get_session_config(redis_key):
+        return r.get(redis_key)
 
 
 if __name__ == '__main__':
