@@ -19,6 +19,8 @@ function PodsOverviewComponent() {
     const [currentForm, setCurrentForm] = useState("");
     const [activeSessionService, setActiveSessionService] = useOutletContext();
     const navigate = useNavigate();
+    const [trigger, setTrigger] = useState(0);
+    
 
 
     useEffect(() => {
@@ -36,6 +38,12 @@ function PodsOverviewComponent() {
         //     subscriptions.map(sub => sub.unsubscribe());
         // }
     }, [activeSessionService.sessionId])
+    
+    
+    // so that the passcode renders in time
+    useEffect(() => {
+        console.log("reload");
+    }, [trigger])
 
 
 
@@ -110,10 +118,18 @@ function PodsOverviewComponent() {
             if (response.status === 200) {
                 closeDialog();
             }
+            setSession(activeSessionService.getSession());
+            setTrigger(trigger + 1);
         },
             apierror => {
                 console.log("pods-overview-components func: setPasscodeState 1 ", apierror)
             });
+    }
+    
+    // to make it easier on the user
+    const copyPasscode = () => {
+        let pwd = getPasscode();
+        navigator.clipboard.writeText(pwd);
     }
 
     const exportSession = () => {
@@ -176,6 +192,7 @@ function PodsOverviewComponent() {
             currentForm = {currentForm}
             closeDialog = {closeDialog}
             setPasscodeState = {setPasscodeState}
+            copyPasscode = {copyPasscode}
             onSessionClosing = {onSessionClosing}
             devices = {devices}
         />
