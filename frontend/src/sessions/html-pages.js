@@ -40,9 +40,9 @@ function DiscussionSessionPage(props) {
           {props.folders.length > 0 ?
             <>
               <span onClick={props.goBackToPrevious} className={style["crumb-name"]} style = {{"max-width": adjDim(240) + 'px',}} > Home</span >
-              {props.breadcrumbs.length > 1 ? <span className={style.breadcrumbs} > / . . . / </span > : <></>}
+              {props.breadcrumbs.length > 1 ? <span className={style.breadcrumbs} style = {{"cursor": "default",}} > / . . . / </span > : <></>}
               {props.breadcrumbs.length === 1 ? <span className={style["breadcrumbs"]} > / </span > : <></>}
-              {props.breadcrumbs.length > 0 ? <div className={style["crumb-name"]} style = {{"max-width": adjDim(240) + 'px',}} > {props.breadcrumbs[props.breadcrumbs.length - 1].name}</div > : <></>}
+              {props.breadcrumbs.length > 0 ? <div className={style["crumb-name"]} style = {{"max-width": adjDim(240) + 'px',"cursor": "default",}} > {props.breadcrumbs[props.breadcrumbs.length - 1].name}</div > : <></>}
             </ >
             :
             <></>
@@ -123,6 +123,7 @@ function DiscussionSessionPage(props) {
   <div  className={style["dialog-window"]} style = {{"min-width": adjDim(270) + 'px',}}>
     <div className={style["dialog-heading"]}>Update Discussion Name:</div>
     <input id='txtName' defaultValue= {props.selectedSession.title} className={style["field-input"]} maxLength = "64" />
+    <div>{props.invalidName ? "Your proposed rename is invalid." : ""}</div>
   <button className={style["basic-button"]} onClick={() => props.changeSessionName(document.getElementById('txtName').value)} > Confirm</button >
     <button className={style["cancel-button"]} onClick={props.closeDialog}> Cancel</button >
   </div >
@@ -134,6 +135,7 @@ function DiscussionSessionPage(props) {
   <div className={style["dialog-window"]} style = {{"min-width": adjDim(270) + 'px',}} >
     <div className={style["dialog-heading"]}>Update Folder Name:</div>
     <input id='txtName' defaultValue = {props.selectedFolder.name} className={style["field-input"]} maxLength = "64" />
+    <div>{props.invalidName ? "Your proposed rename is invalid." : ""}</div>
   <button className={style["basic-button"]} onClick={() => {props.changeFolderName(document.getElementById('txtName').value)}} > Confirm</button >
   <button className={style["cancel-button"]} onClick={props.closeDialog}> Cancel</button >
   </div >
@@ -143,7 +145,6 @@ function DiscussionSessionPage(props) {
 
  {(props.currentForm === "DeleteSession")?
   <div className={style["dialog-window"]} style = {{"min-width": adjDim(270) + 'px',}} >
-    <div className={style["dialog-heading"]}>Delete Session</div>
     <div className={style["dialog-body"]}>Are you sure you want to permanently delete this session?</div>
     <button className={style["delete-button"]} onClick={props.deleteSession} > Delete</button >
     <button className={style["cancel-button"]} onClick={props.closeDialog}> Cancel</button >
@@ -164,7 +165,7 @@ function DiscussionSessionPage(props) {
   }
 
   {(props.currentForm === "NewFolder")?
-  <div className={style["dialog-window"]} style = {{"min-width": adjDim(270) + 'px',}} >"
+  <div className={style["dialog-window"]} style = {{"min-width": adjDim(270) + 'px',}} >
     <div className={style["dialog-heading"]}> Add New Folder</div>
     <input placeholder="Enter new file name" id='txtName' className={style["field-input"]} maxLength = "64" />
   { (!props.breadcrumbs.length > 0) ? <div className={style["basic-button"]} onClick={() => props.addFolder(document.getElementById('txtName').value, null)} > Confirm</div >

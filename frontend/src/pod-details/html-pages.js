@@ -15,6 +15,7 @@ import React from 'react'
 //import {isMobile} from 'react-device-detect'
 
 function PodComponentPages(props) {
+
     return (
         <>
             <div className={style.container}>
@@ -120,7 +121,7 @@ function PodComponentPages(props) {
                             <></>
                         }
                         <label className={style["dc-checkbox"]}>Delete device
-                            <input id='cbxDelete' type="checkbox" onKeyUp={() => props.setDeleteDeviceToggle(document.getElementById('cbxDelete').value)} />
+                            <input id='cbxDelete' type="checkbox" checked={props.deleteDeviceToggle} value={props.deleteDeviceToggle} onChange={() => props.setDeleteDeviceToggle(!props.deleteDeviceToggle)} />
                             <span className={style["checkmark"]}></span>
                         </label>
                         <div className={style["dialog-button-container"]}>

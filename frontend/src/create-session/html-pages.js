@@ -34,10 +34,6 @@ function CreateSessionPage(props) {
                 <input type="checkbox" checked={props.byod} value={props.byod} onChange={() => props.setByod(!props.byod)} />
                 <span className={style.checkmark}></span>
               </label>
-              <label className={style["dc-checkbox"]}>Capture discussion direction
-                <input type="checkbox" checked={props.doa} value={props.doa} onChange={() => props.setDoa(!props.doa)} />
-                <span className={style.checkmark}></span>
-              </label>
               <label className={style["dc-checkbox"]}>Analyze discussion features
                 <input type="checkbox" checked={props.features} value={props.features} onChange={() => props.setFeatures(!props.features)} />
                 <span className={style.checkmark}></span>
@@ -64,7 +60,7 @@ function CreateSessionPage(props) {
               }
               {
                 props.keywordLists.map((keywordList, index) => (
-                  <div key={index} className={props.selectedKeywordList === keywordList ? `${style["keywords-selected"]} ${style["keyword-list-button"]}` : style["keyword-list-button"]} onClick={() => props.setSelectedKeywordList(props.selectedKeywordList === keywordList ? null : keywordList)}>
+                  <div key={index} className={JSON.stringify(props.selectedKeywordList) === JSON.stringify(keywordList) ? `${style["keywords-selected"]} ${style["keyword-list-button"]}` : style["keyword-list-button"]} onClick={() => props.setSelectedKeywordList(props.selectedKeywordList === keywordList ? null : keywordList)}>
                     <div className={style["keyword-list-header"]} >
                       <span className={style.title}>{keywordList.name}</span>
                       <span className={style.date}> - {props.formatKeywordDate(keywordList.creation_date)}</span>
@@ -98,7 +94,7 @@ function CreateSessionPage(props) {
               }
               {
                 props.topicModels.map((topicModel, index) => (
-                  <div key={index} className={props.selectedTopicModel === topicModel ? `${style["keywords-selected"]} ${style["keyword-list-button"]}` : style["keyword-list-button"]} onClick={() => props.setSelectedTopicModel(props.selectedTopicModel === topicModel ? null : topicModel)}>
+                  <div key={index} className={JSON.stringify(props.selectedTopicModel) === JSON.stringify(topicModel) ? `${style["keywords-selected"]} ${style["keyword-list-button"]}` : style["keyword-list-button"]} onClick={() => props.setSelectedTopicModel(props.selectedTopicModel === topicModel ? null : topicModel)}>
                     <div className={style["keyword-list-header"]} >
                       <span className={style.title}>{topicModel.name}</span>
                       <span className={style.date}> - {props.formatKeywordDate(topicModel.creation_date)}</span>

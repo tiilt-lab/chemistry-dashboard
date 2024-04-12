@@ -51,6 +51,8 @@ function TopicListComponent(props){
   const [currInput, setCurrInput] = useState("");
   const [wrongInput, setWrongInput] = useState(false);
   const [changedName, setChangedName] = useState(false);
+  const [noTopics, setNoTopics] = useState(false);
+  const [noName, setNoName] = useState(false);
   const [trigger, setTrigger] = useState(0);
   const [nameInput, setNameInput] = useState("");
 
@@ -87,7 +89,7 @@ function TopicListComponent(props){
   const setTopicName = () => {
     if (currInput != '' && notDupeCurrInput()) {
       //regex match
-      if (/^\w+$/.test(currInput)) {
+      if (currInput.match('^[A-Za-z0-9\u00C0-\u017F\']+$')) {
         let temparr = topicListStruct;
         temparr[showedInd].tname = currInput;
         setTopicListStruct(temparr);
@@ -107,8 +109,14 @@ function TopicListComponent(props){
     if (currDia == "rename") {
       setShowedInd(ind);
       setChangedName(false);
-      setWrongInput(false);
       toggleClicked(ind);
+    }
+    if (currDia == "rename" || currDia == "submit") {
+      setWrongInput(false);
+    }
+    if (currDia == "submit") {
+      setNoTopics(false);
+      setNoName(nameInput == "");
     }
   }
 
@@ -171,7 +179,18 @@ function TopicListComponent(props){
   const saveNewModel = () => {
     //const topics = topicListStruct.filter(tlist => tlist.clicked).map(tlist => tlist.tname);
     //so far only for creation, but need to update it soon (aka if (keywordListID === '-1'))
-    new TopicModelService().saveTopicModel(nameInput, (location.state === null) ? "Nothing here" : (getSelectNameList(false) + "\n" + getUnparsedSubtopics(location.state.topics))).then(
+    let topicNames = getSelectNameList(false);
+    if (topicNames == "") {
+      setNoTopics(true);
+      setWrongInput(false);
+      return
+    }
+    if (nameInput.trim() == "") {
+      setNoTopics(false);
+      setWrongInput(true);
+      return;
+    }
+    new TopicModelService().saveTopicModel(nameInput, (location.state === null) ? "Nothing here" : (topicNames + "\n" + getUnparsedSubtopics(location.state.topics))).then(
       response => {
         if (response.status === 200) {
           navTopicModels();
@@ -211,8 +230,11 @@ function TopicListComponent(props){
         stringFormat = {stringFormat}
         setTopicName = {setTopicName}
         wrongInput = {wrongInput}
+        noTopics = {noTopics}
+        noName = {noName}
         changedName = {changedName}
         currentDialog = {currentDialog}
+        nameInput = {nameInput}
         topicListStruct = {topicListStruct}
         toggleClicked = {toggleClicked}
         getSelectNameList = {getSelectNameList}
