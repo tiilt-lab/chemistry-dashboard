@@ -9,8 +9,8 @@ import json
 from device_websockets import ConnectionManager
 from redis_helper import RedisSessions
 
-def create_session(user_id, name, devices, keyword_list_id, byod, features, doa, folder):
-    session, keywords = database.create_session(user_id, keyword_list_id, name, folder)
+def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder):
+    session, keywords = database.create_session(user_id, keyword_list_id, topic_model_id, name, folder)
     if byod:
         session = database.generate_session_passcode(session.id)
     keywords = [keyword.keyword for keyword in keywords]
@@ -20,6 +20,8 @@ def create_session(user_id, name, devices, keyword_list_id, byod, features, doa,
         'features': features,
         'keywords': keywords,
         'doa': doa,
+        'topic_model': topic_model_id,
+        'owner': user_id
     }
     RedisSessions.create_session(session.id, config)
     if devices:

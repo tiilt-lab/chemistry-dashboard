@@ -11,6 +11,7 @@ function TranscriptsComponentClient(props){
   const [displayTranscripts, setDisplayTranscripts] = useState([]);
   const [showKeywords, setShowKeywords] = useState(true);
   const [showDoA,setShowDoA] = useState(false);
+  const [reload,setReload] = useState(false);
   const navigate = useNavigate()
   const sessionService = new SessionService()
   
@@ -32,11 +33,22 @@ function TranscriptsComponentClient(props){
 
   }, [props.sessionDevice])
 
+
+
+  /*
   useEffect(()=>{
     if(transcripts.length > 0){
       createDisplayTranscripts();
     }
-  },[transcripts.length])
+  },[transcripts.length]) 
+  */
+  
+  // hook for more frequent results (speaker tags for instance)
+  useEffect(()=>{
+    if(reload == true){
+      createDisplayTranscripts();
+    }
+  },[reload])
 
 
 const fetchTranscript = async (deviceid) => {
@@ -44,9 +56,11 @@ const fetchTranscript = async (deviceid) => {
       const response = await sessionService.getSessionDeviceTranscriptsForClient(deviceid)
 
       if (response.status === 200) {
+          setReload(false);
           const jsonObj = await response.json()
           const data = jsonObj.sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
-          setTransripts(data)
+          setTransripts(data);
+          setReload(true);
       } else if (response.status === 400 || response.status === 401) {
           console.log(response, 'no transcript obj fromtranscripts-Component-client.js')
       }
@@ -86,6 +100,8 @@ const createDisplayTranscripts = ()=> {
       transcript['doaColor'] = showDoA ? angleToColor(transcript.direction) : angleToColor(-1);
       accdisplaytrans.push(transcript);
     }
+    console.log("IN CREATE THING");
+    console.log(accdisplaytrans);
     setDisplayTranscripts(accdisplaytrans)
   }
 

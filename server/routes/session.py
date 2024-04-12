@@ -70,6 +70,7 @@ def create_session(user, **kwargs):
         return json_response({'message': message}, 400)
     devices = request.json.get('devices', [])
     keyword_list_id = sanitize(request.json.get('keywordListId', None))
+    topic_model_id = sanitize(request.json.get('topicModelId', None))
     byod = request.json.get('byod', False)
     features = request.json.get('features', True)
     doa = request.json.get('doa', False)
@@ -80,7 +81,7 @@ def create_session(user, **kwargs):
         owned_folder = database.get_folders(id=folder, owner_id=user['id'], first =True)
         if not owned_folder:
             return json_response({'message': 'Either the folder does not exist or invalid access'}, 404)
-    new_session = session_handler.create_session(user['id'], name, devices, keyword_list_id, byod, features, doa, folder)
+    new_session = session_handler.create_session(user['id'], name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder)
     return json_response(new_session.json())
 
 @api_routes.route('/api/v1/sessions/byod', methods=['POST'])

@@ -1,4 +1,5 @@
 import time
+import os
 import logging
 import threading
 import callbacks
@@ -9,6 +10,9 @@ from speaker_diarization.pyDiarization import clusterEmbeddings, clusterSpectral
 import numpy as np
 from speechbrain.pretrained import SpeakerRecognition
 import time
+from gensim.models.ldamodel import LdaModel
+from joblib import load
+from topic_modeling.topic_modeling import preprocess_transcript
 import config as cf
 #from source_seperation import source_seperation_pre_trained
 #from server.topic_modeling.topicmodeling import get_topics_with_prob
@@ -33,6 +37,7 @@ class AudioProcessor:
         self.running = False
         self.asr_complete = False
         self.running_processes = 0
+        self.topic_model = None
         cf.initialize()
 
     def start(self):
@@ -41,6 +46,10 @@ class AudioProcessor:
         self.running_processes = 0
         self.processing_thread = threading.Thread(target=self.process)
         self.processing_thread.daemon = True
+        if self.config.topic_model:
+            logging.info("Loading Topic Model")
+            self.topic_model = load(os.path.join("topicModels", f'{self.config.owner}_{self.config.topic_model}'))
+            logging.info("Loading successful")
         self.processing_thread.start()
 
     def stop(self):
@@ -57,28 +66,21 @@ class AudioProcessor:
             np.savetxt(cf.root_dir()+"chemistry-dashboard/audio_processing/speaker_diarization/results/{}.txt".format(time.strftime("%Y%m%d-%H%M%S")), self.speakers)
 
     def send_speaker_taggings(self):
-        # Parse results from embeddings list.
-        #self.embeddings.sort(key=lambda x: x['start'])
         processing_timer = time.time()
-        logging.info("tagging")
         results = []
         spectralEmbeddings, n_speakers = getSpectralEmbeddings(self.embeddings)
         self.speakers, speaker_class_names, cls_ctrs = clusterSpectralEmbeddings(spectralEmbeddings, n_speakers)
-        logging.info("Tagged")
-        logging.info(n_speakers)
-        logging.info(self.speakers)
-        logging.info(len(self.embeddings))
         for i in range(0, len(self.speakers)):
           results.append({
               'speaker': 'Speaker {0}'.format(self.speakers[i]),
               'start': self.embeddings[i]['start'],
               'end': self.embeddings[i]['end']
         })
-        logging.info("created results array")
-        logging.info(results)
+
         # Convert results into expected JSON format.
         taggings = {}
         taggings["results"] = results
+
         '''
         for i in range(0, len(results)):
             result = results[i]
@@ -93,7 +95,7 @@ class AudioProcessor:
         logging.info(taggings) # DEBUG: Prints the converted speaker timings.
         taggings_posted = callbacks.post_tagging(self.config.auth_key, taggings, self.embeddingsFile)
         if taggings_posted:
-            logging.info('Processing results posted successfully for tagging {0} (Processing time: {1})'.format(self.config.auth_key, processing_time))
+            logging.info('Tagging results posted successfully for  {0} (Processing time: {1})'.format(self.config.auth_key, processing_time))
         else:
             logging.info('Processing results FAILED to post for tagging {0} '.format(self.config.auth_key))
 
@@ -145,8 +147,29 @@ class AudioProcessor:
 
             # Get Topics
             topics = None
-            #if self.config.topics:
-            #    topics = get_topics_with_prob(transcript_text)
+            topic_id = -1
+            if self.topic_model:
+              logging.info("Text for topic modeling")
+              logging.info(transcript_text)
+              preprocessed = preprocess_transcript(transcript_text, [""])
+              logging.info("Preprocessed")
+              logging.info(preprocessed)
+              logging.info(self.topic_model.id2word)
+              text2bow = self.topic_model.id2word.doc2bow(preprocessed)
+              logging.info("Corpus")
+              logging.info(text2bow)
+              if len(text2bow):
+                topics = self.topic_model[text2bow]
+                logging.info("Topics distribution: ")
+                logging.info(topics)
+                #    topics = get_topics_with_prob(transcript_text)
+                if len(topics) > 0:
+                    max = 0
+                    for topic in topics:
+                        if topic[1] > max:
+                            topic_id = topic[0]
+              logging.info(topic_id)
+
 
             # Get DoA
             doa = None
@@ -169,9 +192,6 @@ class AudioProcessor:
                     'start': start_time + self.config.start_offset,
                     'end': end_time + self.config.start_offset,
                 })
-                logging.info("Embeddings: ")
-                logging.info(len(self.embeddings))
-                logging.info(self.embeddings)
                 np.save(self.embeddingsFile, np.array(self.embeddings))
 
             # Get Features
@@ -181,7 +201,7 @@ class AudioProcessor:
             processing_time = time.time() - processing_timer
             start_time += self.config.start_offset
             end_time += self.config.start_offset
-            success = callbacks.post_transcripts(self.config.auth_key, start_time, end_time, transcript_text, doa, questions, keywords, features)
+            success = callbacks.post_transcripts(self.config.auth_key, start_time, end_time, transcript_text, doa, questions, keywords, features, topic_id)
             if success:
                 logging.info('Processing results posted successfully for client {0} (Processing time: {1}) @ {2}'.format(self.config.auth_key, processing_time, start_time))
                 if self.config.diarization and (len(self.embeddings) > 3):

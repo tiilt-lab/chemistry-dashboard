@@ -11,6 +11,7 @@ class Session(db.Model):
     end_date = db.Column(db.DateTime)
     passcode = db.Column(db.String(64))
     folder = db.Column(db.Integer, db.ForeignKey('folder.id'), nullable=True)
+    topic_model_id = db.Column(db.Integer, db.ForeignKey('topic_model.id'), nullable=True)
 
     keywords = db.relationship("Keyword", lazy='joined', uselist=True)
 
@@ -21,11 +22,12 @@ class Session(db.Model):
     def __hash__(self):
         return hash((self.id))
 
-    def __init__(self, owner_id, name="Unnamed", folder=None):
+    def __init__(self, owner_id, name="Unnamed", folder=None, topic_model=None):
         self.owner_id = owner_id
         self.name = name
         self.creation_date = datetime.utcnow()
         self.folder = folder
+        self.topic_model_id = topic_model
 
 
     def get_length(self):
@@ -40,7 +42,8 @@ class Session(db.Model):
             end_date=str(self.end_date) + ' UTC' if self.end_date else None,
             length=self.get_length(), # length is not stored in database as it can be derived
             keywords=[keyword.keyword for keyword in self.keywords],
-            folder=self.folder
+            folder=self.folder,
+            topic_model_id=self.topic_model_id
         )
 
     @staticmethod

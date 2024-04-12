@@ -1,9 +1,7 @@
 import {useState,useEffect} from 'react'
-import { useNavigate } from 'react-router-dom';
-import {useLocation} from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FileUploadService } from "../services/file-upload-service";
 import {TopicListPage} from './html-pages'
-//trying this out
 import { TopicModelService } from "../services/topic-model-service";
 import { KeywordService } from "../services/keyword-service";
 
@@ -14,33 +12,49 @@ function TopicListComponent(props){
   const [showDialog, setShowDialog] = useState(false);
   const [currentDialog, setCurrentDialog] = useState("");
   const [showedInd, setShowedInd] = useState(-1);
-  const array_testing = [[0.9, [["depression", "health", "anxiety", "stress", "score","depression", "health", "anxiety", "stress", "score"], [0.1231, 0.00032, 0.3231, 0.7452, 0.9995,0.1231, 0.00032, 0.3231, 0.7452, 0.9995]]], [0.01, [["school", "homework", "deadline", "test", "gpa","depression", "health", "anxiety", "stress", "score"], [0.1231, 0.00032, 0.3231, 0.7452, 0.9995,0.1231, 0.00032, 0.3231, 0.7452, 0.9995]]], [0.015, [["fall", "spring", "winter", "summer", "seasons","depression", "health", "anxiety", "stress", "score"], [0.1231, 0.00032, 0.3231, 0.7452, 0.9995,0.1231, 0.00032, 0.3231, 0.7452, 0.9995]]], [0.02, [["jan", "feb", "march", "april", "may","depression", "health", "anxiety", "stress", "score"], [0.1231, 0.00032, 0.3231, 0.7452, 0.9995,0.1231, 0.00032, 0.3231, 0.7452, 0.9995]]], [0.35, [["skiing", "ice", "snow", "snowboard", "mountain","depression", "health", "anxiety", "stress", "score"], [0.1231, 0.00032, 0.3231, 0.7452, 0.9995,0.1231, 0.00032, 0.3231, 0.7452, 0.9995]]]];
-  const makeTopicListStruct = () => {
-    let topics = [];
-    for (let i = 0; i < array_testing.length; i++) {
-      let j = i + 1;
-      let temptopic = [];
-      temptopic.tname = "Topic" + j;
-      temptopic.clicked = false;
-      temptopic.prob = array_testing[i][0];
-      temptopic.kwds = array_testing[i][1][0];
-      temptopic.kwdprobs = array_testing[i][1][1];
-      topics.push(temptopic);
+  const [editMode, setEditMode] = useState(location.state.names === undefined);
+  const [viewTitle, setViewTitle] = useState(location.state.title);
+  
+  //parses the inputted string for topic models into a data structure we can use
+  const makeTopicListStruct = (topicStr) => {
+    let topics = []
+    let allTopics = topicStr.split(",");
+    let allNames = editMode ? [] : location.state.names.split(",");
+    const SUBTOPICLEN = 10;  //right now this is a norm
+    for (let i = 0; i < allTopics.length; i++) {
+    	let l = i + 1;
+    	let temptopic = [];
+        temptopic.tname = editMode ? ("Topic" + l) : allNames[i];
+        temptopic.clicked = false;
+    	let subTopics = allTopics[i].split("+");
+    	if (subTopics.length != SUBTOPICLEN) {
+    	  continue;
+    	}
+    	let kwdprobs = [];
+    	let kwds = [];
+    	for (let j = 0; j < SUBTOPICLEN; j++) {
+    	  let numNames = subTopics[j].split("*");
+    	  let num = numNames[0].trim();
+    	  kwdprobs.push(parseFloat(num));
+    	  let name = numNames[1].trim();
+    	  name = name.slice(1, name.length - 1);
+    	  kwds.push(name);
+    	}
+    	temptopic.kwdprobs = kwdprobs;
+    	temptopic.kwds = kwds;
+    	topics.push(temptopic);
     }
     return topics;
   }
-  const [topicListStruct, setTopicListStruct] = useState(makeTopicListStruct());
+  
+  const [topicListStruct, setTopicListStruct] = useState(makeTopicListStruct(location.state.topics));
   const [currInput, setCurrInput] = useState("");
   const [wrongInput, setWrongInput] = useState(false);
   const [changedName, setChangedName] = useState(false);
+  const [noTopics, setNoTopics] = useState(false);
+  const [noName, setNoName] = useState(false);
   const [trigger, setTrigger] = useState(0);
   const [nameInput, setNameInput] = useState("");
-
-
-  const [topics, setTopics] = useState(location.state.topics)
-
-  console.log(topics)
-
 
   useEffect(()=> {
     if (props.userdata !== undefined && Object.keys(props.userdata).length !==0) {
@@ -56,7 +70,11 @@ function TopicListComponent(props){
   },[trigger])
 
   const navigateToFileUpload = ()=> {
-    navigate('/file_upload');
+    if (location.pathname == '/topic-list/new-session') {
+      navigate('/file_upload/new-session', {state: location.state});
+    } else {
+      navigate('/file_upload');
+    }
   }
 
   const notDupeCurrInput = () => {
@@ -71,7 +89,7 @@ function TopicListComponent(props){
   const setTopicName = () => {
     if (currInput != '' && notDupeCurrInput()) {
       //regex match
-      if (/^\w+$/.test(currInput)) {
+      if (currInput.match('^[A-Za-z0-9\u00C0-\u017F\']+$')) {
         let temparr = topicListStruct;
         temparr[showedInd].tname = currInput;
         setTopicListStruct(temparr);
@@ -91,8 +109,14 @@ function TopicListComponent(props){
     if (currDia == "rename") {
       setShowedInd(ind);
       setChangedName(false);
-      setWrongInput(false);
       toggleClicked(ind);
+    }
+    if (currDia == "rename" || currDia == "submit") {
+      setWrongInput(false);
+    }
+    if (currDia == "submit") {
+      setNoTopics(false);
+      setNoName(nameInput == "");
     }
   }
 
@@ -114,7 +138,7 @@ function TopicListComponent(props){
     setTrigger(trigger+1);
   }
 
-  const getSelectNameList = () => {
+  const getSelectNameList = (inQuestion) => {
     let temp = [];
     for (let i = 0; i < topicListStruct.length; i++) {
       if (topicListStruct[i].clicked) {
@@ -122,14 +146,29 @@ function TopicListComponent(props){
       }
     }
     let str = temp.join(", ");
-    if (str.length > 0) {
+    if (str.length > 0 && inQuestion) {
       str += "?";
     }
     return str;
   }
+  
+  const getUnparsedSubtopics = (topicStr) => {
+    let allTopics = topicStr.split(",");
+    let temp = []
+    for (let i = 0; i < topicListStruct.length; i++) {
+      if (topicListStruct[i].clicked) {
+        temp.push(allTopics[i]);
+      }
+    }
+    return temp.join(",");
+  }
 
   const navTopicModels = () => {
-    navigate('/topic-models');
+    if (location.pathname == '/topic-list/new-session') {
+      navigate('/sessions/new', {state: location.state});
+    } else {
+      navigate('/topic-models');
+    }
   }
 
   const isValid = () => {
@@ -140,7 +179,18 @@ function TopicListComponent(props){
   const saveNewModel = () => {
     //const topics = topicListStruct.filter(tlist => tlist.clicked).map(tlist => tlist.tname);
     //so far only for creation, but need to update it soon (aka if (keywordListID === '-1'))
-    new TopicModelService().saveTopicModel(nameInput, topics).then(
+    let topicNames = getSelectNameList(false);
+    if (topicNames == "") {
+      setNoTopics(true);
+      setWrongInput(false);
+      return
+    }
+    if (nameInput.trim() == "") {
+      setNoTopics(false);
+      setWrongInput(true);
+      return;
+    }
+    new TopicModelService().saveTopicModel(nameInput, (location.state === null) ? "Nothing here" : (topicNames + "\n" + getUnparsedSubtopics(location.state.topics))).then(
       response => {
         if (response.status === 200) {
           navTopicModels();
@@ -180,11 +230,17 @@ function TopicListComponent(props){
         stringFormat = {stringFormat}
         setTopicName = {setTopicName}
         wrongInput = {wrongInput}
+        noTopics = {noTopics}
+        noName = {noName}
         changedName = {changedName}
         currentDialog = {currentDialog}
+        nameInput = {nameInput}
         topicListStruct = {topicListStruct}
         toggleClicked = {toggleClicked}
         getSelectNameList = {getSelectNameList}
+        editMode = {editMode}
+        navTopicModels = {navTopicModels}
+        viewTitle = {viewTitle}
       />
   )
 }

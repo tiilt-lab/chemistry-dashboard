@@ -30,7 +30,7 @@ function ManageTopicsPage(props) {
                         <></>}
                     {props.topicModels.map((topicModel, count) => (
                         <div key={"keyword" + count} className={style["keyword-list-button"]} >
-                            <div className={style["click-mask"]} onClick={() => { props.navFileUpload() }} ></div >
+                            <div className={style["click-mask"]} onClick={() => { props.navTopicList(topicModel.data, topicModel.summary, topicModel.name) }} ></div >
                             <div className={style["keyword-list-header"]}>
                                 <div className={style.title}>{topicModel.name}</div>
                                 <div className={style.date}>{props.formatdate(topicModel.creation_date)}</div>

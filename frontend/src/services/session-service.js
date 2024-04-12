@@ -63,11 +63,12 @@ class SessionService {
         return this.api.httpRequestCallWithHeader(`api/v1/help_button`,'POST', body, headers);
     }
 
-    createNewSession(name, devices, keywordListId, byod, features, doa, folder) {
+    createNewSession(name, devices, keywordListId, topicModelId, byod, features, doa, folder) {
         const body = {
         'name': name,
         'devices': devices,
         'keywordListId': keywordListId,
+        'topicModelId': topicModelId,
         'byod': byod,
         'features': features,
         'doa': doa,

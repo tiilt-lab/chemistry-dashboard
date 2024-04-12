@@ -51,6 +51,7 @@ function JoinPage() {
 
     const [name, setName] = useState("");
     const [pcode, setPcode] = useState("");
+    const [wrongInput, setWrongInput] = useState(false);
     const [joinwith, setJoinwith] = useState("");
     const [preview, setPreview] = useState(false)
     const [previewLabel, setPreviewLabel] = useState("Turn On Preview")
@@ -648,7 +649,13 @@ function JoinPage() {
     }
 
     const changeTouppercase = (e) => {
-        setPcode(e.target.value.toUpperCase());
+        let val = e.target.value.toUpperCase();
+        if (val.length <= 4) {
+          setWrongInput(false);
+        } else {
+          setWrongInput(true);
+        }
+        setPcode(val);
     }
 
     const togglePreview = () => {
@@ -703,6 +710,7 @@ function JoinPage() {
                         requestHelp={requestHelp}
                         pcode={pcode}
                         setPcode={setPcode}
+                        wrongInput={wrongInput}
                         changeTouppercase={changeTouppercase}
                         joinwith={joinwith}
                         preview={preview}

@@ -27,14 +27,13 @@ function PodComponent() {
     const [startTime, setStartTime] = useState();
     const [endTime, setEndTime] = useState();
     const [intervalId, setIntervalId] = useState();
-    const [reload, setReload] = useState(false)
+    const [trigger, setTrigger] = useState(0)
     const [activeSessionService, setActiveSessionService] = useOutletContext();
     const { sessionDeviceId } = useParams();
     const navigate = useNavigate()
 
     useEffect(() => {
         // if (endTime === undefined) {
-        //console.log('i was here')
         if (Object.keys(session).length <= 0) {
             const sessionSub = activeSessionService.getSession();
             if (sessionSub !== undefined) {
@@ -100,10 +99,17 @@ function PodComponent() {
     },[endTime])
     
     useEffect(()=>{
-    if(displayTranscripts){
-      console.log('reloaded page')
-    }
-  },[displayTranscripts])
+       if(displayTranscripts){
+          console.log('reloaded page')
+       }
+     },[displayTranscripts])
+     
+     useEffect(()=>{
+       if(trigger > 0){
+          console.log('reloaded page')
+       }
+     },[trigger])
+     
 
     //console.log(session, transcripts, '-', sessionDevice, '-', displayTranscripts, '-', startTime, '-', endTime, '-', 'session .......')
 
@@ -171,6 +177,16 @@ function PodComponent() {
     const closeDialog = () => {
         setCurrentForm("");
     }
+    
+    const toggleDeleteVal = (val) => {
+        console.log("HERE");
+        setDeleteDeviceToggle(!val); 
+        console.log("also here");
+        setTrigger(trigger + 1);
+        console.log("HERE TOO");
+    }
+    
+    const toggleDeleteValFalse = () => {toggleDeleteVal(false)}
 
     return (
 
