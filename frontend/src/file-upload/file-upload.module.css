@@ -1,10 +1,10 @@
 .medium-button {
-  width: 374px !important;
-  margin: 20px 0px !important;
+  width: 374px;
+  margin: 20px 0px;
 }
 
 .small-button {
-  margin: 20px 0px !important;
+  margin: 20px 0px;
   /*width: 100% !important;*/
 }
 
@@ -29,6 +29,10 @@
   line-height: 24px;
   color: #FAFAFC;
   background: linear-gradient(147.59deg, #764BFF 0%, #7BB7F1 100%);
+}
+
+input[type="file"] {
+    display: none;
 }
 
 .basic-button:focus {

@@ -24,6 +24,7 @@ function SessionsComponent(props) {
   const [currentFolder, setCurrentFolder] = useState("");
   const [folderPath, setFolderPath] = useState("");
   const [folderSelect, setFolderSelect] = useState(null)
+  const [invalidName, setInvalidName] = useState(false);
   const navigate = useNavigate();
   const [searchParam, setSearchParam] = useSearchParams();
 
@@ -177,6 +178,11 @@ function SessionsComponent(props) {
   }
 
   const changeFolderName = (newName) => {
+    if (newName == "") {
+      setInvalidName(true);
+      return
+    }
+    setInvalidName(false);
     setCurrentForm("Loading");
     const folderId = selectedFolder.id;
     const fetchData = new SessionService().updateFolder(folderId, null, newName)
@@ -208,6 +214,12 @@ function SessionsComponent(props) {
           const updatedFolder = FolderModel.fromJson(response.json());
           const index = folders.findIndex(f => f.id === updatedFolder.id);
           folders[index] = updatedFolder;
+          /* console.log("MOVE FOLDER");
+          console.log(folders)
+          console.log(updatedFolder);
+          console.log(newFolderId); // ideally I'd want to change it to this thing
+          const diffFolder = folders.findIndex(f => f.id === newFolderId); */
+          // this might need to be changed
           displayFolder(updatedFolder.parent);
         } else {
           setShowAlert(true);
@@ -288,13 +300,22 @@ function SessionsComponent(props) {
   }
 
   const changeSessionName = (newName) => {
+    if (newName == "") {
+      setInvalidName(true);
+      return
+    }
+    setInvalidName(false);
     setCurrentForm("Loading");
     const sessionId = selectedSession.id;
     const fetchData = new SessionService().updateSession(sessionId, newName)
     fetchData.then(
       response => {
         if (response.status === 200) {
+          console.log("CHANGING NAME")
+          console.log(response)
+          console.log(response.json())
           const session = SessionModel.fromJson(response.json())
+          console.log(session)
           const sessionIndex = sessions.findIndex(s => s.id === session.id);
           if (sessionIndex > -1) {
             sessions[sessionIndex] = session;
@@ -381,7 +402,8 @@ function SessionsComponent(props) {
     setCurrentForm("");
     setSelectedSession(null);
     setSelectedFolder(null);
-    setFolderSelect(null)
+    setFolderSelect(null);
+    setInvalidName(false);
   }
 
   const closeAlert = () => {
@@ -420,6 +442,7 @@ function SessionsComponent(props) {
       selectableFolders = {selectableFolders}
       folderSelect = {folderSelect} 
       setFolderSelect = {setFolderSelect}
+      invalidName = {invalidName}
     />
   )
 }

@@ -17,6 +17,7 @@ export class TranscriptModel {
   certainty_value;
   keywords;
   speaker_tag;
+  topic_id;
 
   static fromJson(json) {
     const model = new TranscriptModel();
@@ -34,6 +35,7 @@ export class TranscriptModel {
     model.authenticity_value = json['authenticity_value'];
     model.certainty_value = json['certainty_value'];
     model.speaker_tag = json['speaker_tag'];
+    model.topic_id = json['topic_id'];
     model.keywords = KeywordUsageModel.fromJsonList(json['keywords']);
     model.keywords.forEach(k => k.transcript_id = model.id);
     return model;

@@ -51,7 +51,8 @@ function ByodJoinPage(props) {
                         <div className={style.instruction} style={{width: adjDim(343) + 'px',}}>Please type your name and passcode to join a discussion.</div>
                         <div className={style.instruction} style={{width: adjDim(343) + 'px',}}>If rejoining a discussion, type the same name you used previously.</div>
                         <input className={style["text-input"]}  style={{width: adjDim(330) + 'px',}} id="name" placeholder="Name" />
-                        <input className={style["text-input"]}  style={{width: adjDim(330) + 'px',}} id="passcode" value={props.pcode} placeholder="Passcode (4 characters)" maxLength="4" onInput={(event) => props.changeTouppercase(event)} />
+                        <input className={style["text-input"]}  style={{width: adjDim(330) + 'px',}} id="passcode" value={props.pcode} placeholder="Passcode (4 characters)" onInput={(event) => props.changeTouppercase(event)} />
+                        {(props.wrongInput) ? "Your password must be 4 characters long." : ""}
                         <select id="joinwith" className={style["dropdown-input"]}  style={{width: adjDim(350) + 'px',}}>
                             <option value="Audio">Audio</option>
                             <option value="Video">Video</option>
@@ -158,7 +159,7 @@ function ByodJoinPage(props) {
                             </div>
                             {props.loading() ? <AppSpinner></AppSpinner> : <></>}
                             <div className={style2.footer}>
-                                {props.session ? <AppSessionToolbar session={props.session} closingSession={()=> props.disconnect(true)} /> : <></>}
+                                {props.session ? <AppSessionToolbar session={props.session} sessionDevice={props.sessionDevice}  closingSession={()=> props.disconnect(true)} /> : <></>}
                             </div>
                         </>
 
