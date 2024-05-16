@@ -14,7 +14,7 @@ from torch.nn import init
 import torchvision.transforms as transforms
 from .model.stylegan.op import conv2d_gradfix
 from .model.encoder.encoders.psp_encoders import GradualStyleEncoder
-from .model.encoder.align_all_parallel import get_landmark,get_landmark_multi
+from .model.encoder.align_all_parallel import get_landmark,get_landmark_multi,get_landmark_shape
 
 import logging
     
@@ -163,39 +163,58 @@ def load_psp_standalone(checkpoint_path, device='cuda'):
     psp.register_forward_hook(add_latent_avg)
     return psp
 
+def get_facial_landmark(filepath, predictor, model):
+    if type(filepath) == str:
+        img = dlib.load_rgb_image(filepath)
+    else:
+        img = filepath
+    shape = get_landmark_shape(img, predictor,model)
+    return shape
+
 def get_video_crop_parameter(filepath, predictor, model, padding=[200,200,200,200]):
     if type(filepath) == str:
         img = dlib.load_rgb_image(filepath)
     else:
         img = filepath
-    lms = get_landmark_multi(img, predictor,model)
+    shapes = get_landmark_multi(img, predictor,model)
 
-    if lms is None:
-        return [None,None,None,None]
+    if len(shapes) == 0:
+        return [None,None,None,None,None]
     
     paras = []
-    for i, lm in enumerate(lms):
-        lm_chin          = lm[0  : 17]  # left-right
-        lm_eyebrow_left  = lm[17 : 22]  # left-right
-        lm_eyebrow_right = lm[22 : 27]  # left-right
-        lm_nose          = lm[27 : 31]  # top-down
-        lm_nostrils      = lm[31 : 36]  # top-down
-        lm_eye_left      = lm[36 : 42]  # left-clockwise
-        lm_eye_right     = lm[42 : 48]  # left-clockwise
-        lm_mouth_outer   = lm[48 : 60]  # left-clockwise
-        lm_mouth_inner   = lm[60 : 68]  # left-clockwise
-        
-        if i== 0:
-            scale = 64. / (np.mean(lm_eye_right[:,0])-np.mean(lm_eye_left[:,0]))
-            h, w = round(img.shape[0] * scale), round(img.shape[1] * scale)
-        
-        center = ((np.mean(lm_eye_right, axis=0)+np.mean(lm_eye_left, axis=0)) / 2) * scale
-        left = max(round(center[0] - padding[0]), 0) // 8 * 8
-        right = min(round(center[0] + padding[1]), w) // 8 * 8
-        top = max(round(center[1] - padding[2]), 0) // 8 * 8
-        bottom = min(round(center[1] + padding[3]), h) // 8 * 8
-        paras.append([top,bottom,left,right,lm])
+    try:
+        for i, shape in enumerate(shapes):
+            t = list(shape.parts())
+            lm = []
+            for tt in t:
+                lm.append([tt.x, tt.y])
+            # lms.append(a)
+        # lms = np.array(lms)   
+        # paras = []
+        # for i, lm in enumerate(lms):
+            lm = np.array(lm)
+            lm_chin          = lm[0  : 17]  # left-right
+            lm_eyebrow_left  = lm[17 : 22]  # left-right
+            lm_eyebrow_right = lm[22 : 27]  # left-right
+            lm_nose          = lm[27 : 31]  # top-down
+            lm_nostrils      = lm[31 : 36]  # top-down
+            lm_eye_left      = lm[36 : 42]  # left-clockwise
+            lm_eye_right     = lm[42 : 48]  # left-clockwise
+            lm_mouth_outer   = lm[48 : 60]  # left-clockwise
+            lm_mouth_inner   = lm[60 : 68]  # left-clockwise
+            if i== 0:
+                scale = 64. / (np.mean(lm_eye_right[:,0])-np.mean(lm_eye_left[:,0]))
+                h, w = round(img.shape[0] * scale), round(img.shape[1] * scale)
 
+            center = ((np.mean(lm_eye_right, axis=0)+np.mean(lm_eye_left, axis=0)) / 2) * scale
+            left = max(round(center[0] - padding[0]), 0) // 8 * 8
+            right = min(round(center[0] + padding[1]), w) // 8 * 8
+            top = max(round(center[1] - padding[2]), 0) // 8 * 8
+            bottom = min(round(center[1] + padding[3]), h) // 8 * 8
+            paras.append([top,bottom,left,right,lm,shape])
+    except Exception as e: 
+        logging.info('exception occured inside get_video_crop_parameter: {0}'.format(e))
+                                            
     return paras,h,w,scale
 
 def tensor2cv2(img):
