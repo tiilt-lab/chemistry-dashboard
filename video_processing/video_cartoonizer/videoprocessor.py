@@ -7,7 +7,7 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 from .model.encoder.align_all_parallel import align_face
-from .util import  get_video_crop_parameter
+from .util import  get_video_crop_parameter,get_facial_landmark
 from moviepy.editor import *
 from scipy.io import wavfile
 import logging
@@ -15,7 +15,7 @@ import callbacks
 import time
 
 class VideoProcessor:
-    def __init__(self,cartoon_model,video_queue,frame_queue,cartoon_image_queue,config,vid_img_dir,video_filename,aud_filename,sample_rate,depth,channels):
+    def __init__(self,cartoon_model,facial_emotion_detector,video_queue,frame_queue,cartoon_image_queue,config,vid_img_dir,video_filename,aud_filename,sample_rate,depth,channels):
         self.config = config
         self.video_queue = video_queue
         self.frame_queue = frame_queue
@@ -31,7 +31,40 @@ class VideoProcessor:
         self.running_processes = 0
         self.frame_array = []
         self.cartoon_model = cartoon_model
+        self.facial_emotion_detector = facial_emotion_detector
         self.lock = threading.Lock()
+        self.non_cartoon_emotions = {"Extremely afraid":0,"Extremely alarmed":0,"Extremely annoyed":0,"Extremely aroused":0,"Extremely astonished":0,
+                        "Extremely bored":0,"Extremely calm":0,"Extremely content":0,"Extremely delighted":0,"Extremely depressed":0,
+                        "Extremely distressed":0,"Extremely droopy":0,"Extremely excited":0,"Extremely frustrated":0,"Extremely gloomy":0,
+                        "Extremely happy":0,"Extremely miserable":0,"Extremely pleased":0,"Extremely sad":0,"Extremely satisfied":0,
+                        "Extremely serene":0,"Extremely sleepy":0,"Extremely tensed":0,"Extremely tired":0,"Moderately afraid":0,
+                        "Moderately alarmed":0,"Moderately annoyed":0,"Moderately aroused":0,"Moderately astonished":0,"Moderately bored":0,
+                        "Moderately calm":0,"Moderately content":0,"Moderately delighted":0,"Moderately depressed":0,"Moderately distressed":0,
+                        "Moderately droopy":0,"Moderately excited":0,"Moderately frustrated":0,"Moderately gloomy":0,"Moderately happy":0,"Moderately miserable":0,
+                        "Moderately pleased":0,"Moderately sad":0,"Moderately satisfied":0,"Moderately serene":0,"Moderately sleepy":0,"Moderately tensed":0,
+                        "Moderately tired":0," Neutral":0,"Slightly afraid":0,"Slightly alarmed":0,"Slightly annoyed":0,"Slightly aroused":0,"Slightly astonished":0,
+                        "Slightly bored":0,"Slightly calm":0,"Slightly content":0,"Slightly delighted":0,"Slightly depressed":0,"Slightly distressed":0,
+                        "Slightly droopy":0,"Slightly excited":0,"Slightly frustrated":0,"Slightly gloomy":0,"Slightly happy":0,"Slightly miserable":0,"Slightly pleased":0,
+                        "Slightly sad":0,"Slightly satisfied":0,"Slightly serene":0,"Slightly sleepy":0,"Slightly tensed":0,"Slightly tired":0,"Very afraid":0,
+                        "Very alarmed":0,"Very annoyed":0,"Very aroused":0,"Very astonished":0,"Very bored":0,"Very calm":0,"Very content":0,"Very delighted":0,
+                        "Very depressed":0,"Very distressed":0,"Very droopy":0,"Very excited":0,"Very frustrated":0,"Very gloomy":0,"Very happy":0,"Very miserable":0,
+                        "Very pleased":0,"Very sad":0,"Very satisfied":0,"Very serene":0,"Very sleepy":0,"Very tensed":0,"Very tired":0}
+        self.cartoon_emotions = {"Extremely afraid":0,"Extremely alarmed":0,"Extremely annoyed":0,"Extremely aroused":0,"Extremely astonished":0,
+                        "Extremely bored":0,"Extremely calm":0,"Extremely content":0,"Extremely delighted":0,"Extremely depressed":0,
+                        "Extremely distressed":0,"Extremely droopy":0,"Extremely excited":0,"Extremely frustrated":0,"Extremely gloomy":0,
+                        "Extremely happy":0,"Extremely miserable":0,"Extremely pleased":0,"Extremely sad":0,"Extremely satisfied":0,
+                        "Extremely serene":0,"Extremely sleepy":0,"Extremely tensed":0,"Extremely tired":0,"Moderately afraid":0,
+                        "Moderately alarmed":0,"Moderately annoyed":0,"Moderately aroused":0,"Moderately astonished":0,"Moderately bored":0,
+                        "Moderately calm":0,"Moderately content":0,"Moderately delighted":0,"Moderately depressed":0,"Moderately distressed":0,
+                        "Moderately droopy":0,"Moderately excited":0,"Moderately frustrated":0,"Moderately gloomy":0,"Moderately happy":0,"Moderately miserable":0,
+                        "Moderately pleased":0,"Moderately sad":0,"Moderately satisfied":0,"Moderately serene":0,"Moderately sleepy":0,"Moderately tensed":0,
+                        "Moderately tired":0," Neutral":0,"Slightly afraid":0,"Slightly alarmed":0,"Slightly annoyed":0,"Slightly aroused":0,"Slightly astonished":0,
+                        "Slightly bored":0,"Slightly calm":0,"Slightly content":0,"Slightly delighted":0,"Slightly depressed":0,"Slightly distressed":0,
+                        "Slightly droopy":0,"Slightly excited":0,"Slightly frustrated":0,"Slightly gloomy":0,"Slightly happy":0,"Slightly miserable":0,"Slightly pleased":0,
+                        "Slightly sad":0,"Slightly satisfied":0,"Slightly serene":0,"Slightly sleepy":0,"Slightly tensed":0,"Slightly tired":0,"Very afraid":0,
+                        "Very alarmed":0,"Very annoyed":0,"Very aroused":0,"Very astonished":0,"Very bored":0,"Very calm":0,"Very content":0,"Very delighted":0,
+                        "Very depressed":0,"Very distressed":0,"Very droopy":0,"Very excited":0,"Very frustrated":0,"Very gloomy":0,"Very happy":0,"Very miserable":0,
+                        "Very pleased":0,"Very sad":0,"Very satisfied":0,"Very serene":0,"Very sleepy":0,"Very tensed":0,"Very tired":0}
         
         logging.info('vid directory is {0}'.format(self.vid_img_dir))
         if not os.path.exists(self.vid_img_dir):
@@ -101,9 +134,18 @@ class VideoProcessor:
                             resized_frame = cv2.resize(frame, (w, h),interpolation=cv2.INTER_AREA)
 
                             for index, para in enumerate(paras):
-                                top,bottom,left,right,lm = para
-                                
-                                face = resized_frame[top:bottom, left:right]       
+                                top,bottom,left,right,lm,face_lm = para
+                                #left = x
+                                #top  == y
+                                # right = x + w
+                                # bottom  == y + h
+                                face = resized_frame[top:bottom, left:right]  
+                                if savetopath:
+                                    # emo_det = self.facial_emotion_detector.predict_facial_emotion(face,left,top,right,bottom)
+                                    emo_det = self.facial_emotion_detector.predict_facial_emotion(face_lm)
+                                    self.non_cartoon_emotions[emo_det] = self.non_cartoon_emotions[emo_det] + 1
+                                    
+                                    logging.info('Non cartonized image emotion is  {0}'.format(emo_det))    
                                 try:
                                     with torch.no_grad():
                                         I = align_face(face,lm)
@@ -133,8 +175,37 @@ class VideoProcessor:
                                         cartooned_image =((y_tilde[0].cpu().cpu().numpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8) 
                                         
                                         resized_img = cv2.resize(cartooned_image, (face.shape[1], face.shape[0]), interpolation = cv2.INTER_AREA)
+                                        emo_det = ""
+                                        if savetopath:
+                                            face_lm = get_facial_landmark(resized_img,self.cartoon_model.landmarkpredictor, self.cartoon_model.face_detector_model)
+                                            # emo_det = self.facial_emotion_detector.predict_facial_emotion(resized_img,left,top,right,bottom)
+                                            if face_lm:
+                                                emo_det = self.facial_emotion_detector.predict_facial_emotion(face_lm)
+                                                self.cartoon_emotions[emo_det] = self.cartoon_emotions[emo_det] + 1
+                                                
+                                            logging.info('cartonized image emotion is  {0}'.format(emo_det)) 
                                         
                                         resized_frame[top:bottom, left:right,:] = resized_img
+
+                                        label_size, base_line = cv2.getTextSize("{}".format(emo_det), cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
+                                        resized_frame = cv2.rectangle(
+                                                        resized_frame,
+                                                        # (x, y), (x + w, y + h)
+                                                        (left, top), (right,bottom),
+                                                        # (left + right, top + bottom - label_size[1]),
+                                                        # (left + right + label_size[0], top + 1 + base_line),
+                                                        (223, 128, 255),1)
+
+                                        resized_frame = cv2.putText(
+                                            resized_frame,
+                                            "{}".format(emo_det),
+                                            # (left + right, top + bottom),
+                                            (left , top),
+                                            cv2.FONT_HERSHEY_SIMPLEX,
+                                            0.8,
+                                            (0, 0, 0),
+                                            2) 
+                                        
 
                                 except Exception as e: 
                                     logging.info('exception occured while converting video to cartoon: {0}'.format(e))
@@ -158,6 +229,12 @@ class VideoProcessor:
                 self.running_processes -= 1
                 if (not self.running) and self.running_processes == 0 and self.video_queue.empty():
                     logging.info('i eventually called complete_callback from convert_image')
+                    logging.info('Non cartoonized image emotions:')
+                    for key, value in self.non_cartoon_emotions.items():
+                        logging.info('{0} : {1}'.format(key,value)) 
+                    logging.info('Cartoonized image emotions: ')
+                    for key, value in self.cartoon_emotions.items():
+                        logging.info('{0} : {1}'.format(key,value))
                     self.__complete_callback()  
                     # logging.info('i am done with the lock')           
       
@@ -178,7 +255,7 @@ class VideoProcessor:
                         #     dim = (500,375)
                         # else:
                         #      dim = (375,500)   
-                        frame = cv2.resize(frame, (500,375),interpolation=cv2.INTER_AREA)
+                        # frame = cv2.resize(frame, (500,375),interpolation=cv2.INTER_AREA)
                         self.frame_array.append(frame)
                         if self.frame_count % 29 == 0:
                             frame_batch.append(frame)

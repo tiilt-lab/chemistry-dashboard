@@ -10,10 +10,10 @@ from .util import load_psp_standalone
 class VideoCartoonifyLoader:
     def __init__(self):
         self.base_path = os.path.dirname(os.path.abspath(__file__))
-        self.style_id = 22
-        self.style_degree = 0.5
+        self.style_id = 73
+        self.style_degree = 0.4
         self.color_transfer = False
-        self.ckpt = os.path.join( self.base_path,'checkpoint/vtoonify_d_comic/vtoonify_s_d.pt')
+        self.ckpt = os.path.join( self.base_path,'checkpoint/vtoonify_d_illustration/vtoonify_s009_d_c.pt')
         self.scale_image = True
         self.style_encoder_path = os.path.join(self.base_path,'checkpoint/encoder.pt')
         self.exstyle_path =None
