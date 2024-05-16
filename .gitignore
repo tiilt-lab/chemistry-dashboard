@@ -190,16 +190,11 @@ video_processing/video_cartoonizer/train_vtoonify_d.py
 video_processing/video_cartoonizer/train_vtoonify_t.py
 video_processing/video_cartoonizer/vtoonify_model.py
 video_processing/dlib
-<<<<<<< Updated upstream
 video_processing/emotion_detector
 video_processing/video_file_emotion_detection.py
 video_processing/video_from_study
-=======
-video_processing/emotion_detector/
-video_processing/video_file_emotion_detection.py
-video_processing/video_from_study/
->>>>>>> Stashed changes
 uploads
+ResidualMaskingNetwork
 ResidualMaskingNetwork
 
 /frontend/.gitignore
