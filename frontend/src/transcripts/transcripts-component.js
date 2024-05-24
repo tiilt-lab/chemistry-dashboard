@@ -28,6 +28,7 @@ function TranscriptsComponent(){
   const [subscriptions, setSubscriptions] = useState([]);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [showKeywords, setShowKeywords] = useState(true);
+  const [trigger, setTrigger] = useState(0)
   const [showDoA,setShowDoA] = useState(false);
   const [reload, setReload] = useState(false)
   const [activeSessionService, setActiveSessionService] = useOutletContext();
@@ -86,6 +87,12 @@ useEffect(()=>{
     createDisplayTranscripts();
   }
 },[reload])
+
+useEffect(()=>{
+  if(trigger > 0){
+    createDisplayTranscripts();
+  }
+},[trigger])
 
 //console.log(transcripts, displayTranscripts, 'states ... ')
 const createDisplayTranscripts = ()=> {
@@ -150,6 +157,11 @@ const createDisplayTranscripts = ()=> {
     navigate('/sessions/' + session.id + '/pods/' + sessionDeviceId);
   }
   
+  const toggleKeywords = ()=> {
+    setShowKeywords(!showKeywords);
+    setTrigger(trigger + 1)
+  }
+  
   const legendRef = useD3(
        (svg) => {
          const data = ["No topic", "1", "2", "3", "4", "5"];
@@ -201,6 +213,8 @@ const createDisplayTranscripts = ()=> {
       openOptionsDialog = {openOptionsDialog}
       isenabled = {true}
       legendRef = {legendRef}
+      showKeywords = {showKeywords}
+      toggleKeywords = {toggleKeywords}
     />
   )
 }

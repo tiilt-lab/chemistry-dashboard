@@ -18,10 +18,18 @@ function AppFeaturesComponent(props) {
   const [featureDescription, setFeatureDescription] = useState(null);
   const [featureHeader, setFeatureHeader] = useState(null);
   const [showFeatureDialog, setShowFeatureDialog] = useState(false);
+  const [trigger, setTrigger] = useState(0);
 
   useEffect(()=>{
     updateGraphs()
   },[props.transcripts])
+  
+  
+  useEffect(()=>{
+    if (trigger > 0) {
+      console.log("reloaded page");
+    }
+  },[trigger])
   
   const updateGraphs = ()=> {
     //////attempt to change this into d3 radar chart before making a folder for this
@@ -121,6 +129,7 @@ function AppFeaturesComponent(props) {
     showFeatureDialog = {showFeatureDialog}
     features = {features}
     getInfo = {getInfo}
+    showFeatures = {props.showFeatures}
     />
   )
 }

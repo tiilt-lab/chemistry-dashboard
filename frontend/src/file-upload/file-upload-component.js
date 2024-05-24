@@ -46,6 +46,8 @@ function FileUploadComponent(props){
   const navTopicModels = ()=> {
     if (location.pathname == '/file_upload/new-session') {
       navigate('/sessions/new', {state: location.state});
+    } else if ((location.state != null) && (location.state.fromManagedList)) {
+      navigate('/keyword-lists');
     } else {
       navigate('/topic-models');
     }
