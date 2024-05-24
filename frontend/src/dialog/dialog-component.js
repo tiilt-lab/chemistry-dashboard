@@ -81,7 +81,7 @@ function GenericDialogBox(props) {
   }
   return (
     <div className={style["dialog-background"]}>
-      <div className={style["dialog-container"]}>
+      <div className={style["dialog-container"]} style={{'overflow-y': props.optionsCase ? 'visible' : 'auto'}}>
         {props.children}
       </div>
     </div>)

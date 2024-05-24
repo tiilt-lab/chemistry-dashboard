@@ -15,6 +15,8 @@ function KeywordListItemsComponent() {
   const { keyword_list_id } = useParams();
   const [keywordListID, setKeywordListID] = useState(keyword_list_id);
   const [keyworderror, setKeywordError] = useState("")
+  const [changing, setChanging] = useState(false);
+  const [trigger, setTrigger] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();  
 
@@ -59,6 +61,13 @@ function KeywordListItemsComponent() {
     setKeywordListItems(kwListItem);
   }
   },[keywordList.length])
+  
+  useEffect(() => {
+    if(trigger > 0){
+      console.log("Reloading page")
+    }
+  },[trigger])
+  
 
   
   // @ViewChildren('keywordInput') set newInput(inputs: QueryList<ElementRef>) {
@@ -123,7 +132,12 @@ function KeywordListItemsComponent() {
   }
 
   const removeKeyword = (item) => {
-    setKeywordListItems(keywordListItems.filter(k => k !== item));
+    let keyItems = keywordListItems.filter(k => k !== item);
+    setKeywordListItems(keyItems);
+    setChanging(true);
+    setTrigger(trigger + 1);
+    setChanging(false);
+    setTrigger(trigger + 1);
   }
 
   const checkName = (event) => {
@@ -200,6 +214,7 @@ function KeywordListItemsComponent() {
       checkName={checkName}
       isValid={isValid()}
       keywordError={keyworderror}
+      changing={changing}
     />
   )
 }

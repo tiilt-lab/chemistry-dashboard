@@ -652,6 +652,12 @@
           filter: blur(2px);
 }
 
+.dialog-dropdown {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
 .left-button {
   float: left;
 }

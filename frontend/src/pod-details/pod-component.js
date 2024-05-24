@@ -29,6 +29,10 @@ function PodComponent() {
     const [intervalId, setIntervalId] = useState();
     const [trigger, setTrigger] = useState(0)
     const [activeSessionService, setActiveSessionService] = useOutletContext();
+    const [showFeatures, setShowFeatures] = useState([]);
+    const [showBoxes, setShowBoxes] = useState([]);
+    const [radarTrigger, setRadarTrigger] = useState(0);
+    const [hideDetails, setHideDetails] = useState(true); 
     const { sessionDeviceId } = useParams();
     const navigate = useNavigate()
 
@@ -74,6 +78,13 @@ function PodComponent() {
                 clearInterval(intervalId);
             }
         }, 2000));
+        
+        // initialize the options toolbar
+        let featuresArr = ["Emotional tone", "Analytic thinking", "Clout", "Authenticity", "Confusion"];     
+        initChecklistData(featuresArr, setShowFeatures);
+        // initialize the components toolbar
+        let boxArr = ["Timeline control", "Discussion timeline", "Keyword detection", "Discussion features", "Radar chart"];
+        initChecklistData(boxArr, setShowBoxes);
 
         return () => {
             subscriptions.map(sub => {
@@ -113,6 +124,17 @@ function PodComponent() {
 
     //console.log(session, transcripts, '-', sessionDevice, '-', displayTranscripts, '-', startTime, '-', endTime, '-', 'session .......')
 
+    // to initialize the checklist data structures
+    const initChecklistData = (featuresArr, setFn) => {
+        let valueInd = 0;
+        let showFeats = [];
+        for (const feature of featuresArr) { 
+            showFeats.push({'label': feature, 'value': valueInd, 'clicked': true});
+            valueInd++;
+        }
+        setFn(showFeats);
+    }
+    
     const ResetTimeRange = (values) => {
         const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
         setTimeRange(values);
@@ -178,15 +200,38 @@ function PodComponent() {
         setCurrentForm("");
     }
     
+    /*
     const toggleDeleteVal = (val) => {
-        console.log("HERE");
         setDeleteDeviceToggle(!val); 
-        console.log("also here");
         setTrigger(trigger + 1);
-        console.log("HERE TOO");
     }
     
     const toggleDeleteValFalse = () => {toggleDeleteVal(false)}
+    */
+    
+    // toggles the clicked status of the data field that was clicked
+    const handleCheck = (event, propStruct, propFn) => {
+        let featTemp = propStruct;
+        featTemp[event.option.value]['clicked'] = !featTemp[event.option.value]['clicked']
+        propFn(featTemp);
+        setTrigger(trigger + 1);
+    } 
+    
+    // toggles for showFeatures
+    const handleCheckFeats = (value, event) => {
+      handleCheck(event, showFeatures, setShowFeatures);
+      setRadarTrigger(radarTrigger + 1);
+    }
+    
+    // toggles for showBoxes
+    const handleCheckBoxes = (value, event) => {
+      handleCheck(event, showBoxes, setShowBoxes);
+    }
+    
+    // toggles hideDetails
+    const toggleDetails = () => {
+      setHideDetails(!hideDetails);
+    }
 
     return (
 
@@ -210,6 +255,13 @@ function PodComponent() {
             deleteDeviceToggle={deleteDeviceToggle}
             setDeleteDeviceToggle={setDeleteDeviceToggle}
             removeDeviceFromSession={removeDeviceFromSession}
+            showFeatures={showFeatures}
+            showBoxes={showBoxes}
+            handleCheckFeats={handleCheckFeats}
+            handleCheckBoxes={handleCheckBoxes}
+            radarTrigger={radarTrigger}
+            hideDetails={hideDetails}
+            toggleDetails={toggleDetails}
         />
     )
 }
