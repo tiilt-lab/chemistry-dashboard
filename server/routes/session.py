@@ -16,8 +16,12 @@ import socketio_helper
 import string
 import csv
 import io
+import os
+import base64
+import queue
 
 api_routes = Blueprint('session', __name__)
+image_queue_dict = {}
 
 @api_routes.route('/api/v1/sessions', methods=['GET'])
 @wrappers.verify_login(public=True)
@@ -253,3 +257,69 @@ def export_session(session_id, **kwargs):
     output.headers["Content-Disposition"] = "attachment; filename=export.csv"
     output.headers["Content-type"] = "text/csv"
     return output
+
+@api_routes.route('/api/v1/sessions/getredissessionkey', methods=['POST'])
+def get_device_key(**kwargs):
+    content = request.get_json()
+    redis_key = RedisSessions.get_device_key(content['auth_key'])
+    if redis_key:
+        return json_response({'redis_key': redis_key})
+    else:
+        return json_response({'message': "key cannot be authenticated"}, 400)
+
+@api_routes.route('/api/v1/sessions/getredissessionconfig', methods=['POST'])
+def get_session_config(**kwargs):
+    content = request.get_json()
+    redis_session = RedisSessions.get_session_config(content['session_key'])
+    if redis_session:
+        return json_response({'redis_session_key': redis_session})
+    else:
+        return json_response({'message': "Session key cannot be authenticated"}, 400)
+        
+@api_routes.route('/api/v1/session/addcartoonizedimage', methods=['POST'])
+@wrappers.verify_local
+def add_cartoonized_image(**kwargs):
+    logging.info('Received cartoonized image ...')
+    content = request.get_json()
+    queue_key = '{0}_{1}_{2}'.format(content['source'],content['sessionid'],content['deviceid'])
+    if queue_key in image_queue_dict.keys():
+        image_queue_dict[queue_key].put(content)
+    else:
+        image_queue = queue.Queue()
+        image_queue.put(content) 
+        image_queue_dict[queue_key] = image_queue 
+    return json_response()
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/auth/<auth_id>/streamimages')
+def stream_cartonized_images(session_id, device_id,auth_id, **kwargs):
+    try:
+        filePath  = os.path.dirname(os.path.abspath(__file__)) 
+        os.chdir(filePath)
+        os.chdir("../../video_processing/videorecordings")
+        loading_img_Path = os.path.join(os.getcwd(),'loading_img')
+        loading_frame = read_image(os.path.join(loading_img_Path,'loading.png'))
+        queue_key = '{0}_{1}_{2}'.format(auth_id,session_id,device_id)
+        return Response(gen(loading_frame,queue_key),
+                        mimetype='multipart/x-mixed-replace; boundary=frame')
+    except Exception as e:
+        logging.error('Error occured while streaming cartoonized image: {0}'.format(e))
+
+
+def gen(loading_frame,queue_key):
+    start = False
+    while True:
+        if not start:
+            if  queue_key in  image_queue_dict.keys(): 
+                logging.info('qsize is {0}'.format(image_queue_dict[queue_key].qsize()))
+                if image_queue_dict[queue_key].qsize() >= 1:
+                    start = True
+            yield (b'--frame\r\n'
+                    b'Content-Type: image/png\r\n\r\n' + loading_frame + b'\r\n')    
+        
+        elif not image_queue_dict[queue_key].empty():
+            data = image_queue_dict[queue_key].get(block=False)
+            yield (b'--frame\r\n'
+            b'Content-Type: image/png\r\n\r\n' +  base64.b64decode(data['image']) + b'\r\n')         
+
+def read_image(filepath):
+    return  open(filepath , 'rb').read()

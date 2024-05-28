@@ -60,7 +60,7 @@ limiter = Limiter(app, key_func=get_remote_address)
 if cf.cloud():
 	socketio = SocketIO(app, log=logger, cors_allowed_origins=cf.domain(), manage_session=False)
 else:
-	socketio = SocketIO(app, log=logger, manage_session=False)
+	socketio = SocketIO(app, log=logger, cors_allowed_origins=cf.domain(),manage_session=False)
 
 # Create database
 DATABASE_FILE = os.path.dirname(os.path.abspath(__file__)) + '/discussion_capture.db'
