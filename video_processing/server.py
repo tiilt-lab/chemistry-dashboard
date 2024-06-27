@@ -41,6 +41,7 @@ class ServerProtocol(WebSocketServerProtocol):
         self.last_message = time.time()
         self.end_signaled = False
         self.interval = 10
+        self.stream_data = False
         cm.add(self)
         logging.info('New client connected...')
 
