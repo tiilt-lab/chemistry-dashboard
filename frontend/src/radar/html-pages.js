@@ -11,8 +11,16 @@ function RadarPage(props){
    const margin = adjDim(10);
    const radius = (height-(margin*2)) / 2;
    
-   const data = props.features;
-
+   // const data = [props.showFeatures.filter(sf => sf['clicked']).map(sf => props.features[sf['value']])];
+   
+   let data = props.features;
+   for (let i = 0; i < data.length; i++) {
+       if (!props.showFeatures[i]['clicked']) {
+           data[i]['value'] = 0;
+       }
+   }
+   data = [data]
+   
    const ref = useD3(
      (svg) => {
      	   //d3 code to return regardless
