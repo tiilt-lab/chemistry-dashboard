@@ -18,7 +18,7 @@ function CreateSessionPage(props) {
           leftText={false}
           rightText={""}
           rightEnabled={false}
-          nav={props.navigateToSessions}
+          nav={() => props.openDialog("Back", "Are you sure you want to go back to the session list?")}
         />
         {(props.currentMenu === "Settings") ?
           <React.Fragment >
@@ -106,10 +106,8 @@ function CreateSessionPage(props) {
             </div>
 
             <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.navigateToFileUpload}>Create Topic Model</button>
-            <div className={style["button-side-container"]}>
-              <button className={style["footer-button"]} style={{width: adjDim(374/2) + 'px', 'margin-right': '5px',}} onClick={props.goToKeywords}>Back</button>
-              <button className={style["footer-button"]} style={{width: adjDim(374/2) + 'px', 'margin-left': '5px',}} onClick={props.goToDevices}>Next</button>
-            </div>
+            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.goToKeywords}>Back</button>
+            <button className={style["footer-button"]} style={{width: adjDim(374) + 'px',}} onClick={props.createSession}>Start Discussion</button>
           </React.Fragment>
           :
           <></>
@@ -158,9 +156,19 @@ function CreateSessionPage(props) {
       <GenericDialogBox show={props.currentForm !== ""} >
         {(props.currentForm === "Error") ?
           <div className={style["add-dialog"]} >
-            <div className={style2["dialog-heading"]} >Invalid Sesion</div>
+            <div className={style2["dialog-heading"]} >Invalid Session</div>
             {props.displayText}
-            <button className={style["cancel-button"]} onClick={props.closeDialog}> Close</button >
+            <button className={style["cancel-button"]} onClick={props.closeDialog}>Close</button >
+          </div >
+          :
+          <></>
+        }
+        
+        {(props.currentForm === "Back") ?
+          <div className={style["add-dialog"]} >
+            {props.displayText}
+            <button className={style["dialog-button"]} onClick={() => props.navigateToSessions()}>Go Back</button>
+            <button className={style["cancel-button"]} onClick={props.closeDialog}>Cancel</button >
           </div >
           :
           <></>

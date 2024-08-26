@@ -56,7 +56,7 @@ function ManageKeywordListsComponent(props) {
  
 
   const createTopicModel = () => {
-    return navigate('/file_upload');
+    return navigate('/file_upload', { state: {fromManagedList: true}});
     // just in case the getTopics() function is made later
     const fetchData = new KeywordService().getTopics();
     fetchData.then(

@@ -5,6 +5,7 @@ import { GenericDialogBox } from '../dialog/dialog-component'
 import {Appheader} from '../header/header-component'
 
 function TranscriptComponentPage(props) {
+
   return (
     <>
       <div className={style.container}>
@@ -75,7 +76,7 @@ function TranscriptComponentPage(props) {
             <div className={style2["dialog-heading"]}>Transcript Options</div>
             <br />
             <label className={style["dc-checkbox"]}>Show keywords
-              <input type="checkbox" checked={props.showKeywords} value={props.showKeywords} onChange={props.createDisplayTranscripts} />
+              <input type="checkbox" checked={props.showKeywords} value={props.showKeywords} onChange={props.toggleKeywords} />
               <span className={style["checkmark"]}></span>
             </label>
             <svg

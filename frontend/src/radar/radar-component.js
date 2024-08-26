@@ -10,7 +10,7 @@ function AppRadarComponent(props) {
   
   useEffect(()=>{
     updateGraphs()
-  },[props.transcripts])
+  },[props.transcripts, props.radarTrigger])
   
   const updateGraphs = () => {
     //general format of data (trying to make time-dependent)
@@ -32,14 +32,14 @@ function AppRadarComponent(props) {
     }
     let total_sum = analytical_sum+authenticity_sum+
     certainty_sum+clout_sum+emotional_sum;
+    radfeatures.push({"axis": "Emotional", "value": Math.round(100*emotional_sum/total_sum)/100});
     radfeatures.push({"axis": "Analytical", "value": Math.round(100*analytical_sum/total_sum)/100});
+    radfeatures.push({"axis": "Clout", "value": Math.round(100*clout_sum/total_sum)/100});
     radfeatures.push({"axis": "Authenticity", "value": Math.round(100*authenticity_sum/total_sum)/100});
     radfeatures.push({"axis": "Certainty", "value": Math.round(100*certainty_sum/total_sum)/100});
-    radfeatures.push({"axis": "Clout", "value": Math.round(100*clout_sum/total_sum)/100});
-    radfeatures.push({"axis": "Emotional", "value": Math.round(100*emotional_sum/total_sum)/100});
     //things to set
     setValSum(total_sum);
-    setFeatures([radfeatures]);
+    setFeatures(radfeatures);
     setMaxValue(d3.max(require("underscore").flatten([radfeatures]).map(d => d.value)));
   }
   
@@ -48,6 +48,7 @@ function AppRadarComponent(props) {
     features = {features}
     maxValue = {maxValue}
     valSum = {valSum}
+    showFeatures = {props.showFeatures}
     />
   )
 
