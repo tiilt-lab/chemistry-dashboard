@@ -7,6 +7,16 @@ import { SessionDeviceModel } from '../models/session-device';
 import { ApiService } from '../services/api-service';
 import fixWebmDuration from "fix-webm-duration"
 
+/*
+BYOD Connection Order
+
+1. VerifyInputAndAudio
+2. RequestAccessKey
+3. ConnectToProcessors
+4. DetermineSpeakers
+5. requestStartToProcessing
+6. Media Socket Worklets
+*/
 
 
 
@@ -42,6 +52,7 @@ function JoinPage() {
     const [displayTranscripts, setDisplayTranscripts] = useState([]);
     const [currentTranscript, setCurrentTranscript] = useState({});
     const [timeRange, setTimeRange] = useState([0, 1]);
+    const [speakers, setSpeakers] = useState(null);
 
 
     const [currentForm, setCurrentForm] = useState("");
@@ -76,12 +87,12 @@ function JoinPage() {
             connect_audio_processor_service();
         }
 
-        
+
 
     }, [audiows])
 
     useEffect(() => {
-        
+
         if (videows != null) {
             console.log('called connect_video_processor_service')
             connect_video_processor_service();
@@ -127,6 +138,7 @@ function JoinPage() {
     }, [endTime])
 
 
+    //stop before starting processing to get speakers
     useEffect(() => {
         if(audioconnected && !videoconnected){
             requestStartAudioProcessing();
@@ -250,7 +262,7 @@ function JoinPage() {
 
         try {
             //handle older browsers that might implement getUserMedia in some way
-    
+
             if (navigator.mediaDevices === undefined) {
                 navigator.mediaDevices = {};
                 navigator.mediaDevices.getUserMedia = function (constraintObj) {
@@ -325,7 +337,7 @@ function JoinPage() {
         }
 
         try {
-           
+
             if (navigator.mediaDevices != null) {
                 const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
                    // media.then(function (stream) {
@@ -374,10 +386,10 @@ function JoinPage() {
                         setSessionDevice(SessionDeviceModel.fromJson(jsonObj['session_device']));
                         setKey(jsonObj.key);
                         setAudioWs(new WebSocket(apiService.getAudioWebsocketEndpoint()));
-                        
+
                         //activate video websocket also if user joins with video
-                        if (joinwith === 'Video' || joinwith === 'Videocartoonify') { 
-                            setVideoWs(new WebSocket(apiService.getVideoWebsocketEndpoint())); 
+                        if (joinwith === 'Video' || joinwith === 'Videocartoonify') {
+                            setVideoWs(new WebSocket(apiService.getVideoWebsocketEndpoint()));
                         }
                     })
 
@@ -557,8 +569,8 @@ function JoinPage() {
                 'Video_cartoonify' : true
             };
         }
-        
-        
+
+
         videows.send(JSON.stringify(message));
 
     }
