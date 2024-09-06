@@ -58,7 +58,7 @@ function ByodJoinPage(props) {
                             <option value="Video">Video</option>
                             <option value="Videocartoonify">Video(Cartoon)</option>
                         </select>
-                        <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} 
+                        <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`}
                         onClick={() => props.verifyInputAndAudio(document.getElementById("name").value.trim(), document.getElementById("passcode").value.trim(), document.getElementById("joinwith").value.trim())}>Join Discussion</button>
                     </React.Fragment>
                     :
@@ -146,7 +146,8 @@ function ByodJoinPage(props) {
                                 <AppSectionBoxComponent heading={"Discussion features:"}>
                                     <AppFeaturesComponent
                                         session={props.session}
-                                        transcripts={props.displayTranscripts} />
+                                        transcripts={props.displayTranscripts}
+                                        showFeatures={props.showFeatures} />
                                 </AppSectionBoxComponent>
 
                                 <AppSectionBoxComponent heading={"Radar chart:"}>
@@ -154,7 +155,8 @@ function ByodJoinPage(props) {
                                     session={props.session}
                                     transcripts={props.displayTranscripts}
                                     start={props.startTime}
-                                    end={props.endTime} />
+                                    end={props.endTime}
+                                    showFeatures={props.showFeatures} />
                                 </AppSectionBoxComponent>
                             </div>
                             {props.loading() ? <AppSpinner></AppSpinner> : <></>}

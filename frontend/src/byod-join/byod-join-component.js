@@ -13,7 +13,7 @@ BYOD Connection Order
 1. VerifyInputAndAudio
 2. RequestAccessKey
 3. ConnectToProcessors
-4. DetermineSpeakers
+4. DetermineSpeakers*
 5. requestStartToProcessing
 6. Media Socket Worklets
 */
@@ -52,7 +52,6 @@ function JoinPage() {
     const [displayTranscripts, setDisplayTranscripts] = useState([]);
     const [currentTranscript, setCurrentTranscript] = useState({});
     const [timeRange, setTimeRange] = useState([0, 1]);
-    const [speakers, setSpeakers] = useState(null);
 
 
     const [currentForm, setCurrentForm] = useState("");
@@ -68,11 +67,24 @@ function JoinPage() {
     const [previewLabel, setPreviewLabel] = useState("Turn On Preview")
     const navigate = useNavigate();
 
+
+    const [showFeatures, setShowFeatures] = useState([]);
+    const [showBoxes, setShowBoxes] = useState([]);
+
     const POD_COLOR = '#FF6655';
     const GLOW_COLOR = '#ffc3bd';
     const interval = 10000
 
     let wakeLock;
+
+    useEffect(() => {
+            // initialize the options toolbar
+            let featuresArr = ["Emotional tone", "Analytic thinking", "Clout", "Authenticity", "Confusion"];
+            initChecklistData(featuresArr, setShowFeatures);
+            // initialize the components toolbar
+            let boxArr = ["Timeline control", "Discussion timeline", "Keyword detection", "Discussion features", "Radar chart"];
+            initChecklistData(boxArr, setShowBoxes);
+    }, [])
 
     useEffect(() => {
         if (source !== null && audioContext !== null && name != "" && pcode != "") {
@@ -150,40 +162,40 @@ function JoinPage() {
 
     useEffect(() => {
         if(authenticated){
-        const loadWorklet = async () => {
+            const loadWorklet = async () => {
 
-            await audioContext.audioWorklet.addModule('audio-sender-processor.js');
-            const workletProcessor = new AudioWorkletNode(audioContext, 'audio-sender-processor');
-            workletProcessor.port.onmessage = data => {
-                audiows.send(data.data.buffer);
+                await audioContext.audioWorklet.addModule('audio-sender-processor.js');
+                const workletProcessor = new AudioWorkletNode(audioContext, 'audio-sender-processor');
+                workletProcessor.port.onmessage = data => {
+                    audiows.send(data.data.buffer);
+                }
+                source.connect(workletProcessor).connect(audioContext.destination);
+                setAudioSenderProcessor(workletProcessor);
             }
-            source.connect(workletProcessor).connect(audioContext.destination);
-            setAudioSenderProcessor(workletProcessor);
-        }
 
-        const videoPlay = () => {
-            let video = document.querySelector('video')
-            video.srcObject = streamReference
-            video.onloadedmetadata = function (ev) {
-                video.play();
-                mediaRecorder.start(interval);
-            };
+            const videoPlay = () => {
+                let video = document.querySelector('video')
+                video.srcObject = streamReference
+                video.onloadedmetadata = function (ev) {
+                    video.play();
+                    mediaRecorder.start(interval);
+                };
 
-            mediaRecorder.ondataavailable = async function (ev) {
-                const bufferdata = await ev.data.arrayBuffer()
-                fixWebmDuration(ev.data, interval * 6 * 60 * 24, (fixedblob) => {
-                    videows.send(fixedblob);
-                    audiows.send(fixedblob);
-                })
+                mediaRecorder.ondataavailable = async function (ev) {
+                    const bufferdata = await ev.data.arrayBuffer()
+                    fixWebmDuration(ev.data, interval * 6 * 60 * 24, (fixedblob) => {
+                        videows.send(fixedblob);
+                        audiows.send(fixedblob);
+                    })
+                }
+            }
+
+            if (authenticated && joinwith === 'Audio'){
+                loadWorklet().catch(console.error);
+            }else if (authenticated && (joinwith === 'Video' || joinwith === 'Videocartoonify')){
+                videoPlay()
             }
         }
-
-        if (authenticated && joinwith === 'Audio'){
-            loadWorklet().catch(console.error);
-        }else if (authenticated && (joinwith === 'Video' || joinwith === 'Videocartoonify')){
-            videoPlay()
-        }
-    }
     }, [authenticated])
 
     useEffect(() => {
@@ -703,6 +715,16 @@ function JoinPage() {
       }
     }
 
+    const initChecklistData = (featuresArr, setFn) => {
+      let valueInd = 0;
+      let showFeats = [];
+      for (const feature of featuresArr) {
+          showFeats.push({'label': feature, 'value': valueInd, 'clicked': true});
+          valueInd++;
+      }
+      setFn(showFeats);
+  }
+
     const sessionDevBtnPressed = sessionDevice !== null ? sessionDevice.button_pressed : null;
 
     return (
@@ -743,6 +765,8 @@ function JoinPage() {
                         seeAllTranscripts={seeAllTranscripts}
                         openDialog={openDialog}
                         setCurrentForm = {setCurrentForm}
+                        showBoxes = {showBoxes}
+                        showFeatures = {showFeatures}
                         videoApiEndpoint = {apiService.getVideoServerEndpoint()}
 
                         authKey = {key}

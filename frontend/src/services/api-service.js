@@ -10,7 +10,7 @@ export class ApiService {
       window.location.protocol + "//" + window.location.host + "/"
     );
   }
-
+// TODO: Make video endpoints based on window.location
   getVideoServerEndpoint() {
     return (
       "http://129.105.44.121:8080/"
@@ -41,7 +41,7 @@ export class ApiService {
         "Accept": "application/json"
       };
     }
-    
+
       let key = '';
       let val ='';
     for (const property in headers) {
