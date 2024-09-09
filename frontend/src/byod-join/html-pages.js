@@ -106,7 +106,7 @@ function ByodJoinPage(props) {
                                         <></>
                                 }
 
-{
+                                {
                                     (props.authenticated && props.joinwith === 'Videocartoonify') ?
                                         <AppSectionBoxComponent heading={"Video control:"} >
                                             <div className={style["video-container"]} style={{display: props.preview ? 'block' : 'none' }}>
