@@ -23,7 +23,6 @@ from tables.user import User
 from tables.api_client import APIClient
 from tables.folder import Folder
 from tables.topic_model import TopicModel
-from tables.speaker import Speaker
 
 # Saves changes made to database (models)
 def save_changes():
@@ -31,38 +30,6 @@ def save_changes():
 
 def close_session():
     db.session.remove()
-
-# -------------------------
-# Speakers
-# -------------------------
-
-def get_speakers(session_device_id=None, id = None):
-    query = db.session.query(Speaker)
-    if id != None:
-        return query.filter(Speaker.id == id).first()
-    if session_device_id != None:
-        query = query.filter(Speaker.session_device_id == session_device_id)
-    return query.all()
-
-def add_speaker(session_device_id, alias):
-  speaker = Speaker(session_device_id, alias)
-  db.session.add(speaker)
-  db.session.commit()
-  return speaker
-
-def update_speaker(speaker_id, alias = None):
-    speaker = get_speakers(id = speaker_id)
-    if speaker:
-        if alias:
-            speaker.alias = alias
-        db.session.commit()
-        return speaker
-    return None
-
-def delete_speaker(speaker_id):
-    db.session.query(Speaker).filter(Speaker.id == speaker_id).delete(synchronize_session='fetch')
-    db.session.commit()
-    return True
 
 # -------------------------
 # Topic Models
@@ -88,12 +55,13 @@ def add_topic_model(user_id, name, summary):
 def update_topic_model(topic_model_id, name=None, summary=None):
     topic_model = get_topic_models(id=topic_model_id)
     if topic_model:
-        if name:
+        if name != None:
             topic_model.name = name
-        if summary:
-            topic_model.summary = summary
         db.session.commit()
         return topic_model
+    if summary:
+      topic_model.summary = summary
+      return topic_model
     return None
 
 def delete_topic_model(topic_model_id):
