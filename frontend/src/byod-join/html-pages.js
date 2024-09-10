@@ -24,21 +24,21 @@ function ByodJoinPage(props) {
     // console.log(props, 'props')
     return (
         <>
-        { (props.currentForm === "gottoselectedtranscript" && Object.keys(props.currentTranscript)) ?
+        { ((props.currentForm === "gottoselectedtranscript" && Object.keys(props.currentTranscript)) &&
             <TranscriptsComponentClient
                 sessionDevice={props.sessionDevice}
                 transcriptIndex={props.currentTranscript.id}
                 setParentCurrentForm = {props.setCurrentForm}
-            />
-            :
-            props.currentForm === "gototranscript" ?
+            />)
+            ||
+            (props.currentForm === "gototranscript" &&
             <TranscriptsComponentClient
                 sessionDevice={props.sessionDevice}
                 transcriptIndex={undefined}
                 setParentCurrentForm = {props.setCurrentForm}
-            />
-            :
-            <div className={style.container}>
+            />)
+            ||
+            (<div className={style.container}>
                 <Appheader
                     title={props.pageTitle}
                     leftText={false}
@@ -46,7 +46,7 @@ function ByodJoinPage(props) {
                     rightEnabled={(props.joinwith === 'Video' || props.joinwith === 'Videocartoonify')? true : false}
                     rightTextClick={() => (props.joinwith === 'Video' || props.joinwith === 'Videocartoonify')? props.openDialog("Options"): props.openDialog("")}
                     nav={() => props.navigateToLogin()} />
-                {!props.connected ?
+                {!props.connected &&
                     <React.Fragment>
                         <div className={style.instruction} style={{width: adjDim(343) + 'px',}}>Please type your name and passcode to join a discussion.</div>
                         <div className={style.instruction} style={{width: adjDim(343) + 'px',}}>If rejoining a discussion, type the same name you used previously.</div>
@@ -58,14 +58,11 @@ function ByodJoinPage(props) {
                             <option value="Video">Video</option>
                             <option value="Videocartoonify">Video(Cartoon)</option>
                         </select>
-                        <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} 
+                        <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`}
                         onClick={() => props.verifyInputAndAudio(document.getElementById("name").value.trim(), document.getElementById("passcode").value.trim(), document.getElementById("joinwith").value.trim())}>Join Discussion</button>
                     </React.Fragment>
-                    :
-                    <></>
                 }
-                {
-                    (props.connected) ?
+                {(props.connected) &&
                         <>
                             <div className={style2["overview-container"]}>
                                 <br />
@@ -106,7 +103,7 @@ function ByodJoinPage(props) {
                                         <></>
                                 }
 
-{
+                                {
                                     (props.authenticated && props.joinwith === 'Videocartoonify') ?
                                         <AppSectionBoxComponent heading={"Video control:"} >
                                             <div className={style["video-container"]} style={{display: props.preview ? 'block' : 'none' }}>
@@ -146,7 +143,8 @@ function ByodJoinPage(props) {
                                 <AppSectionBoxComponent heading={"Discussion features:"}>
                                     <AppFeaturesComponent
                                         session={props.session}
-                                        transcripts={props.displayTranscripts} />
+                                        transcripts={props.displayTranscripts}
+                                        showFeatures={props.showFeatures} />
                                 </AppSectionBoxComponent>
 
                                 <AppSectionBoxComponent heading={"Radar chart:"}>
@@ -154,7 +152,8 @@ function ByodJoinPage(props) {
                                     session={props.session}
                                     transcripts={props.displayTranscripts}
                                     start={props.startTime}
-                                    end={props.endTime} />
+                                    end={props.endTime}
+                                    showFeatures={props.showFeatures} />
                                 </AppSectionBoxComponent>
                             </div>
                             {props.loading() ? <AppSpinner></AppSpinner> : <></>}
@@ -162,13 +161,10 @@ function ByodJoinPage(props) {
                                 {props.session ? <AppSessionToolbar session={props.session} sessionDevice={props.sessionDevice}  closingSession={()=> props.disconnect(true)} /> : <></>}
                             </div>
                         </>
-
-                        :
-                        <></>
                 }
 
 
-            </div>
+            </div>)
         }
 
             <GenericDialogBox show={props.currentForm !== "" && props.currentForm !== "gottoselectedtranscript" && props.currentForm !== "gototranscript" }>
