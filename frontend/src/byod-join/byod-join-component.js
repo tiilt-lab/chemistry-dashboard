@@ -7,16 +7,6 @@ import { SessionDeviceModel } from '../models/session-device';
 import { ApiService } from '../services/api-service';
 import fixWebmDuration from "fix-webm-duration"
 
-/*
-BYOD Connection Order
-
-1. VerifyInputAndAudio
-2. RequestAccessKey
-3. ConnectToProcessors
-4. DetermineSpeakers*
-5. requestStartToProcessing
-6. Media Socket Worklets
-*/
 
 
 
@@ -67,24 +57,11 @@ function JoinPage() {
     const [previewLabel, setPreviewLabel] = useState("Turn On Preview")
     const navigate = useNavigate();
 
-
-    const [showFeatures, setShowFeatures] = useState([]);
-    const [showBoxes, setShowBoxes] = useState([]);
-
     const POD_COLOR = '#FF6655';
     const GLOW_COLOR = '#ffc3bd';
     const interval = 10000
 
     let wakeLock;
-
-    useEffect(() => {
-            // initialize the options toolbar
-            let featuresArr = ["Emotional tone", "Analytic thinking", "Clout", "Authenticity", "Confusion"];
-            initChecklistData(featuresArr, setShowFeatures);
-            // initialize the components toolbar
-            let boxArr = ["Timeline control", "Discussion timeline", "Keyword detection", "Discussion features", "Radar chart"];
-            initChecklistData(boxArr, setShowBoxes);
-    }, [])
 
     useEffect(() => {
         if (source !== null && audioContext !== null && name != "" && pcode != "") {
@@ -99,12 +76,12 @@ function JoinPage() {
             connect_audio_processor_service();
         }
 
-
+        
 
     }, [audiows])
 
     useEffect(() => {
-
+        
         if (videows != null) {
             console.log('called connect_video_processor_service')
             connect_video_processor_service();
@@ -150,7 +127,6 @@ function JoinPage() {
     }, [endTime])
 
 
-    //stop before starting processing to get speakers
     useEffect(() => {
         if(audioconnected && !videoconnected){
             requestStartAudioProcessing();
@@ -162,40 +138,40 @@ function JoinPage() {
 
     useEffect(() => {
         if(authenticated){
-            const loadWorklet = async () => {
+        const loadWorklet = async () => {
 
-                await audioContext.audioWorklet.addModule('audio-sender-processor.js');
-                const workletProcessor = new AudioWorkletNode(audioContext, 'audio-sender-processor');
-                workletProcessor.port.onmessage = data => {
-                    audiows.send(data.data.buffer);
-                }
-                source.connect(workletProcessor).connect(audioContext.destination);
-                setAudioSenderProcessor(workletProcessor);
+            await audioContext.audioWorklet.addModule('audio-sender-processor.js');
+            const workletProcessor = new AudioWorkletNode(audioContext, 'audio-sender-processor');
+            workletProcessor.port.onmessage = data => {
+                audiows.send(data.data.buffer);
             }
+            source.connect(workletProcessor).connect(audioContext.destination);
+            setAudioSenderProcessor(workletProcessor);
+        }
 
-            const videoPlay = () => {
-                let video = document.querySelector('video')
-                video.srcObject = streamReference
-                video.onloadedmetadata = function (ev) {
-                    video.play();
-                    mediaRecorder.start(interval);
-                };
+        const videoPlay = () => {
+            let video = document.querySelector('video')
+            video.srcObject = streamReference
+            video.onloadedmetadata = function (ev) {
+                video.play();
+                mediaRecorder.start(interval);
+            };
 
-                mediaRecorder.ondataavailable = async function (ev) {
-                    const bufferdata = await ev.data.arrayBuffer()
-                    fixWebmDuration(ev.data, interval * 6 * 60 * 24, (fixedblob) => {
-                        videows.send(fixedblob);
-                        audiows.send(fixedblob);
-                    })
-                }
-            }
-
-            if (authenticated && joinwith === 'Audio'){
-                loadWorklet().catch(console.error);
-            }else if (authenticated && (joinwith === 'Video' || joinwith === 'Videocartoonify')){
-                videoPlay()
+            mediaRecorder.ondataavailable = async function (ev) {
+                const bufferdata = await ev.data.arrayBuffer()
+                fixWebmDuration(ev.data, interval * 6 * 60 * 24, (fixedblob) => {
+                    videows.send(fixedblob);
+                    audiows.send(fixedblob);
+                })
             }
         }
+
+        if (authenticated && joinwith === 'Audio'){
+            loadWorklet().catch(console.error);
+        }else if (authenticated && (joinwith === 'Video' || joinwith === 'Videocartoonify')){
+            videoPlay()
+        }
+    }
     }, [authenticated])
 
     useEffect(() => {
@@ -274,7 +250,7 @@ function JoinPage() {
 
         try {
             //handle older browsers that might implement getUserMedia in some way
-
+    
             if (navigator.mediaDevices === undefined) {
                 navigator.mediaDevices = {};
                 navigator.mediaDevices.getUserMedia = function (constraintObj) {
@@ -349,7 +325,7 @@ function JoinPage() {
         }
 
         try {
-
+           
             if (navigator.mediaDevices != null) {
                 const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
                    // media.then(function (stream) {
@@ -398,10 +374,10 @@ function JoinPage() {
                         setSessionDevice(SessionDeviceModel.fromJson(jsonObj['session_device']));
                         setKey(jsonObj.key);
                         setAudioWs(new WebSocket(apiService.getAudioWebsocketEndpoint()));
-
+                        
                         //activate video websocket also if user joins with video
-                        if (joinwith === 'Video' || joinwith === 'Videocartoonify') {
-                            setVideoWs(new WebSocket(apiService.getVideoWebsocketEndpoint()));
+                        if (joinwith === 'Video' || joinwith === 'Videocartoonify') { 
+                            setVideoWs(new WebSocket(apiService.getVideoWebsocketEndpoint())); 
                         }
                     })
 
@@ -581,8 +557,8 @@ function JoinPage() {
                 'Video_cartoonify' : true
             };
         }
-
-
+        
+        
         videows.send(JSON.stringify(message));
 
     }
@@ -715,16 +691,6 @@ function JoinPage() {
       }
     }
 
-    const initChecklistData = (featuresArr, setFn) => {
-      let valueInd = 0;
-      let showFeats = [];
-      for (const feature of featuresArr) {
-          showFeats.push({'label': feature, 'value': valueInd, 'clicked': true});
-          valueInd++;
-      }
-      setFn(showFeats);
-  }
-
     const sessionDevBtnPressed = sessionDevice !== null ? sessionDevice.button_pressed : null;
 
     return (
@@ -765,8 +731,6 @@ function JoinPage() {
                         seeAllTranscripts={seeAllTranscripts}
                         openDialog={openDialog}
                         setCurrentForm = {setCurrentForm}
-                        showBoxes = {showBoxes}
-                        showFeatures = {showFeatures}
                         videoApiEndpoint = {apiService.getVideoServerEndpoint()}
 
                         authKey = {key}

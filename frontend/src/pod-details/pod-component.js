@@ -32,7 +32,7 @@ function PodComponent() {
     const [showFeatures, setShowFeatures] = useState([]);
     const [showBoxes, setShowBoxes] = useState([]);
     const [radarTrigger, setRadarTrigger] = useState(0);
-    const [hideDetails, setHideDetails] = useState(false);
+    const [hideDetails, setHideDetails] = useState(true); 
     const { sessionDeviceId } = useParams();
     const navigate = useNavigate()
 
@@ -78,9 +78,9 @@ function PodComponent() {
                 clearInterval(intervalId);
             }
         }, 2000));
-
+        
         // initialize the options toolbar
-        let featuresArr = ["Emotional tone", "Analytic thinking", "Clout", "Authenticity", "Confusion"];
+        let featuresArr = ["Emotional tone", "Analytic thinking", "Clout", "Authenticity", "Confusion"];     
         initChecklistData(featuresArr, setShowFeatures);
         // initialize the components toolbar
         let boxArr = ["Timeline control", "Discussion timeline", "Keyword detection", "Discussion features", "Radar chart"];
@@ -108,19 +108,19 @@ function PodComponent() {
           return transcripts.filter(t => t.start_time >= sTime && t.start_time <= eTime);
         });*/
     },[endTime])
-
+    
     useEffect(()=>{
        if(displayTranscripts){
           console.log('reloaded page')
        }
      },[displayTranscripts])
-
+     
      useEffect(()=>{
        if(trigger > 0){
           console.log('reloaded page')
        }
      },[trigger])
-
+     
 
     //console.log(session, transcripts, '-', sessionDevice, '-', displayTranscripts, '-', startTime, '-', endTime, '-', 'session .......')
 
@@ -128,13 +128,13 @@ function PodComponent() {
     const initChecklistData = (featuresArr, setFn) => {
         let valueInd = 0;
         let showFeats = [];
-        for (const feature of featuresArr) {
+        for (const feature of featuresArr) { 
             showFeats.push({'label': feature, 'value': valueInd, 'clicked': true});
             valueInd++;
         }
         setFn(showFeats);
     }
-
+    
     const ResetTimeRange = (values) => {
         const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
         setTimeRange(values);
@@ -199,35 +199,35 @@ function PodComponent() {
     const closeDialog = () => {
         setCurrentForm("");
     }
-
+    
     /*
     const toggleDeleteVal = (val) => {
-        setDeleteDeviceToggle(!val);
+        setDeleteDeviceToggle(!val); 
         setTrigger(trigger + 1);
     }
-
+    
     const toggleDeleteValFalse = () => {toggleDeleteVal(false)}
     */
-
+    
     // toggles the clicked status of the data field that was clicked
     const handleCheck = (event, propStruct, propFn) => {
         let featTemp = propStruct;
         featTemp[event.option.value]['clicked'] = !featTemp[event.option.value]['clicked']
         propFn(featTemp);
         setTrigger(trigger + 1);
-    }
-
+    } 
+    
     // toggles for showFeatures
     const handleCheckFeats = (value, event) => {
       handleCheck(event, showFeatures, setShowFeatures);
       setRadarTrigger(radarTrigger + 1);
     }
-
+    
     // toggles for showBoxes
     const handleCheckBoxes = (value, event) => {
       handleCheck(event, showBoxes, setShowBoxes);
     }
-
+    
     // toggles hideDetails
     const toggleDetails = () => {
       setHideDetails(!hideDetails);
