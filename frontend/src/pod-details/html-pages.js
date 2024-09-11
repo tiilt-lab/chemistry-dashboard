@@ -10,6 +10,7 @@ import { AppSessionToolbar } from '../session-toolbar/session-toolbar-component'
 import { AppKeywordsComponent } from '../keywords/keywords-component'
 import { Appheader } from '../header/header-component'
 import { isLargeScreen } from '../myhooks/custom-hooks';
+import { AppInfographicsView } from 'components/infographics-view/infographics-view-component';
 import style from './pod.module.css'
 import React from 'react'
 import ReactMultiSelectCheckboxes from "react-multiselect-checkboxes";
@@ -46,62 +47,19 @@ function PodComponentPages(props) {
                 :
                 <div className={isLargeScreen() ? style["overview-container-large"] : style["overview-container-small"]}>
                     <br />
-                    {((props.showBoxes.length > 0) && props.showBoxes[0]['clicked']) ?
-                    <AppSectionBoxComponent heading={"Timeline control:"} >
-                        <AppTimelineSlider id='timeSlider' inputChanged={props.setRange} />
-                    </AppSectionBoxComponent>
-                    : <></>
-                    }
-                    
-                    {((props.showBoxes.length > 0) && props.showBoxes[1]['clicked']) ?
-                    <AppSectionBoxComponent heading={"Discussion timeline:"}>
-                        <AppTimeline
-                            clickedTimeline={props.onClickedTimeline}
-                            session={props.session}
-                            transcripts={props.displayTranscripts}
-                            start={props.startTime}
-                            end={props.endTime}
-                        />
-                    </AppSectionBoxComponent>
-                    : <></>
-                    }
-                    
-                    {((props.showBoxes.length > 0) && props.showBoxes[2]['clicked']) ?
-                    <AppSectionBoxComponent heading={"Keyword detection:"}>
-                        <AppKeywordsComponent
-                            session={props.session}
-                            sessionDevice={props.sessionDevice}
-                            transcripts={props.displayTranscripts}
-                            start={props.startTime}
-                            end={props.endTime}
-                        />
-                    </AppSectionBoxComponent>
-                    : <></>
-                    }
-
-                    {((props.showBoxes.length > 0) && props.showBoxes[3]['clicked']) ?
-                    <AppSectionBoxComponent heading={"Discussion features:"}>
-                        <AppFeaturesComponent 
-                        session={props.session} 
-                        transcripts={props.displayTranscripts}
-                        showFeatures={props.showFeatures} />
-                    </AppSectionBoxComponent>
-                    : <></>
-                    }
-                    
-                    {((props.showBoxes.length > 0) && props.showBoxes[4]['clicked']) ?
-                    <AppSectionBoxComponent heading={"Radar chart:"}>
-                        <AppRadarComponent 
-                        session={props.session} 
-                        transcripts={props.displayTranscripts}
+                    <AppInfographicsView 
+                        displayTranscripts={props.displayTranscripts}
+                        endTime={props.endTime}
+                        onClickedTimeline={props.onClickedTimeline}
                         radarTrigger={props.radarTrigger}
-                        start={props.startTime}
-                        end={props.endTime}
-                        showFeatures={props.showFeatures} />
-                    </AppSectionBoxComponent>
-                    : <></>
-                    }
-                    
+                        session={props.session}
+                        sessionDevice={props.sessionDevice}
+                        setRange={props.setRange} 
+                        showBoxes={props.showBoxes}
+                        showFeatures={props.showFeatures} 
+                        startTime={props.startTime}
+                        >
+                    </AppInfographicsView>
                     <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.toggleDetails}>Hide Details</button >
                 </div>
                 }

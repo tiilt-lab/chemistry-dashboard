@@ -16,53 +16,62 @@ import style from './pod.module.css'
 import React from 'react'
 
 
-function AppInfographicsView(props){
+function AppInfographicsView(props) {
 
-  return(
-      <>
-          <AppSectionBoxComponent heading={"Timeline control:"} >
-              <AppTimelineSlider id='timeSlider' inputChanged={props.setRange} />
-          </AppSectionBoxComponent>
+    return (
+        <>
+            {((props.showBoxes.length > 0) && props.showBoxes[0]['clicked']) &&
+                <AppSectionBoxComponent heading={"Timeline control:"} >
+                    <AppTimelineSlider id='timeSlider' inputChanged={props.setRange} />
+                </AppSectionBoxComponent>
+            }
 
-          <AppSectionBoxComponent heading={"Discussion timeline:"}>
-              <AppTimeline
-                  clickedTimeline={props.onClickedTimeline}
-                  session={props.session}
-                  transcripts={props.displayTranscripts}
-                  start={props.startTime}
-                  end={props.endTime}
-              />
-          </AppSectionBoxComponent>
+            {((props.showBoxes.length > 0) && props.showBoxes[1]['clicked']) &&
+                <AppSectionBoxComponent heading={"Discussion timeline:"}>
+                    <AppTimeline
+                        clickedTimeline={props.onClickedTimeline}
+                        session={props.session}
+                        transcripts={props.displayTranscripts}
+                        start={props.startTime}
+                        end={props.endTime}
+                    />
+                </AppSectionBoxComponent>
+            }
 
-          <AppSectionBoxComponent heading={"Keyword detection:"}>
-              <AppKeywordsComponent
-                  clickedKeyword={props.onClickedKeyword}
-                  session={props.session}
-                  sessionDevice={props.sessionDevice}
-                  transcripts={props.displayTranscripts}
-                  start={props.startTime}
-                  end={props.endTime}
-                  fromclient={true}
-              />
-          </AppSectionBoxComponent>
+            {((props.showBoxes.length > 0) && props.showBoxes[2]['clicked']) &&
+                <AppSectionBoxComponent heading={"Keyword detection:"}>
+                    <AppKeywordsComponent
+                        session={props.session}
+                        sessionDevice={props.sessionDevice}
+                        transcripts={props.displayTranscripts}
+                        start={props.startTime}
+                        end={props.endTime}
+                    />
+                </AppSectionBoxComponent>
+            }
 
-          <AppSectionBoxComponent heading={"Discussion features:"}>
-              <AppFeaturesComponent
-                  session={props.session}
-                  transcripts={props.displayTranscripts}
-                  showFeatures={props.showFeatures} />
-          </AppSectionBoxComponent>
+            {((props.showBoxes.length > 0) && props.showBoxes[3]['clicked']) &&
+                <AppSectionBoxComponent heading={"Discussion features:"}>
+                    <AppFeaturesComponent
+                        session={props.session}
+                        transcripts={props.displayTranscripts}
+                        showFeatures={props.showFeatures} />
+                </AppSectionBoxComponent>
+            }
 
-          <AppSectionBoxComponent heading={"Radar chart:"}>
-              <AppRadarComponent
-              session={props.session}
-              transcripts={props.displayTranscripts}
-              start={props.startTime}
-              end={props.endTime}
-              showFeatures={props.showFeatures} />
-          </AppSectionBoxComponent>
-      </>
-  )
+            {((props.showBoxes.length > 0) && props.showBoxes[4]['clicked']) &&
+                <AppSectionBoxComponent heading={"Radar chart:"}>
+                    <AppRadarComponent
+                        session={props.session}
+                        transcripts={props.displayTranscripts}
+                        radarTrigger={props.radarTrigger}
+                        start={props.startTime}
+                        end={props.endTime}
+                        showFeatures={props.showFeatures} />
+                </AppSectionBoxComponent>
+            }
+        </>
+    )
 }
 
-export{ AppInfographicsView }
+export { AppInfographicsView }
