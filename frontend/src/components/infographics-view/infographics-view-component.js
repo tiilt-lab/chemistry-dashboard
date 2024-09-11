@@ -1,18 +1,10 @@
-import { AppSectionBoxComponent } from '../../section-box/section-box-component'
-import { AppTimelineSlider } from '../timeline-slider/timeline-slider-component'
-import { AppTimeline } from '../../timeline/timeline-component'
-import { AppHeatMapComponent } from '../../heat-map/heat-map-component'
-import { AppFeaturesComponent } from '../../features/features-component'
-import { AppRadarComponent } from '../../radar/radar-component'
-import { AppSpinner } from '../../spinner/spinner-component'
-import { AppSessionToolbar } from '../../session-toolbar/session-toolbar-component'
-import { AppSessionToolbar } from '../session-toolbar/session-toolbar-component'
-import { AppKeywordsComponent } from '../keywords/keywords-component'
+import { AppSectionBoxComponent } from 'components/section-box/section-box-component'
+import { AppTimelineSlider } from 'components/timeline-slider/timeline-slider-component'
+import { AppTimeline } from 'timeline/timeline-component'
+import { AppFeaturesComponent } from 'features/features-component'
+import { AppRadarComponent } from 'radar/radar-component'
+import { AppKeywordsComponent } from 'keywords/keywords-component'
 
-import { AppKeywordsComponent } from '../keywords/keywords-component'
-import { adjDim, isLargeScreen } from '../myhooks/custom-hooks';
-
-import style from './pod.module.css'
 import React from 'react'
 
 
@@ -46,6 +38,7 @@ function AppInfographicsView(props) {
                         transcripts={props.displayTranscripts}
                         start={props.startTime}
                         end={props.endTime}
+                        fromclient={props.fromclient}
                     />
                 </AppSectionBoxComponent>
             }
