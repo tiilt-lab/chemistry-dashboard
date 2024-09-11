@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Appheader } from '../header/header-component';
 import { DialogBox, WaitingDialog, DialogBoxTwoOption, GenericDialogBox } from "../dialog/dialog-component";
-import { AppSectionBoxComponent } from '../section-box/section-box-component'
+import { AppSectionBoxComponent } from 'components/section-box/section-box-component'
 import { AppTimelineSlider } from '../components/timeline-slider/timeline-slider-component'
 import { AppTimeline } from '../timeline/timeline-component'
 import { AppHeatMapComponent } from '../heat-map/heat-map-component'

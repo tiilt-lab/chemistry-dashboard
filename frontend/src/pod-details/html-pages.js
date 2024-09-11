@@ -1,5 +1,5 @@
 import { GenericDialogBox } from '../dialog/dialog-component'
-import { AppSectionBoxComponent } from '../section-box/section-box-component'
+import { AppSectionBoxComponent } from 'components/section-box/section-box-component'
 import { AppTimelineSlider } from '../components/timeline-slider/timeline-slider-component'
 import { AppTimeline } from '../timeline/timeline-component'
 import { AppHeatMapComponent } from '../heat-map/heat-map-component'
@@ -16,7 +16,7 @@ import React from 'react'
 import ReactMultiSelectCheckboxes from "react-multiselect-checkboxes";
 
 function PodComponentPages(props) {
-    
+
     return (
         <>
             <div className={style.container}>
@@ -28,35 +28,36 @@ function PodComponentPages(props) {
                     rightTextClick={() => props.openDialog("Options")}
                     nav={props.navigateToSession}
                 />
-                
-                {props.hideDetails ? 
+
+                {props.hideDetails ?
                 <div className={isLargeScreen() ? style["overview-container-large"] : style["overview-container-small"]}>
                 <br />
                 <AppSectionBoxComponent heading={"Box 1:"} >
                 </AppSectionBoxComponent>
-                
+
                 <AppSectionBoxComponent heading={"Box 2:"} >
                 </AppSectionBoxComponent>
-                
+
                 <AppSectionBoxComponent heading={"Box 3:"} >
                 </AppSectionBoxComponent>
-                
+
                 <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.toggleDetails}>Show Details</button >
-                
+
                 </div>
                 :
                 <div className={isLargeScreen() ? style["overview-container-large"] : style["overview-container-small"]}>
                     <br />
-                    <AppInfographicsView 
+                    <AppInfographicsView
                         displayTranscripts={props.displayTranscripts}
                         endTime={props.endTime}
+                        fromclient={false}
                         onClickedTimeline={props.onClickedTimeline}
                         radarTrigger={props.radarTrigger}
                         session={props.session}
                         sessionDevice={props.sessionDevice}
-                        setRange={props.setRange} 
+                        setRange={props.setRange}
                         showBoxes={props.showBoxes}
-                        showFeatures={props.showFeatures} 
+                        showFeatures={props.showFeatures}
                         startTime={props.startTime}
                         >
                     </AppInfographicsView>
@@ -86,17 +87,17 @@ function PodComponentPages(props) {
                 {props.currentForm == "Options" ?
                     <div className={style["dialog-content"]}>
                         <div className={style["dialog-heading"]}>Section Boxes</div>
-                        <div className={style["dialog-dropdown"]}>   
-                          <ReactMultiSelectCheckboxes 
-                          options={props.showBoxes} 
-                          value={props.showBoxes.filter((feature) => feature['clicked'])} 
+                        <div className={style["dialog-dropdown"]}>
+                          <ReactMultiSelectCheckboxes
+                          options={props.showBoxes}
+                          value={props.showBoxes.filter((feature) => feature['clicked'])}
                           onChange={props.handleCheckBoxes}/>
                         </div>
                         <div className={style["dialog-heading"]}>Discussion Features</div>
-                        <div className={style["dialog-dropdown"]}>   
-                          <ReactMultiSelectCheckboxes 
-                          options={props.showFeatures} 
-                          value={props.showFeatures.filter((feature) => feature['clicked'])} 
+                        <div className={style["dialog-dropdown"]}>
+                          <ReactMultiSelectCheckboxes
+                          options={props.showFeatures}
+                          value={props.showFeatures.filter((feature) => feature['clicked'])}
                           onChange={props.handleCheckFeats}/>
                         </div>
                         <div className={style["dialog-heading"]}>Device Options</div>
