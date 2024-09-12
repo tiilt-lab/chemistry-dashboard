@@ -453,25 +453,32 @@ def delete_session_device(session_device_id):
     db.session.commit()
     return True
 
-def create_byod_session_device(passcode, name):
+def create_byod_session_device(passcode, name, collaborators):
     session = get_sessions(active=True, passcode=passcode, first=True)
+    speakers = []
     if not session:
-        return False, 'Session not found.'
+        return False, 'Session not found.', speakers
     duplicate = get_session_devices(session_id=session.id, name=name, first=True)
     if duplicate:
         if duplicate.connected: # User signed into a device already in use.
-            return False, "Name already in use."
+            return False, "Name already in use.", speakers
         else: # User signed back into existing device.
             duplicate.removed = False
             db.session.commit()
-            return True, duplicate
+            return True, duplicate, get_speakers(session_device_id=duplicate.id)
     else: # New session device.
         session_device = SessionDevice(session.id, None, name)
         db.session.add(session_device)
         db.session.commit()
         session_device.create_key()
         db.session.commit()
-        return True, session_device
+        logging.info("Collaborators: {}".format(collaborators))
+        for i in range(0, collaborators):
+          speaker = Speaker(session_device.id,"")
+          speakers.append(speaker.json())
+          db.session.add(speaker)
+          db.session.commit()
+        return True, session_device, speakers
 
 def create_session_device(session_id, name):
     session = get_sessions(id=session_id, active=True)

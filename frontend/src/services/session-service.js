@@ -1,140 +1,199 @@
-import { ApiService } from './api-service';
+import { ApiService } from "./api-service";
 //import 'rxjs/add/operator/map';
 
 class SessionService {
-    deviceIds = [];
-    keywordListId = '';
-    api = new ApiService();
-    
-    endSession(sessionId) {
-        return this.api.httpRequestCall(`api/v1/sessions/${sessionId}/stop`, 'POST',{});
-    }
+  deviceIds = [];
+  keywordListId = "";
+  api = new ApiService();
 
-    getSessions(){
-        return this.api.httpRequestCall('api/v1/sessions','GET',{});
-    }
+  endSession(sessionId) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/stop`,
+      "POST",
+      {}
+    );
+  }
 
-    getSession(sessionId) {
-        return this.api.httpRequestCall(`api/v1/sessions/${sessionId}`,'GET',{});
-    }
+  getSessions() {
+    return this.api.httpRequestCall("api/v1/sessions", "GET", {});
+  }
 
-    deleteSession(sessionId) {
-        return this.api.httpRequestCall(`api/v1/sessions/${sessionId}`,'DELETE',{});
-    }
+  getSession(sessionId) {
+    return this.api.httpRequestCall(`api/v1/sessions/${sessionId}`, "GET", {});
+  }
 
-    updateSession(sessionId, name) {
-        const body = {
-        'name': name
-        };
-        return this.api.httpRequestCall(`api/v1/sessions/${sessionId}`,'PUT', body);
-    }
+  deleteSession(sessionId) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}`,
+      "DELETE",
+      {}
+    );
+  }
 
-    updateSessionFolder(sessionId, folder) {
-        const body = {
-        'folder': folder
-        };
-        return this.api.httpRequestCall(`api/v1/sessions/${sessionId}`, 'PUT',body);
-    }
+  updateSession(sessionId, name) {
+    const body = {
+      name: name,
+    };
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}`,
+      "PUT",
+      body
+    );
+  }
 
-    getSessionDevice(sessionId, sessionDeviceId) {
-        return this.api.httpRequestCall(`api/v1/sessions/${sessionId}/devices/${sessionDeviceId}`,'GET',{})
-    }
+  updateSessionFolder(sessionId, folder) {
+    const body = {
+      folder: folder,
+    };
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}`,
+      "PUT",
+      body
+    );
+  }
 
-    getSessionDevices(sessionId){
-        return this.api.httpRequestCall(`api/v1/sessions/${sessionId}/devices`,'GET',{});
-    }
+  getSessionDevice(sessionId, sessionDeviceId) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/devices/${sessionDeviceId}`,
+      "GET",
+      {}
+    );
+  }
 
-    getSessionDeviceTranscripts(sessionId, sessionDeviceId, startTime = 0) {
-        return this.api.httpRequestCall(`api/v1/sessions/${sessionId}/devices/${sessionDeviceId}/transcripts`,'GET',{});
-    }
+  getSessionDevices(sessionId) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/devices`,
+      "GET",
+      {}
+    );
+  }
 
-    getSessionDeviceTranscriptsForClient(sessionDeviceId, startTime = 0) {
-        return this.api.httpRequestCall(`api/v1/sessions/devices/${sessionDeviceId}/transcripts/client`,'GET',{});
-    }
+  getSessionDeviceTranscripts(sessionId, sessionDeviceId, startTime = 0) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/devices/${sessionDeviceId}/transcripts`,
+      "GET",
+      {}
+    );
+  }
 
-    setDeviceButton(sessionDeviceId, pressed, key) {
-        const body = {
-        'id': sessionDeviceId,
-        'activated': pressed
-        };
-        const headers = {
-        'X-Processing-Key': key
-        };
-        return this.api.httpRequestCallWithHeader(`api/v1/help_button`,'POST', body, headers);
-    }
+  getSessionDeviceTranscriptsForClient(sessionDeviceId, startTime = 0) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/devices/${sessionDeviceId}/transcripts/client`,
+      "GET",
+      {}
+    );
+  }
 
-    createNewSession(name, devices, keywordListId, topicModelId, byod, features, doa, folder) {
-        const body = {
-        'name': name,
-        'devices': devices,
-        'keywordListId': keywordListId,
-        'topicModelId': topicModelId,
-        'byod': byod,
-        'features': features,
-        'doa': doa,
-        'folder': folder
-        };
+  setDeviceButton(sessionDeviceId, pressed, key) {
+    const body = {
+      id: sessionDeviceId,
+      activated: pressed,
+    };
+    const headers = {
+      "X-Processing-Key": key,
+    };
+    return this.api.httpRequestCallWithHeader(
+      `api/v1/help_button`,
+      "POST",
+      body,
+      headers
+    );
+  }
 
-        return this.api.httpRequestCall('api/v1/sessions','POST', body);
-    }
+  createNewSession(
+    name,
+    devices,
+    keywordListId,
+    topicModelId,
+    byod,
+    features,
+    doa,
+    folder
+  ) {
+    const body = {
+      name: name,
+      devices: devices,
+      keywordListId: keywordListId,
+      topicModelId: topicModelId,
+      byod: byod,
+      features: features,
+      doa: doa,
+      folder: folder,
+    };
 
-    joinByodSession(name, passcode) {
-        const body = {
-        'name': name,
-        'passcode': passcode
-        };
-        return this.api.httpRequestCall('api/v1/sessions/byod','POST', body);
-    }
+    return this.api.httpRequestCall("api/v1/sessions", "POST", body);
+  }
 
-    addPodToSession(sessionId, podId) {
-        const body = {
-        'sessionId': sessionId,
-        'podId': podId
-        };
-        return this.api.httpRequestCall('api/v1/sessions/pod','POST', body);
-    }
+  joinByodSession(name, passcode, collaborators) {
+    const body = {
+      name: name,
+      passcode: passcode,
+      collaborators: collaborators,
+    };
+    return this.api.httpRequestCall("api/v1/sessions/byod", "POST", body);
+  }
 
-    setPasscodeStatus(sessionId, state) {
-        const body = {
-        'state': state
-        };
-        return this.api.httpRequestCall(`api/v1/sessions/${sessionId}/passcode`,'POST', body);
-    }
+  addPodToSession(sessionId, podId) {
+    const body = {
+      sessionId: sessionId,
+      podId: podId,
+    };
+    return this.api.httpRequestCall("api/v1/sessions/pod", "POST", body);
+  }
 
-    removeDeviceFromSession(sessionId, sessionDeviceId, shouldDelete = false) {
-        const query = {
-        'delete': shouldDelete
-        };
-        return this.api.httpRequestCall(`api/v1/sessions/${sessionId}/devices/${sessionDeviceId}`,'DELETE', query);
-    }
+  setPasscodeStatus(sessionId, state) {
+    const body = {
+      state: state,
+    };
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/passcode`,
+      "POST",
+      body
+    );
+  }
 
-    downloadSessionReport(sessionId, fileName) {
-        return this.api.httpRequestCall(`api/v1/sessions/${sessionId}/export`,'GET',{});
-    }
+  removeDeviceFromSession(sessionId, sessionDeviceId, shouldDelete = false) {
+    const query = {
+      delete: shouldDelete,
+    };
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/devices/${sessionDeviceId}`,
+      "DELETE",
+      query
+    );
+  }
 
-    getFolders(){
-        return this.api.httpRequestCall(`api/folders`,'GET',{});
-    }
+  downloadSessionReport(sessionId, fileName) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/export`,
+      "GET",
+      {}
+    );
+  }
 
-    addFolder(name, parent) {
-        const body = {
-        'name': name,
-        'parent': parent
-        };
-        return this.api.httpRequestCall(`api/folder`,'POST' ,body);
-    }
+  getFolders() {
+    return this.api.httpRequestCall(`api/folders`, "GET", {});
+  }
 
-    updateFolder(folderId, parent, name) {
-        const body = {
-        'parent': parent,
-        'name': name,
-        };
-        return this.api.httpRequestCall(`api/folders/${folderId}`,'POST',body);
-    }
+  addFolder(name, parent) {
+    const body = {
+      name: name,
+      parent: parent,
+    };
+    return this.api.httpRequestCall(`api/folder`, "POST", body);
+  }
 
-    deleteFolder(folderId){
-        return this.api.httpRequestCall(`api/folders/${folderId}`,'DELETE',{});
-    }
+  updateFolder(folderId, parent, name) {
+    const body = {
+      parent: parent,
+      name: name,
+    };
+    return this.api.httpRequestCall(`api/folders/${folderId}`, "POST", body);
+  }
+
+  deleteFolder(folderId) {
+    return this.api.httpRequestCall(`api/folders/${folderId}`, "DELETE", {});
+  }
 }
 
-export {SessionService}
+export { SessionService };

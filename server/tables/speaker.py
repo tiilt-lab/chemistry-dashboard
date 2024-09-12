@@ -18,11 +18,11 @@ class Speaker(db.Model):
         self.session_device_id = session_device_id
         self.alias = alias
 
-    def get_name(self):
-        if not self.name:
+    def get_alias(self):
+        if not self.alias:
             return 'Speaker {0}'.format(self.id)
         else:
-            return self.name
+            return self.alias
 
     def json(self):
         return dict(

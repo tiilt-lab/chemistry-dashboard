@@ -30,39 +30,39 @@ function PodComponentPages(props) {
                 />
 
                 {props.hideDetails ?
-                <div className={isLargeScreen() ? style["overview-container-large"] : style["overview-container-small"]}>
-                <br />
-                <AppSectionBoxComponent heading={"Box 1:"} >
-                </AppSectionBoxComponent>
+                  <div className={isLargeScreen() ? style["overview-container-large"] : style["overview-container-small"]}>
+                  <br />
+                  <AppSectionBoxComponent heading={"Box 1:"} >
+                  </AppSectionBoxComponent>
 
-                <AppSectionBoxComponent heading={"Box 2:"} >
-                </AppSectionBoxComponent>
+                  <AppSectionBoxComponent heading={"Box 2:"} >
+                  </AppSectionBoxComponent>
 
-                <AppSectionBoxComponent heading={"Box 3:"} >
-                </AppSectionBoxComponent>
+                  <AppSectionBoxComponent heading={"Box 3:"} >
+                  </AppSectionBoxComponent>
 
-                <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.toggleDetails}>Show Details</button >
+                  <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.toggleDetails}>Show Details</button >
 
-                </div>
-                :
-                <div className={isLargeScreen() ? style["overview-container-large"] : style["overview-container-small"]}>
-                    <br />
-                    <AppInfographicsView
-                        displayTranscripts={props.displayTranscripts}
-                        endTime={props.endTime}
-                        fromclient={false}
-                        onClickedTimeline={props.onClickedTimeline}
-                        radarTrigger={props.radarTrigger}
-                        session={props.session}
-                        sessionDevice={props.sessionDevice}
-                        setRange={props.setRange}
-                        showBoxes={props.showBoxes}
-                        showFeatures={props.showFeatures}
-                        startTime={props.startTime}
-                        >
-                    </AppInfographicsView>
-                    <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.toggleDetails}>Hide Details</button >
-                </div>
+                  </div>
+                  :
+                  <div className={isLargeScreen() ? style["overview-container-large"] : style["overview-container-small"]}>
+                      <br />
+                      <AppInfographicsView
+                          displayTranscripts={props.displayTranscripts}
+                          endTime={props.endTime}
+                          fromclient={false}
+                          onClickedTimeline={props.onClickedTimeline}
+                          radarTrigger={props.radarTrigger}
+                          session={props.session}
+                          sessionDevice={props.sessionDevice}
+                          setRange={props.setRange}
+                          showBoxes={props.showBoxes}
+                          showFeatures={props.showFeatures}
+                          startTime={props.startTime}
+                          >
+                      </AppInfographicsView>
+                      <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.toggleDetails}>Hide Details</button >
+                  </div>
                 }
                 {props.loading() ? <AppSpinner></AppSpinner> : <></>}
                 <div className={style.footer}>
