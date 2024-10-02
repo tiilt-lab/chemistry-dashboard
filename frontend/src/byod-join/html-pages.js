@@ -19,6 +19,7 @@ import micIcon from "../assets/img/mic.svg";
 import { AppContextMenu } from "../components/context-menu/context-menu-component";
 import iconPod from "../assets/img/icon-pod.svg";
 import lightIcon from "../assets/img/light.svg";
+import podIcon from "../assets/img/icon-pod.svg";
 
 function ByodJoinPage(props) {
   // console.log(props, 'props')
@@ -139,137 +140,207 @@ function ByodJoinPage(props) {
                 </button>
               </React.Fragment>
             )}
-            {props.connected && props.authenticated && (
-              <>
-                <div className={style2["overview-container"]}>
-                  <br />
-                  {props.joinwith === "Audio" && (
-                    <AppSectionBoxComponent heading={"Audio control:"}>
+            {props.connected && !props.speakersValidated && (
+              <React.Fragment>
+                <div className={style["list-container"]}>
+                  {!props.speakers && (
+                    <div className={style["load-text onload"]}>Loading...</div>
+                  )}
+                  {props.speakers && props.speakers.length === 0 && (
+                    <div className={style["empty-keyword-list"]}>
+                      <div className={style["load-text"]}> No Speakers </div>
+                      <div className={style["load-text-description"]}>
+                        {" "}
+                        Tap the button below to add a speaker or other button to
+                        join automatically detect speakers(less accurate){" "}
+                      </div>
+                    </div>
+                  )}
+                  {props.speakers.map((speaker, count) => (
+                    <div
+                      key={"keyword" + count}
+                      className={style["keyword-list-button"]}
+                    >
                       <div
-                        className={style["pod-overview-button"]}
-                        style={{ margin: "0 auto" }}
-                        onClick={props.requestHelp}
-                      >
-                        <svg
-                          width="80px"
-                          height="80px"
-                          style={{ marginTop: "22px" }}
-                          viewBox="-40 -40 80 80"
+                        className={style["click-mask"]}
+                        onClick={() => {}}
+                      ></div>
+                      <div className={style["keyword-list-header"]}>
+                        <div className={style.title}>{speaker.alias}</div>
+                      </div>
+                      <AppContextMenu className={style["keyword-list-options"]}>
+                        <div
+                          className={`${style2["menu-item"]} ${style2["red"]}`}
+                          onClick={() => {}}
+                        >
+                          Delete
+                        </div>
+                      </AppContextMenu>
+                    </div>
+                  ))}
+                  {/* {displayKeywordList()} */}
+                </div>
+                <div>
+                  <button
+                    className={
+                      isLargeScreen()
+                        ? `${style["basic-button"]} ${style["medium-button"]}`
+                        : `${style["basic-button"]} ${style["small-button"]}`
+                    }
+                  >
+                    {" "}
+                    Add Speaker
+                  </button>
+                </div>
+                <div>
+                  <button
+                    className={
+                      isLargeScreen()
+                        ? `${style["basic-button"]} ${style["medium-button"]}`
+                        : `${style["basic-button"]} ${style["small-button"]}`
+                    }
+                    onClick={(e) => {
+                      props.setSpeakersValidated(true);
+                    }}
+                  >
+                    Join Discussion
+                  </button>
+                </div>
+              </React.Fragment>
+            )}
+            {props.connected &&
+              props.authenticated &&
+              props.speakersValidated && (
+                <>
+                  <div className={style2["overview-container"]}>
+                    <br />
+                    {props.joinwith === "Audio" && (
+                      <AppSectionBoxComponent heading={"Audio control:"}>
+                        <div
+                          className={style["pod-overview-button"]}
+                          style={{ margin: "0 auto" }}
+                          onClick={props.requestHelp}
                         >
                           <svg
-                            x="-8.5"
-                            y="-13.5"
-                            width="17"
-                            height="27"
-                            viewBox="0 0 17 27"
+                            width="80px"
+                            height="80px"
+                            style={{ marginTop: "22px" }}
+                            viewBox="-40 -40 80 80"
                           >
-                            <use
-                              xlinkHref={`${micIcon}#5`}
-                              fill={props.POD_COLOR}
-                            ></use>
-                          </svg>
-                          {props.button_pressed ? (
+                            <svg
+                              x="-8.5"
+                              y="-13.5"
+                              width="17"
+                              height="27"
+                              viewBox="0 0 17 27"
+                            >
+                              <use
+                                xlinkHref={`${micIcon}#5`}
+                                fill={props.POD_COLOR}
+                              ></use>
+                            </svg>
+                            {props.button_pressed ? (
+                              <svg>
+                                <circle
+                                  className={style.svgpulse}
+                                  x="0"
+                                  y="0"
+                                  r="33.5"
+                                  fill-opacity="0"
+                                  stroke={props.GLOW_COLOR}
+                                />
+                              </svg>
+                            ) : (
+                              <></>
+                            )}
                             <svg>
                               <circle
-                                className={style.svgpulse}
                                 x="0"
                                 y="0"
-                                r="33.5"
+                                r="30.5"
                                 fill-opacity="0"
-                                stroke={props.GLOW_COLOR}
+                                stroke-width="3"
+                                stroke={props.POD_COLOR}
                               />
                             </svg>
-                          ) : (
-                            <></>
-                          )}
-                          <svg>
-                            <circle
-                              x="0"
-                              y="0"
-                              r="30.5"
-                              fill-opacity="0"
-                              stroke-width="3"
-                              stroke={props.POD_COLOR}
-                            />
                           </svg>
-                        </svg>
-                        <div style={{ marginTop: "13px" }}>Help</div>
-                      </div>
-                    </AppSectionBoxComponent>
-                  )}
+                          <div style={{ marginTop: "13px" }}>Help</div>
+                        </div>
+                      </AppSectionBoxComponent>
+                    )}
 
-                  {props.joinwith === "Video" && (
-                    <AppSectionBoxComponent heading={"Video control:"}>
-                      <div
-                        className={style["video-container"]}
-                        style={{ display: props.preview ? "block" : "none" }}
-                      >
-                        <video
-                          controls={true}
-                          muted={true}
-                          style={{ marginLeft: "20px" }}
-                        />
-                      </div>
-                    </AppSectionBoxComponent>
-                  )}
+                    {props.joinwith === "Video" && (
+                      <AppSectionBoxComponent heading={"Video control:"}>
+                        <div
+                          className={style["video-container"]}
+                          style={{ display: props.preview ? "block" : "none" }}
+                        >
+                          <video
+                            controls={true}
+                            muted={true}
+                            style={{ marginLeft: "20px" }}
+                          />
+                        </div>
+                      </AppSectionBoxComponent>
+                    )}
 
-                  {props.joinwith === "Videocartoonify" && (
-                    <AppSectionBoxComponent heading={"Video control:"}>
-                      <div
-                        className={style["video-container"]}
-                        style={{ display: props.preview ? "block" : "none" }}
-                      >
-                        <video
-                          controls={true}
-                          muted={true}
-                          style={{ marginLeft: "20px" }}
-                        />
-                        <img
-                          style={{ marginLeft: "12px" }}
-                          width="150"
-                          height="80"
-                          src={
-                            props.videoApiEndpoint +
-                            "api/v1/sessions/" +
-                            props.session.id +
-                            "/devices/" +
-                            props.sessionDevice.id +
-                            "/auth/" +
-                            props.authKey +
-                            "/streamimages"
-                          }
-                        />
-                      </div>
-                    </AppSectionBoxComponent>
-                  )}
-                  <AppInfographicsView
-                    displayTranscripts={props.displayTranscripts}
-                    endTime={props.endTime}
-                    fromclient={true}
-                    onClickedTimeline={props.onClickedTimeline}
-                    radarTrigger={props.radarTrigger}
-                    session={props.session}
-                    sessionDevice={props.sessionDevice}
-                    setRange={props.setRange}
-                    showBoxes={props.showBoxes}
-                    showFeatures={props.showFeatures}
-                    startTime={props.startTime}
-                  ></AppInfographicsView>
-                </div>
-                {props.loading() ? <AppSpinner></AppSpinner> : <></>}
-                <div className={style2.footer}>
-                  {props.session ? (
-                    <AppSessionToolbar
+                    {props.joinwith === "Videocartoonify" && (
+                      <AppSectionBoxComponent heading={"Video control:"}>
+                        <div
+                          className={style["video-container"]}
+                          style={{ display: props.preview ? "block" : "none" }}
+                        >
+                          <video
+                            controls={true}
+                            muted={true}
+                            style={{ marginLeft: "20px" }}
+                          />
+                          <img
+                            style={{ marginLeft: "12px" }}
+                            width="150"
+                            height="80"
+                            src={
+                              props.videoApiEndpoint +
+                              "api/v1/sessions/" +
+                              props.session.id +
+                              "/devices/" +
+                              props.sessionDevice.id +
+                              "/auth/" +
+                              props.authKey +
+                              "/streamimages"
+                            }
+                          />
+                        </div>
+                      </AppSectionBoxComponent>
+                    )}
+                    <AppInfographicsView
+                      displayTranscripts={props.displayTranscripts}
+                      endTime={props.endTime}
+                      fromclient={true}
+                      onClickedTimeline={props.onClickedTimeline}
+                      radarTrigger={props.radarTrigger}
                       session={props.session}
                       sessionDevice={props.sessionDevice}
-                      closingSession={() => props.disconnect(true)}
-                    />
-                  ) : (
-                    <></>
-                  )}
-                </div>
-              </>
-            )}
+                      setRange={props.setRange}
+                      showBoxes={props.showBoxes}
+                      showFeatures={props.showFeatures}
+                      startTime={props.startTime}
+                    ></AppInfographicsView>
+                  </div>
+                  {props.loading() ? <AppSpinner></AppSpinner> : <></>}
+                  <div className={style2.footer}>
+                    {props.session ? (
+                      <AppSessionToolbar
+                        session={props.session}
+                        sessionDevice={props.sessionDevice}
+                        closingSession={() => props.disconnect(true)}
+                      />
+                    ) : (
+                      <></>
+                    )}
+                  </div>
+                </>
+              )}
           </div>
         )}
 

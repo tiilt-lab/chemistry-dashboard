@@ -67,6 +67,7 @@ function JoinPage() {
   const [showBoxes, setShowBoxes] = useState([]);
   const [numSpeakers, setNumSpeakers] = useState();
   const [speakers, setSpeakers] = useState([]);
+  const [speakersValidated, setSpeakersValidated] = useState(false);
 
   const POD_COLOR = "#FF6655";
   const GLOW_COLOR = "#ffc3bd";
@@ -156,13 +157,15 @@ function JoinPage() {
 
   //stop before starting processing to get speakers
   useEffect(() => {
-    if (audioconnected && !videoconnected) {
-      requestStartAudioProcessing();
+    if (speakersValidated) {
+      if (audioconnected && !videoconnected) {
+        requestStartAudioProcessing();
+      }
+      if (audioconnected && videoconnected) {
+        requestStartVideoProcessing();
+      }
     }
-    if (audioconnected && videoconnected) {
-      requestStartVideoProcessing();
-    }
-  }, [audioconnected, videoconnected]);
+  }, [audioconnected, videoconnected, speakersValidated]);
 
   useEffect(() => {
     if (authenticated) {
@@ -785,6 +788,9 @@ function JoinPage() {
       showBoxes={showBoxes}
       showFeatures={showFeatures}
       videoApiEndpoint={apiService.getVideoServerEndpoint()}
+      setSpeakersValidated={setSpeakersValidated}
+      speakersValidated={speakersValidated}
+      speakers={speakers}
       authKey={key}
     />
   );
