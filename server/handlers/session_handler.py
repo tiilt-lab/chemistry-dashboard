@@ -64,7 +64,7 @@ def byod_join_session(name, passcode, collaborators):
         session = database.get_sessions(id=session_device.session_id)
         RedisSessions.create_device_key(session_device.processing_key, session.id)
         socketio_helper.update_session_device(session_device)
-        return True, {'session': session.json(), 'session_device': session_device.json(), 'key': session_device.processing_key, 'speakers': json.dumps(speakers)}
+        return True, {'session': session.json(), 'session_device': session_device.json(), 'key': session_device.processing_key, 'speakers': [speaker.json() for speaker in speakers]}
     else:
         return False, session_device
 
