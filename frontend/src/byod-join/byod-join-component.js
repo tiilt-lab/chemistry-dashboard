@@ -415,7 +415,7 @@ function JoinPage() {
             setSessionDevice(
               SessionDeviceModel.fromJson(jsonObj["session_device"])
             );
-            setSpeakers(SpeakerModel.fromJsonList(["speakers"]));
+            setSpeakers(SpeakerModel.fromJsonList(jsonObj["speakers"]));
             setKey(jsonObj.key);
             setAudioWs(new WebSocket(apiService.getAudioWebsocketEndpoint()));
 
@@ -448,6 +448,7 @@ function JoinPage() {
 
     audiows.onopen = (e) => {
       console.log("[Connected audio processor service]");
+      console.log("speakers ", speakers);
       setAudioConnected(true);
       setPageTitle(name);
       setReload(true);

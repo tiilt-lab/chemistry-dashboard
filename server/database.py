@@ -475,7 +475,7 @@ def create_byod_session_device(passcode, name, collaborators):
         logging.info("Collaborators: {}".format(collaborators))
         for i in range(0, collaborators):
           speaker = Speaker(session_device.id,"")
-          speakers.append(speaker.json())
+          speakers.append(speaker)
           db.session.add(speaker)
           db.session.commit()
         return True, session_device, speakers

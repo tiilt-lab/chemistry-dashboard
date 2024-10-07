@@ -15,6 +15,8 @@ import { AppInfographicsView } from "components/infographics-view/infographics-v
 
 import style from "./byod-join.module.css";
 import style2 from "../pod-details/pod.module.css";
+import style3 from "../manage-keyword-lists/manage-keyword-lists.module.css";
+import style4 from "../components/context-menu/context-menu.module.css";
 import micIcon from "../assets/img/mic.svg";
 import { AppContextMenu } from "../components/context-menu/context-menu-component";
 import iconPod from "../assets/img/icon-pod.svg";
@@ -142,14 +144,14 @@ function ByodJoinPage(props) {
             )}
             {props.connected && !props.speakersValidated && (
               <React.Fragment>
-                <div className={style["list-container"]}>
+                <div className={style3["list-container"]}>
                   {!props.speakers && (
-                    <div className={style["load-text onload"]}>Loading...</div>
+                    <div className={style3["load-text onload"]}>Loading...</div>
                   )}
                   {props.speakers && props.speakers.length === 0 && (
-                    <div className={style["empty-keyword-list"]}>
-                      <div className={style["load-text"]}> No Speakers </div>
-                      <div className={style["load-text-description"]}>
+                    <div className={style3["empty-keyword-list"]}>
+                      <div className={style3["load-text"]}> No Speakers </div>
+                      <div className={style3["load-text-description"]}>
                         {" "}
                         Tap the button below to add a speaker or other button to
                         join automatically detect speakers(less accurate){" "}
@@ -158,19 +160,21 @@ function ByodJoinPage(props) {
                   )}
                   {props.speakers.map((speaker, count) => (
                     <div
-                      key={"keyword" + count}
-                      className={style["keyword-list-button"]}
+                      key={"speaker" + count}
+                      className={style3["keyword-list-button"]}
                     >
                       <div
-                        className={style["click-mask"]}
+                        className={style3["click-mask"]}
                         onClick={() => {}}
                       ></div>
-                      <div className={style["keyword-list-header"]}>
-                        <div className={style.title}>{speaker.alias}</div>
+                      <div className={style3["keyword-list-header"]}>
+                        <div className={style3.title}>{speaker.alias}</div>
                       </div>
-                      <AppContextMenu className={style["keyword-list-options"]}>
+                      <AppContextMenu
+                        className={style3["keyword-list-options"]}
+                      >
                         <div
-                          className={`${style2["menu-item"]} ${style2["red"]}`}
+                          className={`${style4["menu-item"]} ${style4["red"]}`}
                           onClick={() => {}}
                         >
                           Delete
@@ -184,8 +188,8 @@ function ByodJoinPage(props) {
                   <button
                     className={
                       isLargeScreen()
-                        ? `${style["basic-button"]} ${style["medium-button"]}`
-                        : `${style["basic-button"]} ${style["small-button"]}`
+                        ? `${style3["basic-button"]} ${style3["medium-button"]}`
+                        : `${style3["basic-button"]} ${style3["small-button"]}`
                     }
                   >
                     {" "}
@@ -196,8 +200,8 @@ function ByodJoinPage(props) {
                   <button
                     className={
                       isLargeScreen()
-                        ? `${style["basic-button"]} ${style["medium-button"]}`
-                        : `${style["basic-button"]} ${style["small-button"]}`
+                        ? `${style3["basic-button"]} ${style3["medium-button"]}`
+                        : `${style3["basic-button"]} ${style3["small-button"]}`
                     }
                     onClick={(e) => {
                       props.setSpeakersValidated(true);
