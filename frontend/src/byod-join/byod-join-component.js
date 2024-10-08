@@ -68,6 +68,7 @@ function JoinPage() {
   const [numSpeakers, setNumSpeakers] = useState();
   const [speakers, setSpeakers] = useState([]);
   const [speakersValidated, setSpeakersValidated] = useState(false);
+  const [selectedSpeaker, setSelectedSpeaker] = useState(null);
 
   const POD_COLOR = "#FF6655";
   const GLOW_COLOR = "#ffc3bd";
@@ -155,17 +156,14 @@ function JoinPage() {
     }
   }, [endTime]);
 
-  //stop before starting processing to get speakers
   useEffect(() => {
-    if (speakersValidated) {
-      if (audioconnected && !videoconnected) {
-        requestStartAudioProcessing();
-      }
-      if (audioconnected && videoconnected) {
-        requestStartVideoProcessing();
-      }
+    if (audioconnected && !videoconnected) {
+      requestStartAudioProcessing();
     }
-  }, [audioconnected, videoconnected, speakersValidated]);
+    if (audioconnected && videoconnected) {
+      requestStartVideoProcessing();
+    }
+  }, [audioconnected, videoconnected]);
 
   useEffect(() => {
     if (authenticated) {
@@ -218,6 +216,17 @@ function JoinPage() {
     }
   }, [preview]);
 
+  const openForms = (form, speaker = null) => {
+    setCurrentForm(form);
+    if (form === "fingerprintAudio") {
+      setSelectedSpeaker(speaker);
+    }
+  };
+
+  const closeForm = () => {
+    setCurrentForm("");
+  };
+
   // Disconnects from websocket server and audio stream.
   const disconnect = (permanent = false) => {
     console.log("disconnect called", permanent);
@@ -257,6 +266,20 @@ function JoinPage() {
       videows.close();
       setVideoWs(null);
     }
+  };
+
+  const saveAudioFingerprint = (audioblob) => {
+    let message = null;
+    message = {
+      type: "speaker",
+      id: selectedSpeaker.id,
+      alias: selectedSpeaker.alias,
+      size: audioblob.size,
+      blob_type: audioblob.type,
+    };
+    audiows.send(JSON.stringify(message));
+    // send sample blob
+    closeForm();
   };
 
   // Verifies the users connection input and that the user
@@ -526,6 +549,15 @@ function JoinPage() {
     };
   };
 
+  const addSpeakerFingerprint = (start, end) => {
+    let message = null;
+    if (audiows === null) {
+      return;
+    }
+
+    audiows.send(JSON.stringify(message));
+  };
+
   // Begin capturing and sending client audio.
   const requestStartAudioProcessing = () => {
     let message = null;
@@ -793,6 +825,11 @@ function JoinPage() {
       speakersValidated={speakersValidated}
       speakers={speakers}
       authKey={key}
+      openForms={openForms}
+      closeForm={closeForm}
+      selectedSpeaker={selectedSpeaker}
+      setSelectedSpeaker={setSelectedSpeaker}
+      saveAudioFingerprint={saveAudioFingerprint}
     />
   );
 }

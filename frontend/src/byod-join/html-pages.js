@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Appheader } from "../header/header-component";
+import { VoiceRecorder } from "react-voice-recorder-player";
 import {
   DialogBox,
   WaitingDialog,
@@ -142,76 +143,88 @@ function ByodJoinPage(props) {
                 </button>
               </React.Fragment>
             )}
-            {props.connected && !props.speakersValidated && (
-              <React.Fragment>
-                <div className={style3["list-container"]}>
-                  {!props.speakers && (
-                    <div className={style3["load-text onload"]}>Loading...</div>
-                  )}
-                  {props.speakers && props.speakers.length === 0 && (
-                    <div className={style3["empty-keyword-list"]}>
-                      <div className={style3["load-text"]}> No Speakers </div>
-                      <div className={style3["load-text-description"]}>
-                        {" "}
-                        Tap the button below to add a speaker or other button to
-                        join automatically detect speakers(less accurate){" "}
+            {props.connected &&
+              props.authenticated &&
+              !props.speakersValidated && (
+                <React.Fragment>
+                  <div className={style3["list-container"]}>
+                    {!props.speakers && (
+                      <div className={style3["load-text onload"]}>
+                        Loading...
                       </div>
-                    </div>
-                  )}
-                  {props.speakers.map((speaker, count) => (
-                    <div
-                      key={"speaker" + count}
-                      className={style3["keyword-list-button"]}
-                    >
+                    )}
+                    {props.speakers && props.speakers.length === 0 && (
+                      <div className={style3["empty-keyword-list"]}>
+                        <div className={style3["load-text"]}> No Speakers </div>
+                        <div className={style3["load-text-description"]}>
+                          {" "}
+                          Tap the button below to add a speaker or other button
+                          to join automatically detect speakers(less accurate){" "}
+                        </div>
+                      </div>
+                    )}
+                    {props.speakers.map((speaker, count) => (
                       <div
-                        className={style3["click-mask"]}
-                        onClick={() => {}}
-                      ></div>
-                      <div className={style3["keyword-list-header"]}>
-                        <div className={style3.title}>{speaker.alias}</div>
-                      </div>
-                      <AppContextMenu
-                        className={style3["keyword-list-options"]}
+                        key={"speaker" + count}
+                        className={style3["keyword-list-button"]}
                       >
                         <div
-                          className={`${style4["menu-item"]} ${style4["red"]}`}
+                          className={style3["click-mask"]}
                           onClick={() => {}}
-                        >
-                          Delete
+                        ></div>
+                        <div className={style3["keyword-list-header"]}>
+                          <div className={style3.title}>{speaker.alias}</div>
                         </div>
-                      </AppContextMenu>
-                    </div>
-                  ))}
-                  {/* {displayKeywordList()} */}
-                </div>
-                <div>
-                  <button
-                    className={
-                      isLargeScreen()
-                        ? `${style3["basic-button"]} ${style3["medium-button"]}`
-                        : `${style3["basic-button"]} ${style3["small-button"]}`
-                    }
-                  >
-                    {" "}
-                    Add Speaker
-                  </button>
-                </div>
-                <div>
-                  <button
-                    className={
-                      isLargeScreen()
-                        ? `${style3["basic-button"]} ${style3["medium-button"]}`
-                        : `${style3["basic-button"]} ${style3["small-button"]}`
-                    }
-                    onClick={(e) => {
-                      props.setSpeakersValidated(true);
-                    }}
-                  >
-                    Join Discussion
-                  </button>
-                </div>
-              </React.Fragment>
-            )}
+                        <AppContextMenu
+                          className={style3["keyword-list-options"]}
+                        >
+                          <div
+                            className={`${style4["menu-item"]} ${style4["black"]}`}
+                            onClick={() => {
+                              props.openForms("fingerprintAudio", speaker);
+                            }}
+                          >
+                            Record Fingerprint
+                          </div>
+                          <div
+                            className={`${style4["menu-item"]} ${style4["red"]}`}
+                            onClick={() => {}}
+                          >
+                            Delete
+                          </div>
+                        </AppContextMenu>
+                      </div>
+                    ))}
+                    {/* {displayKeywordList()} */}
+                  </div>
+                  <div>
+                    <button
+                      className={
+                        isLargeScreen()
+                          ? `${style3["basic-button"]} ${style3["medium-button"]}`
+                          : `${style3["basic-button"]} ${style3["small-button"]}`
+                      }
+                    >
+                      {" "}
+                      Add Speaker
+                    </button>
+                  </div>
+                  <div>
+                    <button
+                      className={
+                        isLargeScreen()
+                          ? `${style3["basic-button"]} ${style3["medium-button"]}`
+                          : `${style3["basic-button"]} ${style3["small-button"]}`
+                      }
+                      onClick={(e) => {
+                        props.setSpeakersValidated(true);
+                      }}
+                    >
+                      Join Discussion
+                    </button>
+                  </div>
+                </React.Fragment>
+              )}
             {props.connected &&
               props.authenticated &&
               props.speakersValidated && (
@@ -355,7 +368,7 @@ function ByodJoinPage(props) {
           props.currentForm !== "gototranscript"
         }
       >
-        {props.currentForm === "Transcript" ? (
+        {(props.currentForm === "Transcript" && (
           <div className={style2["dialog-content"]}>
             <div className={style2["dialog-heading"]}>Transcript</div>
             <div className={style2["dialog-body"]}>
@@ -376,29 +389,27 @@ function ByodJoinPage(props) {
               </button>
             </div>
           </div>
-        ) : (
-          <></>
-        )}
-
-        {props.currentForm == "Options" ? (
-          <div className={style2["dialog-content"]}>
-            <div className={style2["dialog-heading"]}>Session Options</div>
-            <button
-              className={style2["basic-button"]}
-              onClick={props.togglePreview}
-            >
-              {props.previewLabel}
-            </button>
-            <button
-              className={style2["cancel-button"]}
-              onClick={props.closeDialog}
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <></>
-        )}
+        )) ||
+          (props.currentForm === "fingerprintAudio" && (
+            <VoiceRecorder onAudioDownload={props.saveAudioFingerprint} />
+          )) ||
+          (props.currentForm === "Options" && (
+            <div className={style2["dialog-content"]}>
+              <div className={style2["dialog-heading"]}>Session Options</div>
+              <button
+                className={style2["basic-button"]}
+                onClick={props.togglePreview}
+              >
+                {props.previewLabel}
+              </button>
+              <button
+                className={style2["cancel-button"]}
+                onClick={props.closeDialog}
+              >
+                Cancel
+              </button>
+            </div>
+          ))}
       </GenericDialogBox>
 
       <DialogBoxTwoOption
