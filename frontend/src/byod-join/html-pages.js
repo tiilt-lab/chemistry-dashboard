@@ -390,9 +390,6 @@ function ByodJoinPage(props) {
             </div>
           </div>
         )) ||
-          (props.currentForm === "fingerprintAudio" && (
-            <VoiceRecorder onAudioDownload={props.saveAudioFingerprint} />
-          )) ||
           (props.currentForm === "Options" && (
             <div className={style2["dialog-content"]}>
               <div className={style2["dialog-heading"]}>Session Options</div>
@@ -401,6 +398,29 @@ function ByodJoinPage(props) {
                 onClick={props.togglePreview}
               >
                 {props.previewLabel}
+              </button>
+              <button
+                className={style2["cancel-button"]}
+                onClick={props.closeDialog}
+              >
+                Cancel
+              </button>
+            </div>
+          )) ||
+          (props.currentForm === "fingerprintAudio" && (
+            <div className={style2["dialog-content"]}>
+              <VoiceRecorder
+                onAudioDownload={props.saveAudioFingerprint}
+                downloadable="false"
+                width="100%"
+                mainContainerStyle={{
+                  "margin-right": "auto",
+                  "margin-left": "auto",
+                }}
+                controllerContainerStyle={{ height: "10em" }}
+              />
+              <button className={style2["basic-button"]} onClick={() => {}}>
+                Confirm
               </button>
               <button
                 className={style2["cancel-button"]}
