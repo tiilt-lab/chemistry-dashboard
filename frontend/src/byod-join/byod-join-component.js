@@ -277,9 +277,10 @@ function JoinPage() {
       size: audioblob.size,
       blob_type: audioblob.type,
     };
-    audiows.send(JSON.stringify(message));
+    //store blob for confirmation
+    //audiows.send(JSON.stringify(message));
     // send sample blob
-    closeForm();
+    //closeForm();
   };
 
   // Verifies the users connection input and that the user
