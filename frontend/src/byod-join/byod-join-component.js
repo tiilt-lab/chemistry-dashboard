@@ -65,8 +65,10 @@ function JoinPage() {
 
   const [showFeatures, setShowFeatures] = useState([]);
   const [showBoxes, setShowBoxes] = useState([]);
+
   const [numSpeakers, setNumSpeakers] = useState();
   const [speakers, setSpeakers] = useState([]);
+  const [speakerFingerprinted, setSpeakerFingerprinted] = useState([]);
   const [speakersValidated, setSpeakersValidated] = useState(false);
   const [selectedSpeaker, setSelectedSpeaker] = useState(null);
   const [currBlob, setCurrBlob] = useState(null);
@@ -270,13 +272,15 @@ function JoinPage() {
   };
 
   const confirmSpeakers = () => {
-    let message = null;
-    message = {
-      type: "speaker",
-      id: "done",
-    };
-    audiows.send(JSON.stringify(message));
-    setSpeakersValidated(true);
+    if (!speakerFingerprinted.some((s) => s.fingerprinted === false)) {
+      let message = null;
+      message = {
+        type: "speaker",
+        id: "done",
+      };
+      audiows.send(JSON.stringify(message));
+      setSpeakersValidated(true);
+    }
   };
 
   const saveAudioFingerprint = (audioblob) => {
@@ -299,9 +303,16 @@ function JoinPage() {
     };
     let data = await currBlob.arrayBuffer();
 
+    const updatedSpeakerFingerprinted = speakerFingerprinted.map((s) => {
+      if (s.id === selectedSpeaker.id) return { id: s.id, fingerprinted: true };
+      return s;
+    });
+
+    setSpeakerFingerprinted(updatedSpeakerFingerprinted);
     audiows.send(JSON.stringify(message));
     audiows.send(data);
     console.log("sent speaker fingerprint");
+
     closeForm();
   };
 
@@ -462,6 +473,11 @@ function JoinPage() {
               SessionDeviceModel.fromJson(jsonObj["session_device"])
             );
             setSpeakers(SpeakerModel.fromJsonList(jsonObj["speakers"]));
+            setSpeakerFingerprinted(
+              speakers.map((s) => {
+                return { id: s.id, fingerprinted: false };
+              })
+            );
             setKey(jsonObj.key);
             setAudioWs(new WebSocket(apiService.getAudioWebsocketEndpoint()));
 
@@ -591,6 +607,7 @@ function JoinPage() {
         embeddingsFile: sessionDevice.embeddings,
         deviceid: sessionDevice.id,
         sessionid: session.id,
+        numSpeakers: numSpeakers,
       };
     } else if (joinwith === "Video" || joinwith === "Videocartoonify") {
       message = {
@@ -605,6 +622,7 @@ function JoinPage() {
         embeddingsFile: sessionDevice.embeddings,
         deviceid: sessionDevice.id,
         sessionid: session.id,
+        numSpeakers: numSpeakers,
       };
     }
     audiows.send(JSON.stringify(message));
