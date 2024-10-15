@@ -281,11 +281,10 @@ function JoinPage() {
 
   const saveAudioFingerprint = (audioblob) => {
     //store blob for confirmation
-    console.log(audioblob);
     setCurrBlob(audioblob);
   };
 
-  const addSpeakerFingerprint = () => {
+  const addSpeakerFingerprint = async () => {
     if (audiows === null) {
       return;
     }
@@ -298,10 +297,11 @@ function JoinPage() {
       size: currBlob.size,
       blob_type: currBlob.type,
     };
+    let data = await currBlob.arrayBuffer();
 
     audiows.send(JSON.stringify(message));
-    audiows.send(currBlob);
-
+    audiows.send(data);
+    console.log("sent speaker fingerprint");
     closeForm();
   };
 

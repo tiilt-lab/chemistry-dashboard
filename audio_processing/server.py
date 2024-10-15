@@ -84,10 +84,11 @@ class ServerProtocol(WebSocketServerProtocol):
         if data['type'] == 'speaker':
             if data['id'] == "done":
                 self.awaitingSpeakers = False
+                logging.info("Done awaiting all speakers info")
             else:
                 self.currSpeaker = data['id']
                 self.speakers.update({self.currSpeaker : {'alias' : data['alias']}})
-                self.send_json({'type':'placeholder'})
+                logging.info("preparing for speaker {}'s fingerprint".format(self.currSpeaker))
         if data['type'] == 'start':
             valid, result = ProcessingConfig.from_json(data)
             if not valid:
@@ -150,8 +151,9 @@ class ServerProtocol(WebSocketServerProtocol):
                 logging.info('video binary recieved')
         elif self.running and self.awaitingSpeakers:
             if self.currSpeaker:
-                logging.info(data)
-                self.speakers[self.currSpeaker].update({"blob": data})
+                self.speakers[self.currSpeaker].update({"data": data})
+                logging.info("storing speaker {}'s fingerprint".format(self.currSpeaker))
+                logging.info(self.speakers)
                 self.currSpeaker = None
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
