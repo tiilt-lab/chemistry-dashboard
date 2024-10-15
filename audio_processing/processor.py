@@ -38,6 +38,7 @@ class AudioProcessor:
         self.asr_complete = False
         self.running_processes = 0
         self.topic_model = None
+        self.fingerprints = None
         cf.initialize()
 
     def start(self):
@@ -64,6 +65,9 @@ class AudioProcessor:
             except Exception as ex:
                 logging.info(ex)
             np.savetxt(cf.root_dir()+"chemistry-dashboard/audio_processing/speaker_diarization/results/{}.txt".format(time.strftime("%Y%m%d-%H%M%S")), self.speakers)
+
+    def setSpeakerFingerprints(self, fingerprints):
+        self.fingerprints = fingerprints
 
     def send_speaker_taggings(self):
         processing_timer = time.time()
@@ -179,20 +183,23 @@ class AudioProcessor:
 
             #Perform Speaker Diarization
             if self.config.diarization == False:
-                if len(self.embeddings) == 0 and self.embeddingsFile != None:
-                    try:
-                      self.embeddings = np.load(self.embeddingsFile).tolist()
-                    except:
-                      self.embeddings = []
-                elif self.embeddingsFile == None:
-                    self.embeddingsFile = time.strftime("%Y%m%d-%H%M%S")+".npy"
-                embedding = embedSignal(audio_data, self.diarization_model)
-                self.embeddings.append({
-                    'embedding': embedding,
-                    'start': start_time + self.config.start_offset,
-                    'end': end_time + self.config.start_offset,
-                })
-                np.save(self.embeddingsFile, np.array(self.embeddings))
+                if self.fingerprints == None:
+                  if len(self.embeddings) == 0 and self.embeddingsFile != None:
+                      try:
+                        self.embeddings = np.load(self.embeddingsFile).tolist()
+                      except:
+                        self.embeddings = []
+                  elif self.embeddingsFile == None:
+                      self.embeddingsFile = time.strftime("%Y%m%d-%H%M%S")+".npy"
+                  embedding = embedSignal(audio_data, self.diarization_model)
+                  self.embeddings.append({
+                      'embedding': embedding,
+                      'start': start_time + self.config.start_offset,
+                      'end': end_time + self.config.start_offset,
+                  })
+                  np.save(self.embeddingsFile, np.array(self.embeddings))
+                else:
+                    np.save(self.embeddingsFile, np.array(self.embeddings))
 
             # Get Features
             features = None
