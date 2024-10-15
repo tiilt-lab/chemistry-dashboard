@@ -216,9 +216,7 @@ function ByodJoinPage(props) {
                           ? `${style3["basic-button"]} ${style3["medium-button"]}`
                           : `${style3["basic-button"]} ${style3["small-button"]}`
                       }
-                      onClick={(e) => {
-                        props.setSpeakersValidated(true);
-                      }}
+                      onClick={props.confirmSpeakers}
                     >
                       Join Discussion
                     </button>
@@ -411,7 +409,8 @@ function ByodJoinPage(props) {
             <div className={style2["dialog-content"]}>
               <VoiceRecorder
                 onAudioDownload={props.saveAudioFingerprint}
-                downloadable="false"
+                downloadable={false}
+                uploadAudioFile={false}
                 width="100%"
                 mainContainerStyle={{
                   "margin-right": "auto",
@@ -419,7 +418,10 @@ function ByodJoinPage(props) {
                 }}
                 controllerContainerStyle={{ height: "10em" }}
               />
-              <button className={style2["basic-button"]} onClick={() => {}}>
+              <button
+                className={style2["basic-button"]}
+                onClick={props.addSpeakerFingerprint}
+              >
                 Confirm
               </button>
               <button
