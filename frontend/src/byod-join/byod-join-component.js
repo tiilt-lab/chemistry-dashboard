@@ -69,6 +69,7 @@ function JoinPage() {
   const [speakers, setSpeakers] = useState([]);
   const [speakersValidated, setSpeakersValidated] = useState(false);
   const [selectedSpeaker, setSelectedSpeaker] = useState(null);
+  const [currBlob, setCurrBlob] = useState(null);
 
   const POD_COLOR = "#FF6655";
   const GLOW_COLOR = "#ffc3bd";
@@ -268,19 +269,40 @@ function JoinPage() {
     }
   };
 
+  const confirmSpeakers = () => {
+    let message = null;
+    message = {
+      type: "speaker",
+      id: "done",
+    };
+    audiows.send(JSON.stringify(message));
+    setSpeakersValidated(true);
+  };
+
   const saveAudioFingerprint = (audioblob) => {
+    //store blob for confirmation
+    console.log(audioblob);
+    setCurrBlob(audioblob);
+  };
+
+  const addSpeakerFingerprint = () => {
+    if (audiows === null) {
+      return;
+    }
+
     let message = null;
     message = {
       type: "speaker",
       id: selectedSpeaker.id,
       alias: selectedSpeaker.alias,
-      size: audioblob.size,
-      blob_type: audioblob.type,
+      size: currBlob.size,
+      blob_type: currBlob.type,
     };
-    //store blob for confirmation
-    //audiows.send(JSON.stringify(message));
-    // send sample blob
-    //closeForm();
+
+    audiows.send(JSON.stringify(message));
+    audiows.send(currBlob);
+
+    closeForm();
   };
 
   // Verifies the users connection input and that the user
@@ -548,15 +570,6 @@ function JoinPage() {
     videows.onclose = (e) => {
       console.log("[Disconnected]", ending.value);
     };
-  };
-
-  const addSpeakerFingerprint = (start, end) => {
-    let message = null;
-    if (audiows === null) {
-      return;
-    }
-
-    audiows.send(JSON.stringify(message));
   };
 
   // Begin capturing and sending client audio.
@@ -831,6 +844,8 @@ function JoinPage() {
       selectedSpeaker={selectedSpeaker}
       setSelectedSpeaker={setSelectedSpeaker}
       saveAudioFingerprint={saveAudioFingerprint}
+      addSpeakerFingerprint={addSpeakerFingerprint}
+      confirmSpeakers={confirmSpeakers}
     />
   );
 }

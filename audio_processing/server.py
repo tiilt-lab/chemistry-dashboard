@@ -46,6 +46,9 @@ class ServerProtocol(WebSocketServerProtocol):
         self.last_message = time.time()
         self.end_signaled = False
         self.interval = 10
+        self.awaitingSpeakers = True
+        self.speakers = dict()
+        self.currSpeaker = None
         cm.add(self)
         logging.info('New client connected...')
 
@@ -79,7 +82,12 @@ class ServerProtocol(WebSocketServerProtocol):
             logging.warning('Message does not contain "type".')
             return
         if data['type'] == 'speaker':
-            self.send_json({'type':'placeholder'})
+            if data['id'] == "done":
+                self.awaitingSpeakers = False
+            else:
+                self.currSpeaker = data['id']
+                self.speakers.update({self.currSpeaker : {'alias' : data['alias']}})
+                self.send_json({'type':'placeholder'})
         if data['type'] == 'start':
             valid, result = ProcessingConfig.from_json(data)
             if not valid:
@@ -108,7 +116,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 callbacks.post_connect(self.config.auth_key)
 
     def process_binary(self, data):
-        if self.running:
+        if self.running and not self.awaitingSpeakers:
             if self.stream_data == 'audio':
                 if cf.record_original():
                     # Save audio data.
@@ -140,6 +148,11 @@ class ServerProtocol(WebSocketServerProtocol):
 
                 self.video_count = self.video_count + 1
                 logging.info('video binary recieved')
+        elif self.running and self.awaitingSpeakers:
+            if self.currSpeaker:
+                logging.info(data)
+                self.speakers[self.currSpeaker].update({"blob": data})
+                self.currSpeaker = None
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 
