@@ -9,7 +9,7 @@ export class SpeakerModel {
     const model = new SpeakerModel();
     model.id = json["id"];
     model.alias = json["alias"];
-    model.name = json["session_device_id"];
+    model.session_device_id = json["session_device_id"];
     model.fingerprinted = false;
     return model;
   }
