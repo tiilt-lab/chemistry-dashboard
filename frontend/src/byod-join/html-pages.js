@@ -18,6 +18,7 @@ import style from "./byod-join.module.css";
 import style2 from "../pod-details/pod.module.css";
 import style3 from "../manage-keyword-lists/manage-keyword-lists.module.css";
 import style4 from "../components/context-menu/context-menu.module.css";
+import style5 from "../sessions/sessions.module.css";
 import micIcon from "../assets/img/mic.svg";
 import { AppContextMenu } from "../components/context-menu/context-menu-component";
 import iconPod from "../assets/img/icon-pod.svg";
@@ -175,6 +176,11 @@ function ByodJoinPage(props) {
                         <div className={style3["keyword-list-header"]}>
                           <div className={style3.title}>{speaker.alias}</div>
                         </div>
+                        {speaker.fingerprinted && (
+                          <div className={style3["keyword-list-keywords"]}>
+                            RECORDED!
+                          </div>
+                        )}
                         <AppContextMenu
                           className={style3["keyword-list-options"]}
                         >
@@ -187,7 +193,7 @@ function ByodJoinPage(props) {
                             Record Fingerprint
                           </div>
                           <div
-                            className={`${style4["menu-item"]} ${style4["red"]}`}
+                            className={`${style4["menu-item"]} ${style4["black"]}`}
                             onClick={() => {
                               props.openForms("renameAlias", speaker);
                             }}
@@ -436,21 +442,21 @@ function ByodJoinPage(props) {
           )) ||
           (props.currentForm === "renameAlias" && (
             <div
-              className={style["dialog-window"]}
+              className={style5["dialog-window"]}
               style={{ "min-width": adjDim(270) + "px" }}
             >
-              <div className={style["dialog-heading"]}>Update Alias Name:</div>
+              <div className={style5["dialog-heading"]}>Update Alias Name:</div>
               <input
                 id="txtAlias"
                 defaultValue={props.selectedSpeaker.alias}
-                className={style["field-input"]}
+                className={style5["field-input"]}
                 maxLength="64"
               />
               <div>
                 {props.invalidName ? "Your proposed rename is invalid." : ""}
               </div>
               <button
-                className={style["basic-button"]}
+                className={style5["basic-button"]}
                 onClick={() => {
                   props.changeAliasName(
                     document.getElementById("txtAlias").value
@@ -461,7 +467,7 @@ function ByodJoinPage(props) {
                 Confirm
               </button>
               <button
-                className={style["cancel-button"]}
+                className={style5["cancel-button"]}
                 onClick={props.closeDialog}
               >
                 {" "}
