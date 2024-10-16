@@ -302,6 +302,7 @@ function JoinPage() {
       blob_type: currBlob.type,
     };
     let data = await currBlob.arrayBuffer();
+    let audiodata = await audioContext.decodeAudioData(data);
 
     const updatedSpeakerFingerprinted = speakerFingerprinted.map((s) => {
       if (s.id === selectedSpeaker.id) return { id: s.id, fingerprinted: true };
@@ -310,7 +311,7 @@ function JoinPage() {
 
     setSpeakerFingerprinted(updatedSpeakerFingerprinted);
     audiows.send(JSON.stringify(message));
-    audiows.send(data);
+    audiows.send(audiodata.getChannelData(0));
     console.log("sent speaker fingerprint");
 
     closeForm();

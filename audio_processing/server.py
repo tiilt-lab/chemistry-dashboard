@@ -154,10 +154,9 @@ class ServerProtocol(WebSocketServerProtocol):
                 logging.info('video binary recieved')
         elif self.running and self.awaitingSpeakers:
             if self.currSpeaker:
-                signal = np.frombuffer(data , dtype=np.dtype('int16'))
-                self.speakers[self.currSpeaker] = {"alias": self.currAlias, "data": signal}
+                new_data = self.reformat_data(data)
+                self.speakers[self.currSpeaker] = {"alias": self.currAlias, "data": new_data}
                 logging.info("storing speaker {}'s fingerprint with alias {}".format(self.currSpeaker, self.currAlias))
-                logging.info(signal)
                 self.currSpeaker = None
                 self.currAlias = None
         else:
