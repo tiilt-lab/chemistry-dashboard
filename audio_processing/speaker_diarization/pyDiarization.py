@@ -38,7 +38,7 @@ def checkFingerprints(x, fingerprints, verification):
   speaker_alias = None
   for speaker in fingerprints:
     logging.info("Checking speaker {}".format(speaker))
-    speaker_signal = torch.tensor(fingerprints[speaker]["data"])
+    speaker_signal = torch.tensor(np.frombuffer(fingerprints[speaker]["data"], dtype=np.dtype('int16')))
     score, prediction = verification.verify_batch(np_signal, speaker_signal)
     logging.info("Current prediction is {} with score of {}".format(prediction.item(), score.item()))
     if prediction.item():
