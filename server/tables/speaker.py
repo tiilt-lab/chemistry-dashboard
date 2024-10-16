@@ -32,11 +32,11 @@ class Speaker(db.Model):
         )
 
     @staticmethod
-    def verify_fields(name=None):
+    def verify_fields(alias=None):
         message = None
-        if name != None:
-            if len(name) > Speaker.NAME_MAX_LENGTH:
+        if alias!= None:
+            if len(alias) > Speaker.NAME_MAX_LENGTH:
                 message = 'Alias must not exceed {0} characters.'.format(Speaker.NAME_MAX_LENGTH)
-            if not verify_characters(name, Speaker.NAME_CHARS):
+            if not verify_characters(alias, Speaker.NAME_CHARS):
                 message = 'Invalid characters in alias.'
         return message == None, message

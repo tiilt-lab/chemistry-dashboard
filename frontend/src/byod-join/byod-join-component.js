@@ -34,6 +34,8 @@ function JoinPage() {
   const [source, setSource] = useState(null);
   const [ending, setEnding] = useState({ value: false });
   const [reconnectCounter, setReconnectCounter] = useState(0);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
 
   // Session data
   const [sessionDevice, setSessionDevice] = useState(null);
@@ -71,6 +73,7 @@ function JoinPage() {
   const [speakersValidated, setSpeakersValidated] = useState(false);
   const [selectedSpeaker, setSelectedSpeaker] = useState(null);
   const [currBlob, setCurrBlob] = useState(null);
+  const [invalidName, setInvalidName] = useState(false);
 
   const POD_COLOR = "#FF6655";
   const GLOW_COLOR = "#ffc3bd";
@@ -220,7 +223,7 @@ function JoinPage() {
 
   const openForms = (form, speaker = null) => {
     setCurrentForm(form);
-    if (form === "fingerprintAudio") {
+    if (form === "fingerprintAudio" || form === "renameAlias") {
       setSelectedSpeaker(speaker);
     }
   };
@@ -314,7 +317,50 @@ function JoinPage() {
     audiows.send(audiodata.getChannelData(0));
     console.log("sent speaker fingerprint");
 
-    closeForm();
+    closeDialog();
+  };
+
+  const changeAliasName = (newAlias) => {
+    if (newAlias == "") {
+      setInvalidName(true);
+      return;
+    }
+    console.log(`Speaker ID: ${selectedSpeaker.id} with new name: ${newAlias}`);
+    setInvalidName(false);
+    const speakerId = selectedSpeaker.id;
+    const fetchData = new SessionService().updateCollaborator(
+      speakerId,
+      newAlias
+    );
+    fetchData
+      .then(
+        (response) => {
+          if (response.status === 200) {
+            response.json().then((jsonObj) => {
+              console.log(jsonObj);
+              const speaker = SpeakerModel.fromJson(jsonObj);
+              console.log(speaker);
+              const updatedSpeakers = speakers.map((s) =>
+                s.id === selectedSpeaker.id ? { ...s, alias: speaker.alias } : s
+              );
+              setSpeakers(updatedSpeakers);
+              setSelectedSpeaker(null);
+            });
+          } else {
+            setShowAlert(true);
+            setAlertMessage(response.json()["message"]);
+          }
+        },
+        (apierror) => {
+          console.log(
+            "byod-join-components func: changealiasname 1 ",
+            apierror
+          );
+        }
+      )
+      .finally(() => {
+        closeDialog();
+      });
   };
 
   // Verifies the users connection input and that the user
@@ -498,6 +544,10 @@ function JoinPage() {
         );
       }
     );
+  };
+
+  const closeAlert = () => {
+    setShowAlert(false);
   };
 
   // Connects to audio processor websocket server.
@@ -860,6 +910,9 @@ function JoinPage() {
       saveAudioFingerprint={saveAudioFingerprint}
       addSpeakerFingerprint={addSpeakerFingerprint}
       confirmSpeakers={confirmSpeakers}
+      closeAlert={closeAlert}
+      changeAliasName={changeAliasName}
+      invalidName={invalidName}
     />
   );
 }
