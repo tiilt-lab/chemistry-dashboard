@@ -133,6 +133,17 @@ class SessionService {
     return this.api.httpRequestCall("api/v1/sessions/byod", "POST", body);
   }
 
+  updateCollaborator(speakerId, alias) {
+    const body = {
+      alias: alias,
+    };
+    return this.api.httpRequestCall(
+      `api/speakers/${speakerId}`,
+      "POST",
+      body
+    );
+  }
+
   addPodToSession(sessionId, podId) {
     const body = {
       sessionId: sessionId,

@@ -188,9 +188,11 @@ function ByodJoinPage(props) {
                           </div>
                           <div
                             className={`${style4["menu-item"]} ${style4["red"]}`}
-                            onClick={() => {}}
+                            onClick={() => {
+                              props.openForms("renameAlias", speaker);
+                            }}
                           >
-                            Delete
+                            Rename Alias
                           </div>
                         </AppContextMenu>
                       </div>
@@ -431,6 +433,41 @@ function ByodJoinPage(props) {
                 Cancel
               </button>
             </div>
+          )) ||
+          (props.currentForm === "renameAlias" && (
+            <div
+              className={style["dialog-window"]}
+              style={{ "min-width": adjDim(270) + "px" }}
+            >
+              <div className={style["dialog-heading"]}>Update Alias Name:</div>
+              <input
+                id="txtAlias"
+                defaultValue={props.selectedSpeaker.alias}
+                className={style["field-input"]}
+                maxLength="64"
+              />
+              <div>
+                {props.invalidName ? "Your proposed rename is invalid." : ""}
+              </div>
+              <button
+                className={style["basic-button"]}
+                onClick={() => {
+                  props.changeAliasName(
+                    document.getElementById("txtAlias").value
+                  );
+                }}
+              >
+                {" "}
+                Confirm
+              </button>
+              <button
+                className={style["cancel-button"]}
+                onClick={props.closeDialog}
+              >
+                {" "}
+                Cancel
+              </button>
+            </div>
           ))}
       </GenericDialogBox>
 
@@ -466,6 +503,14 @@ function ByodJoinPage(props) {
         heading={"Connecting..."}
         message={"Please wait..."}
         show={props.currentForm === "Connecting"}
+      />
+
+      <DialogBox
+        itsclass={"add-dialog"}
+        heading={"Error"}
+        message={props.alertMessage}
+        show={props.showAlert}
+        closedialog={props.closeAlert}
       />
     </>
   );
