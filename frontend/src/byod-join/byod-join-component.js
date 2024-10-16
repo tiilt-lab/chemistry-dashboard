@@ -68,7 +68,6 @@ function JoinPage() {
 
   const [numSpeakers, setNumSpeakers] = useState();
   const [speakers, setSpeakers] = useState([]);
-  const [speakerFingerprinted, setSpeakerFingerprinted] = useState([]);
   const [speakersValidated, setSpeakersValidated] = useState(false);
   const [selectedSpeaker, setSelectedSpeaker] = useState(null);
   const [currBlob, setCurrBlob] = useState(null);
@@ -272,7 +271,8 @@ function JoinPage() {
   };
 
   const confirmSpeakers = () => {
-    if (!speakerFingerprinted.some((s) => s.fingerprinted === false)) {
+    console.log(speakers);
+    if (speakers.every((s) => s.fingerprinted)) {
       let message = null;
       message = {
         type: "speaker",
@@ -303,13 +303,13 @@ function JoinPage() {
     };
     let data = await currBlob.arrayBuffer();
     let audiodata = await audioContext.decodeAudioData(data);
+    console.log(speakers);
 
-    const updatedSpeakerFingerprinted = speakerFingerprinted.map((s) => {
-      if (s.id === selectedSpeaker.id) return { id: s.id, fingerprinted: true };
-      return s;
-    });
+    const updatedSpeakers = speakers.map((s) =>
+      s.id === selectedSpeaker.id ? { ...s, fingerprinted: true } : s
+    );
 
-    setSpeakerFingerprinted(updatedSpeakerFingerprinted);
+    setSpeakers(updatedSpeakers);
     audiows.send(JSON.stringify(message));
     audiows.send(audiodata.getChannelData(0));
     console.log("sent speaker fingerprint");
@@ -474,11 +474,6 @@ function JoinPage() {
               SessionDeviceModel.fromJson(jsonObj["session_device"])
             );
             setSpeakers(SpeakerModel.fromJsonList(jsonObj["speakers"]));
-            setSpeakerFingerprinted(
-              speakers.map((s) => {
-                return { id: s.id, fingerprinted: false };
-              })
-            );
             setKey(jsonObj.key);
             setAudioWs(new WebSocket(apiService.getAudioWebsocketEndpoint()));
 
