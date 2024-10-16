@@ -280,6 +280,7 @@ function JoinPage() {
       message = {
         type: "speaker",
         id: "done",
+        speakers: speakers,
       };
       audiows.send(JSON.stringify(message));
       setSpeakersValidated(true);
@@ -325,7 +326,9 @@ function JoinPage() {
       setInvalidName(true);
       return;
     }
-    console.log(`Speaker ID: ${selectedSpeaker.id} with new name: ${newAlias}`);
+    console.log(
+      `Speaker ID: ${selectedSpeaker.id} with new alias: ${newAlias}`
+    );
     setInvalidName(false);
     const speakerId = selectedSpeaker.id;
     const fetchData = new SessionService().updateCollaborator(

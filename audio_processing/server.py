@@ -85,6 +85,8 @@ class ServerProtocol(WebSocketServerProtocol):
         if data['type'] == 'speaker':
             if data['id'] == "done":
                 self.awaitingSpeakers = False
+                for speaker in data['speakers']:
+                    self.speakers[speaker["id"]]["alias"] = speaker["alias"]
                 self.processor.setSpeakerFingerprints(self.speakers)
                 logging.info("Done awaiting all speakers info")
             else:
