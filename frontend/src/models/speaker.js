@@ -3,12 +3,14 @@ export class SpeakerModel {
   id;
   alias;
   session_device_id;
+  fingerprinted;
 
   static fromJson(json) {
     const model = new SpeakerModel();
     model.id = json["id"];
     model.alias = json["alias"];
     model.name = json["session_device_id"];
+    model.fingerprinted = false;
     return model;
   }
 

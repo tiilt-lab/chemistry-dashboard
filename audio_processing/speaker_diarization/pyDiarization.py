@@ -25,8 +25,7 @@ import scipy.spatial as sp
 
 def embedSignal(x, verification):
 
-  np_signal = np.frombuffer(x, dtype=np.dtype('int16'))
-  signal = torch.from_numpy(np_signal)
+  signal = torch.tensor(np.frombuffer(x, dtype=np.dtype('int16')))
 
   embedding = verification.encode_batch(signal)
   return [embedding[0, 0].numpy()]
