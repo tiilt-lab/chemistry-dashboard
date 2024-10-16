@@ -23,7 +23,7 @@ class Transcript(db.Model):
     def __hash__(self):
         return hash((self.id))
 
-    def __init__(self, session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id, speaker_tag=None):
+    def __init__(self, session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id, speaker_tag):
         self.session_device_id = session_device_id
         self.start_time = start_time
         self.length = length
