@@ -245,6 +245,7 @@ function JoinPage() {
     releaseWakeLock();
     setAudioConnected(false);
     setVideoConnected(false);
+    setSpeakersValidated(false);
     setAuthenticated(false);
 
     if (source != null) {
@@ -270,6 +271,9 @@ function JoinPage() {
     if (videows != null) {
       videows.close();
       setVideoWs(null);
+    }
+    if (speakers != null) {
+      setSpeakers(null);
     }
   };
 
