@@ -5,7 +5,7 @@ from datetime import datetime
 import logging
 import base64
 
-def post_transcripts(source, start_time, end_time, transcript, doa, questions, keywords, features, topic_id, speaker_tag):
+def post_transcripts(source, start_time, end_time, transcript, doa, questions, keywords, features, topic_id, speaker_tag, speaker_id):
     result = {
         'source': source,
         'start_time': start_time,
@@ -24,6 +24,8 @@ def post_transcripts(source, start_time, end_time, transcript, doa, questions, k
         result['topic_id'] = topic_id
     if speaker_tag:
         result['speaker_tag'] = speaker_tag
+    if speaker_id:
+        result['speaker_id'] = speaker_id
     logging.info(result)
     try:
         response = requests.post(config.processing_callback(), json=result)

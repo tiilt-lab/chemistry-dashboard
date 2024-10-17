@@ -1,5 +1,5 @@
 class AudioSenderProcessor extends AudioWorkletProcessor {
-  bufferSize = 16384; //4096
+  bufferSize = 4096; //16384
 
   _bytesWritten = 0;
 

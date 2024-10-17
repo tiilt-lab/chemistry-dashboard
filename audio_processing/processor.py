@@ -183,9 +183,10 @@ class AudioProcessor:
 
             #Perform Speaker Diarization
             speaker_tag = None
+            speaker_id = -1
             if self.config.diarization:
                 if self.fingerprints:
-                  speaker_tag = checkFingerprints(audio_data, self.fingerprints ,self.diarization_model)
+                  speaker_tag, speaker_id = checkFingerprints(audio_data, self.fingerprints ,self.diarization_model)
                 else:
                     if len(self.embeddings) == 0 and self.embeddingsFile != None:
                       try:
@@ -209,7 +210,7 @@ class AudioProcessor:
             processing_time = time.time() - processing_timer
             start_time += self.config.start_offset
             end_time += self.config.start_offset
-            success = callbacks.post_transcripts(self.config.auth_key, start_time, end_time, transcript_text, doa, questions, keywords, features, topic_id, speaker_tag)
+            success = callbacks.post_transcripts(self.config.auth_key, start_time, end_time, transcript_text, doa, questions, keywords, features, topic_id, speaker_tag, speaker_id)
             if success:
                 logging.info('Processing results posted successfully for client {0} (Processing time: {1}) @ {2}'.format(self.config.auth_key, processing_time, start_time))
                 if self.config.diarization and (len(self.embeddings) > 3):

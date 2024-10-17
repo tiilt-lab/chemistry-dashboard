@@ -528,8 +528,8 @@ def setEmbeddingsFile(processing_key, embeddings):
 # Transcript
 # -------------------------
 
-def add_transcript(session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id ,tag):
-    transcript = Transcript(session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id, tag)
+def add_transcript(session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id ,tag, speaker_id):
+    transcript = Transcript(session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id, tag, speaker_id)
     db.session.add(transcript)
     db.session.commit()
     return transcript
@@ -539,18 +539,18 @@ def set_speaker_tag(transcript, tag):
     db.session.commit()
     return True
 
-def get_transcripts(session_id=None, session_device_id=None, start_time=0, end_time=-1):
+def get_transcripts(session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
     query = db.session.query(Transcript)
     if session_id != None:
         query = query.filter(SessionDevice.session_id == session_id)
-	#filter(SessionDevice.id == Transcript.session_device_id).\
-        #    filter(SessionDevice.session_id == session_id)
     if session_device_id != None:
         query = query.filter(Transcript.session_device_id == session_device_id)
     if start_time > 0:
         query = query.filter(Transcript.start_time >= start_time)
     if end_time != -1 and end_time > start_time:
         query = query.filter(Transcript.start_time < end_time)
+    if speaker_id != -1:
+        query = query.filter(Transcript.speaker_id == speaker_id)
     return query.all()
 
 def delete_device_transcripts(session_device_id):
