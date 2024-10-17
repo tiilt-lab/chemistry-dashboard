@@ -203,7 +203,6 @@ function ByodJoinPage(props) {
                         </AppContextMenu>
                       </div>
                     ))}
-                    {/* {displayKeywordList()} */}
                   </div>
                   <div>
                     <button
