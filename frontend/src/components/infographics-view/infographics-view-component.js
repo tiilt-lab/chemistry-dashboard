@@ -4,12 +4,34 @@ import { AppTimeline } from "timeline/timeline-component";
 import { AppFeaturesComponent } from "features/features-component";
 import { AppRadarComponent } from "radar/radar-component";
 import { AppKeywordsComponent } from "keywords/keywords-component";
+import style from "byod-join/byod-join.module.css";
+import { adjDim, isLargeScreen } from "myhooks/custom-hooks";
 
 import React from "react";
+import ReactSlider from "react-slider";
 
 function AppInfographicsView(props) {
   return (
     <>
+      {props.speakers && (
+        <React.Fragment>
+          <div>Selected Speaker:</div>
+          <select
+            id="speaker"
+            className={style["dropdown-input"]}
+            style={{ width: adjDim(350) + "px" }}
+            value={props.selectedSpeaker}
+            onChange={(e) =>
+              props.setSelectedSpeaker(parseInt(e.target.value, 10))
+            }
+          >
+            <option value="-1">All Speakers</option>
+            {props.speakers.map((speaker) => (
+              <option value={speaker["id"]}>{speaker["alias"]}</option>
+            ))}
+          </select>
+        </React.Fragment>
+      )}
       {props.showBoxes.length > 0 && props.showBoxes[0]["clicked"] && (
         <AppSectionBoxComponent heading={"Timeline control:"}>
           <AppTimelineSlider id="timeSlider" inputChanged={props.setRange} />
