@@ -76,9 +76,33 @@ class SessionService {
     );
   }
 
+  getSessionDeviceSpeakers(sessionId, sessionDeviceId) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/devices/${sessionDeviceId}/speakers`,
+      "GET",
+      {}
+    );
+  }
+
   getSessionDeviceTranscriptsForClient(sessionDeviceId, startTime = 0) {
     return this.api.httpRequestCall(
-      `api/v1/sessions/devices/${sessionDeviceId}/transcripts/client`,
+      `api/v1/devices/${sessionDeviceId}/transcripts/client`,
+      "GET",
+      {}
+    );
+  }
+
+  getSpeakerIdTranscripts(deviceId, speakerId) {
+    return this.api.httpRequestCall(
+      `/api/v1/sessions/devices/${deviceId}>/speakers/${speakerId}/transcripts`,
+      "GET",
+      {}
+    );
+  }
+
+  getSpeakerIdTranscriptsForClient(deviceId, speakerId) {
+    return this.api.httpRequestCall(
+      `/api/v1/sessions/devices/${deviceId}>/speakers/${speakerId}/transcripts/client`,
       "GET",
       {}
     );
@@ -137,11 +161,7 @@ class SessionService {
     const body = {
       alias: alias,
     };
-    return this.api.httpRequestCall(
-      `api/speakers/${speakerId}`,
-      "POST",
-      body
-    );
+    return this.api.httpRequestCall(`api/speakers/${speakerId}`, "POST", body);
   }
 
   addPodToSession(sessionId, podId) {

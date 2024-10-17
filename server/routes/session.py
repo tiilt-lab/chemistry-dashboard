@@ -146,13 +146,35 @@ def session_device_transcripts(session_id, device_id, **kwargs):
     transcripts = database.get_transcripts(session_device_id=device_id)
     return json_response([transcript.json() for transcript in transcripts])
 
-@api_routes.route('/api/v1/sessions/devices/<int:device_id>/transcripts/client', methods=['GET'])
+@api_routes.route('/api/v1/sessions/devices/<int:device_id>/speakers/<int:speaker_id>/transcripts', methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def speaker_id_transcripts_for(device_id, speaker_id, **kwargs):
+    transcripts = database.get_transcripts(speaker_id=speaker_id)
+    return json_response([transcript.json() for transcript in transcripts])
+
+
+@api_routes.route('/api/v1/devices/<int:device_id>/transcripts/client', methods=['GET'])
 # @wrappers.verify_login(public=True)
 # @wrappers.verify_session_access
 def session_device_transcripts_for_client(device_id, **kwargs):
     transcripts = database.get_transcripts(session_device_id=device_id)
     return json_response([transcript.json() for transcript in transcripts])
 
+
+@api_routes.route('/api/v1/sessions/devices/<int:device_id>/speakers/<int:speaker_id>/transcripts/client', methods=['GET'])
+# @wrappers.verify_login(public=True)
+# @wrappers.verify_session_access
+def speaker_id_transcripts_for_client(device_id, speaker_id, **kwargs):
+    transcripts = database.get_transcripts(speaker_id=speaker_id)
+    return json_response([transcript.json() for transcript in transcripts])
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/speakers', methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def session_device_speakers(session_id, device_id, **kwargs):
+    speakers = database.get_speakers(session_device_id=device_id)
+    return json_response([speaker.json() for speaker in speakers])
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/keywords', methods=['GET'])
 @wrappers.verify_login(public=True)
