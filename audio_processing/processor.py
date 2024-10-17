@@ -6,7 +6,7 @@ import callbacks
 from features_detector import features_detector
 from keyword_detector import keyword_detector
 from doa.doa_respeaker_v2_6mic_array import calculateDOA
-from speaker_diarization.pyDiarization import clusterEmbeddings, clusterSpectralEmbeddings, embedSignal, getSpectralEmbeddings
+from speaker_diarization.pyDiarization import clusterEmbeddings, clusterSpectralEmbeddings, embedSignal, getSpectralEmbeddings, checkFingerprints
 import numpy as np
 from speechbrain.pretrained import SpeakerRecognition
 import time
@@ -38,6 +38,7 @@ class AudioProcessor:
         self.asr_complete = False
         self.running_processes = 0
         self.topic_model = None
+        self.fingerprints = None
         cf.initialize()
 
     def start(self):
@@ -64,6 +65,9 @@ class AudioProcessor:
             except Exception as ex:
                 logging.info(ex)
             np.savetxt(cf.root_dir()+"chemistry-dashboard/audio_processing/speaker_diarization/results/{}.txt".format(time.strftime("%Y%m%d-%H%M%S")), self.speakers)
+
+    def setSpeakerFingerprints(self, fingerprints):
+        self.fingerprints = fingerprints
 
     def send_speaker_taggings(self):
         processing_timer = time.time()
@@ -178,21 +182,26 @@ class AudioProcessor:
                 doa = calculateDOA(start_time, audio_data, word_timings, 16000, self.config.channels, self.config.depth)
 
             #Perform Speaker Diarization
-            if self.config.diarization == False:
-                if len(self.embeddings) == 0 and self.embeddingsFile != None:
-                    try:
-                      self.embeddings = np.load(self.embeddingsFile).tolist()
-                    except:
-                      self.embeddings = []
-                elif self.embeddingsFile == None:
-                    self.embeddingsFile = time.strftime("%Y%m%d-%H%M%S")+".npy"
-                embedding = embedSignal(audio_data, self.diarization_model)
-                self.embeddings.append({
-                    'embedding': embedding,
-                    'start': start_time + self.config.start_offset,
-                    'end': end_time + self.config.start_offset,
-                })
-                np.save(self.embeddingsFile, np.array(self.embeddings))
+            speaker_tag = None
+            speaker_id = -1
+            if self.config.diarization:
+                if self.fingerprints:
+                  speaker_tag, speaker_id = checkFingerprints(audio_data, self.fingerprints ,self.diarization_model)
+                else:
+                    if len(self.embeddings) == 0 and self.embeddingsFile != None:
+                      try:
+                        self.embeddings = np.load(self.embeddingsFile).tolist()
+                      except:
+                        self.embeddings = []
+                    elif self.embeddingsFile == None:
+                      self.embeddingsFile = time.strftime("%Y%m%d-%H%M%S")+".npy"
+                    embedding = embedSignal(audio_data, self.diarization_model)
+                    self.embeddings.append({
+                        'embedding': embedding,
+                        'start': start_time + self.config.start_offset,
+                        'end': end_time + self.config.start_offset,
+                    })
+                    np.save(self.embeddingsFile, np.array(self.embeddings))
 
             # Get Features
             features = None
@@ -201,7 +210,7 @@ class AudioProcessor:
             processing_time = time.time() - processing_timer
             start_time += self.config.start_offset
             end_time += self.config.start_offset
-            success = callbacks.post_transcripts(self.config.auth_key, start_time, end_time, transcript_text, doa, questions, keywords, features, topic_id)
+            success = callbacks.post_transcripts(self.config.auth_key, start_time, end_time, transcript_text, doa, questions, keywords, features, topic_id, speaker_tag, speaker_id)
             if success:
                 logging.info('Processing results posted successfully for client {0} (Processing time: {1}) @ {2}'.format(self.config.auth_key, processing_time, start_time))
                 if self.config.diarization and (len(self.embeddings) > 3):

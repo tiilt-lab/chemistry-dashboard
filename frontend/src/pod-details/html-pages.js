@@ -1,5 +1,5 @@
 import { GenericDialogBox } from '../dialog/dialog-component'
-import { AppSectionBoxComponent } from '../section-box/section-box-component'
+import { AppSectionBoxComponent } from 'components/section-box/section-box-component'
 import { AppTimelineSlider } from '../components/timeline-slider/timeline-slider-component'
 import { AppTimeline } from '../timeline/timeline-component'
 import { AppHeatMapComponent } from '../heat-map/heat-map-component'
@@ -10,12 +10,13 @@ import { AppSessionToolbar } from '../session-toolbar/session-toolbar-component'
 import { AppKeywordsComponent } from '../keywords/keywords-component'
 import { Appheader } from '../header/header-component'
 import { isLargeScreen } from '../myhooks/custom-hooks';
+import { AppInfographicsView } from 'components/infographics-view/infographics-view-component';
 import style from './pod.module.css'
 import React from 'react'
 import ReactMultiSelectCheckboxes from "react-multiselect-checkboxes";
 
 function PodComponentPages(props) {
-    
+
     return (
         <>
             <div className={style.container}>
@@ -27,83 +28,41 @@ function PodComponentPages(props) {
                     rightTextClick={() => props.openDialog("Options")}
                     nav={props.navigateToSession}
                 />
-                
-                {props.hideDetails ? 
-                <div className={isLargeScreen() ? style["overview-container-large"] : style["overview-container-small"]}>
-                <br />
-                <AppSectionBoxComponent heading={"Box 1:"} >
-                </AppSectionBoxComponent>
-                
-                <AppSectionBoxComponent heading={"Box 2:"} >
-                </AppSectionBoxComponent>
-                
-                <AppSectionBoxComponent heading={"Box 3:"} >
-                </AppSectionBoxComponent>
-                
-                <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.toggleDetails}>Show Details</button >
-                
-                </div>
-                :
-                <div className={isLargeScreen() ? style["overview-container-large"] : style["overview-container-small"]}>
-                    <br />
-                    {((props.showBoxes.length > 0) && props.showBoxes[0]['clicked']) ?
-                    <AppSectionBoxComponent heading={"Timeline control:"} >
-                        <AppTimelineSlider id='timeSlider' inputChanged={props.setRange} />
-                    </AppSectionBoxComponent>
-                    : <></>
-                    }
-                    
-                    {((props.showBoxes.length > 0) && props.showBoxes[1]['clicked']) ?
-                    <AppSectionBoxComponent heading={"Discussion timeline:"}>
-                        <AppTimeline
-                            clickedTimeline={props.onClickedTimeline}
-                            session={props.session}
-                            transcripts={props.displayTranscripts}
-                            start={props.startTime}
-                            end={props.endTime}
-                        />
-                    </AppSectionBoxComponent>
-                    : <></>
-                    }
-                    
-                    {((props.showBoxes.length > 0) && props.showBoxes[2]['clicked']) ?
-                    <AppSectionBoxComponent heading={"Keyword detection:"}>
-                        <AppKeywordsComponent
-                            session={props.session}
-                            sessionDevice={props.sessionDevice}
-                            transcripts={props.displayTranscripts}
-                            start={props.startTime}
-                            end={props.endTime}
-                        />
-                    </AppSectionBoxComponent>
-                    : <></>
-                    }
 
-                    {((props.showBoxes.length > 0) && props.showBoxes[3]['clicked']) ?
-                    <AppSectionBoxComponent heading={"Discussion features:"}>
-                        <AppFeaturesComponent 
-                        session={props.session} 
-                        transcripts={props.displayTranscripts}
-                        showFeatures={props.showFeatures} />
-                    </AppSectionBoxComponent>
-                    : <></>
-                    }
-                    
-                    {((props.showBoxes.length > 0) && props.showBoxes[4]['clicked']) ?
-                    <AppSectionBoxComponent heading={"Radar chart:"}>
-                        <AppRadarComponent 
-                        session={props.session} 
-                        transcripts={props.displayTranscripts}
-                        radarTrigger={props.radarTrigger}
-                        start={props.startTime}
-                        end={props.endTime}
-                        showFeatures={props.showFeatures} />
-                    </AppSectionBoxComponent>
-                    : <></>
-                    }
-                    
-                    <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.toggleDetails}>Hide Details</button >
-                </div>
+                {props.hideDetails ?
+                  <div className={isLargeScreen() ? style["overview-container-large"] : style["overview-container-small"]}>
+                  <br />
+                  <AppSectionBoxComponent heading={"Box 1:"} >
+                  </AppSectionBoxComponent>
+
+                  <AppSectionBoxComponent heading={"Box 2:"} >
+                  </AppSectionBoxComponent>
+
+                  <AppSectionBoxComponent heading={"Box 3:"} >
+                  </AppSectionBoxComponent>
+
+                  <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.toggleDetails}>Show Details</button >
+
+                  </div>
+                  :
+                  <div className={isLargeScreen() ? style["overview-container-large"] : style["overview-container-small"]}>
+                      <br />
+                      <AppInfographicsView
+                          displayTranscripts={props.displayTranscripts}
+                          endTime={props.endTime}
+                          fromclient={false}
+                          onClickedTimeline={props.onClickedTimeline}
+                          radarTrigger={props.radarTrigger}
+                          session={props.session}
+                          sessionDevice={props.sessionDevice}
+                          setRange={props.setRange}
+                          showBoxes={props.showBoxes}
+                          showFeatures={props.showFeatures}
+                          startTime={props.startTime}
+                          >
+                      </AppInfographicsView>
+                      <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.toggleDetails}>Hide Details</button >
+                  </div>
                 }
                 {props.loading() ? <AppSpinner></AppSpinner> : <></>}
                 <div className={style.footer}>
@@ -128,17 +87,17 @@ function PodComponentPages(props) {
                 {props.currentForm == "Options" ?
                     <div className={style["dialog-content"]}>
                         <div className={style["dialog-heading"]}>Section Boxes</div>
-                        <div className={style["dialog-dropdown"]}>   
-                          <ReactMultiSelectCheckboxes 
-                          options={props.showBoxes} 
-                          value={props.showBoxes.filter((feature) => feature['clicked'])} 
+                        <div className={style["dialog-dropdown"]}>
+                          <ReactMultiSelectCheckboxes
+                          options={props.showBoxes}
+                          value={props.showBoxes.filter((feature) => feature['clicked'])}
                           onChange={props.handleCheckBoxes}/>
                         </div>
                         <div className={style["dialog-heading"]}>Discussion Features</div>
-                        <div className={style["dialog-dropdown"]}>   
-                          <ReactMultiSelectCheckboxes 
-                          options={props.showFeatures} 
-                          value={props.showFeatures.filter((feature) => feature['clicked'])} 
+                        <div className={style["dialog-dropdown"]}>
+                          <ReactMultiSelectCheckboxes
+                          options={props.showFeatures}
+                          value={props.showFeatures.filter((feature) => feature['clicked'])}
                           onChange={props.handleCheckFeats}/>
                         </div>
                         <div className={style["dialog-heading"]}>Device Options</div>
