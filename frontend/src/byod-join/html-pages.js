@@ -347,6 +347,9 @@ function ByodJoinPage(props) {
                       showBoxes={props.showBoxes}
                       showFeatures={props.showFeatures}
                       startTime={props.startTime}
+                      speakers={props.speakers}
+                      selectedSpeaker={props.selectedSpeaker}
+                      setSelectedSpeaker={props.setSelectedSpeaker}
                     ></AppInfographicsView>
                   </div>
                   {props.loading() ? <AppSpinner></AppSpinner> : <></>}

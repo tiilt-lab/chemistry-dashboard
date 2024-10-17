@@ -147,19 +147,15 @@ function JoinPage() {
   }, [session, sessionDevice]);
 
   useEffect(() => {
-    if (session !== null) {
+    if (session !== null && speakersValidated) {
       const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
       const sTime = Math.round(sessionLen * timeRange[0] * 100) / 100;
       const eTime = Math.round(sessionLen * timeRange[1] * 100) / 100;
       setStartTime(sTime);
       setEndTime(eTime);
-      setDisplayTranscripts(
-        transcripts.filter(
-          (t) => t.start_time >= sTime && t.start_time <= eTime
-        )
-      );
+      generateDisplayTranscripts(sTime, eTime);
     }
-  }, [endTime]);
+  }, [transcripts, startTime, endTime, selectedSpeaker]);
 
   useEffect(() => {
     if (audioconnected && !videoconnected) {
@@ -766,18 +762,29 @@ function JoinPage() {
     if (session !== null) {
       const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
       setTimeRange(values);
-      setStartTime(Math.round(sessionLen * values[0] * 100) / 100);
-      setEndTime(Math.round(sessionLen * values[1] * 100) / 100);
-      generateDispalyTranscripts();
+      const start = Math.round(sessionLen * values[0] * 100) / 100;
+      const end = Math.round(sessionLen * values[1] * 100) / 100;
+      setStartTime(start);
+      setEndTime(end);
+      generateDisplayTranscripts(start, end);
     }
   };
 
-  const generateDispalyTranscripts = () => {
-    setDisplayTranscripts(
-      transcripts.filter(
-        (t) => t.start_time >= startTime && t.start_time <= endTime
-      )
-    );
+  const generateDisplayTranscripts = (s, e) => {
+    if (selectedSpeaker === -1) {
+      setDisplayTranscripts(
+        transcripts.filter((t) => t.start_time >= s && t.start_time <= e)
+      );
+    } else {
+      setDisplayTranscripts(
+        transcripts.filter(
+          (t) =>
+            t.start_time >= s &&
+            t.start_time <= e &&
+            t.speaker_id === selectedSpeaker
+        )
+      );
+    }
   };
 
   const seeAllTranscripts = () => {
