@@ -201,3 +201,4 @@ pretrained_ecapa
 
 .gitignore
 topicModels
+audio_processing/videorecordings/*

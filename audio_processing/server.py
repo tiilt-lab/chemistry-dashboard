@@ -223,8 +223,8 @@ class ServerProtocol(WebSocketServerProtocol):
         # Begin Post Processing
         if cf.record_reduced():
             self.redu_recorder.close()
-        if self.stream_data == 'video':
-            self.orig_vid_recorder.close()
+        # if self.stream_data == 'video':
+        #     self.orig_vid_recorder.close()
         if cf.record_original():
             self.orig_recorder.close()
             '''
@@ -264,7 +264,7 @@ if __name__ == '__main__':
     auth_connections.start(5.0)
     factory = WebSocketServerFactory()
     factory.protocol = ServerProtocol
-    reactor.listenTCP(9002, factory)
+    reactor.listenTCP(9000, factory)
     logging.info('Audio Processing Service started.')
     reactor.run()
     logging.info('Audio Processing Service ended.')
