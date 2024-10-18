@@ -4,8 +4,8 @@ import style2 from '../dialog/dialog.module.css'
 import { GenericDialogBox } from '../dialog/dialog-component'
 import {Appheader} from '../header/header-component'
 
-
 function TranscriptComponentPage(props) {
+
   return (
     <>
       <div className={style.container}>
@@ -76,13 +76,14 @@ function TranscriptComponentPage(props) {
             <div className={style2["dialog-heading"]}>Transcript Options</div>
             <br />
             <label className={style["dc-checkbox"]}>Show keywords
-              <input type="checkbox" checked={props.showKeywords} value={props.showKeywords} onChange={props.createDisplayTranscripts} />
+              <input type="checkbox" checked={props.showKeywords} value={props.showKeywords} onChange={props.toggleKeywords} />
               <span className={style["checkmark"]}></span>
             </label>
-            <label className={style["dc-checkbox"]}>Show direction of arrival
-              <input type="checkbox" checked={props.showDoA} value={props.showDoA} onChange={props.createDisplayTranscripts} />
-              <span className={style["checkmark"]}></span>
-            </label>
+            <svg
+              ref={props.legendRef}
+              width = {100}
+              height = {100 + (10 * 2)}>
+            </svg>
             <br />
             <button className={style["delete-button"]} onClick={props.closeDialog}>Close</button>
           </div>

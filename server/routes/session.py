@@ -70,6 +70,7 @@ def create_session(user, **kwargs):
         return json_response({'message': message}, 400)
     devices = request.json.get('devices', [])
     keyword_list_id = sanitize(request.json.get('keywordListId', None))
+    topic_model_id = sanitize(request.json.get('topicModelId', None))
     byod = request.json.get('byod', False)
     features = request.json.get('features', True)
     doa = request.json.get('doa', False)
@@ -80,19 +81,20 @@ def create_session(user, **kwargs):
         owned_folder = database.get_folders(id=folder, owner_id=user['id'], first =True)
         if not owned_folder:
             return json_response({'message': 'Either the folder does not exist or invalid access'}, 404)
-    new_session = session_handler.create_session(user['id'], name, devices, keyword_list_id, byod, features, doa, folder)
+    new_session = session_handler.create_session(user['id'], name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder)
     return json_response(new_session.json())
 
 @api_routes.route('/api/v1/sessions/byod', methods=['POST'])
 def byod_join_session(**kwargs):
     name = request.json.get('name', None)
     passcode = sanitize(request.json.get('passcode', None))
+    collaborators = request.json.get('collaborators', None)
     if not name or not passcode:
         return json_response({'message': 'Must supply name and passcode.'}, 400)
     valid, message = SessionDevice.verify_fields(name=name)
     if not valid:
         return json_response({'message': message}, 400)
-    success, data = session_handler.byod_join_session(name, passcode)
+    success, data = session_handler.byod_join_session(name, passcode, collaborators)
     if success:
         return json_response(data)
     else:
@@ -144,13 +146,35 @@ def session_device_transcripts(session_id, device_id, **kwargs):
     transcripts = database.get_transcripts(session_device_id=device_id)
     return json_response([transcript.json() for transcript in transcripts])
 
-@api_routes.route('/api/v1/sessions/devices/<int:device_id>/transcripts/client', methods=['GET'])
+@api_routes.route('/api/v1/sessions/devices/<int:device_id>/speakers/<int:speaker_id>/transcripts', methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def speaker_id_transcripts_for(device_id, speaker_id, **kwargs):
+    transcripts = database.get_transcripts(speaker_id=speaker_id)
+    return json_response([transcript.json() for transcript in transcripts])
+
+
+@api_routes.route('/api/v1/devices/<int:device_id>/transcripts/client', methods=['GET'])
 # @wrappers.verify_login(public=True)
 # @wrappers.verify_session_access
 def session_device_transcripts_for_client(device_id, **kwargs):
     transcripts = database.get_transcripts(session_device_id=device_id)
     return json_response([transcript.json() for transcript in transcripts])
 
+
+@api_routes.route('/api/v1/sessions/devices/<int:device_id>/speakers/<int:speaker_id>/transcripts/client', methods=['GET'])
+# @wrappers.verify_login(public=True)
+# @wrappers.verify_session_access
+def speaker_id_transcripts_for_client(device_id, speaker_id, **kwargs):
+    transcripts = database.get_transcripts(speaker_id=speaker_id)
+    return json_response([transcript.json() for transcript in transcripts])
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/speakers', methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def session_device_speakers(session_id, device_id, **kwargs):
+    speakers = database.get_speakers(session_device_id=device_id)
+    return json_response([speaker.json() for speaker in speakers])
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/keywords', methods=['GET'])
 @wrappers.verify_login(public=True)
@@ -274,7 +298,7 @@ def get_session_config(**kwargs):
         return json_response({'redis_session_key': redis_session})
     else:
         return json_response({'message': "Session key cannot be authenticated"}, 400)
-        
+
 @api_routes.route('/api/v1/session/addcartoonizedimage', methods=['POST'])
 @wrappers.verify_local
 def add_cartoonized_image(**kwargs):
@@ -285,14 +309,14 @@ def add_cartoonized_image(**kwargs):
         image_queue_dict[queue_key].put(content)
     else:
         image_queue = queue.Queue()
-        image_queue.put(content) 
-        image_queue_dict[queue_key] = image_queue 
+        image_queue.put(content)
+        image_queue_dict[queue_key] = image_queue
     return json_response()
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/auth/<auth_id>/streamimages')
 def stream_cartonized_images(session_id, device_id,auth_id, **kwargs):
     try:
-        filePath  = os.path.dirname(os.path.abspath(__file__)) 
+        filePath  = os.path.dirname(os.path.abspath(__file__))
         os.chdir(filePath)
         os.chdir("../../video_processing/videorecordings")
         loading_img_Path = os.path.join(os.getcwd(),'loading_img')
@@ -308,17 +332,17 @@ def gen(loading_frame,queue_key):
     start = False
     while True:
         if not start:
-            if  queue_key in  image_queue_dict.keys(): 
+            if  queue_key in  image_queue_dict.keys():
                 logging.info('qsize is {0}'.format(image_queue_dict[queue_key].qsize()))
                 if image_queue_dict[queue_key].qsize() >= 1:
                     start = True
             yield (b'--frame\r\n'
-                    b'Content-Type: image/png\r\n\r\n' + loading_frame + b'\r\n')    
-        
+                    b'Content-Type: image/png\r\n\r\n' + loading_frame + b'\r\n')
+
         elif not image_queue_dict[queue_key].empty():
             data = image_queue_dict[queue_key].get(block=False)
             yield (b'--frame\r\n'
-            b'Content-Type: image/png\r\n\r\n' +  base64.b64decode(data['image']) + b'\r\n')         
+            b'Content-Type: image/png\r\n\r\n' +  base64.b64decode(data['image']) + b'\r\n')
 
 def read_image(filepath):
     return  open(filepath , 'rb').read()

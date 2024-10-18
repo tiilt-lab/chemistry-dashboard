@@ -9,10 +9,13 @@ function SessionManagerComponent() {
   const [initialized, setInitialized] = useState(false)
   const { sessionId } = useParams();
 
+
   useEffect(() => {
     if (sessionId !== undefined) {
       activeSessionService.initialize(sessionId,setInitialized);
     }
+
+    //THROWS ERROR AROUND HERE
     return () => {
       activeSessionService.close();
     }
@@ -24,7 +27,7 @@ function SessionManagerComponent() {
   }
 
   return (
-    
+
     <Outlet context={[activeSessionService, setActiveSessionService]}/>
   )
 

@@ -2,6 +2,7 @@ import { KeywordService } from "../services/keyword-service";
 import { TopicModelService } from "../services/topic-model-service";
 import { TopicModelModel } from '../models/topic-model';
 import { formatDate } from "../globals";
+import { unpackTopModels } from '../myhooks/custom-hooks';
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ManageTopicsPage } from './html-pages'
@@ -12,7 +13,7 @@ function ManageTopicModelsComponent(props) {
   const [deleteDialogIsOpen, setDeleteDialogIsOpen] = useState(false);
   const [topicModelToDelete, setTopicModelToDelete] = useState(null);
   const [topicModels, setTopicModels] = useState([]);
-  const [topics, setTopics] = useState([]);
+  //const [topics, setTopics] = useState([]);
   //const location = useLocation();
 
   const formatdate = formatDate; // Allows the HTML to invoke the function.
@@ -25,9 +26,9 @@ function ManageTopicModelsComponent(props) {
           const resp = response.json()
           resp.then(
             (result) => {
-              const topModels = TopicModelModel.fromJsonList(result)
-              setTopicModels(topModels)
-              console.log(topicModels)
+              const topModels = TopicModelModel.fromJsonList(result);
+              console.log(topModels);
+              setTopicModels(unpackTopModels(topModels));
             },
             (err) => { console.log('ManageTopicModelsComponent error func : useeffect 122' ,err) })
 
@@ -46,7 +47,16 @@ function ManageTopicModelsComponent(props) {
   const navFileUpload = () => {
     navigate("/file_upload");
   }
+  
+  const navTopicList = (dataToPrint, topicNames, title) => {
+    if (typeof dataToPrint !== "undefined") {
+       navigate('/topic-list', {state: {topics:dataToPrint, names:topicNames.replace(/ /g, ''), title:title}});
+    } else {
+      console.log("Can't load model");
+    }
+  }
 
+  /*
   const createTopicModel = () => {
     const fetchData = new TopicModelService().getTopics();
     fetchData.then(
@@ -65,10 +75,7 @@ function ManageTopicModelsComponent(props) {
       }
     )
   }
-
-  const keywordListClicked = (keywordList) => {
-    return navigate("/keyword-lists/" + keywordList.id);
-  }
+  */
 
   const navigateToHomeScreen = () => {
     return navigate("/home");
@@ -117,11 +124,11 @@ function ManageTopicModelsComponent(props) {
       closeDeleteDialog={closeDeleteDialog}
       topicModels={topicModels}
       navigate={navigateToHomeScreen}
-      keywordListClicked={keywordListClicked}
       deleteTopicModel={deleteTopicModel}
-      createTopicModel={createTopicModel}
+      //createTopicModel={createTopicModel}
       confirmDeleteTopicModel={confirmDeleteTopicModel}
       navFileUpload = {navFileUpload}
+      navTopicList = {navTopicList}
     />
   )
 }
