@@ -199,8 +199,8 @@ pretrained_ecapa
 #npy file
 *.npy
 
-.gitignore
-topicModels
+audio_processing/videorecordings/*
+
 pretrained_ecapa/classifier.ckpt
 pretrained_ecapa/embedding_model.ckpt
 pretrained_ecapa/hyperparams.yaml
