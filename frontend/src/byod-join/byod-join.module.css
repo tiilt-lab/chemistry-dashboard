@@ -16,23 +16,26 @@
   padding: 12px 16px 12px 16px;
   box-sizing: border-box;
   cursor: pointer;
-  box-shadow: 0 0 8px 0 rgba(69, 69, 153, 0.2), 0 8px 8px -4px rgba(69, 69, 153, 0.2);
+  box-shadow: 0 0 8px 0 rgba(69, 69, 153, 0.2),
+    0 8px 8px -4px rgba(69, 69, 153, 0.2);
   transition: box-shadow 0.2s ease-in-out;
   font-family: "SST", sans-serif;
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #FAFAFC;
-  background: linear-gradient(147.59deg, #764BFF 0%, #7BB7F1 100%);
+  color: #fafafc;
+  background: linear-gradient(147.59deg, #764bff 0%, #7bb7f1 100%);
 }
 .basic-button:focus {
   outline: 0;
 }
 .basic-button:hover {
-  box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2), 0 12px 12px -4px rgba(69, 69, 153, 0.2);
+  box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2),
+    0 12px 12px -4px rgba(69, 69, 153, 0.2);
 }
 .basic-button:active {
-  box-shadow: 0 0 2px 0 rgba(57, 57, 128, 0.08), 0 6px 6px -4px rgba(57, 57, 128, 0.24);
+  box-shadow: 0 0 2px 0 rgba(57, 57, 128, 0.08),
+    0 6px 6px -4px rgba(57, 57, 128, 0.24);
 }
 
 .delete-button {
@@ -43,23 +46,26 @@
   padding: 12px 16px 12px 16px;
   box-sizing: border-box;
   cursor: pointer;
-  box-shadow: 0 0 8px 0 rgba(69, 69, 153, 0.2), 0 8px 8px -4px rgba(69, 69, 153, 0.2);
+  box-shadow: 0 0 8px 0 rgba(69, 69, 153, 0.2),
+    0 8px 8px -4px rgba(69, 69, 153, 0.2);
   transition: box-shadow 0.2s ease-in-out;
   font-family: "SST", sans-serif;
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #FAFAFC;
-  background: #FF6363;
+  color: #fafafc;
+  background: #ff6363;
 }
 .delete-button:focus {
   outline: 0;
 }
 .delete-button:hover {
-  box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2), 0 12px 12px -4px rgba(69, 69, 153, 0.2);
+  box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2),
+    0 12px 12px -4px rgba(69, 69, 153, 0.2);
 }
 .delete-button:active {
-  box-shadow: 0 0 2px 0 rgba(57, 57, 128, 0.08), 0 6px 6px -4px rgba(57, 57, 128, 0.24);
+  box-shadow: 0 0 2px 0 rgba(57, 57, 128, 0.08),
+    0 6px 6px -4px rgba(57, 57, 128, 0.24);
 }
 
 .cancel-button {
@@ -75,7 +81,7 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #3991CC;
+  color: #3991cc;
 }
 .cancel-button:focus {
   outline: 0;
@@ -84,7 +90,7 @@
 .pod-button {
   border-radius: 18px;
   border: none;
-  fill: #7878FA;
+  fill: #7878fa;
   background: transparent;
   box-sizing: border-box;
   padding: 12px 16px 12px 16px;
@@ -94,7 +100,7 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #3991CC;
+  color: #3991cc;
 }
 .pod-button:focus {
   outline: 0;
@@ -113,21 +119,23 @@
   font-weight: 700;
   font-size: 17px;
   line-height: 24px;
-  color: #2B2B2E;
+  color: #2b2b2e;
   width: 150px;
   height: 150px;
-  background-color: #FCFDFF;
+  background-color: #fcfdff;
   border-radius: 4px;
   margin-bottom: 16px;
   margin-left: 8px;
   margin-right: 8px;
-  box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2), 0 8px 8px -4px rgba(69, 69, 153, 0.2);
+  box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2),
+    0 8px 8px -4px rgba(69, 69, 153, 0.2);
   transition: box-shadow 0.2s ease-in-out;
 }
 .pod-overview-button:hover {
   cursor: pointer;
-  background-color: #FFFFFF;
-  box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2), 0 12px 12px -3px rgba(69, 69, 153, 0.2);
+  background-color: #ffffff;
+  box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2),
+    0 12px 12px -3px rgba(69, 69, 153, 0.2);
 }
 .pod-overview-button *::selection {
   background: none;
@@ -195,7 +203,7 @@
 }
 
 .dc-checkbox input:checked ~ .checkmark {
-  background-color: #7878FA;
+  background-color: #7878fa;
 }
 
 .checkmark:after {
@@ -245,7 +253,7 @@
   font-weight: 500;
   font-size: 22px;
   line-height: 32px;
-  color: #58585C;
+  color: #58585c;
   width: auto;
   margin-bottom: 32px;
 }
@@ -262,10 +270,8 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #58585C;
+  color: #58585c;
 }
-
-
 
 .list-container {
   max-width: 375px;
@@ -289,12 +295,12 @@
   grid-template-columns: 48px auto min-content;
   grid-template-rows: 56px;
   display: grid;
-  background: #FCFDFF;
+  background: #fcfdff;
   box-shadow: 0 0 2px 2px rgba(69, 69, 153, 0.2);
   border-radius: 4px;
   border-style: solid;
   border-width: 2px;
-  border-color: #FCFDFF;
+  border-color: #fcfdff;
   margin: 12px 6px;
 }
 .list-container .list .pod-item .pod-icon {
@@ -322,13 +328,13 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #58585C;
-  background: #FCFDFF;
+  color: #58585c;
+  background: #fcfdff;
   box-shadow: 0 0 2px 2px rgba(69, 69, 153, 0.2);
   border-radius: 4px;
   border-style: solid;
   border-width: 2px;
-  border-color: #FCFDFF;
+  border-color: #fcfdff;
   margin: 12px 5px;
 }
 .list-container .list .folder-item .folder-icon {
@@ -362,18 +368,18 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #58585C;
-  background: #FCFDFF;
+  color: #58585c;
+  background: #fcfdff;
   box-shadow: 0 0 2px 2px rgba(69, 69, 153, 0.2);
   border-radius: 4px;
   border-style: solid;
   border-width: 2px;
-  border-color: #FCFDFF;
+  border-color: #fcfdff;
   margin: 12px 6px;
 }
 .list-container .list .session-item .session-icon {
   grid-area: left;
-  fill: #7878FA;
+  fill: #7878fa;
   padding: 16px 10px;
 }
 .list-container .list .session-item .session-title {
@@ -387,7 +393,7 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #58585C;
+  color: #58585c;
 }
 .list-container .list .session-item .session-date {
   grid-area: middle-bottom;
@@ -409,7 +415,7 @@
   margin-top: 5px;
 }
 .breadcrumb-container .crumb-name {
-  color: #7878FA;
+  color: #7878fa;
   text-overflow: ellipsis;
   max-width: 240px;
   white-space: nowrap;
@@ -444,7 +450,7 @@
   width: 20px;
   height: 20px;
   border-radius: 10px;
-  background: #7878FA;
+  background: #7878fa;
   cursor: pointer;
 }
 
@@ -452,7 +458,7 @@
   width: 20px;
   height: 20px;
   border-radius: 10px;
-  background: #7878FA;
+  background: #7878fa;
   cursor: pointer;
 }
 

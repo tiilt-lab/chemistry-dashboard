@@ -2,13 +2,15 @@ import style from './features.module.css';
 import {DialogBox} from '../dialog/dialog-component';
 import questIcon from "../assets/img/question.svg";
 import { adjDim } from '../myhooks/custom-hooks';
+import React from 'react';
 
 function FeaturePage(props){
+
   return(
     <>
-      <div>
-          <table className={style["features-table"]}
-          style = {{width: adjDim(343) + 'px',}}>
+      <div> 
+            <table className={style["features-table"]}
+            style = {{width: adjDim(343) + 'px',}}>
                 <thead>
                   <tr>
                     <th className={style["desc-header"]}
@@ -19,8 +21,9 @@ function FeaturePage(props){
                     style = {{width: adjDim(74) + 'px',}}>Graph</th>
                   </tr>
                 </thead>
+                {props.features.length > 0 ?
                 <tbody>
-                    {props.features.map((feature, index)=>(
+                    {props.showFeatures.filter(sf => sf['clicked']).map(sf => props.features[sf['value']]).map((feature, index)=>(
                         <tr key={index}>
                             <td>
                               <img alt='quest' onClick={()=> props.getInfo(feature.name)} className={style["info-button"]} src={questIcon}/>
@@ -39,9 +42,11 @@ function FeaturePage(props){
                                 <path d={feature.path} fill="none" className={feature.trend >= 0 ? style.positive : feature.trend == -1 ? style.negative : ""}></path>
                               </svg>
                             </td>
-                      </tr>))   
+                      </tr>
+                      ))   
                   }
                 </tbody>
+                : <></>}
             </table>
         </div>
 

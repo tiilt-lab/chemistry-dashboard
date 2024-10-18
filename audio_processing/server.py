@@ -46,6 +46,10 @@ class ServerProtocol(WebSocketServerProtocol):
         self.last_message = time.time()
         self.end_signaled = False
         self.interval = 10
+        self.awaitingSpeakers = True
+        self.speakers = None
+        self.currSpeaker = None
+        self.currAlias = None
         cm.add(self)
         logging.info('New client connected...')
 
@@ -78,6 +82,17 @@ class ServerProtocol(WebSocketServerProtocol):
         if not 'type' in data:
             logging.warning('Message does not contain "type".')
             return
+        if data['type'] == 'speaker':
+            if data['id'] == "done":
+                self.awaitingSpeakers = False
+                for speaker in data['speakers']:
+                    self.speakers[speaker["id"]]["alias"] = speaker["alias"]
+                self.processor.setSpeakerFingerprints(self.speakers)
+                logging.info("Done awaiting all speakers info")
+            else:
+                self.currSpeaker = data['id']
+                self.currAlias = data['alias']
+                logging.info("preparing for speaker {}'s fingerprint".format(self.currSpeaker))
         if data['type'] == 'start':
             valid, result = ProcessingConfig.from_json(data)
             if not valid:
@@ -87,7 +102,9 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.config = result
                 cm.associate_keys(self, self.config.session_key, self.config.auth_key)
                 self.stream_data = data['streamdata']
-                
+                if(data['numSpeakers'] != 0):
+                    self.speakers = dict()
+
                 if self.stream_data == 'audio':
                     if cf.record_original():
                         filename = os.path.join(cf.recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
@@ -99,14 +116,13 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.video_count = 1
                     self.filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_orig".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, str(time.ctime())))
                     self.orig_vid_recorder = VidRecorder(self.filename,16000, 2, 1)
-                        
                 self.signal_start()
                 self.send_json({'type':'start'})
                 logging.info('Audio process connected')
                 callbacks.post_connect(self.config.auth_key)
 
     def process_binary(self, data):
-        if self.running:
+        if self.running and not self.awaitingSpeakers:
             if self.stream_data == 'audio':
                 if cf.record_original():
                     # Save audio data.
@@ -138,6 +154,13 @@ class ServerProtocol(WebSocketServerProtocol):
 
                 self.video_count = self.video_count + 1
                 logging.info('video binary recieved')
+        elif self.running and self.awaitingSpeakers:
+            if self.currSpeaker:
+                new_data = self.reformat_data(data)
+                self.speakers[self.currSpeaker] = {"alias": self.currAlias, "data": new_data}
+                logging.info("storing speaker {}'s fingerprint with alias {}".format(self.currSpeaker, self.currAlias))
+                self.currSpeaker = None
+                self.currAlias = None
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 
@@ -210,7 +233,7 @@ class ServerProtocol(WebSocketServerProtocol):
         if self.asr:
             self.asr.stop()
         if self.processor:
-            self.processor.stop()      
+            self.processor.stop()
 
         if self.config:
             callbacks.post_disconnect(self.config.auth_key)

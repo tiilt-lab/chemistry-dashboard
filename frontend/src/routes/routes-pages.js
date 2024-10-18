@@ -43,7 +43,9 @@ function PageRouter() {
                 </Route> 
                 <Route path='/topic-models' element={<ProtectedRoute component={ManageTopicModelsComponent}/>} />
                 <Route path='/file_upload' element={<ProtectedRoute component={FileUploadComponent}/>} />
+                <Route path='/file_upload/new-session' element={<ProtectedRoute component={FileUploadComponent}/>} />
                 <Route path='/topic-list' element={<ProtectedRoute component={TopicListComponent}/>} />
+                <Route path='/topic-list/new-session' element={<ProtectedRoute component={TopicListComponent}/>} />
                 <Route path='/pods' element={<ProtectedRoute component={PodsComponent}/> } />
                 <Route path='/settings' element={<ProtectedRoute component={SettingsComponent}/> } />
             </Routes>

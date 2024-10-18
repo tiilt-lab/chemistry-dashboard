@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext,useParams, useSearchParams } from 'react-router-dom';
 import { similarityToRGB } from '../globals';
 import {TranscriptComponentPage} from './html-pages'
+import { useD3 } from '../myhooks/custom-hooks';
+import * as d3 from 'd3';
 
 function TranscriptsComponent(){
 
@@ -26,12 +28,15 @@ function TranscriptsComponent(){
   const [subscriptions, setSubscriptions] = useState([]);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [showKeywords, setShowKeywords] = useState(true);
+  const [trigger, setTrigger] = useState(0)
   const [showDoA,setShowDoA] = useState(false);
   const [reload, setReload] = useState(false)
   const [activeSessionService, setActiveSessionService] = useOutletContext();
   const { sessionDeviceId } = useParams(); 
   const [searchParam, setSearchParam] = useSearchParams();
   const navigate = useNavigate()
+  
+  const colorTopicDict = ['hsl(0, 100%, 100%)', 'hsl(151, 58%, 87%)', 'hsl(109, 67%, 92%)', 'hsl(49, 94%, 93%)', 'hsl(34, 100%, 89%)', 'hsl(30, 79%, 85%)'];
   
   useEffect(()=>{
     const index = searchParam.get('index');
@@ -83,6 +88,12 @@ useEffect(()=>{
   }
 },[reload])
 
+useEffect(()=>{
+  if(trigger > 0){
+    createDisplayTranscripts();
+  }
+},[trigger])
+
 //console.log(transcripts, displayTranscripts, 'states ... ')
 const createDisplayTranscripts = ()=> {
     const accdisplaytrans = [];
@@ -110,15 +121,15 @@ const createDisplayTranscripts = ()=> {
         });
       }
       transcript['words'] = result;
-      transcript['doaColor'] = showDoA ? angleToColor(transcript.direction) : angleToColor(-1);
+      transcript['doaColor'] = showDoA ? angleToColor(transcript.direction, transcript.topic_id) : angleToColor(-1, transcript.topic_id);
       accdisplaytrans.push(transcript);
     }
     setDisplayTranscripts(accdisplaytrans)
   }
 
-  const angleToColor = (angle)=> {
+  const angleToColor = (angle, id)=> {
     if (angle === -1) {
-      return 'hsl(0, 100%, 100%)';
+      return colorTopicDict[id + 1];
     } else {
       return 'hsl(' + angle + ', 100%, 95%)';
     }
@@ -145,6 +156,46 @@ const createDisplayTranscripts = ()=> {
   const navigateToSession = ()=> {
     navigate('/sessions/' + session.id + '/pods/' + sessionDeviceId);
   }
+  
+  const toggleKeywords = ()=> {
+    setShowKeywords(!showKeywords);
+    setTrigger(trigger + 1)
+  }
+  
+  const legendRef = useD3(
+       (svg) => {
+         const data = ["No topic", "1", "2", "3", "4", "5"];
+         // Create a color scale
+         const colorScale = d3.scaleOrdinal()
+           .domain(data)
+           .range(colorTopicDict.map((c) => d3.hsl(c)));
+
+         // Create legend
+         const legend = svg
+          .selectAll(".legend")
+          .data(data)
+          .enter()
+          .append("g")
+          .attr("class", "legend")
+          .attr("transform", (d, i) => `translate(0, ${i * 20})`);
+       
+        // Add colored rectangles to the legend
+        legend
+          .append("rect")
+          .attr("width", 18)
+          .attr("height", 18)
+          .style("fill", (d) => colorScale(d));
+
+        // Add text labels to the legend
+        legend
+          .append("text")
+          .attr("x", 24)
+          .attr("y", 9)
+          .attr("dy", ".35em")
+          .style("text-anchor", "start")
+          .text((d) => d);
+        }
+  )  
 
   return(
     <TranscriptComponentPage
@@ -161,6 +212,9 @@ const createDisplayTranscripts = ()=> {
       createDisplayTranscripts = {createDisplayTranscripts}
       openOptionsDialog = {openOptionsDialog}
       isenabled = {true}
+      legendRef = {legendRef}
+      showKeywords = {showKeywords}
+      toggleKeywords = {toggleKeywords}
     />
   )
 }

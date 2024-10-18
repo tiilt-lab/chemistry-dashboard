@@ -31,7 +31,7 @@ function AppContextMenu(props) {
   const toggle = (state) => {
     setIsopen(!state);
     //prevent triggering click interaction
-    if (location.pathname == "/topic-list") {
+    if (location.pathname == "/topic-list" || location.pathname == "/topic-list/new-session") {
       props.reverseToggle();
     }
   }
