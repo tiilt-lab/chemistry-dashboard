@@ -16,15 +16,15 @@ import moviepy.editor as mp
 from recorder import VidRecorder
 from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager
-from video_cartoonizer.videoprocessor import VideoProcessor
+# from video_cartoonizer.videoprocessor import VideoProcessor
 from datetime import datetime
 from twisted.internet import reactor, task
 from autobahn.twisted.websocket import WebSocketServerFactory
 from autobahn.twisted.websocket import WebSocketServerProtocol
-from video_cartoonizer.video_cartoonify_loader import VideoCartoonifyLoader
+# from video_cartoonizer.video_cartoonify_loader import VideoCartoonifyLoader
 
 cm = ConnectionManager()
-cartoon_model = VideoCartoonifyLoader()
+cartoon_model = None #VideoCartoonifyLoader()
 
 class ServerProtocol(WebSocketServerProtocol):
 
@@ -195,7 +195,7 @@ if __name__ == '__main__':
     logger.addHandler(log_console)
 
     # Initialize cartoonify
-    if cf.video_cartoonize:
+    if cf.video_cartoonize():
         cartoon_model.load_model()
     # Run Server
     logging.info('Starting video Processing Service...')
