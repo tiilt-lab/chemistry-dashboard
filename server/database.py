@@ -44,6 +44,10 @@ def get_speakers(session_device_id=None, id = None):
         query = query.filter(Speaker.session_device_id == session_device_id)
     return query.all()
 
+def get_speaker_tags(session_device_id=None):
+    query = db.session.query(Transcript).filter(session_device_id=session_device_id).distinct(Transcript.speaker_tag)
+    return query.count()
+
 def add_speaker(session_device_id, alias):
   speaker = Speaker(session_device_id, alias)
   db.session.add(speaker)
