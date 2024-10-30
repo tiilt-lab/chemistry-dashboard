@@ -153,6 +153,12 @@ def speaker_id_transcripts_for(device_id, speaker_id, **kwargs):
     transcripts = database.get_transcripts(speaker_id=speaker_id)
     return json_response([transcript.json() for transcript in transcripts])
 
+@api_routes.route('/api/v1/sessions/devices/<int:device_id>/speaker_tags', methods=['GET'])
+#@wrappers.verify_login(public=True)
+#@wrappers.verify_session_access
+def speaker_tags_for(device_id, **kwargs):
+    tags = database.get_speaker_tags(session_device_id=device_id)
+    return json_response({"Speakers": tags})
 
 @api_routes.route('/api/v1/devices/<int:device_id>/transcripts/client', methods=['GET'])
 # @wrappers.verify_login(public=True)
