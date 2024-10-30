@@ -120,8 +120,8 @@ function ByodJoinPage(props) {
                   style={{ width: adjDim(350) + "px" }}
                 >
                   <option value="Audio">Audio</option>
-                  <option value="Video">Video</option>
-                  <option value="Videocartoonify">Video(Cartoon)</option>
+                  {/*<option value="Video">Video</option>
+                  <option value="Videocartoonify">Video(Cartoon)</option>*/}
                 </select>
                 <button
                   className={
