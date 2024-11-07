@@ -22,6 +22,8 @@ from tables.keyword import Keyword
 from tables.user import User
 from tables.api_client import APIClient
 from tables.folder import Folder
+from tables.topic_model import TopicModel
+from tables.speaker import Speaker
 
 # Saves changes made to database (models)
 def save_changes():
@@ -29,6 +31,79 @@ def save_changes():
 
 def close_session():
     db.session.remove()
+
+# -------------------------
+# Speakers
+# -------------------------
+
+def get_speakers(session_device_id=None, id = None):
+    query = db.session.query(Speaker)
+    if id != None:
+        return query.filter(Speaker.id == id).first()
+    if session_device_id != None:
+        query = query.filter(Speaker.session_device_id == session_device_id)
+    return query.all()
+
+def get_speaker_tags(session_device_id=None):
+    query = db.session.query(Transcript).filter(session_device_id=session_device_id).distinct(Transcript.speaker_tag)
+    return query.count()
+
+def add_speaker(session_device_id, alias):
+  speaker = Speaker(session_device_id, alias)
+  db.session.add(speaker)
+  db.session.commit()
+  return speaker
+
+def update_speaker(speaker_id, alias = None):
+    speaker = get_speakers(id = speaker_id)
+    if speaker:
+        if alias:
+            speaker.alias = alias
+        db.session.commit()
+        return speaker
+    return None
+
+def delete_speaker(speaker_id):
+    db.session.query(Speaker).filter(Speaker.id == speaker_id).delete(synchronize_session='fetch')
+    db.session.commit()
+    return True
+
+# -------------------------
+# Topic Models
+# -------------------------
+
+def get_topic_models(owner_id = None, id = None, name = None):
+  query = db.session.query(TopicModel)
+  if owner_id != None:
+      query = query.filter(TopicModel.owner_id == owner_id)
+  if id != None:
+      return query.filter(TopicModel.id == id).first()
+  if name != None:
+      return query.filter(TopicModel.name == name).first()
+  return query.all()
+
+
+def add_topic_model(user_id, name, summary):
+  topic_model = TopicModel(user_id, name, summary)
+  db.session.add(topic_model)
+  db.session.commit()
+  return topic_model
+
+def update_topic_model(topic_model_id, name=None, summary=None):
+    topic_model = get_topic_models(id=topic_model_id)
+    if topic_model:
+        if name:
+            topic_model.name = name
+        if summary:
+            topic_model.summary = summary
+        db.session.commit()
+        return topic_model
+    return None
+
+def delete_topic_model(topic_model_id):
+  db.session.query(TopicModel).filter(TopicModel.id == topic_model_id).delete(synchronize_session='fetch')
+  db.session.commit()
+  return True
 
 # -------------------------
 # Keyword (Session keywords)
@@ -280,8 +355,9 @@ def get_sessions(id=None, owner_id=None, active=None, folder_ids=None, passcode=
         return query.first()
     return query.all()
 
-def create_session(user_id, keyword_list_id, name="Unnamed", folder=None):
-    session = Session(user_id,name, folder)
+def create_session(user_id, keyword_list_id, topic_model_id, name="Unnamed", folder=None):
+    # TODO get the topic model from the db and somehow add it to the discussion.
+    session = Session(user_id, name, folder, topic_model_id)
     db.session.add(session)
     keyword_list_items = get_keyword_list_items(keyword_list_id, owner_id=user_id)
     keywords = []
@@ -381,25 +457,32 @@ def delete_session_device(session_device_id):
     db.session.commit()
     return True
 
-def create_byod_session_device(passcode, name):
+def create_byod_session_device(passcode, name, collaborators):
     session = get_sessions(active=True, passcode=passcode, first=True)
+    speakers = []
     if not session:
-        return False, 'Session not found.'
+        return False, 'Session not found.', speakers
     duplicate = get_session_devices(session_id=session.id, name=name, first=True)
     if duplicate:
         if duplicate.connected: # User signed into a device already in use.
-            return False, "Name already in use."
+            return False, "Name already in use.", speakers
         else: # User signed back into existing device.
             duplicate.removed = False
             db.session.commit()
-            return True, duplicate
+            return True, duplicate, get_speakers(session_device_id=duplicate.id)
     else: # New session device.
         session_device = SessionDevice(session.id, None, name)
         db.session.add(session_device)
         db.session.commit()
         session_device.create_key()
         db.session.commit()
-        return True, session_device
+        logging.info("Collaborators: {}".format(collaborators))
+        for i in range(0, collaborators):
+          speaker = Speaker(session_device.id,"")
+          speakers.append(speaker)
+          db.session.add(speaker)
+          db.session.commit()
+        return True, session_device, speakers
 
 def create_session_device(session_id, name):
     session = get_sessions(id=session_id, active=True)
@@ -436,28 +519,42 @@ def create_pod_session_device(session_id, device_id):
     db.session.commit()
     return True, session_device
 
+def setEmbeddingsFile(processing_key, embeddings):
+    session_device = get_session_devices(processing_key=processing_key)
+    session_device.embeddings = embeddings
+    db.session.commit()
+    return True
+
+
+
+
 # -------------------------
 # Transcript
 # -------------------------
 
-def add_transcript(session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, tag=None):
-    transcript = Transcript(session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, tag)
+def add_transcript(session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id ,tag, speaker_id):
+    transcript = Transcript(session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id, tag, speaker_id)
     db.session.add(transcript)
     db.session.commit()
     return transcript
 
-def get_transcripts(session_id=None, session_device_id=None, start_time=0, end_time=-1):
+def set_speaker_tag(transcript, tag):
+    transcript.speaker_tag = tag
+    db.session.commit()
+    return True
+
+def get_transcripts(session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
     query = db.session.query(Transcript)
     if session_id != None:
         query = query.filter(SessionDevice.session_id == session_id)
-	#filter(SessionDevice.id == Transcript.session_device_id).\
-        #    filter(SessionDevice.session_id == session_id)
     if session_device_id != None:
         query = query.filter(Transcript.session_device_id == session_device_id)
     if start_time > 0:
         query = query.filter(Transcript.start_time >= start_time)
     if end_time != -1 and end_time > start_time:
         query = query.filter(Transcript.start_time < end_time)
+    if speaker_id != -1:
+        query = query.filter(Transcript.speaker_id == speaker_id)
     return query.all()
 
 def delete_device_transcripts(session_device_id):

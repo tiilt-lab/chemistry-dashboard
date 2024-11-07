@@ -80,6 +80,7 @@ export class KeywordListItemsComponent implements OnInit {
     }
     this.newPressed = true;
     this.keywordListItems.push(new KeywordListItemModel());
+   
   }
 
   removeKeyword(item) {

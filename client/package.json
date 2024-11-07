@@ -27,20 +27,20 @@
     "core-js": "^2.4.1",
     "ng-click-outside": "^4.0.0",
     "ng2-file-upload": "^1.4.0",
-    "node-sass": "^4.13.1",
+    "node-sass": "^7.0.0",
     "rxjs": "^5.5.2",
     "socket.io-client": "^2.2.0",
     "socketio-wildcard": "^2.0.0",
     "zone.js": "^0.8.14"
   },
   "devDependencies": {
-    "@angular/cli": "1.6.7",
+    "@angular/cli": "^1.7.4",
     "@angular/compiler-cli": "^5.0.0",
     "@angular/language-service": "^5.0.0",
     "@types/jasmine": "~2.8.6",
     "@types/jasminewd2": "~2.0.2",
     "@types/node": "~9.4.1",
-    "codelyzer": "^4.0.1",
+    "codelyzer": "^4.5.0",
     "jasmine-core": "~3.0.0",
     "jasmine-spec-reporter": "~4.2.1",
     "karma": "~6.3.16",
@@ -52,6 +52,6 @@
     "protractor": "~5.3.0",
     "ts-node": "~4.1.0",
     "tslint": "~5.9.1",
-    "typescript": "^2.6.2"
+    "typescript": "^2.9.2"
   }
 }

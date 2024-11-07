@@ -1,0 +1,24 @@
+@import '../design-system';
+// Colours definitions
+$section-border: rgba(44%, 47%, 71%, 0.15);
+
+.section-container {
+    padding: 16px;
+    // 375px - the 16px left and right padding - 2px left and right border
+    width: 375px - 32px - 2px;
+    position: relative;
+    background-color: $solid-white;
+    border: 1px solid $section-border;
+    @include text-body;
+    margin: $stack-M;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.heading {
+    position: relative;
+    @include text-headline;
+    margin: $stack-M;
+    font-weight: bold;
+    padding-left: 16px;
+}

@@ -10,7 +10,7 @@ import os
 # In total, this model has about 3,000,000 words.
 # Setting limit will take the N most frequent words from that model.
 def initialize(limit=100000):
-    global KEYWORD_MODEL
+    global KEYWORD_MODEL    
     print('Unpacking keyword model...')
     model_path = os.path.dirname(os.path.abspath(__file__)) + '/models/GoogleNews-vectors-negative300.bin'
     KEYWORD_MODEL = gensim.models.KeyedVectors.load_word2vec_format(model_path, binary=True, limit=limit)

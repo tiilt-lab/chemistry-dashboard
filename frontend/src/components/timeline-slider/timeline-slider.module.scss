@@ -1,0 +1,39 @@
+@import '../../design-system';
+
+.timeline{
+  position: relative;
+  height: 50px;
+  margin: 11px 21px;
+}
+
+.timeline-handle {
+	position: absolute;
+	width: 20px;
+  height: 50px;
+  background-color: $solid-blue;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.timeline-bar {
+  position: absolute;
+  height: 30px;
+  top: 10px;
+  background-color: #b1b1ff;
+}
+
+.timeline-background {
+  position: absolute;
+  height: 30px;
+  top: 10px;
+  left: 10px;
+  width: 280px;
+  border-radius: 5px;
+  background-color: $solid-light-grey;
+}
+
+.timeline-text {
+  position: absolute;
+  @include text-caption1;
+  opacity: 0.5;
+}

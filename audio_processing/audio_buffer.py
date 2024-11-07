@@ -1,3 +1,4 @@
+import logging
 import threading
 
 class AudioBuffer:
@@ -8,9 +9,9 @@ class AudioBuffer:
         self.buffer_start = 0
         self.buffer_end = 0
         self.config = config
-        self.sample_rate = self.config.sample_rate
+        self.sample_rate = 16000
         self.channels = self.config.channels
-        self.depth = self.config.depth
+        self.depth = 2
         self.lock = threading.Lock()
 
     def append(self, data):
