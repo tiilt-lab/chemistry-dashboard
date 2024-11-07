@@ -7,10 +7,14 @@ import shutil
 import logging
 import callbacks
 import threading
+import weakref
+import wave
 import scipy.signal
 import config as cf
 import numpy as np
+import moviepy.editor as mp
 from recorder import WaveRecorder
+from recorder import VidRecorder
 from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager
 from audio_buffer import AudioBuffer
@@ -41,6 +45,11 @@ class ServerProtocol(WebSocketServerProtocol):
         self.processor = None
         self.last_message = time.time()
         self.end_signaled = False
+        self.interval = 10
+        self.awaitingSpeakers = True
+        self.speakers = None
+        self.currSpeaker = None
+        self.currAlias = None
         cm.add(self)
         logging.info('New client connected...')
 
@@ -73,6 +82,17 @@ class ServerProtocol(WebSocketServerProtocol):
         if not 'type' in data:
             logging.warning('Message does not contain "type".')
             return
+        if data['type'] == 'speaker':
+            if data['id'] == "done":
+                self.awaitingSpeakers = False
+                for speaker in data['speakers']:
+                    self.speakers[speaker["id"]]["alias"] = speaker["alias"]
+                self.processor.setSpeakerFingerprints(self.speakers)
+                logging.info("Done awaiting all speakers info")
+            else:
+                self.currSpeaker = data['id']
+                self.currAlias = data['alias']
+                logging.info("preparing for speaker {}'s fingerprint".format(self.currSpeaker))
         if data['type'] == 'start':
             valid, result = ProcessingConfig.from_json(data)
             if not valid:
@@ -80,41 +100,67 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.signal_end()
             else:
                 self.config = result
-                logging.info('Client {0} signalled to started...'.format(self.config.auth_key))
                 cm.associate_keys(self, self.config.session_key, self.config.auth_key)
+                self.stream_data = data['streamdata']
+                if(data['numSpeakers'] != 0):
+                    self.speakers = dict()
+
+                if self.stream_data == 'audio':
+                    if cf.record_original():
+                        filename = os.path.join(cf.recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
+                        self.orig_recorder = WaveRecorder(filename, self.config.sample_rate, self.config.depth, self.config.channels)
+                    if cf.record_reduced():
+                        filename = os.path.join(cf.recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
+                        self.redu_recorder = WaveRecorder(filename, 16000, 2, 1)
+                elif self.stream_data == 'video':
+                    self.video_count = 1
+                    self.filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_orig".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, str(time.ctime())))
+                    self.orig_vid_recorder = VidRecorder(self.filename,16000, 2, 1)
                 self.signal_start()
                 self.send_json({'type':'start'})
+                logging.info('Audio process connected')
                 callbacks.post_connect(self.config.auth_key)
-                if cf.record_original():
-                    filename = os.path.join(cf.recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
-                    self.orig_recorder = WaveRecorder(filename, self.config.sample_rate, self.config.depth, self.config.channels)
-                if cf.record_reduced():
-                    filename = os.path.join(cf.recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
-                    self.redu_recorder = WaveRecorder(filename, 16000, 2, 1)
-
-        elif data['type'] == 'stop':
-            if(self.running):
-                logging.info('Client {0} signalled to stop...'.format(self.config.auth_key))
-                self.signal_end()
-        else:
-            logging.warning('Unexpected message type: {0}.'.format(data['type']))
 
     def process_binary(self, data):
-        if self.running:
-            # Save audio data.
-            if cf.record_original():
-                self.orig_recorder.write(data)
+        if self.running and not self.awaitingSpeakers:
+            if self.stream_data == 'audio':
+                if cf.record_original():
+                    # Save audio data.
+                    self.orig_recorder.write(data)
+                # Convert all audio to pcm_i16le
+                data = self.reformat_data(data)
+                data = self.resample_data(data)
+                self.audio_buffer.append(data)
+                asr_data = self.reduce_channels(1, data)
+                self.asr_audio_queue.put(asr_data)
+                # Save audio data.
+                if cf.record_reduced():
+                    self.redu_recorder.write(asr_data)
+            elif self.stream_data == 'video':
+                self.orig_vid_recorder.write(data)
 
-            # Convert all audio to pcm_i16le
-            data = self.reformat_data(data)
-            data = self.resample_data(data)
-            self.audio_buffer.append(data)
-            asr_data = self.reduce_channels(1, data)
-            self.asr_audio_queue.put(asr_data)
+                temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
+                vidclip = mp.VideoFileClip(self.filename+'.webm')
+                subclips = vidclip.subclip((self.video_count-1)*self.interval,self.video_count*self.interval)
+                subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=16000,bitrate='50k') #nbytes=2,codec='pcm_s16le',
 
-            # Save audio data.
-            if cf.record_reduced():
-                self.redu_recorder.write(asr_data)
+                wavObj = wave.open(temp_aud_file+'.wav')
+                self.audio_buffer.append(self.read_bytes_from_wav(wavObj))
+                audiobyte = self.reduce_wav_channel(1,wavObj)
+                self.asr_audio_queue.put(audiobyte)
+
+                if os.path.isfile(temp_aud_file+'.wav'):
+                    os.remove(temp_aud_file+'.wav')
+
+                self.video_count = self.video_count + 1
+                logging.info('video binary recieved')
+        elif self.running and self.awaitingSpeakers:
+            if self.currSpeaker:
+                new_data = self.reformat_data(data)
+                self.speakers[self.currSpeaker] = {"alias": self.currAlias, "data": new_data}
+                logging.info("storing speaker {}'s fingerprint with alias {}".format(self.currSpeaker, self.currAlias))
+                self.currSpeaker = None
+                self.currAlias = None
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 
@@ -126,7 +172,7 @@ class ServerProtocol(WebSocketServerProtocol):
     def reformat_data(self, in_data):
         if self.config.encoding == 'pcm_f32le':
             out_data = np.frombuffer(in_data, np.float32, -1)
-            return (out_data * 32768.0).astype(np.int16, copy=False).tobytes()
+            return (out_data * 32767.0).astype(np.int16, copy=False).tobytes()
         else:
             return in_data
 
@@ -148,11 +194,30 @@ class ServerProtocol(WebSocketServerProtocol):
         else:
             return in_data
 
+    def read_bytes_from_wav(self,wav):
+        wav.setpos(0)
+        sdata = wav.readframes(wav.getnframes())
+        data = np.frombuffer(sdata,dtype=np.dtype('int16'))
+        return data.tobytes()
+
+    def reduce_wav_channel(self,channels_wanted,wav):
+        if channels_wanted < self.config.channels:
+            nch = wav.getnchannels()
+            wav.setpos(0)
+            sdata = wav.readframes(wav.getnframes())
+            data = np.frombuffer(sdata,dtype=np.dtype('int16'))
+            ch_data = data[0::nch]
+            return ch_data.tobytes()
+        else:
+            self.read_bytes_from_wav(wav)
+
+
+
     def signal_start(self):
         self.audio_buffer = AudioBuffer(self.config)
         self.asr_audio_queue = queue.Queue()
         self.asr_transcript_queue = queue.Queue()
-        self.asr = GoogleASR(self.asr_audio_queue, self.asr_transcript_queue, self.config)
+        self.asr = GoogleASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data,self.interval)
         self.asr.start()
         self.processor = AudioProcessor(self.audio_buffer, self.asr_transcript_queue, self.config)
         self.processor.start()
@@ -169,6 +234,7 @@ class ServerProtocol(WebSocketServerProtocol):
             self.asr.stop()
         if self.processor:
             self.processor.stop()
+
         if self.config:
             callbacks.post_disconnect(self.config.auth_key)
             cm.remove(self, self.config.session_key, self.config.auth_key)
@@ -180,8 +246,11 @@ class ServerProtocol(WebSocketServerProtocol):
         # Begin Post Processing
         if cf.record_reduced():
             self.redu_recorder.close()
+        # if self.stream_data == 'video':
+        #     self.orig_vid_recorder.close()
         if cf.record_original():
             self.orig_recorder.close()
+            '''
             if self.config.tag:
                 logging.info('Performing speaker tagging...')
                 tagging_results = speaker_tagging.speaker_tagging(self.orig_recorder.wav_filename)
@@ -191,6 +260,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     logging.info('Processing results posted successfully for tagging {0} '.format(self.config.auth_key))
                 else:
                     logging.info('Processing results FAILED to post for {0} '.format(self.config.auth_key))
+            '''
 
 if __name__ == '__main__':
     cf.initialize()

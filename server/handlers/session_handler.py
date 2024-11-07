@@ -9,8 +9,8 @@ import json
 from device_websockets import ConnectionManager
 from redis_helper import RedisSessions
 
-def create_session(user_id, name, devices, keyword_list_id, byod, features, doa, folder):
-    session, keywords = database.create_session(user_id, keyword_list_id, name, folder)
+def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder):
+    session, keywords = database.create_session(user_id, keyword_list_id, topic_model_id, name, folder)
     if byod:
         session = database.generate_session_passcode(session.id)
     keywords = [keyword.keyword for keyword in keywords]
@@ -20,6 +20,8 @@ def create_session(user_id, name, devices, keyword_list_id, byod, features, doa,
         'features': features,
         'keywords': keywords,
         'doa': doa,
+        'topic_model': topic_model_id,
+        'owner': user_id
     }
     RedisSessions.create_session(session.id, config)
     if devices:
@@ -56,13 +58,13 @@ def end_session(session_id):
             logging.critical('Session End: Pod ' + str(device.id) + ' was unreachable or failed to respond.')
     return True, session
 
-def byod_join_session(name, passcode):
-    success, session_device = database.create_byod_session_device(passcode, name)
+def byod_join_session(name, passcode, collaborators):
+    success, session_device, speakers = database.create_byod_session_device(passcode, name, collaborators)
     if success:
         session = database.get_sessions(id=session_device.session_id)
         RedisSessions.create_device_key(session_device.processing_key, session.id)
         socketio_helper.update_session_device(session_device)
-        return True, {'session': session.json(), 'session_device': session_device.json(), 'key': session_device.processing_key}
+        return True, {'session': session.json(), 'session_device': session_device.json(), 'key': session_device.processing_key, 'speakers': [speaker.json() for speaker in speakers]}
     else:
         return False, session_device
 

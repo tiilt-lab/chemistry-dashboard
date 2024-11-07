@@ -113,6 +113,20 @@ def verify_keyword_list_access(f):
 
     return verify_function
 
+def verify_topic_model_access(f):
+    @wraps(f)
+    def verify_function(*args, **kwargs):
+        topic_model_id= kwargs['topic_model_id']
+        user = kwargs['user']
+        topic_model_model = database.get_topic_models(id=topic_model_id)
+        if topic_model_model:
+            kwargs['topic_model'] = topic_model_model
+            return f(*args, **kwargs)
+        else:
+            return json_response({'message': 'Topic model not found.'}, 403)
+
+    return verify_function
+
 # Expects 'user_id' to exist in keyword args.
 def verify_user_authority(f):
     @wraps(f)

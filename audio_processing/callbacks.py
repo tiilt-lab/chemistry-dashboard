@@ -3,8 +3,9 @@ import requests
 import os
 from datetime import datetime
 import logging
+import base64
 
-def post_transcripts(source, start_time, end_time, transcript, doa, questions, keywords, features):
+def post_transcripts(source, start_time, end_time, transcript, doa, questions, keywords, features, topic_id, speaker_tag, speaker_id):
     result = {
         'source': source,
         'start_time': start_time,
@@ -19,16 +20,24 @@ def post_transcripts(source, start_time, end_time, transcript, doa, questions, k
         result['keywords'] = keywords
     if features:
         result['features'] = features
+    if topic_id:
+        result['topic_id'] = topic_id
+    if speaker_tag:
+        result['speaker_tag'] = speaker_tag
+    if speaker_id:
+        result['speaker_id'] = speaker_id
+    logging.info(result)
     try:
         response = requests.post(config.processing_callback(), json=result)
         return response.status_code == 200
     except Exception as e:
         return False
 
-def post_tagging(source, tag):
+def post_tagging(source, tag, embeddingsFile):
     result = {
         'source': source,
-        'tagging': tag
+        'tagging': tag,
+        'embeddingsFile': embeddingsFile
     }
     try:
         response = requests.post(config.tagging_callback(),json=result)
@@ -43,9 +52,13 @@ def post_connect(source):
         'time': str(datetime.utcnow())
     }
     try:
+        logging.info('end point')
+        logging.info(config.connect_callback())
         response = requests.post(config.connect_callback(), json=connection)
+        logging.info(response.status_code)
         return response.status_code == 200
     except Exception as e:
+        logging.info('connect callback failed: {0}'.format(e))
         return False
 
 def post_disconnect(source):

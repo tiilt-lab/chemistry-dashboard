@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="28px" height="28px" viewBox="0 0 28 28" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 50.2 (55047) - http://www.bohemiancoding.com/sketch -->
+    <title>atom/icon/mic</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <linearGradient x1="-33.2875%" y1="-94.4335938%" x2="133.289583%" y2="167.96875%" id="linearGradient-1">
+            <stop stop-color="#764BFF" stop-opacity="0.96" offset="0%"></stop>
+            <stop stop-color="#7BB7F1" offset="100%"></stop>
+        </linearGradient>
+        <linearGradient x1="-10.8571409%" y1="-78.8766924%" x2="103.932263%" y2="115.545744%" id="linearGradient-2">
+            <stop stop-color="#764BFF" offset="0%"></stop>
+            <stop stop-color="#7BB7F1" offset="100%"></stop>
+        </linearGradient>
+    </defs>
+    <g id="Main" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="1.Home" transform="translate(-34.000000, -425.000000)">
+            <g id="Recordings" transform="translate(16.000000, 395.000000)">
+                <g id="atom/icon/record" transform="translate(16.000000, 28.000000)">
+                    <circle id="Oval" fill="url(#linearGradient-1)" fill-rule="evenodd" cx="16" cy="16" r="8"></circle>
+                    <circle id="Oval" stroke="url(#linearGradient-2)" stroke-width="2" cx="16" cy="16" r="13"></circle>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

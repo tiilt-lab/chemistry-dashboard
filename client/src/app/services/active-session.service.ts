@@ -40,7 +40,6 @@ export class ActiveSessionService {
   initializeSocket() {
     // Create Socket.
     this.socket = this.socketService.createSocket('session', this.sessionId);
-
     // Update device.
     this.socket.on('device_update', e => {
       const updatedDevice = SessionDeviceModel.fromJson(JSON.parse(e));
@@ -119,7 +118,7 @@ export class ActiveSessionService {
 
   getSessionDeviceTranscripts(sessionDeviceId: number) {
     return this.transcriptSource.map(ts => ts.filter(t => t.session_device_id === sessionDeviceId)
-                                      .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1));
+    .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1));
   }
   getTranscripts() {
     return this.transcriptSource;
