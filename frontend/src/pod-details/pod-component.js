@@ -32,7 +32,7 @@ function PodComponent() {
   const [radarTrigger, setRadarTrigger] = useState(0);
   const [hideDetails, setHideDetails] = useState(false);
   const [speakers, setSpeakers] = useState([]);
-  const [selectedSpeaker, setSelectedSpeaker] = useState(-1);
+  const [selectedSpkrId, setSelectedSpkrId] = useState(-1);
 
   const { sessionDeviceId } = useParams();
   const navigate = useNavigate();
@@ -130,7 +130,7 @@ function PodComponent() {
     setDisplayTranscripts((past) => {
           return transcripts.filter(t => t.start_time >= sTime && t.start_time <= eTime);
         });*/
-  }, [startTime, endTime, selectedSpeaker]);
+  }, [startTime, endTime, selectedSpkrId]);
 
   useEffect(() => {
     if (displayTranscripts) {
@@ -174,7 +174,7 @@ function PodComponent() {
   };
 
   const generateDisplayTranscripts = (s, e) => {
-    if (selectedSpeaker === -1) {
+    if (selectedSpkrId === -1) {
       setDisplayTranscripts(
         transcripts.filter((t) => t.start_time >= s && t.start_time <= e)
       );
@@ -184,7 +184,7 @@ function PodComponent() {
           (t) =>
             t.start_time >= s &&
             t.start_time <= e &&
-            t.speaker_id === selectedSpeaker
+            t.speaker_id === selectedSpkrId
         )
       );
     }
@@ -335,8 +335,8 @@ function PodComponent() {
       hideDetails={hideDetails}
       toggleDetails={toggleDetails}
       speakers={speakers}
-      selectedSpeaker={selectedSpeaker}
-      setSelectedSpeaker={setSelectedSpeaker}
+      selectedSppkrId={selectedSpkrId}
+      setSelectedSpkrId={setSelectedSpkrId}
     />
   );
 }

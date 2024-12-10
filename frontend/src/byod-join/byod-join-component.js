@@ -71,6 +71,7 @@ function JoinPage() {
   const [numSpeakers, setNumSpeakers] = useState();
   const [speakers, setSpeakers] = useState([]);
   const [speakersValidated, setSpeakersValidated] = useState(false);
+  const [selectedSpkrId, setSelectedSpkrId] = useState(-1);
   const [selectedSpeaker, setSelectedSpeaker] = useState(null);
   const [currBlob, setCurrBlob] = useState(null);
   const [invalidName, setInvalidName] = useState(false);
@@ -155,7 +156,7 @@ function JoinPage() {
       setEndTime(eTime);
       generateDisplayTranscripts(sTime, eTime);
     }
-  }, [transcripts, startTime, endTime, selectedSpeaker]);
+  }, [transcripts, startTime, endTime, selectedSpkrId, speakersValidated]);
 
   useEffect(() => {
     if (audioconnected && !videoconnected) {
@@ -771,7 +772,7 @@ function JoinPage() {
   };
 
   const generateDisplayTranscripts = (s, e) => {
-    if (selectedSpeaker === -1) {
+    if (selectedSpkrId === -1) {
       setDisplayTranscripts(
         transcripts.filter((t) => t.start_time >= s && t.start_time <= e)
       );
@@ -781,7 +782,7 @@ function JoinPage() {
           (t) =>
             t.start_time >= s &&
             t.start_time <= e &&
-            t.speaker_id === selectedSpeaker
+            t.speaker_id === selectedSpkrId
         )
       );
     }
@@ -919,6 +920,8 @@ function JoinPage() {
       authKey={key}
       openForms={openForms}
       closeForm={closeForm}
+      selectedSpkrId={selectedSpkrId}
+      setSelectedSpkrId={setSelectedSpkrId}
       selectedSpeaker={selectedSpeaker}
       setSelectedSpeaker={setSelectedSpeaker}
       saveAudioFingerprint={saveAudioFingerprint}
