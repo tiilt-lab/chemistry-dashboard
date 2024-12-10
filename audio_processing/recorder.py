@@ -4,8 +4,8 @@ import numpy as np
 from scipy.io import wavfile
 import os
 import numpy as np
-import cv2
-from moviepy.editor import *
+#import cv2
+#from moviepy.editor import *
 #from video_cartoonizer.cartoonizer import caart
 
 
@@ -37,6 +37,7 @@ class WaveRecorder:
             os.remove(self.dat_filename)
             self.closed = True
 
+'''
 class VidRecorder:
 
     def __init__(self, filename,sample_rate,depth,channels):
@@ -72,3 +73,5 @@ class VidRecorder:
               logging.info('Unable to delete video file: {0}'.format(e))         
             
             self.closed = True
+    '''
+
