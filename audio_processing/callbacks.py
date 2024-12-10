@@ -70,4 +70,5 @@ def post_disconnect(source):
         response = requests.post(config.disconnect_callback(), json=disconnection)
         return response.status_code == 200
     except Exception as e:
+        logging.info('disconnect callback failed: {0}'.format(e))
         return False

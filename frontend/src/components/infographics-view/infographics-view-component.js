@@ -20,9 +20,9 @@ function AppInfographicsView(props) {
             id="speaker"
             className={style["dropdown-input"]}
             style={{ width: adjDim(350) + "px" }}
-            value={props.selectedSpeaker}
+            value={props.selectedSpkrId}
             onChange={(e) =>
-              props.setSelectedSpeaker(parseInt(e.target.value, 10))
+              props.setSelectedSpkrId(parseInt(e.target.value, 10))
             }
           >
             <option value="-1">All Speakers</option>
