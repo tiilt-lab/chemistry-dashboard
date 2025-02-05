@@ -9,7 +9,6 @@ class Transcript(db.Model):
     question = db.Column(db.Boolean, nullable=False)
     transcript = db.Column(db.Text, nullable=False)
     word_count = db.Column(db.Integer, nullable=False)
-    speaker_tag = db.Column(db.String(64))
     direction = db.Column(db.Integer)
     emotional_tone_value = db.Column(db.Integer)
     analytic_thinking_value = db.Column(db.Integer)
@@ -17,6 +16,7 @@ class Transcript(db.Model):
     authenticity_value = db.Column(db.Integer)
     certainty_value = db.Column(db.Integer)
     topic_id = db.Column(db.Integer)
+    speaker_tag = db.Column(db.String(64))
     speaker_id = db.Column(db.Integer)
 
     keywords = db.relationship("KeywordUsage", lazy='joined', uselist=True)
@@ -50,7 +50,6 @@ class Transcript(db.Model):
             length=self.length,
             question=self.question,
             transcript=self.transcript,
-            speaker_tag=self.speaker_tag,
             direction=self.direction,
             emotional_tone_value=self.emotional_tone_value,
             analytic_thinking_value=self.analytic_thinking_value,
@@ -59,6 +58,7 @@ class Transcript(db.Model):
             certainty_value=self.certainty_value,
             word_count=self.word_count,
             topic_id=self.topic_id,
+            speaker_tag=self.speaker_tag,
             speaker_id=self.speaker_id,
             keywords=[keyword.json(suppress=['transcript_id']) for keyword in self.keywords]
         )
