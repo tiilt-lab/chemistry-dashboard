@@ -258,7 +258,7 @@ def remove_device_from_session(session_id, session_device_id, **kwargs):
 @wrappers.verify_session_access
 def export_session(session_id, **kwargs):
     si = io.StringIO()
-    field_names = ['Device ID', 'Device Name', 'Start Time', 'Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty', 'Clout', 'Emotional Tone', 'Direction', 'Word Count']
+    field_names = ['Device ID', 'Device Name', 'Start Time', 'Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty', 'Clout', 'Emotional Tone', 'Direction', 'Word Count', 'Speaker Tag', 'Speaker ID', 'Topic ID']
     fwrite = csv.DictWriter(si, fieldnames = field_names)
     fwrite.writeheader()
     session_devices = database.get_session_devices(session_id=session_id)
@@ -280,7 +280,11 @@ def export_session(session_id, **kwargs):
                 'Clout': int(t.clout_value),
                 'Emotional Tone': int(t.emotional_tone_value),
                 'Direction': int(t.direction),
-                'Word Count': int(t.word_count)})
+                'Word Count': int(t.word_count),
+                'Speaker Tag': t.speaker_tag,
+                'Speaker ID': int(t.speaker_id),
+                'Topic ID': int(t.topic_id)
+                })
 
     output = make_response(si.getvalue())
     output.headers["Content-Disposition"] = "attachment; filename=export.csv"
