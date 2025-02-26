@@ -29,8 +29,12 @@ from asr_connectors.google_asr_connector import GoogleASR
 from features_detector import features_detector
 from keyword_detector import keyword_detector
 from speaker_tagging import speaker_tagging
+from speechbrain.pretrained import SpeakerRecognition
+from sentence_transformers import SentenceTransformer
 
 cm = ConnectionManager()
+diarization_model = None
+semantic_model = None
 
 class ServerProtocol(WebSocketServerProtocol):
 
@@ -219,7 +223,7 @@ class ServerProtocol(WebSocketServerProtocol):
         self.asr_transcript_queue = queue.Queue()
         self.asr = GoogleASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data,self.interval)
         self.asr.start()
-        self.processor = AudioProcessor(self.audio_buffer, self.asr_transcript_queue, self.config)
+        self.processor = AudioProcessor(self.audio_buffer, self.asr_transcript_queue, diarization_model, semantic_model, self.config)
         self.processor.start()
         self.running = True
 
@@ -281,6 +285,12 @@ if __name__ == '__main__':
     logging.info('Starting Audio Processing Service...')
     features_detector.initialize()
     keyword_detector.initialize(cf.keyword_model_limit())
+
+    logging.info('Loading Diarization Model...')
+    diarization_model = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="./pretrained_ecapa")
+    logging.info('Loading Semantic Model...')
+    semantic_model = SentenceTransformer("all-mpnet-base-v2")
+
     poll_connections = task.LoopingCall(cm.check_connections)
     poll_connections.start(10.0)
     auth_connections = task.LoopingCall(cm.check_connection_authentication)
