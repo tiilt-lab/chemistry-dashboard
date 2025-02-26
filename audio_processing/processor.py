@@ -119,7 +119,6 @@ class AudioProcessor:
             transcript_data = self.transcript_queue.get()
             if transcript_data is None:
                 self.asr_complete = True
-                self.speaker_transcript_queue.put(None)
             else:
                 # Gather audio data related to the transcript.
                 words = transcript_data.alternatives[0].words
@@ -132,6 +131,7 @@ class AudioProcessor:
                 transcript_thread.daemon = True
                 transcript_thread.start()
         if self.running_processes == 0:
+            self.speaker_transcript_queue.put(None)
             self.__complete_callback()
         logging.info('Processing thread stopped for {0}.'.format(self.config.auth_key))
 
