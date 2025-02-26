@@ -23,7 +23,7 @@ import multiprocessing as mp
 NANO = 1000000000
 
 class AudioProcessor:
-    def __init__(self, audio_buffer, transcript_queue, config, diarization_model, semantic_model):
+    def __init__(self, audio_buffer, transcript_queue, diarization_model, semantic_model, config):
         self.audio_buffer = audio_buffer
         self.transcript_queue = transcript_queue
         self.mt_feats = np.array([])
@@ -59,7 +59,7 @@ class AudioProcessor:
             self.topic_model = load(os.path.join("topicModels", f'{self.config.owner}_{self.config.topic_model}'))
             logging.info("Loading successful")
         self.processing_thread.start()
-        self.speaker_metrics_processor = speaker_metrics.SpeakerProcessor(self.speaker_transcript_queue, self.fingerprints, self.cohesion_window, self.semantic_model, self.config)
+
 
     def stop(self):
         self.running = False
@@ -76,6 +76,10 @@ class AudioProcessor:
 
     def setSpeakerFingerprints(self, fingerprints):
         self.fingerprints = fingerprints
+        logging.info("Init metrics processor")
+        self.speaker_metrics_processor = speaker_metrics.SpeakerProcessor(self.speaker_transcript_queue, self.fingerprints, self.cohesion_window, self.semantic_model, self.config)
+        logging.info("Start metrics processor")
+        self.speaker_metrics_processor.start()
 
     def send_speaker_taggings(self):
         processing_timer = time.time()
@@ -186,7 +190,7 @@ class AudioProcessor:
             if self.config.diarization:
                 if self.fingerprints:
                   speaker_tag, speaker_id = checkFingerprints(audio_data, self.fingerprints ,self.diarization_model)
-                  self.speaker_transcript_queue.put((speaker_id, transcript_data))
+                  self.speaker_transcript_queue.put((speaker_id, transcript_text))
                 else:
                     if len(self.embeddings) == 0 and self.embeddingsFile != None:
                       try:

@@ -288,7 +288,6 @@ if __name__ == '__main__':
 
     logging.info('Loading Diarization Model...')
     diarization_model = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="./pretrained_ecapa")
-    logging.info('Loading Semantic Model...')
     semantic_model = SentenceTransformer("all-mpnet-base-v2")
 
     poll_connections = task.LoopingCall(cm.check_connections)
