@@ -1,7 +1,7 @@
 numpy
 matplotlib
 scipy
-sklearn
+scikit-learn
 hmmlearn
 simplejson
 eyed3
