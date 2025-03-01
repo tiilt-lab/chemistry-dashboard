@@ -3,25 +3,29 @@ import os
 import logging
 import threading
 import callbacks
+from speaker_metrics import speaker_metrics
 from features_detector import features_detector
 from keyword_detector import keyword_detector
 from doa.doa_respeaker_v2_6mic_array import calculateDOA
 from speaker_diarization.pyDiarization import clusterEmbeddings, clusterSpectralEmbeddings, embedSignal, getSpectralEmbeddings, checkFingerprints
 import numpy as np
-from speechbrain.pretrained import SpeakerRecognition
+from speechbrain.inference import SpeakerRecognition
 import time
 from gensim.models.ldamodel import LdaModel
 from joblib import load
 from topic_modeling.topic_modeling import preprocess_transcript
 import config as cf
+import torch.multiprocessing as mp
 #from source_seperation import source_seperation_pre_trained
 #from server.topic_modeling.topicmodeling import get_topics_with_prob
 
 # For converting nano seconds to seconds.
 NANO = 1000000000
 
+
+
 class AudioProcessor:
-    def __init__(self, audio_buffer, transcript_queue, config):
+    def __init__(self, audio_buffer, transcript_queue, diarization_model, semantic_model, config):
         self.audio_buffer = audio_buffer
         self.transcript_queue = transcript_queue
         self.mt_feats = np.array([])
@@ -30,7 +34,7 @@ class AudioProcessor:
         self.max_speakers = 10
         self.embeddings = []
         self.embeddingsFile = None
-        self.diarization_model = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="./pretrained_ecapa")
+        self.diarization_model = diarization_model
         self.speaker_timings = []
         self.config = config
         self.fs = 16000
@@ -39,6 +43,21 @@ class AudioProcessor:
         self.running_processes = 0
         self.topic_model = None
         self.fingerprints = None
+        self.cohesion_window = 20
+
+        try:
+          mp.set_start_method('spawn', force=True)
+        except RuntimeError:
+          print("unable to spawn")
+
+        self.processing_queue = mp.Queue()
+        self.speaker_transcript_queue = mp.Queue()
+        self.semantic_model = semantic_model
+        logging.info("Start metrics process")
+        self.speaker_metrics_process = mp.Process(target=speaker_metrics.process, args=(self.processing_queue, self.speaker_transcript_queue, self.semantic_model))
+        self.speaker_metrics_process.start()
+        self.processing_queue.put(config)
+
         cf.initialize()
 
     def start(self):
@@ -52,6 +71,7 @@ class AudioProcessor:
             self.topic_model = load(os.path.join("topicModels", f'{self.config.owner}_{self.config.topic_model}'))
             logging.info("Loading successful")
         self.processing_thread.start()
+
 
     def stop(self):
         self.running = False
@@ -68,6 +88,8 @@ class AudioProcessor:
 
     def setSpeakerFingerprints(self, fingerprints):
         self.fingerprints = fingerprints
+        logging.info("Set Speakers")
+        self.processing_queue.put(self.fingerprints)
 
     def send_speaker_taggings(self):
         processing_timer = time.time()
@@ -85,16 +107,6 @@ class AudioProcessor:
         taggings = {}
         taggings["results"] = results
 
-        '''
-        for i in range(0, len(results)):
-            result = results[i]
-            speaker = 'Speaker {0}'.format(result['speaker'])
-            timing = [self.float_to_timestamp(result['start']), self.float_to_timestamp(result['end'])]
-            if not speaker in taggings:
-                taggings[speaker] = [timing]
-            else:
-                taggings[speaker].append(timing)
-        '''
         processing_time = time.time() - processing_timer
         logging.info(taggings) # DEBUG: Prints the converted speaker timings.
         taggings_posted = callbacks.post_tagging(self.config.auth_key, taggings, self.embeddingsFile)
@@ -129,7 +141,9 @@ class AudioProcessor:
                 transcript_thread.daemon = True
                 transcript_thread.start()
         if self.running_processes == 0:
+            self.speaker_transcript_queue.put(None)
             self.__complete_callback()
+            self.speaker_metrics_process.terminate()
         logging.info('Processing thread stopped for {0}.'.format(self.config.auth_key))
 
     # Processes a transcript and its related audio data.
@@ -187,6 +201,7 @@ class AudioProcessor:
             if self.config.diarization:
                 if self.fingerprints:
                   speaker_tag, speaker_id = checkFingerprints(audio_data, self.fingerprints ,self.diarization_model)
+                  self.speaker_transcript_queue.put((speaker_id, transcript_text))
                 else:
                     if len(self.embeddings) == 0 and self.embeddingsFile != None:
                       try:

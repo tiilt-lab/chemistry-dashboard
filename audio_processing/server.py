@@ -29,6 +29,9 @@ from asr_connectors.google_asr_connector import GoogleASR
 from features_detector import features_detector
 from keyword_detector import keyword_detector
 from speaker_tagging import speaker_tagging
+from speechbrain.inference import SpeakerRecognition
+from sentence_transformers import SentenceTransformer
+import torch.multiprocessing as multiprocessing
 
 cm = ConnectionManager()
 
@@ -50,6 +53,12 @@ class ServerProtocol(WebSocketServerProtocol):
         self.speakers = None
         self.currSpeaker = None
         self.currAlias = None
+        self.diarization_model = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="./pretrained_ecapa")
+        self.semantic_model = SentenceTransformer("all-mpnet-base-v2")
+        self.semantic_model.share_memory()
+
+        logging.info('Loaded Diarization Model and Semantic Model...')
+
         cm.add(self)
         logging.info('New client connected...')
 
@@ -219,7 +228,7 @@ class ServerProtocol(WebSocketServerProtocol):
         self.asr_transcript_queue = queue.Queue()
         self.asr = GoogleASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data,self.interval)
         self.asr.start()
-        self.processor = AudioProcessor(self.audio_buffer, self.asr_transcript_queue, self.config)
+        self.processor = AudioProcessor(self.audio_buffer, self.asr_transcript_queue, self.diarization_model, self.semantic_model, self.config)
         self.processor.start()
         self.running = True
 
@@ -281,12 +290,14 @@ if __name__ == '__main__':
     logging.info('Starting Audio Processing Service...')
     features_detector.initialize()
     keyword_detector.initialize(cf.keyword_model_limit())
+
     poll_connections = task.LoopingCall(cm.check_connections)
     poll_connections.start(10.0)
     auth_connections = task.LoopingCall(cm.check_connection_authentication)
     auth_connections.start(5.0)
     factory = WebSocketServerFactory()
     factory.protocol = ServerProtocol
+
     reactor.listenTCP(9000, factory)
     logging.info('Audio Processing Service started.')
     reactor.run()
