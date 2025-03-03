@@ -78,6 +78,9 @@ class AudioProcessor:
 
     def __complete_callback(self):
         logging.info("completing callback")
+        self.speaker_transcript_queue.put(None)
+        self.speaker_metrics_process.join()
+        self.speaker_metrics_process.close()
         logging.info(self.config.diarization)
         if self.config.diarization:
             try:
@@ -141,9 +144,7 @@ class AudioProcessor:
                 transcript_thread.daemon = True
                 transcript_thread.start()
         if self.running_processes == 0:
-            self.speaker_transcript_queue.put(None)
             self.__complete_callback()
-            self.speaker_metrics_process.terminate()
         logging.info('Processing thread stopped for {0}.'.format(self.config.auth_key))
 
     # Processes a transcript and its related audio data.

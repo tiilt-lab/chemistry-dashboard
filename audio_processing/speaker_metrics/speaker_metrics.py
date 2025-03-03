@@ -105,8 +105,6 @@ class SpeakerProcessor:
             self.newness = np.nan_to_num(self.newness)
 
     def start(self):
-        if(self.running):
-           self.stop()
         self.running = True
         self.asr_complete = False
 
@@ -133,6 +131,7 @@ def process(processing_queue, speaker_transcript_queue, model):
     config = processing_queue.get()
     processor = SpeakerProcessor(config)
     auth_key = AuthenticationString(processor.auth_key)
+    processor.start()
 
     if processor:
       logging.info('[Speaker_Metrics]Speaker metric Process started for {0}.'.format(auth_key))
@@ -142,13 +141,14 @@ def process(processing_queue, speaker_transcript_queue, model):
         logging.info('[Speaker_Metrics]Speaker metric Process for {0} processed fingerprints.'.format(auth_key))
         processor.setSpeakers(speakers)
 
-        while not processor.asr_complete:
+        while processor.running and not processor.asr_complete :
             try:
               speaker_transcript_data = speaker_transcript_queue.get()
               processing_timer = time.time()
 
               if speaker_transcript_data is None:
-                  processor.asr_complete = True
+                  logging.info("[Speaker_Metrics]Attempting to stop")
+                  processor.stop()
 
               else:
                 speaker = speaker_transcript_data[0]
