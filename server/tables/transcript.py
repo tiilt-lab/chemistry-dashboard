@@ -42,6 +42,7 @@ class Transcript(db.Model):
         self.speaker_tag = speaker_tag
         self.speaker_id = speaker_id
 
+
     def json(self):
         return dict(
             id=self.id,
