@@ -5,6 +5,7 @@ import os
 import multiprocessing as mp
 from multiprocessing.process import AuthenticationString
 import time
+import callbacks
 
 '''
 SpeakerProcessor
@@ -28,7 +29,7 @@ class SpeakerProcessor:
         logging.info("[Speaker_Metrics]Inside speaker metric init")
         self.total_contributions = 0
         self.asr_complete = False
-        self.auth_key = bytes(config.auth_key, 'utf-8')
+        self.auth_key = config.auth_key
         logging.info(self.auth_key)
         logging.info('[Speaker_Metrics]Loaded semenatic model')
 
@@ -61,6 +62,7 @@ class SpeakerProcessor:
       self.overall_responsivity = np.zeros((self.participants+1), dtype=float)
       self.social_impact = np.zeros((self.participants+1), dtype=float)
       self.newness = self.total_new
+      self.communication_density = np.zeros((self.participants+1), dtype=float)
 
     def calculateCohesionSums(self, speaker, embedding, model):
       if self.length >= self.tau_window:
@@ -130,7 +132,7 @@ def process(processing_queue, speaker_transcript_queue, model):
     logging.info("[Speaker_Metrics]Init speaker metrics processor")
     config = processing_queue.get()
     processor = SpeakerProcessor(config)
-    auth_key = AuthenticationString(processor.auth_key)
+    auth_key = processor.auth_key
     processor.start()
 
     if processor:
@@ -140,6 +142,7 @@ def process(processing_queue, speaker_transcript_queue, model):
       if speakers:
         logging.info('[Speaker_Metrics]Speaker metric Process for {0} processed fingerprints.'.format(auth_key))
         processor.setSpeakers(speakers)
+        speaker_ids = list(speakers.keys())
 
         while processor.running and not processor.asr_complete :
             try:
@@ -153,6 +156,7 @@ def process(processing_queue, speaker_transcript_queue, model):
               else:
                 speaker = speaker_transcript_data[0]
                 transcript = speaker_transcript_data[1]
+                transcript_id = speaker_transcript_data[2]
                 index = processor.indicies[speaker] + 1 if speaker != -1 else 0
                 processor.contributions[index] += 1
 
@@ -173,12 +177,21 @@ def process(processing_queue, speaker_transcript_queue, model):
                 processor.participation_scores = np.subtract(np.multiply(np.divide(processor.contributions, processor.length), processor.participants), 1)
 
                 processing_time =  time.time() - processing_timer
-                logging.info('[Speaker Metrics]Processing for {0} finished in {1}'.format(auth_key, processing_time))
-                logging.info('[Speaker_Metrics]Participation Scores: {0}.'.format(processor.participation_scores))
-                logging.info('[Speaker_Metrics]Internal Cohesion: {0}.'.format(processor.internal_cohesion))
-                logging.info('[Speaker_Metrics]Responsiveness: {0}.'.format(processor.overall_responsivity))
-                logging.info('[Speaker_Metrics]Social Impact: {0}.'.format(processor.social_impact))
-                logging.info('[Speaker_Metrics]Newness: {0}.'.format(processor.newness))
+
+                success = callbacks.post_speaker_metrics(auth_key,
+                                                         transcript_id,
+                                                         speaker_ids,
+                                                         processor.participation_scores.tolist(),
+                                                         processor.internal_cohesion.tolist(),
+                                                         processor.overall_responsivity.tolist(),
+                                                         processor.social_impact.tolist(),
+                                                         processor.newness.tolist(),
+                                                         processor.communication_density.tolist())
+
+                if success:
+                   logging.info('[Speaker_Metrics]Processing posted successfully for client {0} (Processing time: {1}) @ {2}'.format(auth_key, processing_time, processing_timer))
+                else:
+                   logging.warning('[Speaker_Metrics]Processing results FAILED to post for client {0} (Processing time: {1})'.format(auth_key, processing_time))
 
             except Exception as e:
               logging.error('[Speaker Metrics]Processing FAILED for client {0}: {1}'.format(auth_key, e))

@@ -26,12 +26,13 @@ def post_transcripts(source, start_time, end_time, transcript, doa, questions, k
         result['speaker_tag'] = speaker_tag
     if speaker_id:
         result['speaker_id'] = speaker_id
-    logging.info(result)
     try:
         response = requests.post(config.processing_callback(), json=result)
-        return response.status_code == 200
+        transcript_id = response.json()['transcript_id'] if response.status_code == 200 else -1
+        return response.status_code == 200, transcript_id
     except Exception as e:
-        return False
+        logging.warning('Transcript callback failed: {0}'.format(e))
+        return False, -1
 
 def post_tagging(source, tag, embeddingsFile):
     result = {
@@ -71,4 +72,23 @@ def post_disconnect(source):
         return response.status_code == 200
     except Exception as e:
         logging.info('disconnect callback failed: {0}'.format(e))
+        return False
+
+def post_speaker_metrics(source, transcript_id, speakers, participation_scores, internal_cohesion, responsivity, social_impact, newness, communication_density):
+    result = {
+        'source': source,
+        'transcript_id': transcript_id,
+        'speakers': speakers,
+        'participation_scores': participation_scores,
+        'internal_cohesion': internal_cohesion,
+        'responsivity': responsivity,
+        'social_impact': social_impact,
+        'newness': newness,
+        'communication_density': communication_density
+    }
+    try:
+        response = requests.post(config.speaker_metrics_callback(), json=result)
+        return response.status_code == 200
+    except Exception as e:
+        logging.warning('Speaper Metrics callback failed: {0}'.format(e))
         return False

@@ -202,7 +202,6 @@ class AudioProcessor:
             if self.config.diarization:
                 if self.fingerprints:
                   speaker_tag, speaker_id = checkFingerprints(audio_data, self.fingerprints ,self.diarization_model)
-                  self.speaker_transcript_queue.put((speaker_id, transcript_text))
                 else:
                     if len(self.embeddings) == 0 and self.embeddingsFile != None:
                       try:
@@ -226,11 +225,13 @@ class AudioProcessor:
             processing_time = time.time() - processing_timer
             start_time += self.config.start_offset
             end_time += self.config.start_offset
-            success = callbacks.post_transcripts(self.config.auth_key, start_time, end_time, transcript_text, doa, questions, keywords, features, topic_id, speaker_tag, speaker_id)
+            success, transcript_id = callbacks.post_transcripts(self.config.auth_key, start_time, end_time, transcript_text, doa, questions, keywords, features, topic_id, speaker_tag, speaker_id)
             if success:
                 logging.info('Processing results posted successfully for client {0} (Processing time: {1}) @ {2}'.format(self.config.auth_key, processing_time, start_time))
-                if self.config.diarization and (len(self.embeddings) > 3):
-                  self.send_speaker_taggings()
+                if self.config.diarization:
+                  self.speaker_transcript_queue.put((speaker_id, transcript_text, transcript_id))
+                  if len(self.embeddings) > 3:
+                    self.send_speaker_taggings()
 
             else:
                 logging.warning('Processing results FAILED to post for client {0} (Processing time: {1})'.format(self.config.auth_key, processing_time))
