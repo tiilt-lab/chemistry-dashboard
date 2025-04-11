@@ -615,6 +615,90 @@
   cursor: pointer;
 }
 
+/* Feedback Form */
+.feedback-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.feedback-modal {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 400px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
+.feedback-title {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.feedback-description {
+  margin-bottom: 10px;
+  color: #555;
+}
+
+.feedback-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.feedback-label {
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+.feedback-input,
+.feedback-textarea {
+  width: 100%;
+  padding: 8px;
+  margin-top: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.feedback-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+}
+
+.submit-button {
+  background: #764BFF;
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.submit-button:hover {
+  background: #5a36d0;
+}
+
+.skip-button {
+  background: transparent;
+  border: none;
+  color: #555;
+  cursor: pointer;
+}
+
+.skip-button:hover {
+  color: #222;
+}
+
+/* Feedback form end */
+
 .dialog-content {
   display: block;
 }
