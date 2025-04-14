@@ -183,28 +183,6 @@
   margin-top: 15px;
 }
 
-.pod-overview-container .comparison-container {
-  display: flex !important;
-  justify-content: space-between !important;
-  flex-direction: row !important;
-}
-
-.pod-overview-container .comparison-column {
-  flex: 1 !important;
-  margin: 0 10px !important;
-}
-
-.pod_overview-container-large__+DaY+ {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 10px;
-  width: 100%;
-  max-width: 100%;
-  overflow: hidden; /* Prevent overflow */
-}
-
 .svgpulse {
   -webkit-animation: svgpulse 1s ease-out infinite;
           animation: svgpulse 1s ease-out infinite;
@@ -290,7 +268,7 @@
 }
 
 .container {
-  -webkit-box-orient: horizontal;
+  -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
       -ms-flex-direction: column;
           flex-direction: column;
@@ -599,48 +577,126 @@
   cursor: pointer;
 }
 
-.section-container {
-  padding: 16px;
-  /*375px - the 16px left and right padding - 2px left and right border*/
-  width: 375px - 32px - 2px;
-  position: relative;
-  background-color: #FCFDFF;
-  border: 1px solid rgba(112, 120, 181, 0.15);
+.positive {
+  stroke: #6BDA88;
+}
+
+.negative {
+  stroke: #FF6363;
+}
+
+.fill-positive {
+  fill: #d1f4da;
+}
+
+.fill-negative {
+  fill: white;
+}
+
+.features-table {
+  table-layout: fixed;
+  /*width: 343px;*/
+  border-spacing: 0px;
+}
+
+.features-table th, .features-table td {
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.features-table th {
   font-family: 'SST', sans-serif;
-  font-weight: 400;
-  font-size: 16px;
-  line-height: 24px;
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 20px;
   color: #58585C;
-  margin: 0 0 12px 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  padding: 0 0 12px 0;
+  border-bottom: 1px solid rgba(69, 69, 153, 0.2);
 }
 
-.heading {
-  position: relative;
+.features-table .desc-header {
+  /*width: 186px;*/
+}
+
+.features-table .score-header {
+  /*width: 59px;*/
+  /*padding-right: 24px;*/
+}
+
+.features-table .graph-header {
+  /*width: 74px;*/
+}
+
+.features-table th:first-child {
+  text-align: left;
+}
+
+.features-table td {
+  padding-top: 8px;
+  height: 40px;
+  padding-bottom: 8px;
+}
+
+.features-table tr:first-child td {
+  padding-top: 16px;
+}
+
+.features-table .score {
+  /*width: 59px;*/
+  /*padding-right: 24px;*/
+  text-align: right;
+  font-size: 0px;
+}
+
+.features-table .score .number {
+  display: inline-block;
   font-family: 'SST', sans-serif;
-  font-weight: 700;
-  font-size: 17px;
-  line-height: 24px;
-  color: #ffffff;
-  background-color: #375faf; /* Add background color to match the section container */
-  border: 1px solid rgba(218, 220, 231, 0.15); /* Add border */
-  border-radius: 4px; /* Add border radius */
-  margin: 0 0 12px 0;
-  padding: 0 12px; /* Add padding */
-  cursor: pointer; /* Add cursor pointer to indicate it's clickable */
+  font-weight: 500;
+  /*font-size: 22px;*/
+  line-height: 32px;
+  color: #2B2B2E;
+  padding-right: 4px;
+  position: relative;
+  vertical-align: middle;
 }
 
-.comparison-container {
-  display: flex !important;
-  justify-content: space-between !important;
-  flex-direction: row !important;
+.features-table .score .direction-indicator {
+  display: inline-block;
+  width: 12px;
+  height: 32px;
+  vertical-align: middle;
 }
 
-.comparison-column {
-  flex: 1;
-  min-width: 300px; /* Ensure columns don't get too narrow */
-  margin: 0 10px;
-  overflow: auto; /* Allow scrolling within the column if needed */
+.features-table .score .direction-indicator.positive {
+  background-image: url("../assets/img/icon-trending-up.svg");
 }
-/*# sourceMappingURL=section-box.module.css.map */
+
+.features-table .score .direction-indicator.neutral {
+  background-image: url("../assets/img/icon-trending-neutral.svg");
+}
+
+.features-table .score .direction-indicator.negative {
+  background-image: url("../assets/img/icon-trending-down.svg");
+}
+
+.features-table .svg {
+  display: block;
+  /*width: 74px;*/
+  height: 40px;
+}
+
+.no-data-span {
+  position: absolute;
+  height: 39.5px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(45deg, #CACACE, #CACACE 5px, #E5E5E6 5px, #E5E5E6 10px);
+}
+
+.info-button {
+  vertical-align: middle;
+  margin-bottom: 2%;
+  cursor: pointer;
+}
+
+/*# sourceMappingURL=features.module.css.map */

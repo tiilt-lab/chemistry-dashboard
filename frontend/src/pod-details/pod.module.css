@@ -586,7 +586,7 @@
 }
 
 .overview-container-large {
-  width: 400px;
+  width: auto;
   height: 100%;
   overflow: auto;
 }

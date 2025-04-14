@@ -14,6 +14,7 @@ import { AppInfographicsView } from "components/infographics-view/infographics-v
 import style from "./pod.module.css";
 import React from "react";
 import ReactMultiSelectCheckboxes from "react-multiselect-checkboxes";
+import { AppInfographicsDetailedView } from "components/infographics-view/infographics-detailedview";
 
 function PodComponentPages(props) {
   return (
@@ -37,12 +38,23 @@ function PodComponentPages(props) {
             }
           >
             <br />
-            <AppSectionBoxComponent heading={"Box 1:"}></AppSectionBoxComponent>
-
-            <AppSectionBoxComponent heading={"Box 2:"}></AppSectionBoxComponent>
-
-            <AppSectionBoxComponent heading={"Box 3:"}></AppSectionBoxComponent>
-
+            <AppInfographicsDetailedView
+              displayTranscripts={props.displayTranscripts}
+              endTime={props.endTime}
+              fromclient={false}
+              onClickedTimeline={props.onClickedTimeline}
+              radarTrigger={props.radarTrigger}
+              session={props.session}
+              sessionDevice={props.sessionDevice}
+              setRange={props.setRange}
+              showBoxes={props.showBoxes}
+              showFeatures={props.showFeatures}
+              startTime={props.startTime}
+              speakers={props.speakers}
+              selectedSpkrId={props.selectedSpkrId}
+              setSelectedSpkrId={props.setSelectedSpkrId}
+            ></AppInfographicsDetailedView>
+            
             <button
               className={
                 isLargeScreen()
@@ -51,7 +63,7 @@ function PodComponentPages(props) {
               }
               onClick={props.toggleDetails}
             >
-              Show Details
+              Show Less
             </button>
           </div>
         ) : (
@@ -79,16 +91,6 @@ function PodComponentPages(props) {
               selectedSpkrId={props.selectedSpkrId}
               setSelectedSpkrId={props.setSelectedSpkrId}
             ></AppInfographicsView>
-            <button
-              className={
-                isLargeScreen()
-                  ? `${style["basic-button"]} ${style["medium-button"]}`
-                  : `${style["basic-button"]} ${style["small-button"]}`
-              }
-              onClick={props.toggleDetails}
-            >
-              Hide Details
-            </button>
           </div>
         )}
         {props.loading() ? <AppSpinner></AppSpinner> : <></>}
@@ -101,7 +103,20 @@ function PodComponentPages(props) {
           ) : (
             <></>
           )}
+          
         </div>
+        {!props.hideDetails && (
+            <button
+              className={
+                isLargeScreen()
+                  ? `${style["basic-button"]} ${style["medium-button"]}`
+                  : `${style["basic-button"]} ${style["small-button"]}`
+              }
+              onClick={props.toggleDetails}
+            >
+              Show More
+            </button>
+          )}
       </div>
 
       <GenericDialogBox
@@ -238,4 +253,13 @@ function PodComponentPages(props) {
     </>
   );
 }
+
 export { PodComponentPages };
+
+/*
+<AppSectionBoxComponent heading={"Box 1:"}></AppSectionBoxComponent>
+
+            <AppSectionBoxComponent heading={"Box 2:"}></AppSectionBoxComponent>
+
+            <AppSectionBoxComponent heading={"Box 3:"}></AppSectionBoxComponent>
+*/
