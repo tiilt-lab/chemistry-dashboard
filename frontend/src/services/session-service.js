@@ -100,6 +100,14 @@ class SessionService {
     );
   }
 
+  getSpeakerMetricsForDevice(sessionDeviceId) {
+    return this.api.httpRequestCall(
+      `/api/v1/devices/${sessionDeviceId}/transcripts/speaker_metrics`,
+      "GET",
+      {}
+    );
+  }
+
   getSpeakerIdTranscriptsForClient(deviceId, speakerId) {
     return this.api.httpRequestCall(
       `/api/v1/sessions/devices/${deviceId}>/speakers/${speakerId}/transcripts/client`,
