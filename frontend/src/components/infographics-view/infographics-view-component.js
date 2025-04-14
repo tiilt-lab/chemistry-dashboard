@@ -7,7 +7,7 @@ import { AppRadarComponent } from "radar/radar-component";
 import { AppKeywordsComponent } from "keywords/keywords-component";
 import style from "byod-join/byod-join.module.css";
 import { adjDim, isLargeScreen } from "myhooks/custom-hooks";
-
+import {AppIndividualFeaturesComponent} from "individualmetrics/features-component";
 import React, { useState } from "react";
 import ReactSlider from "react-slider";
 
@@ -77,11 +77,12 @@ function AppInfographicsView(props) {
                     />
                   </AppSectionBoxComponent>
                 )}
+                
               </>
             ) : (
               // Content for specific speaker
               <>
-                {props.showBoxes.length > 0 && props.showBoxes[3]["clicked"] && (
+                 /* {props.showBoxes.length > 0 && props.showBoxes[3]["clicked"] && (
                   <AppSectionBoxComponent heading={`Discussion features for Speaker ${selectedSpkrId1}`}>
                     <AppFeaturesComponent
                       session={props.session}
@@ -89,7 +90,7 @@ function AppInfographicsView(props) {
                       showFeatures={props.showFeatures}
                     />
                   </AppSectionBoxComponent>
-                )}
+                )} 
 
                 {props.showBoxes.length > 0 && props.showBoxes[4]["clicked"] && (
                   <AppSectionBoxComponent heading={`Radar chart for Speaker ${selectedSpkrId1}`}>
@@ -99,6 +100,16 @@ function AppInfographicsView(props) {
                       radarTrigger={props.radarTrigger}
                       start={props.startTime}
                       end={props.endTime}
+                      showFeatures={props.showFeatures}
+                    />
+                  </AppSectionBoxComponent>
+                )}*/
+
+                {props.showBoxes.length > 0 && props.showBoxes[5]["clicked"] && (
+                  <AppSectionBoxComponent heading={`Individual Metrics for Speaker ${selectedSpkrId1}`}>
+                    <AppIndividualFeaturesComponent
+                      session={props.session}
+                      transcripts={props.displayTranscripts.filter(t => t.speaker_id === selectedSpkrId1)}
                       showFeatures={props.showFeatures}
                     />
                   </AppSectionBoxComponent>
@@ -158,7 +169,7 @@ function AppInfographicsView(props) {
             ) : (
               // Content for specific speaker
               <>
-                {props.showBoxes.length > 0 && props.showBoxes[3]["clicked"] && (
+                 /* {props.showBoxes.length > 0 && props.showBoxes[3]["clicked"] && (
                   <AppSectionBoxComponent heading={`Discussion features for Speaker ${selectedSpkrId1}`}>
                     <AppFeaturesComponent
                       session={props.session}
@@ -166,7 +177,7 @@ function AppInfographicsView(props) {
                       showFeatures={props.showFeatures}
                     />
                   </AppSectionBoxComponent>
-                )}
+                )} 
 
                 {props.showBoxes.length > 0 && props.showBoxes[4]["clicked"] && (
                   <AppSectionBoxComponent heading={`Radar chart for Speaker ${selectedSpkrId1}`}>
@@ -176,6 +187,16 @@ function AppInfographicsView(props) {
                       radarTrigger={props.radarTrigger}
                       start={props.startTime}
                       end={props.endTime}
+                      showFeatures={props.showFeatures}
+                    />
+                  </AppSectionBoxComponent>
+                )}*/
+
+                {props.showBoxes.length > 0 && props.showBoxes[5]["clicked"] && (
+                  <AppSectionBoxComponent heading={`Individual Metrics for Speaker ${selectedSpkrId1}`}>
+                    <AppIndividualFeaturesComponent
+                      session={props.session}
+                      transcripts={props.displayTranscripts.filter(t => t.speaker_id === selectedSpkrId1)}
                       showFeatures={props.showFeatures}
                     />
                   </AppSectionBoxComponent>
