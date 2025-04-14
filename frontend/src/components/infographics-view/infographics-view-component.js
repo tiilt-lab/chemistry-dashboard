@@ -2,7 +2,6 @@ import { AppSectionBoxComponent } from "components/section-box/section-box-compo
 import { AppTimelineSlider } from "components/timeline-slider/timeline-slider-component";
 import { AppTimeline } from "timeline/timeline-component";
 import { AppFeaturesComponent } from "features/features-component";
-// import { AppIndividualFeaturesComponent } from "individualmetrics/features-component";
 import { AppRadarComponent } from "radar/radar-component";
 import { AppKeywordsComponent } from "keywords/keywords-component";
 import style from "byod-join/byod-join.module.css";
@@ -13,7 +12,7 @@ import ReactSlider from "react-slider";
 
 function AppInfographicsView(props) {
   const [selectedSpkrId1, setSelectedSpkrId1] = useState(-1);
-  const [selectedSpkrId2, setSelectedSpkrId2] = useState(props.speakers?.[0]?.id ?? 1);
+  const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1);
 
   return (
     <>
@@ -56,7 +55,7 @@ function AppInfographicsView(props) {
               // Content for All Speakers
               <>
                 {props.showBoxes.length > 0 && props.showBoxes[3]["clicked"] && (
-                  <AppSectionBoxComponent heading={"Discussion features"}>
+                  <AppSectionBoxComponent heading={"Expression and Thinking Style"}>
                     <AppFeaturesComponent
                       session={props.session}
                       transcripts={props.displayTranscripts}
@@ -83,7 +82,7 @@ function AppInfographicsView(props) {
               // Content for specific speaker
               <>
                  /* {props.showBoxes.length > 0 && props.showBoxes[3]["clicked"] && (
-                  <AppSectionBoxComponent heading={`Discussion features for Speaker ${selectedSpkrId1}`}>
+                  <AppSectionBoxComponent heading={`Expression and Thinking Style`}>
                     <AppFeaturesComponent
                       session={props.session}
                       transcripts={props.displayTranscripts.filter(t => t.speaker_id === selectedSpkrId1)}
@@ -93,7 +92,7 @@ function AppInfographicsView(props) {
                 )} 
 
                 {props.showBoxes.length > 0 && props.showBoxes[4]["clicked"] && (
-                  <AppSectionBoxComponent heading={`Radar chart for Speaker ${selectedSpkrId1}`}>
+                  <AppSectionBoxComponent heading={`Radar chart`}>
                     <AppRadarComponent
                       session={props.session}
                       transcripts={props.displayTranscripts.filter(t => t.speaker_id === selectedSpkrId1)}
@@ -106,7 +105,7 @@ function AppInfographicsView(props) {
                 )}*/
 
                 {props.showBoxes.length > 0 && props.showBoxes[5]["clicked"] && (
-                  <AppSectionBoxComponent heading={`Individual Metrics for Speaker ${selectedSpkrId1}`}>
+                  <AppSectionBoxComponent heading={`Participation and Impact Style`}>
                     <AppIndividualFeaturesComponent
                       session={props.session}
                       transcripts={props.displayTranscripts.filter(t => t.speaker_id === selectedSpkrId1)}
@@ -140,11 +139,11 @@ function AppInfographicsView(props) {
 
             
 
-            {selectedSpkrId1 === -1 ? (
+            {selectedSpkrId2 === -1 ? (
               // Content for All Speakers
               <>
                 {props.showBoxes.length > 0 && props.showBoxes[3]["clicked"] && (
-                  <AppSectionBoxComponent heading={"Discussion features"}>
+                  <AppSectionBoxComponent heading={"Expression and Thinking Style"}>
                     <AppFeaturesComponent
                       session={props.session}
                       transcripts={props.displayTranscripts}
@@ -170,20 +169,20 @@ function AppInfographicsView(props) {
               // Content for specific speaker
               <>
                  /* {props.showBoxes.length > 0 && props.showBoxes[3]["clicked"] && (
-                  <AppSectionBoxComponent heading={`Discussion features for Speaker ${selectedSpkrId1}`}>
+                  <AppSectionBoxComponent heading={`Expression and Thinking Style`}>
                     <AppFeaturesComponent
                       session={props.session}
-                      transcripts={props.displayTranscripts.filter(t => t.speaker_id === selectedSpkrId1)}
+                      transcripts={props.displayTranscripts.filter(t => t.speaker_id === selectedSpkrId2)}
                       showFeatures={props.showFeatures}
                     />
                   </AppSectionBoxComponent>
                 )} 
 
                 {props.showBoxes.length > 0 && props.showBoxes[4]["clicked"] && (
-                  <AppSectionBoxComponent heading={`Radar chart for Speaker ${selectedSpkrId1}`}>
+                  <AppSectionBoxComponent heading={`Radar chart`}>
                     <AppRadarComponent
                       session={props.session}
-                      transcripts={props.displayTranscripts.filter(t => t.speaker_id === selectedSpkrId1)}
+                      transcripts={props.displayTranscripts.filter(t => t.speaker_id === selectedSpkrId2)}
                       radarTrigger={props.radarTrigger}
                       start={props.startTime}
                       end={props.endTime}
@@ -193,10 +192,10 @@ function AppInfographicsView(props) {
                 )}*/
 
                 {props.showBoxes.length > 0 && props.showBoxes[5]["clicked"] && (
-                  <AppSectionBoxComponent heading={`Individual Metrics for Speaker ${selectedSpkrId1}`}>
+                  <AppSectionBoxComponent heading={`Participation and Impact Style`}>
                     <AppIndividualFeaturesComponent
                       session={props.session}
-                      transcripts={props.displayTranscripts.filter(t => t.speaker_id === selectedSpkrId1)}
+                      transcripts={props.displayTranscripts.filter(t => t.speaker_id === selectedSpkrId2)}
                       showFeatures={props.showFeatures}
                     />
                   </AppSectionBoxComponent>

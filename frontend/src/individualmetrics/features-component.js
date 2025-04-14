@@ -43,12 +43,12 @@ function AppIndividualFeaturesComponent(props) {
     ];
   
     props.transcripts.map(t => {
-      valueArrays[5].values.push(t.participation_value);
-      valueArrays[6].values.push(t.social_impact_value);
-      valueArrays[7].values.push(t.responsivity_value);
-      valueArrays[8].values.push(t.internal_cohesion_value);
-      valueArrays[9].values.push(t.newness_value);
-      valueArrays[10].values.push(t.communication_density_value);
+      valueArrays[0].values.push(t.participation_value);
+      valueArrays[1].values.push(t.social_impact_value);
+      valueArrays[2].values.push(t.responsivity_value);
+      valueArrays[3].values.push(t.internal_cohesion_value);
+      valueArrays[4].values.push(t.newness_value);
+      valueArrays[5].values.push(t.communication_density_value);
     });
   
     for (const valueArray of valueArrays) {
