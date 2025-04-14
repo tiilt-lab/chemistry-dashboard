@@ -167,6 +167,12 @@ def session_device_transcripts_for_client(device_id, **kwargs):
     transcripts = database.get_transcripts(session_device_id=device_id)
     return json_response([transcript.json() for transcript in transcripts])
 
+@api_routes.route('/api/v1/devices/<int:device_id>/transcripts/speaker_metrics', methods=['GET'])
+def session_device_speaker_metrics(device_id, **kwargs):
+    speaker_metrics = database.get_speaker_transcript_metrics(session_device_id=device_id)
+    logging.info(f'Received speaker metrics from database{speaker_metrics}')
+    return json_response([speaker_metric.json() for speaker_metric in speaker_metrics])
+
 
 @api_routes.route('/api/v1/sessions/devices/<int:device_id>/speakers/<int:speaker_id>/transcripts/client', methods=['GET'])
 # @wrappers.verify_login(public=True)
