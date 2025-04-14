@@ -94,6 +94,12 @@ function PodComponent() {
       "Clout",
       "Authenticity",
       "Confusion",
+      "Participation",
+      "Social Impact",
+      "Responsivity",
+      "Internal Cohesion",
+      "Newness",
+      "Communication Density",
     ];
     initChecklistData(featuresArr, setShowFeatures);
     // initialize the components toolbar
@@ -103,6 +109,12 @@ function PodComponent() {
       "Keyword detection",
       "Discussion features",
       "Radar chart",
+      "Participation",
+      "Social Impact",
+      "Responsivity",
+      "Internal Cohesion",
+      "Newness",
+      "Communication Density",
     ];
     initChecklistData(boxArr, setShowBoxes);
 
