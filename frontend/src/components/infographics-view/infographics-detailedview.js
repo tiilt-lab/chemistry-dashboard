@@ -12,36 +12,31 @@ import React, { useState } from "react";
 import ReactSlider from "react-slider";
 
 function AppInfographicsDetailedView(props) {
-  const [selectedSpkrId1, setSelectedSpkrId1] = useState(-1);
-  const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1);
-
   return (
     <>
       {props.speakers && (
         <div
-        className="pod_overview-container-large__+DaY+"
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          flexWrap: "wrap",
-          alignItems: "flex-start",
-          gap: "10px",
-          width: "auto",
-          maxWidth: "100%",
-          maxHeight: "calc(100vh - 100px)", // Ensures content doesn't exceed viewport
-          overflowY: "auto", // Enables internal scrolling
-        }}
+          className="pod_overview-container-large__+DaY+"
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            flexWrap: "wrap",
+            alignItems: "flex-start",
+            gap: "10px",
+            width: "auto",
+            maxWidth: "100%",
+            maxHeight: "calc(100vh - 100px)", // Ensures content doesn't exceed viewport
+            overflowY: "auto", // Enables internal scrolling
+          }}
         >
-      
           <div className={style["comparison-column"]}>
-            
             <select
               id="speaker1"
               className={style["dropdown-input"]}
               style={{ width: adjDim(350) + "px" }}
-              value={selectedSpkrId1}
+              value={props.selectedSpkrId1}
               onChange={(e) =>
-                setSelectedSpkrId1(parseInt(e.target.value, 10))
+                props.setSelectedSpkrId1(parseInt(e.target.value, 10))
               }
             >
               <option value="-1">Group</option>
@@ -108,18 +103,16 @@ function AppInfographicsDetailedView(props) {
                 />
               </AppSectionBoxComponent>
             )}
-
           </div>
 
           <div className={style["comparison-column"]}>
-            
             <select
               id="speaker2"
               className={style["dropdown-input"]}
               style={{ width: adjDim(350) + "px" }}
-              value={selectedSpkrId2}
+              value={props.selectedSpkrId2}
               onChange={(e) =>
-                setSelectedSpkrId2(parseInt(e.target.value, 10))
+                props.setSelectedSpkrId2(parseInt(e.target.value, 10))
               }
             >
               <option value="-1">Group</option>

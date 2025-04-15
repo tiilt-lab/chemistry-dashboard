@@ -74,11 +74,10 @@ def post_disconnect(source):
         logging.info('disconnect callback failed: {0}'.format(e))
         return False
 
-def post_speaker_metrics(source, transcript_id, speakers, participation_scores, internal_cohesion, responsivity, social_impact, newness, communication_density):
+def post_speaker_transcript_metrics(transcript_data, speakers, participation_scores, internal_cohesion, responsivity, social_impact, newness, communication_density):
     result = {
-        'source': source,
-        'transcript_id': transcript_id,
-        'speakers': speakers,
+        'transcript_data': transcript_data,
+        'speakers':speakers,
         'participation_scores': participation_scores,
         'internal_cohesion': internal_cohesion,
         'responsivity': responsivity,
@@ -90,5 +89,5 @@ def post_speaker_metrics(source, transcript_id, speakers, participation_scores, 
         response = requests.post(config.speaker_metrics_callback(), json=result)
         return response.status_code == 200
     except Exception as e:
-        logging.warning('Speaper Metrics callback failed: {0}'.format(e))
+        logging.warning('Speaker Metrics callback failed: {0}'.format(e))
         return False

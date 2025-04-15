@@ -11,9 +11,6 @@ import React, { useState } from "react";
 import ReactSlider from "react-slider";
 
 function AppInfographicsView(props) {
-  const [selectedSpkrId1, setSelectedSpkrId1] = useState(-1);
-  const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1);
-
   return (
     <>
       {props.speakers && (
@@ -36,8 +33,10 @@ function AppInfographicsView(props) {
               id="speaker1"
               className={style["dropdown-input"]}
               style={{ width: adjDim(350) + "px" }}
-              value={selectedSpkrId1}
-              onChange={(e) => setSelectedSpkrId1(parseInt(e.target.value, 10))}
+              value={props.selectedSpkrId1}
+              onChange={(e) =>
+                props.setSelectedSpkrId1(parseInt(e.target.value, 10))
+              }
             >
               <option value="-1">Group</option>
               {props.speakers.map((speaker) => (
@@ -47,7 +46,7 @@ function AppInfographicsView(props) {
               ))}
             </select>
 
-            {selectedSpkrId1 === -1 ? (
+            {props.selectedSpkrId1 === -1 ? (
               // Content for All Speakers
               <>
                 {props.showBoxes.length > 0 &&
@@ -88,7 +87,7 @@ function AppInfographicsView(props) {
                       <AppFeaturesComponent
                         session={props.session}
                         transcripts={props.displayTranscripts.filter(
-                          (t) => t.speaker_id === selectedSpkrId1
+                          (t) => t.speaker_id === props.selectedSpkrId1
                         )}
                         showFeatures={props.showFeatures}
                       />
@@ -101,7 +100,7 @@ function AppInfographicsView(props) {
                       <AppRadarComponent
                         session={props.session}
                         transcripts={props.displayTranscripts.filter(
-                          (t) => t.speaker_id === selectedSpkrId1
+                          (t) => t.speaker_id === props.selectedSpkrId1
                         )}
                         radarTrigger={props.radarTrigger}
                         start={props.startTime}
@@ -118,9 +117,8 @@ function AppInfographicsView(props) {
                     >
                       <AppIndividualFeaturesComponent
                         session={props.session}
-                        transcripts={props.displayTranscripts.filter(
-                          (t) => t.speaker_id === selectedSpkrId1
-                        )}
+                        transcripts={props.displayTranscripts}
+                        spkrId={props.selectedSpkrId1}
                         showFeatures={props.showFeatures}
                       />
                     </AppSectionBoxComponent>
@@ -134,8 +132,10 @@ function AppInfographicsView(props) {
               id="speaker2"
               className={style["dropdown-input"]}
               style={{ width: adjDim(350) + "px" }}
-              value={selectedSpkrId2}
-              onChange={(e) => setSelectedSpkrId2(parseInt(e.target.value, 10))}
+              value={props.selectedSpkrId2}
+              onChange={(e) =>
+                props.setSelectedSpkrId2(parseInt(e.target.value, 10))
+              }
             >
               <option value="-1">Group</option>
               {props.speakers.map((speaker) => (
@@ -145,7 +145,7 @@ function AppInfographicsView(props) {
               ))}
             </select>
 
-            {selectedSpkrId2 === -1 ? (
+            {props.selectedSpkrId2 === -1 ? (
               // Content for All Speakers
               <>
                 {props.showBoxes.length > 0 &&
@@ -186,7 +186,7 @@ function AppInfographicsView(props) {
                       <AppFeaturesComponent
                         session={props.session}
                         transcripts={props.displayTranscripts.filter(
-                          (t) => t.speaker_id === selectedSpkrId2
+                          (t) => t.speaker_id === props.selectedSpkrId2
                         )}
                         showFeatures={props.showFeatures}
                       />
@@ -198,7 +198,7 @@ function AppInfographicsView(props) {
                       <AppRadarComponent
                         session={props.session}
                         transcripts={props.displayTranscripts.filter(
-                          (t) => t.speaker_id === selectedSpkrId2
+                          (t) => t.speaker_id === props.selectedSpkrId2
                         )}
                         radarTrigger={props.radarTrigger}
                         start={props.startTime}
@@ -214,9 +214,8 @@ function AppInfographicsView(props) {
                     >
                       <AppIndividualFeaturesComponent
                         session={props.session}
-                        transcripts={props.displayTranscripts.filter(
-                          (t) => t.speaker_id === selectedSpkrId2
-                        )}
+                        transcripts={props.displayTranscripts}
+                        spkrId={props.selectedSpkrId2}
                         showFeatures={props.showFeatures}
                       />
                     </AppSectionBoxComponent>

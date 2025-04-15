@@ -225,15 +225,24 @@ class AudioProcessor:
             processing_time = time.time() - processing_timer
             start_time += self.config.start_offset
             end_time += self.config.start_offset
-            success, transcript_id = callbacks.post_transcripts(self.config.auth_key, start_time, end_time, transcript_text, doa, questions, keywords, features, topic_id, speaker_tag, speaker_id)
-            if success:
-                logging.info('Processing results posted successfully for client {0} (Processing time: {1}) @ {2}'.format(self.config.auth_key, processing_time, start_time))
-                if self.config.diarization:
-                  self.speaker_transcript_queue.put((speaker_id, transcript_text, transcript_id))
-                  if len(self.embeddings) > 3:
-                    self.send_speaker_taggings()
-
+            if self.config.diarization:
+              transcript_data = {'source':self.config.auth_key,
+                                'start_time':start_time,
+                                'end_time':end_time,
+                                'transcript': transcript_text,
+                                'doa':doa,
+                                'questions':questions,
+                                'keywords':keywords,
+                                'features':features,
+                                'topic_id':topic_id,
+                                'speaker_tag':speaker_tag,
+                                'speaker_id':speaker_id}
+              self.speaker_transcript_queue.put(transcript_data)
             else:
+              success, transcript_id = callbacks.post_transcripts(self.config.auth_key, start_time, end_time, transcript_text, doa, questions, keywords, features, topic_id, speaker_tag, speaker_id)
+              if success:
+                  logging.info('Processing results posted successfully for client {0} (Processing time: {1}) @ {2}'.format(self.config.auth_key, processing_time, start_time))
+              else:
                 logging.warning('Processing results FAILED to post for client {0} (Processing time: {1})'.format(self.config.auth_key, processing_time))
 
             #Get source seperation

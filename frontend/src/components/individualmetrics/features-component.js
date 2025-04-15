@@ -22,7 +22,7 @@ function AppIndividualFeaturesComponent(props) {
 
   useEffect(() => {
     updateGraphs();
-  }, [props.transcripts]);
+  }, [props.transcripts, props.spkrId]);
 
   useEffect(() => {
     if (trigger > 0) {
@@ -40,15 +40,26 @@ function AppIndividualFeaturesComponent(props) {
       { name: "Newness", values: [] },
       { name: "Communication Density", values: [] },
     ];
+    console.log("speaker_metrics");
+    const speaker_metrics = props.transcripts.map((t) => {
+      //select speaker metrics from transcripts based on the spkrId
+      const speaker_metric = t.speaker_metrics.find(
+        (item) => item.speaker_id === props.spkrId
+      );
 
-    props.transcripts.map((t) => {
-      valueArrays[0].values.push(t.participation_value);
-      valueArrays[1].values.push(t.social_impact_value);
-      valueArrays[2].values.push(t.responsivity_value);
-      valueArrays[3].values.push(t.internal_cohesion_value);
-      valueArrays[4].values.push(t.newness_value);
-      valueArrays[5].values.push(t.communication_density_value);
+      valueArrays[0].values.push(speaker_metric.participation_score * 100);
+      valueArrays[1].values.push(speaker_metric.social_impact * 100);
+      valueArrays[2].values.push(speaker_metric.responsivity * 100);
+      valueArrays[3].values.push(speaker_metric.internal_cohesion * 100);
+      valueArrays[4].values.push(speaker_metric.newness * 100);
+      valueArrays[5].values.push(speaker_metric.communication_density * 100);
+      console.log("speaker_metric");
+      console.log(speaker_metric);
+      return speaker_metric;
     });
+    console.log(speaker_metrics);
+    console.log("Values Array");
+    console.log(valueArrays);
 
     for (const valueArray of valueArrays) {
       const length = valueArray.values.length;
@@ -71,10 +82,10 @@ function AppIndividualFeaturesComponent(props) {
       // Generate the SVG path using the smoothed values
       for (let i = 0; i < smoothedValues.length; i++) {
         const xPos = Math.round(((i + 1) / smoothedValues.length) * svgWidth);
+        console.log("smoothedValues");
         console.log(smoothedValues[i]);
-        const yPos = !isNaN(smoothedValues[i])
-          ? svgHeight - Math.round((smoothedValues[i] / 100) * svgHeight)
-          : 0;
+        const yPos =
+          svgHeight - Math.round((smoothedValues[i] / 100) * svgHeight);
         path += i === 0 ? "M" : "L";
         path += `${xPos} ${yPos} `;
       }

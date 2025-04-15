@@ -154,9 +154,8 @@ def process(processing_queue, speaker_transcript_queue, model):
                   processor.stop()
 
               else:
-                speaker = speaker_transcript_data[0]
-                transcript = speaker_transcript_data[1]
-                transcript_id = speaker_transcript_data[2]
+                speaker = speaker_transcript_data['speaker_id']
+                transcript = speaker_transcript_data['transcript_text']
                 index = processor.indicies[speaker] + 1 if speaker != -1 else 0
                 processor.contributions[index] += 1
 
@@ -178,8 +177,7 @@ def process(processing_queue, speaker_transcript_queue, model):
 
                 processing_time =  time.time() - processing_timer
 
-                success = callbacks.post_speaker_metrics(auth_key,
-                                                         transcript_id,
+                success = callbacks.post_speaker_transcript_metrics(speaker_transcript_data,
                                                          speaker_ids,
                                                          processor.participation_scores.tolist(),
                                                          processor.internal_cohesion.tolist(),

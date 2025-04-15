@@ -53,8 +53,12 @@ function PodComponentPages(props) {
               speakers={props.speakers}
               selectedSpkrId={props.selectedSpkrId}
               setSelectedSpkrId={props.setSelectedSpkrId}
+              selectedSpkrId1={props.selectedSpkrId1}
+              setSelectedSpkrId1={props.setSelectedSpkrId1}
+              selectedSpkrId2={props.selectedSpkrId2}
+              setSelectedSpkrId2={props.setSelectedSpkrId2}
             ></AppInfographicsDetailedView>
-            
+
             <button
               className={
                 isLargeScreen()
@@ -90,6 +94,10 @@ function PodComponentPages(props) {
               speakers={props.speakers}
               selectedSpkrId={props.selectedSpkrId}
               setSelectedSpkrId={props.setSelectedSpkrId}
+              selectedSpkrId1={props.selectedSpkrId1}
+              setSelectedSpkrId1={props.setSelectedSpkrId1}
+              selectedSpkrId2={props.selectedSpkrId2}
+              setSelectedSpkrId2={props.setSelectedSpkrId2}
             ></AppInfographicsView>
           </div>
         )}
@@ -103,20 +111,19 @@ function PodComponentPages(props) {
           ) : (
             <></>
           )}
-          
         </div>
         {!props.hideDetails && (
-            <button
-              className={
-                isLargeScreen()
-                  ? `${style["basic-button"]} ${style["medium-button"]}`
-                  : `${style["basic-button"]} ${style["small-button"]}`
-              }
-              onClick={props.toggleDetails}
-            >
-              Show More
-            </button>
-          )}
+          <button
+            className={
+              isLargeScreen()
+                ? `${style["basic-button"]} ${style["medium-button"]}`
+                : `${style["basic-button"]} ${style["small-button"]}`
+            }
+            onClick={props.toggleDetails}
+          >
+            Show More
+          </button>
+        )}
       </div>
 
       <GenericDialogBox
