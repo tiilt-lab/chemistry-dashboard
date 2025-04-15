@@ -155,7 +155,7 @@ def process(processing_queue, speaker_transcript_queue, model):
 
               else:
                 speaker = speaker_transcript_data['speaker_id']
-                transcript = speaker_transcript_data['transcript_text']
+                transcript = speaker_transcript_data['transcript']
                 index = processor.indicies[speaker] + 1 if speaker != -1 else 0
                 processor.contributions[index] += 1
 

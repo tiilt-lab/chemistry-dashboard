@@ -120,7 +120,16 @@ def add_speaker_transcript_metrics(**kwargs):
   # EXPECTED FORMAT
   # {
   #     'source': str
-  #     'transcript_id': int
+  #     'start_time': int
+  #     'end_time': int
+  #     'transcript': str
+  #     'direction': int
+  #     'questions': [str]
+  #     'keywords': [keyword]
+  #     'features': features object
+  #     'topic_id': int
+  #     'speaker_tag':str
+  #     'speaker_id': int
   #     'speakers': [str]
   #     'participation_scores': [float]
   #     'internal_cohesion': [float]
@@ -130,28 +139,26 @@ def add_speaker_transcript_metrics(**kwargs):
   #     'communication_density': [float]
   # }
   content = request.get_json()
-  transcript_data = content.get('data', None)
-  key = transcript_data.get('source', '')
-  start_time = transcript_data.get('start_time', 0)
-  end_time = transcript_data.get('end_time', 0)
-  transcript = transcript_data.get('transcript', '')
-  direction = transcript_data.get('direction', -1)
-  questions = transcript_data.get('questions', [])
+  key = content.get('source', '')
+  start_time = content.get('start_time', 0)
+  end_time = content.get('end_time', 0)
+  transcript = content.get('transcript', '')
+  direction = content.get('direction', -1)
+  questions = content.get('questions', [])
   if questions is None:
     questions = []
-  keywords = transcript_data.get('keywords', [])
+  keywords = content.get('keywords', [])
   if keywords is None:
     keywords = []
-  features = transcript_data.get('features', {})
-  topic_id = transcript_data.get('topic_id', -1)
+  features = content.get('features', {})
+  topic_id = content.get('topic_id', -1)
   emotional_tone = features.get('emotional_tone_value', 0)
   analytic_thinking = features.get('analytic_thinking_value', 0)
   clout = features.get('clout_value', 0)
   authenticity = features.get('authenticity_value', 0)
   certainty = features.get('certainty_value', 0)
-  speaker_tag = transcript_data.get('speaker_tag', '')
-  speaker_id = transcript_data.get('speaker_id', -1)
-  res = {}
+  speaker_tag = content.get('speaker_tag', '')
+  speaker_id = content.get('speaker_id', -1)
 
 
   speakers = content.get('speakers', [])
@@ -161,6 +168,7 @@ def add_speaker_transcript_metrics(**kwargs):
   social_impact = content.get('social_impact', [])
   newness = content.get('newness', [])
   communication_density = content.get('communication_density', [])
+
   res = {}
 
   session_device = database.get_session_devices(processing_key=key)
@@ -186,7 +194,7 @@ def add_speaker_transcript_metrics(**kwargs):
                                               newness=newness[i],
                                               communication_density=communication_density[i])
       metrics.append(metric.json())
-    socketio.emit('transcript_update', json.dumps({'transcript':transcript.json(), 'metrics':metrics}), room=room_name, namespace="/session")
+    socketio.emit('transcript_metrics_update', json.dumps({'transcript':transcript.json(), 'speaker_metrics':metrics}), room=room_name, namespace="/session")
     res = {'transcript_id':transcript.__hash__()}
   return json_response(payload=res)
 
