@@ -130,8 +130,30 @@ def add_speaker_transcript_metrics(**kwargs):
   #     'communication_density': [float]
   # }
   content = request.get_json()
-  key = content.get('source', '')
-  transcript_id = content.get('transcript_id', -1)
+  transcript_data = content.get('data', None)
+  key = transcript_data.get('source', '')
+  start_time = transcript_data.get('start_time', 0)
+  end_time = transcript_data.get('end_time', 0)
+  transcript = transcript_data.get('transcript', '')
+  direction = transcript_data.get('direction', -1)
+  questions = transcript_data.get('questions', [])
+  if questions is None:
+    questions = []
+  keywords = transcript_data.get('keywords', [])
+  if keywords is None:
+    keywords = []
+  features = transcript_data.get('features', {})
+  topic_id = transcript_data.get('topic_id', -1)
+  emotional_tone = features.get('emotional_tone_value', 0)
+  analytic_thinking = features.get('analytic_thinking_value', 0)
+  clout = features.get('clout_value', 0)
+  authenticity = features.get('authenticity_value', 0)
+  certainty = features.get('certainty_value', 0)
+  speaker_tag = transcript_data.get('speaker_tag', '')
+  speaker_id = transcript_data.get('speaker_id', -1)
+  res = {}
+
+
   speakers = content.get('speakers', [])
   participation_scores = content.get('participation_scores', [])
   internal_cohesion = content.get('internal_cohesion', [])
@@ -139,24 +161,34 @@ def add_speaker_transcript_metrics(**kwargs):
   social_impact = content.get('social_impact', [])
   newness = content.get('newness', [])
   communication_density = content.get('communication_density', [])
+  res = {}
 
   session_device = database.get_session_devices(processing_key=key)
   if session_device:
-    logging.info("Speaker Metrics received for session device %s for session %s for transcript %i." %
-                 (session_device.id, session_device.session_id, transcript_id))
+    logging.info("Speaker Metrics received for session device %s for session %s." %
+                 (session_device.id, session_device.session_id))
+
+    transcript = database.add_transcript(session_device.id, start_time, end_time - start_time, transcript, len(questions) > 0, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id, speaker_tag, speaker_id)
+    added_keywords = []
+    for keyword in keywords:
+      added_keywords.append(database.add_keyword_usage(transcript.id, keyword['word'], keyword['keyword'], keyword['similarity']))
+
     room_name = str(session_device.session_id)
+    metrics = []
     for i in range(0, len(participation_scores)):
       speaker_id = speakers[i-1] if i != 0 else None
       metric = database.add_speaker_transcript_metrics(speaker_id=speaker_id,
-                                              transcript_id=transcript_id,
+                                              transcript_id=transcript.id,
                                               participation_score=participation_scores[i],
                                               internal_cohesion=internal_cohesion[i],
                                               responsivity=responsivity[i],
                                               social_impact=social_impact[i],
                                               newness=newness[i],
                                               communication_density=communication_density[i])
-      socketio.emit('speaker_metrics_update', json.dumps(metric.json()), room=room_name, namespace="/session")
-  return json_response()
+      metrics.append(metric.json())
+    socketio.emit('transcript_update', json.dumps({'transcript':transcript.json(), 'metrics':metrics}), room=room_name, namespace="/session")
+    res = {'transcript_id':transcript.__hash__()}
+  return json_response(payload=res)
 
 
 @api_routes.route('/api/v1/callback/tag', methods=['POST'])

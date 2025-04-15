@@ -73,7 +73,7 @@ def delete_speaker(speaker_id):
 # Speaker Transcript Metrics
 # -------------------------
 
-def get_speaker_transcript_metrics(id = None, speaker_id=None, transcript_id=None, session_device_id=None):
+def get_speaker_transcript_metrics(id = None, speaker_id=None, transcript_id=None, session_device_id=None, session_id=None):
     query = db.session.query(SpeakerTranscriptMetrics)
     if id != None:
         return query.filter(SpeakerTranscriptMetrics.id == id).first()
@@ -82,7 +82,7 @@ def get_speaker_transcript_metrics(id = None, speaker_id=None, transcript_id=Non
     if transcript_id != None:
         query = query.filter(SpeakerTranscriptMetrics.transcript_id == transcript_id)
     if session_device_id != None:
-        query = query.join(Transcript, SpeakerTranscriptMetrics.transcript).filter(Transcript.session_device_id == session_device_id)
+        query = query.join(Transcript, SpeakerTranscriptMetrics.transcript_id).filter(Transcript.session_device_id == session_device_id)
     return query.all()
 
 def add_speaker_transcript_metrics(speaker_id, transcript_id, participation_score, internal_cohesion, responsivity, social_impact, newness, communication_density):

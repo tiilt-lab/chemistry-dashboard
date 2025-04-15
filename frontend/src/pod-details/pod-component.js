@@ -15,6 +15,7 @@ function PodComponent() {
   const [sessionDevice, setSessionDevice] = useState({});
   const [session, setSession] = useState({});
   const [transcripts, setTranscripts] = useState([]);
+  const [speakerMetrics, setSpeakerMetrics] = useState([]);
   const [displayTranscripts, setDisplayTranscripts] = useState([]);
   const [currentTranscript, setCurrentTranscript] = useState({});
   const [currentForm, setCurrentForm] = useState("");
@@ -33,6 +34,8 @@ function PodComponent() {
   const [hideDetails, setHideDetails] = useState(false);
   const [speakers, setSpeakers] = useState([]);
   const [selectedSpkrId, setSelectedSpkrId] = useState(-1);
+  const [selectedSpkrId1, setSelectedSpkrId1] = useState(-1);
+  const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1);
 
   const { sessionDeviceId } = useParams();
   const navigate = useNavigate();
@@ -147,6 +150,7 @@ function PodComponent() {
   useEffect(() => {
     if (displayTranscripts) {
       console.log("reloaded page");
+      console.log(displayTranscripts);
     }
   }, [displayTranscripts]);
 
@@ -347,8 +351,12 @@ function PodComponent() {
       hideDetails={hideDetails}
       toggleDetails={toggleDetails}
       speakers={speakers}
-      selectedSppkrId={selectedSpkrId}
+      selectedSpkrId={selectedSpkrId}
       setSelectedSpkrId={setSelectedSpkrId}
+      selectedSpkrId1={selectedSpkrId1}
+      setSelectedSpkrId1={setSelectedSpkrId1}
+      selectedSpkrId2={selectedSpkrId2}
+      setSelectedSpkrId2={setSelectedSpkrId2}
     />
   );
 }
