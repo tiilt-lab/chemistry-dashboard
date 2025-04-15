@@ -40,13 +40,13 @@ function AppIndividualFeaturesComponent(props) {
       { name: "Newness", values: [] },
       { name: "Communication Density", values: [] },
     ];
-    console.log("speaker_metrics");
-    const speaker_metrics = props.transcripts.map((t) => {
+    props.transcripts.forEach((t) => {
       //select speaker metrics from transcripts based on the spkrId
       const speaker_metric = t.speaker_metrics.find(
         (item) => item.speaker_id === props.spkrId
       );
 
+      //accumulate each score into their value array
       valueArrays[0].values.push(speaker_metric.participation_score * 100);
       valueArrays[1].values.push(speaker_metric.social_impact * 100);
       valueArrays[2].values.push(speaker_metric.responsivity * 100);
@@ -55,12 +55,12 @@ function AppIndividualFeaturesComponent(props) {
       valueArrays[5].values.push(speaker_metric.communication_density * 100);
       console.log("speaker_metric");
       console.log(speaker_metric);
-      return speaker_metric;
     });
-    console.log(speaker_metrics);
+
     console.log("Values Array");
     console.log(valueArrays);
 
+    //smooth the values of the value array over 10 values
     for (const valueArray of valueArrays) {
       const length = valueArray.values.length;
       const average =

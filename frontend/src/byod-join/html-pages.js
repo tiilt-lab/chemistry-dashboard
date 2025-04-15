@@ -350,6 +350,10 @@ function ByodJoinPage(props) {
                       speakers={props.speakers}
                       selectedSpkrId={props.selectedSpkrId}
                       setSelectedSpkrId={props.setSelectedSpkrId}
+                      selectedSpkrId1={props.selectedSpkrId1}
+                      setSelectedSpkrId1={props.setSelectedSpkrId1}
+                      selectedSpkrId2={props.selectedSpkrId2}
+                      setSelectedSpkrId2={props.setSelectedSpkrId2}
                     ></AppInfographicsView>
                   </div>
                   {props.loading() ? <AppSpinner></AppSpinner> : <></>}

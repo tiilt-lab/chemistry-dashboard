@@ -73,10 +73,20 @@ def post_disconnect(source):
     except Exception as e:
         logging.info('disconnect callback failed: {0}'.format(e))
         return False
-
+#Post speaker metrics with transcript data
 def post_speaker_transcript_metrics(transcript_data, speakers, participation_scores, internal_cohesion, responsivity, social_impact, newness, communication_density):
     result = {
-        'transcript_data': transcript_data,
+        'source': transcript_data['source'],
+        'start_time': transcript_data['start_time'],
+        'end_time': transcript_data['end_time'],
+        'transcript': transcript_data['transcript'],
+        'direction': transcript_data['doa'],
+        'questions': transcript_data['questions'],
+        'keywords': transcript_data['keywords'],
+        'features': transcript_data['features'],
+        'topic_id': transcript_data['topic_id'],
+        'speaker_tag': transcript_data['speaker_tag'],
+        'speaker_id':transcript_data['speaker_id'],
         'speakers':speakers,
         'participation_scores': participation_scores,
         'internal_cohesion': internal_cohesion,

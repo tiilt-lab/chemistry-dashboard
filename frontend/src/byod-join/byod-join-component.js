@@ -45,12 +45,14 @@ function JoinPage() {
   const sessionService = new SessionService();
   const apiService = new ApiService();
 
-  const [transcripts, setTransripts] = useState([]);
+  const [transcripts, setTranscripts] = useState([]);
   const [startTime, setStartTime] = useState();
   const [endTime, setEndTime] = useState();
   const [displayTranscripts, setDisplayTranscripts] = useState([]);
   const [currentTranscript, setCurrentTranscript] = useState({});
   const [timeRange, setTimeRange] = useState([0, 1]);
+  const [selectedSpkrId1, setSelectedSpkrId1] = useState(-1);
+  const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1);
 
   const [currentForm, setCurrentForm] = useState("");
   const [displayText, setDisplayText] = useState("");
@@ -90,6 +92,12 @@ function JoinPage() {
       "Clout",
       "Authenticity",
       "Confusion",
+      "Participation",
+      "Social Impact",
+      "Responsivity",
+      "Internal Cohesion",
+      "Newness",
+      "Communication Density",
     ];
     initChecklistData(featuresArr, setShowFeatures);
     // initialize the components toolbar
@@ -99,6 +107,12 @@ function JoinPage() {
       "Keyword detection",
       "Discussion features",
       "Radar chart",
+      "Participation",
+      "Social Impact",
+      "Responsivity",
+      "Internal Cohesion",
+      "Newness",
+      "Communication Density",
     ];
     initChecklistData(boxArr, setShowBoxes);
   }, []);
@@ -737,6 +751,26 @@ function JoinPage() {
     }
   };
 
+  const fetchSpeakerMetrics = async (transcript) => {
+    try {
+      const response = await sessionService.getTranscriptSpeakerMetrics(
+        transcript.id
+      );
+      if (response.status === 200) {
+        const jsonObj = await response.json();
+        return { ...transcript, speaker_metrics: jsonObj };
+      } else if (response.status === 400 || response.status === 401) {
+        console.log(response, "no speaker metric for transcript id");
+        return { ...transcript, speaker_metrics: null };
+      }
+    } catch (error) {
+      console.log(
+        "byod-join-component error func : fetch Speaker Metrics",
+        error
+      );
+    }
+  };
+
   const fetchTranscript = async (deviceid) => {
     try {
       const response =
@@ -744,10 +778,19 @@ function JoinPage() {
 
       if (response.status === 200) {
         const jsonObj = await response.json();
-        const data = jsonObj.sort((a, b) =>
+        const fetched_transcripts = jsonObj.sort((a, b) =>
           a.start_time > b.start_time ? 1 : -1
         );
-        setTransripts(data);
+
+        const fetch_metrics_promises =
+          fetched_transcripts.map(fetchSpeakerMetrics);
+        const fetched_trancript_metrics = await Promise.all(
+          fetch_metrics_promises
+        );
+
+        console.log("Transcript with speaker data");
+        console.log(fetched_trancript_metrics);
+        setTranscripts(fetched_trancript_metrics);
         const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
         setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100);
         setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100);
@@ -755,7 +798,7 @@ function JoinPage() {
         console.log(response, "no transcript obj");
       }
     } catch (error) {
-      console.log("byod-join-component error func : requestAccessKey 1", error);
+      console.log("byod-join-component error func : fetch transcript", error);
     }
   };
 
@@ -772,6 +815,8 @@ function JoinPage() {
   };
 
   const generateDisplayTranscripts = (s, e) => {
+    console.log("generateDisplayTranscripts");
+    console.log(transcripts);
     if (selectedSpkrId === -1) {
       setDisplayTranscripts(
         transcripts.filter((t) => t.start_time >= s && t.start_time <= e)
@@ -922,6 +967,10 @@ function JoinPage() {
       closeForm={closeForm}
       selectedSpkrId={selectedSpkrId}
       setSelectedSpkrId={setSelectedSpkrId}
+      selectedSpkrId1={selectedSpkrId1}
+      setSelectedSpkrId1={setSelectedSpkrId1}
+      selectedSpkrId2={selectedSpkrId2}
+      setSelectedSpkrId2={setSelectedSpkrId2}
       selectedSpeaker={selectedSpeaker}
       setSelectedSpeaker={setSelectedSpeaker}
       saveAudioFingerprint={saveAudioFingerprint}

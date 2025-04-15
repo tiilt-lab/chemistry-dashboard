@@ -14,7 +14,6 @@ export class ActiveSessionService {
   sessionSource = new BehaviorSubject(null);
   sessionDeviceSource = new BehaviorSubject([]);
   transcriptSource = new BehaviorSubject([]);
-  speakerMetricsSource = new BehaviorSubject([]);
 
   socket;
   sessionId;
@@ -104,8 +103,8 @@ export class ActiveSessionService {
     // Handle room join.
     this.socket.on("room_joined", (e) => {});
 
-    // Update transcripts.
-    this.socket.on("transcript_update", (e) => {
+    // Update transcripts and speaker metrics.
+    this.socket.on("transcript_metrics_update", (e) => {
       const data = JSON.parse(e);
 
       const speaker_metrics = SpeakerMetricsModel.fromJsonList(
@@ -115,36 +114,24 @@ export class ActiveSessionService {
         data["transcript"],
         speaker_metrics
       );
-      console.log("Transcript Model");
-      console.log(transcript_model);
       const currentTranscripts = this.transcriptSource.getValue();
 
       currentTranscripts.push(transcript_model);
       this.transcriptSource.next(currentTranscripts);
     });
 
-    this.socket.on("speaker_metrics_update", (e) => {
-      const data = JSON.parse(e);
-      const currentSpeakerMetrics = this.speakerMetricsSource.getValue();
-      currentSpeakerMetrics.push(SpeakerMetricsModel.fromJson(data));
-      this.speakerMetricsSource.next(currentSpeakerMetrics);
-    });
-
-    // Initial digest of transcripts.
+    // Initial digest of transcripts and speaker metrics.
     this.socket.on("transcript_metrics_digest", (e) => {
       const data = JSON.parse(e);
       const transcripts = [];
       for (const transcript_metrics of data) {
-        const speaker_metrics = [];
-        const transcript_model = TranscriptModel.fromJson(
-          transcript_metrics["transcript"]
+        const speaker_metrics = SpeakerMetricsModel.fromJsonList(
+          transcript_metrics["speaker_metrics"]
         );
-        for (const speaker_metric of transcript_metrics["speaker_metrics"]) {
-          const speaker_metric_model =
-            SpeakerMetricsModel.fromJson(speaker_metric);
-          speaker_metrics.push(speaker_metric_model);
-        }
-        transcript_model.speaker_metrics = speaker_metrics;
+        const transcript_model = TranscriptModel.fromJson(
+          transcript_metrics["transcript"],
+          speaker_metrics
+        );
         transcripts.push(transcript_model);
       }
       this.transcriptSource.next(transcripts);
@@ -191,9 +178,5 @@ export class ActiveSessionService {
   }
   getTranscripts() {
     return this.transcriptSource;
-  }
-
-  getSpeakerMetrics() {
-    return this.speakerMetricsSource;
   }
 }
