@@ -2,18 +2,22 @@ import { AppSectionBoxComponent } from "components/section-box/section-box-compo
 import { AppTimelineSlider } from "components/timeline-slider/timeline-slider-component";
 import { AppTimeline } from "timeline/timeline-component";
 import { AppFeaturesComponent } from "features/features-component";
-// import { AppIndividualFeaturesComponent } from "individualmetrics/features-component";
+//import { AppIndividualFeaturesComponent } from "frontend\src\individualmetrics\features-component.js"
 import { AppRadarComponent } from "radar/radar-component";
 import { AppKeywordsComponent } from "keywords/keywords-component";
 import style from "byod-join/byod-join.module.css";
 import { adjDim, isLargeScreen } from "myhooks/custom-hooks";
-
 import React, { useState } from "react";
 import ReactSlider from "react-slider";
 
 function AppInfographicsDetailedView(props) {
   return (
     <>
+      {props.showBoxes.length > 0 && props.showBoxes[0]["clicked"] && (
+        <AppSectionBoxComponent heading={"Timeline control"}>
+          <AppTimelineSlider id="timeSlider" inputChanged={props.setRange} />
+        </AppSectionBoxComponent>
+      )}
       {props.speakers && (
         <div
           className="pod_overview-container-large__+DaY+"
@@ -46,15 +50,6 @@ function AppInfographicsDetailedView(props) {
                 </option>
               ))}
             </select>
-
-            {props.showBoxes.length > 0 && props.showBoxes[0]["clicked"] && (
-              <AppSectionBoxComponent heading={"Timeline control"}>
-                <AppTimelineSlider
-                  id="timeSlider1"
-                  inputChanged={props.setRange}
-                />
-              </AppSectionBoxComponent>
-            )}
 
             {props.showBoxes.length > 0 && props.showBoxes[1]["clicked"] && (
               <AppSectionBoxComponent heading={"Discussion timeline"}>
@@ -122,15 +117,6 @@ function AppInfographicsDetailedView(props) {
                 </option>
               ))}
             </select>
-
-            {props.showBoxes.length > 0 && props.showBoxes[0]["clicked"] && (
-              <AppSectionBoxComponent heading={"Timeline control"}>
-                <AppTimelineSlider
-                  id="timeSlider2"
-                  inputChanged={props.setRange}
-                />
-              </AppSectionBoxComponent>
-            )}
 
             {props.showBoxes.length > 0 && props.showBoxes[1]["clicked"] && (
               <AppSectionBoxComponent heading={"Discussion timeline"}>
