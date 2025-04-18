@@ -833,22 +833,28 @@ function JoinPage() {
   };
 
   const setSpeakerTranscripts = () => {
-    setSpkr1Transcripts(
-      selectedSpkrId1 !== -1
-        ? displayTranscripts.reduce((indicies, transcript, index) => {
-            if (transcript.speaker_id === selectedSpkrId1) indicies.push(index);
-            return indicies;
-          }, [])
-        : displayTranscripts.keys
-    );
-    setSpkr2Transcripts(
-      selectedSpkrId2 !== -1
-        ? displayTranscripts.reduce((indicies, transcript, index) => {
-            if (transcript.speaker_id === selectedSpkrId2) indicies.push(index);
-            return indicies;
-          }, [])
-        : displayTranscripts.keys
-    );
+    if (displayTranscripts.length) {
+      setSpkr1Transcripts(
+        displayTranscripts.reduce((indicies, transcript, index) => {
+          if (
+            selectedSpkrId1 === -1 ||
+            transcript.speaker_id === selectedSpkrId1
+          )
+            indicies.push(index);
+          return indicies;
+        }, [])
+      );
+      setSpkr2Transcripts(
+        displayTranscripts.reduce((indicies, transcript, index) => {
+          if (
+            selectedSpkrId2 === -1 ||
+            transcript.speaker_id === selectedSpkrId2
+          )
+            indicies.push(index);
+          return indicies;
+        }, [])
+      );
+    }
   };
 
   const seeAllTranscripts = () => {
