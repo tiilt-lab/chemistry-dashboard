@@ -53,6 +53,8 @@ function JoinPage() {
   const [timeRange, setTimeRange] = useState([0, 1]);
   const [selectedSpkrId1, setSelectedSpkrId1] = useState(-1);
   const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1);
+  const [spkr1Transcripts, setSpkr1Transcripts] = useState([]);
+  const [spkr2Transcripts, setSpkr2Transcripts] = useState([]);
 
   const [currentForm, setCurrentForm] = useState("");
   const [displayText, setDisplayText] = useState("");
@@ -170,7 +172,15 @@ function JoinPage() {
       setEndTime(eTime);
       generateDisplayTranscripts(sTime, eTime);
     }
-  }, [transcripts, startTime, endTime, selectedSpkrId, speakersValidated]);
+  }, [transcripts, startTime, endTime, session, speakersValidated, timeRange]);
+
+  useEffect(() => {
+    if (displayTranscripts) {
+      console.log("reloaded page");
+      console.log(displayTranscripts);
+    }
+    setSpeakerTranscripts();
+  }, [displayTranscripts, selectedSpkrId1, selectedSpkrId2]);
 
   useEffect(() => {
     if (audioconnected && !videoconnected) {
@@ -817,20 +827,28 @@ function JoinPage() {
   const generateDisplayTranscripts = (s, e) => {
     console.log("generateDisplayTranscripts");
     console.log(transcripts);
-    if (selectedSpkrId === -1) {
-      setDisplayTranscripts(
-        transcripts.filter((t) => t.start_time >= s && t.start_time <= e)
-      );
-    } else {
-      setDisplayTranscripts(
-        transcripts.filter(
-          (t) =>
-            t.start_time >= s &&
-            t.start_time <= e &&
-            t.speaker_id === selectedSpkrId
-        )
-      );
-    }
+    setDisplayTranscripts(
+      transcripts.filter((t) => t.start_time >= s && t.start_time <= e)
+    );
+  };
+
+  const setSpeakerTranscripts = () => {
+    setSpkr1Transcripts(
+      selectedSpkrId1 !== -1
+        ? displayTranscripts.reduce((indicies, transcript, index) => {
+            if (transcript.speaker_id === selectedSpkrId1) indicies.push(index);
+            return indicies;
+          }, [])
+        : displayTranscripts.keys
+    );
+    setSpkr2Transcripts(
+      selectedSpkrId2 !== -1
+        ? displayTranscripts.reduce((indicies, transcript, index) => {
+            if (transcript.speaker_id === selectedSpkrId2) indicies.push(index);
+            return indicies;
+          }, [])
+        : displayTranscripts.keys
+    );
   };
 
   const seeAllTranscripts = () => {
@@ -971,6 +989,8 @@ function JoinPage() {
       setSelectedSpkrId1={setSelectedSpkrId1}
       selectedSpkrId2={selectedSpkrId2}
       setSelectedSpkrId2={setSelectedSpkrId2}
+      spkr1Transcripts={spkr1Transcripts}
+      spkr2Transcripts={spkr2Transcripts}
       selectedSpeaker={selectedSpeaker}
       setSelectedSpeaker={setSelectedSpeaker}
       saveAudioFingerprint={saveAudioFingerprint}

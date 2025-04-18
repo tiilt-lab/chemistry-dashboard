@@ -56,7 +56,9 @@ function AppInfographicsDetailedView(props) {
                 <AppTimeline
                   clickedTimeline={props.onClickedTimeline}
                   session={props.session}
-                  transcripts={props.displayTranscripts}
+                  transcripts={props.spkr1Transcripts.map(
+                    (index) => props.displayTranscripts[index]
+                  )}
                   start={props.startTime}
                   end={props.endTime}
                 />
@@ -68,7 +70,9 @@ function AppInfographicsDetailedView(props) {
                 <AppKeywordsComponent
                   session={props.session}
                   sessionDevice={props.sessionDevice}
-                  transcripts={props.displayTranscripts}
+                  transcripts={props.spkr1Transcripts.map(
+                    (index) => props.displayTranscripts[index]
+                  )}
                   start={props.startTime}
                   end={props.endTime}
                   fromclient={props.fromclient}
@@ -80,7 +84,9 @@ function AppInfographicsDetailedView(props) {
               <AppSectionBoxComponent heading={"Discussion features"}>
                 <AppFeaturesComponent
                   session={props.session}
-                  transcripts={props.displayTranscripts}
+                  transcripts={props.spkr1Transcripts.map(
+                    (index) => props.displayTranscripts[index]
+                  )}
                   showFeatures={props.showFeatures}
                 />
               </AppSectionBoxComponent>
@@ -90,7 +96,9 @@ function AppInfographicsDetailedView(props) {
               <AppSectionBoxComponent heading={"Radar chart"}>
                 <AppRadarComponent
                   session={props.session}
-                  transcripts={props.displayTranscripts}
+                  transcripts={props.spkr1Transcripts.map(
+                    (index) => props.displayTranscripts[index]
+                  )}
                   radarTrigger={props.radarTrigger}
                   start={props.startTime}
                   end={props.endTime}
@@ -123,7 +131,9 @@ function AppInfographicsDetailedView(props) {
                 <AppTimeline
                   clickedTimeline={props.onClickedTimeline}
                   session={props.session}
-                  transcripts={props.displayTranscripts}
+                  transcripts={props.spkr2Transcripts.map(
+                    (index) => props.displayTranscripts[index]
+                  )}
                   start={props.startTime}
                   end={props.endTime}
                 />
@@ -135,7 +145,9 @@ function AppInfographicsDetailedView(props) {
                 <AppKeywordsComponent
                   session={props.session}
                   sessionDevice={props.sessionDevice}
-                  transcripts={props.displayTranscripts}
+                  transcripts={props.spkr2Transcripts.map(
+                    (index) => props.displayTranscripts[index]
+                  )}
                   start={props.startTime}
                   end={props.endTime}
                   fromclient={props.fromclient}
@@ -147,7 +159,9 @@ function AppInfographicsDetailedView(props) {
               <AppSectionBoxComponent heading={"Discussion features"}>
                 <AppFeaturesComponent
                   session={props.session}
-                  transcripts={props.displayTranscripts}
+                  transcripts={props.spkr2Transcripts.map(
+                    (index) => props.displayTranscripts[index]
+                  )}
                   showFeatures={props.showFeatures}
                 />
               </AppSectionBoxComponent>
@@ -157,7 +171,9 @@ function AppInfographicsDetailedView(props) {
               <AppSectionBoxComponent heading={"Radar chart"}>
                 <AppRadarComponent
                   session={props.session}
-                  transcripts={props.displayTranscripts}
+                  transcripts={props.spkr2Transcripts.map(
+                    (index) => props.displayTranscripts[index]
+                  )}
                   radarTrigger={props.radarTrigger}
                   start={props.startTime}
                   end={props.endTime}

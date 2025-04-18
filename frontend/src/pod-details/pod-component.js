@@ -33,9 +33,10 @@ function PodComponent() {
   const [radarTrigger, setRadarTrigger] = useState(0);
   const [hideDetails, setHideDetails] = useState(false);
   const [speakers, setSpeakers] = useState([]);
-  const [selectedSpkrId, setSelectedSpkrId] = useState(-1);
   const [selectedSpkrId1, setSelectedSpkrId1] = useState(-1);
   const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1);
+  const [spkr1Transcripts, setSpkr1Transcripts] = useState([]);
+  const [spkr2Transcripts, setSpkr2Transcripts] = useState([]);
 
   const { sessionDeviceId } = useParams();
   const navigate = useNavigate();
@@ -135,24 +136,18 @@ function PodComponent() {
     const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
     const sTime = Math.round(sessionLen * timeRange[0] * 100) / 100;
     const eTime = Math.round(sessionLen * timeRange[1] * 100) / 100;
-    //console.log("Start and end times changed endtime useeffect");
     setStartTime(sTime);
     setEndTime(eTime);
     generateDisplayTranscripts(sTime, eTime);
-    /*setDisplayTranscripts(
-      transcripts.filter((t) => t.start_time >= sTime && t.start_time <= eTime)
-    );
-    setDisplayTranscripts((past) => {
-          return transcripts.filter(t => t.start_time >= sTime && t.start_time <= eTime);
-        });*/
-  }, [startTime, endTime, selectedSpkrId]);
+  }, [startTime, endTime, transcripts, timeRange]);
 
   useEffect(() => {
     if (displayTranscripts) {
       console.log("reloaded page");
       console.log(displayTranscripts);
     }
-  }, [displayTranscripts]);
+    setSpeakerTranscripts();
+  }, [displayTranscripts, selectedSpkrId1, selectedSpkrId2]);
 
   useEffect(() => {
     if (trigger > 0) {
@@ -188,22 +183,29 @@ function PodComponent() {
     setEndTime(e);
     generateDisplayTranscripts(s, e);
   };
+  const setSpeakerTranscripts = () => {
+    setSpkr1Transcripts(
+      selectedSpkrId1 !== -1
+        ? displayTranscripts.reduce((indicies, transcript, index) => {
+            if (transcript.speaker_id === selectedSpkrId1) indicies.push(index);
+            return indicies;
+          }, [])
+        : displayTranscripts.keys
+    );
+    setSpkr2Transcripts(
+      selectedSpkrId2 !== -1
+        ? displayTranscripts.reduce((indicies, transcript, index) => {
+            if (transcript.speaker_id === selectedSpkrId2) indicies.push(index);
+            return indicies;
+          }, [])
+        : displayTranscripts.keys
+    );
+  };
 
   const generateDisplayTranscripts = (s, e) => {
-    if (selectedSpkrId === -1) {
-      setDisplayTranscripts(
-        transcripts.filter((t) => t.start_time >= s && t.start_time <= e)
-      );
-    } else {
-      setDisplayTranscripts(
-        transcripts.filter(
-          (t) =>
-            t.start_time >= s &&
-            t.start_time <= e &&
-            t.speaker_id === selectedSpkrId
-        )
-      );
-    }
+    setDisplayTranscripts(
+      transcripts.filter((t) => t.start_time >= s && t.start_time <= e)
+    );
   };
 
   const navigateToSession = () => {
@@ -351,12 +353,12 @@ function PodComponent() {
       hideDetails={hideDetails}
       toggleDetails={toggleDetails}
       speakers={speakers}
-      selectedSpkrId={selectedSpkrId}
-      setSelectedSpkrId={setSelectedSpkrId}
       selectedSpkrId1={selectedSpkrId1}
       setSelectedSpkrId1={setSelectedSpkrId1}
       selectedSpkrId2={selectedSpkrId2}
       setSelectedSpkrId2={setSelectedSpkrId2}
+      spkr1Transcripts={spkr1Transcripts}
+      spkr2Transcripts={spkr2Transcripts}
     />
   );
 }

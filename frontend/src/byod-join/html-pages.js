@@ -354,6 +354,8 @@ function ByodJoinPage(props) {
                       setSelectedSpkrId1={props.setSelectedSpkrId1}
                       selectedSpkrId2={props.selectedSpkrId2}
                       setSelectedSpkrId2={props.setSelectedSpkrId2}
+                      spkr1Transcripts={props.spkr1Transcripts}
+                      spkr2Transcripts={props.spkr2Transcripts}
                     ></AppInfographicsView>
                   </div>
                   {props.loading() ? <AppSpinner></AppSpinner> : <></>}
