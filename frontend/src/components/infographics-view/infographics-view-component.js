@@ -86,8 +86,8 @@ function AppInfographicsView(props) {
                     >
                       <AppFeaturesComponent
                         session={props.session}
-                        transcripts={props.displayTranscripts.filter(
-                          (t) => t.speaker_id === props.selectedSpkrId1
+                        transcripts={props.spkr1Transcripts.map(
+                          (index) => props.displayTranscripts[index]
                         )}
                         showFeatures={props.showFeatures}
                       />
@@ -99,8 +99,8 @@ function AppInfographicsView(props) {
                     <AppSectionBoxComponent heading={`Radar chart`}>
                       <AppRadarComponent
                         session={props.session}
-                        transcripts={props.displayTranscripts.filter(
-                          (t) => t.speaker_id === props.selectedSpkrId1
+                        transcripts={props.spkr1Transcripts.map(
+                          (index) => props.displayTranscripts[index]
                         )}
                         radarTrigger={props.radarTrigger}
                         start={props.startTime}
@@ -185,8 +185,8 @@ function AppInfographicsView(props) {
                     >
                       <AppFeaturesComponent
                         session={props.session}
-                        transcripts={props.displayTranscripts.filter(
-                          (t) => t.speaker_id === props.selectedSpkrId2
+                        transcripts={props.spkr2Transcripts.map(
+                          (index) => props.displayTranscripts[index]
                         )}
                         showFeatures={props.showFeatures}
                       />
@@ -197,8 +197,8 @@ function AppInfographicsView(props) {
                     <AppSectionBoxComponent heading={`Radar chart`}>
                       <AppRadarComponent
                         session={props.session}
-                        transcripts={props.displayTranscripts.filter(
-                          (t) => t.speaker_id === props.selectedSpkrId2
+                        transcripts={props.spkr2Transcripts.map(
+                          (index) => props.displayTranscripts[index]
                         )}
                         radarTrigger={props.radarTrigger}
                         start={props.startTime}
