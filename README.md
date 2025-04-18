@@ -101,6 +101,26 @@ $ nvidia-smi
 $ nvcc -V
 ```
 
+```
+cd ../../../video_processing
+python3 -m venv ./venv
+source venv/bin/activate
+
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip3 install cmake matplotlib ninja numpy opencv-python scipy tqdm wget imutils
+
+install dlib with cuda enabled
+
+$ git clone https://github.com/davisking/dlib.git
+$ cd dlib
+$ mkdir build
+$ cd build
+$ cmake .. -D DLIB_USE_CUDA=1 -D USE_AVX_INSTRUCTIONS=1 -D CMAKE_C_COMPILER=/usr/bin/gcc-11
+$ cmake --build .
+$ cd ..
+$ python setup.py install --set DLIB_USE_CUDA=1 --set CMAKE_C_COMPILER=/usr/bin/gcc-11
+```
+
 ## Required parts of Server:
 
 Create a database in MySQL
@@ -131,6 +151,7 @@ pyenv install 3.9.21
 cd server
 pyenv virtualenv 3.9.21 discussion_capture
 pyenv local discussion_capture
+pip install --upgrade pip
 pip install -r requirements.txt
 pyenv which python
 cd ..
@@ -142,6 +163,7 @@ Change ExecStart of deploy/audio_processor.service with "pyenv which python" res
 cd audio_processing
 pyenv virtualenv 3.9.21 audio_processor
 pyenv local audio_processor
+pip install --upgrade pip
 pip install spacy
 python -m spacy download en_core_web_sm
 pip install wheel
@@ -172,36 +194,15 @@ After the download is complete, execute the following lines.
 gunzip GoogleNews-vectors-negative300.bin.gz
 ```
 
-```
-cd ../../../video_processing
-python3 -m venv ./venv
-source venv/bin/activate
-
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-pip3 install cmake matplotlib ninja numpy opencv-python scipy tqdm wget imutils
-
-install dlib with cuda enabled
-
-$ git clone https://github.com/davisking/dlib.git
-$ cd dlib
-$ mkdir build
-$ cd build
-$ cmake .. -D DLIB_USE_CUDA=1 -D USE_AVX_INSTRUCTIONS=1 -D CMAKE_C_COMPILER=/usr/bin/gcc-11
-$ cmake --build .
-$ cd ..
-$ python setup.py install --set DLIB_USE_CUDA=1 --set CMAKE_C_COMPILER=/usr/bin/gcc-11
-```
-
 Setup the flask app
 
 ```
 cd ../server
-source venv/bin/activate
 export FLASK_APP=discussion_capture.py
 flask db upgrade
 ```
 
-Then setup up the front-end by following the README in the client folder, chemistry-dashboard/client
+Then setup up the front-end by following the README in the frontend folder, chemistry-dashboard/frontend
 
 Setup Discussion Capture system services.
 
