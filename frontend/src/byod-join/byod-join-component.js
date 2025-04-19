@@ -186,10 +186,9 @@ function JoinPage() {
 
   useEffect(() => {
     if (displayTranscripts) {
-      console.log("reloaded page");
-      console.log(displayTranscripts);
+      console.log("reloaded page - displayTranscripts");
+      setSpeakerTranscripts();
     }
-    setSpeakerTranscripts();
   }, [displayTranscripts, selectedSpkrId1, selectedSpkrId2]);
 
   useEffect(() => {
@@ -817,6 +816,10 @@ function JoinPage() {
           return values;
         }, [])
       );
+    }
+    else{
+      setSpkr1Transcripts([]);
+      setSpkr2Transcripts([]);
     }
   };
 
