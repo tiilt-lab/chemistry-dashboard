@@ -142,7 +142,7 @@ function PodComponent() {
   }, [startTime, endTime, transcripts, timeRange]);
 
   useEffect(() => {
-    if (displayTranscripts && displayTranscripts.length) {
+    if (displayTranscripts) {
       console.log("reloaded page - display transcripts");
       setSpeakerTranscripts(displayTranscripts);
     }
@@ -199,6 +199,10 @@ function PodComponent() {
           return values;
         }, [])
       );
+    }
+    else{
+      setSpkr1Transcripts([]);
+      setSpkr2Transcripts([]);
     }
   };
 
