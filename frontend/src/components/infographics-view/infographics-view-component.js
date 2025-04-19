@@ -86,9 +86,7 @@ function AppInfographicsView(props) {
                     >
                       <AppFeaturesComponent
                         session={props.session}
-                        transcripts={props.spkr1Transcripts.map(
-                          (index) => props.displayTranscripts[index]
-                        )}
+                        transcripts={props.spkr1Transcripts}
                         showFeatures={props.showFeatures}
                       />
                     </AppSectionBoxComponent>
@@ -99,9 +97,7 @@ function AppInfographicsView(props) {
                     <AppSectionBoxComponent heading={`Radar chart`}>
                       <AppRadarComponent
                         session={props.session}
-                        transcripts={props.spkr1Transcripts.map(
-                          (index) => props.displayTranscripts[index]
-                        )}
+                        transcripts={props.spkr1Transcripts}
                         radarTrigger={props.radarTrigger}
                         start={props.startTime}
                         end={props.endTime}
@@ -185,9 +181,7 @@ function AppInfographicsView(props) {
                     >
                       <AppFeaturesComponent
                         session={props.session}
-                        transcripts={props.spkr2Transcripts.map(
-                          (index) => props.displayTranscripts[index]
-                        )}
+                        transcripts={props.spkr2Transcripts}
                         showFeatures={props.showFeatures}
                       />
                     </AppSectionBoxComponent>
@@ -197,9 +191,7 @@ function AppInfographicsView(props) {
                     <AppSectionBoxComponent heading={`Radar chart`}>
                       <AppRadarComponent
                         session={props.session}
-                        transcripts={props.spkr2Transcripts.map(
-                          (index) => props.displayTranscripts[index]
-                        )}
+                        transcripts={props.spkr2Transcripts}
                         radarTrigger={props.radarTrigger}
                         start={props.startTime}
                         end={props.endTime}

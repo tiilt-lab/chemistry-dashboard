@@ -142,10 +142,9 @@ function PodComponent() {
   }, [startTime, endTime, transcripts, timeRange]);
 
   useEffect(() => {
-    if (displayTranscripts) {
-      console.log("reloaded page");
-      console.log(displayTranscripts);
-      setSpeakerTranscripts();
+    if (displayTranscripts && displayTranscripts.length) {
+      console.log("reloaded page - display transcripts");
+      setSpeakerTranscripts(displayTranscripts);
     }
   }, [displayTranscripts, selectedSpkrId1, selectedSpkrId2]);
 
@@ -175,34 +174,29 @@ function PodComponent() {
   };
 
   const ResetTimeRange = (values) => {
-    const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
     setTimeRange(values);
-    const s = Math.round(sessionLen * values[0] * 100) / 100;
-    const e = Math.round(sessionLen * values[1] * 100) / 100;
-    setStartTime(s);
-    setEndTime(e);
-    generateDisplayTranscripts(s, e);
   };
+
   const setSpeakerTranscripts = () => {
     if (displayTranscripts.length) {
       setSpkr1Transcripts(
-        displayTranscripts.reduce((indicies, transcript, index) => {
+        displayTranscripts.reduce((values, transcript) => {
           if (
             selectedSpkrId1 === -1 ||
             transcript.speaker_id === selectedSpkrId1
           )
-            indicies.push(index);
-          return indicies;
+            values.push(transcript);
+          return values;
         }, [])
       );
       setSpkr2Transcripts(
-        displayTranscripts.reduce((indicies, transcript, index) => {
+        displayTranscripts.reduce((values, transcript) => {
           if (
             selectedSpkrId2 === -1 ||
             transcript.speaker_id === selectedSpkrId2
           )
-            indicies.push(index);
-          return indicies;
+            values.push(transcript);
+          return values;
         }, [])
       );
     }

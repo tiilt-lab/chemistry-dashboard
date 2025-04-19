@@ -50,13 +50,14 @@ class AudioProcessor:
         except RuntimeError:
           print("unable to spawn")
 
-        self.processing_queue = mp.Queue()
-        self.speaker_transcript_queue = mp.Queue()
+        #self.processing_queue = mp.Queue()
+        #self.speaker_transcript_queue = mp.Queue()
         self.semantic_model = semantic_model
         logging.info("Start metrics process")
-        self.speaker_metrics_process = mp.Process(target=speaker_metrics.process, args=(self.processing_queue, self.speaker_transcript_queue, self.semantic_model))
-        self.speaker_metrics_process.start()
-        self.processing_queue.put(config)
+        self.speaker_metrics_process = speaker_metrics.SpeakerProcessor(config, self.semantic_model)
+        #mp.Process(target=speaker_metrics.process, args=(self.processing_queue, self.speaker_transcript_queue, self.semantic_model))
+        #self.speaker_metrics_process.start()
+        #self.processing_queue.put(config)
 
         cf.initialize()
 
@@ -78,9 +79,11 @@ class AudioProcessor:
 
     def __complete_callback(self):
         logging.info("completing callback")
+        '''
         self.speaker_transcript_queue.put(None)
         self.speaker_metrics_process.join()
         self.speaker_metrics_process.close()
+        '''
         logging.info(self.config.diarization)
         if self.config.diarization:
             try:
@@ -92,7 +95,7 @@ class AudioProcessor:
     def setSpeakerFingerprints(self, fingerprints):
         self.fingerprints = fingerprints
         logging.info("Set Speakers")
-        self.processing_queue.put(self.fingerprints)
+        self.speaker_metrics_process.setSpeakers(self.fingerprints)
 
     def send_speaker_taggings(self):
         processing_timer = time.time()
@@ -226,7 +229,7 @@ class AudioProcessor:
             start_time += self.config.start_offset
             end_time += self.config.start_offset
             if self.config.diarization:
-              transcript_data = {'source':self.config.auth_key,
+              self.speaker_metrics_process.process_transcript({'source':self.config.auth_key,
                                 'start_time':start_time,
                                 'end_time':end_time,
                                 'transcript': transcript_text,
@@ -236,12 +239,11 @@ class AudioProcessor:
                                 'features':features,
                                 'topic_id':topic_id,
                                 'speaker_tag':speaker_tag,
-                                'speaker_id':speaker_id}
-              self.speaker_transcript_queue.put(transcript_data)
+                                'speaker_id':speaker_id})
             else:
               success, transcript_id = callbacks.post_transcripts(self.config.auth_key, start_time, end_time, transcript_text, doa, questions, keywords, features, topic_id, speaker_tag, speaker_id)
               if success:
-                  logging.info('Processing results posted successfully for client {0} (Processing time: {1}) @ {2}'.format(self.config.auth_key, processing_time, start_time))
+                  logging.info('Processing results posted successfully for client {0} (Processing time: {1}) @ {2} for transcript {3}'.format(self.config.auth_key, processing_time, start_time, transcript_id))
               else:
                 logging.warning('Processing results FAILED to post for client {0} (Processing time: {1})'.format(self.config.auth_key, processing_time))
 
