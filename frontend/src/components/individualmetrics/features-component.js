@@ -53,12 +53,7 @@ function AppIndividualFeaturesComponent(props) {
       valueArrays[3].values.push(speaker_metric.internal_cohesion * 100);
       valueArrays[4].values.push(speaker_metric.newness * 100);
       valueArrays[5].values.push(speaker_metric.communication_density * 100);
-      console.log("speaker_metric");
-      console.log(speaker_metric);
     });
-
-    console.log("Values Array");
-    console.log(valueArrays);
 
     //smooth the values of the value array over 10 values
     for (const valueArray of valueArrays) {
@@ -82,8 +77,6 @@ function AppIndividualFeaturesComponent(props) {
       // Generate the SVG path using the smoothed values
       for (let i = 0; i < smoothedValues.length; i++) {
         const xPos = Math.round(((i + 1) / smoothedValues.length) * svgWidth);
-        console.log("smoothedValues");
-        console.log(smoothedValues[i]);
         const yPos =
           svgHeight - Math.round((smoothedValues[i] / 100) * svgHeight);
         path += i === 0 ? "M" : "L";

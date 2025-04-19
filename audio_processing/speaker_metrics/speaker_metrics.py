@@ -24,7 +24,7 @@ class SpeakerProcessor:
     participants = 0
     indicies = None
 
-    def __init__(self, config):
+    def __init__(self, config, semantic_model):
 
         logging.info("[Speaker_Metrics]Inside speaker metric init")
         self.total_contributions = 0
@@ -41,6 +41,7 @@ class SpeakerProcessor:
         self.tau_window = 20
 
         self.length = 0
+        self.semantic_model = semantic_model
 
     def setSpeakers(self, speakers):
       self.speakers = speakers
@@ -113,6 +114,51 @@ class SpeakerProcessor:
     def stop(self):
         self.running = False
         self.asr_complete = True
+
+    def process_transcript(self, speaker_transcript_data):
+      try:
+        processing_timer = time.time()
+        speaker_ids = list(self.speakers.keys())
+
+        speaker = speaker_transcript_data['speaker_id']
+        transcript = speaker_transcript_data['transcript']
+        index = self.indicies[speaker] + 1 if speaker != -1 else 0
+        self.contributions[index] += 1
+
+        embedding = self.semantic_model.encode(transcript)
+
+        if self.length > 0:
+          cross_cohesion = self.calculateCohesionSums(index, embedding, self.semantic_model)
+          self.processResponsivity(cross_cohesion)
+          self.calculateNewness(embedding, index)
+
+        else:
+          self.embeddings = np.array([embedding])
+          self.subspace_basis = normalizeVector(self.embeddings)
+          self.total_new[index] += 1
+
+        self.length += 1
+        self.prev_window_speakers.append(speaker)
+        self.participation_scores = np.subtract(np.multiply(np.divide(self.contributions, self.length), self.participants), 1)
+
+        processing_time =  time.time() - processing_timer
+
+        success = callbacks.post_speaker_transcript_metrics(speaker_transcript_data,
+                                                  speaker_ids,
+                                                  self.participation_scores.tolist(),
+                                                  self.internal_cohesion.tolist(),
+                                                  self.overall_responsivity.tolist(),
+                                                  self.social_impact.tolist(),
+                                                  self.newness.tolist(),
+                                                  self.communication_density.tolist())
+
+        if success:
+           logging.info('[Speaker_Metrics]Processing posted successfully for client {0} (Processing time: {1}) @ {2}'.format(self.auth_key, processing_time, processing_timer))
+        else:
+           logging.warning('[Speaker_Metrics]Processing results FAILED to post for client {0} (Processing time: {1})'.format(self.auth_key, processing_time))
+      except Exception as e:
+         logging.error('[Speaker Metrics]Processing FAILED for client {0}: {1}'.format(auth_key, e))
+
 
 
 def process(processing_queue, speaker_transcript_queue, model):
