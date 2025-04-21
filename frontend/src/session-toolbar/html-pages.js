@@ -20,13 +20,14 @@ function AppSessionPage(props) {
           <div className={style.time}>{props.timeText}</div>
           <div className={style.info}>Total duration</div>
         </span>
-        {props.menus.map((menu, index) => (
+        {props.menus && props.menus.length ? props.menus.map((menu, index) => (
           <button className={
             isLargeScreen()
               ? `${style["toolbar-button"]} ${style["basic-button"]} ${style["medium-button"]}`
               : `${style["toolbar-button"]} ${style["basic-button"]} ${style["small-button"]}`}
-           >{`${index + 1}. ${menu.title}`}</button>
-        ))}
+              onClick={menu.action}
+           >{`${menu.title}`}</button>
+        )) : <></> }
         {props.session.recording ? (
           <span className={style["session-end"]} onClick={props.onEndSession}>
             <button className={style["end-button"]}>End</button>

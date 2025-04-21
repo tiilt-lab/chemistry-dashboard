@@ -14,8 +14,9 @@ import { AppInfographicsView } from "components/infographics-view/infographics-v
 import style from "./pod.module.css";
 import React from "react";
 import ReactMultiSelectCheckboxes from "react-multiselect-checkboxes";
-import { AppInfographicsDetailedView } from "components/infographics-view/infographics-detailedview";
-import { AppInfographicsSidebar } from "components/infographics-sidebar/infographics-sidebar";
+import { AppInfographicsComparison } from "components/infographics-view/infographics-comparison";
+import { AppInfographicsGroup } from "components/infographics-view/infographics-group";
+import { AppInfographicsIndividual } from "components/infographics-view/infographics-individual";
 
 function PodComponentPages(props) {
   return (
@@ -25,7 +26,7 @@ function PodComponentPages(props) {
           title={props.sessionDevice.name}
           leftText={false}
           rightText={"Option"}
-          rightEnabled={props.hideDetails ? false : true}
+          rightEnabled={true}
           rightTextClick={() => props.openDialog("Options")}
           nav={props.navigateToSession}
         />
@@ -34,12 +35,17 @@ function PodComponentPages(props) {
             <AppSessionToolbar
               session={props.session}
               closingSession={props.onSessionClosing}
+              menus={[
+                { title: "Group", action: () => props.viewGroup() },
+                { title: "Individual", action: () => props.viewIndividual() },
+                { title: "Comparison", action: () => props.viewComparison() },
+              ]}
             />
           ) : (
             <></>
           )}
         </div>
-        {props.hideDetails ? (
+        {props.details === "Group" && (
           <div
             className={
               isLargeScreen()
@@ -48,7 +54,7 @@ function PodComponentPages(props) {
             }
           >
             <br />
-            <AppInfographicsDetailedView
+            <AppInfographicsGroup
               displayTranscripts={props.displayTranscripts}
               endTime={props.endTime}
               fromclient={false}
@@ -61,28 +67,10 @@ function PodComponentPages(props) {
               showFeatures={props.showFeatures}
               startTime={props.startTime}
               speakers={props.speakers}
-              selectedSpkrId={props.selectedSpkrId}
-              setSelectedSpkrId={props.setSelectedSpkrId}
-              selectedSpkrId1={props.selectedSpkrId1}
-              setSelectedSpkrId1={props.setSelectedSpkrId1}
-              selectedSpkrId2={props.selectedSpkrId2}
-              setSelectedSpkrId2={props.setSelectedSpkrId2}
-              spkr1Transcripts={props.spkr1Transcripts}
-              spkr2Transcripts={props.spkr2Transcripts}
-            ></AppInfographicsDetailedView>
-
-            <button
-              className={
-                isLargeScreen()
-                  ? `${style["basic-button"]} ${style["medium-button"]}`
-                  : `${style["basic-button"]} ${style["small-button"]}`
-              }
-              onClick={props.toggleDetails}
-            >
-              Show Less
-            </button>
+            ></AppInfographicsGroup>
           </div>
-        ) : (
+        )}
+        {props.details === "Comparison" && (
           <div
             className={
               isLargeScreen()
@@ -91,7 +79,7 @@ function PodComponentPages(props) {
             }
           >
             <br />
-            <AppInfographicsView
+            <AppInfographicsComparison
               displayTranscripts={props.displayTranscripts}
               endTime={props.endTime}
               fromclient={false}
@@ -112,25 +100,41 @@ function PodComponentPages(props) {
               setSelectedSpkrId2={props.setSelectedSpkrId2}
               spkr1Transcripts={props.spkr1Transcripts}
               spkr2Transcripts={props.spkr2Transcripts}
-            ></AppInfographicsView>
+            ></AppInfographicsComparison>
+          </div>
+        )}
+        {props.details === "Individual" && (
+          <div
+            className={
+              isLargeScreen()
+                ? style["overview-container-large"]
+                : style["overview-container-small"]
+            }
+          >
+            <br />
+            <AppInfographicsIndividual
+              displayTranscripts={props.displayTranscripts}
+              endTime={props.endTime}
+              fromclient={false}
+              onClickedTimeline={props.onClickedTimeline}
+              radarTrigger={props.radarTrigger}
+              session={props.session}
+              sessionDevice={props.sessionDevice}
+              setRange={props.setRange}
+              showBoxes={props.showBoxes}
+              showFeatures={props.showFeatures}
+              startTime={props.startTime}
+              speakers={props.speakers}
+              selectedSpkrId={props.selectedSpkrId}
+              setSelectedSpkrId={props.setSelectedSpkrId}
+              selectedSpkrId1={props.selectedSpkrId1}
+              setSelectedSpkrId1={props.setSelectedSpkrId1}
+              spkr1Transcripts={props.spkr1Transcripts}
+            ></AppInfographicsIndividual>
           </div>
         )}
         {props.loading() ? <AppSpinner></AppSpinner> : <></>}
       </div>
-
-      {!props.hideDetails && (
-        <button
-          className={
-            isLargeScreen()
-              ? `${style["basic-button"]} ${style["medium-button"]}`
-              : `${style["basic-button"]} ${style["small-button"]}`
-          }
-          onClick={props.toggleDetails}
-        >
-          Show More
-        </button>
-      )}
-
       <GenericDialogBox
         show={props.currentForm !== ""}
         optionsCase={props.currentForm == "Options"}
