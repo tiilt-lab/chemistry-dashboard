@@ -14,12 +14,6 @@ function AppSessionToolbar(props) {
     const [searchParam, setSearchParam] = useSearchParams();
     const navigate = useNavigate();
     const location = useLocation()
-    const menus = [
-        { title: "Group" },
-        { title: "Individual" },
-        { title: "Comparison", gap: true },
-        { title: "Settings" },
-      ];
 
 
 
@@ -86,7 +80,7 @@ function AppSessionToolbar(props) {
             innerhtml={props.children}
             session={props.session}
             onEndSession={onEndSession}
-            menus={menus}
+            menus={props.menus}
         />
     )
 }

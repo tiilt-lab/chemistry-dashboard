@@ -696,36 +696,5 @@
   -ms-grid-column: 1;
   padding: 8px;
 }
-/*
-.session-toolbar .middle-content {
-  -ms-grid-row: 1;
-  -ms-grid-column: 2;
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-box-pack: center;
-      -ms-flex-pack: center;
-          justify-content: center;
-}
 
-.session-toolbar .toolbar-button {
-  width: 60px;
-  cursor: pointer;
-}
-
-.session-toolbar .toolbar-button .button-text {
-  font-size: 10px;
-  text-align: center;
-}
-
-
-
-.session-toolbar .toolbar-button:hover {
-  background-color: #E5E5E6;
-}
-
-.session-toolbar .session-end {
-  -ms-grid-row: 1;
-  -ms-grid-column: 3;
-}*/
 /*# sourceMappingURL=session-toolbar.module.css.map */

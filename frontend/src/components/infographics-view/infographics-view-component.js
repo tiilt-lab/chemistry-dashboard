@@ -15,7 +15,7 @@ function AppInfographicsView(props) {
     <>
       {props.speakers && (
         <div
-          className="pod_overview-container-large__+DaY+"
+          className="infographics_container"
           style={{
             display: "flex",
             flexDirection: "row",

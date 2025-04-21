@@ -285,7 +285,6 @@ def export_session(session_id, **kwargs):
                 'Certainty': int(t.certainty_value),
                 'Clout': int(t.clout_value),
                 'Emotional Tone': int(t.emotional_tone_value),
-                'Direction': int(t.direction),
                 'Word Count': int(t.word_count),
                 'Speaker Tag': t.speaker_tag,
                 'Speaker ID': int(t.speaker_id),

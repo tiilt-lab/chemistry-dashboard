@@ -31,14 +31,13 @@ function PodComponent() {
   const [showFeatures, setShowFeatures] = useState([]);
   const [showBoxes, setShowBoxes] = useState([]);
   const [radarTrigger, setRadarTrigger] = useState(0);
-  const [hideDetails, setHideDetails] = useState(false);
+  const [details, setDetails] = useState("Group");
   const [speakers, setSpeakers] = useState([]);
   const [selectedSpkrId1, setSelectedSpkrId1] = useState(-1);
   const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1);
   const [spkr1Transcripts, setSpkr1Transcripts] = useState([]);
   const [spkr2Transcripts, setSpkr2Transcripts] = useState([]);
   const [open, setOpen] = useState(true);
-  
 
   const { sessionDeviceId } = useParams();
   const navigate = useNavigate();
@@ -201,8 +200,7 @@ function PodComponent() {
           return values;
         }, [])
       );
-    }
-    else{
+    } else {
       setSpkr1Transcripts([]);
       setSpkr2Transcripts([]);
     }
@@ -252,7 +250,9 @@ function PodComponent() {
       (response) => {
         if (response.status === 200)
           response.json().then((jsonObj) => {
-            setSpeakers(SpeakerModel.fromJsonList(jsonObj));
+            const input = SpeakerModel.fromJsonList(jsonObj)
+            setSpeakers(input);
+            setSelectedSpkrId1(input[0]["id"])
           });
       },
       (apierror) => {
@@ -325,10 +325,17 @@ function PodComponent() {
     handleCheck(event, showBoxes, setShowBoxes);
   };
 
-  // toggles hideDetails
-  const toggleDetails = () => {
-    setHideDetails(!hideDetails);
+  const viewComparison = () => {
+    setDetails("Comparison");
   };
+
+  const viewIndividual = () => {
+    setDetails("Individual");
+  };
+
+  const viewGroup = () => {
+    setDetails("Group");
+  }
 
   return (
     <PodComponentPages
@@ -355,9 +362,7 @@ function PodComponent() {
       showBoxes={showBoxes}
       handleCheckFeats={handleCheckFeats}
       handleCheckBoxes={handleCheckBoxes}
-      radarTrigger={radarTrigger}
-      hideDetails={hideDetails}
-      toggleDetails={toggleDetails}
+      radarTrigger={radarTrigger}  
       speakers={speakers}
       selectedSpkrId1={selectedSpkrId1}
       setSelectedSpkrId1={setSelectedSpkrId1}
@@ -365,6 +370,10 @@ function PodComponent() {
       setSelectedSpkrId2={setSelectedSpkrId2}
       spkr1Transcripts={spkr1Transcripts}
       spkr2Transcripts={spkr2Transcripts}
+      details={details} 
+      viewIndividual={viewIndividual}
+      viewComparison={viewComparison}
+      viewGroup={viewGroup}  
       open={open}
       setOpen={setOpen}
     />

@@ -40,6 +40,11 @@ function AppIndividualFeaturesComponent(props) {
       { name: "Newness", values: [] },
       { name: "Communication Density", values: [] },
     ];
+    if(!props.transcripts || !props.transcripts.length || props.spkrId === -1)
+    {
+      setFeatures(valueArrays);
+      return;
+    }
     props.transcripts.forEach((t) => {
       //select speaker metrics from transcripts based on the spkrId
       const speaker_metric = t.speaker_metrics.find(
