@@ -370,7 +370,8 @@ function PodComponent() {
       setSelectedSpkrId2={setSelectedSpkrId2}
       spkr1Transcripts={spkr1Transcripts}
       spkr2Transcripts={spkr2Transcripts}
-      details={details} 
+      details={details}
+      setDetails={setDetails}
       viewIndividual={viewIndividual}
       viewComparison={viewComparison}
       viewGroup={viewGroup}  
