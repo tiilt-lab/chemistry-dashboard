@@ -37,6 +37,8 @@ function PodComponent() {
   const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1);
   const [spkr1Transcripts, setSpkr1Transcripts] = useState([]);
   const [spkr2Transcripts, setSpkr2Transcripts] = useState([]);
+  const [open, setOpen] = useState(true);
+  
 
   const { sessionDeviceId } = useParams();
   const navigate = useNavigate();
@@ -363,6 +365,8 @@ function PodComponent() {
       setSelectedSpkrId2={setSelectedSpkrId2}
       spkr1Transcripts={spkr1Transcripts}
       spkr2Transcripts={spkr2Transcripts}
+      open={open}
+      setOpen={setOpen}
     />
   );
 }
