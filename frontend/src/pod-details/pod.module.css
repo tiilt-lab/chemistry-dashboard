@@ -297,6 +297,10 @@
   width: 100%;
 }
 
+.toolbar {
+  width: 100%;
+}
+
 .load-text {
   font-family: 'SST', sans-serif;
   font-weight: 500;
@@ -588,6 +592,7 @@
 .overview-container-large {
   width: auto;
   height: 100%;
+  margin-left: 200px ;
   overflow: auto;
 }
 

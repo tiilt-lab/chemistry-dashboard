@@ -15,6 +15,7 @@ import style from "./pod.module.css";
 import React from "react";
 import ReactMultiSelectCheckboxes from "react-multiselect-checkboxes";
 import { AppInfographicsDetailedView } from "components/infographics-view/infographics-detailedview";
+import { AppInfographicsSidebar } from "components/infographics-sidebar/infographics-sidebar";
 
 function PodComponentPages(props) {
   return (
@@ -28,7 +29,16 @@ function PodComponentPages(props) {
           rightTextClick={() => props.openDialog("Options")}
           nav={props.navigateToSession}
         />
-
+        <div className={style.toolbar}>
+          {props.session ? (
+            <AppSessionToolbar
+              session={props.session}
+              closingSession={props.onSessionClosing}
+            />
+          ) : (
+            <></>
+          )}
+        </div>
         {props.hideDetails ? (
           <div
             className={
@@ -106,29 +116,20 @@ function PodComponentPages(props) {
           </div>
         )}
         {props.loading() ? <AppSpinner></AppSpinner> : <></>}
-        <div className={style.footer}>
-          {props.session ? (
-            <AppSessionToolbar
-              session={props.session}
-              closingSession={props.onSessionClosing}
-            />
-          ) : (
-            <></>
-          )}
-        </div>
-        {!props.hideDetails && (
-          <button
-            className={
-              isLargeScreen()
-                ? `${style["basic-button"]} ${style["medium-button"]}`
-                : `${style["basic-button"]} ${style["small-button"]}`
-            }
-            onClick={props.toggleDetails}
-          >
-            Show More
-          </button>
-        )}
       </div>
+
+      {!props.hideDetails && (
+        <button
+          className={
+            isLargeScreen()
+              ? `${style["basic-button"]} ${style["medium-button"]}`
+              : `${style["basic-button"]} ${style["small-button"]}`
+          }
+          onClick={props.toggleDetails}
+        >
+          Show More
+        </button>
+      )}
 
       <GenericDialogBox
         show={props.currentForm !== ""}
