@@ -1,12 +1,12 @@
-import { AppSectionBoxComponent } from "components/section-box/section-box-component";
-import { AppTimelineSlider } from "components/timeline-slider/timeline-slider-component";
-import { AppTimeline } from "timeline/timeline-component";
-import { AppFeaturesComponent } from "features/features-component";
-import { AppRadarComponent } from "radar/radar-component";
-import { AppKeywordsComponent } from "keywords/keywords-component";
-import style from "byod-join/byod-join.module.css";
-import { adjDim, isLargeScreen } from "myhooks/custom-hooks";
-import { AppIndividualFeaturesComponent } from "components/individualmetrics/features-component";
+import { AppSectionBoxComponent } from "../section-box/section-box-component";
+import { AppTimelineSlider } from "../timeline-slider/timeline-slider-component";
+import { AppTimeline } from "../../timeline/timeline-component";
+import { AppFeaturesComponent } from "../../features/features-component";
+import { AppRadarComponent } from "../../radar/radar-component";
+import { AppKeywordsComponent } from "../../keywords/keywords-component";
+import style from "../../byod-join/byod-join.module.css";
+import { adjDim, isLargeScreen } from "../../myhooks/custom-hooks";
+import { AppIndividualFeaturesComponent } from "../individualmetrics/features-component";
 import React, { useState } from "react";
 import ReactSlider from "react-slider";
 

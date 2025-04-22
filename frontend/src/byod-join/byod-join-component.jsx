@@ -4,7 +4,7 @@ import { SessionService } from "../services/session-service";
 import { ByodJoinPage } from "./html-pages";
 import { SessionModel } from "../models/session";
 import { SessionDeviceModel } from "../models/session-device";
-import { SpeakerModel } from "models/speaker";
+import { SpeakerModel } from "../models/speaker";
 import { ApiService } from "../services/api-service";
 import fixWebmDuration from "fix-webm-duration";
 

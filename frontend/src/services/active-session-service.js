@@ -5,7 +5,7 @@ import { SessionService } from "./session-service";
 import { SessionModel } from "../models/session";
 import { SessionDeviceModel } from "../models/session-device";
 import { TranscriptModel } from "../models/transcript";
-import { SpeakerMetricsModel } from "models/speaker-metrics";
+import { SpeakerMetricsModel } from "../models/speaker-metrics";
 
 export class ActiveSessionService {
   socketService = new SocketService();
