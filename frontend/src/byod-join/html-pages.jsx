@@ -7,12 +7,12 @@ import {
   DialogBoxTwoOption,
   GenericDialogBox,
 } from "../dialog/dialog-component";
-import { AppSectionBoxComponent } from "components/section-box/section-box-component";
+import { AppSectionBoxComponent } from "../components/section-box/section-box-component";
 import { AppSpinner } from "../spinner/spinner-component";
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component";
 import { TranscriptsComponentClient } from "../transcripts/transcripts-component_client";
 import { adjDim, isLargeScreen } from "../myhooks/custom-hooks";
-import { AppInfographicsView } from "components/infographics-view/infographics-view-component";
+import { AppInfographicsView } from "../components/infographics-view/infographics-view-component";
 
 import style from "./byod-join.module.css";
 import style2 from "../pod-details/pod.module.css";

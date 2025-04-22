@@ -1,5 +1,5 @@
 import { GenericDialogBox } from "../dialog/dialog-component";
-import { AppSectionBoxComponent } from "components/section-box/section-box-component";
+import { AppSectionBoxComponent } from "../components/section-box/section-box-component";
 import { AppTimelineSlider } from "../components/timeline-slider/timeline-slider-component";
 import { AppTimeline } from "../timeline/timeline-component";
 import { AppHeatMapComponent } from "../heat-map/heat-map-component";
@@ -10,13 +10,13 @@ import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { AppKeywordsComponent } from "../keywords/keywords-component";
 import { Appheader } from "../header/header-component";
 import { isLargeScreen } from "../myhooks/custom-hooks";
-import { AppInfographicsView } from "components/infographics-view/infographics-view-component";
+import { AppInfographicsView } from "../components/infographics-view/infographics-view-component";
 import style from "./pod.module.css";
 import React from "react";
 import ReactMultiSelectCheckboxes from "react-multiselect-checkboxes";
-import { AppInfographicsComparison } from "components/infographics-view/infographics-comparison";
-import { AppInfographicsGroup } from "components/infographics-view/infographics-group";
-import { AppInfographicsIndividual } from "components/infographics-view/infographics-individual";
+import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison";
+import { AppInfographicsGroup } from "../components/infographics-view/infographics-group";
+import { AppInfographicsIndividual } from "../components/infographics-view/infographics-individual";
 
 function PodComponentPages(props) {
   return (

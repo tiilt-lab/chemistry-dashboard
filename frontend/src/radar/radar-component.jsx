@@ -1,6 +1,7 @@
 import * as d3 from "d3";
 import { useEffect, useState } from 'react';
 import {RadarPage} from './html-pages';
+import underscore from 'underscore'
 
 function AppRadarComponent(props) {
   //list of elements to put in html pages (instead of this)
@@ -40,7 +41,7 @@ function AppRadarComponent(props) {
     //things to set
     setValSum(total_sum);
     setFeatures(radfeatures);
-    setMaxValue(d3.max(require("underscore").flatten([radfeatures]).map(d => d.value)));
+    setMaxValue(d3.max(underscore.flatten([radfeatures]).map(d => d.value)));
   }
   
   return(
