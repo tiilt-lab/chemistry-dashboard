@@ -55,11 +55,13 @@ function JoinPage() {
   const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1);
   const [spkr1Transcripts, setSpkr1Transcripts] = useState([]);
   const [spkr2Transcripts, setSpkr2Transcripts] = useState([]);
+  const [details, setDetails] = useState("Group");
 
   const [currentForm, setCurrentForm] = useState("");
   const [displayText, setDisplayText] = useState("");
   const [reload, setReload] = useState(false);
   const [pageTitle, setPageTitle] = useState("Join Discussion");
+  const [sessionClosing, setSessionClosing] = useState(false);
 
   const [name, setName] = useState("");
   const [pcode, setPcode] = useState("");
@@ -644,7 +646,7 @@ function JoinPage() {
         channels: 1,
         streamdata: "audio",
         tag: true,
-        embeddingsFile: sessionDevice.embeddings,
+        embeddings_file: sessionDevice.embeddings,
         deviceid: sessionDevice.id,
         sessionid: session.id,
         numSpeakers: numSpeakers,
@@ -659,7 +661,7 @@ function JoinPage() {
         video_encoding: "video/mp4",
         channels: 2,
         streamdata: "video",
-        embeddingsFile: sessionDevice.embeddings,
+        embeddings_file: sessionDevice.embeddings,
         deviceid: sessionDevice.id,
         sessionid: session.id,
         numSpeakers: numSpeakers,
@@ -684,7 +686,7 @@ function JoinPage() {
         video_encoding: "video/mp4",
         channels: 2,
         streamdata: "video",
-        embeddingsFile: sessionDevice.embeddings,
+        embeddings_file: sessionDevice.embeddings,
         deviceid: sessionDevice.id,
         sessionid: session.id,
       };
@@ -698,7 +700,7 @@ function JoinPage() {
         video_encoding: "video/mp4",
         channels: 2,
         streamdata: "video",
-        embeddingsFile: sessionDevice.embeddings,
+        embeddings_file: sessionDevice.embeddings,
         deviceid: sessionDevice.id,
         sessionid: session.id,
         Video_cartoonify: true,
@@ -868,6 +870,10 @@ function JoinPage() {
     setPreview(!preview);
   };
 
+  const onSessionClosing = (isClosing) => {
+    setSessionClosing(isClosing);
+  };
+
   const acquireWakeLock = async () => {
     if (!("wakeLock" in navigator)) {
       console.error("Screen Wake Lock API is not supported by the browser");
@@ -910,6 +916,18 @@ function JoinPage() {
     setFn(showFeats);
   };
 
+  const viewComparison = () => {
+    setDetails("Comparison");
+  };
+
+  const viewIndividual = () => {
+    setDetails("Individual");
+  };
+
+  const viewGroup = () => {
+    setDetails("Group");
+  }
+
   const sessionDevBtnPressed =
     sessionDevice !== null ? sessionDevice.button_pressed : null;
 
@@ -947,6 +965,7 @@ function JoinPage() {
       endTime={endTime}
       transcripts={transcripts}
       loading={loading}
+      onSessionClosing={onSessionClosing}
       currentTranscript={currentTranscript}
       seeAllTranscripts={seeAllTranscripts}
       openDialog={openDialog}
@@ -975,6 +994,11 @@ function JoinPage() {
       confirmSpeakers={confirmSpeakers}
       closeAlert={closeAlert}
       changeAliasName={changeAliasName}
+      details={details}
+      setDetails={setDetails}
+      viewIndividual={viewIndividual}
+      viewComparison={viewComparison}
+      viewGroup={viewGroup}  
       invalidName={invalidName}
     />
   );

@@ -92,9 +92,9 @@ def compute_coherence_values(dictionary, corpus, texts, limit, start=2, step=3):
 def process_file(file_url):
     data = []
     if file_url.endswith(".pdf"):
-      pdf = PyPDF2.PdfFileReader(file_url)
+      pdf = PyPDF2.PdfReader(file_url)
       for page in pdf.pages:
-              text = page.extractText()
+              text = page.extract_text()
               text.rstrip('\n')
               data.append(text)
 

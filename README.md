@@ -153,6 +153,7 @@ pyenv virtualenv 3.9.21 discussion_capture
 pyenv local discussion_capture
 pip install --upgrade pip
 pip install -r requirements.txt
+python -m spacy download en_core_web_sm
 pyenv which python
 cd ..
 ```

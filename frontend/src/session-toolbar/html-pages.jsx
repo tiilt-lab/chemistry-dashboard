@@ -27,7 +27,7 @@ function AppSessionPage(props) {
               onClick={menu.action}
            >{`${menu.title}`}</button>
         )) : <></> }
-        {props.session.recording ? (
+        {props.session.recording && !props.fromClient? (
           <span className={style["session-end"]} onClick={props.onEndSession}>
             <button className={style["end-button"]}>End</button>
           </span>
