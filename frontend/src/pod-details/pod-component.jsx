@@ -251,8 +251,10 @@ function PodComponent() {
         if (response.status === 200)
           response.json().then((jsonObj) => {
             const input = SpeakerModel.fromJsonList(jsonObj)
-            setSpeakers(input);
-            setSelectedSpkrId1(input[0]["id"])
+            if(input && input.length){
+              setSpeakers(input);
+              setSelectedSpkrId1(input[0]["id"])
+            }
           });
       },
       (apierror) => {

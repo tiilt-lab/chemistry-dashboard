@@ -21,6 +21,9 @@ import style4 from "../components/context-menu/context-menu.module.css";
 import style5 from "../sessions/sessions.module.css";
 import MicIcon from "~/Icons/Mic";
 import { AppContextMenu } from "../components/context-menu/context-menu-component";
+import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison";
+import { AppInfographicsGroup } from "../components/infographics-view/infographics-group";
+import { AppInfographicsIndividual } from "../components/infographics-view/infographics-individual";
 
 function ByodJoinPage(props) {
   // console.log(props, 'props')
@@ -60,6 +63,27 @@ function ByodJoinPage(props) {
               }
               nav={() => props.navigateToLogin()}
             />
+            <div className={style.toolbar}>
+              {props.speakersValidated ? (
+                <AppSessionToolbar
+                  session={props.session}
+                  closingSession={props.onSessionClosing}
+                  menus={[
+                    { title: "Group", action: () => props.viewGroup() },
+                    {
+                      title: "Individual",
+                      action: () => props.viewIndividual(),
+                    },
+                    {
+                      title: "Comparison",
+                      action: () => props.viewComparison(),
+                    },
+                  ]}
+                />
+              ) : (
+                <></>
+              )}
+            </div>
             {!props.connected && (
               <React.Fragment>
                 <div
@@ -231,7 +255,35 @@ function ByodJoinPage(props) {
               props.authenticated &&
               props.speakersValidated && (
                 <>
-                  <div className={style2["overview-container"]}>
+                  <div className={style.toolbar}>
+                    {props.session ? (
+                      <AppSessionToolbar
+                        session={props.session}
+                        closingSession={props.onSessionClosing}
+                        fromClient={true}
+                        menus={[
+                          { title: "Group", action: () => props.viewGroup() },
+                          {
+                            title: "Individual",
+                            action: () => props.viewIndividual(),
+                          },
+                          {
+                            title: "Comparison",
+                            action: () => props.viewComparison(),
+                          },
+                        ]}
+                      />
+                    ) : (
+                      <></>
+                    )}
+                  </div>
+                  <div
+                    className={
+                      isLargeScreen()
+                        ? style["overview-container-large"]
+                        : style["overview-container-small"]
+                    }
+                  >
                     <br />
                     {props.joinwith === "Audio" && (
                       <AppSectionBoxComponent heading={"Audio control:"}>
@@ -253,9 +305,7 @@ function ByodJoinPage(props) {
                               height="27"
                               viewBox="0 0 17 27"
                             >
-                              <MicIcon
-                                fill={props.POD_COLOR}
-                              ></MicIcon>
+                              <MicIcon fill={props.POD_COLOR}></MicIcon>
                             </svg>
                             {props.button_pressed ? (
                               <svg>
@@ -331,28 +381,67 @@ function ByodJoinPage(props) {
                         </div>
                       </AppSectionBoxComponent>
                     )}
-                    <AppInfographicsView
-                      displayTranscripts={props.displayTranscripts}
-                      endTime={props.endTime}
-                      fromclient={true}
-                      onClickedTimeline={props.onClickedTimeline}
-                      radarTrigger={props.radarTrigger}
-                      session={props.session}
-                      sessionDevice={props.sessionDevice}
-                      setRange={props.setRange}
-                      showBoxes={props.showBoxes}
-                      showFeatures={props.showFeatures}
-                      startTime={props.startTime}
-                      speakers={props.speakers}
-                      selectedSpkrId={props.selectedSpkrId}
-                      setSelectedSpkrId={props.setSelectedSpkrId}
-                      selectedSpkrId1={props.selectedSpkrId1}
-                      setSelectedSpkrId1={props.setSelectedSpkrId1}
-                      selectedSpkrId2={props.selectedSpkrId2}
-                      setSelectedSpkrId2={props.setSelectedSpkrId2}
-                      spkr1Transcripts={props.spkr1Transcripts}
-                      spkr2Transcripts={props.spkr2Transcripts}
-                    ></AppInfographicsView>
+                    {props.details === "Group" && (
+                      <AppInfographicsGroup
+                        displayTranscripts={props.displayTranscripts}
+                        endTime={props.endTime}
+                        fromclient={false}
+                        onClickedTimeline={props.onClickedTimeline}
+                        radarTrigger={props.radarTrigger}
+                        session={props.session}
+                        sessionDevice={props.sessionDevice}
+                        setRange={props.setRange}
+                        showBoxes={props.showBoxes}
+                        showFeatures={props.showFeatures}
+                        startTime={props.startTime}
+                        speakers={props.speakers}
+                      ></AppInfographicsGroup>
+                    )}
+                    {props.details === "Individual" && (
+                      <AppInfographicsIndividual
+                        displayTranscripts={props.displayTranscripts}
+                        endTime={props.endTime}
+                        fromclient={false}
+                        onClickedTimeline={props.onClickedTimeline}
+                        radarTrigger={props.radarTrigger}
+                        session={props.session}
+                        sessionDevice={props.sessionDevice}
+                        setRange={props.setRange}
+                        showBoxes={props.showBoxes}
+                        showFeatures={props.showFeatures}
+                        startTime={props.startTime}
+                        speakers={props.speakers}
+                        selectedSpkrId={props.selectedSpkrId}
+                        setSelectedSpkrId={props.setSelectedSpkrId}
+                        selectedSpkrId1={props.selectedSpkrId1}
+                        setSelectedSpkrId1={props.setSelectedSpkrId1}
+                        spkr1Transcripts={props.spkr1Transcripts}
+                      ></AppInfographicsIndividual>
+                    )}
+                    {props.details === "Comparison" && (
+                      <AppInfographicsComparison
+                        displayTranscripts={props.displayTranscripts}
+                        endTime={props.endTime}
+                        fromclient={false}
+                        onClickedTimeline={props.onClickedTimeline}
+                        radarTrigger={props.radarTrigger}
+                        session={props.session}
+                        sessionDevice={props.sessionDevice}
+                        setRange={props.setRange}
+                        showBoxes={props.showBoxes}
+                        showFeatures={props.showFeatures}
+                        startTime={props.startTime}
+                        speakers={props.speakers}
+                        selectedSpkrId={props.selectedSpkrId}
+                        setSelectedSpkrId={props.setSelectedSpkrId}
+                        selectedSpkrId1={props.selectedSpkrId1}
+                        setSelectedSpkrId1={props.setSelectedSpkrId1}
+                        selectedSpkrId2={props.selectedSpkrId2}
+                        setSelectedSpkrId2={props.setSelectedSpkrId2}
+                        spkr1Transcripts={props.spkr1Transcripts}
+                        spkr2Transcripts={props.spkr2Transcripts}
+                      ></AppInfographicsComparison>
+                    )}
                   </div>
                   {props.loading() ? <AppSpinner></AppSpinner> : <></>}
                   <div className={style2.footer}>

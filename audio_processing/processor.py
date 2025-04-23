@@ -101,6 +101,7 @@ class AudioProcessor:
     def setSpeakerFingerprints(self, fingerprints):
         self.fingerprints = fingerprints
         logging.info("Set Speakers")
+        logging.info(fingerprints)
         self.speaker_metrics_process.setSpeakers(self.fingerprints)
 
     def send_speaker_taggings(self):
@@ -217,15 +218,33 @@ class AudioProcessor:
                 doa = calculateDOA(start_time, audio_data, word_timings,
                                    16000, self.config.channels, self.config.depth)
 
+            features = None
+            if self.config.features:
+                features = features_detector.detect_features(transcript_text)
+
             # Perform Speaker Diarization
             speaker_tag = None
             speaker_id = -1
-            if self.config.diarization:
-                if self.fingerprints:
-                    speaker_tag, speaker_id = checkFingerprints(
+            if self.config.diarization and self.fingerprints and self.fingerprints.length:
+                speaker_tag, speaker_id = checkFingerprints(
                         audio_data, self.fingerprints, self.diarization_model)
-                else:
-                    if len(self.embeddings) == 0 and self.embeddings_file != None:
+                self.speaker_metrics_process.process_transcript(
+                    {
+                        'source': self.config.auth_key,
+                        'start_time': start_time,
+                        'end_time': end_time,
+                        'transcript': transcript_text,
+                        'doa': doa,
+                        'questions': questions,
+                        'keywords': keywords,
+                        'features': features,
+                        'topic_id': topic_id,
+                        'speaker_tag': speaker_tag,
+                        'speaker_id': speaker_id
+                    })
+            else:
+                if self.config.diarization:
+                    if len(self.embeddings) == 0 and self.embeddings_file is not None:
                         try:
                             self.embeddings = np.load(
                                 self.embeddings_file).tolist()
@@ -243,34 +262,15 @@ class AudioProcessor:
                         'end': end_time + self.config.start_offset,
                     })
                     np.save(self.embeddings_file, np.array(self.embeddings))
-
-            # Get Features
-            features = None
-            if self.config.features:
-                features = features_detector.detect_features(transcript_text)
-            processing_time = time.time() - processing_timer
-            start_time += self.config.start_offset
-            end_time += self.config.start_offset
-            if self.config.diarization:
-                self.speaker_metrics_process.process_transcript(
-                    {
-                        'source': self.config.auth_key,
-                        'start_time': start_time,
-                        'end_time': end_time,
-                        'transcript': transcript_text,
-                        'doa': doa,
-                        'questions': questions,
-                        'keywords': keywords,
-                        'features': features,
-                        'topic_id': topic_id,
-                        'speaker_tag': speaker_tag,
-                        'speaker_id': speaker_id
-                    })
-            else:
                 success, transcript_id = callbacks.post_transcripts(
-                    self.config.auth_key, start_time, end_time, 
-                    transcript_text, doa, questions, keywords, 
+                    self.config.auth_key, start_time, end_time,
+                    transcript_text, doa, questions, keywords,
                     features, topic_id, speaker_tag, speaker_id)
+                
+                processing_time = time.time() - processing_timer
+                start_time += self.config.start_offset
+                end_time += self.config.start_offset
+
                 if success:
                     logging.info("Processing results posted successfully for"
                                  "client %d (Processing time: {%f)"

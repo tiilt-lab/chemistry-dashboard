@@ -44,6 +44,8 @@ class SpeakerProcessor:
         self.semantic_model = semantic_model
 
     def setSpeakers(self, speakers):
+      if speakers is None:
+         return
       self.speakers = speakers
       self.participants = len(speakers)
       self.indicies = {k: i for i ,k in enumerate(speakers)}

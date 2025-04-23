@@ -11,6 +11,7 @@ function AppSessionToolbar(props) {
     const [sessionEnding, setSessionEnding] = useState();
     const [intervalId, setInterValid] = useState();
     const [searchParam, setSearchParam] = useSearchParams();
+    const [fromClient, setFromClient] = useState(false);
     const navigate = useNavigate();
     const location = useLocation()
 
@@ -18,6 +19,8 @@ function AppSessionToolbar(props) {
 
     useEffect(() => {
         console.log(props.session.length,'session length')
+        if(props.fromClient)
+            setFromClient(props.fromClient)
         const intvalId = setInterval(() => {
             updateTime();
         }, 1000);
@@ -76,6 +79,7 @@ function AppSessionToolbar(props) {
             session={props.session}
             onEndSession={onEndSession}
             menus={props.menus}
+            fromClient={props.fromClient}
         />
     )
 }
