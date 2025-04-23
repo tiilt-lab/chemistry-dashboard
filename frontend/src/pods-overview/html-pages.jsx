@@ -7,10 +7,7 @@ import { GenericDialogBox } from "../dialog/dialog-component";
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component";
 import { adjDim } from "../myhooks/custom-hooks";
 
-import micIcon from "../assets/img/mic.svg?react";
-import iconPod from "../assets/img/icon-pod.svg";
-import downloadIcon from "../assets/img/download.svg";
-import iconGraph from "../assets/img/icon-graph.svg";
+import MicIcon from "../Icons/Mic";
 
 function PodsOverviewPages(props) {
   const POD_ON_COLOR = "#FF6655";
@@ -77,10 +74,9 @@ function PodsOverviewPages(props) {
                     height="27"
                     viewBox="0 0 17 27"
                   >
-                    <use
-                      xlinkHref={`${micIcon}#5`}
+                    <MicIcon
                       fill={device.connected ? POD_ON_COLOR : POD_OFF_COLOR}
-                    ></use>
+                    ></MicIcon>
                   </svg>
                   {device.button_pressed ? (
                     <svg>

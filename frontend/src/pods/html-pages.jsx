@@ -2,8 +2,8 @@ import style from './pods.module.css'
 import { AppContextMenu } from '../components/context-menu/context-menu-component'
 import { Appheader } from '../header/header-component'
 import { GenericDialogBox } from '../dialog/dialog-component'
-import iconPod from "../assets/img/icon-pod.svg"
-import lightIcon from "../assets/img/light.svg"
+import IconPod from "../Icons/IconPod"
+import LightIcon from "../Icons/Light"
 import React from 'react'
 import { isLargeScreen } from '../myhooks/custom-hooks';
 
@@ -26,14 +26,14 @@ function PodComponentPage(props) {
               props.devices.map((device, index) => (
                 <li key={index} className={style["pod-item"]}>
                   <svg x="0" y="0" width="20" height="18" viewBox="0 0 20 18" className={!device.connected ? `${style["pod-icon pod-connected"]}` `${style["pod-disconnected"]}` : style["pod-icon pod-connected"]}>
-                    <use xlinkHref={`${iconPod}#pod-icon`}></use>
+                    <IconPod></IconPod>
                   </svg>
                   <div className={style["pod-text"]}>{device.name}</div>
                   <div className={style["button-container"]}>
                     {device.connected ?
                       <button className={device.blinking ? `${style["pod-button"]}` `${style["selected-button"]}` : style["pod-button"]} onClick={() => props.blinkPod(device)} >
                         <svg x="0" y="0" width="20" height="20" viewBox="0 0 512 512" className={style["light-svg"]}>
-                          <use xlinkHref={`${lightIcon}#light-icon`}></use>
+                          <LightIcon></LightIcon>
                         </svg>
                       </button>
                       : <></>

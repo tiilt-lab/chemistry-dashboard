@@ -1,5 +1,5 @@
 import style from './context-menu.module.css';
-import optionIcon from "../../assets/img/icon-kebab.svg";
+import OptionIcon from "~/Icons/IconKebab";
 import { useState, useEffect, useRef } from 'react';
 import React from 'react';
 import { useLocation } from 'react-router-dom';
@@ -57,7 +57,7 @@ function AppContextMenu(props) {
     <div className={style["menu-container"]}>
       <button className={style["menu-button"]} ref={ref} onClick={() => toggle(isOpen)}>
         <svg x="0" y="0" width="24" height="24" viewBox="0 0 24 24">
-          <use xlinkHref={`${optionIcon}#kebab`}></use>
+          <OptionIcon></OptionIcon>
         </svg>
       </button>
       {dynamicInnerChild()}

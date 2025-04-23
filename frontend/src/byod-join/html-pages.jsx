@@ -19,11 +19,8 @@ import style2 from "../pod-details/pod.module.css";
 import style3 from "../manage-keyword-lists/manage-keyword-lists.module.css";
 import style4 from "../components/context-menu/context-menu.module.css";
 import style5 from "../sessions/sessions.module.css";
-import micIcon from "../assets/img/mic.svg";
+import MicIcon from "~/Icons/Mic";
 import { AppContextMenu } from "../components/context-menu/context-menu-component";
-import iconPod from "../assets/img/icon-pod.svg";
-import lightIcon from "../assets/img/light.svg";
-import podIcon from "../assets/img/icon-pod.svg";
 
 function ByodJoinPage(props) {
   // console.log(props, 'props')
@@ -256,10 +253,9 @@ function ByodJoinPage(props) {
                               height="27"
                               viewBox="0 0 17 27"
                             >
-                              <use
-                                xlinkHref={`${micIcon}#5`}
+                              <MicIcon
                                 fill={props.POD_COLOR}
-                              ></use>
+                              ></MicIcon>
                             </svg>
                             {props.button_pressed ? (
                               <svg>
