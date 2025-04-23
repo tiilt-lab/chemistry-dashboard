@@ -45,7 +45,6 @@ function RadarPage(props){
 	   let axesLength =  data[0].length;
 	   let angleSlice = Math.PI * 2 / axesLength;
 	   let axisLabelFactor = 1.12;
-	   let dotRadius = 4;
 	   let format = d3.format("d");
 	   //plotting
 	   let rScale = d3.scaleLinear()

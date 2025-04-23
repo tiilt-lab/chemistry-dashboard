@@ -7,7 +7,7 @@ import { GenericDialogBox } from "../dialog/dialog-component";
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component";
 import { adjDim } from "../myhooks/custom-hooks";
 
-import micIcon from "../assets/img/mic.svg";
+import micIcon from "../assets/img/mic.svg?react";
 import iconPod from "../assets/img/icon-pod.svg";
 import downloadIcon from "../assets/img/download.svg";
 import iconGraph from "../assets/img/icon-graph.svg";

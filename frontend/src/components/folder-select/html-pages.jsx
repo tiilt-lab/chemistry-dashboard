@@ -8,7 +8,7 @@ import homeIcon from "../../assets/img/home.svg";
 function AppFolderPage(props) {
   return (
     <div className={style["list-container"]}>
-      {props.visibleFolders.length == 0 ? (
+      {props.visibleFolders.length === 0 ? (
         <div> There is no valid location for this item. </div>
       ) : (
         <></>
@@ -16,7 +16,7 @@ function AppFolderPage(props) {
       {props.visibleFolders.length > 0 ? (
         <Fragment>
           <div className={style["breadcrumb-container"]}>
-            {props.breadcrumbs.length == 1 ? (
+            {props.breadcrumbs.length === 1 ? (
               <img
                 alt="arrow"
                 src={backIcon}
@@ -49,7 +49,7 @@ function AppFolderPage(props) {
             ) : (
               <></>
             )}
-            {props.breadcrumbs.length == 1 ? (
+            {props.breadcrumbs.length === 1 ? (
               <span className={style.breadcrumbs}> / </span>
             ) : (
               <></>
@@ -73,7 +73,7 @@ function AppFolderPage(props) {
                 }
                 onClick={() => props.setSelectedFolderEvent(folder.id)}
               >
-                <img src={folderIcon} className={style["folder-icon"]} />
+                <img src={folderIcon} className={style["folder-icon"]} alt={folder.name} />
                 <div className={style["folder-title"]}>{folder.name}</div>
                 {props.hasChildren(folder) ? (
                   <img
@@ -93,7 +93,7 @@ function AppFolderPage(props) {
               props.visibleFolders[0].parent === null) ? (
               <li
                 className={
-                  -1 == props.selectedFolder
+                  -1 === props.selectedFolder
                     ? `${style["folder-item"]} ${style["selected"]}`
                     : style["folder-item"]
                 }

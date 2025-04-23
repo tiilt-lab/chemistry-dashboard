@@ -1,5 +1,4 @@
 import { SessionService } from '../services/session-service';
-import { SessionModel } from '../models/session';
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { AppSessionPage } from './html-pages'
@@ -67,10 +66,6 @@ function AppSessionToolbar(props) {
                 }
             }
         })
-    }
-
-    const closeEndDialog = () => {
-        setSessionEnding(false);
     }
 
     return (

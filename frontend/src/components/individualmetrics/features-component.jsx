@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import { SessionModel } from "../../models/session";
-import { TranscriptModel } from "../../models/transcript";
 import { IndividualFeaturePage } from "./html-pages-individual";
 
 function AppIndividualFeaturesComponent(props) {
@@ -18,17 +16,10 @@ function AppIndividualFeaturesComponent(props) {
   const [featureDescription, setFeatureDescription] = useState(null);
   const [featureHeader, setFeatureHeader] = useState(null);
   const [showFeatureDialog, setShowFeatureDialog] = useState(false);
-  const [trigger, setTrigger] = useState(0);
 
   useEffect(() => {
     updateGraphs();
-  }, [props.transcripts, props.spkrId]);
-
-  useEffect(() => {
-    if (trigger > 0) {
-      console.log("reloaded page");
-    }
-  }, [trigger]);
+  });
 
   //update new metrics (individual)
   const updateGraphs = () => {
@@ -100,34 +91,36 @@ function AppIndividualFeaturesComponent(props) {
     switch (featureName) {
       case "Participation":
         {
-          setFeatureDescription("Placeholder texts.");
+          setFeatureDescription("How much you participate above or below the average.");
+          break;
         }
-        break;
       case "Social mpact":
         {
-          setFeatureDescription("Placeholder texts.");
+          setFeatureDescription("How much your speech is related to the following response.");
+          break;
         }
-        break;
       case "Responsivity":
         {
-          setFeatureDescription("Placeholder texts.");
+          setFeatureDescription("How much your response is related to the other's speech.");
+          break;
         }
-        break;
       case "Internal Cohesion":
         {
-          setFeatureDescription("Placeholder texts.");
+          setFeatureDescription("How much your speech is realted to itself.");
+          break;
         }
-        break;
       case "Newness":
         {
-          setFeatureDescription("Placeholder texts.");
+          setFeatureDescription("How much new info you present throughout the discussion");
+          break;
         }
-        break;
       case "Communication Density":
         {
-          setFeatureDescription("Placeholder texts.");
+          setFeatureDescription("The amount of word per speech segment");
+          break;
         }
-        break;
+      default:
+        console.log("no text");
     }
     setFeatureHeader(featureName);
     setShowFeatureDialog(true);

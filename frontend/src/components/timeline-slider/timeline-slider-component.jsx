@@ -26,7 +26,7 @@ function AppTimelineSlider(props) {
   // Send updated slider values to parent
   const sendUpdate = () => {
     if (!dragging) {
-      console.log("Handle finish dragging")
+      //console.log("Handle finish dragging")
       props.inputChanged([min, max]);
       initalDragPos.current = [-1,-1]
     }
@@ -53,10 +53,9 @@ function AppTimelineSlider(props) {
     //setDraggingHandle(handleId);
     draggingHandleRef.current = handleId;
     initalDragPos.current =  [e.clientX, e.clientY]
-
     // Listen on document for smoother dragging, even outside the slider area
-    document.addEventListener("mousemove", handleDrag);
-    document.addEventListener("mouseup", stopDragging);
+    document.addEventListener("pointermove", handleDrag);
+    document.addEventListener("pointerup", stopDragging);
     //console.log("Dragging started for handle:", handleId);  
     setDragging(true);
   };
@@ -75,14 +74,14 @@ function AppTimelineSlider(props) {
   // Stop dragging and clean up event listeners
   const stopDragging = () => {
     draggingHandleRef.current = null;
-    document.removeEventListener("mousemove", handleDrag);
-    document.removeEventListener("mouseup", stopDragging);
+    document.removeEventListener("pointermove", handleDrag);
+    document.removeEventListener("pointerup", stopDragging);
     setDragging(false);
   };
 
   // Move the handle based on mouse position
   const moveHandles = (handleId, e) => {
-    console.log(handleId)
+    //console.log(handleId)
     if (!timelineBackgroundRef.current) return; // Add safety check
 
     // Get timeline's position relative to the viewport
@@ -90,9 +89,9 @@ function AppTimelineSlider(props) {
     const left = rect.x;
     const right = rect.right;
     const delta = (e.clientX - initalDragPos.current[0]) / (right-left);
-    console.log(e.clientX)
-    console.log(initalDragPos.current[0])
-    console.log(delta)
+    //console.log(e.clientX)
+    //console.log(initalDragPos.current[0])
+    //console.log(delta)
 
     // Add some logging to debug
     //console.log(`Moving handle ${handleId}, clientX: ${e.clientX}, offset: ${offset}, end: ${end}, delta: ${delta}`);
@@ -105,13 +104,11 @@ function AppTimelineSlider(props) {
       if(newMin < 0 || newMin > newMax - HANDLE_WIDTH/TIMELINE_WIDTH)
         return;
       setMin(newMin);
-      console.log(`Setting min to: ${newMin}`);
     }
     if (handleId === 1 || handleId === 2) {
       if(newMax < newMin + HANDLE_WIDTH/TIMELINE_WIDTH)
         return;
       setMax(newMax);
-      console.log(`Setting max to: ${newMax}`);
     }
   };
 
@@ -125,17 +122,17 @@ function AppTimelineSlider(props) {
       <div
         className={style["timeline-bar"]}
         style={{ left: barLeft(), width: barWidth() }}
-        onMouseDown={(e) => startDragging(2, e)}
+        onPointerDown={(e) => startDragging(2, e)}
 
       ></div>
       <div
         className={style["timeline-handle"]}
-        onMouseDown={(e) => startDragging(0, e)}
+        onPointerDown={(e) => startDragging(0, e)}
         style={{ left: handlePos(0) }}
       ></div>
       <div
         className={style["timeline-handle"]}
-        onMouseDown={(e) => startDragging(1, e)}
+        onPointerDown={(e) => startDragging(1, e)}
         style={{ left: handlePos(1) }}
       ></div>
       <div
