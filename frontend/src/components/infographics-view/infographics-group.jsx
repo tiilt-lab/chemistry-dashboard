@@ -6,9 +6,7 @@ import { AppFeaturesComponent } from "../../features/features-component";
 import { AppRadarComponent } from "../../radar/radar-component";
 import { AppKeywordsComponent } from "../../keywords/keywords-component";
 import style from "../../byod-join/byod-join.module.css";
-import { adjDim, isLargeScreen } from "../../myhooks/custom-hooks";
-import React, { useState } from "react";
-import ReactSlider from "react-slider";
+import React from "react";
 
 function AppInfographicsGroup(props) {
   return (

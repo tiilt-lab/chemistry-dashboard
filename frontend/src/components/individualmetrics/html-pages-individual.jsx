@@ -69,18 +69,18 @@ function IndividualFeaturePage(props) {
                       </div>
                       <div
                         className={
-                          feature.trend == 1
+                          feature.trend === 1
                             ? `${style["direction-indicator"]} ${style.positive}`
-                            : feature.trend == 0
+                            : feature.trend === 0
                             ? `${style["direction-indicator"]} ${style.neutral}`
-                            : feature.trend == -1
+                            : feature.trend === -1
                             ? `${style["direction-indicator"]} ${style.negative}`
                             : style["direction-indicator"]
                         }
                       ></div>
                     </td>
                     <td>
-                      {feature.values.length == 0 ? (
+                      {feature.values.length === 0 ? (
                         <span
                           className={style["no-data-span"]}
                           style={{ width: adjDim(74) + "px" }}
@@ -99,7 +99,7 @@ function IndividualFeaturePage(props) {
                           className={
                             feature.trend >= 0
                               ? style.positive
-                              : feature.trend == -1
+                              : feature.trend === -1
                               ? style.negative
                               : ""
                           }

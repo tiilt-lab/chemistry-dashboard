@@ -7,9 +7,8 @@ import { AppRadarComponent } from "../../radar/radar-component";
 import { AppKeywordsComponent } from "../../keywords/keywords-component";
 import style from "../../byod-join/byod-join.module.css";
 import { AppIndividualFeaturesComponent } from "../individualmetrics/features-component";
-import { adjDim, isLargeScreen } from "../../myhooks/custom-hooks";
-import React, { useState } from "react";
-import ReactSlider from "react-slider";
+import { adjDim } from "../../myhooks/custom-hooks";
+import React from "react";
 
 function AppInfographicsComparison(props) {
   return (

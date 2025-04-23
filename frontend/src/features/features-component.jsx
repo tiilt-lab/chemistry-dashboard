@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react';
-import { SessionModel } from '../models/session';
-import { TranscriptModel } from '../models/transcript';
 import {FeaturePage} from './html-pages'
 
 function AppFeaturesComponent(props) {
