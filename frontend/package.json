@@ -28,6 +28,7 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
+    "svgr": "svgr -d src/Icons/ --ext jsx --ignore-existing src/assets/img",
     "start": "vite",
     "build": "vite build",
     "serve": "vite preview"
@@ -52,6 +53,7 @@
   },
   "devDependencies": {
     "@originjs/vite-plugin-commonjs": "^1.0.3",
+    "@svgr/cli": "^8.1.0",
     "@vitejs/plugin-react": "^4.4.1",
     "eslint": "^8.57.1",
     "eslint-config-react-app": "^7.0.1",

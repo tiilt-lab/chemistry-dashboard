@@ -6,7 +6,7 @@ import style from "./create-session.module.css";
 import style2 from "../dialog/dialog.module.css";
 import openFolderIcon from "../assets/img/open-folder.svg";
 import podIcon from "../assets/img/icon-pod.svg";
-import lightIcon from "../assets/img/light.svg";
+import LightIcon from "~/Icons/Light";
 import { adjDim } from "../myhooks/custom-hooks";
 
 function CreateSessionPage(props) {
@@ -97,7 +97,7 @@ function CreateSessionPage(props) {
         ) : (
           <></>
         )}
-        {props.currentMenu == "Keywords" ? (
+        {props.currentMenu === "Keywords" ? (
           <React.Fragment>
             <div className={style["list-container"]}>
               {props.keywordLists && props.keywordLists.length == 0 ? (
@@ -281,7 +281,7 @@ function CreateSessionPage(props) {
                             viewBox="0 0 512 512"
                             className={style["light-svg"]}
                           >
-                            <use xlinkHref={`${lightIcon}#light-icon`}></use>
+                            <LightIcon></LightIcon>
                           </svg>
                         </button>
                       </div>

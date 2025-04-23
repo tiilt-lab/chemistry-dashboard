@@ -6,7 +6,7 @@ import style from  './sessions.module.css';
 import style2 from '../components/context-menu/context-menu.module.css';
 import breadcrumbIcon from '../assets/img/icon-back.svg';
 import folderIcon from "../assets/img/folder.svg";
-import micIcon from '../assets/img/mic.svg';
+import MicIcon from '~/Icons/Mic';
 import { adjDim } from '../myhooks/custom-hooks';
 
 function DiscussionSessionPage(props) {
@@ -76,8 +76,8 @@ function DiscussionSessionPage(props) {
               <ul className={style.list}>
                 {props.displayedSessions.map((session,index) => (
                   <li key={index} className={style["session-item"]}>
-                    <svg x="0" y="0" width={adjDim(24) + ""} height={adjDim(24) + ""} viewBox="0 0 20 30" className={session.recording ? style['active-sesion'] : style["session-icon"] } >
-                      <use xlinkHref={`${micIcon}#5`}></use>
+                    <svg x="0" y="0" with={adjDim(24) + ""} height={adjDim(24) + ""} viewBox="0 0 20 30" className={session.recording ? style['active-sesion'] : style["session-icon"] } >
+                      <MicIcon></MicIcon>
                     </svg>
                     <div className={style["click-mask"]} style = {{width: adjDim(310) + 'px',}} onClick={() => { props.goToSession(session) }} ></div >
                     <div className={style["session-title"]}>{session.title}</div>
