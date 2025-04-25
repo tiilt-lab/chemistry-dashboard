@@ -2,14 +2,27 @@
   display: flex;
   height: 100vh;
 } */
-body, html {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
+body,
+html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
 }
 
+@import "tailwindcss";
 
+.header-grid {  
+  @apply flex h-min md:max-h-1/6 w-full flex-row bg-[#FCFDFF] shadow;
+}
+
+.text-sans {
+  @apply font-sans text-lg font-bold text-[#6466E3];
+}
+
+.center-column-container{
+  @apply items-center justify-evenly flex flex-col
+}
 /* body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
