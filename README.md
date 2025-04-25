@@ -139,7 +139,7 @@ Go to var/lib foloder and pull the git repo
 ```
 cd /var/lib/
 sudo git clone https://github.com/tiilt-lab/chemistry-dashboard.git
-chmod 777 -R chemistry-dashboard
+sudo chmod 777 -R chemistry-dashboard
 cd chemistry-dashboard
 ```
 
@@ -158,7 +158,7 @@ pyenv which python
 cd ..
 ```
 
-Change ExecStart of deploy/audio_processor.service with "pyenv which python" result above
+Change ExecStart of deploy/discussion_capture.service with "pyenv which python" result above
 
 ```
 cd audio_processing
@@ -173,7 +173,7 @@ pyenv which python
 cd ..
 ```
 
-Change ExecStart of deploy/discussion_capture.service with "pyenv which python" result above
+Change ExecStart of deploy/audio_processor.service with "pyenv which python" result above
 
 Fetch audio processing service models.
 NOTE: Perfom from chemistry-dashboard root directory.
