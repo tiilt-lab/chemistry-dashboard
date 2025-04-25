@@ -1,51 +1,43 @@
-import style from "./header.module.css";
-import backicon from "../assets/img/icon-back.svg";
+import backicon from "../assets/img/icon-back.svg"
 
 function Appheader(props) {
-  return (
-    <div className={style["header-grid"]}>
-      {props.leftText !== false ? (
-        <div onClick={props.nav} className={style.left}>
-          {" "}
-          {props.leftText}
+    return (
+        <div className="header-grid">
+            {props.leftText !== false ? (
+                <div onClick={props.nav} className="text-sans w-min p-4">
+                    {" "}
+                    {props.leftText}
+                </div>
+            ) : (
+                <img
+                    onClick={props.nav}
+                    alt="back"
+                    className={"w-min p-4"}
+                    src={backicon}
+                />
+            )}
+            <div className="text-sans w-full overflow-hidden text-center leading-14 whitespace-nowrap select-none">
+                {props.editMode ? (
+                    <input
+                        class="visible w-52 overflow-scroll border-0 leading-14"
+                        type="text"
+                        defaultValue={props.title}
+                        onKeyUp={(event) =>
+                            props.changeInputVal(event.target.value)
+                        }
+                    />
+                ) : (
+                    props.title
+                )}
+            </div>
+            <div
+                onClick={props.rightTextClick}
+                className="text-sans w-min min-w-12 px-2 text-center leading-14 disabled:text-gray-50"
+            >
+                {props.rightText}
+            </div>
         </div>
-      ) : (
-        <img
-          onClick={props.nav}
-          alt="back"
-          className={style.left}
-          src={backicon}
-        />
-      )}
-      <div className={style.center}>
-        {props.editMode ? (
-          <input
-            class={style.center}
-            type="text"
-            defaultValue={props.title}
-            style={{
-              visibility: "visible",
-              width: "200px",
-              "border-width": "0px",
-              overflow: "scroll",
-              "line-height": "50px",
-            }}
-            onKeyUp={(event) => props.changeInputVal(event.target.value)}
-          />
-        ) : (
-          props.title
-        )}
-      </div>
-      <div
-        onClick={props.rightTextClick}
-        className={
-          !props.rightEnabled ? `${style.right} ${style.disabled}` : style.right
-        }
-      >
-        {props.rightText}
-      </div>
-    </div>
-  );
+    )
 }
 
-export { Appheader };
+export { Appheader }

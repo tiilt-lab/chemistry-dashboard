@@ -44,7 +44,7 @@ function ByodJoinPage(props) {
             setParentCurrentForm={props.setCurrentForm}
           />
         )) || (
-          <div className={style.container}>
+          <div className="relative h-vh w-full">
             <Appheader
               title={props.pageTitle}
               leftText={false}
@@ -87,82 +87,84 @@ function ByodJoinPage(props) {
             {!props.connected && (
               <React.Fragment>
                 <div
-                  className={style.instruction}
-                  style={{ width: adjDim(343) + "px" }}
+                  className="center-column-container"  
                 >
-                  Please type your name and passcode to join a discussion.
-                </div>
-                <div
-                  className={style.instruction}
-                  style={{ width: adjDim(343) + "px" }}
-                >
-                  If rejoining a discussion, type the same name you used
-                  previously.
-                </div>
-                <div>Device Name:</div>
-                <input
-                  className={style["text-input"]}
-                  style={{ width: adjDim(330) + "px" }}
-                  id="name"
-                  placeholder="Name"
-                />
-                <div>Numbers of Collaborators:</div>
-                <select
-                  id="collaborators"
-                  className={style["dropdown-input"]}
-                  style={{ width: adjDim(350) + "px" }}
-                >
-                  <option value="0">0(Automatic)</option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                  <option value="3">3</option>
-                  <option value="4">4</option>
-                  <option value="5">5</option>
-                  <option value="6">6</option>
-                  <option value="7">7</option>
-                  <option value="8">8</option>
-                </select>
-                <div>Passcode:</div>
-                <input
-                  className={style["text-input"]}
-                  style={{ width: adjDim(330) + "px" }}
-                  id="passcode"
-                  value={props.pcode}
-                  placeholder="Passcode (4 characters)"
-                  onInput={(event) => props.changeTouppercase(event)}
-                />
-                {props.wrongInput
-                  ? "Your password must be 4 characters long."
-                  : ""}
-                <div>Join With:</div>
-                <select
-                  id="joinwith"
-                  className={style["dropdown-input"]}
-                  style={{ width: adjDim(350) + "px" }}
-                >
-                  <option value="Audio">Audio</option>
-                  {/*<option value="Video">Video</option>
-                  <option value="Videocartoonify">Video(Cartoon)</option>*/}
-                </select>
-                <button
-                  className={
-                    isLargeScreen()
-                      ? `${style["basic-button"]} ${style["medium-button"]}`
-                      : `${style["basic-button"]} ${style["small-button"]}`
-                  }
-                  onClick={() =>
-                    props.verifyInputAndAudio(
-                      document.getElementById("name").value.trim(),
-                      document.getElementById("passcode").value.trim(),
-                      document.getElementById("joinwith").value.trim(),
-                      parseInt(
-                        document.getElementById("collaborators").value.trim()
+                  <div
+                    className="font-sans my-1.5 font-normal text-base leading-5 text-[#727278]"
+                  >
+                    Please type your name and passcode to join a discussion.
+                  </div>
+                  <div
+                    className="font-sans my-1.5 font-normal text-xs leading-5 text-[#727278]"
+                  >
+                    If rejoining a discussion, type the same name you used
+                    previously.
+                  </div>
+                  <div>Device Name:</div>
+                  <input
+                    className={style["text-input"]}
+                    style={{ width: adjDim(330) + "px" }}
+                    id="name"
+                    placeholder="Name"
+                  />
+                  <div>Numbers of Collaborators:</div>
+                  <select
+                    id="collaborators"
+                    className={style["dropdown-input"]}
+                    style={{ width: adjDim(330) + "px" }}
+                  >
+                    <option value="0">0(Automatic)</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                  </select>
+                  <div>Passcode:</div>
+                  <input
+                    className={style["text-input"]}
+                    style={{ width: adjDim(330) + "px" }}
+                    id="passcode"
+                    value={props.pcode}
+                    placeholder="Passcode (4 characters)"
+                    onInput={(event) => props.changeTouppercase(event)}
+                  />
+                  {props.wrongInput
+                    ? "Your password must be 4 characters long."
+                    : ""}
+                  <div>Join With:</div>
+                  <select
+                    id="joinwith"
+                    className={style["dropdown-input"]}
+                    style={{ width: adjDim(330) + "px" }}
+                  >
+                    <option value="Audio">Audio</option>
+                    {/*<option value="Video">Video</option>
+                    <option value="Videocartoonify">Video(Cartoon)</option>*/}
+                  </select>
+                  <button
+                    className={
+                      isLargeScreen()
+                        ? `${style["basic-button"]} ${style["medium-button"]}`
+                        : `${style["basic-button"]} ${style["small-button"]}`
+                    }
+                    onClick={() =>
+                      props.verifyInputAndAudio(
+                        document.getElementById("name").value.trim(),
+                        document.getElementById("passcode").value.trim(),
+                        document.getElementById("joinwith").value.trim(),
+                        parseInt(
+                          document.getElementById("collaborators").value.trim()
+                        )
                       )
-                    )
-                  }
-                >
-                  Connect to Server
-                </button>
+                    }
+                  >
+                    Connect to Server
+                  </button>
+                </div>
               </React.Fragment>
             )}
             {props.connected &&
