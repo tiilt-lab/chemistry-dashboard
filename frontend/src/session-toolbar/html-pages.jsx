@@ -9,11 +9,7 @@ function AppSessionPage(props) {
   return (
     <>
       <div
-        className={
-          props.sessionEnding
-            ? `${style["session-toolbar"]} ${style["dialog-blur"]}`
-            : style["session-toolbar"]
-        }
+        className="toolbar"
       >
         <span className={style["session-time"]}>
           <div className={style.time}>{props.timeText}</div>

@@ -21,7 +21,7 @@ import { AppInfographicsIndividual } from "../components/infographics-view/infog
 function PodComponentPages(props) {
   return (
     <>
-      <div className={style.container}>
+      <div className="main-container">
         <Appheader
           title={props.sessionDevice.name}
           leftText={false}
@@ -30,109 +30,99 @@ function PodComponentPages(props) {
           rightTextClick={() => props.openDialog("Options")}
           nav={props.navigateToSession}
         />
-        <div className={style.toolbar}>
-          {props.session ? (
-            <AppSessionToolbar
-              session={props.session}
-              closingSession={props.onSessionClosing}
-              menus={[
-                { title: "Group", action: () => props.viewGroup() },
-                { title: "Individual", action: () => props.viewIndividual() },
-                { title: "Comparison", action: () => props.viewComparison() },
-              ]}
-            />
-          ) : (
-            <></>
+        <div className="relative">
+          <div className="toolbar">
+            {props.session ? (
+              <AppSessionToolbar
+                session={props.session}
+                closingSession={props.onSessionClosing}
+                menus={[
+                  { title: "Group", action: () => props.viewGroup() },
+                  { title: "Individual", action: () => props.viewIndividual() },
+                  { title: "Comparison", action: () => props.viewComparison() },
+                ]}
+              />
+            ) : (
+              <></>
+            )}
+          </div>
+          {props.details === "Group" && (
+            <div
+              className="center-column-container"
+            >
+              <br />
+              <AppInfographicsGroup
+                displayTranscripts={props.displayTranscripts}
+                endTime={props.endTime}
+                fromclient={false}
+                onClickedTimeline={props.onClickedTimeline}
+                radarTrigger={props.radarTrigger}
+                session={props.session}
+                sessionDevice={props.sessionDevice}
+                setRange={props.setRange}
+                showBoxes={props.showBoxes}
+                showFeatures={props.showFeatures}
+                startTime={props.startTime}
+                speakers={props.speakers}
+              ></AppInfographicsGroup>
+            </div>
+          )}
+          {props.details === "Comparison" && (
+            <div
+              className="center-column-container"
+            >
+              <br />
+              <AppInfographicsComparison
+                displayTranscripts={props.displayTranscripts}
+                endTime={props.endTime}
+                fromclient={false}
+                onClickedTimeline={props.onClickedTimeline}
+                radarTrigger={props.radarTrigger}
+                session={props.session}
+                sessionDevice={props.sessionDevice}
+                setRange={props.setRange}
+                showBoxes={props.showBoxes}
+                showFeatures={props.showFeatures}
+                startTime={props.startTime}
+                speakers={props.speakers}
+                selectedSpkrId={props.selectedSpkrId}
+                setSelectedSpkrId={props.setSelectedSpkrId}
+                selectedSpkrId1={props.selectedSpkrId1}
+                setSelectedSpkrId1={props.setSelectedSpkrId1}
+                selectedSpkrId2={props.selectedSpkrId2}
+                setSelectedSpkrId2={props.setSelectedSpkrId2}
+                spkr1Transcripts={props.spkr1Transcripts}
+                spkr2Transcripts={props.spkr2Transcripts}
+              ></AppInfographicsComparison>
+            </div>
+          )}
+          {props.details === "Individual" && (
+            <div
+              className="center-column-container"
+            >
+              <br />
+              <AppInfographicsIndividual
+                displayTranscripts={props.displayTranscripts}
+                endTime={props.endTime}
+                fromclient={false}
+                onClickedTimeline={props.onClickedTimeline}
+                radarTrigger={props.radarTrigger}
+                session={props.session}
+                sessionDevice={props.sessionDevice}
+                setRange={props.setRange}
+                showBoxes={props.showBoxes}
+                showFeatures={props.showFeatures}
+                startTime={props.startTime}
+                speakers={props.speakers}
+                selectedSpkrId={props.selectedSpkrId}
+                setSelectedSpkrId={props.setSelectedSpkrId}
+                selectedSpkrId1={props.selectedSpkrId1}
+                setSelectedSpkrId1={props.setSelectedSpkrId1}
+                spkr1Transcripts={props.spkr1Transcripts}
+              ></AppInfographicsIndividual>
+            </div>
           )}
         </div>
-        {props.details === "Group" && (
-          <div
-            className={
-              isLargeScreen()
-                ? style["overview-container-large"]
-                : style["overview-container-small"]
-            }
-          >
-            <br />
-            <AppInfographicsGroup
-              displayTranscripts={props.displayTranscripts}
-              endTime={props.endTime}
-              fromclient={false}
-              onClickedTimeline={props.onClickedTimeline}
-              radarTrigger={props.radarTrigger}
-              session={props.session}
-              sessionDevice={props.sessionDevice}
-              setRange={props.setRange}
-              showBoxes={props.showBoxes}
-              showFeatures={props.showFeatures}
-              startTime={props.startTime}
-              speakers={props.speakers}
-            ></AppInfographicsGroup>
-          </div>
-        )}
-        {props.details === "Comparison" && (
-          <div
-            className={
-              isLargeScreen()
-                ? style["overview-container-large"]
-                : style["overview-container-small"]
-            }
-          >
-            <br />
-            <AppInfographicsComparison
-              displayTranscripts={props.displayTranscripts}
-              endTime={props.endTime}
-              fromclient={false}
-              onClickedTimeline={props.onClickedTimeline}
-              radarTrigger={props.radarTrigger}
-              session={props.session}
-              sessionDevice={props.sessionDevice}
-              setRange={props.setRange}
-              showBoxes={props.showBoxes}
-              showFeatures={props.showFeatures}
-              startTime={props.startTime}
-              speakers={props.speakers}
-              selectedSpkrId={props.selectedSpkrId}
-              setSelectedSpkrId={props.setSelectedSpkrId}
-              selectedSpkrId1={props.selectedSpkrId1}
-              setSelectedSpkrId1={props.setSelectedSpkrId1}
-              selectedSpkrId2={props.selectedSpkrId2}
-              setSelectedSpkrId2={props.setSelectedSpkrId2}
-              spkr1Transcripts={props.spkr1Transcripts}
-              spkr2Transcripts={props.spkr2Transcripts}
-            ></AppInfographicsComparison>
-          </div>
-        )}
-        {props.details === "Individual" && (
-          <div
-            className={
-              isLargeScreen()
-                ? style["overview-container-large"]
-                : style["overview-container-small"]
-            }
-          >
-            <br />
-            <AppInfographicsIndividual
-              displayTranscripts={props.displayTranscripts}
-              endTime={props.endTime}
-              fromclient={false}
-              onClickedTimeline={props.onClickedTimeline}
-              radarTrigger={props.radarTrigger}
-              session={props.session}
-              sessionDevice={props.sessionDevice}
-              setRange={props.setRange}
-              showBoxes={props.showBoxes}
-              showFeatures={props.showFeatures}
-              startTime={props.startTime}
-              speakers={props.speakers}
-              selectedSpkrId={props.selectedSpkrId}
-              setSelectedSpkrId={props.setSelectedSpkrId}
-              selectedSpkrId1={props.selectedSpkrId1}
-              setSelectedSpkrId1={props.setSelectedSpkrId1}
-              spkr1Transcripts={props.spkr1Transcripts}
-            ></AppInfographicsIndividual>
-          </div>
-        )}
         {props.loading() ? <AppSpinner></AppSpinner> : <></>}
       </div>
       <GenericDialogBox
