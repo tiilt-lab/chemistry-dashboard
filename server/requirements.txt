@@ -24,4 +24,4 @@ gensim
 pyPDF2
 matplotlib
 nltk
-spacy>=2.2.0,<3.0.0
+spacy

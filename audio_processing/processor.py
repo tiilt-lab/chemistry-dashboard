@@ -272,11 +272,7 @@ class AudioProcessor:
                 end_time += self.config.start_offset
 
                 if success:
-                    logging.info("Processing results posted successfully for"
-                                 "client %d (Processing time: {%f)"
-                                 " @ {%f} for transcript {%d}",
-                                 self.config.auth_key, processing_time,
-                                 start_time, transcript_id)
+                    logging.info( f"Processing results posted successfully for client {self.config.auth_key} (Processing time: {processing_time}) @ {start_time} for transcript {transcript_id}")
                 else:
                     logging.warning("Processing results FAILED to post for"
                                     " client %d (Processing time: {%f)",

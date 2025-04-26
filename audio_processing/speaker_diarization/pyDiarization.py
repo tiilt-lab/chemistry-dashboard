@@ -2,10 +2,6 @@
 import logging
 import numpy as np
 import sklearn.cluster
-from pyAudioAnalysis import MidTermFeatures as mtf
-from pyAudioAnalysis import ShortTermFeatures as stf
-from pyAudioAnalysis import audioTrainTest as at
-from pyAudioAnalysis import audioBasicIO
 from scipy.spatial import distance
 import scipy.signal
 import sklearn.discriminant_analysis
@@ -16,7 +12,6 @@ import scipy
 import torch
 import numpy as np
 from sklearn.decomposition import PCA
-import matplotlib.pyplot as plt
 from sklearn.metrics import silhouette_score
 import torchaudio
 from speechbrain.pretrained import SpeakerRecognition
