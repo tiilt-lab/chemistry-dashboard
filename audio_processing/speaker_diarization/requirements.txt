@@ -1,5 +1,4 @@
 numpy
-matplotlib
 scipy
 scikit-learn
 hmmlearn

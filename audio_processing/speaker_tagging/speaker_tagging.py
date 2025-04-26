@@ -46,9 +46,6 @@ def speaker_tagging(signal):
 	td = cross_correlation(signal1, signal2, sr, 'calib')
 	logging.info(td)
 
-	# import matplotlib.pyplot as plt
-	# plt.plot(td)
-
 	# Removing noise from signal
 	cleaned_signal = remove_noise_from_signal(np.array(td),5,1)
 	cleaned_signal = remove_noise_from_signal(np.array(td),5,1)
