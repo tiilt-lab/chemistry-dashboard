@@ -13,7 +13,7 @@ import { isLargeScreen } from "../myhooks/custom-hooks";
 import { AppInfographicsView } from "../components/infographics-view/infographics-view-component";
 import style from "./pod.module.css";
 import React from "react";
-import ReactMultiSelectCheckboxes from "react-multiselect-checkboxes";
+import Select from 'react-select';
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison";
 import { AppInfographicsGroup } from "../components/infographics-view/infographics-group";
 import { AppInfographicsIndividual } from "../components/infographics-view/infographics-individual";
@@ -168,7 +168,7 @@ function PodComponentPages(props) {
           <div className={style["dialog-content"]}>
             <div className={style["dialog-heading"]}>Section Boxes</div>
             <div className={style["dialog-dropdown"]}>
-              <ReactMultiSelectCheckboxes
+              <Select
                 options={props.showBoxes}
                 value={props.showBoxes.filter((feature) => feature["clicked"])}
                 onChange={props.handleCheckBoxes}
@@ -176,7 +176,7 @@ function PodComponentPages(props) {
             </div>
             <div className={style["dialog-heading"]}>Discussion Features</div>
             <div className={style["dialog-dropdown"]}>
-              <ReactMultiSelectCheckboxes
+              <Select
                 options={props.showFeatures}
                 value={props.showFeatures.filter(
                   (feature) => feature["clicked"]
