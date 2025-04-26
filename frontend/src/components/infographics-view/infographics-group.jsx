@@ -11,11 +11,6 @@ import React from "react";
 function AppInfographicsGroup(props) {
   return (
     <>
-      {props.showBoxes.length > 0 && props.showBoxes[0]["clicked"] && (
-        <AppSectionBoxComponent heading={"Timeline control"}>
-          <AppTimelineSlider id="timeSlider" inputChanged={props.setRange} />
-        </AppSectionBoxComponent>
-      )}
       {props.speakers && (
         <div
           className="infographics_container"
@@ -32,6 +27,11 @@ function AppInfographicsGroup(props) {
           }}
         >
           <div className={style["comparison-column"]}>
+            {props.showBoxes.length > 0 && props.showBoxes[0]["clicked"] && (
+              <AppSectionBoxComponent heading={"Timeline control"}>
+                <AppTimelineSlider id="timeSlider" inputChanged={props.setRange} />
+              </AppSectionBoxComponent>
+            )}
             {props.showBoxes.length > 0 && props.showBoxes[1]["clicked"] && (
               <AppSectionBoxComponent heading={"Discussion timeline"}>
                 <AppTimeline

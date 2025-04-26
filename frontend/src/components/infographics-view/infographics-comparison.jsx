@@ -13,11 +13,6 @@ import React from "react";
 function AppInfographicsComparison(props) {
   return (
     <>
-      {props.showBoxes.length > 0 && props.showBoxes[0]["clicked"] && (
-        <AppSectionBoxComponent heading={"Timeline control"}>
-          <AppTimelineSlider id="timeSlider" inputChanged={props.setRange} />
-        </AppSectionBoxComponent>
-      )}
       {props.speakers && (
         <div
           className="infographics_container"
@@ -34,6 +29,12 @@ function AppInfographicsComparison(props) {
           }}
         >
           <div className={style["comparison-column"]}>
+            {props.showBoxes.length > 0 && props.showBoxes[0]["clicked"] && (
+              <AppSectionBoxComponent heading={"Timeline control"}>
+                <AppTimelineSlider id="timeSlider" inputChanged={props.setRange} />
+              </AppSectionBoxComponent>
+            )}
+            
             <select
               id="speaker1"
               className={style["dropdown-input"]}

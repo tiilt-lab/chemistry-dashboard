@@ -12,8 +12,12 @@ html {
 
 @import "tailwindcss";
 
+.main-container{
+  @apply flex-col relative w-full h-dvh overflow-y-hidden
+}
+
 .header-grid {  
-  @apply fixed flex h-min md:max-h-1/6 w-full flex-row bg-[#FCFDFF] shadow;
+  @apply relative top-0 flex h-min md:max-h-1/6 w-full flex-row bg-[#FCFDFF] shadow;
 }
 
 .text-sans {
@@ -21,7 +25,11 @@ html {
 }
 
 .center-column-container{
-  @apply items-center justify-evenly flex flex-col
+  @apply items-center justify-evenly flex flex-col w-auto overflow-auto
+}
+
+.toolbar{
+  @apply fixed left-0 h-full w-min
 }
 /* body {
   margin: 0;

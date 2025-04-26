@@ -44,7 +44,7 @@ function ByodJoinPage(props) {
             setParentCurrentForm={props.setCurrentForm}
           />
         )) || (
-          <div className="relative h-vh w-full">
+          <div className="main-container">
             <Appheader
               title={props.pageTitle}
               leftText={false}
@@ -63,27 +63,6 @@ function ByodJoinPage(props) {
               }
               nav={() => props.navigateToLogin()}
             />
-            <div className={style.toolbar}>
-              {props.speakersValidated ? (
-                <AppSessionToolbar
-                  session={props.session}
-                  closingSession={props.onSessionClosing}
-                  menus={[
-                    { title: "Group", action: () => props.viewGroup() },
-                    {
-                      title: "Individual",
-                      action: () => props.viewIndividual(),
-                    },
-                    {
-                      title: "Comparison",
-                      action: () => props.viewComparison(),
-                    },
-                  ]}
-                />
-              ) : (
-                <></>
-              )}
-            </div>
             {!props.connected && (
               <React.Fragment>
                 <div
@@ -257,11 +236,10 @@ function ByodJoinPage(props) {
               props.authenticated &&
               props.speakersValidated && (
                 <>
-                  <div className={style.toolbar}>
                     {props.session ? (
                       <AppSessionToolbar
                         session={props.session}
-                        closingSession={props.onSessionClosing}
+                        closingSession={props.disconnect()}
                         fromClient={true}
                         menus={[
                           { title: "Group", action: () => props.viewGroup() },
@@ -278,7 +256,6 @@ function ByodJoinPage(props) {
                     ) : (
                       <></>
                     )}
-                  </div>
                   <div
                     className={
                       isLargeScreen()
@@ -446,17 +423,7 @@ function ByodJoinPage(props) {
                     )}
                   </div>
                   {props.loading() ? <AppSpinner></AppSpinner> : <></>}
-                  <div className={style2.footer}>
-                    {props.session ? (
-                      <AppSessionToolbar
-                        session={props.session}
-                        sessionDevice={props.sessionDevice}
-                        closingSession={() => props.disconnect(true)}
-                      />
-                    ) : (
-                      <></>
-                    )}
-                  </div>
+
                 </>
               )}
           </div>
