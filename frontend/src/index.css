@@ -13,7 +13,7 @@ html {
 @import "tailwindcss";
 
 .header-grid {  
-  @apply flex h-min md:max-h-1/6 w-full flex-row bg-[#FCFDFF] shadow;
+  @apply fixed flex h-min md:max-h-1/6 w-full flex-row bg-[#FCFDFF] shadow;
 }
 
 .text-sans {
