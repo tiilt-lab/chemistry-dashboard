@@ -13,18 +13,7 @@ function AppInfographicsGroup(props) {
     <>
       {props.speakers && (
         <div
-          className="infographics_container"
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            flexWrap: "wrap",
-            alignItems: "flex-start",
-            gap: "10px",
-            width: "auto",
-            maxWidth: "100%",
-            maxHeight: "calc(100vh - 100px)", // Ensures content doesn't exceed viewport
-            overflowY: "auto", // Enables internal scrolling
-          }}
+          className="infographics-container"
         >
           <div className={style["comparison-column"]}>
             {props.showBoxes.length > 0 && props.showBoxes[0]["clicked"] && (
