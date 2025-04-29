@@ -8,33 +8,34 @@ import { isLargeScreen } from "../myhooks/custom-hooks"
 function AppSessionPage(props) {
     return (
         <>
-            <div className="relative justify-between items-center bg-gray-200 flex flex-row sm:flex-col flex-nowrap shadow h-1/6 sm:h-dvh w-full sm:w-1/12">
-                <span className="sm:p-8 w-min h-fit inline-block">
-                    <div className="font-sans font-bold text-xl/normal w-min">{props.timeText}</div>
-                    <div className="font-sans font-normal text-xs/snug w-min">Total duration</div>
+            <div className="relative flex h-1/6 w-full min-w-fit flex-row flex-nowrap items-center justify-between bg-gray-200 text-center shadow sm:h-full sm:w-1/6 sm:flex-col">
+                <span className="m-3 inline-block h-fit w-min px-3">
+                    <div className="inline-block w-max font-sans text-xl/normal font-bold sm:text-3xl/loose">
+                        {props.timeText}
+                    </div>
+                    <div className="inline-block w-max font-sans text-xs/snug font-normal sm:text-base/normal">
+                        Total duration
+                    </div>
                 </span>
-                <div class="justify-around flex flex-row sm:flex-col flex-auto items-center max-w-4/6 sm:w-min">
-                {props.menus && props.menus.length ? (
-                    props.menus.map((menu, index) => (
-                        <button 
-                            className="w-22 text-center font-sans font-normal text-[#FAFAFC] text-xs/snug rounded-4xl box-border border cursor-pointer shadow transition-shadow bg-gradient-to-r from-[#764BFF] to-[#7BB7F1] py-4 px-3"
-                            onClick={menu.action}
-                        >{`${menu.title}`}</button>
-                    ))
-                ) : (
-                    <></>
-                )}
-                {props.session.recording && !props.fromClient ? (
-                    <span
-                        className="bottom-2"
-                        onClick={props.onEndSession}
-                    >
-                        <button className={style["end-button"]}>End</button>
-                    </span>
-                ) : (
-                    <></>
-                )}
+                <div class="flex max-w-4/6 flex-1 flex-row items-center justify-center sm:w-min sm:flex-col">
+                    {props.menus && props.menus.length ? (
+                        props.menus.map((menu, index) => (
+                            <button
+                                className="m-0.5 box-border w-19 cursor-pointer rounded-4xl border bg-gradient-to-r from-[#764BFF] to-[#7BB7F1] px-1 py-2 text-center font-sans text-xs/normal font-normal text-[#FAFAFC] transition-shadow hover:shadow-2xl focus:border-[#301f66] focus:ring focus:outline-none active:bg-[#573dac] sm:m-3 sm:w-33 sm:text-base/loose"
+                                onClick={menu.action}
+                            >{`${menu.title}`}</button>
+                        ))
+                    ) : (
+                        <></>
+                    )}
                 </div>
+                <button
+                    className="m-2 box-border w-19 cursor-pointer rounded-4xl border bg-[#FF6363] px-1 py-2 text-center font-sans text-base/normal font-normal text-[#FAFAFC] transition-shadow hover:shadow-2xl disabled:hidden sm:w-33 sm:text-xl/loose"
+                    onClick={props.onEndSession}
+                    disabled={!props.session.recording || props.fromClient}
+                >
+                    End
+                </button>
             </div>
 
             <GenericDialogBox show={props.sessionEnding}>

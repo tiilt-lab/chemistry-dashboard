@@ -30,26 +30,29 @@ function PodComponentPages(props) {
                     rightTextClick={() => props.openDialog("Options")}
                     nav={props.navigateToSession}
                 />
-                <div className="relative flex h-11/12 flex-col-reverse sm:flex-row">
-                {props.session ? (
-                    <AppSessionToolbar
-                        session={props.session}
-                        closingSession={props.onSessionClosing}
-                        menus={[
-                            { title: "Group", action: () => props.viewGroup() },
-                            {
-                                title: "Individual",
-                                action: () => props.viewIndividual(),
-                            },
-                            {
-                                title: "Comparison",
-                                action: () => props.viewComparison(),
-                            },
-                        ]}
-                    />
-                ) : (
-                    <></>
-                )}
+                <div className="relative box-border flex grow flex-col-reverse overflow-hidden sm:flex-row">
+                    {props.session ? (
+                        <AppSessionToolbar
+                            session={props.session}
+                            closingSession={props.onSessionClosing}
+                            menus={[
+                                {
+                                    title: "Group",
+                                    action: () => props.viewGroup(),
+                                },
+                                {
+                                    title: "Individual",
+                                    action: () => props.viewIndividual(),
+                                },
+                                {
+                                    title: "Comparison",
+                                    action: () => props.viewComparison(),
+                                },
+                            ]}
+                        />
+                    ) : (
+                        <></>
+                    )}
                     {props.details === "Group" && (
                         <div className="center-column-container">
                             <br />
