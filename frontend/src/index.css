@@ -12,8 +12,12 @@ html {
 
 @import "tailwindcss";
 
+#root {
+    @apply box-border flex h-screen w-screen overflow-clip;
+}
+
 .main-container {
-    @apply relative flex h-dvh w-full flex-col overflow-y-hidden;
+    @apply relative box-border flex h-full w-full min-w-fit flex-col;
 }
 
 .text-sans {
@@ -21,9 +25,9 @@ html {
 }
 
 .center-column-container {
-    @apply relative flex flex-col w-full h-full items-center justify-evenly overflow-y-auto;
+    @apply relative box-border flex h-full w-full flex-col items-center justify-evenly overflow-y-auto;
 }
 
-.infographic-container{
-    @apply relative flex flex-row w-full max-w-full overflow-y-auto align-middle items-start flex-wrap
+.infographic-container {
+    @apply relative flex w-full max-w-full flex-row flex-wrap items-start overflow-y-auto align-middle;
 }
