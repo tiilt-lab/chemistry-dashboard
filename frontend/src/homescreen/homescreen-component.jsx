@@ -48,7 +48,7 @@ function HomeScreen(props) {
   }
 
   return (
-    <div className="main-container items-center">
+    <div className="main-container items-center overflow-y-auto">
       <div className="intro-box">
       <div className="greeting">Good {timeOfDay}!</div>
         <Instruction instructions="Welcome to the Building Literacy in N-person Collaborations (BLINC) Dashboard. You can start gathering
