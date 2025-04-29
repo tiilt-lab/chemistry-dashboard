@@ -51,7 +51,7 @@ class ServerProtocol(WebSocketServerProtocol):
         self.speakers = None
         self.currSpeaker = None
         self.currAlias = None
-        self.diarization_model = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="pretrained_models//pretrained_ecapa")
+        self.diarization_model = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="pretrained_models/pretrained_ecapa")
         self.semantic_model = SentenceTransformer("all-mpnet-base-v2")
         self.semantic_model.share_memory()
 
@@ -102,6 +102,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 logging.info("preparing for speaker {}'s fingerprint".format(self.currSpeaker))
         if data['type'] == 'start':
             valid, result = ProcessingConfig.from_json(data)
+            logging.info(valid)
             if not valid:
                 self.send_json({'type': 'error', 'message': result})
                 self.signal_end()
