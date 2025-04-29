@@ -16,17 +16,6 @@ function AppInfographicsIndividual(props) {
       {props.speakers && (
         <div
           className="infographics_container"
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            flexWrap: "wrap",
-            alignItems: "flex-start",
-            gap: "10px",
-            width: "auto",
-            maxWidth: "100%",
-            maxHeight: "calc(100vh - 100px)", // Ensures content doesn't exceed viewport
-            overflowY: "auto", // Enables internal scrolling
-          }}
         >
           <div className={style["comparison-column"]}>
             <select

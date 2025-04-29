@@ -2,7 +2,7 @@ import backicon from "../assets/img/icon-back.svg"
 
 function Appheader(props) {
     return (
-        <div className="header-grid">
+        <div className="relative top-0 flex h-1/12 w-full flex-row bg-[#FCFDFF] shadow z-10">
             {props.leftText !== false ? (
                 <div onClick={props.nav} className="text-sans w-min p-4">
                     {" "}
@@ -32,7 +32,7 @@ function Appheader(props) {
             </div>
             <div
                 onClick={props.rightTextClick}
-                className="text-sans w-min min-w-12 px-2 text-center leading-14 disabled:text-gray-50"
+                className="text-sans w-min min-w-12 px-2 text-center leading-14 disabled:text-gray-50 py-1"
             >
                 {props.rightText}
             </div>

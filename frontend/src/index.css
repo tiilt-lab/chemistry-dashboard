@@ -12,35 +12,18 @@ html {
 
 @import "tailwindcss";
 
-.main-container{
-  @apply flex-col relative w-full h-dvh overflow-y-hidden
-}
-
-.header-grid {  
-  @apply relative top-0 flex h-min md:max-h-1/6 w-full flex-row bg-[#FCFDFF] shadow;
+.main-container {
+    @apply relative flex h-dvh w-full flex-col overflow-y-hidden;
 }
 
 .text-sans {
-  @apply font-sans text-lg font-bold text-[#6466E3];
+    @apply font-sans text-lg font-bold text-[#6466E3];
 }
 
-.center-column-container{
-  @apply items-center justify-evenly flex flex-col w-auto overflow-auto
+.center-column-container {
+    @apply relative flex flex-col w-full h-full items-center justify-evenly overflow-y-auto;
 }
 
-.toolbar{
-  @apply fixed left-0 h-full w-min
+.infographic-container{
+    @apply relative flex flex-row w-full max-w-full overflow-y-auto align-middle items-start flex-wrap
 }
-/* body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
-} */
