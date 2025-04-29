@@ -26,7 +26,7 @@ const navigate = useNavigate();
 
 
   return (
-  <div className="container">
+  <div className="main-container items-center">
   <IntroBox/>
   <button className={isLargeScreen() ? "basic-button medium-button" : "basic-button small-button"} 
    onClick={()=> navigate('/login')}

@@ -46,7 +46,7 @@ function PodsOverviewPages(props) {
                     ) : (
                         <></>
                     )}
-                    <div className={style["list-container"]}>
+                    <div className="infographics-container grow overflow-y-auto mt-2">
                         {props.sessionDevices === null ? (
                             <div className={style["load-text"]}>Loading...</div>
                         ) : (
