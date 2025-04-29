@@ -58,7 +58,7 @@ function LoginPage() {
   }
 
   return (
-    <div className="container">
+    <div className="main-container items-center">
 
       <Appheader
         title="Sign In"
