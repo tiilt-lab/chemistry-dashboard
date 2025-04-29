@@ -13,7 +13,7 @@ function AppSectionBoxComponent(props) {
         <>
             <div
                 className={
-                    "relative border-black bg-[#FCFDFF] text-center font-sans text-base/relaxed font-normal"
+                    "relative border-black bg-[#FCFDFF] text-center font-sans text-base/relaxed font-normal h-min"
                 }
                 style={
                     props.maxHeight !== undefined

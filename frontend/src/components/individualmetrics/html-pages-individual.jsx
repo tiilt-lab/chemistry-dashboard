@@ -7,10 +7,10 @@ import React from "react";
 function IndividualFeaturePage(props) {
   return (
     <>
-      <div>
+      <div className='w-sm'>
         <table
           className={style["features-table"]}
-          style={{ width: adjDim(343) + "px" }}
+          style={{ width: adjDim(400) + "px" }}
         >
           <thead>
             <tr>
@@ -81,10 +81,10 @@ function IndividualFeaturePage(props) {
                     </td>
                     <td>
                       {feature.values.length === 0 ? (
-                        <span
+                        <div
                           className={style["no-data-span"]}
                           style={{ width: adjDim(74) + "px" }}
-                        ></span>
+                        ></div>
                       ) : (
                         <></>
                       )}

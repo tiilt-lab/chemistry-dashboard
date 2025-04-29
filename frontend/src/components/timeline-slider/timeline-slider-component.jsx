@@ -34,7 +34,7 @@ function AppTimelineSlider(props) {
 
   // Calculate pixel position for each handle based on normalized values
   const handlePos = (handleId) => {
-    return (handleId === 0 ? min : max) * TIMELINE_WIDTH + "%";
+    return (handleId === 0 ? min : 1-max) * TIMELINE_WIDTH + "%";
   };
 
   // Calculate the left position of the timeline bar
@@ -101,22 +101,22 @@ function AppTimelineSlider(props) {
       return;
     // Update state based on which handle is being dragged
     if (handleId === 0 || handleId ===2) {
-      if(newMin < 0 || newMin > newMax - HANDLE_WIDTH/TIMELINE_WIDTH)
+      if(newMin < 0 || newMin > newMax - (HANDLE_WIDTH/TIMELINE_WIDTH)*1.5)
         return;
       setMin(newMin);
     }
     if (handleId === 1 || handleId === 2) {
-      if(newMax < newMin + HANDLE_WIDTH/TIMELINE_WIDTH)
+      if(newMax < newMin + (HANDLE_WIDTH/TIMELINE_WIDTH)*1.5)
         return;
       setMax(newMax);
     }
   };
 
   return (
-    <div className={style.timeline}>
+    <div className="flex flex-row h-14 relative px-5 w-sm md:w-xl lg:w-3xl xl:w-5xl 2xl:w-6xl box-border">
       <div
         className={style["timeline-background"]}
-        style={{ width: TIMELINE_WIDTH + "%" }}
+        style={{ width: (TIMELINE_WIDTH-2*HANDLE_WIDTH) + "%" }}
         ref={timelineBackgroundRef}
       ></div>
       <div
@@ -133,7 +133,7 @@ function AppTimelineSlider(props) {
       <div
         className={style["timeline-handle"]}
         onPointerDown={(e) => startDragging(1, e)}
-        style={{ left: handlePos(1) }}
+        style={{ right: handlePos(1)}}
       ></div>
       <div
         className={style["timeline-text"]}
