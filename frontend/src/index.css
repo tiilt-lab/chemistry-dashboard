@@ -17,7 +17,7 @@ html {
 }
 
 .main-container {
-    @apply relative box-border flex h-full w-full min-w-fit flex-col;
+    @apply @container relative box-border flex h-full w-full min-w-fit flex-col;
 }
 
 .text-sans {
@@ -25,9 +25,10 @@ html {
 }
 
 .center-column-container {
-    @apply relative box-border flex h-full w-full flex-col items-center justify-evenly overflow-y-auto;
+    @apply @container relative box-border flex grow overflow-y-auto flex-col;
 }
 
-.infographic-container {
-    @apply relative flex w-full max-w-full flex-row flex-wrap items-start overflow-y-auto align-middle;
+.infographics-container {
+    @apply @container relative flex w-full max-w-full flex-row flex-wrap justify-around;
 }
+

@@ -28,6 +28,10 @@ function RadarPage(props) {
       const containerWidth = width - margin * 2;
       const containerHeight = height - margin * 2;
 
+      if (!(props.valSum && data.length)) {
+        return;
+      }
+
       const container = svg
         .append("g")
         .attr("width", containerWidth)
@@ -37,9 +41,6 @@ function RadarPage(props) {
           `translate(${width / 2 + margin}, ${height / 2 + margin})`
         );
 
-      if (!(props.valSum && data.length)) {
-        return;
-      }
 
       //specific config
       let axesDomain = data[0].map((d) => d.axis);
@@ -154,8 +155,7 @@ function RadarPage(props) {
 
   return (
     <div
-      className={style["radar-contain"]}
-      style={{ width: width + "px", height: height + margin * 2 + "px" }}
+      className="relative w-sm h-min"
     >
       <svg ref={ref} width={width} height={height + margin * 2}></svg>
     </div>

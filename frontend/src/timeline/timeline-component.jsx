@@ -71,7 +71,7 @@ function AppTimeline(props) {
    
 
     return (
-        <div className={style["timeline-container"]}>
+        <div className="w-sm">
             <div className={style.legend}>
                 <span className={`${style["color-box"]} ${style.question}`}></span>
                 <span className={style["legend-text"]}>Question</span>

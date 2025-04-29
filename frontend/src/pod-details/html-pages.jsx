@@ -30,7 +30,7 @@ function PodComponentPages(props) {
                     rightTextClick={() => props.openDialog("Options")}
                     nav={props.navigateToSession}
                 />
-                <div className="relative box-border flex grow flex-col-reverse overflow-hidden sm:flex-row">
+                <div className="relative box-border flex grow flex-col-reverse overflow-hidden sm:flex-row items-stretch content-stretch">
                     {props.session ? (
                         <AppSessionToolbar
                             session={props.session}
@@ -55,7 +55,6 @@ function PodComponentPages(props) {
                     )}
                     {props.details === "Group" && (
                         <div className="center-column-container">
-                            <br />
                             <AppInfographicsGroup
                                 displayTranscripts={props.displayTranscripts}
                                 endTime={props.endTime}
@@ -74,7 +73,6 @@ function PodComponentPages(props) {
                     )}
                     {props.details === "Comparison" && (
                         <div className="center-column-container">
-                            <br />
                             <AppInfographicsComparison
                                 displayTranscripts={props.displayTranscripts}
                                 endTime={props.endTime}
@@ -101,7 +99,6 @@ function PodComponentPages(props) {
                     )}
                     {props.details === "Individual" && (
                         <div className="center-column-container">
-                            <br />
                             <AppInfographicsIndividual
                                 displayTranscripts={props.displayTranscripts}
                                 endTime={props.endTime}

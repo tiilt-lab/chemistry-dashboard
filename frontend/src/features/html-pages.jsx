@@ -7,7 +7,7 @@ import React from 'react';
 function FeaturePage(props) {
   return (
     <>
-      <div>
+      <div className='w-sm'>
         <table className={style["features-table"]}
                style={{ width: adjDim(343) + 'px' }}>
           <thead>
@@ -51,7 +51,7 @@ function FeaturePage(props) {
                     </td>
                     <td>
                       {feature.values.length === 0 ? (
-                        <span className={style["no-data-span"]}
+                        <div className={style["no-data-span"]}
                               style={{ width: adjDim(74) + "px" }} />
                       ) : (
                         <svg viewBox="0 -0.5 74 39.5"

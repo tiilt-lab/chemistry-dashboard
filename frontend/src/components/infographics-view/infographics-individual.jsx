@@ -13,7 +13,7 @@ function AppInfographicsIndividual(props) {
     return (
         <>
             {props.speakers && (
-                <div className="infographics_container">
+                <div className="infographics-container">
                     <select
                         id="speaker1"
                         className={style["dropdown-input"]}
@@ -40,19 +40,6 @@ function AppInfographicsIndividual(props) {
                                 <AppTimelineSlider
                                     id="timeSlider"
                                     inputChanged={props.setRange}
-                                />
-                            </AppSectionBoxComponent>
-                        )}
-                    {props.showBoxes.length > 0 &&
-                        props.showBoxes[5]["clicked"] && (
-                            <AppSectionBoxComponent
-                                heading={`Participation and Impact Style`}
-                            >
-                                <AppIndividualFeaturesComponent
-                                    session={props.session}
-                                    transcripts={props.displayTranscripts}
-                                    spkrId={props.selectedSpkrId1}
-                                    showFeatures={props.showFeatures}
                                 />
                             </AppSectionBoxComponent>
                         )}
@@ -86,7 +73,19 @@ function AppInfographicsIndividual(props) {
                                 />
                             </AppSectionBoxComponent>
                         )}
-
+                    {props.showBoxes.length > 0 &&
+                        props.showBoxes[5]["clicked"] && (
+                            <AppSectionBoxComponent
+                                heading={`Participation and Impact Style`}
+                            >
+                                <AppIndividualFeaturesComponent
+                                    session={props.session}
+                                    transcripts={props.displayTranscripts}
+                                    spkrId={props.selectedSpkrId1}
+                                    showFeatures={props.showFeatures}
+                                />
+                            </AppSectionBoxComponent>
+                        )}
                     {props.showBoxes.length > 0 &&
                         props.showBoxes[3]["clicked"] && (
                             <AppSectionBoxComponent
