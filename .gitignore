@@ -201,6 +201,8 @@ pretrained_ecapa
 
 audio_processing/videorecordings/*
 
+topicModels/*
+
 pretrained_ecapa/classifier.ckpt
 pretrained_ecapa/embedding_model.ckpt
 pretrained_ecapa/hyperparams.yaml

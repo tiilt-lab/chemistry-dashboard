@@ -5,7 +5,7 @@ import logging
 import config as cf
 
 class ProcessingConfig:
-    def __init__(self, auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, transcribe, keywords, doa, features, tag, diarization, embeddingsFile, topic_model, owner,sessionId,deviceId,videocartoonify):
+    def __init__(self, auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, transcribe, keywords, doa, features, tag, diarization, embeddings_file, topic_model, owner,sessionId,deviceId,videocartoonify):
         self.auth_key = auth_key
         self.session_key = session_key
         self.server_start = server_start
@@ -20,7 +20,7 @@ class ProcessingConfig:
         self.features = features
         self.tag = tag
         self.diarization = True # Default to true for testing.
-        self.embeddingsFile = embeddingsFile
+        self.embeddings_file = embeddings_file
         self.topic_model = topic_model
         self.owner = owner
         self.sessionId = sessionId
@@ -67,7 +67,7 @@ class ProcessingConfig:
         tag = data.get('tag', False) and cf.record_original() and channels == 2
         # Check if diarization is requested and possible.
         diarization = data.get('tag', False)
-        embeddingsFile = data.get('embeddingsFile', None)
+        embeddings_file = data.get('embeddings_file', None)
 
         # check if video cartoonify is activated and  selected by user
         videocartoonify = data.get('Video_cartoonify',False) and cf.video_cartoonize()
@@ -90,8 +90,10 @@ class ProcessingConfig:
             logging.warning('Invalid key sent by device.')
             return False, "Invalid key."
 
-        return True, ProcessingConfig(auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, transcribe, keywords, doa, features, tag, diarization, embeddingsFile, topic_model, owner,sessionId,deviceId,videocartoonify)
+        return True, ProcessingConfig(auth_key, session_key, server_start, start_offset,
+                                      sample_rate, encoding, channels, transcribe, keywords,
+                                      doa, features, tag, diarization, embeddings_file,
+                                      topic_model, owner,sessionId,deviceId,videocartoonify)
 
     def is_valid_key(self):
-        return RedisSessions.get_device_key(self.auth_key) != None
-
+        return RedisSessions.get_device_key(self.auth_key) is not None
