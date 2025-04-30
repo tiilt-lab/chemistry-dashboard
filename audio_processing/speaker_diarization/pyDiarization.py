@@ -12,7 +12,6 @@ import scipy
 import torch
 import numpy as np
 from sklearn.decomposition import PCA
-import matplotlib.pyplot as plt
 from sklearn.metrics import silhouette_score
 import torchaudio
 from speechbrain.pretrained import SpeakerRecognition

@@ -24,6 +24,7 @@ from tables.api_client import APIClient
 from tables.folder import Folder
 from tables.topic_model import TopicModel
 from tables.speaker import Speaker
+from tables.speaker_transcript_metrics import SpeakerTranscriptMetrics
 
 # Saves changes made to database (models)
 def save_changes():
@@ -65,6 +66,70 @@ def update_speaker(speaker_id, alias = None):
 
 def delete_speaker(speaker_id):
     db.session.query(Speaker).filter(Speaker.id == speaker_id).delete(synchronize_session='fetch')
+    db.session.commit()
+    return True
+
+# -------------------------
+# Speaker Transcript Metrics
+# -------------------------
+
+def get_speaker_transcript_metrics(id = None, speaker_id=None, transcript_id=None, session_device_id=None, session_id=None):
+    query = db.session.query(SpeakerTranscriptMetrics)
+    if id != None:
+        return query.filter(SpeakerTranscriptMetrics.id == id).first()
+    if speaker_id != None:
+        query = query.filter(SpeakerTranscriptMetrics.speaker_id == speaker_id)
+    if transcript_id != None:
+        query = query.filter(SpeakerTranscriptMetrics.transcript_id == transcript_id)
+    if session_device_id != None:
+        query = query.join(Transcript, SpeakerTranscriptMetrics.transcript_id).filter(Transcript.session_device_id == session_device_id)
+    return query.all()
+
+def add_speaker_transcript_metrics(speaker_id, transcript_id, participation_score, internal_cohesion, responsivity, social_impact, newness, communication_density):
+    metrics = SpeakerTranscriptMetrics(speaker_id, transcript_id, participation_score, internal_cohesion, responsivity, social_impact, newness, communication_density)
+    db.session.add(metrics)
+    db.session.commit()
+    return metrics
+
+def update_speaker_transcript_metrics(id, speaker_id=None, transcript_id=None, participation_score=None, internal_cohesion=None, responsivity=None, social_impact=None, newness=None, communication_density=None):
+    metrics = get_speaker_transcript_metrics(id)
+
+    if metrics:
+        if speaker_id:
+            metrics.speaker_id = speaker_id
+        if transcript_id:
+            metrics.transcript_id = transcript_id
+        if participation_score:
+            metrics.participation_score = participation_score
+        if internal_cohesion:
+            metrics.interal_cohesion = internal_cohesion
+        if responsivity:
+            metrics.responsivity = responsivity
+        if social_impact:
+            metrics.social_impact = social_impact
+        if newness:
+            metrics.newness = newness
+        if communication_density:
+            metrics.communcation_density = communication_density
+        db.session.commit()
+        return(metrics)
+
+    return None
+
+def delete_speaker_transcript_metrics(id = None, speaker_id = None, transcript_id = None):
+    if id:
+        db.session.query(SpeakerTranscriptMetrics).filter(SpeakerTranscriptMetrics.id == id).delete(synchronize_session='fetch')
+    if speaker_id:
+        if transcript_id:
+            db.session.query(SpeakerTranscriptMetrics).filter(SpeakerTranscriptMetrics.speaker_id == speaker_id)\
+              .filter(SpeakerTranscriptMetrics.transcript_id == transcript_id)\
+                .delete(synchronize_session='fetch')
+        else:
+            db.session.query(SpeakerTranscriptMetrics).filter(SpeakerTranscriptMetrics.speaker_id == speaker_id)\
+              .delete(synchronize_session='fetch')
+    else:
+        db.session.query(SpeakerTranscriptMetrics).filter(SpeakerTranscriptMetrics.transcript_id == transcript_id)\
+          .delete(synchronize_session='fetch')
     db.session.commit()
     return True
 

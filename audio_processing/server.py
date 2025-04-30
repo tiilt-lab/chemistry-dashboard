@@ -12,9 +12,7 @@ import wave
 import scipy.signal
 import config as cf
 import numpy as np
-#import moviepy.editor as mp
 from recorder import WaveRecorder
-#from recorder import VidRecorder
 from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager
 from audio_buffer import AudioBuffer
@@ -29,6 +27,9 @@ from asr_connectors.google_asr_connector import GoogleASR
 from features_detector import features_detector
 from keyword_detector import keyword_detector
 from speaker_tagging import speaker_tagging
+from speechbrain.inference import SpeakerRecognition
+from sentence_transformers import SentenceTransformer
+import torch.multiprocessing as multiprocessing
 
 cm = ConnectionManager()
 
@@ -50,6 +51,12 @@ class ServerProtocol(WebSocketServerProtocol):
         self.speakers = None
         self.currSpeaker = None
         self.currAlias = None
+        self.diarization_model = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="pretrained_models/pretrained_ecapa")
+        self.semantic_model = SentenceTransformer("all-mpnet-base-v2")
+        self.semantic_model.share_memory()
+
+        logging.info('Loaded Diarization Model and Semantic Model...')
+
         cm.add(self)
         logging.info('New client connected...')
 
@@ -95,6 +102,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 logging.info("preparing for speaker {}'s fingerprint".format(self.currSpeaker))
         if data['type'] == 'start':
             valid, result = ProcessingConfig.from_json(data)
+            logging.info(valid)
             if not valid:
                 self.send_json({'type': 'error', 'message': result})
                 self.signal_end()
@@ -112,12 +120,6 @@ class ServerProtocol(WebSocketServerProtocol):
                     if cf.record_reduced():
                         filename = os.path.join(cf.recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
                         self.redu_recorder = WaveRecorder(filename, 16000, 2, 1)
-                '''
-                elif self.stream_data == 'video':
-                    self.video_count = 1
-                    self.filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_orig".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, str(time.ctime())))
-                    self.orig_vid_recorder = VidRecorder(self.filename,16000, 2, 1)
-                '''
                 self.signal_start()
                 self.send_json({'type':'start'})
                 logging.info('Audio process connected')
@@ -138,26 +140,6 @@ class ServerProtocol(WebSocketServerProtocol):
                 # Save audio data.
                 if cf.record_reduced():
                     self.redu_recorder.write(asr_data)
-            '''
-            elif self.stream_data == 'video':
-                self.orig_vid_recorder.write(data)
-
-                temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
-                #vidclip = mp.VideoFileClip(self.filename+'.webm')
-                subclips = vidclip.subclip((self.video_count-1)*self.interval,self.video_count*self.interval)
-                subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=16000,bitrate='50k') #nbytes=2,codec='pcm_s16le',
-
-                wavObj = wave.open(temp_aud_file+'.wav')
-                self.audio_buffer.append(self.read_bytes_from_wav(wavObj))
-                audiobyte = self.reduce_wav_channel(1,wavObj)
-                self.asr_audio_queue.put(audiobyte)
-
-                if os.path.isfile(temp_aud_file+'.wav'):
-                    os.remove(temp_aud_file+'.wav')
-
-                self.video_count = self.video_count + 1
-                logging.info('video binary recieved')
-            '''
         elif self.running and self.awaitingSpeakers:
             if self.currSpeaker:
                 new_data = self.reformat_data(data)
@@ -223,7 +205,7 @@ class ServerProtocol(WebSocketServerProtocol):
         self.asr_transcript_queue = queue.Queue()
         self.asr = GoogleASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data,self.interval)
         self.asr.start()
-        self.processor = AudioProcessor(self.audio_buffer, self.asr_transcript_queue, self.config)
+        self.processor = AudioProcessor(self.audio_buffer, self.asr_transcript_queue, self.diarization_model, self.semantic_model, self.config)
         self.processor.start()
         self.running = True
 
@@ -285,12 +267,14 @@ if __name__ == '__main__':
     logging.info('Starting Audio Processing Service...')
     features_detector.initialize()
     keyword_detector.initialize(cf.keyword_model_limit())
+
     poll_connections = task.LoopingCall(cm.check_connections)
     poll_connections.start(10.0)
     auth_connections = task.LoopingCall(cm.check_connection_authentication)
     auth_connections.start(5.0)
     factory = WebSocketServerFactory()
     factory.protocol = ServerProtocol
+
     reactor.listenTCP(9000, factory)
     logging.info('Audio Processing Service started.')
     reactor.run()
