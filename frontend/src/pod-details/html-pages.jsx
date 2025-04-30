@@ -30,7 +30,7 @@ function PodComponentPages(props) {
                     rightTextClick={() => props.openDialog("Options")}
                     nav={props.navigateToSession}
                 />
-                <div className="relative box-border flex grow flex-col-reverse overflow-hidden sm:flex-row items-stretch content-stretch">
+                <div className="toolbar-view-container">
                     {props.session ? (
                         <AppSessionToolbar
                             session={props.session}

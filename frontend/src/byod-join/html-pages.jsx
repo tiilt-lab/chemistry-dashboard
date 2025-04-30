@@ -172,22 +172,22 @@ function ByodJoinPage(props) {
                             !props.speakersValidated && (
                                 <React.Fragment>
                                     <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto text-center">
-                                        <div className="w-[400px] lg:w-3xl px-2">
+                                        <div className="w-[400px] px-2 lg:w-3xl">
                                             <div className="my-1.5 font-sans text-base/loose font-medium text-[#727278]">
                                                 Please add a Speaker Fingerprint
                                                 for each speaker
                                             </div>
                                             <div className="my-1.5 font-sans text-xs/normal font-normal text-[#727278]">
-                                                Each speaker must record and temporarily save a short 3-5
+                                                Each speaker must record and
+                                                temporarily save a short 3-5
                                                 second sample of their voice.
                                                 This is used to track each
                                                 speaker's metrics throughout a
-                                                discussion and is deleted upon ending the discussion.
+                                                discussion and is deleted upon
+                                                ending the discussion.
                                             </div>
                                         </div>
-                                        <div
-                                            className="w-[400px] h-fit mt-2"
-                                        >
+                                        <div className="mt-2 h-fit w-[400px]">
                                             {!props.speakers && (
                                                 <div
                                                     className={
@@ -343,7 +343,7 @@ function ByodJoinPage(props) {
                             props.authenticated &&
                             props.speakersValidated && (
                                 <>
-                                    <div className="relative box-border flex grow flex-col-reverse content-stretch items-stretch overflow-hidden sm:flex-row">
+                                    <div className="toolbar-view-container">
                                         {props.session ? (
                                             <AppSessionToolbar
                                                 session={props.session}

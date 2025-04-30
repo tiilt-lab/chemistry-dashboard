@@ -31,6 +31,10 @@ html {
     @apply font-sans text-lg font-bold text-[#6466E3];
 }
 
+.toolbar-view-container {
+    @apply relative box-border flex grow flex-col-reverse content-stretch items-stretch overflow-hidden sm:flex-row
+}
+
 .center-column-container {
     @apply @container relative box-border flex grow overflow-y-auto flex-col min-w-[320px];
 }
