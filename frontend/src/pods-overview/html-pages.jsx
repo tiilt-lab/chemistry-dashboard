@@ -27,7 +27,7 @@ function PodsOverviewPages(props) {
                     }}
                     nav={props.navigateToSessions}
                 />
-                <div className="relative flex grow flex-col-reverse sm:flex-row">
+                <div className="toolbar-view-container">
                     {props.session !== null ? (
                         <AppSessionToolbar
                             session={props.session}
@@ -46,7 +46,7 @@ function PodsOverviewPages(props) {
                     ) : (
                         <></>
                     )}
-                    <div className="infographics-container grow overflow-y-auto mt-2">
+                    <div className="infographics-container mt-2 grow overflow-y-auto">
                         {props.sessionDevices === null ? (
                             <div className={style["load-text"]}>Loading...</div>
                         ) : (
