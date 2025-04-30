@@ -44,7 +44,7 @@ html {
 }
 
 .small-section {
-    @apply w-xs @sm:w-sm @5xl:w-lg @6xl:w-xl @7xl:w-4xl
+    @apply w-xs @sm:w-sm @6xl:w-xl
 }
 
 .wide-section {
