@@ -14,6 +14,7 @@ function AppInfographicsIndividual(props) {
         <>
             {props.speakers && (
                 <div className="infographics-container">
+                    <div className="wide-section justify-center">
                     <select
                         id="speaker1"
                         className={style["dropdown-input"]}
@@ -32,6 +33,7 @@ function AppInfographicsIndividual(props) {
                             </option>
                         ))}
                     </select>
+                    </div>
                     {props.showBoxes.length > 0 &&
                         props.showBoxes[0]["clicked"] && (
                             <AppSectionBoxComponent

@@ -15,7 +15,7 @@ function AppInfographicsComparison(props) {
         <>
             {props.speakers && (
                 <div className="infographics-container">
-                    <div className="wide-section justify-between text-center">
+                    <div className="wide-section justify-between">
                         <select
                             id="speaker1"
                             className={style["dropdown-input"]}
