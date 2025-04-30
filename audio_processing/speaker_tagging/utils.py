@@ -3,7 +3,6 @@ import scipy
 import librosa
 import datetime
 import numpy as np
-from colorama import Fore
 from collections import OrderedDict
 from sklearn.metrics.pairwise import cosine_similarity
 

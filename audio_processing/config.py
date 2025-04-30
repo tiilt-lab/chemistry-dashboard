@@ -56,3 +56,6 @@ def cartoonize_image_callback():
 
 def root_dir():
     return str(config['rootpath']['root_dir'])
+
+def speaker_metrics_callback():
+    return str(config['output']['speaker_metrics_callback'])

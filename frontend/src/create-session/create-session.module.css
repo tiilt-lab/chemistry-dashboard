@@ -1272,6 +1272,7 @@
 
 .keywords-selected {
   border-color: #7878FA;
+  border-width: medium;
 }
 
 .dialog-window {
@@ -1284,6 +1285,7 @@
 
 .selected-pod {
   border-color: #7878FA !important;
+  border-width: medium;
 }
 
 .disabled {

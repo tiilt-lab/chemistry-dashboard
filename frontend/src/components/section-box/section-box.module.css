@@ -183,6 +183,28 @@
   margin-top: 15px;
 }
 
+.pod-overview-container .comparison-container {
+  display: flex !important;
+  justify-content: space-between !important;
+  flex-direction: row !important;
+}
+
+.pod-overview-container .comparison-column {
+  flex: 1 !important;
+  margin: 0 10px !important;
+}
+
+.pod_overview-container-large__+DaY+ {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden; /* Prevent overflow */
+}
+
 .svgpulse {
   -webkit-animation: svgpulse 1s ease-out infinite;
           animation: svgpulse 1s ease-out infinite;
@@ -268,7 +290,7 @@
 }
 
 .container {
-  -webkit-box-orient: vertical;
+  -webkit-box-orient: horizontal;
   -webkit-box-direction: normal;
       -ms-flex-direction: column;
           flex-direction: column;
@@ -600,9 +622,25 @@
   font-weight: 700;
   font-size: 17px;
   line-height: 24px;
-  color: #2B2B2E;
+  color: #ffffff;
+  background-color: #375faf; /* Add background color to match the section container */
+  border: 1px solid rgba(218, 220, 231, 0.15); /* Add border */
+  border-radius: 4px; /* Add border radius */
   margin: 0 0 12px 0;
-  font-weight: bold;
-  padding-left: 16px;
+  padding: 0 12px; /* Add padding */
+  cursor: pointer; /* Add cursor pointer to indicate it's clickable */
+}
+
+.comparison-container {
+  display: flex !important;
+  justify-content: space-between !important;
+  flex-direction: row !important;
+}
+
+.comparison-column {
+  flex: 1;
+  min-width: 300px; /* Ensure columns don't get too narrow */
+  margin: 0 10px;
+  overflow: auto; /* Allow scrolling within the column if needed */
 }
 /*# sourceMappingURL=section-box.module.css.map */

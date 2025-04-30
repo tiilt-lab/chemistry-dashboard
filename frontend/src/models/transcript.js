@@ -19,8 +19,9 @@ export class TranscriptModel {
   speaker_tag;
   topic_id;
   speaker_id;
+  speaker_metrics;
 
-  static fromJson(json) {
+  static fromJson(json, speaker_metrics) {
     const model = new TranscriptModel();
     model.id = json["id"];
     model.session_device_id = json["session_device_id"];
@@ -40,6 +41,7 @@ export class TranscriptModel {
     model.speaker_id = json["speaker_id"];
     model.keywords = KeywordUsageModel.fromJsonList(json["keywords"]);
     model.keywords.forEach((k) => (k.transcript_id = model.id));
+    model.speaker_metrics = speaker_metrics;
     return model;
   }
 
