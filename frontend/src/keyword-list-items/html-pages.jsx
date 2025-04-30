@@ -38,7 +38,7 @@ function KeywordListPages(props) {
               </div>
               ))}
             </div>
-            <button className="large-button" onClick={props.addNewKeyword}>Add Keyword</button>
+            <button className="wide-button" onClick={props.addNewKeyword}>Add Keyword</button>
           </React.Fragment>
           :
           <></>

@@ -89,7 +89,6 @@ class AudioProcessor:
         self.speaker_metrics_process.join()
         self.speaker_metrics_process.close()
         '''
-        logging.info(self.config.diarization)
         if self.config.diarization:
             try:
                 self.send_speaker_taggings()
@@ -101,7 +100,6 @@ class AudioProcessor:
     def setSpeakerFingerprints(self, fingerprints):
         self.fingerprints = fingerprints
         logging.info("Set Speakers")
-        logging.info(fingerprints)
         self.speaker_metrics_process.setSpeakers(self.fingerprints)
 
     def send_speaker_taggings(self):

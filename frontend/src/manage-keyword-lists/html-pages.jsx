@@ -71,7 +71,7 @@ function KeywordListPage(props) {
         </div>
         <div>
           <button
-            className="large-button"
+            className="wide-button"
             onClick={props.openNewKeywordList}
           >
             {" "}
@@ -80,7 +80,7 @@ function KeywordListPage(props) {
         </div>
         <div>
           <button
-            className="large-button"
+            className="wide-button"
             onClick={props.createTopicModel}
           >
             {" "}
