@@ -27,7 +27,7 @@ function PodsOverviewPages(props) {
                     }}
                     nav={props.navigateToSessions}
                 />
-                <div className="relative flex h-11/12 flex-col-reverse sm:flex-row">
+                <div className="relative flex grow flex-col-reverse sm:flex-row">
                     {props.session !== null ? (
                         <AppSessionToolbar
                             session={props.session}
