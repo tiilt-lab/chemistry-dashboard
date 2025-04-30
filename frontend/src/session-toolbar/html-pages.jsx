@@ -21,7 +21,7 @@ function AppSessionPage(props) {
                     {props.menus && props.menus.length ? (
                         props.menus.map((menu, index) => (
                             <button
-                                className="basic-button"
+                                className="toolbar-button"
                                 onClick={menu.action}
                             >{`${menu.title}`}</button>
                         ))

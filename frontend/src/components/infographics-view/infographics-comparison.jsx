@@ -15,43 +15,51 @@ function AppInfographicsComparison(props) {
         <>
             {props.speakers && (
                 <div className="infographics-container">
-                    <select
-                        id="speaker1"
-                        className={style["dropdown-input"]}
-                        style={{ width: adjDim(350) + "px" }}
-                        value={props.selectedSpkrId1}
-                        onChange={(e) =>
-                            props.setSelectedSpkrId1(
-                                parseInt(e.target.value, 10),
-                            )
-                        }
-                    >
-                        <option value="-1">Group</option>
-                        {props.speakers.map((speaker) => (
-                            <option key={speaker["id"]} value={speaker["id"]}>
-                                {speaker["alias"]}
-                            </option>
-                        ))}
-                    </select>
+                    <div className="wide-section justify-between text-center">
+                        <select
+                            id="speaker1"
+                            className={style["dropdown-input"]}
+                            style={{ width: adjDim(350) + "px" }}
+                            value={props.selectedSpkrId1}
+                            onChange={(e) =>
+                                props.setSelectedSpkrId1(
+                                    parseInt(e.target.value, 10),
+                                )
+                            }
+                        >
+                            <option value="-1">Group</option>
+                            {props.speakers.map((speaker) => (
+                                <option
+                                    key={speaker["id"]}
+                                    value={speaker["id"]}
+                                >
+                                    {speaker["alias"]}
+                                </option>
+                            ))}
+                        </select>
 
-                    <select
-                        id="speaker2"
-                        className={style["dropdown-input"]}
-                        style={{ width: adjDim(350) + "px" }}
-                        value={props.selectedSpkrId2}
-                        onChange={(e) =>
-                            props.setSelectedSpkrId2(
-                                parseInt(e.target.value, 10),
-                            )
-                        }
-                    >
-                        <option value="-1">Group</option>
-                        {props.speakers.map((speaker) => (
-                            <option key={speaker["id"]} value={speaker["id"]}>
-                                {speaker["alias"]}
-                            </option>
-                        ))}
-                    </select>
+                        <select
+                            id="speaker2"
+                            className={style["dropdown-input"]}
+                            style={{ width: adjDim(350) + "px" }}
+                            value={props.selectedSpkrId2}
+                            onChange={(e) =>
+                                props.setSelectedSpkrId2(
+                                    parseInt(e.target.value, 10),
+                                )
+                            }
+                        >
+                            <option value="-1">Group</option>
+                            {props.speakers.map((speaker) => (
+                                <option
+                                    key={speaker["id"]}
+                                    value={speaker["id"]}
+                                >
+                                    {speaker["alias"]}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                     {props.showBoxes.length > 0 &&
                         props.showBoxes[0]["clicked"] && (
                             <AppSectionBoxComponent

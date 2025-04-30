@@ -155,7 +155,7 @@ function RadarPage(props) {
 
   return (
     <div
-      className="relative w-sm h-min"
+      className="relative small-section h-min"
     >
       <svg ref={ref} width={width} height={height + margin * 2}></svg>
     </div>

@@ -9,7 +9,7 @@ function AppKeywordsPage(props) {
     return (
         <>
             <div
-                className="min-h-20 w-sm"
+                className="min-h-20 small-section"
             >
                 {!props.showGraph ? (
                     <React.Fragment>
@@ -108,11 +108,11 @@ function AppKeywordsPage(props) {
                 )}
                 <img
                     onClick={() => props.toggleDisplay(true)}
-                    className="absolute top-0 left-0 mt-2.5 cursor-pointer"
+                    className="absolute top-0 left-0 mt-3.5 ml-1 cursor-pointer"
                     alt="question"
                     src={questIcon}
                 />
-                <div className="absolute top-0 right-0 mt-2.5 cursor-pointer">
+                <div className="absolute top-0 right-0 mt-3.5 mr-1 cursor-pointer">
                     <AppContextMenu setcallback={props.setCallbackFunc}>
                         <div
                             className="mt-2.5"
