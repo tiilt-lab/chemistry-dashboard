@@ -12,7 +12,7 @@ import { adjDim } from "../myhooks/custom-hooks"
 function DiscussionSessionPage(props) {
     return (
         <>
-            <div className={style.container}>
+            <div className="main-container items-center">
                 <Appheader
                     title={"Manage Discussions"}
                     leftText={false}

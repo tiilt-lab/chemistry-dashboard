@@ -21,7 +21,7 @@ function AppSessionPage(props) {
                     {props.menus && props.menus.length ? (
                         props.menus.map((menu, index) => (
                             <button
-                                className="m-0.5 box-border w-19 cursor-pointer rounded-4xl border bg-gradient-to-r from-[#764BFF] to-[#7BB7F1] px-1 py-2 text-center font-sans text-xs/normal font-normal text-[#FAFAFC] transition-shadow hover:shadow-2xl focus:border-[#301f66] focus:ring focus:outline-none active:bg-[#573dac] sm:m-3 sm:w-33 sm:text-base/loose"
+                                className="basic-button"
                                 onClick={menu.action}
                             >{`${menu.title}`}</button>
                         ))

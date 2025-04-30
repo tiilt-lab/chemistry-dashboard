@@ -10,7 +10,7 @@ function KeywordListPage(props) {
     props.keywordLists !== undefined ? props.keywordLists : [];
   return (
     <>
-      <div className={style.container}>
+      <div className="main-container items-center">
         <Appheader
           title={"Manage Keyword Lists"}
           leftText={false}
@@ -18,7 +18,7 @@ function KeywordListPage(props) {
           rightEnabled={false}
           nav={props.navigate}
         />
-        <div className={style["list-container"]}>
+        <div className="center-column-container">
           {!props.keywordLists ? (
             <div className={style["load-text onload"]}>Loading...</div>
           ) : (
@@ -71,11 +71,7 @@ function KeywordListPage(props) {
         </div>
         <div>
           <button
-            className={
-              isLargeScreen()
-                ? `${style["basic-button"]} ${style["medium-button"]}`
-                : `${style["basic-button"]} ${style["small-button"]}`
-            }
+            className="large-button"
             onClick={props.openNewKeywordList}
           >
             {" "}
@@ -84,11 +80,7 @@ function KeywordListPage(props) {
         </div>
         <div>
           <button
-            className={
-              isLargeScreen()
-                ? `${style["basic-button"]} ${style["medium-button"]}`
-                : `${style["basic-button"]} ${style["small-button"]}`
-            }
+            className="large-button"
             onClick={props.createTopicModel}
           >
             {" "}

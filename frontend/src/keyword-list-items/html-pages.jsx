@@ -8,7 +8,7 @@ import { isLargeScreen } from '../myhooks/custom-hooks';
 function KeywordListPages(props) {
 
   return (
-    <div className={style.container}>
+    <div className='main-container items-center justify-stretch'>
       <Appheader
         title={"Manage Keyword Lists"}
         leftText={"Cancel"}
@@ -38,7 +38,7 @@ function KeywordListPages(props) {
               </div>
               ))}
             </div>
-            <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={props.addNewKeyword}>Add Keyword</button>
+            <button className="large-button" onClick={props.addNewKeyword}>Add Keyword</button>
           </React.Fragment>
           :
           <></>
