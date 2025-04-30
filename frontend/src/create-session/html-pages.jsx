@@ -6,7 +6,7 @@ import style from "./create-session.module.css";
 import style2 from "../dialog/dialog.module.css";
 import openFolderIcon from "../assets/img/open-folder.svg";
 import podIcon from "../assets/img/icon-pod.svg";
-import LightIcon from "~/Icons/Light";
+import LightIcon from "@icons/Light";
 import { adjDim } from "../myhooks/custom-hooks";
 
 function CreateSessionPage(props) {

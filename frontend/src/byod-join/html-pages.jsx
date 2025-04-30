@@ -19,7 +19,8 @@ import style2 from "../pod-details/pod.module.css"
 import style3 from "../manage-keyword-lists/manage-keyword-lists.module.css"
 import style4 from "../components/context-menu/context-menu.module.css"
 import style5 from "../sessions/sessions.module.css"
-import MicIcon from "~/Icons/Mic"
+import MicIcon from "@icons/Mic"
+import Checkmark from "@assets/img/checkmark.svg"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
 import { AppInfographicsGroup } from "../components/infographics-view/infographics-group"
@@ -136,11 +137,7 @@ function ByodJoinPage(props) {
                                         </select>
                                     </div>
                                     <button
-                                        className={
-                                            isLargeScreen()
-                                                ? `${style["basic-button"]} ${style["medium-button"]}`
-                                                : `${style["basic-button"]} ${style["small-button"]}`
-                                        }
+                                        className="wide-button"
                                         onClick={() =>
                                             props.verifyInputAndAudio(
                                                 document
@@ -172,7 +169,7 @@ function ByodJoinPage(props) {
                             !props.speakersValidated && (
                                 <React.Fragment>
                                     <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto text-center">
-                                        <div className="w-[400px] px-2 lg:w-3xl">
+                                        <div className="w-[300px] px-2 sm:w-[400px] lg:w-3xl">
                                             <div className="my-1.5 font-sans text-base/loose font-medium text-[#727278]">
                                                 Please add a Speaker Fingerprint
                                                 for each speaker
@@ -187,7 +184,7 @@ function ByodJoinPage(props) {
                                                 ending the discussion.
                                             </div>
                                         </div>
-                                        <div className="mt-2 h-fit w-[400px]">
+                                        <div className="mt-2 h-fit w-[300px] sm:w-[400px] lg:w-3xl">
                                             {!props.speakers && (
                                                 <div
                                                     className={
@@ -239,12 +236,15 @@ function ByodJoinPage(props) {
                                                 (speaker, count) => (
                                                     <div
                                                         key={"speaker" + count}
-                                                        className={
-                                                            style3[
-                                                                "keyword-list-button"
-                                                            ]
-                                                        }
+                                                        className="my-3 flex flex-row items-center justify-between rounded-md border px-2 py-2"
                                                     >
+                                                        {speaker.fingerprinted && (
+                                                            <img
+                                                                className="h-8 w-8"
+                                                                alt="question"
+                                                                src={Checkmark}
+                                                            />
+                                                        )}
                                                         <div
                                                             className={
                                                                 style3[
@@ -253,32 +253,11 @@ function ByodJoinPage(props) {
                                                             }
                                                             onClick={() => {}}
                                                         ></div>
-                                                        <div
-                                                            className={
-                                                                style3[
-                                                                    "keyword-list-header"
-                                                                ]
-                                                            }
-                                                        >
-                                                            <div
-                                                                className={
-                                                                    style3.title
-                                                                }
-                                                            >
+                                                        <div className="flew-row flex grow text-center">
+                                                            <div className="grow font-sans text-lg/loose font-bold text-[#58585C]">
                                                                 {speaker.alias}
                                                             </div>
                                                         </div>
-                                                        {speaker.fingerprinted && (
-                                                            <div
-                                                                className={
-                                                                    style3[
-                                                                        "keyword-list-keywords"
-                                                                    ]
-                                                                }
-                                                            >
-                                                                RECORDED!
-                                                            </div>
-                                                        )}
                                                         <AppContextMenu
                                                             className={
                                                                 style3[
@@ -316,21 +295,7 @@ function ByodJoinPage(props) {
                                         </div>
                                         <div>
                                             <button
-                                                className={
-                                                    isLargeScreen()
-                                                        ? `${style3["basic-button"]} ${style3["medium-button"]}`
-                                                        : `${style3["basic-button"]} ${style3["small-button"]}`
-                                                }
-                                            >
-                                                {" "}
-                                                Add Speaker
-                                            </button>
-                                            <button
-                                                className={
-                                                    isLargeScreen()
-                                                        ? `${style3["basic-button"]} ${style3["medium-button"]}`
-                                                        : `${style3["basic-button"]} ${style3["small-button"]}`
-                                                }
+                                                className="wide-button"
                                                 onClick={props.confirmSpeakers}
                                             >
                                                 Join Discussion
@@ -715,7 +680,10 @@ function ByodJoinPage(props) {
                         </div>
                     )) ||
                     (props.currentForm === "fingerprintAudio" && (
-                        <div className={style2["dialog-content"]}>
+                        <div className="min-w-{300px} flex h-60 flex-col items-center justify-around text-center sm:h-70">
+                            <div className="sans text-base/normal sm:text-xl/loose font-bold">
+                                Record Speaker Fingerprint:
+                            </div>
                             <VoiceRecorder
                                 onAudioDownload={props.saveAudioFingerprint}
                                 downloadable={false}
@@ -725,10 +693,10 @@ function ByodJoinPage(props) {
                                     "margin-right": "auto",
                                     "margin-left": "auto",
                                 }}
-                                controllerContainerStyle={{ height: "10em" }}
+                                controllerContainerStyle={{ height: "3rem" }}
                             />
                             <button
-                                className={style2["basic-button"]}
+                                className="toolbar-button"
                                 onClick={props.addSpeakerFingerprint}
                             >
                                 Confirm
@@ -799,6 +767,14 @@ function ByodJoinPage(props) {
                 heading={"Failed to Join"}
                 message={props.displayText}
                 show={props.currentForm === "JoinError"}
+                closedialog={props.closeDialog}
+            />
+
+            <DialogBox
+                itsclass={"add-dialog"}
+                heading={"Missing Speaker Fingerprints"}
+                message={props.displayText}
+                show={props.currentForm === "FingerprintingError"}
                 closedialog={props.closeDialog}
             />
 

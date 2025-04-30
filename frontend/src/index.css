@@ -24,7 +24,7 @@ html {
     @apply m-0.5 box-border w-19 cursor-pointer rounded-4xl border bg-gradient-to-r from-[#764BFF] to-[#7BB7F1] px-1 py-2 text-center font-sans text-xs/normal font-normal text-[#FAFAFC] transition-shadow hover:shadow-2xl focus:border-[#301f66] focus:ring focus:outline-none active:bg-[#573dac] sm:m-2 sm:w-40 sm:text-sm/normal
 }
 
-.large-button {
+.wide-button {
     @apply m-0.5 box-border w-60 cursor-pointer rounded-4xl border bg-gradient-to-r from-[#764BFF] to-[#7BB7F1] px-1 py-2 text-center font-sans text-lg/relaxed font-normal text-[#FAFAFC] transition-shadow hover:shadow-2xl focus:border-[#301f66] focus:ring focus:outline-none active:bg-[#573dac] sm:m-3 sm:w-80 sm:text-xl/loose
 }
 .text-sans {

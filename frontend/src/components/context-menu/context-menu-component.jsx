@@ -1,5 +1,5 @@
 import style from './context-menu.module.css';
-import OptionIcon from "~/Icons/IconKebab";
+import OptionIcon from "@icons/IconKebab";
 import { useState, useEffect, useRef } from 'react';
 import React from 'react';
 import { useLocation } from 'react-router-dom';
