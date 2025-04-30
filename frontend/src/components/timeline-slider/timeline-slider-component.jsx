@@ -113,10 +113,10 @@ function AppTimelineSlider(props) {
   };
 
   return (
-    <div className="flex flex-row h-14 relative px-5 w-sm md:w-xl lg:w-3xl xl:w-5xl 2xl:w-6xl box-border">
+    <div className="wide-section h-14">
       <div
         className={style["timeline-background"]}
-        style={{ width: (TIMELINE_WIDTH-2*HANDLE_WIDTH) + "%" }}
+        style={{ width: "97%" }}
         ref={timelineBackgroundRef}
       ></div>
       <div
