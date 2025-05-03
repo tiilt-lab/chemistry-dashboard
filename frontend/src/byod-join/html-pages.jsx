@@ -484,17 +484,7 @@ function ByodJoinPage(props) {
                                                             width="150"
                                                             height="80"
                                                             src={
-                                                                props.videoApiEndpoint +
-                                                                "api/v1/sessions/" +
-                                                                props.session
-                                                                    .id +
-                                                                "/devices/" +
-                                                                props
-                                                                    .sessionDevice
-                                                                    .id +
-                                                                "/auth/" +
-                                                                props.authKey +
-                                                                "/streamimages"
+                                                                props.cartoonImgUrl
                                                             }
                                                         />
                                                     </div>
@@ -681,7 +671,7 @@ function ByodJoinPage(props) {
                     )) ||
                     (props.currentForm === "fingerprintAudio" && (
                         <div className="min-w-{300px} flex h-60 flex-col items-center justify-around text-center sm:h-70">
-                            <div className="sans text-base/normal sm:text-xl/loose font-bold">
+                            <div className="sans text-base/normal font-bold sm:text-xl/loose">
                                 Record Speaker Fingerprint:
                             </div>
                             <VoiceRecorder

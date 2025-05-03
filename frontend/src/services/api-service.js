@@ -16,44 +16,21 @@ export class ApiService {
         return window.location.protocol + "//" + window.location.host + "/"
     }
 
-    getVideoServerEndpoint() {
-        //   return (
-        //     "http://129.105.44.121:8080/"
-        //   );
-        return "https://video.tiilt-blinc.com"
-    }
+  getVideoServerEndpoint() {
+    return (
+      "https://video.tiilt-blinc.com/"
+    );
+    
+  }
 
-    getAudioWebsocketEndpoint() {
-        return (
-            this.getWSSProtocol() +
-            "//" +
-            // window.location.host.split(":")[0] +
-            window.location.host +
-            "/audio_socket"
-        )
-    }
+  getAudioWebsocketEndpoint() {
+    return (
+      this.getWSSProtocol() +
+      "//" +window.location.host +"/audio_socket"
+    );
+  }
 
-    getVideoWebsocketEndpoint() {
-        // return (
-        //   "ws://129.105.44.121:8080/video_socket"
-        // );
-        return window.location.protocol + "//" + window.location.host + "/"
-    }
-
-    getAudioWebsocketEndpoint() {
-        return (
-            this.getWSSProtocol() +
-            "//" +
-            // window.location.host.split(":")[0] +
-            window.location.host +
-            "/audio_socket"
-        )
-    }
-
-    getVideoWebsocketEndpoint() {
-    //   return (
-    //     "ws://129.105.44.121:8080/video_socket"
-    //   );
+  getVideoWebsocketEndpoint() {
     return (
       "wss://video.tiilt-blinc.com/video_socket"
     );
