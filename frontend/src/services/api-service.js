@@ -12,11 +12,8 @@ export class ApiService {
   }
 
   getVideoServerEndpoint() {
-    // return (
-    //   "http://129.105.44.121:8080/"
-    // );
     return (
-      "https://video.tiilt-blinc.com"
+      "https://video.tiilt-blinc.com/"
     );
     
   }
@@ -24,18 +21,11 @@ export class ApiService {
   getAudioWebsocketEndpoint() {
     return (
       this.getWSSProtocol() +
-      "//" +
-      // window.location.host.split(":")[0] +
-      window.location.host +
-      "/audio_socket"
+      "//" +window.location.host +"/audio_socket"
     );
   }
 
   getVideoWebsocketEndpoint() {
-    // return (
-    //   "ws://129.105.44.121:8080/video_socket"
-    // );
-
     return (
 
       "wss://video.tiilt-blinc.com/video_socket"

@@ -6,6 +6,7 @@ import { SessionModel } from '../models/session';
 import { SessionDeviceModel } from '../models/session-device';
 import { ApiService } from '../services/api-service';
 import fixWebmDuration from "fix-webm-duration"
+import { range } from 'underscore';
 
 
 
@@ -26,7 +27,11 @@ function JoinPage() {
     const [source, setSource] = useState(null);
     const [ending, setEnding] = useState({ value: false });
     const [reconnectCounter, setReconnectCounter] = useState(0);
-
+    const [frameBuffer, setFrameBuffer] = useState([]); // Buffer for cartoonized frames
+    const [frameBufferLength, setFrameBufferLength] = useState(0);
+    const [cartoonImgUrl, setCartoonImgUrl] = useState("");
+    const [cartoonImgBatch, setCartoonImgBatch] = useState(1);
+    const [renderingStarted, setRenderingStarted] = useState(false)
     // Session data
     const [sessionDevice, setSessionDevice] = useState(null);
     const [session, setSession] = useState(null);
@@ -62,13 +67,7 @@ function JoinPage() {
 
     let wakeLock;
 
-    useEffect(() => {
-        if (source !== null && audioContext !== null && name != "" && pcode != "") {
-            requestAccessKey(name, pcode);
-        }
-
-    }, [source, audioContext, name, pcode])
-
+    //Use effect for audio websocket duplex communication
     useEffect(() => {
         if (audiows != null) {
             console.log('called connect_audio_processor_service')
@@ -79,6 +78,7 @@ function JoinPage() {
 
     }, [audiows])
 
+    //Use effect for video websocket duplex communication
     useEffect(() => {
         
         if (videows != null) {
@@ -88,6 +88,16 @@ function JoinPage() {
 
     }, [videows])
 
+    //Use effect to validate passcode when joining with audio access
+    useEffect(() => {
+        if (source !== null && audioContext !== null && name != "" && pcode != "") {
+            requestAccessKey(name, pcode);
+        }
+
+    }, [source, audioContext, name, pcode])
+
+
+    //Use effect to validate passcode when joining with video access
     useEffect(() => {
         if (mediaRecorder !== null && (joinwith === 'Video' || joinwith ==='Videocartoonify')) {
             requestAccessKey(name, pcode);
@@ -96,8 +106,11 @@ function JoinPage() {
     }, [mediaRecorder,reconnectCounter, joinwith])
 
 
+    //Use effect to intermetently reload the transcript
     useEffect(() => {
         let intervalLoad
+
+        // fetch the transcript   
         if (session !== null && sessionDevice !== null) {
             fetchTranscript(sessionDevice.id)
 
@@ -113,7 +126,7 @@ function JoinPage() {
 
     }, [session, sessionDevice])
 
-
+    //Use effect to intermetently display the transcript
     useEffect(() => {
         if (session !== null) {
             const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
@@ -125,7 +138,7 @@ function JoinPage() {
         }
     }, [endTime])
 
-
+    //Use effect to start audio and video processing
     useEffect(() => {
         if(audioconnected && !videoconnected){
             requestStartAudioProcessing();
@@ -135,6 +148,7 @@ function JoinPage() {
         }
     }, [audioconnected,videoconnected])
 
+    //Use effect to start the camera and microphone for video and audio capturing
     useEffect(() => {
         if(authenticated){
         const loadWorklet = async () => {
@@ -173,6 +187,7 @@ function JoinPage() {
     }
     }, [authenticated])
 
+    //Use effect to toggle video view pane
     useEffect(() => {
         if (preview) {
             setPreviewLabel("Turn Off Preview")
@@ -180,6 +195,12 @@ function JoinPage() {
             setPreviewLabel("Turn On Preview")
         }
     }, [preview])
+
+    //Use effect to display processed cartoonized image
+    useEffect(() => {
+        console.log('inside renderframe buffer useeffect ', frameBufferLength)
+        renderFrameFromBuffer()
+    }, [frameBufferLength])
 
     // Disconnects from websocket server and audio stream.
     const disconnect = (permanent = false) => {
@@ -451,7 +472,7 @@ function JoinPage() {
 
     // Connects to video processor websocket server.
     const connect_video_processor_service = () => {
-        videows.binaryType = 'arraybuffer';
+        videows.binaryType = 'blob';
 
         videows.onopen = e => {
             console.log('[Connected to video processor services]');
@@ -459,18 +480,39 @@ function JoinPage() {
         };
 
         videows.onmessage = e => {
-            const message = JSON.parse(e.data);
-            if (message['type'] === 'start') {
-                setAuthenticated(true);
-                closeDialog();
-            } else if (message['type'] === 'error') {
-                disconnect(true);
-                setDisplayText('The connection to the session has been closed by the server.');
-                setCurrentForm('ClosedSession');
-            } else if (message['type'] === 'end') {
-                disconnect(true);
-                setDisplayText('The session has been closed by the owner.');
-                setCurrentForm('ClosedSession');
+           if (typeof e.data === 'string'){
+                const message = JSON.parse(e.data);
+                if (message['type'] === 'start') {
+                    setAuthenticated(true);
+                    closeDialog();
+                }else if(message['type'] === 'attention_data'){
+
+                }else if (message['type'] === 'error') {
+                    disconnect(true);
+                    setDisplayText('The connection to the session has been closed by the server.');
+                    setCurrentForm('ClosedSession');
+                } else if (message['type'] === 'end') {
+                    disconnect(true);
+                    setDisplayText('The session has been closed by the owner.');
+                    setCurrentForm('ClosedSession');
+                }
+            }else if (e.data instanceof Blob){
+                const url = URL.createObjectURL(e.data);
+                // Add the processed frame to the buffer
+                
+                setFrameBuffer(prevBuffer =>{
+                        const newItems = [...prevBuffer, url]
+                        if (newItems.length % 40 == 0) {
+                            setFrameBufferLength(newItems.length)
+                            // setCartoonImgBatch(prevCount => prevCount + 1)
+                            // setFrameBufferLength(prevCount => prevCount + 1)
+                        }
+                        
+                        return newItems
+                    } 
+                );
+
+                setRenderingStarted(true)
             }
         };
 
@@ -600,6 +642,24 @@ function JoinPage() {
 
     }
 
+    //function to render the cartoonized image
+    const renderFrameFromBuffer = () => {
+        console.log('frameBufferLength = ', frameBufferLength,' cartoonImgBatch = ', cartoonImgBatch)
+        if (frameBufferLength > (40 * cartoonImgBatch)) {
+            for (var i = (cartoonImgBatch-1)*40; i < cartoonImgBatch*40; i++){
+                
+                setInterval(() => {
+                    setCartoonImgUrl(frameBuffer[i]);
+                    console.log('i called setcartoonimgurl ', i)
+                }, 500)
+                
+            }    
+            setCartoonImgBatch(prevCount => prevCount + 1)
+          
+        } 
+
+      }
+
     const ResetTimeRange = (values) => {
         if (session !== null) {
             const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
@@ -724,7 +784,7 @@ function JoinPage() {
                         openDialog={openDialog}
                         setCurrentForm = {setCurrentForm}
                         videoApiEndpoint = {apiService.getVideoServerEndpoint()}
-
+                        cartoonImgUrl = {cartoonImgUrl}
                         authKey = {key}
 
                     />
