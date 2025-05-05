@@ -1,34 +1,79 @@
-import styles from './session-feedback-form.module.css';
+import React, { useState } from 'react';
 import { AppSpinner } from '../spinner/spinner-component';
 import { GenericDialogBox } from '../dialog/dialog-component';
 import { Appheader } from '../header/header-component';
-import React from 'react';
+import styles from './session-feedback-form.module.css';
 
-function FeedbackFormPage({ loading, sessionId, onClose }) {
+function FeedbackFormPage({ sessionId, questions = [], onSubmit }) {
+    const [responses, setResponses] = useState({});
+    const [submitted, setSubmitted] = useState(false);
+
+    const handleInputChange = (id, value) => {
+        setResponses((prev) => ({ ...prev, [id]: value }));
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (onSubmit) {
+            onSubmit({ sessionId, responses });
+        } else {
+            console.log({ sessionId, responses });
+        }
+        setSubmitted(true);
+    };
+
     return (
         <>
-            <div className={styles.feedbackPage}>
-                {loading ? (
-                    <div className={styles.loadingContainer}>
-                        <AppSpinner />
-                        <p>Loading feedback form...</p>
+            <Appheader
+                title="Session Feedback"
+                leftText={false}
+                rightText=""
+                rightEnabled={false}
+                nav={() => window.history.back()}
+            />
+            <div className={styles["feedbackContainer"]}>
+                {submitted ? (
+                    <div className={styles["thankYouMessage"]}>
+                        <h2>Thank you for your feedback!</h2>
+                        <p>We appreciate your time.</p>
                     </div>
                 ) : (
-                    <div className={styles.formContainer}>
-                        <p>Scan the QR code to provide feedback on your phone:</p>
-                        <div className={styles.qrCodeWrapper}>
-                            <img
-                                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${window.location.origin}/feedback-form/${sessionId}`}
-                                alt="Feedback QR Code"
-                            />
-                        </div>
-                        <p>or <a href={`/feedback-form/${sessionId}`} target="_blank" rel="noopener noreferrer">click here</a> to fill out the form.</p>
-                    </div>
+                    <>
+                        <form onSubmit={handleSubmit} className={styles["feedbackForm"]}>
+                            {questions.filter(q => q.show).map((q, index) => (
+                                <div key={q.id} className={styles["questionBlock"]}>
+                                    <label className={styles["label"]}>
+                                        {index + 1}. {q.label}
+                                    </label>
+                                    {q.type === "likert" && (
+                                        <div className={styles["likertContainer"]}>
+                                            {["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"].map((label, labelIndex) => {
+                                                const value = labelIndex + 1;
+                                                return (
+                                                    <button
+                                                        key={value}
+                                                        type="button"
+                                                        className={`${styles["likertButton"]} ${responses[q.id] === value ? styles["selected"] : ""}`}
+                                                        onClick={() => handleInputChange(q.id, value)}
+                                                    >
+                                                        {label}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </form>
+                        <button type="submit" className={styles["submitButton"]}>
+                            Submit Feedback
+                        </button>
+                    </>
                 )}
             </div>
 
-            <GenericDialogBox show={loading}>
-                <div className={styles.dialogContent}>
+            <GenericDialogBox show={false}>
+                <div className={styles["dialogContent"]}>
                     <h2>Loading Feedback Form...</h2>
                     <AppSpinner />
                 </div>

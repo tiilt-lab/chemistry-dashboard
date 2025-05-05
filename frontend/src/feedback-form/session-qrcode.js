@@ -1,6 +1,6 @@
 import React from "react";
 import { QRCodeCanvas } from "qrcode.react";
-import style from "./session-qrcode.module.scss";
+import style from "./session-qrcode.module.css";
 
 function SessionQRCode({ sessionId, onClose }) {
   if (!sessionId) return null;
