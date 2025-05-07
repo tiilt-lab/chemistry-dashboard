@@ -5,7 +5,7 @@ from datetime import datetime
 import logging
 import base64
 
-def post_transcripts(source, start_time, end_time, transcript, doa, questions, keywords, features):
+def post_transcripts(source, start_time, end_time, transcript, doa, questions, keywords, features, topic_id, speaker_tag, speaker_id):
     result = {
         'source': source,
         'start_time': start_time,
@@ -20,11 +20,19 @@ def post_transcripts(source, start_time, end_time, transcript, doa, questions, k
         result['keywords'] = keywords
     if features:
         result['features'] = features
+    if topic_id:
+        result['topic_id'] = topic_id
+    if speaker_tag:
+        result['speaker_tag'] = speaker_tag
+    if speaker_id:
+        result['speaker_id'] = speaker_id
     try:
         response = requests.post(config.processing_callback(), json=result)
-        return response.status_code == 200
+        transcript_id = response.json()['transcript_id'] if response.status_code == 200 else -1
+        return response.status_code == 200, transcript_id
     except Exception as e:
-        return False
+        logging.warning('Transcript callback failed: {0}'.format(e))
+        return False, -1
 
 def post_tagging(source, tag, embeddingsFile):
     result = {
@@ -63,4 +71,33 @@ def post_disconnect(source):
         response = requests.post(config.disconnect_callback(), json=disconnection)
         return response.status_code == 200
     except Exception as e:
+        logging.info('disconnect callback failed: {0}'.format(e))
+        return False
+#Post speaker metrics with transcript data
+def post_speaker_transcript_metrics(transcript_data, speakers, participation_scores, internal_cohesion, responsivity, social_impact, newness, communication_density):
+    result = {
+        'source': transcript_data['source'],
+        'start_time': transcript_data['start_time'],
+        'end_time': transcript_data['end_time'],
+        'transcript': transcript_data['transcript'],
+        'direction': transcript_data['doa'],
+        'questions': transcript_data['questions'],
+        'keywords': transcript_data['keywords'],
+        'features': transcript_data['features'],
+        'topic_id': transcript_data['topic_id'],
+        'speaker_tag': transcript_data['speaker_tag'],
+        'speaker_id':transcript_data['speaker_id'],
+        'speakers':speakers,
+        'participation_scores': participation_scores,
+        'internal_cohesion': internal_cohesion,
+        'responsivity': responsivity,
+        'social_impact': social_impact,
+        'newness': newness,
+        'communication_density': communication_density
+    }
+    try:
+        response = requests.post(config.speaker_metrics_callback(), json=result)
+        return response.status_code == 200
+    except Exception as e:
+        logging.warning('Speaker Metrics callback failed: {0}'.format(e))
         return False

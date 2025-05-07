@@ -40,6 +40,10 @@
           box-shadow: 0 0 2px 0 rgba(57, 57, 128, 0.08), 0 6px 6px -4px rgba(57, 57, 128, 0.24);
 }
 
+.button-side-container {
+  display: flex;
+}
+
 .delete-button {
   width: 100%;
   text-align: center;
@@ -1268,6 +1272,7 @@
 
 .keywords-selected {
   border-color: #7878FA;
+  border-width: medium;
 }
 
 .dialog-window {
@@ -1280,6 +1285,7 @@
 
 .selected-pod {
   border-color: #7878FA !important;
+  border-width: medium;
 }
 
 .disabled {

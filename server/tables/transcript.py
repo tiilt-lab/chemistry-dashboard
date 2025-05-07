@@ -9,20 +9,22 @@ class Transcript(db.Model):
     question = db.Column(db.Boolean, nullable=False)
     transcript = db.Column(db.Text, nullable=False)
     word_count = db.Column(db.Integer, nullable=False)
-    speaker_tag = db.Column(db.String(64))
     direction = db.Column(db.Integer)
     emotional_tone_value = db.Column(db.Integer)
     analytic_thinking_value = db.Column(db.Integer)
     clout_value = db.Column(db.Integer)
     authenticity_value = db.Column(db.Integer)
     certainty_value = db.Column(db.Integer)
+    topic_id = db.Column(db.Integer)
+    speaker_tag = db.Column(db.String(64))
+    speaker_id = db.Column(db.Integer)
 
     keywords = db.relationship("KeywordUsage", lazy='joined', uselist=True)
 
     def __hash__(self):
         return hash((self.id))
 
-    def __init__(self, session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, speaker_tag=None):
+    def __init__(self, session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id, speaker_tag, speaker_id):
         self.session_device_id = session_device_id
         self.start_time = start_time
         self.length = length
@@ -36,7 +38,10 @@ class Transcript(db.Model):
         self.clout_value = clout
         self.authenticity_value = authenticity
         self.certainty_value = certainty
+        self.topic_id = topic_id
         self.speaker_tag = speaker_tag
+        self.speaker_id = speaker_id
+
 
     def json(self):
         return dict(
@@ -46,7 +51,6 @@ class Transcript(db.Model):
             length=self.length,
             question=self.question,
             transcript=self.transcript,
-            speaker_tag=self.speaker_tag,
             direction=self.direction,
             emotional_tone_value=self.emotional_tone_value,
             analytic_thinking_value=self.analytic_thinking_value,
@@ -54,6 +58,9 @@ class Transcript(db.Model):
             authenticity_value=self.authenticity_value,
             certainty_value=self.certainty_value,
             word_count=self.word_count,
+            topic_id=self.topic_id,
+            speaker_tag=self.speaker_tag,
+            speaker_id=self.speaker_id,
             keywords=[keyword.json(suppress=['transcript_id']) for keyword in self.keywords]
         )
 

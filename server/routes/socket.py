@@ -27,7 +27,13 @@ def join_session(message):
             #logging.info(str(room))
             #logging.info(str(user))
             #logging.info(database.get_transcripts(session_id=room))
-            emit('transcript_digest', json.dumps([transcript.json() for transcript in database.get_transcripts(session_id=room)]))
+            transcripts = database.get_transcripts(session_id=room)
+            transcripts_metrics = []
+            for transcript in transcripts:
+                speaker_metrics = database.get_speaker_transcript_metrics(transcript_id=transcript.id)
+                transcripts_metrics.append({'transcript' : transcript.json(),
+                                          'speaker_metrics' : [speaker_metric.json() for speaker_metric in speaker_metrics]})
+            emit('transcript_metrics_digest', json.dumps(transcripts_metrics))
             emit('room_joined', json.dumps({'success': True if room else False}))
 
 @socketio.on('leave_room', namespace='/session')

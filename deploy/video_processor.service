@@ -10,8 +10,8 @@ Restart=always
 RestartSec=1
 LimitRTPRIO=99
 LimitRTTIME=infinity
-WorkingDirectory=/home/tde3218/chemistry-dashboard/
-ExecStart= /home/tde3218/chemistry-dashboard/video_processing/venv/bin/python3 video_processing/server.py
+WorkingDirectory=/var/lib/chemistry-dashboard/
+ExecStart= /var/lib/chemistry-dashboard/video_processing/venv/bin/python3 video_processing/server.py
 
 [Install]
 WantedBy=multi-user.target
