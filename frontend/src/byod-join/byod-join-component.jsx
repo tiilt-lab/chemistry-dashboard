@@ -36,6 +36,11 @@ function JoinPage() {
     const [reconnectCounter, setReconnectCounter] = useState(0)
     const [showAlert, setShowAlert] = useState(false)
     const [alertMessage, setAlertMessage] = useState("")
+    const [frameBuffer, setFrameBuffer] = useState([]); // Buffer for cartoonized frames
+    const [frameBufferLength, setFrameBufferLength] = useState(0);
+    const [cartoonImgUrl, setCartoonImgUrl] = useState("");
+    const [cartoonImgBatch, setCartoonImgBatch] = useState(1);
+    const [renderingStarted, setRenderingStarted] = useState(false)
 
     // Session data
     const [sessionDevice, setSessionDevice] = useState(null)
@@ -122,6 +127,18 @@ function JoinPage() {
         initChecklistData(boxArr, setShowBoxes)
     }, [])
 
+    //Use effect to display processed cartoonized image
+    useEffect(() => {
+        console.log('inside renderframe buffer useeffect ', frameBufferLength)
+        renderFrameFromBuffer()
+    }, [frameBufferLength])
+
+    //Use effect to display processed cartoonized image
+    useEffect(() => {
+        console.log('inside renderframe buffer useeffect ', frameBufferLength)
+        renderFrameFromBuffer()
+    }, [frameBufferLength])
+
     useEffect(() => {
         if (constraintObj && pcode !== "" && joinwith !== "") handleStream()
     }, [constraintObj, pcode, joinwith])
@@ -142,8 +159,10 @@ function JoinPage() {
         }
     }, [videows])
 
+    //Use effect to intermetently reload the transcript
     useEffect(() => {
         let intervalLoad
+        // fetch the transcript
         if (session !== null && sessionDevice !== null) {
             fetchTranscript(sessionDevice.id)
 
@@ -176,6 +195,7 @@ function JoinPage() {
         }
     }, [displayTranscripts, selectedSpkrId1, selectedSpkrId2])
 
+    //Use effect to start audio and video processing
     useEffect(() => {
         if (audioconnected && !videoconnected) {
             requestStartAudioProcessing()
@@ -185,6 +205,7 @@ function JoinPage() {
         }
     }, [audioconnected, videoconnected])
 
+    //Use effect to start the camera and microphone for video and audio capturing
     useEffect(() => {
         if (authenticated) {
             const loadWorklet = async () => {
@@ -236,6 +257,7 @@ function JoinPage() {
         }
     }, [authenticated])
 
+    //Use effect to toggle video view pane
     useEffect(() => {
         if (preview) {
             setPreviewLabel("Turn Off Preview")
@@ -243,6 +265,12 @@ function JoinPage() {
             setPreviewLabel("Turn On Preview")
         }
     }, [preview])
+
+    //Use effect to display processed cartoonized image
+    useEffect(() => {
+        console.log('inside renderframe buffer useeffect ', frameBufferLength)
+        renderFrameFromBuffer()
+    }, [frameBufferLength])
 
     const openForms = (form, speaker = null) => {
         setCurrentForm(form)
@@ -638,26 +666,45 @@ function JoinPage() {
         }
 
         videows.onmessage = (e) => {
-            const message = JSON.parse(e.data)
-            if (message["type"] === "start") {
-                setAuthenticated(true)
-                closeDialog()
-            } else if (message["type"] === "error") {
-                disconnect(true)
-                setDisplayText(
-                    "The connection to the session has been closed by the server.",
-                )
-                setCurrentForm("ClosedSession")
-            } else if (message["type"] === "end") {
-                disconnect(true)
-                setDisplayText("The session has been closed by the owner.")
-                setCurrentForm("ClosedSession")
-            }
-        }
+            if (typeof e.data === 'string'){
+                const message = JSON.parse(e.data);
+                if (message['type'] === 'start') {
+                    setAuthenticated(true);
+                    closeDialog();
+                }else if(message['type'] === 'attention_data'){
 
-        videows.onclose = (e) => {
-            console.log("[Disconnected]", ending.value)
-        }
+                }else if (message['type'] === 'error') {
+                    disconnect(true);
+                    setDisplayText('The connection to the session has been closed by the server.');
+                    setCurrentForm('ClosedSession');
+                } else if (message['type'] === 'end') {
+                    disconnect(true);
+                    setDisplayText('The session has been closed by the owner.');
+                    setCurrentForm('ClosedSession');
+                }
+            }else if (e.data instanceof Blob){
+                const url = URL.createObjectURL(e.data);
+                // Add the processed frame to the buffer
+                
+                setFrameBuffer(prevBuffer =>{
+                        const newItems = [...prevBuffer, url]
+                        if (newItems.length % 40 == 0) {
+                            setFrameBufferLength(newItems.length)
+                            // setCartoonImgBatch(prevCount => prevCount + 1)
+                            // setFrameBufferLength(prevCount => prevCount + 1)
+                        }
+                        
+                        return newItems
+                    } 
+                );
+
+                setRenderingStarted(true)
+            }
+        };
+
+        videows.onclose = e => {
+            console.log('[Disconnected]',ending.value);
+        };
     }
 
     // Begin capturing and sending client audio.
@@ -814,6 +861,24 @@ function JoinPage() {
             )
         }
     }
+
+    //function to render the cartoonized image
+    const renderFrameFromBuffer = () => {
+        console.log('frameBufferLength = ', frameBufferLength,' cartoonImgBatch = ', cartoonImgBatch)
+        if (frameBufferLength > (40 * cartoonImgBatch)) {
+            for (var i = (cartoonImgBatch-1)*40; i < cartoonImgBatch*40; i++){
+                
+                setInterval(() => {
+                    setCartoonImgUrl(frameBuffer[i]);
+                    console.log('i called setcartoonimgurl ', i)
+                }, 500)
+                
+            }    
+            setCartoonImgBatch(prevCount => prevCount + 1)
+          
+        } 
+
+      }
 
     const ResetTimeRange = (values) => {
         if (session !== null) {
@@ -1041,6 +1106,7 @@ function JoinPage() {
             viewIndividual={viewIndividual}
             viewComparison={viewComparison}
             viewGroup={viewGroup}
+            cartoonImgUrl = {cartoonImgUrl}
             invalidName={invalidName}
         />
     )
