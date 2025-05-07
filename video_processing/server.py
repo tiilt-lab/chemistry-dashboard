@@ -23,14 +23,10 @@ from autobahn.twisted.websocket import WebSocketServerFactory
 from autobahn.twisted.websocket import WebSocketServerProtocol
 from video_cartoonizer.video_cartoonify_loader import VideoCartoonifyLoader
 from emotion_detector.emotion_detection_model import EmotionDetectionModel
-from attention_tracking.detect import ImageObjectDetection
-from attention_tracking.attention_tracking import AttentionDetection
 
 cm = ConnectionManager()
 cartoon_model = VideoCartoonifyLoader()
 facial_emotion_detector = EmotionDetectionModel()
-image_object_detection = ImageObjectDetection()
-attention_detection = AttentionDetection()
 
 class ServerProtocol(WebSocketServerProtocol):
 
@@ -41,8 +37,6 @@ class ServerProtocol(WebSocketServerProtocol):
         self.processor = None
         self.cartoon_model = cartoon_model
         self.facial_emotion_detector = facial_emotion_detector
-        self.image_object_detection = image_object_detection
-        self.attention_detection = attention_detection
         self.video_processor = None
         self.last_message = time.time()
         self.end_signaled = False
@@ -95,21 +89,19 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_orig".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, str(time.ctime())))
                     self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_{1}_{2}_({3})".format(self.config.auth_key,self.config.sessionId,self.config.deviceId,  str(time.ctime())))
                     self.orig_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1)
+
                     if self.config.videocartoonify:
                         self.video_queue = queue.Queue()
                         self.frame_queue = None
                         self.cartoon_image_queue = None
-                        self.video_processor = VideoProcessor(self.cartoon_model,self.facial_emotion_detector,self.image_object_detection, self.attention_detection, \
-                                                              self.video_queue,self.frame_queue,self.cartoon_image_queue,self.config,self.frame_dir,self.filename,aud_filename,16000, 2,1)
-                        self.video_processor.add_websocket_connection(self)
-
+                        self.video_processor = VideoProcessor(self.cartoon_model,self.facial_emotion_detector,self.video_queue,self.frame_queue,self.cartoon_image_queue,self.config,self.frame_dir,self.filename,aud_filename,16000, 2,1)
+                        
                 if cf.video_record_reduced():
                     aud_filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_audio".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, datetime.today().strftime("%Y-%m-%d")))
                     self.filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_redu".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, datetime.today().strftime("%Y-%m-%d")))
                     self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_{1}_{2}_({3})".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, datetime.today().strftime('%Y-%m-%d')))
                     self.redu_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1)
 
-                   
                 self.signal_start()
                 self.send_json({'type':'start'})
 
@@ -144,7 +136,7 @@ class ServerProtocol(WebSocketServerProtocol):
 
     def send_json(self, message):
         payload = json.dumps(message).encode('utf8')
-        self.sendMessage(payload, isBinary = False)     
+        self.sendMessage(payload, isBinary = False)
 
     def read_bytes_from_wav(self,wav):
         wav.setpos(0)
@@ -210,11 +202,6 @@ if __name__ == '__main__':
     if cf.video_cartoonize():
         cartoon_model.load_model()
         facial_emotion_detector.load_model()
-
-    # Initialize attention tracking
-    if cf.attention_tracking():
-        image_object_detection.init_model(cartoon_model.batch_size)
-        attention_detection.init_model(cartoon_model.batch_size)    
     # Run Server
     logging.info('Starting video Processing Service...')
     poll_connections = task.LoopingCall(cm.check_connections)
