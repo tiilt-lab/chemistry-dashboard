@@ -46,7 +46,7 @@ def get_landmark_multi(filepath, predictor,model):
     #logging.info('dlib multi faces detected is {0}'.format(len(dets)))
     if len(dets) == 0:
         logging.info('Error: no multi face detected! If you are sure there are faces in your input, you may rerun the code or change the image several times until the face is detected. Sometimes the detector is unstable.')
-        return None
+        return []
     
     lm = []
     shapes = []
