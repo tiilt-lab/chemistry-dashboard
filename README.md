@@ -188,6 +188,7 @@ Then call the following line to download Google News Vectors
 cd audio_processing/keyword_detector/models
 pip install gdown
 gdown https://drive.google.com/uc?id=0B7XkCwpI5KDYNlNUTTlSS21pQmM
+```
 
 After the download is complete, execute the following lines.
 

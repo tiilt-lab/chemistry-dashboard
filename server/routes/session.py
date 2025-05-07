@@ -287,8 +287,8 @@ def export_session(session_id, **kwargs):
                 'Emotional Tone': int(t.emotional_tone_value),
                 'Word Count': int(t.word_count),
                 'Speaker Tag': t.speaker_tag,
-                'Speaker ID': int(t.speaker_id),
-                'Topic ID': int(t.topic_id)
+                'Speaker ID': int(t.speaker_id) if t.speaker_id != None else -1,
+                'Topic ID': int(t.topic_id) if t.topic_id != None else -1
                 })
 
     output = make_response(si.getvalue())
