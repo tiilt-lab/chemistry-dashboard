@@ -297,6 +297,10 @@
   width: 100%;
 }
 
+.toolbar {
+  width: 100%;
+}
+
 .load-text {
   font-family: 'SST', sans-serif;
   font-weight: 500;
@@ -586,8 +590,9 @@
 }
 
 .overview-container-large {
-  width: 400px;
+  width: auto;
   height: 100%;
+  margin-left: 100px ;
   overflow: auto;
 }
 
@@ -650,6 +655,12 @@
 .dialog-blur {
   -webkit-filter: blur(2px);
           filter: blur(2px);
+}
+
+.dialog-dropdown {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  text-align: center;
 }
 
 .left-button {

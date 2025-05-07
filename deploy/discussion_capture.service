@@ -10,8 +10,8 @@ Restart=always
 RestartSec=1
 LimitRTPRIO=99
 LimitRTTIME=infinity
-WorkingDirectory=/home/tde3218/chemistry-dashboard/
-ExecStart=/home/tde3218/chemistry-dashboard/server/venv/bin/python3 server/discussion_capture.py
+WorkingDirectory=/var/lib/chemistry-dashboard/
+ExecStart=/home/blinc/.pyenv/versions/discussion_capture/bin/python server/discussion_capture.py
 
 [Install]
 WantedBy=multi-user.target

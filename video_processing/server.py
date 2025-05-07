@@ -16,7 +16,7 @@ import moviepy.editor as mp
 from recorder import VidRecorder
 from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager
-from video_cartoonizer.videoprocessor import VideoProcessor
+# from video_cartoonizer.videoprocessor import VideoProcessor
 from datetime import datetime
 from twisted.internet import reactor, task
 from autobahn.twisted.websocket import WebSocketServerFactory
@@ -89,7 +89,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_orig".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, str(time.ctime())))
                     self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_{1}_{2}_({3})".format(self.config.auth_key,self.config.sessionId,self.config.deviceId,  str(time.ctime())))
                     self.orig_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1)
-                    
+
                     if self.config.videocartoonify:
                         self.video_queue = queue.Queue()
                         self.frame_queue = None
@@ -117,7 +117,7 @@ class ServerProtocol(WebSocketServerProtocol):
 
             wavObj = wave.open(temp_aud_file+'.wav')
             audiobyte = self.reduce_wav_channel(1,wavObj)
-        
+
             if self.config.videocartoonify:
                 self.video_queue.put(subclips.iter_frames())
                 logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
@@ -168,9 +168,9 @@ class ServerProtocol(WebSocketServerProtocol):
         if self.end_signaled:
             return
         self.end_signaled = True
-        
+
         if  self.video_processor:
-            self.video_processor.stop()      
+            self.video_processor.stop()
 
         if self.config:
             cm.remove(self, self.config.session_key, self.config.auth_key)
@@ -199,7 +199,7 @@ if __name__ == '__main__':
     logger.addHandler(log_console)
 
     # Initialize cartoonify
-    if cf.video_cartoonize:
+    if cf.video_cartoonize():
         cartoon_model.load_model()
         facial_emotion_detector.load_model()
     # Run Server
@@ -210,7 +210,7 @@ if __name__ == '__main__':
     auth_connections.start(5.0)
     factory = WebSocketServerFactory()
     factory.protocol = ServerProtocol
-    reactor.listenTCP(9004, factory)
+    reactor.listenTCP(9003, factory)
     logging.info('Video Processing Service started.')
     reactor.run()
     logging.info('Video Processing Service ended.')

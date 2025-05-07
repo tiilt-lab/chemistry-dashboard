@@ -10,8 +10,8 @@ Restart=always
 RestartSec=1
 LimitRTPRIO=99
 LimitRTTIME=infinity
-WorkingDirectory=/home/tde3218/chemistry-dashboard/
-ExecStart= /home/tde3218/chemistry-dashboard/audio_processing/venv/bin/python3 audio_processing/server.py
+WorkingDirectory=/var/lib/chemistry-dashboard/
+ExecStart=/home/blinc/.pyenv/versions/audio_processor/bin/python audio_processing/server.py
 
 [Install]
 WantedBy=multi-user.target
