@@ -21,10 +21,12 @@ from datetime import datetime
 from twisted.internet import reactor, task
 from autobahn.twisted.websocket import WebSocketServerFactory
 from autobahn.twisted.websocket import WebSocketServerProtocol
-# from video_cartoonizer.video_cartoonify_loader import VideoCartoonifyLoader
+from video_cartoonizer.video_cartoonify_loader import VideoCartoonifyLoader
+from emotion_detector.emotion_detection_model import EmotionDetectionModel
 
 cm = ConnectionManager()
-cartoon_model = None #VideoCartoonifyLoader()
+cartoon_model = VideoCartoonifyLoader()
+facial_emotion_detector = EmotionDetectionModel()
 
 class ServerProtocol(WebSocketServerProtocol):
 
@@ -34,10 +36,12 @@ class ServerProtocol(WebSocketServerProtocol):
         self.running = False
         self.processor = None
         self.cartoon_model = cartoon_model
+        self.facial_emotion_detector = facial_emotion_detector
         self.video_processor = None
         self.last_message = time.time()
         self.end_signaled = False
         self.interval = 10
+        self.stream_data = False
         cm.add(self)
         logging.info('New client connected...')
 
@@ -90,8 +94,8 @@ class ServerProtocol(WebSocketServerProtocol):
                         self.video_queue = queue.Queue()
                         self.frame_queue = None
                         self.cartoon_image_queue = None
-                        self.video_processor = VideoProcessor(self.cartoon_model,self.video_queue,self.frame_queue,self.cartoon_image_queue,self.config,self.frame_dir,self.filename,aud_filename,16000, 2,1)
-
+                        self.video_processor = VideoProcessor(self.cartoon_model,self.facial_emotion_detector,self.video_queue,self.frame_queue,self.cartoon_image_queue,self.config,self.frame_dir,self.filename,aud_filename,16000, 2,1)
+                        
                 if cf.video_record_reduced():
                     aud_filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_audio".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, datetime.today().strftime("%Y-%m-%d")))
                     self.filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_redu".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, datetime.today().strftime("%Y-%m-%d")))
@@ -197,6 +201,7 @@ if __name__ == '__main__':
     # Initialize cartoonify
     if cf.video_cartoonize():
         cartoon_model.load_model()
+        facial_emotion_detector.load_model()
     # Run Server
     logging.info('Starting video Processing Service...')
     poll_connections = task.LoopingCall(cm.check_connections)
