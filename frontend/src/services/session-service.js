@@ -94,7 +94,7 @@ class SessionService {
 
   getSpeakerIdTranscripts(deviceId, speakerId) {
     return this.api.httpRequestCall(
-      `/api/v1/sessions/devices/${deviceId}>/speakers/${speakerId}/transcripts`,
+      `api/v1/sessions/devices/${deviceId}>/speakers/${speakerId}/transcripts`,
       "GET",
       {}
     );
@@ -102,7 +102,7 @@ class SessionService {
 
   getSessionDeviceSpeakerMetrics(sessionDeviceId) {
     return this.api.httpRequestCall(
-      `/api/v1/devices/${sessionDeviceId}/transcripts/speaker_metrics`,
+      `api/v1/devices/${sessionDeviceId}/transcripts/speaker_metrics`,
       "GET",
       {}
     );
@@ -110,7 +110,7 @@ class SessionService {
 
   getTranscriptSpeakerMetrics(transcriptId) {
     return this.api.httpRequestCall(
-      `/api/v1/transcripts/${transcriptId}/speaker_metrics`,
+      `api/v1/transcripts/${transcriptId}/speaker_metrics`,
       "GET",
       {}
     );
@@ -118,7 +118,7 @@ class SessionService {
 
   getSpeakerIdTranscriptsForClient(deviceId, speakerId) {
     return this.api.httpRequestCall(
-      `/api/v1/sessions/devices/${deviceId}>/speakers/${speakerId}/transcripts/client`,
+      `api/v1/sessions/devices/${deviceId}>/speakers/${speakerId}/transcripts/client`,
       "GET",
       {}
     );

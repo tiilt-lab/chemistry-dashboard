@@ -29,9 +29,11 @@ from keyword_detector import keyword_detector
 from speaker_tagging import speaker_tagging
 from speechbrain.inference import SpeakerRecognition
 from sentence_transformers import SentenceTransformer
-import torch.multiprocessing as multiprocessing
 
 cm = ConnectionManager()
+semantic_model = SentenceTransformer("all-mpnet-base-v2")
+diarization_model = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="pretrained_models/pretrained_ecapa")
+semantic_model.share_memory()
 
 class ServerProtocol(WebSocketServerProtocol):
 
@@ -51,9 +53,6 @@ class ServerProtocol(WebSocketServerProtocol):
         self.speakers = None
         self.currSpeaker = None
         self.currAlias = None
-        self.diarization_model = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="pretrained_models/pretrained_ecapa")
-        self.semantic_model = SentenceTransformer("all-mpnet-base-v2")
-        self.semantic_model.share_memory()
 
         logging.info('Loaded Diarization Model and Semantic Model...')
 
@@ -124,6 +123,9 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.send_json({'type':'start'})
                 logging.info('Audio process connected')
                 callbacks.post_connect(self.config.auth_key)
+
+    def getRunning(self):
+        return self.running
 
     def process_binary(self, data):
         if self.running and not self.awaitingSpeakers:
@@ -205,7 +207,7 @@ class ServerProtocol(WebSocketServerProtocol):
         self.asr_transcript_queue = queue.Queue()
         self.asr = GoogleASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data,self.interval)
         self.asr.start()
-        self.processor = AudioProcessor(self.audio_buffer, self.asr_transcript_queue, self.diarization_model, self.semantic_model, self.config)
+        self.processor = AudioProcessor(self.audio_buffer, self.asr_transcript_queue, diarization_model, semantic_model, self.config)
         self.processor.start()
         self.running = True
 
