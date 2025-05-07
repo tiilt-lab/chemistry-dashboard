@@ -190,7 +190,12 @@ video_processing/video_cartoonizer/train_vtoonify_d.py
 video_processing/video_cartoonizer/train_vtoonify_t.py
 video_processing/video_cartoonizer/vtoonify_model.py
 video_processing/dlib
+video_processing/emotion_detector
+video_processing/video_file_emotion_detection.py
+video_processing/video_from_study
 uploads
+ResidualMaskingNetwork
+ResidualMaskingNetwork
 
 /frontend/.gitignore
 
@@ -198,6 +203,16 @@ uploads
 pretrained_ecapa
 #npy file
 *.npy
+
+.gitignore
+topicModels
+GazeTracking/
+MCGaze/
+Multiple_object_detection
+ResidualMaskingNetwork
+Shared-Attention
+facial-expression-analysis
+gaze_estimation
 
 audio_processing/videorecordings/*
 

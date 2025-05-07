@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { SessionService } from "../services/session-service"
 import { ByodJoinPage } from "./html-pages"
@@ -21,7 +21,7 @@ BYOD Connection Order
 
 function JoinPage() {
     // Audio connection data
-    const [audiows, setAudioWs] = useState(null)
+    const audiows = useRef(null)
     const [videows, setVideoWs] = useState(null)
     const [audioconnected, setAudioConnected] = useState(false)
     const [videoconnected, setVideoConnected] = useState(false)
@@ -36,6 +36,11 @@ function JoinPage() {
     const [reconnectCounter, setReconnectCounter] = useState(0)
     const [showAlert, setShowAlert] = useState(false)
     const [alertMessage, setAlertMessage] = useState("")
+    const [frameBuffer, setFrameBuffer] = useState([]); // Buffer for cartoonized frames
+    const [frameBufferLength, setFrameBufferLength] = useState(0);
+    const [cartoonImgUrl, setCartoonImgUrl] = useState("");
+    const [cartoonImgBatch, setCartoonImgBatch] = useState(1);
+    const [renderingStarted, setRenderingStarted] = useState(false)
 
     // Session data
     const [sessionDevice, setSessionDevice] = useState(null)
@@ -122,17 +127,31 @@ function JoinPage() {
         initChecklistData(boxArr, setShowBoxes)
     }, [])
 
+    //Use effect to display processed cartoonized image
     useEffect(() => {
-        if (constraintObj && pcode) handleStream()
-    }, [constraintObj, pcode])
+        console.log('inside renderframe buffer useeffect ', frameBufferLength)
+        renderFrameFromBuffer()
+    }, [frameBufferLength])
+
+    //Use effect to display processed cartoonized image
+    useEffect(() => {
+        console.log('inside renderframe buffer useeffect ', frameBufferLength)
+        renderFrameFromBuffer()
+    }, [frameBufferLength])
 
     useEffect(() => {
-        if (audiows != null) {
+        if (constraintObj && pcode !== "" && joinwith !== "") handleStream()
+    }, [constraintObj, pcode, joinwith])
+/*
+    useEffect(() => {
+        if (
+            audiows.current != null
+        ) {
             console.log("called connect_audio_processor_service")
             connect_audio_processor_service()
         }
-    }, [audiows])
-
+    }, [audiows.current])
+*/
     useEffect(() => {
         if (videows != null) {
             console.log("called connect_video_processor_service")
@@ -140,8 +159,10 @@ function JoinPage() {
         }
     }, [videows])
 
+    //Use effect to intermetently reload the transcript
     useEffect(() => {
         let intervalLoad
+        // fetch the transcript
         if (session !== null && sessionDevice !== null) {
             fetchTranscript(sessionDevice.id)
 
@@ -174,6 +195,7 @@ function JoinPage() {
         }
     }, [displayTranscripts, selectedSpkrId1, selectedSpkrId2])
 
+    //Use effect to start audio and video processing
     useEffect(() => {
         if (audioconnected && !videoconnected) {
             requestStartAudioProcessing()
@@ -183,6 +205,7 @@ function JoinPage() {
         }
     }, [audioconnected, videoconnected])
 
+    //Use effect to start the camera and microphone for video and audio capturing
     useEffect(() => {
         if (authenticated) {
             const loadWorklet = async () => {
@@ -194,7 +217,7 @@ function JoinPage() {
                     "audio-sender-processor",
                 )
                 workletProcessor.port.onmessage = (data) => {
-                    audiows.send(data.data.buffer)
+                    audiows.current.send(data.data.buffer)
                 }
                 source
                     .connect(workletProcessor)
@@ -217,7 +240,7 @@ function JoinPage() {
                         interval * 6 * 60 * 24,
                         (fixedblob) => {
                             videows.send(fixedblob)
-                            audiows.send(fixedblob)
+                            audiows.current.send(fixedblob)
                         },
                     )
                 }
@@ -234,6 +257,7 @@ function JoinPage() {
         }
     }, [authenticated])
 
+    //Use effect to toggle video view pane
     useEffect(() => {
         if (preview) {
             setPreviewLabel("Turn Off Preview")
@@ -241,6 +265,12 @@ function JoinPage() {
             setPreviewLabel("Turn On Preview")
         }
     }, [preview])
+
+    //Use effect to display processed cartoonized image
+    useEffect(() => {
+        console.log('inside renderframe buffer useeffect ', frameBufferLength)
+        renderFrameFromBuffer()
+    }, [frameBufferLength])
 
     const openForms = (form, speaker = null) => {
         setCurrentForm(form)
@@ -256,6 +286,8 @@ function JoinPage() {
     // Disconnects from websocket server and audio stream.
     const disconnect = (permanent = false) => {
         console.log("disconnect called", permanent)
+        if(ending.value)
+            return
         if (permanent) {
             setPageTitle("Join Discussion")
             setName("")
@@ -291,9 +323,9 @@ function JoinPage() {
         setVideoConnected(false)
         setAuthenticated(false)
 
-        if (audiows != null) {
-            audiows.close()
-            setAudioWs(null)
+        if (audiows.current != null) {
+            audiows.current.close();
+            audiows.current = null;
         }
         if (videows != null) {
             videows.close()
@@ -310,7 +342,7 @@ function JoinPage() {
                 id: "done",
                 speakers: speakers,
             }
-            audiows.send(JSON.stringify(message))
+            audiows.current.send(JSON.stringify(message))
             setSpeakersValidated(true)
         } else {
             setDisplayText(
@@ -326,7 +358,7 @@ function JoinPage() {
     }
 
     const addSpeakerFingerprint = async () => {
-        if (audiows === null) {
+        if (audiows.current === null) {
             return
         }
 
@@ -347,8 +379,8 @@ function JoinPage() {
         )
 
         setSpeakers(updatedSpeakers)
-        audiows.send(JSON.stringify(message))
-        audiows.send(audiodata.getChannelData(0))
+        audiows.current.send(JSON.stringify(message))
+        audiows.current.send(audiodata.getChannelData(0))
         console.log("sent speaker fingerprint")
         setCurrBlob(null)
         closeDialog()
@@ -452,6 +484,12 @@ function JoinPage() {
                     const context = new AudioContext({ sampleRate: 16000 })
                     setSource(context.createMediaStreamSource(stream))
                     setAudioContext(context)
+                    console.log("connect to websocket");
+                    audiows.current = new WebSocket(
+                        apiService.getAudioWebsocketEndpoint(),
+                    )
+                    connect_audio_processor_service();
+                    
                 } else if (
                     joinwith === "Video" ||
                     joinwith === "Videocartoonify"
@@ -492,11 +530,17 @@ function JoinPage() {
             names = "User Device"
         }
         setName(names)
-        setPcode(passcode)
         setJoinwith(joinswith)
         setNumSpeakers(collaborators)
+        requestAccessKey(names, passcode, collaborators, joinswith)
+    }
+
+    // Requests session access from the server.
+    const requestAccessKey = (names, passcode, collaborators, joinwith) => {
+        ending.value = false
+        setCurrentForm("Connecting")
         const constraint = {}
-        if (joinswith === "Video" || joinswith === "Videocartoonify") {
+        if (joinwith === "Video" || joinwith === "Videocartoonify") {
             constraint.audio = true
             constraint.video = {
                 facingMode: "user",
@@ -507,14 +551,6 @@ function JoinPage() {
             constraint.audio = true
             constraint.video = false
         }
-        setConstraintObj(constraint)
-        requestAccessKey(names, passcode, collaborators, joinswith)
-    }
-
-    // Requests session access from the server.
-    const requestAccessKey = (names, passcode, collaborators, joinwith) => {
-        ending.value = false
-        setCurrentForm("Connecting")
         sessionService.joinByodSession(names, passcode, collaborators).then(
             (response) => {
                 if (response.status === 200) {
@@ -528,12 +564,9 @@ function JoinPage() {
                         setSpeakers(
                             SpeakerModel.fromJsonList(jsonObj["speakers"]),
                         )
-                        setKey(jsonObj.key)
-                        setAudioWs(
-                            new WebSocket(
-                                apiService.getAudioWebsocketEndpoint(),
-                            ),
-                        )
+                        setKey(jsonObj.key);                        
+                        setConstraintObj(constraint)
+                        setPcode(passcode)
                         setJoinwith(joinwith)
 
                         //activate video websocket also if user joins with video
@@ -574,9 +607,9 @@ function JoinPage() {
 
     // Connects to audio processor websocket server.
     const connect_audio_processor_service = () => {
-        audiows.binaryType = "arraybuffer"
+        audiows.current.binaryType = "arraybuffer"
 
-        audiows.onopen = (e) => {
+        audiows.current.onopen = (e) => {
             console.log("[Connected audio processor service]")
             console.log("speakers ", speakers)
             setAudioConnected(true)
@@ -584,12 +617,12 @@ function JoinPage() {
             setPageTitle(name)
             setReload(true)
             setCurrentForm("")
-        }
+        };
 
-        audiows.onmessage = (e) => {
+        audiows.current.onmessage = (e) => {
             const message = JSON.parse(e.data)
+            setAuthenticated(true)
             if (message["type"] === "start") {
-                setAuthenticated(true)
                 closeDialog()
             } else if (message["type"] === "error") {
                 disconnect(true)
@@ -604,7 +637,7 @@ function JoinPage() {
             }
         }
 
-        audiows.onclose = (e) => {
+        audiows.current.onclose = (e) => {
             console.log("[Disconnected]", ending.value)
             if (!ending.value) {
                 if (reconnectCounter <= 5) {
@@ -633,32 +666,52 @@ function JoinPage() {
         }
 
         videows.onmessage = (e) => {
-            const message = JSON.parse(e.data)
-            if (message["type"] === "start") {
-                setAuthenticated(true)
-                closeDialog()
-            } else if (message["type"] === "error") {
-                disconnect(true)
-                setDisplayText(
-                    "The connection to the session has been closed by the server.",
-                )
-                setCurrentForm("ClosedSession")
-            } else if (message["type"] === "end") {
-                disconnect(true)
-                setDisplayText("The session has been closed by the owner.")
-                setCurrentForm("ClosedSession")
-            }
-        }
+            if (typeof e.data === 'string'){
+                const message = JSON.parse(e.data);
+                if (message['type'] === 'start') {
+                    setAuthenticated(true);
+                    closeDialog();
+                }else if(message['type'] === 'attention_data'){
 
-        videows.onclose = (e) => {
-            console.log("[Disconnected]", ending.value)
-        }
+                }else if (message['type'] === 'error') {
+                    disconnect(true);
+                    setDisplayText('The connection to the session has been closed by the server.');
+                    setCurrentForm('ClosedSession');
+                } else if (message['type'] === 'end') {
+                    disconnect(true);
+                    setDisplayText('The session has been closed by the owner.');
+                    setCurrentForm('ClosedSession');
+                }
+            }else if (e.data instanceof Blob){
+                const url = URL.createObjectURL(e.data);
+                // Add the processed frame to the buffer
+                
+                setFrameBuffer(prevBuffer =>{
+                        const newItems = [...prevBuffer, url]
+                        if (newItems.length % 40 == 0) {
+                            setFrameBufferLength(newItems.length)
+                            // setCartoonImgBatch(prevCount => prevCount + 1)
+                            // setFrameBufferLength(prevCount => prevCount + 1)
+                        }
+                        
+                        return newItems
+                    } 
+                );
+
+                setRenderingStarted(true)
+            }
+        };
+
+        videows.onclose = e => {
+            console.log('[Disconnected]',ending.value);
+        };
     }
 
     // Begin capturing and sending client audio.
     const requestStartAudioProcessing = () => {
+        console.log("Starting Audio")
         let message = null
-        if (audiows === null) {
+        if (audiows.current === null) {
             return
         }
         if (joinwith === "Audio") {
@@ -692,7 +745,7 @@ function JoinPage() {
                 numSpeakers: numSpeakers,
             }
         }
-        audiows.send(JSON.stringify(message))
+        audiows.current.send(JSON.stringify(message))
     }
 
     // Begin capturing and sending client video.
@@ -808,6 +861,24 @@ function JoinPage() {
             )
         }
     }
+
+    //function to render the cartoonized image
+    const renderFrameFromBuffer = () => {
+        console.log('frameBufferLength = ', frameBufferLength,' cartoonImgBatch = ', cartoonImgBatch)
+        if (frameBufferLength > (40 * cartoonImgBatch)) {
+            for (var i = (cartoonImgBatch-1)*40; i < cartoonImgBatch*40; i++){
+                
+                setInterval(() => {
+                    setCartoonImgUrl(frameBuffer[i]);
+                    console.log('i called setcartoonimgurl ', i)
+                }, 500)
+                
+            }    
+            setCartoonImgBatch(prevCount => prevCount + 1)
+          
+        } 
+
+      }
 
     const ResetTimeRange = (values) => {
         if (session !== null) {
@@ -1035,6 +1106,7 @@ function JoinPage() {
             viewIndividual={viewIndividual}
             viewComparison={viewComparison}
             viewGroup={viewGroup}
+            cartoonImgUrl = {cartoonImgUrl}
             invalidName={invalidName}
         />
     )

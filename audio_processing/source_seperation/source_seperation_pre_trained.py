@@ -3,7 +3,7 @@ import speechbrain as sb
 import torchaudio
 import numpy as np
 import torch
-from speechbrain.pretrained import SepformerSeparation as separator
+from speechbrain.inference import SepformerSeparation as separator
 
 
 def source_seperation(file_path):
