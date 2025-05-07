@@ -7,28 +7,6 @@ export class ApiService {
     getEndpoint() {
         return window.location.protocol + "//" + window.location.host + "/"
     }
-
-    getWSSProtocol() {
-        return window.location.protocol === "https:" ? "wss:" : "ws:"
-    }
-
-    getEndpoint() {
-        return window.location.protocol + "//" + window.location.host + "/"
-    }
-
-  getVideoServerEndpoint() {
-    // return (
-    //   "http://129.105.44.121:8080/"
-    // );
-    getWSSProtocol() {
-      return window.location.protocol === "https:" ? "wss:" : "ws:";
-    }
-  
-    getEndpoint() {
-      return (
-        window.location.protocol + "//" + window.location.host + "/"
-      );
-    }
   
     getVideoServerEndpoint() {
     //   return (
@@ -49,25 +27,6 @@ export class ApiService {
       "/audio_socket"
     );
   }
-
-  getVideoWebsocketEndpoint() {
-    // return (
-    //   "ws://129.105.44.121:8080/video_socket"
-    // );
-
-        window.location.protocol + "//" + window.location.host + "/"
-      );
-    }
-  
-    getAudioWebsocketEndpoint() {
-      return (
-        this.getWSSProtocol() +
-        "//" +
-        // window.location.host.split(":")[0] +
-        window.location.host +
-        "/audio_socket"
-      );
-    }
   
     getVideoWebsocketEndpoint() {
     //   return (
