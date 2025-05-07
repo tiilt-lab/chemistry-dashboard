@@ -20,7 +20,6 @@ import numpy as np
 from joblib import load
 from topic_modeling.topic_modeling import preprocess_transcript
 import config as cf
-import torch.multiprocessing as mp
 # from source_seperation import source_seperation_pre_trained
 # from server.topic_modeling.topicmodeling import get_topics_with_prob
 # For converting nano seconds to seconds.
@@ -49,20 +48,10 @@ class AudioProcessor:
         self.fingerprints = None
         self.cohesion_window = 20
 
-        try:
-            mp.set_start_method('spawn', force=True)
-        except RuntimeError:
-            print("unable to spawn")
-
-        # self.processing_queue = mp.Queue()
-        # self.speaker_transcript_queue = mp.Queue()
         self.semantic_model = semantic_model
         logging.info("Start metrics process")
         self.speaker_metrics_process = speaker_metrics.SpeakerProcessor(
             config, self.semantic_model)
-        # mp.Process(target=speaker_metrics.process, args=(self.processing_queue, self.speaker_transcript_queue, self.semantic_model))
-        # self.speaker_metrics_process.start()
-        # self.processing_queue.put(config)
 
         cf.initialize()
 
@@ -223,7 +212,7 @@ class AudioProcessor:
             # Perform Speaker Diarization
             speaker_tag = None
             speaker_id = -1
-            if self.config.diarization and self.fingerprints and self.fingerprints.length:
+            if self.config.diarization and self.fingerprints and len(self.fingerprints):
                 speaker_tag, speaker_id = checkFingerprints(
                         audio_data, self.fingerprints, self.diarization_model)
                 self.speaker_metrics_process.process_transcript(

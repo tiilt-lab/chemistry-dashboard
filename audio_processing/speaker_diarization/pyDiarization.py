@@ -14,7 +14,7 @@ import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 import torchaudio
-from speechbrain.pretrained import SpeakerRecognition
+from speechbrain.inference import SpeakerRecognition
 from sklearn.metrics.pairwise import cosine_similarity
 import scipy.spatial as sp
 
