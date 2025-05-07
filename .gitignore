@@ -209,13 +209,17 @@ topicModels
 GazeTracking/
 MCGaze/
 Multiple_object_detection
-<<<<<<< Updated upstream
-Shared-Attention
-facial-expression-analysis
-gaze_estimation
-=======
 ResidualMaskingNetwork
 Shared-Attention
 facial-expression-analysis
 gaze_estimation
->>>>>>> Stashed changes
+
+audio_processing/videorecordings/*
+
+topicModels/*
+
+pretrained_ecapa/classifier.ckpt
+pretrained_ecapa/embedding_model.ckpt
+pretrained_ecapa/hyperparams.yaml
+pretrained_ecapa/label_encoder.ckpt
+pretrained_ecapa/mean_var_norm_emb.ckpt
