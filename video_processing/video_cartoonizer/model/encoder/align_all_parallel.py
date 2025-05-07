@@ -49,16 +49,19 @@ def get_landmark_multi(filepath, predictor,model):
         return None
     
     lm = []
+    shapes = []
     shape = None
     for k, d in enumerate(dets):
         shape = predictor(img, d.rect)
-        t = list(shape.parts())
-        a = []
-        for tt in t:
-            a.append([tt.x, tt.y])
-        lm.append(a)
+        shapes.append(shape)
+        # t = list(shape.parts())
+        # a = []
+        # for tt in t:
+        #     a.append([tt.x, tt.y])
+        # lm.append(a)
     
-    return np.array(lm)
+    # return np.array(lm)
+    return shapes
 
 def get_landmark(filepath, predictor,model):
     """get landmark with dlib
@@ -89,6 +92,30 @@ def get_landmark(filepath, predictor,model):
     lm = np.array(a)
     
     return lm
+
+def get_landmark_shape(filepath, predictor,model):
+    """get landmark with dlib
+    :return: np.array shape=(68, 2)
+    """
+    detector = dlib.cnn_face_detection_model_v1(model)
+    if type(filepath) == str:
+        img = dlib.load_rgb_image(filepath)
+    else:
+        img = filepath
+
+    dets = detector(img, 1)
+    
+    #logging.info('dlib faces detected is {0}'.format(len(dets)))
+    
+    if len(dets) == 0:
+        logging.info('Error: no single face detected! If you are sure there are faces in your input, you may rerun the code or change the image several times until the face is detected. Sometimes the detector is unstable.')
+        return None
+    
+    shape = None
+    for k, d in enumerate(dets):
+        shape = predictor(img, d.rect)
+    
+    return shape    
 
 def align_face(filepath,lm):
     """
