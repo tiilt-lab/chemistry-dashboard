@@ -116,19 +116,20 @@ export class ActiveSessionService {
             this.sessionService
                 .getSessionSpeakerMetrics(this.sessionId)
                 .then((response) => response.json())
-                .then((data) => {
-                  const transcripts = []
-                  for (const transcript_metrics of data) {
-                      const speaker_metrics = SpeakerMetricsModel.fromJsonList(
-                          transcript_metrics["speaker_metrics"],
-                      )
-                      const transcript_model = TranscriptModel.fromJson(
-                          transcript_metrics["transcript"],
-                          speaker_metrics,
-                      )
-                      transcripts.push(transcript_model)
-                  }
-                  this.transcriptSource.next(transcripts)
+                .then((json) => {
+                    const data = JSON.parse(json);
+                    const transcripts = []
+                    for (const transcript_metrics of data) {
+                        const speaker_metrics = SpeakerMetricsModel.fromJsonList(
+                            transcript_metrics["speaker_metrics"],
+                        )
+                        const transcript_model = TranscriptModel.fromJson(
+                            transcript_metrics["transcript"],
+                            speaker_metrics,
+                        )
+                        transcripts.push(transcript_model)
+                    }
+                    this.transcriptSource.next(transcripts)
                 })
         })
 

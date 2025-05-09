@@ -109,10 +109,13 @@ class SessionService {
   }
 
   getSessionSpeakerMetrics(sessionId){
+    const body = {
+      sessionId: sessionId,
+    };
     return this.api.httpRequestCall(
       `api/v1/sessions/${sessionId}/transcripts/speaker_metrics`,
-      "GET",
-      {}
+      "POST",
+      body
     );
   }
 
