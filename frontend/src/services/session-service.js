@@ -108,6 +108,14 @@ class SessionService {
     );
   }
 
+  getSessionSpeakerMetrics(sessionId){
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/transcripts/speaker_metrics`,
+      "GET",
+      {}
+    );
+  }
+
   getTranscriptSpeakerMetrics(transcriptId) {
     return this.api.httpRequestCall(
       `api/v1/transcripts/${transcriptId}/speaker_metrics`,
