@@ -155,7 +155,7 @@ export class ActiveSessionService {
         // Initial digest of transcripts and speaker metrics.
         this.socket.on("transcript_metrics_digest", (e) => {
             const data = JSON.parse(e)
-            const transcripts = []
+            const transcripts = this.transcriptSource.getValue()
             for (const transcript_metrics of data) {
                 const speaker_metrics = SpeakerMetricsModel.fromJsonList(
                     transcript_metrics["speaker_metrics"],
