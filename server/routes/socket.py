@@ -29,10 +29,16 @@ def join_session(message):
             #logging.info(str(user))
             #logging.info(database.get_transcripts(session_id=room))
             transcripts = database.get_transcripts(session_id=room)
+            page_size = 100
+            transcript_speaker_metrics = []
             for transcript in transcripts:
+                if len(transcript_speaker_metrics) == page_size:
+                    emit('transcript_metrics_digest', json.dumps(transcript_speaker_metrics))
+                    transcript_speaker_metrics = [] 
                 speaker_metrics = database.get_speaker_transcript_metrics(transcript_id=transcript.id)
-                emit('transcript_metrics_update', json.dumps({'transcript' : transcript.json(),
-                                                              'speaker_metrics' : [speaker_metric.json() for speaker_metric in speaker_metrics]}))
+                transcript_speaker_metrics.append({'transcript' : transcript.json(),
+                                                   'speaker_metrics' : [speaker_metric.json() for speaker_metric in speaker_metrics]})
+            emit('transcript_metrics_digest', json.dumps(transcript_speaker_metrics))
             
 
 @socketio.on('leave_room', namespace='/session')
