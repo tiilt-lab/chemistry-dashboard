@@ -113,6 +113,7 @@ export class ActiveSessionService {
 
         // Handle room join.
         this.socket.on("room_joined", (e) => {
+           /* 
             this.sessionService
                 .getSessionSpeakerMetrics(this.sessionId)
                 .then((response) => response.json())
@@ -131,6 +132,7 @@ export class ActiveSessionService {
                     }
                     this.transcriptSource.next(transcripts)
                 })
+                    */
         })
 
         // Update transcripts and speaker metrics.
