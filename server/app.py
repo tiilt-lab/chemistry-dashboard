@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask
 from flask_socketio import SocketIO
@@ -34,9 +37,6 @@ logger.addHandler(log_file)
 log_console = logging.StreamHandler()
 log_console.setFormatter(log_format)
 logger.addHandler(log_console)
-
-from gevent import monkey
-monkey.patch_all()
 
 # Create app
 app = Flask(__name__)
