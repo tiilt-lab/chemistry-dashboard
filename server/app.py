@@ -35,6 +35,9 @@ log_console = logging.StreamHandler()
 log_console.setFormatter(log_format)
 logger.addHandler(log_console)
 
+from gevent import monkey
+monkey.patch_all()
+
 # Create app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = '\xf9\xc5_!\x9c^t\x80\xce\xee\xbc\x8c_\xd2\xd6\xf3\x92C\x9e\xcb\x88\xc7\xa9('
@@ -58,9 +61,9 @@ limiter = Limiter(app, key_func=get_remote_address)
 
 # Create SocketIO app (engineio_logger=True for advance debug)
 if cf.cloud():
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"127.0.0.1:5000","localhost"], manage_session=False)
+	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"127.0.0.1:5000","localhost"], manage_session=False, message_queue="redis://")
 else:
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"127.0.0.1:5000","localhost"],manage_session=False)
+	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"127.0.0.1:5000","localhost"],manage_session=False, message_queue="redis://")
 
 # Create database
 DATABASE_SERVER = "blinc.c2tdsnprd97b.us-east-2.rds.amazonaws.com" #"localhost:3306"
