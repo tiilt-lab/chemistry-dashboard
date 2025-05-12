@@ -19,7 +19,7 @@ export class ActiveSessionService {
     sessionId
     initialized = false
 
-    initialize(sessionId, setSate) {
+    initialize(sessionId, setInitialized) {
         if (this.sessionId === sessionId) {
             return
         }
@@ -49,8 +49,7 @@ export class ActiveSessionService {
                                             devicesObj,
                                         )
                                         this.initializeSocket()
-                                        this.initialized = true
-                                        setSate(true)
+                                        setInitialized(true)
                                     })
                                 }
                             },
@@ -113,6 +112,7 @@ export class ActiveSessionService {
 
         // Handle room join.
         this.socket.on("room_joined", (e) => {
+            this.initialized = true
            /* 
             this.sessionService
                 .getSessionSpeakerMetrics(this.sessionId)
