@@ -2,7 +2,6 @@ import { AppSectionBoxComponent } from "../section-box/section-box-component"
 import { AppTimelineSlider } from "../timeline-slider/timeline-slider-component"
 import { AppTimeline } from "../../timeline/timeline-component"
 import { AppFeaturesComponent } from "../../features/features-component"
-//import { AppIndividualFeaturesComponent } from "frontend\src\individualmetrics\features-component.js"
 import { AppRadarComponent } from "../../radar/radar-component"
 import { AppKeywordsComponent } from "../../keywords/keywords-component"
 import style from "../../byod-join/byod-join.module.css"
@@ -15,51 +14,55 @@ function AppInfographicsComparison(props) {
         <>
             {props.speakers && (
                 <div className="infographics-container">
-                    <div className="wide-section justify-between">
-                        <select
-                            id="speaker1"
-                            className={style["dropdown-input"]}
-                            style={{ width: adjDim(350) + "px" }}
-                            value={props.selectedSpkrId1}
-                            onChange={(e) =>
-                                props.setSelectedSpkrId1(
-                                    parseInt(e.target.value, 10),
-                                )
-                            }
-                        >
-                            <option value="-1">Group</option>
-                            {props.speakers.map((speaker) => (
-                                <option
-                                    key={speaker["id"]}
-                                    value={speaker["id"]}
-                                >
-                                    {speaker["alias"]}
-                                </option>
-                            ))}
-                        </select>
+                    {props.details !== "Group" && (
+                        <div className="wide-section justify-between">
+                            <select
+                                id="speaker1"
+                                className={style["dropdown-input"]}
+                                style={{ width: adjDim(350) + "px" }}
+                                value={props.selectedSpkrId1}
+                                onChange={(e) =>
+                                    props.setSelectedSpkrId1(
+                                        parseInt(e.target.value, 10),
+                                    )
+                                }
+                            >
+                                <option value="-1">Group</option>
+                                {props.speakers.map((speaker) => (
+                                    <option
+                                        key={speaker["id"]}
+                                        value={speaker["id"]}
+                                    >
+                                        {speaker["alias"]}
+                                    </option>
+                                ))}
+                            </select>
 
-                        <select
-                            id="speaker2"
-                            className={style["dropdown-input"]}
-                            style={{ width: adjDim(350) + "px" }}
-                            value={props.selectedSpkrId2}
-                            onChange={(e) =>
-                                props.setSelectedSpkrId2(
-                                    parseInt(e.target.value, 10),
-                                )
-                            }
-                        >
-                            <option value="-1">Group</option>
-                            {props.speakers.map((speaker) => (
-                                <option
-                                    key={speaker["id"]}
-                                    value={speaker["id"]}
+                            {props.details === "Comparison" && (
+                                <select
+                                    id="speaker2"
+                                    className={style["dropdown-input"]}
+                                    style={{ width: adjDim(350) + "px" }}
+                                    value={props.selectedSpkrId2}
+                                    onChange={(e) =>
+                                        props.setSelectedSpkrId2(
+                                            parseInt(e.target.value, 10),
+                                        )
+                                    }
                                 >
-                                    {speaker["alias"]}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                                    <option value="-1">Group</option>
+                                    {props.speakers.map((speaker) => (
+                                        <option
+                                            key={speaker["id"]}
+                                            value={speaker["id"]}
+                                        >
+                                            {speaker["alias"]}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+                        </div>
+                    )}
                     {props.showBoxes.length > 0 &&
                         props.showBoxes[0]["clicked"] && (
                             <AppSectionBoxComponent
@@ -87,7 +90,8 @@ function AppInfographicsComparison(props) {
                             </AppSectionBoxComponent>
                         )}
 
-                    {props.showBoxes.length > 0 &&
+                    {props.details === "Comparison" &&
+                        props.showBoxes.length > 0 &&
                         props.showBoxes[1]["clicked"] && (
                             <AppSectionBoxComponent
                                 heading={"Discussion timeline"}
@@ -118,7 +122,8 @@ function AppInfographicsComparison(props) {
                             </AppSectionBoxComponent>
                         )}
 
-                    {props.showBoxes.length > 0 &&
+                    {props.details === "Comparison" &&
+                        props.showBoxes.length > 0 &&
                         props.showBoxes[2]["clicked"] && (
                             <AppSectionBoxComponent
                                 heading={"Keyword detection"}
@@ -134,7 +139,8 @@ function AppInfographicsComparison(props) {
                             </AppSectionBoxComponent>
                         )}
 
-                    {props.showBoxes.length > 0 &&
+                    {props.details !== "Group" &&
+                        props.showBoxes.length > 0 &&
                         props.showBoxes[5]["clicked"] && (
                             <AppSectionBoxComponent
                                 heading={`Participation and Impact Style`}
@@ -148,7 +154,8 @@ function AppInfographicsComparison(props) {
                             </AppSectionBoxComponent>
                         )}
 
-                    {props.showBoxes.length > 0 &&
+                    {props.details === "Comparison" &&
+                        props.showBoxes.length > 0 &&
                         props.showBoxes[5]["clicked"] && (
                             <AppSectionBoxComponent
                                 heading={`Participation and Impact Style`}
@@ -175,7 +182,8 @@ function AppInfographicsComparison(props) {
                             </AppSectionBoxComponent>
                         )}
 
-                    {props.showBoxes.length > 0 &&
+                    {props.details === "Comparison" &&
+                        props.showBoxes.length > 0 &&
                         props.showBoxes[3]["clicked"] && (
                             <AppSectionBoxComponent
                                 heading={`Expression and Thinking Style`}
@@ -202,7 +210,8 @@ function AppInfographicsComparison(props) {
                             </AppSectionBoxComponent>
                         )}
 
-                    {props.showBoxes.length > 0 &&
+                    {props.details === "Comparison" &&
+                        props.showBoxes.length > 0 &&
                         props.showBoxes[4]["clicked"] && (
                             <AppSectionBoxComponent heading={"Radar chart"}>
                                 <AppRadarComponent

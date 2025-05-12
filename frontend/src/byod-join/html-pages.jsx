@@ -12,7 +12,6 @@ import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { TranscriptsComponentClient } from "../transcripts/transcripts-component_client"
 import { adjDim, isLargeScreen } from "../myhooks/custom-hooks"
-import { AppInfographicsView } from "../components/infographics-view/infographics-view-component"
 
 import style from "./byod-join.module.css"
 import style2 from "../pod-details/pod.module.css"
@@ -23,8 +22,6 @@ import MicIcon from "@icons/Mic"
 import Checkmark from "@assets/img/checkmark.svg"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
-import { AppInfographicsGroup } from "../components/infographics-view/infographics-group"
-import { AppInfographicsIndividual } from "../components/infographics-view/infographics-individual"
 
 function ByodJoinPage(props) {
     // console.log(props, 'props')
@@ -490,123 +487,55 @@ function ByodJoinPage(props) {
                                                     </div>
                                                 </AppSectionBoxComponent>
                                             )}
-                                            {props.details === "Group" && (
-                                                <AppInfographicsGroup
-                                                    displayTranscripts={
-                                                        props.displayTranscripts
-                                                    }
-                                                    endTime={props.endTime}
-                                                    fromclient={false}
-                                                    onClickedTimeline={
-                                                        props.onClickedTimeline
-                                                    }
-                                                    radarTrigger={
-                                                        props.radarTrigger
-                                                    }
-                                                    session={props.session}
-                                                    sessionDevice={
-                                                        props.sessionDevice
-                                                    }
-                                                    setRange={props.setRange}
-                                                    showBoxes={props.showBoxes}
-                                                    showFeatures={
-                                                        props.showFeatures
-                                                    }
-                                                    startTime={props.startTime}
-                                                    speakers={props.speakers}
-                                                ></AppInfographicsGroup>
-                                            )}
-                                            {props.details === "Individual" && (
-                                                <AppInfographicsIndividual
-                                                    displayTranscripts={
-                                                        props.displayTranscripts
-                                                    }
-                                                    endTime={props.endTime}
-                                                    fromclient={false}
-                                                    onClickedTimeline={
-                                                        props.onClickedTimeline
-                                                    }
-                                                    radarTrigger={
-                                                        props.radarTrigger
-                                                    }
-                                                    session={props.session}
-                                                    sessionDevice={
-                                                        props.sessionDevice
-                                                    }
-                                                    setRange={props.setRange}
-                                                    showBoxes={props.showBoxes}
-                                                    showFeatures={
-                                                        props.showFeatures
-                                                    }
-                                                    startTime={props.startTime}
-                                                    speakers={props.speakers}
-                                                    selectedSpkrId={
-                                                        props.selectedSpkrId
-                                                    }
-                                                    setSelectedSpkrId={
-                                                        props.setSelectedSpkrId
-                                                    }
-                                                    selectedSpkrId1={
-                                                        props.selectedSpkrId1
-                                                    }
-                                                    setSelectedSpkrId1={
-                                                        props.setSelectedSpkrId1
-                                                    }
-                                                    spkr1Transcripts={
-                                                        props.spkr1Transcripts
-                                                    }
-                                                ></AppInfographicsIndividual>
-                                            )}
-                                            {props.details === "Comparison" && (
-                                                <AppInfographicsComparison
-                                                    displayTranscripts={
-                                                        props.displayTranscripts
-                                                    }
-                                                    endTime={props.endTime}
-                                                    fromclient={false}
-                                                    onClickedTimeline={
-                                                        props.onClickedTimeline
-                                                    }
-                                                    radarTrigger={
-                                                        props.radarTrigger
-                                                    }
-                                                    session={props.session}
-                                                    sessionDevice={
-                                                        props.sessionDevice
-                                                    }
-                                                    setRange={props.setRange}
-                                                    showBoxes={props.showBoxes}
-                                                    showFeatures={
-                                                        props.showFeatures
-                                                    }
-                                                    startTime={props.startTime}
-                                                    speakers={props.speakers}
-                                                    selectedSpkrId={
-                                                        props.selectedSpkrId
-                                                    }
-                                                    setSelectedSpkrId={
-                                                        props.setSelectedSpkrId
-                                                    }
-                                                    selectedSpkrId1={
-                                                        props.selectedSpkrId1
-                                                    }
-                                                    setSelectedSpkrId1={
-                                                        props.setSelectedSpkrId1
-                                                    }
-                                                    selectedSpkrId2={
-                                                        props.selectedSpkrId2
-                                                    }
-                                                    setSelectedSpkrId2={
-                                                        props.setSelectedSpkrId2
-                                                    }
-                                                    spkr1Transcripts={
-                                                        props.spkr1Transcripts
-                                                    }
-                                                    spkr2Transcripts={
-                                                        props.spkr2Transcripts
-                                                    }
-                                                ></AppInfographicsComparison>
-                                            )}
+                                            <AppInfographicsComparison
+                                                displayTranscripts={
+                                                    props.displayTranscripts
+                                                }
+                                                endTime={props.endTime}
+                                                fromclient={true}
+                                                onClickedTimeline={
+                                                    props.onClickedTimeline
+                                                }
+                                                radarTrigger={
+                                                    props.radarTrigger
+                                                }
+                                                session={props.session}
+                                                sessionDevice={
+                                                    props.sessionDevice
+                                                }
+                                                setRange={props.setRange}
+                                                showBoxes={props.showBoxes}
+                                                showFeatures={
+                                                    props.showFeatures
+                                                }
+                                                startTime={props.startTime}
+                                                speakers={props.speakers}
+                                                selectedSpkrId={
+                                                    props.selectedSpkrId
+                                                }
+                                                setSelectedSpkrId={
+                                                    props.setSelectedSpkrId
+                                                }
+                                                selectedSpkrId1={
+                                                    props.selectedSpkrId1
+                                                }
+                                                setSelectedSpkrId1={
+                                                    props.setSelectedSpkrId1
+                                                }
+                                                selectedSpkrId2={
+                                                    props.selectedSpkrId2
+                                                }
+                                                setSelectedSpkrId2={
+                                                    props.setSelectedSpkrId2
+                                                }
+                                                spkr1Transcripts={
+                                                    props.spkr1Transcripts
+                                                }
+                                                spkr2Transcripts={
+                                                    props.spkr2Transcripts
+                                                }
+                                                details={props.details}
+                                            />
                                         </div>
                                         {props.loading() ? (
                                             <AppSpinner></AppSpinner>
