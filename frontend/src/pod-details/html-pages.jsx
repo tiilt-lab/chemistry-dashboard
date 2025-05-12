@@ -200,6 +200,16 @@ function PodComponentPages(props) {
                     <></>
                 )}
 
+                {props.loading() ? (
+                    <div className={style["add-dialog"]}>
+                        <div className={style["dialog-heading"]}>
+                            Loading...please wait...
+                        </div>
+                    </div>
+                ) : (
+                    <></>
+                )}
+
                 {props.currentForm == "RemoveDevice" ? (
                     <div className={style["dialog-content"]}>
                         <div className={style["dialog-heading"]}>
