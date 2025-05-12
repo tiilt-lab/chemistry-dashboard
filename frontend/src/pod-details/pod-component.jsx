@@ -238,7 +238,7 @@ function PodComponent() {
   };
 
   const loading = () => {
-    return session === null || transcripts === null;
+    return session === null || transcripts === null || !activeSessionService.initialized;
   };
 
   const getSpeakers = () => {
@@ -376,7 +376,7 @@ function PodComponent() {
       setDetails={setDetails}
       viewIndividual={viewIndividual}
       viewComparison={viewComparison}
-      viewGroup={viewGroup}  
+      viewGroup={viewGroup}
       open={open}
       setOpen={setOpen}
     />
