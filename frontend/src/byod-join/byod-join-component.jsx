@@ -193,7 +193,7 @@ function JoinPage() {
             console.log("reloaded page - displayTranscripts")
             setSpeakerTranscripts()
         }
-    }, [displayTranscripts, selectedSpkrId1, selectedSpkrId2])
+    }, [displayTranscripts, selectedSpkrId1, selectedSpkrId2, details])
 
     //Use effect to start audio and video processing
     useEffect(() => {
