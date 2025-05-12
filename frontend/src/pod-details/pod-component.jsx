@@ -238,7 +238,7 @@ function PodComponent() {
   };
 
   const loading = () => {
-    return session === null || transcripts === null || !activeSessionService.initialized;
+    return session === null || transcripts === null;
   };
 
   const getSpeakers = () => {

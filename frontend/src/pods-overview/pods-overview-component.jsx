@@ -226,6 +226,7 @@ function PodsOverviewComponent() {
       setPasscodeState={setPasscodeState}
       copyPasscode={copyPasscode}
       onSessionClosing={onSessionClosing}
+      initialized={activeSessionService.initialized}
       devices={devices}
     />
   );
