@@ -6,6 +6,7 @@ import { Appheader } from "../header/header-component"
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { adjDim } from "../myhooks/custom-hooks"
+import { AppSpinner } from "../spinner/spinner-component"
 
 import MicIcon from "../Icons/Mic"
 
@@ -27,6 +28,16 @@ function PodsOverviewPages(props) {
                     }}
                     nav={props.navigateToSessions}
                 />
+                {props.sessionDevices === null || !props.initialized ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <div className={style["load-text"]}>
+                            Loading Session Data...
+                        </div>
+                        <AppSpinner />
+                    </div>
+                ) : (
+                    <></>
+                )}
                 <div className="toolbar-view-container">
                     {props.session !== null ? (
                         <AppSessionToolbar
@@ -47,12 +58,8 @@ function PodsOverviewPages(props) {
                         <></>
                     )}
                     <div className="infographics-container mt-2 grow overflow-y-auto">
-                        {props.sessionDevices === null ? (
-                            <div className={style["load-text"]}>Loading...</div>
-                        ) : (
-                            <></>
-                        )}
                         {props.sessionDevices !== null &&
+                        props.initialized &&
                         Object.keys(props.sessionDevices).length === 0 ? (
                             <div className={style["load-text"]}>
                                 {" "}
@@ -61,7 +68,7 @@ function PodsOverviewPages(props) {
                         ) : (
                             <></>
                         )}
-                        {props.sessionDevices !== null ? (
+                        {props.sessionDevices !== null && props.initialized ? (
                             props.sessionDevices.map((device, index) => (
                                 <div
                                     key={index}
