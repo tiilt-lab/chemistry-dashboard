@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Outlet } from 'react-router-dom';
 import { ActiveSessionService } from '../services/active-session-service';
+import { AppSpinner } from "../spinner/spinner-component"
 
 
 function SessionManagerComponent() {
@@ -23,13 +24,16 @@ function SessionManagerComponent() {
 
 
   if (!initialized) {
-    return <></>
+    return (
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <AppSpinner/>
+      </div>
+    );
   }
 
   return (
-
     <Outlet context={[activeSessionService, setActiveSessionService]}/>
-  )
+  );
 
 }
 
