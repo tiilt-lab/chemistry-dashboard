@@ -147,7 +147,7 @@ function PodComponent() {
       console.log("reloaded page - display transcripts");
       setSpeakerTranscripts(displayTranscripts);
     }
-  }, [displayTranscripts, selectedSpkrId1, selectedSpkrId2]);
+  }, [displayTranscripts, selectedSpkrId1, selectedSpkrId2, details]);
 
   useEffect(() => {
     if (trigger > 0) {
