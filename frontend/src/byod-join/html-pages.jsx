@@ -77,20 +77,14 @@ function ByodJoinPage(props) {
                                     <div>
                                         <div>Device Name:</div>
                                         <input
-                                            className={style["text-input"]}
-                                            style={{
-                                                width: adjDim(330) + "px",
-                                            }}
+                                            className="text-box small-section"
                                             id="name"
                                             placeholder="Name"
                                         />
                                         <div>Numbers of Collaborators:</div>
                                         <select
                                             id="collaborators"
-                                            className={style["dropdown-input"]}
-                                            style={{
-                                                width: adjDim(330) + "px",
-                                            }}
+                                            className="dropdown small-section"
                                         >
                                             <option value="0">
                                                 0(Automatic)
@@ -106,10 +100,7 @@ function ByodJoinPage(props) {
                                         </select>
                                         <div>Passcode:</div>
                                         <input
-                                            className={style["text-input"]}
-                                            style={{
-                                                width: adjDim(330) + "px",
-                                            }}
+                                            className="text-box small-section"
                                             id="passcode"
                                             value={props.pcode}
                                             placeholder="Passcode (4 characters)"
@@ -123,10 +114,7 @@ function ByodJoinPage(props) {
                                         <div>Join With:</div>
                                         <select
                                             id="joinwith"
-                                            className={style["dropdown-input"]}
-                                            style={{
-                                                width: adjDim(330) + "px",
-                                            }}
+                                            className="dropdown small-section"
                                         >
                                             <option value="Audio">Audio</option>
                                             {/*<option value="Video">Video</option>
@@ -609,7 +597,7 @@ function ByodJoinPage(props) {
                                 controllerContainerStyle={{ height: "3rem" }}
                             />
                             <button
-                                className="toolbar-button"
+                                className="toolbar-button z-40"
                                 onClick={props.addSpeakerFingerprint}
                             >
                                 Confirm
