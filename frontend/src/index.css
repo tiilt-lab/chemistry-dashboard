@@ -47,7 +47,16 @@ html {
     @apply w-xs @sm:w-sm @6xl:w-xl
 }
 
-.wide-section {
-    @apply flex flex-row relative w-xs @sm:w-sm @3xl:w-3xl @6xl:w-6xl @7xl:w-7xl box-border
+.wide-section
+{
+    @apply w-xs @sm:w-sm @3xl:w-3xl @6xl:w-6xl @7xl:w-7xl
+}
+
+.dropdown {
+    @apply flex relative text-base/relaxed py-2.5 mx-3 border-2 border-solid rounded-md border-[#a7a7a7] transition-colors outline-0 text-center
+}
+
+.section-box {
+    @apply flex flex-row relative box-border
 }
 
