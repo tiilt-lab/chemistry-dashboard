@@ -1,22 +1,11 @@
 import { GenericDialogBox } from "../dialog/dialog-component"
-import { AppSectionBoxComponent } from "../components/section-box/section-box-component"
-import { AppTimelineSlider } from "../components/timeline-slider/timeline-slider-component"
-import { AppTimeline } from "../timeline/timeline-component"
-import { AppHeatMapComponent } from "../heat-map/heat-map-component"
-import { AppFeaturesComponent } from "../features/features-component"
-import { AppRadarComponent } from "../radar/radar-component"
 import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
-import { AppKeywordsComponent } from "../keywords/keywords-component"
 import { Appheader } from "../header/header-component"
-import { isLargeScreen } from "../myhooks/custom-hooks"
-import { AppInfographicsView } from "../components/infographics-view/infographics-view-component"
 import style from "./pod.module.css"
 import React from "react"
 import Select from "react-select"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
-import { AppInfographicsGroup } from "../components/infographics-view/infographics-group"
-import { AppInfographicsIndividual } from "../components/infographics-view/infographics-individual"
 
 function PodComponentPages(props) {
     return (
@@ -53,73 +42,29 @@ function PodComponentPages(props) {
                     ) : (
                         <></>
                     )}
-                    {props.details === "Group" && (
-                        <div className="center-column-container">
-                            <AppInfographicsGroup
-                                displayTranscripts={props.displayTranscripts}
-                                endTime={props.endTime}
-                                fromclient={false}
-                                onClickedTimeline={props.onClickedTimeline}
-                                radarTrigger={props.radarTrigger}
-                                session={props.session}
-                                sessionDevice={props.sessionDevice}
-                                setRange={props.setRange}
-                                showBoxes={props.showBoxes}
-                                showFeatures={props.showFeatures}
-                                startTime={props.startTime}
-                                speakers={props.speakers}
-                            ></AppInfographicsGroup>
-                        </div>
-                    )}
-                    {props.details === "Comparison" && (
-                        <div className="center-column-container">
-                            <AppInfographicsComparison
-                                displayTranscripts={props.displayTranscripts}
-                                endTime={props.endTime}
-                                fromclient={false}
-                                onClickedTimeline={props.onClickedTimeline}
-                                radarTrigger={props.radarTrigger}
-                                session={props.session}
-                                sessionDevice={props.sessionDevice}
-                                setRange={props.setRange}
-                                showBoxes={props.showBoxes}
-                                showFeatures={props.showFeatures}
-                                startTime={props.startTime}
-                                speakers={props.speakers}
-                                selectedSpkrId={props.selectedSpkrId}
-                                setSelectedSpkrId={props.setSelectedSpkrId}
-                                selectedSpkrId1={props.selectedSpkrId1}
-                                setSelectedSpkrId1={props.setSelectedSpkrId1}
-                                selectedSpkrId2={props.selectedSpkrId2}
-                                setSelectedSpkrId2={props.setSelectedSpkrId2}
-                                spkr1Transcripts={props.spkr1Transcripts}
-                                spkr2Transcripts={props.spkr2Transcripts}
-                            ></AppInfographicsComparison>
-                        </div>
-                    )}
-                    {props.details === "Individual" && (
-                        <div className="center-column-container">
-                            <AppInfographicsIndividual
-                                displayTranscripts={props.displayTranscripts}
-                                endTime={props.endTime}
-                                fromclient={false}
-                                onClickedTimeline={props.onClickedTimeline}
-                                radarTrigger={props.radarTrigger}
-                                session={props.session}
-                                sessionDevice={props.sessionDevice}
-                                setRange={props.setRange}
-                                showBoxes={props.showBoxes}
-                                showFeatures={props.showFeatures}
-                                startTime={props.startTime}
-                                speakers={props.speakers}
-                                selectedSpkrId={props.selectedSpkrId}
-                                setSelectedSpkrId={props.setSelectedSpkrId}
-                                selectedSpkrId1={props.selectedSpkrId1}
-                                setSelectedSpkrId1={props.setSelectedSpkrId1}
-                                spkr1Transcripts={props.spkr1Transcripts}
-                            ></AppInfographicsIndividual>
-                        </div>
-                    )}
+                    <div className="center-column-container">
+                        <AppInfographicsComparison
+                            displayTranscripts={props.displayTranscripts}
+                            endTime={props.endTime}
+                            fromclient={false}
+                            onClickedTimeline={props.onClickedTimeline}
+                            radarTrigger={props.radarTrigger}
+                            session={props.session}
+                            sessionDevice={props.sessionDevice}
+                            setRange={props.setRange}
+                            showBoxes={props.showBoxes}
+                            showFeatures={props.showFeatures}
+                            startTime={props.startTime}
+                            speakers={props.speakers}
+                            selectedSpkrId1={props.selectedSpkrId1}
+                            setSelectedSpkrId1={props.setSelectedSpkrId1}
+                            selectedSpkrId2={props.selectedSpkrId2}
+                            setSelectedSpkrId2={props.setSelectedSpkrId2}
+                            spkr1Transcripts={props.spkr1Transcripts}
+                            spkr2Transcripts={props.spkr2Transcripts}
+                            details={props.details}
+                        ></AppInfographicsComparison>
+                    </div>
                 </div>
                 {props.loading() ? <AppSpinner></AppSpinner> : <></>}
             </div>

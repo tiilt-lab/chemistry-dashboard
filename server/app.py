@@ -1,3 +1,6 @@
+import eventlet
+eventlet.monkey_patch()
+
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask
 from flask_socketio import SocketIO
@@ -58,9 +61,9 @@ limiter = Limiter(app, key_func=get_remote_address)
 
 # Create SocketIO app (engineio_logger=True for advance debug)
 if cf.cloud():
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=cf.domain(), manage_session=False)
+	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"127.0.0.1:5000","localhost"], manage_session=False, message_queue="redis://")
 else:
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=cf.domain(),manage_session=False)
+	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"127.0.0.1:5000","localhost"],manage_session=False, message_queue="redis://")
 
 # Create database
 DATABASE_FILE = os.path.dirname(os.path.abspath(__file__)) + '/discussion_capture.db'
