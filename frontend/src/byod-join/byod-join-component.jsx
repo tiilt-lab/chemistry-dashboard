@@ -82,7 +82,6 @@ function JoinPage() {
     const [numSpeakers, setNumSpeakers] = useState()
     const [speakers, setSpeakers] = useState([])
     const [speakersValidated, setSpeakersValidated] = useState(false)
-    const [selectedSpkrId, setSelectedSpkrId] = useState(-1)
     const [selectedSpeaker, setSelectedSpeaker] = useState(null)
     const [currBlob, setCurrBlob] = useState(null)
     const [invalidName, setInvalidName] = useState(false)
@@ -1086,8 +1085,6 @@ function JoinPage() {
             authKey={key}
             openForms={openForms}
             closeForm={closeForm}
-            selectedSpkrId={selectedSpkrId}
-            setSelectedSpkrId={setSelectedSpkrId}
             selectedSpkrId1={selectedSpkrId1}
             setSelectedSpkrId1={setSelectedSpkrId1}
             selectedSpkrId2={selectedSpkrId2}
