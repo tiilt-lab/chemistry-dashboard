@@ -510,12 +510,6 @@ function ByodJoinPage(props) {
                                                 }
                                                 startTime={props.startTime}
                                                 speakers={props.speakers}
-                                                selectedSpkrId={
-                                                    props.selectedSpkrId
-                                                }
-                                                setSelectedSpkrId={
-                                                    props.setSelectedSpkrId
-                                                }
                                                 selectedSpkrId1={
                                                     props.selectedSpkrId1
                                                 }

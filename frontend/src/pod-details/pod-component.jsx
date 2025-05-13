@@ -253,7 +253,6 @@ function PodComponent() {
             const input = SpeakerModel.fromJsonList(jsonObj)
             if(input && input.length){
               setSpeakers(input);
-              setSelectedSpkrId1(input[0]["id"])
             }
           });
       },
