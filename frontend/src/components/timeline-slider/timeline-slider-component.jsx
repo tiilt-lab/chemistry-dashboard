@@ -113,7 +113,7 @@ function AppTimelineSlider(props) {
   };
 
   return (
-    <div className="wide-section h-14">
+    <div className="section-box h-14">
       <div
         className={style["timeline-background"]}
         style={{ width: "97%" }}
