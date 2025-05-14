@@ -5,7 +5,7 @@ import { AppFolderSelectComponent } from "../components/folder-select/folder-sel
 import style from "./sessions.module.css"
 import style2 from "../components/context-menu/context-menu.module.css"
 import breadcrumbIcon from "../assets/img/icon-back.svg"
-import folderIcon from "../assets/img/folder.svg"
+import FolderIcon from "../Icons/Folder"
 import MicIcon from "../Icons/Mic"
 import { adjDim } from "../myhooks/custom-hooks"
 import { AppSpinner } from "../spinner/spinner-component"
@@ -24,7 +24,7 @@ function DiscussionSessionPage(props) {
 
                 <div
                     className={style["list-container"]}
-                    style={{ "max-width": adjDim(375) + "px" }}
+                    style={{ "maxWidth": adjDim(375) + "px" }}
                 >
                     {props.isLoading ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -69,7 +69,7 @@ function DiscussionSessionPage(props) {
                                 <span
                                     onClick={props.goBackToPrevious}
                                     className={style["crumb-name"]}
-                                    style={{ "max-width": adjDim(240) + "px" }}
+                                    style={{ "maxWidth": adjDim(240) + "px" }}
                                 >
                                     {" "}
                                     Home
@@ -97,7 +97,7 @@ function DiscussionSessionPage(props) {
                                     <div
                                         className={style["crumb-name"]}
                                         style={{
-                                            "max-width": adjDim(240) + "px",
+                                            "maxWidth": adjDim(240) + "px",
                                             cursor: "default",
                                         }}
                                     >
@@ -125,11 +125,12 @@ function DiscussionSessionPage(props) {
                                         key={index}
                                         className={style["folder-item"]}
                                     >
-                                        <img
+                                        <div
                                             alt="folder"
-                                            src={folderIcon}
                                             className={style["folder-icon"]}
-                                        />
+                                        >
+                                            <FolderIcon/>
+                                        </div>
                                         <div
                                             className={style["folder-title"]}
                                             onClick={() => {

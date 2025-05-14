@@ -479,7 +479,6 @@ function ByodJoinPage(props) {
                                                 displayTranscripts={
                                                     props.displayTranscripts
                                                 }
-                                                endTime={props.endTime}
                                                 fromclient={true}
                                                 onClickedTimeline={
                                                     props.onClickedTimeline
@@ -497,6 +496,7 @@ function ByodJoinPage(props) {
                                                     props.showFeatures
                                                 }
                                                 startTime={props.startTime}
+                                                endTime={props.endTime}
                                                 speakers={props.speakers}
                                                 selectedSpkrId1={
                                                     props.selectedSpkrId1
