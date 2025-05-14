@@ -336,7 +336,7 @@
 }
 
 .list-container {
-  max-width: 375px;
+  maxWidth: 375px;
   width: 100%;
   height: 100%;
   overflow: auto;
@@ -531,7 +531,7 @@
 .breadcrumb-container .crumb-name {
   color: #7878FA;
   text-overflow: ellipsis;
-  max-width: 240px;
+  maxWidth: 240px;
   white-space: nowrap;
   display: inline-block;
   height: 18px;
@@ -673,7 +673,7 @@
 }
 
 /* On screens that are less than 700px wide, make the sidebar into a topbar */
-@media screen and (max-width: 700px) {
+@media screen and (maxWidth: 700px) {
   .session-toolbar {
     width: 100%;
     height: auto;
@@ -684,7 +684,7 @@
 }
 
 /* On screens that are less than 400px, display the bar vertically, instead of horizontally */
-@media screen and (max-width: 400px) {
+@media screen and (maxWidth: 400px) {
   .session-toolbar .toolbar-button {
     text-align: center;
     float: none;

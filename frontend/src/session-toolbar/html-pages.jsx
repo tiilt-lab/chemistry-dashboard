@@ -17,7 +17,7 @@ function AppSessionPage(props) {
                         Total duration
                     </div>
                 </span>
-                <div class="flex relative max-w-4/6 flex-1 flex-row items-center justify-center sm:w-min sm:flex-col sm:max-w-full">
+                <div className="flex relative max-w-4/6 flex-1 flex-row items-center justify-center sm:w-min sm:flex-col sm:max-w-full">
                     {props.menus && props.menus.length ? (
                         props.menus.map((menu, index) => (
                             <button
