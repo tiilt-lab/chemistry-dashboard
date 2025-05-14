@@ -12,7 +12,7 @@ import { adjDim } from "../myhooks/custom-hooks";
 function CreateSessionPage(props) {
   return (
     <>
-      <div className={style.container}>
+      <div className="main-container items-center">
         <Appheader
           title={props.pageTitle}
           leftText={false}
@@ -27,25 +27,22 @@ function CreateSessionPage(props) {
         />
         {props.currentMenu === "Settings" ? (
           <React.Fragment>
-            <div className={style["list-container"]}>
+            <div className="center-column-container text-center">
               <div>Discussion name:</div>
               <input
                 id="txtName"
-                className={style["text-input"]}
-                style={{ width: adjDim(350) + "px" }}
+                className="text-box"
                 defaultValue={props.sessionName}
                 onKeyUp={(event) => props.setSessionName(event.target.value)}
                 maxLength="64"
               />
               <div>Folder: </div>
-              <span
-                className={style["path-container"]}
-                style={{ width: adjDim(375) + "px" }}
+              <div
+                className="flex flex-row w-full"
               >
                 <input
                   type="text"
-                  className={style["folder-input"]}
-                  style={{ width: adjDim(318) + "px" }}
+                  className="text-box flex-grow"
                   name="Location"
                   placeholder={props.folderPath}
                   readOnly
@@ -55,7 +52,7 @@ function CreateSessionPage(props) {
                   id={style["open-folder-icon"]}
                   onClick={() => props.openDialog("Folder", "test")}
                 />
-              </span>
+              </div>
               <label className={style["dc-checkbox"]}>
                 Allow participant devices
                 <input
