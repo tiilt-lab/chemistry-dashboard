@@ -327,7 +327,7 @@
 
 
 .list-container {
-  /*maxWidth: 375px;*/
+  /*max-width: 375px;*/
   width: 100vh;
   height: 100vh;
   overflow: auto;
@@ -526,7 +526,7 @@
 .breadcrumb-container .crumb-name {
   color: #7878FA;
   text-overflow: ellipsis;
-  /*maxWidth: 240px;*/
+  /*max-width: 240px;*/
   white-space: nowrap;
   display: inline-block;
   height: 18px;
