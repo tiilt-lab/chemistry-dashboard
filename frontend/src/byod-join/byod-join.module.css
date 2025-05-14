@@ -283,7 +283,7 @@
 }
 
 .list-container {
-  maxWidth: 375px;
+  max-width: 375px;
   width: 100vh;
   height: 100vh;
   overflow: auto;
@@ -291,7 +291,7 @@
 }
 
 .video-container {
-  maxWidth: 640px;
+  max-width: 640px;
   width: 100%;
   margin-top: 20px;
 }
@@ -426,7 +426,7 @@
 .breadcrumb-container .crumb-name {
   color: #7878fa;
   text-overflow: ellipsis;
-  maxWidth: 240px;
+  max-width: 240px;
   white-space: nowrap;
   display: inline-block;
   height: 18px;
