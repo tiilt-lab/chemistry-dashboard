@@ -16,38 +16,49 @@ html {
     @apply box-border flex h-screen w-screen overflow-clip;
 }
 
-.main-container {
-    @apply @container relative box-border flex h-full w-full min-w-fit flex-col;
-}
-
-.toolbar-button {
-    @apply m-0.5 box-border w-19 cursor-pointer rounded-4xl border bg-gradient-to-r from-[#764BFF] to-[#7BB7F1] px-1 py-2 text-center font-sans text-xs/normal font-normal text-[#FAFAFC] transition-shadow hover:shadow-2xl focus:border-[#301f66] focus:ring focus:outline-none active:bg-[#573dac] sm:m-2 sm:w-40 sm:text-sm/normal
-}
-
-.wide-button {
-    @apply m-0.5 box-border w-60 cursor-pointer rounded-4xl border bg-gradient-to-r from-[#764BFF] to-[#7BB7F1] px-1 py-2 text-center font-sans text-lg/relaxed font-normal text-[#FAFAFC] transition-shadow hover:shadow-2xl focus:border-[#301f66] focus:ring focus:outline-none active:bg-[#573dac] sm:m-3 sm:w-80 sm:text-xl/loose
-}
 .text-sans {
     @apply font-sans text-lg font-bold text-[#6466E3];
 }
 
+.main-container {
+    @apply @container relative box-border flex h-full w-full min-w-fit flex-col;
+}
 .toolbar-view-container {
-    @apply relative box-border flex grow flex-col-reverse content-stretch items-stretch overflow-hidden sm:flex-row
+    @apply relative box-border flex grow flex-col-reverse content-stretch items-stretch overflow-hidden sm:flex-row;
 }
 
 .center-column-container {
-    @apply @container relative box-border flex grow overflow-y-auto flex-col min-w-[320px];
+    @apply @container relative box-border flex min-w-[320px] grow flex-col overflow-y-auto;
 }
 
 .infographics-container {
-    @apply @container relative flex grow max-w-full flex-row flex-wrap justify-center;
+    @apply @container relative flex max-w-full grow flex-row flex-wrap justify-center;
+}
+
+.toolbar-button {
+    @apply m-0.5 box-border w-19 cursor-pointer rounded-4xl border bg-gradient-to-r from-[#764BFF] to-[#7BB7F1] px-1 py-2 text-center font-sans text-xs/normal font-normal text-[#FAFAFC] transition-shadow hover:shadow-2xl focus:border-[#301f66] focus:ring focus:outline-none active:bg-[#573dac] sm:my-2 sm:w-30 md:w-40 md:text-sm/normal;
+}
+
+.wide-button {
+    @apply m-0.5 box-border w-60 cursor-pointer rounded-4xl border bg-gradient-to-r from-[#764BFF] to-[#7BB7F1] px-1 py-2 text-center font-sans text-lg/relaxed font-normal text-[#FAFAFC] transition-shadow hover:shadow-2xl focus:border-[#301f66] focus:ring focus:outline-none active:bg-[#573dac] @sm:m-3 @sm:w-80 @sm:text-xl/loose;
+}
+
+.section-box {
+    @apply relative box-border flex flex-row;
 }
 
 .small-section {
-    @apply w-xs @sm:w-sm @6xl:w-xl
+    @apply w-xs @sm:w-sm @6xl:w-xl;
 }
 
 .wide-section {
-    @apply flex flex-row relative w-xs @sm:w-sm @3xl:w-3xl @6xl:w-6xl @7xl:w-7xl box-border
+    @apply w-xs @sm:w-sm @3xl:w-3xl @6xl:w-6xl @7xl:w-7xl;
 }
 
+.dropdown {
+    @apply relative mx-3 flex rounded-md border-2 border-solid border-[#a7a7a7] py-2.5 text-center text-base/relaxed outline-0 transition-colors;
+}
+
+.text-box {
+    @apply relative mx-3 flex rounded-md border-2 border-solid border-[#a7a7a7] py-2.5 text-center text-sm/relaxed outline-0 transition-colors focus:border-[#006db3];
+}

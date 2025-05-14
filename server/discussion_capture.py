@@ -28,7 +28,10 @@ app.register_blueprint(folder_api)
 app.register_blueprint(topicmodel_api)
 app.register_blueprint(speaker_api)
 
+
+
 def main():
+    
 	# Set device connection status to false
 	devices = database.get_devices(connected=True)
 	for device in devices:
@@ -44,4 +47,4 @@ def main():
 	scheduler.shutdown(wait=False)
 
 if __name__ == '__main__':
-	main()
+    main()

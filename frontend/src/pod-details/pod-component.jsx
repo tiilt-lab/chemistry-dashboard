@@ -147,7 +147,7 @@ function PodComponent() {
       console.log("reloaded page - display transcripts");
       setSpeakerTranscripts(displayTranscripts);
     }
-  }, [displayTranscripts, selectedSpkrId1, selectedSpkrId2]);
+  }, [displayTranscripts, selectedSpkrId1, selectedSpkrId2, details]);
 
   useEffect(() => {
     if (trigger > 0) {
@@ -253,7 +253,6 @@ function PodComponent() {
             const input = SpeakerModel.fromJsonList(jsonObj)
             if(input && input.length){
               setSpeakers(input);
-              setSelectedSpkrId1(input[0]["id"])
             }
           });
       },
@@ -376,7 +375,7 @@ function PodComponent() {
       setDetails={setDetails}
       viewIndividual={viewIndividual}
       viewComparison={viewComparison}
-      viewGroup={viewGroup}  
+      viewGroup={viewGroup}
       open={open}
       setOpen={setOpen}
     />

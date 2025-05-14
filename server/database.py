@@ -437,12 +437,14 @@ def delete_session(session_id):
     session_to_delete = get_sessions(id=session_id, active=True)
     if session_to_delete:
         return False
+    
     sub_query = db.session.query(Transcript.id).\
         filter(Transcript.session_device_id == SessionDevice.id).\
         filter(SessionDevice.session_id == session_id).subquery()
+        
     db.session.query(KeywordUsage).filter(KeywordUsage.transcript_id.in_(sub_query)).delete(synchronize_session='fetch')
-    db.session.query(Transcript).filter(Transcript.id.in_(sub_query)).delete(synchronize_session='fetch')
     db.session.query(Keyword).filter(Keyword.session_id == session_id).delete()
+    db.session.query(Transcript).filter(Transcript.id.in_(sub_query)).delete(synchronize_session='fetch')
     db.session.query(SessionDevice).filter(SessionDevice.session_id == session_id).delete()
     db.session.query(Session).filter(Session.id == session_id).delete()
     db.session.commit()

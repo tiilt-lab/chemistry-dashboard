@@ -19,7 +19,7 @@ function Appheader(props) {
             <div className="text-sans w-full overflow-hidden text-center leading-14 whitespace-nowrap select-none">
                 {props.editMode ? (
                     <input
-                        class="visible w-52 overflow-scroll border-0 leading-14"
+                        className="visible w-52 overflow-scroll border-0 leading-14"
                         type="text"
                         defaultValue={props.title}
                         onKeyUp={(event) =>

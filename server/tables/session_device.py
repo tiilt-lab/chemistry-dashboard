@@ -14,6 +14,8 @@ class SessionDevice(db.Model):
     removed = db.Column(db.Boolean, nullable=False, default=False) # If the device was removed from the session by the owner.
     button_pressed = db.Column(db.Boolean, nullable=False)
     embeddings = db.Column(db.String(64))
+    
+    speakers = db.relationship("Speaker", back_populates="session_device", cascade="all, delete",passive_deletes=True)
 
     UniqueConstraint('session_id', 'name', name='unique_session_name')
 
