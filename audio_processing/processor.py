@@ -209,6 +209,9 @@ class AudioProcessor:
             if self.config.features:
                 features = features_detector.detect_features(transcript_text)
 
+            start_time += self.config.start_offset
+            end_time += self.config.start_offset
+            
             # Perform Speaker Diarization
             speaker_tag = None
             speaker_id = -1
@@ -245,9 +248,10 @@ class AudioProcessor:
                     embedding = embedSignal(audio_data, self.diarization_model)
                     self.embeddings.append({
                         'embedding': embedding,
-                        'start': start_time + self.config.start_offset,
-                        'end': end_time + self.config.start_offset,
+                        'start': start_time,
+                        'end': end_time,
                     })
+                    
                     np.save(self.embeddings_file, np.array(self.embeddings))
                 success, transcript_id = callbacks.post_transcripts(
                     self.config.auth_key, start_time, end_time,
@@ -255,8 +259,6 @@ class AudioProcessor:
                     features, topic_id, speaker_tag, speaker_id)
                 
                 processing_time = time.time() - processing_timer
-                start_time += self.config.start_offset
-                end_time += self.config.start_offset
 
                 if success:
                     logging.info( f"Processing results posted successfully for client {self.config.auth_key} (Processing time: {processing_time}) @ {start_time} for transcript {transcript_id}")

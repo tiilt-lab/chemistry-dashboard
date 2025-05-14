@@ -4,9 +4,14 @@ import react from "@vitejs/plugin-react"
 import eslint from "vite-plugin-eslint"
 import tailwindcss from "@tailwindcss/vite"
 
+
 export default defineConfig(() => {
     return {
-        plugins: [react(), eslint(), tailwindcss()],
+        plugins: [
+            react(), 
+            eslint(), 
+            tailwindcss()
+        ],
         resolve: {
             alias: {
                 "@": path.resolve(__dirname, "./src"),
@@ -18,6 +23,9 @@ export default defineConfig(() => {
         build: {
             outDir: "build",
             sourcemap: true,
+        },
+        css: {
+            devSourcemap: true,
         },
     }
 })
