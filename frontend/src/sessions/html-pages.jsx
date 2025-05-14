@@ -24,7 +24,7 @@ function DiscussionSessionPage(props) {
 
                 <div
                     className={style["list-container"]}
-                    style={{ "max-width": adjDim(375) + "px" }}
+                    style={{ "maxWidth": adjDim(375) + "px" }}
                 >
                     {props.isLoading ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -69,7 +69,7 @@ function DiscussionSessionPage(props) {
                                 <span
                                     onClick={props.goBackToPrevious}
                                     className={style["crumb-name"]}
-                                    style={{ "max-width": adjDim(240) + "px" }}
+                                    style={{ "maxWidth": adjDim(240) + "px" }}
                                 >
                                     {" "}
                                     Home
@@ -97,7 +97,7 @@ function DiscussionSessionPage(props) {
                                     <div
                                         className={style["crumb-name"]}
                                         style={{
-                                            "max-width": adjDim(240) + "px",
+                                            "maxWidth": adjDim(240) + "px",
                                             cursor: "default",
                                         }}
                                     >
