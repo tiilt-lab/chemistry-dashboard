@@ -4,13 +4,15 @@ class SpeakerTranscriptMetrics(db.Model):
     __tablename__ = 'speaker_transcript_metrics'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     speaker_id = db.Column(db.Integer, db.ForeignKey('speaker.id'), nullable=True)
-    transcript_id = db.Column(db.Integer, db.ForeignKey('transcript.id'), nullable=False)
+    transcript_id = db.Column(db.Integer, db.ForeignKey('transcript.id', ondelete="CASCADE"), nullable=False)
     participation_score = db.Column(db.Float)
     internal_cohesion = db.Column(db.Float)
     responsivity =  db.Column(db.Float)
     social_impact = db.Column(db.Float)
     newness =  db.Column(db.Float)
     communication_density = db.Column(db.Float)
+    
+    transcript = db.relationship("Transcript", back_populates="metrics")
 
 
     def __hash__(self):
