@@ -20,6 +20,7 @@ class Transcript(db.Model):
     speaker_id = db.Column(db.Integer)
 
     keywords = db.relationship("KeywordUsage", lazy='joined', uselist=True)
+    metrics = db.relationship("SpeakerTranscriptMetrics", back_populates="transcript", cascade="all, delete",passive_deletes=True)
 
     def __hash__(self):
         return hash((self.id))
