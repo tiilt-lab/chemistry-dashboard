@@ -2,12 +2,9 @@ import { AppSectionBoxComponent } from "../section-box/section-box-component"
 import { AppTimelineSlider } from "../timeline-slider/timeline-slider-component"
 import { AppTimeline } from "../../timeline/timeline-component"
 import { AppFeaturesComponent } from "../../features/features-component"
-//import { AppIndividualFeaturesComponent } from "frontend\src\individualmetrics\features-component.js"
 import { AppRadarComponent } from "../../radar/radar-component"
 import { AppKeywordsComponent } from "../../keywords/keywords-component"
-import style from "../../byod-join/byod-join.module.css"
 import { AppIndividualFeaturesComponent } from "../individualmetrics/features-component"
-import { adjDim } from "../../myhooks/custom-hooks"
 import React from "react"
 
 function AppInfographicsComparison(props) {
@@ -15,54 +12,57 @@ function AppInfographicsComparison(props) {
         <>
             {props.speakers && (
                 <div className="infographics-container">
-                    <div className="wide-section justify-between">
-                        <select
-                            id="speaker1"
-                            className={style["dropdown-input"]}
-                            style={{ width: adjDim(350) + "px" }}
-                            value={props.selectedSpkrId1}
-                            onChange={(e) =>
-                                props.setSelectedSpkrId1(
-                                    parseInt(e.target.value, 10),
-                                )
-                            }
-                        >
-                            <option value="-1">Group</option>
-                            {props.speakers.map((speaker) => (
-                                <option
-                                    key={speaker["id"]}
-                                    value={speaker["id"]}
-                                >
-                                    {speaker["alias"]}
-                                </option>
-                            ))}
-                        </select>
+                    {props.details !== "Group" && (
+                        <div className="flex flex-col @sm:flex-row relative box-border wide-section justify-center my-2 max-h-12">
+                            <select
+                                id="speaker1"
+                                className="dropdown small-section"
+                                value={props.selectedSpkrId1}
+                                onChange={(e) =>
+                                    props.setSelectedSpkrId1(
+                                        parseInt(e.target.value, 10),
+                                    )
+                                }
+                            >
+                                <option value="-1">Group</option>
+                                {props.speakers.map((speaker) => (
+                                    <option
+                                        key={speaker["id"]}
+                                        value={speaker["id"]}
+                                    >
+                                        {speaker["alias"]}
+                                    </option>
+                                ))}
+                            </select>
 
-                        <select
-                            id="speaker2"
-                            className={style["dropdown-input"]}
-                            style={{ width: adjDim(350) + "px" }}
-                            value={props.selectedSpkrId2}
-                            onChange={(e) =>
-                                props.setSelectedSpkrId2(
-                                    parseInt(e.target.value, 10),
-                                )
-                            }
-                        >
-                            <option value="-1">Group</option>
-                            {props.speakers.map((speaker) => (
-                                <option
-                                    key={speaker["id"]}
-                                    value={speaker["id"]}
+                            {props.details === "Comparison" && (
+                                <select
+                                    id="speaker2"
+                                    className="dropdown small-section"
+                                    value={props.selectedSpkrId2}
+                                    onChange={(e) =>
+                                        props.setSelectedSpkrId2(
+                                            parseInt(e.target.value, 10),
+                                        )
+                                    }
                                 >
-                                    {speaker["alias"]}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                                    <option value="-1">Group</option>
+                                    {props.speakers.map((speaker) => (
+                                        <option
+                                            key={speaker["id"]}
+                                            value={speaker["id"]}
+                                        >
+                                            {speaker["alias"]}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+                        </div>
+                    )}
                     {props.showBoxes.length > 0 &&
                         props.showBoxes[0]["clicked"] && (
                             <AppSectionBoxComponent
+                                type={"wide-section"}
                                 heading={"Timeline control"}
                             >
                                 <AppTimelineSlider
@@ -75,21 +75,24 @@ function AppInfographicsComparison(props) {
                     {props.showBoxes.length > 0 &&
                         props.showBoxes[1]["clicked"] && (
                             <AppSectionBoxComponent
+                                type={"small-section"}
                                 heading={"Discussion timeline"}
                             >
                                 <AppTimeline
                                     clickedTimeline={props.onClickedTimeline}
                                     session={props.session}
-                                    transcripts={props.spkr1Transcripts}
+                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
                                     start={props.startTime}
                                     end={props.endTime}
                                 />
                             </AppSectionBoxComponent>
                         )}
 
-                    {props.showBoxes.length > 0 &&
+                    {props.details === "Comparison" &&
+                        props.showBoxes.length > 0 &&
                         props.showBoxes[1]["clicked"] && (
                             <AppSectionBoxComponent
+                                type={"small-section"}
                                 heading={"Discussion timeline"}
                             >
                                 <AppTimeline
@@ -105,12 +108,13 @@ function AppInfographicsComparison(props) {
                     {props.showBoxes.length > 0 &&
                         props.showBoxes[2]["clicked"] && (
                             <AppSectionBoxComponent
+                                type={"small-section"}
                                 heading={"Keyword detection"}
                             >
                                 <AppKeywordsComponent
                                     session={props.session}
                                     sessionDevice={props.sessionDevice}
-                                    transcripts={props.spkr1Transcripts}
+                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
                                     start={props.startTime}
                                     end={props.endTime}
                                     fromclient={props.fromclient}
@@ -118,9 +122,11 @@ function AppInfographicsComparison(props) {
                             </AppSectionBoxComponent>
                         )}
 
-                    {props.showBoxes.length > 0 &&
+                    {props.details === "Comparison" &&
+                        props.showBoxes.length > 0 &&
                         props.showBoxes[2]["clicked"] && (
                             <AppSectionBoxComponent
+                                type={"small-section"}
                                 heading={"Keyword detection"}
                             >
                                 <AppKeywordsComponent
@@ -134,9 +140,11 @@ function AppInfographicsComparison(props) {
                             </AppSectionBoxComponent>
                         )}
 
-                    {props.showBoxes.length > 0 &&
+                    {props.details !== "Group" &&
+                        props.showBoxes.length > 0 &&
                         props.showBoxes[5]["clicked"] && (
                             <AppSectionBoxComponent
+                                type={"small-section"}
                                 heading={`Participation and Impact Style`}
                             >
                                 <AppIndividualFeaturesComponent
@@ -148,9 +156,11 @@ function AppInfographicsComparison(props) {
                             </AppSectionBoxComponent>
                         )}
 
-                    {props.showBoxes.length > 0 &&
+                    {props.details === "Comparison" &&
+                        props.showBoxes.length > 0 &&
                         props.showBoxes[5]["clicked"] && (
                             <AppSectionBoxComponent
+                                type={"small-section"}
                                 heading={`Participation and Impact Style`}
                             >
                                 <AppIndividualFeaturesComponent
@@ -165,19 +175,22 @@ function AppInfographicsComparison(props) {
                     {props.showBoxes.length > 0 &&
                         props.showBoxes[3]["clicked"] && (
                             <AppSectionBoxComponent
+                                type={"small-section"}
                                 heading={"Expression and Thinking Style"}
                             >
                                 <AppFeaturesComponent
                                     session={props.session}
-                                    transcripts={props.spkr1Transcripts}
+                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
                                     showFeatures={props.showFeatures}
                                 />
                             </AppSectionBoxComponent>
                         )}
 
-                    {props.showBoxes.length > 0 &&
+                    {props.details === "Comparison" &&
+                        props.showBoxes.length > 0 &&
                         props.showBoxes[3]["clicked"] && (
                             <AppSectionBoxComponent
+                                type={"small-section"}
                                 heading={`Expression and Thinking Style`}
                             >
                                 <AppFeaturesComponent
@@ -190,10 +203,13 @@ function AppInfographicsComparison(props) {
 
                     {props.showBoxes.length > 0 &&
                         props.showBoxes[4]["clicked"] && (
-                            <AppSectionBoxComponent heading={"Radar chart"}>
+                            <AppSectionBoxComponent
+                                type={"small-section"} 
+                                heading={"Radar chart"}
+                            >
                                 <AppRadarComponent
                                     session={props.session}
-                                    transcripts={props.spkr1Transcripts}
+                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
                                     radarTrigger={props.radarTrigger}
                                     start={props.startTime}
                                     end={props.endTime}
@@ -202,9 +218,13 @@ function AppInfographicsComparison(props) {
                             </AppSectionBoxComponent>
                         )}
 
-                    {props.showBoxes.length > 0 &&
+                    {props.details === "Comparison" &&
+                        props.showBoxes.length > 0 &&
                         props.showBoxes[4]["clicked"] && (
-                            <AppSectionBoxComponent heading={"Radar chart"}>
+                            <AppSectionBoxComponent
+                                type={"small-section"}
+                                heading={"Radar chart"}
+                            >
                                 <AppRadarComponent
                                     session={props.session}
                                     transcripts={props.spkr2Transcripts}

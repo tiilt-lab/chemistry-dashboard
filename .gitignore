@@ -223,3 +223,5 @@ pretrained_ecapa/embedding_model.ckpt
 pretrained_ecapa/hyperparams.yaml
 pretrained_ecapa/label_encoder.ckpt
 pretrained_ecapa/mean_var_norm_emb.ckpt
+
+.vscode

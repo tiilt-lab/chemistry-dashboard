@@ -5,8 +5,10 @@ class Speaker(db.Model):
     __tablename__ = 'speaker'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    session_device_id = db.Column(db.Integer, db.ForeignKey('session_device.id'), nullable=False)
+    session_device_id = db.Column(db.Integer, db.ForeignKey('session_device.id', ondelete="CASCADE"), nullable=False)
     alias = db.Column(db.String(64))
+    
+    session_device = db.relationship("SessionDevice", back_populates="speakers")
 
     NAME_MAX_LENGTH = 64
     NAME_CHARS = 'a-zA-Z0-9\': '

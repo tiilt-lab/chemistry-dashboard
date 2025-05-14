@@ -5,9 +5,10 @@ import { AppFolderSelectComponent } from "../components/folder-select/folder-sel
 import style from "./sessions.module.css"
 import style2 from "../components/context-menu/context-menu.module.css"
 import breadcrumbIcon from "../assets/img/icon-back.svg"
-import folderIcon from "../assets/img/folder.svg"
+import FolderIcon from "../Icons/Folder"
 import MicIcon from "../Icons/Mic"
 import { adjDim } from "../myhooks/custom-hooks"
+import { AppSpinner } from "../spinner/spinner-component"
 
 function DiscussionSessionPage(props) {
     return (
@@ -26,7 +27,10 @@ function DiscussionSessionPage(props) {
                     style={{ "max-width": adjDim(375) + "px" }}
                 >
                     {props.isLoading ? (
-                        <div className={style["load-text"]}>Loading...</div>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <div className={style["load-text"]}>Loading...</div>
+                            <AppSpinner />
+                        </div>
                     ) : (
                         <></>
                     )}
@@ -121,11 +125,12 @@ function DiscussionSessionPage(props) {
                                         key={index}
                                         className={style["folder-item"]}
                                     >
-                                        <img
+                                        <div
                                             alt="folder"
-                                            src={folderIcon}
                                             className={style["folder-icon"]}
-                                        />
+                                        >
+                                            <FolderIcon/>
+                                        </div>
                                         <div
                                             className={style["folder-title"]}
                                             onClick={() => {
@@ -315,7 +320,7 @@ function DiscussionSessionPage(props) {
                         <></>
                     )}
 
-                    {props.folders.length > 0 || props.sessions.length > 0 ? (
+                    {(props.folders.length > 0 || props.sessions.length > 0) && !props.isLoading? (
                         <div>
                             {props.displayedFolders.length === 0 &&
                             props.displayedSessions.length === 0 ? (

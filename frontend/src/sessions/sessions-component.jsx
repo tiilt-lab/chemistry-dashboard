@@ -39,16 +39,12 @@ function SessionsComponent(props) {
               const fetchData2 = new SessionService().getFolders();
               fetchData2.then(
                 (response) => {
-                  //console.log(response,'response')
                   if (response.status === 200) {
                     const resp2 = response.json();
                     resp2.then((folders) => {
-                      //console.log(folders,'folders')
                       const folderresult = FolderModel.fromJsonList(folders);
-                      //console.log(folderresult,'folderresult')
                       setFolders(folderresult);
-                      // const folder = searchParam.get('folder');
-                      // displayFolder(parseInt(folder, 10));
+                      setIsLoading(false);
                     });
                   }
                 },
@@ -70,7 +66,6 @@ function SessionsComponent(props) {
         console.log("sessions-components func: useEffect 2 ", apierror);
       }
     );
-    setIsLoading(false);
   }, [currentForm]);
 
   useEffect(() => {
