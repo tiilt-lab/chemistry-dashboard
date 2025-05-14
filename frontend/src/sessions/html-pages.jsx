@@ -5,7 +5,7 @@ import { AppFolderSelectComponent } from "../components/folder-select/folder-sel
 import style from "./sessions.module.css"
 import style2 from "../components/context-menu/context-menu.module.css"
 import breadcrumbIcon from "../assets/img/icon-back.svg"
-import folderIcon from "../assets/img/folder.svg"
+import FolderIcon from "../Icons/Folder"
 import MicIcon from "../Icons/Mic"
 import { adjDim } from "../myhooks/custom-hooks"
 import { AppSpinner } from "../spinner/spinner-component"
@@ -125,11 +125,12 @@ function DiscussionSessionPage(props) {
                                         key={index}
                                         className={style["folder-item"]}
                                     >
-                                        <img
+                                        <div
                                             alt="folder"
-                                            src={folderIcon}
                                             className={style["folder-icon"]}
-                                        />
+                                        >
+                                            <FolderIcon/>
+                                        </div>
                                         <div
                                             className={style["folder-title"]}
                                             onClick={() => {
