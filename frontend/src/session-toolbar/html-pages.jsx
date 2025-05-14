@@ -23,6 +23,7 @@ function AppSessionPage(props) {
                             <button
                                 className="toolbar-button"
                                 onClick={menu.action}
+                                key={index}
                             >{`${menu.title}`}</button>
                         ))
                     ) : (

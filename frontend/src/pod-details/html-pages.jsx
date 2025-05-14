@@ -45,7 +45,6 @@ function PodComponentPages(props) {
                     <div className="center-column-container">
                         <AppInfographicsComparison
                             displayTranscripts={props.displayTranscripts}
-                            endTime={props.endTime}
                             fromclient={false}
                             onClickedTimeline={props.onClickedTimeline}
                             radarTrigger={props.radarTrigger}
@@ -55,6 +54,7 @@ function PodComponentPages(props) {
                             showBoxes={props.showBoxes}
                             showFeatures={props.showFeatures}
                             startTime={props.startTime}
+                            endTime={props.endTime}
                             speakers={props.speakers}
                             selectedSpkrId1={props.selectedSpkrId1}
                             setSelectedSpkrId1={props.setSelectedSpkrId1}
