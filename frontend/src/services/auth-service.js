@@ -132,6 +132,10 @@ class AuthService {
     return new ApiService().httpRequestCall("api/v1/admin/users/" + userId, 'GET', {});
   }
 
+  disconnectSessionDevices() {
+    return new ApiService().httpRequestCall("/api/v1/admin/devices/reset", 'PATCH', {});
+  }
+
 }
 
 export { AuthService }

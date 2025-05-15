@@ -509,6 +509,13 @@ def get_session_devices(id=None, session_id=None, device_id=None, name=None, pro
         return query.first()
     return query.all()
 
+def disconnect_all_session_devices():
+    query = db.session.query(SessionDevice).filter(SessionDevice.connected == True)
+    for session_device in query.all():
+        session_device.connected = False
+    db.session.commit()
+    return True
+
 def set_session_device_status(session_device_id, status):
     session_device = get_session_devices(id=session_device_id)
     if session_device and session_device != status:

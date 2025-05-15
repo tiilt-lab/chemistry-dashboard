@@ -432,6 +432,23 @@ function SettingsComponent(props) {
     )
   }
 
+  const disconnectSessionDevices = async () => {
+    setCurrentForm("Loading");
+    const fetchData = await new AuthService().disconnectSessionDevices()
+    if (fetchData!= null && fetchData.status === 200) {
+      setStatusTitle('Disconnect Devices');
+      setStatus('Disconnected session devices successfully.');
+      setCurrentForm("Status")
+    }else{
+      const respJson = await fetchData.json()
+      setStatus(respJson['message']);
+      setStatusTitle('Disconnect Devices');
+      setCurrentForm("Status")
+      console.log("settingcomponent func : disconnectSessionDevices")
+    }
+    
+  }
+
   return (
     <SettingComponentPage
       navigateToHomescreen={navigateToHomescreen}
@@ -452,6 +469,7 @@ function SettingsComponent(props) {
       deleteServerLogs={deleteServerLogs}
       downloadDeviceLogs={downloadDeviceLogs}
       downloadServerLogs={downloadServerLogs}
+      disconnectSessionDevices={disconnectSessionDevices}
       changeUserRole={changeUserRole}
       resetUserPassword={resetUserPassword}
       unlockUser={unlockUser}

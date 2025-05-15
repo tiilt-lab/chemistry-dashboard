@@ -29,6 +29,7 @@ function SettingComponentPage(props) {
             <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("LockUser", true)}>Lock User</div>
             <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("UnlockUser", true)}>Unlock User</div>
             <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("ResetUser", true)}>Reset User Password</div>
+            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("DisconnectSessionDevices", true)}>Disconnect Session Devices</div>
           </React.Fragment>
           :
           <></>
@@ -202,6 +203,17 @@ function SettingComponentPage(props) {
             </select>
             {props.status ? <div className={style["error-status"]}>{props.status}</div> : <></>}
             <button className={style["basic-button"]} onClick={() => props.resetUserPassword(document.getElementById('ddUser').value)}>Reset Password</button>
+            <button className={style["cancel-button"]} onClick={props.closeDialog}>Cancel</button>
+          </div>
+          :
+          <></>
+        }
+
+        {props.currentForm === "DisconnectSessionDevices" ?
+          <div className={style["add-dialog"]}>
+            <div className={style["dialog-heading"]}>Disconnect Session Devices</div>
+            {props.status ? <div className={style["error-status"]}>{props.status}</div> : <></>}
+            <button className={style["basic-button"]} onClick={() => props.disconnectSessionDevices()}>Disconnect All</button>
             <button className={style["cancel-button"]} onClick={props.closeDialog}>Cancel</button>
           </div>
           :

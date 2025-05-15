@@ -130,6 +130,15 @@ def revoke_api_access(user_id, **kwargs):
         return json_response({'success': True})
     else:
         return json_response({'message': 'User not found'}, 400)
+    
+@api_routes.route('/api/v1/admin/devices/reset', methods=['PATCH'])
+@wrappers.verify_login(roles=['admin', 'super'])
+def reset_session_device_connections(**kwargs):
+    try: 
+        database.disconnect_all_session_devices()
+        return json_response({'success': True})
+    except:
+        return json_response({'message': 'Error resetting'}, 400)
 
 @api_routes.route('/api/v1/admin/server/logs', methods=['GET'])
 @wrappers.verify_login(roles=['super'])
