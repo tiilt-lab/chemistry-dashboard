@@ -40,6 +40,9 @@ logger.addHandler(log_console)
 # Create app
 app = Flask(__name__)
 
+# newly added 
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+
 eventlet.patcher.monkey_patch(select=True, socket=True)
  
 app.config['SECRET_KEY'] = '\xf9\xc5_!\x9c^t\x80\xce\xee\xbc\x8c_\xd2\xd6\xf3\x92C\x9e\xcb\x88\xc7\xa9('
