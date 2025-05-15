@@ -8,64 +8,63 @@ function DiscussionPage(props){
   
   return(
   <>
-    <div>
-    <Appheader 
-        title={"Discussion Graph"}
-        leftText={false}
-        rightText={"Options"}
-        rightEnabled={true}
-        rightTextClick={()=>{props.openForms("checkbox", props.selectedDevice)}}
-        nav={props.navigateToSession} 
-        headerclass={"discussion-graph-header"}
-      />
-</div>
-<div className={style["page-container"]}>
-  <div className={style["header-container"]}>
-    <span className={style["header-spacer"]}></span>
-    {
-      props.checkedDevices().map((device, index)=>(
-        <div  key={index} className={style["header-text"]} onClick={()=> props.openForms("stats", device)}>{ device.name }</div>
-      ))
-    } 
-  </div>
-  <div className={style["graph-container"]}>
-    <div className={style["timeline"]}>
-      {
-          props.timestamps.map((timestamp, index)=>(
-            <div  key={index} className={style.timestamp}>{ timestamp }</div>
-          ))
-        }
-    </div>
-
-    {
-      props.checkedDevices().map((device, index)=>(
-        <div  key={index} className={style["transcript-column"]} >
+    <div className='main-container'>
+      <Appheader 
+          title={"Discussion Graph"}
+          leftText={false}
+          rightText={"Options"}
+          rightEnabled={true}
+          rightTextClick={()=>{props.openForms("checkbox", props.selectedDevice)}}
+          nav={props.navigateToSession} 
+        />
+      <div className={style["page-container"]}>
+        <div className={style["header-container"]}>
+          <span className={style["header-spacer"]}></span>
           {
-            device.transcripts.map((transcript,index)=>(
-              <div key={index} className={style.transcript} style={{marginTop: `${transcript.start_time * 20}`+"px" , height: `${transcript.length * 20}`+"px"}} >
-                  <div className={style["transcript-text"]}>
-                      {transcript.question ? <div className={style["question-mark"]} onClick={()=> props.highlightQuestions(transcript)}>?</div> : <></>}
-                      {transcript.speaker_tag ?  <span className={style["speaker-tag"]}>{transcript.speaker_tag}: </span> : <></> }
-                        { transcript.transcript.map((transcriptData, index)=>(
-                          
-                          <React.Fragment key={index}>
-                            {(transcriptData.matchingKeywords !== null) ? <span className={transcriptData.highlight ? `${style["keyword-text"]} ${style["question-highlight"]}` : style["keyword-text"]} style={{color: `${transcriptData.color}`}} onClick={()=> props.openForms("keywords", transcriptData.matchingKeywords)}>{transcriptData.word}</span> 
-                            : 
-                            <span className={transcriptData.highlight? style["question-highlight"] : ""}> {transcriptData.word} </span> }
-      
-                          </React.Fragment>
-                        ))
-                      
-                        }
-                    </div>
-                </div>
+            props.checkedDevices().map((device, index)=>(
+              <div  key={index} className={style["header-text"]} onClick={()=> props.openForms("stats", device)}>{ device.name }</div>
             ))
-          }                                         
+          } 
         </div>
-      ))
-    }
-  </div>
-</div>
+        <div className={style["graph-container"]}>
+          <div className={style["timeline"]}>
+            {
+                props.timestamps.map((timestamp, index)=>(
+                  <div  key={index} className={style.timestamp}>{ timestamp }</div>
+                ))
+              }
+          </div>
+
+          {
+            props.checkedDevices().map((device, index)=>(
+              <div  key={index} className={style["transcript-column"]} >
+                {
+                  device.transcripts.map((transcript,index)=>(
+                    <div key={index} className={style.transcript} style={{marginTop: `${transcript.start_time * 20}`+"px" , height: `${transcript.length * 20}`+"px"}} >
+                        <div className={style["transcript-text"]}>
+                            {transcript.question ? <div className={style["question-mark"]} onClick={()=> props.highlightQuestions(transcript)}>?</div> : <></>}
+                            {transcript.speaker_tag ?  <span className={style["speaker-tag"]}>{transcript.speaker_tag}: </span> : <></> }
+                              { transcript.transcript.map((transcriptData, index)=>(
+                                
+                                <React.Fragment key={index}>
+                                  {(transcriptData.matchingKeywords !== null) ? <span className={transcriptData.highlight ? `${style["keyword-text"]} ${style["question-highlight"]}` : style["keyword-text"]} style={{color: `${transcriptData.color}`}} onClick={()=> props.openForms("keywords", transcriptData.matchingKeywords)}>{transcriptData.word}</span> 
+                                  : 
+                                  <span className={transcriptData.highlight? style["question-highlight"] : ""}> {transcriptData.word} </span> }
+            
+                                </React.Fragment>
+                              ))
+                            
+                              }
+                          </div>
+                      </div>
+                  ))
+                }                                         
+              </div>
+            ))
+          }
+        </div>
+      </div>
+    </div>
 
  <GenericDialogBox show = {props.currentForm !== ""} checkBox = {props.currentForm} displayDevices = {props.displayDevices} changeCheck = {props.changeCheck} >
    

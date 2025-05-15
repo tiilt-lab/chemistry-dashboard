@@ -672,7 +672,7 @@
   white-space: pre-line;
 }
 
-.option-button {
+.option-buttons {
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;

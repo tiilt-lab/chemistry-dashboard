@@ -47,6 +47,10 @@ html {
     @apply m-0.5 box-border w-60 cursor-pointer rounded-4xl border bg-gradient-to-r from-[#764BFF] to-[#7BB7F1] px-1 py-1 text-center font-sans text-lg/relaxed font-bold text-[#FAFAFC] transition-shadow hover:shadow-2xl focus:border-[#301f66] focus:ring focus:outline-none active:bg-[#573dac] @sm:m-3 @sm:w-90 @sm:text-xl/loose;
 }
 
+.option-button {
+    @apply m-2 flex flex-row gap-4 justify-start items-center rounded-sm bg-[#FCFDFF] px-4 py-2 text-center font-sans text-lg/normal font-bold text-[#6466E3] shadow-md shadow-[#45459933] transition-shadow hover:bg-[#FFFFFF] hover:shadow-lg/75;
+}
+
 .section-box {
     @apply relative box-border flex flex-row;
 }

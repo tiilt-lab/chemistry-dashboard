@@ -8,7 +8,7 @@ import { adjDim } from '../myhooks/custom-hooks';
 function SettingComponentPage(props) {
   return (
     <>
-      <div className={style.container}>
+      <div className="main-container items-center">
         <Appheader
           title={'Settings'}
           leftText={false}
@@ -16,39 +16,39 @@ function SettingComponentPage(props) {
           rightEnabled={false}
           nav={props.navigateToHomescreen}
         />
+        <div className='center-column-container items-center w-full'>
+          <div className={style["section-header"]}>Account Settings</div>
+          <div className="option-button small-section" onClick={() => props.openDialog("ChangePassword")}>Change Password</div>
+          {(props.user.isAdmin || props.user.isSuper) ?
+            <React.Fragment>
+              <div className={style["section-header"]}>Manage Accounts</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("ViewUsers", true)}>View Users</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("AddUser")}>Add User</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("DeleteUser", true)}>Delete User</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("UserRole", true)}>Change User Role</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("LockUser", true)}>Lock User</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("UnlockUser", true)}>Unlock User</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("ResetUser", true)}>Reset User Password</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("DisconnectSessionDevices", true)}>Disconnect Session Devices</div>
+            </React.Fragment>
+            :
+            <></>
+          }
 
-        <div className={style["section-header"]}>Account Settings</div>
-        <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("ChangePassword")}>Change Password</div>
-        {(props.user.isAdmin || props.user.isSuper) ?
-          <React.Fragment>
-            <div className={style["section-header"]}>Manage Accounts</div>
-            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("ViewUsers", true)}>View Users</div>
-            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("AddUser")}>Add User</div>
-            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("DeleteUser", true)}>Delete User</div>
-            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("UserRole", true)}>Change User Role</div>
-            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("LockUser", true)}>Lock User</div>
-            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("UnlockUser", true)}>Unlock User</div>
-            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("ResetUser", true)}>Reset User Password</div>
-            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("DisconnectSessionDevices", true)}>Disconnect Session Devices</div>
-          </React.Fragment>
-          :
-          <></>
-        }
-
-        {(props.user.isSuper) ?
-          <React.Fragment>
-            <div className={style["section-header"]}>Manage Server</div>
-            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("ServerLogs")}>Download Server Logs</div>
-            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("DeviceLogs", false, true)}>Download Device Logs</div>
-            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("DeleteServerLogs")}>Clear Server Logs</div>
-            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("DeleteDeviceLogs", false, true)}>Clear Device Logs</div>
-            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("AllowAPI", true)}>Allow API Access</div>
-            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("RevokeAPI", true)}>Revoke API Access</div>
-          </React.Fragment>
-          :
-          <></>
-        }
-
+          {(props.user.isSuper) ?
+            <React.Fragment>
+              <div className={style["section-header"]}>Manage Server</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("ServerLogs")}>Download Server Logs</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("DeviceLogs", false, true)}>Download Device Logs</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("DeleteServerLogs")}>Clear Server Logs</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("DeleteDeviceLogs", false, true)}>Clear Device Logs</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("AllowAPI", true)}>Allow API Access</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("RevokeAPI", true)}>Revoke API Access</div>
+            </React.Fragment>
+            :
+            <></>
+          }
+        </div>
       </div>
 
       <GenericDialogBox show={props.currentForm !== ""}>

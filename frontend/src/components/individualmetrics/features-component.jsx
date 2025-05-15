@@ -19,7 +19,7 @@ function AppIndividualFeaturesComponent(props) {
 
   useEffect(() => {
     updateGraphs();
-  });
+  }, [props.transcripts, props.spkrId]);
 
   //update new metrics (individual)
   const updateGraphs = () => {
@@ -79,7 +79,7 @@ function AppIndividualFeaturesComponent(props) {
         path += `${xPos} ${yPos} `;
       }
 
-      valueArray["average"] = average;
+      valueArray["average"] = average === NaN ? 0 : average;
       valueArray["last"] = last;
       valueArray["trend"] = trend;
       valueArray["path"] = path;
