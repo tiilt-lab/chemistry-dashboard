@@ -94,6 +94,8 @@ function FileUploadComponent(props){
 
   const onSubmit = (e)=> {
     e.preventDefault();
+    if (myFiles.length == 0)
+      return
     const formData = new FormData();
     // upload only unuploaded things 
     let filesToUpload = myFiles.filter(file => !fileStatus[file['name']])

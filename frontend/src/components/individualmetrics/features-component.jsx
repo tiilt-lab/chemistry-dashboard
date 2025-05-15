@@ -31,8 +31,15 @@ function AppIndividualFeaturesComponent(props) {
       { name: "Newness", values: [] },
       { name: "Communication Density", values: [] },
     ];
+
     if(!props.transcripts || !props.transcripts.length || props.spkrId === -1)
     {
+      for (const valueArray of valueArrays) {
+        valueArray["average"] = 0;
+        valueArray["last"] = 0;
+        valueArray["trend"] = 0;
+        valueArray["path"] = "";
+      }
       setFeatures(valueArrays);
       return;
     }
@@ -79,7 +86,7 @@ function AppIndividualFeaturesComponent(props) {
         path += `${xPos} ${yPos} `;
       }
 
-      valueArray["average"] = average === NaN ? 0 : average;
+      valueArray["average"] = average;
       valueArray["last"] = last;
       valueArray["trend"] = trend;
       valueArray["path"] = path;

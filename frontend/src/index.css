@@ -74,7 +74,3 @@ html {
 .dialog-heading {
     @apply text-center font-sans text-base/normal font-bold text-[#2B2B2E];
 }
-
-.instruction {
-    @apply w-xs font-sans text-xs/normal font-normal text-[#727278] @sm:w-sm @6xl:w-xl;
-}
