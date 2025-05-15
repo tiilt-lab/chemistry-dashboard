@@ -38,7 +38,7 @@ function CreateSessionPage(props) {
               />
               <div>Folder: </div>
               <div
-                className="flex flex-row w-full"
+                className="flex flex-row w-full items-center"
               >
                 <input
                   type="text"
@@ -49,7 +49,7 @@ function CreateSessionPage(props) {
                 />
                 <img
                   src={openFolderIcon}
-                  id={style["open-folder-icon"]}
+                  className="w-9 h-auto"
                   onClick={() => props.openDialog("Folder", "test")}
                 />
               </div>

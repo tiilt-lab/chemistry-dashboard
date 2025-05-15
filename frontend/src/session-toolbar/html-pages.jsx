@@ -1,9 +1,6 @@
-import style from "./session-toolbar.module.css"
-import style2 from "../dialog/dialog.module.css"
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { AppSpinner } from "../spinner/spinner-component"
 import React from "react"
-import { isLargeScreen } from "../myhooks/custom-hooks"
 
 function AppSessionPage(props) {
     return (
@@ -40,11 +37,11 @@ function AppSessionPage(props) {
             </div>
 
             <GenericDialogBox show={props.sessionEnding}>
-                <div className={style["dialog-content"]}>
-                    <div className={style2["dialog-heading"]}>
+                <div className="block">
+                    <div className="dialog-heading">
                         Session Ending...
                     </div>
-                    <div className={style["dialog-spinner"]}>
+                    <div className="text-center">
                         <AppSpinner></AppSpinner>
                     </div>
                 </div>

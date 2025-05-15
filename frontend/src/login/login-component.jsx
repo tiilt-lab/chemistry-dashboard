@@ -4,9 +4,7 @@ import { Instruction } from '../utilities/utility-components';
 import { Appheader } from '../header/header-component';
 import { DialogBox } from '../dialog/dialog-component';
 import { AuthService } from '../services/auth-service';
-import { UserModel } from '../models/user';
-import './login-component.css';
-import { adjDim, isLargeScreen } from '../myhooks/custom-hooks';
+
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -58,7 +56,7 @@ function LoginPage() {
   }
 
   return (
-    <div className="main-container items-center">
+    <div className="main-container items-center text-center">
 
       <Appheader
         title="Sign In"
@@ -69,10 +67,10 @@ function LoginPage() {
       <br></br>
       <Instruction instructions="Please enter your username and password." />
 
-      <input className="text-input" style = {{width: adjDim(320) + 'px',}} placeholder="username / email" name="username" id='username' />
-      <input className="text-input" style = {{width: adjDim(320) + 'px',}} placeholder="password" type="password" name="password" id='password' />
+      <input className="text-box my-2 small-section" placeholder="username / email" name="username" id='username' />
+      <input className="text-box small-section" placeholder="password" type="password" name="password" id='password' />
 
-      <button className={isLargeScreen() ? "basic-button medium-button" : "basic-button small-button"}  onClick={checkLogin}>
+      <button className="wide-button"  onClick={checkLogin}>
         Sign In
       </button>
 
