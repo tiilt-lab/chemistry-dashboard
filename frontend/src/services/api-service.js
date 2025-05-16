@@ -122,6 +122,19 @@ export class ApiService {
         })
     }
 
+    patch(apipath, data, headers) {
+        return fetch(this.getEndpoint() + apipath, {
+            method: "PATCH", // *GET, POST, PUT, DELETE, etc.
+            mode: "cors", // no-cors, *cors, same-origin
+            //cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
+            credentials: "include", // include, *same-origin, omit
+            headers: this._generateHeaders(headers, data),
+            redirect: "follow", // manual, *follow, error
+            //referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
+            body: JSON.stringify(data), // body data type must match "Content-Type" header
+        })
+    }
+
     httpRequestCall(apipath, type, data) {
         // Default options are marked with *
         let fetchcall = undefined
@@ -133,6 +146,8 @@ export class ApiService {
             fetchcall = this.get(apipath, {})
         } else if (type === "DELETE") {
             fetchcall = this.delete(apipath, {})
+        } else if (type === "PATCH") {
+            fetchcall = this.patch(apipath, data, {})
         }
         return fetchcall
     }
@@ -148,6 +163,8 @@ export class ApiService {
             fetchcall = this.get(apipath, headers)
         } else if (type === "DELETE") {
             fetchcall = this.delete(apipath, headers)
+        } else if (type === "PATCH") {
+            fetchcall = this.patch(apipath, data, headers)
         }
         return fetchcall
     }

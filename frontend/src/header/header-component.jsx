@@ -2,7 +2,7 @@ import backicon from "../assets/img/icon-back.svg"
 
 function Appheader(props) {
     return (
-        <div className="relative top-0 z-10 flex h-12 w-full flex-none flex-row items-center bg-[#FCFDFF] shadow m-h-1/12">
+        <div className="relative top-0 z-10 flex h-12 w-full flex-row items-center justify-center bg-[#FCFDFF] shadow m-h-1/12">
             {props.leftText !== false ? (
                 <div onClick={props.nav} className="text-sans w-min p-4">
                     {" "}

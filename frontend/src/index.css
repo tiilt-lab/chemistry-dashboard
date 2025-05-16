@@ -43,6 +43,14 @@ html {
     @apply m-0.5 box-border w-60 cursor-pointer rounded-4xl border bg-gradient-to-r from-[#764BFF] to-[#7BB7F1] px-1 py-2 text-center font-sans text-lg/relaxed font-normal text-[#FAFAFC] transition-shadow hover:shadow-2xl focus:border-[#301f66] focus:ring focus:outline-none active:bg-[#573dac] @sm:m-3 @sm:w-80 @sm:text-xl/loose;
 }
 
+.lanky-button {
+    @apply m-0.5 box-border w-60 cursor-pointer rounded-4xl border bg-gradient-to-r from-[#764BFF] to-[#7BB7F1] px-1 py-1 text-center font-sans text-lg/relaxed font-bold text-[#FAFAFC] transition-shadow hover:shadow-2xl focus:border-[#301f66] focus:ring focus:outline-none active:bg-[#573dac] @sm:m-3 @sm:w-90 @sm:text-xl/loose;
+}
+
+.option-button {
+    @apply m-2 flex flex-row gap-4 justify-start items-center rounded-sm bg-[#FCFDFF] px-4 py-2 text-center font-sans text-lg/normal font-bold text-[#6466E3] shadow-md shadow-[#45459933] transition-shadow hover:bg-[#FFFFFF] hover:shadow-lg/75;
+}
+
 .section-box {
     @apply relative box-border flex flex-row;
 }
@@ -61,4 +69,8 @@ html {
 
 .text-box {
     @apply relative mx-3 flex rounded-md border-2 border-solid border-[#a7a7a7] py-2.5 text-center text-sm/relaxed outline-0 transition-colors focus:border-[#006db3];
+}
+
+.dialog-heading {
+    @apply text-center font-sans text-base/normal font-bold text-[#2B2B2E];
 }

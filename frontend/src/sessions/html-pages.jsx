@@ -339,16 +339,14 @@ function DiscussionSessionPage(props) {
                     )}
                 </div>
                 <button
-                    className={`${style["basic-button"]} ${style["medium-button"]}`}
+                    className="wide-button"
                     onClick={() => props.openFolderDialog("NewFolder")}
-                    style={{ width: adjDim(374) + "px" }}
                 >
                     New Folder
                 </button>
                 <button
-                    className={`${style["basic-button"]} ${style["medium-button"]}`}
+                    className="wide-button"
                     onClick={props.newRecording}
-                    style={{ width: adjDim(374) + "px" }}
                 >
                     New Discussion
                 </button>

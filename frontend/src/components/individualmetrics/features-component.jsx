@@ -19,7 +19,7 @@ function AppIndividualFeaturesComponent(props) {
 
   useEffect(() => {
     updateGraphs();
-  });
+  }, [props.transcripts, props.spkrId]);
 
   //update new metrics (individual)
   const updateGraphs = () => {
@@ -31,8 +31,15 @@ function AppIndividualFeaturesComponent(props) {
       { name: "Newness", values: [] },
       { name: "Communication Density", values: [] },
     ];
+
     if(!props.transcripts || !props.transcripts.length || props.spkrId === -1)
     {
+      for (const valueArray of valueArrays) {
+        valueArray["average"] = 0;
+        valueArray["last"] = 0;
+        valueArray["trend"] = 0;
+        valueArray["path"] = "";
+      }
       setFeatures(valueArrays);
       return;
     }
