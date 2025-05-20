@@ -67,6 +67,7 @@ function JoinPage() {
     const [reload, setReload] = useState(false)
     const [pageTitle, setPageTitle] = useState("Join Discussion")
     const [sessionClosing, setSessionClosing] = useState(false)
+    const [prevSessionId, setPrevSessionId] = useState(-1)
 
     const [name, setName] = useState("")
     const [pcode, setPcode] = useState("")
@@ -294,6 +295,7 @@ function JoinPage() {
             ending.value = true
             setSpeakersValidated(false)
             setSpeakers(null)
+            setPrevSessionId(session.id)
             setSession(null)
             setSessionDevice(null)
             setKey(null)
@@ -953,6 +955,8 @@ function JoinPage() {
     }
 
     const closeDialog = () => {
+        if(currentForm === "ClosedSession")
+            setPrevSessionId(-1)
         setCurrentForm("")
     }
 
@@ -1105,6 +1109,7 @@ function JoinPage() {
             viewGroup={viewGroup}
             cartoonImgUrl = {cartoonImgUrl}
             invalidName={invalidName}
+            prevSessionId={prevSessionId}
         />
     )
 }
