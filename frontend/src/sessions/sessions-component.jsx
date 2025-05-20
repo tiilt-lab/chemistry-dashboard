@@ -4,6 +4,7 @@ import { SessionService } from "../services/session-service";
 import { SessionModel } from "../models/session";
 import { FolderModel } from "../models/folder";
 import { DiscussionSessionPage } from "./html-pages";
+import SessionQRCode from "../feedback-form/session-qrcode";
 
 function SessionsComponent(props) {
   //forms = Forms;
@@ -25,6 +26,8 @@ function SessionsComponent(props) {
   const [invalidName, setInvalidName] = useState(false);
   const navigate = useNavigate();
   const [searchParam, setSearchParam] = useSearchParams();
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [qrSessionId, setQrSessionId] = useState(null);
 
   useEffect(() => {
     const fetchData = new SessionService().getSessions();
@@ -73,6 +76,26 @@ function SessionsComponent(props) {
     displayFolder(parseInt(folder, 10));
   }, [folders]);
 
+  useEffect(() => {
+    const sessionId = searchParam.get("sessionId");
+    const showQR = searchParam.get("showQRCode") === "true";
+
+    if (showQR && sessionId) {
+        setQrSessionId(sessionId);
+        setShowQRCode(true);
+    }
+  }, [searchParam]);
+
+  const closeQRCode = () => {
+    setShowQRCode(false);
+    setSearchParam((prev) => {
+        const newParams = new URLSearchParams(prev);
+        newParams.delete("sessionId");
+        newParams.delete("showQRCode");
+        return newParams;
+    }, { replace: true });
+  };
+  
   const navigateToHomescreen = () => {
     navigate("/home", { replace: true });
   };
@@ -445,6 +468,7 @@ function SessionsComponent(props) {
   };
 
   return (
+    <>
     <DiscussionSessionPage
       openFolderDialog={openFolderDialog}
       navigateToHomescreen={navigateToHomescreen}
@@ -478,6 +502,10 @@ function SessionsComponent(props) {
       setFolderSelect={setFolderSelect}
       invalidName={invalidName}
     />
+     {showQRCode && qrSessionId && (
+            <SessionQRCode sessionId={qrSessionId} onClose={closeQRCode} />
+        )}
+    </>    
   );
 }
 

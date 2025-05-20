@@ -59,12 +59,24 @@ function AppSessionToolbar(props) {
                 if (deleteDevice) {
                     navigate('/join')
                 } else {
+                    // if (props.session.folder) {
+                    // 	 // works now, just had to switch the lines
+                    // 	 setSearchParam({ folder: props.session.folder })
+                    //     navigate('/sessions?folder=' + props.session.folder);
+                    // } else {
+                    //     navigate('/sessions', { replace: true })
+                    // }
                     if (props.session.folder) {
                     	 // works now, just had to switch the lines
-                    	 setSearchParam({ folder: props.session.folder })
-                        navigate('/sessions?folder=' + props.session.folder);
+                         setSearchParam({
+                            folder: props.session.folder,
+                            sessionId: props.session.id, 
+                            showQRCode: "true"
+                        });
+                        navigate(`/sessions?folder=${props.session.folder}&sessionId=${props.session.id}&showQRCode=true`);
                     } else {
-                        navigate('/sessions', { replace: true })
+                        setSearchParam({ sessionId: props.session.id, showQRCode: "true" });
+                        navigate(`/sessions?sessionId=${props.session.id}&showQRCode=true`, { replace: true });
                     }
                 }
             }

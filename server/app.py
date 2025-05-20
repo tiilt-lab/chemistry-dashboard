@@ -68,8 +68,9 @@ else:
 	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"127.0.0.1:5000","localhost"],manage_session=False, message_queue="redis://")
 
 # Create database
+DATABASE_SERVER = "localhost:3306" #"blinc.c2tdsnprd97b.us-east-2.rds.amazonaws.com"
 DATABASE_FILE = os.path.dirname(os.path.abspath(__file__)) + '/discussion_capture.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://{0}@localhost:3306/discussion_capture'.format(cf.database_user())
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://{0}@{1}/discussion_capture'.format(cf.database_user(), DATABASE_SERVER)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)

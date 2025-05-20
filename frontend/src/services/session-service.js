@@ -210,6 +210,19 @@ class SessionService {
     );
   }
 
+  submitFeedback(sessionId, responses) {
+    const body = {
+      sessionId: sessionId,
+      feedback: responses
+    };
+
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/feedback`,
+      "POST",
+      body
+    );
+  }
+
   removeDeviceFromSession(sessionId, sessionDeviceId, shouldDelete = false) {
     const query = {
       delete: shouldDelete,
