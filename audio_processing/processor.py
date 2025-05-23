@@ -211,7 +211,7 @@ class AudioProcessor:
 
             start_time += self.config.start_offset
             end_time += self.config.start_offset
-            
+
             # Perform Speaker Diarization
             speaker_tag = None
             speaker_id = -1
@@ -251,21 +251,19 @@ class AudioProcessor:
                         'start': start_time,
                         'end': end_time,
                     })
-                    
+
                     np.save(self.embeddings_file, np.array(self.embeddings))
                 success, transcript_id = callbacks.post_transcripts(
                     self.config.auth_key, start_time, end_time,
                     transcript_text, doa, questions, keywords,
                     features, topic_id, speaker_tag, speaker_id)
-                
+
                 processing_time = time.time() - processing_timer
 
                 if success:
                     logging.info( f"Processing results posted successfully for client {self.config.auth_key} (Processing time: {processing_time}) @ {start_time} for transcript {transcript_id}")
                 else:
-                    logging.warning("Processing results FAILED to post for"
-                                    " client %d (Processing time: {%f)",
-                                    self.config.auth_key, processing_time)
+                    logging.warning(f"Processing results FAILED to post for client {self.config.auth_key} (Processing time: {processing_time})")
 
             # Get source seperation
             # if self.config.source_seperation:

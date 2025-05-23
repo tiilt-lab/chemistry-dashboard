@@ -13,7 +13,6 @@ from handlers import callback_handlers
 api_routes = Blueprint('callback', __name__)
 
 @api_routes.route('/api/v1/callback/connect', methods=['POST'])
-@wrappers.verify_local
 def device_connected(**kwargs):
   # EXPECTED FORMAT
   # {
@@ -34,7 +33,6 @@ def device_connected(**kwargs):
   return json_response()
 
 @api_routes.route('/api/v1/callback/disconnect', methods=['POST'])
-@wrappers.verify_local
 def device_disconnected(**kwargs):
   # EXPECTED FORMAT
   # {
@@ -61,7 +59,6 @@ def device_disconnected(**kwargs):
   return json_response()
 
 @api_routes.route('/api/v1/callback/transcript', methods=['POST'])
-@wrappers.verify_local
 def add_transcript(**kwargs):
   # EXPECTED FORMAT
   # {
@@ -115,7 +112,6 @@ def add_transcript(**kwargs):
   return json_response(payload=res)
 
 @api_routes.route('/api/v1/callback/speaker_transcript_metrics', methods=['POST'])
-@wrappers.verify_local
 def add_speaker_transcript_metrics(**kwargs):
   # EXPECTED FORMAT
   # {
@@ -200,7 +196,6 @@ def add_speaker_transcript_metrics(**kwargs):
 
 
 @api_routes.route('/api/v1/callback/tag', methods=['POST'])
-@wrappers.verify_local
 def add_tagging(**kwargs):
   logging.info('Received tagging information...recalculating transcripts...')
   content = request.get_json()

@@ -1,0 +1,46 @@
+services:
+  blinc-db:
+    image: mysql/mysql-server:latest
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: mudcat11
+      MYSQL_DATABASE: discussion_capture
+      MYSQL_USER: vagrant
+      MYSQL_PASSWORD: vagrant
+  redis:
+    image: redis
+  server:
+    build:
+      context: .
+      dockerfile: docker/server.Dockerfile
+    depends_on:
+      blinc-db:
+        condition: service_healthy
+        restart: true
+      redis:
+        condition: service_started
+  audio_processor:
+    build:
+      context: .
+      dockerfile: docker/audio.Dockerfile
+    depends_on:
+      redis:
+        condition: service_started
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx.Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
+      - "9000:9000"
+      - "9001:9001"
+      - "9003:9003"
+    depends_on:
+      audio_processor:
+        condition: service_healthy
+        restart: true
+      server:
+        condition: service_healthy
+        restart: true
+

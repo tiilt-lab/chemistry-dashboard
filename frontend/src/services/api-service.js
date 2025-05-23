@@ -7,7 +7,7 @@ export class ApiService {
     getEndpoint() {
         return window.location.protocol + "//" + window.location.host + "/"
     }
-  
+
     getVideoServerEndpoint() {
     //   return (
     //     "http://129.105.44.121:8080/"
@@ -15,7 +15,7 @@ export class ApiService {
     return (
       "https://video.tiilt-blinc.com"
     );
-    
+
   }
 
   getAudioWebsocketEndpoint() {
@@ -27,7 +27,7 @@ export class ApiService {
       "/audio_socket"
     );
   }
-  
+
     getVideoWebsocketEndpoint() {
     //   return (
     //     "ws://129.105.44.121:8080/video_socket"
@@ -45,7 +45,7 @@ export class ApiService {
         "Accept": "application/json"
       };
     }
-      
+
         let key = '';
         let val ='';
       for (const property in headers) {

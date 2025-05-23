@@ -33,7 +33,6 @@ from sentence_transformers import SentenceTransformer
 cm = ConnectionManager()
 semantic_model = SentenceTransformer("all-mpnet-base-v2")
 diarization_model = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="pretrained_models/pretrained_ecapa")
-semantic_model.share_memory()
 
 class ServerProtocol(WebSocketServerProtocol):
 

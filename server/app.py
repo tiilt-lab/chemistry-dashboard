@@ -41,7 +41,7 @@ logger.addHandler(log_console)
 app = Flask(__name__)
 
 eventlet.patcher.monkey_patch(select=True, socket=True)
- 
+
 app.config['SECRET_KEY'] = '\xf9\xc5_!\x9c^t\x80\xce\xee\xbc\x8c_\xd2\xd6\xf3\x92C\x9e\xcb\x88\xc7\xa9('
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = cf.https()
@@ -56,19 +56,19 @@ app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=2 if cf.cloud() else 1, x_proto=1)
 
 # Redis
-r = redis.Redis(host='localhost', port=6379, db=0)
+r = redis.Redis(host='redis', port=6379, db=0)
 
 # Set API Limiter
 limiter = Limiter(app, key_func=get_remote_address)
 
 # Create SocketIO app (engineio_logger=True for advance debug)
 if cf.cloud():
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"127.0.0.1:5000","localhost"], manage_session=False, message_queue="redis://")
+	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"server:5000","audio_processor", "nginx", "server", "127.0.0.1"], manage_session=False, message_queue="redis://redis:6379")
 else:
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"127.0.0.1:5000","localhost"],manage_session=False, message_queue="redis://")
+	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"server:5000","audio_processor", "nginx", "server", "127.0.0.1"],manage_session=False, message_queue="redis://redis:6379")
 
 # Create database
-DATABASE_SERVER = "localhost:3306" #"blinc.c2tdsnprd97b.us-east-2.rds.amazonaws.com"
+DATABASE_SERVER = "blinc-db" #"blinc.c2tdsnprd97b.us-east-2.rds.amazonaws.com"
 DATABASE_FILE = os.path.dirname(os.path.abspath(__file__)) + '/discussion_capture.db'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://{0}@{1}/discussion_capture'.format(cf.database_user(), DATABASE_SERVER)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
