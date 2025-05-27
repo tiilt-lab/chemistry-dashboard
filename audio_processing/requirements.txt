@@ -17,3 +17,4 @@ hmmlearn
 sentence-transformers
 speechbrain
 scikit-learn
+hf_xet
