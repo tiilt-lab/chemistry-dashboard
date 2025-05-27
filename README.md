@@ -1,6 +1,106 @@
 # Chemistry Dashboard
 
-## Installing Dependencies
+## Docker Development Environment Setup
+
+### Check configuration
+
+Checkout the development branch and create and new branch for your feature
+
+```
+git pull or git clone ...
+git checkout dev
+git checkout -b your_feature_branch_name
+
+```
+
+Check server/config.ini
+
+```
+https=false
+debug=true
+domain=127.0.0.1
+```
+
+Check server/app.py
+
+```
+...
+redis_loc = "redis://redis:6379"
+...
+DATABASE_SERVER = "blinc-db"
+...
+
+```
+
+Check audio_processing/config.ini
+
+```
+processing_callback=http://server:5000/api/v1/callback/transcript
+connect_callback=http://server:5000/api/v1/callback/connect
+disconnect_callback=http://server:5000/api/v1/callback/disconnect
+tagging_callback=http://server:5000/api/v1/callback/tag
+speaker_metrics_callback=http://server:5000/api/v1/callback/speaker_transcript_metrics
+```
+
+Check deploy/nginx.conf
+
+```
+events {}
+http {
+  ...
+  upstream api{
+    server server:5000;
+  }
+  ...
+}
+```
+
+### Install Dependencies
+
+Download and Install Docker Hub for your device
+
+```
+https://hub.docker.com/welcome
+```
+
+Download the current google-cloud-key.json and place in audio_processing/asr_connectors
+
+### Run Docker Containers
+
+Will take some time the first time depending on hardware
+
+```
+docker compose -f 'compose.yaml' up -d --build 
+```
+
+After sucessful build, access server at http://127.0.0.1
+
+### Docker Hub
+
+You should be able to see the container in docker hub in a single compose stack called chemistry-dashboard. Here you can validate the containers are running. To develop, perform changes in the local files then rebuild the containers to view the changes at the server location above.
+
+### Rebuilding Containers
+
+Rerun the docker compose above to rebuild all containers to see changes. To build specific containers when only a single component needs to be rebuilt due to changes:
+
+```
+docker compose -f 'compose.yaml' up -d --build 'container-name'
+
+e.g. docker compose -f 'compose.yaml' up -d --build 'nginx'
+```
+
+If frontend changes aren't being seen, delete the nginx container in docker hub to force the rebuild of that container when running the compose. 
+
+### Not enough Stroage 
+
+If the audio_processor at 20GB is too large to store directly on your computer, use an external drive which can be setup with docker following the directions below:
+
+```
+https://www.howtogeek.com/devops/how-to-store-docker-images-and-containers-on-an-external-drive/
+```
+
+## Hosted Server Setup
+### Installing Dependencies
 
 Update system packages
 

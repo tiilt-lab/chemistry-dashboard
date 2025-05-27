@@ -61,11 +61,13 @@ r = redis.Redis(host='redis', port=6379, db=0)
 # Set API Limiter
 limiter = Limiter(app, key_func=get_remote_address)
 
+redis_loc = "redis://redis:6379"
+
 # Create SocketIO app (engineio_logger=True for advance debug)
 if cf.cloud():
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"server:5000","audio_processor", "nginx", "server", "127.0.0.1"], manage_session=False, message_queue="redis://redis:6379")
+	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"server:5000","audio_processor", "nginx", "server", "127.0.0.1"], manage_session=False, message_queue=redis_loc)
 else:
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"server:5000","audio_processor", "nginx", "server", "127.0.0.1"],manage_session=False, message_queue="redis://redis:6379")
+	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"server:5000","audio_processor", "nginx", "server", "127.0.0.1"],manage_session=False, message_queue=redis_loc)
 
 # Create database
 DATABASE_SERVER = "blinc-db" #"blinc.c2tdsnprd97b.us-east-2.rds.amazonaws.com"

@@ -9,6 +9,7 @@ services:
       MYSQL_PASSWORD: vagrant
   redis:
     image: redis
+    restart: always
   server:
     build:
       context: .
@@ -16,7 +17,6 @@ services:
     depends_on:
       blinc-db:
         condition: service_healthy
-        restart: true
       redis:
         condition: service_started
   audio_processor:
@@ -39,8 +39,7 @@ services:
     depends_on:
       audio_processor:
         condition: service_healthy
-        restart: true
       server:
         condition: service_healthy
-        restart: true
+    restart: always
 
