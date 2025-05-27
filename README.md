@@ -59,15 +59,18 @@ http {
 
 Download and Install Docker Hub for your device
 
-```
 https://hub.docker.com/welcome
-```
+
 
 Download the current google-cloud-key.json and place in audio_processing/asr_connectors
 
+### Build Frontend files
+
+Open the frontend folder within the chemistry-dashboard and follow the README to build to frontend files
+
 ### Run Docker Containers
 
-Will take some time the first time depending on hardware
+In the chemistry-dashboard folder run the command below. It will take some time the first time depending on hardware
 
 ```
 docker compose -f 'compose.yaml' up -d --build 
