@@ -18,6 +18,7 @@ import {TopicListComponent} from '../topic-list/topic-list-component'
 import {ManageTopicModelsComponent} from '../manage-topic-models/manage-topic-models-component'
 import {PodsComponent} from '../pods/pods-component'
 import {ProtectedRoute} from './protected-route'
+import {SessionFeedbackForm} from "../feedback-form/session-feedback-form";
 
 function PageRouter() {
     
@@ -48,6 +49,7 @@ function PageRouter() {
                 <Route path='/topic-list/new-session' element={<ProtectedRoute component={TopicListComponent}/>} />
                 <Route path='/pods' element={<ProtectedRoute component={PodsComponent}/> } />
                 <Route path='/settings' element={<ProtectedRoute component={SettingsComponent}/> } />
+                <Route path="/feedback-form/:sessionId" element={<SessionFeedbackForm />} />
             </Routes>
         </BrowserRouter>
     )

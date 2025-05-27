@@ -4,6 +4,7 @@ import { SessionService } from "../services/session-service";
 import { SessionModel } from "../models/session";
 import { FolderModel } from "../models/folder";
 import { DiscussionSessionPage } from "./html-pages";
+import SessionQRCode from "../feedback-form/session-qrcode";
 
 function SessionsComponent(props) {
   //forms = Forms;
@@ -72,7 +73,7 @@ function SessionsComponent(props) {
     const folder = searchParam.get("folder");
     displayFolder(parseInt(folder, 10));
   }, [folders]);
-
+  
   const navigateToHomescreen = () => {
     navigate("/home", { replace: true });
   };
@@ -445,6 +446,7 @@ function SessionsComponent(props) {
   };
 
   return (
+    <>
     <DiscussionSessionPage
       openFolderDialog={openFolderDialog}
       navigateToHomescreen={navigateToHomescreen}
@@ -478,6 +480,7 @@ function SessionsComponent(props) {
       setFolderSelect={setFolderSelect}
       invalidName={invalidName}
     />
+    </>    
   );
 }
 

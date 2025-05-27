@@ -225,3 +225,4 @@ pretrained_ecapa/label_encoder.ckpt
 pretrained_ecapa/mean_var_norm_emb.ckpt
 
 .vscode
+frontend/package-lock.json

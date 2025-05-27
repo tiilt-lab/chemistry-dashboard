@@ -12,6 +12,7 @@ import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { TranscriptsComponentClient } from "../transcripts/transcripts-component_client"
 import { adjDim, isLargeScreen } from "../myhooks/custom-hooks"
+import SessionQRCode from "../feedback-form/session-qrcode";
 
 import style from "./byod-join.module.css"
 import style2 from "../pod-details/pod.module.css"
@@ -679,13 +680,16 @@ function ByodJoinPage(props) {
                 closedialog={props.closeDialog}
             />
 
-            <DialogBox
-                itsclass={"add-dialog"}
+            <GenericDialogBox
+                itsclass={"add-dialog small-section"}
                 heading={"Discussion Closed"}
-                message={props.displayText}
                 show={props.currentForm === "ClosedSession"}
-                closedialog={props.closeDialog}
-            />
+            >
+                <div className="text-xl/loose font-sans font-bold m-2">Discussion Closed</div>
+                <div className="text-base font-sans font-normal m-2">{props.displayText}</div>
+                <SessionQRCode sessionId={props.prevSessionId} />
+                <button className="option-button font-sans small-section bg-red-500 hover:bg-red-400 m-2" onClick={props.closeDialog}>Close</button>
+            </GenericDialogBox>
 
             <WaitingDialog
                 itsclass={"add-dialog"}
