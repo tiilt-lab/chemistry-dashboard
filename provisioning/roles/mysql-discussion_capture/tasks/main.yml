@@ -1,6 +1,0 @@
----
-- name: Update/Create Discussion Capture database
-  become_user: "vagrant"
-  shell: "FLASK_APP=discussion_capture.py LC_ALL=C.UTF-8 LANG=C.UTF-8 /var/lib/chemistry-dashboard/server/venv/bin/flask db upgrade"
-  args:
-    chdir: /var/lib/chemistry-dashboard/server

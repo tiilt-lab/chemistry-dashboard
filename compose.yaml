@@ -14,6 +14,7 @@ services:
     build:
       context: .
       dockerfile: docker/server.Dockerfile
+    image: khanders12/blinc_server:latest
     depends_on:
       blinc-db:
         condition: service_healthy
@@ -23,6 +24,7 @@ services:
     build:
       context: .
       dockerfile: docker/audio.Dockerfile
+    image: khanders12/blinc_audio_processor:latest
     depends_on:
       redis:
         condition: service_started
@@ -30,6 +32,7 @@ services:
     build:
       context: .
       dockerfile: docker/nginx.Dockerfile
+    image: khanders12/blinc_nginx:latest
     ports:
       - "80:80"
       - "443:443"
