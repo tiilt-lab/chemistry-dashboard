@@ -56,7 +56,7 @@ app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=2 if cf.cloud() else 1, x_proto=1)
 
 # Redis
-r = redis.Redis(host='localhost', port=6379, db=0)
+r = redis.Redis(host='blinc-scrzmn.serverless.use2.cache.amazonaws.com', port=6379, db=0, decode_responses=True, ssl=True)
 
 # Set API Limiter
 limiter = Limiter(app, key_func=get_remote_address)

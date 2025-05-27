@@ -3,7 +3,7 @@ import time
 import json
 import logging
 
-r = redis.StrictRedis(host='localhost', port=6379, db=0, decode_responses=True)
+r = redis.StrictRedis(host='blinc-scrzmn.serverless.use2.cache.amazonaws.com', port=6379, db=0, decode_responses=True, ssl=True)
 
 class RedisLogin:
     EXPIRATION_TIME = 60 * 5
