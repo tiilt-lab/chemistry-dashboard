@@ -118,20 +118,19 @@ export class ActiveSessionService {
         // Update transcripts.
         this.socket.on("transcript_update", (e) => {
           const data = JSON.parse(e);
+            const currentTranscripts = this.transcriptSource.getValue();
+            currentTranscripts.push(TranscriptModel.fromJson(data));
+            this.transcriptSource.next(currentTranscripts);
+        });
 
-          const speaker_metrics = SpeakerMetricsModel.fromJsonList(
-            data["speaker_metrics"]
-          );
-          const transcript_model = TranscriptModel.fromJson(
-            data["transcript"],
-            speaker_metrics
-          );
-          console.log("Transcript Model");
-          console.log(transcript_model);
-          const currentTranscripts = this.transcriptSource.getValue();
-
-          currentTranscripts.push(transcript_model);
-          this.transcriptSource.next(currentTranscripts);
+        // Initial digest of transcripts.
+        this.socket.on('transcript_digest', e => {
+            const data = JSON.parse(e);
+            const transcripts = [];
+            for (const transcript of data) {
+                transcripts.push(TranscriptModel.fromJson(transcript));
+            }
+            this.transcriptSource.next(transcripts);
         });
 
         // Update transcripts and speaker metrics.
