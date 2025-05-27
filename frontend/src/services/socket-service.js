@@ -5,13 +5,13 @@ export class SocketService {
 
   // Creates socket connection to server.
   createSocket(endpoint, room = null) {
-    const socket = SocketIO.connect(window.location.protocol + '//' + window.location.host + '/' + endpoint, {transports: ['websocket'], upgrade: false});
+    const socket = SocketIO.connect(window.location.protocol + '//server:5000/' + endpoint, {transports: ['websocket'], upgrade: false});
     socket.on('connect', e => {
       if (room != null) {
         socket.emit('join_room', {room: room});
       }
     });
-    
+
     socket.on('disconnect', e => {});
     socket.on('connecting', e => {});
     socket.on('connect_failed', e => {});
