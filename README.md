@@ -64,6 +64,25 @@ https://hub.docker.com/welcome
 
 Download the current google-cloud-key.json and place in audio_processing/asr_connectors
 
+https://drive.google.com/drive/u/1/folders/1vUuZwQtB0hr8NrgoCwrGswiQGp6OGc5E
+
+### Download and Extract Keyword Detector Model
+
+```
+pip install gdown
+mkdir -p chemistry-dashboard/audio_processing/keyword_detector/models
+cd chemistry-dashboard/audio_processing/keyword_detector/models
+gdown https://drive.google.com/uc?id=0B7XkCwpI5KDYNlNUTTlSS21pQmM
+gunzip GoogleNews-vectors-negative300.bin.gz
+```
+### If command don't work
+
+Download gz file from: https://drive.google.com/uc?id=0B7XkCwpI5KDYNlNUTTlSS21pQmM
+
+Create the chemistry-dashboard/audio_processing/keyword_detector/models folder
+
+Extract file in gz to chemistry-dashboard/audio_processing/keyword_detector/models
+
 ### Build Frontend files
 
 Open the frontend folder within the chemistry-dashboard and follow the README to build to frontend files

@@ -18,17 +18,6 @@ RUN python -m spacy download en_core_web_sm
 RUN pip install --no-cache-dir wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
-#Download keyword detector model
-RUN pip install gdown
-RUN mkdir -p audio_processing/keyword_detector/models
-WORKDIR /var/lib/chemistry-dashboard/audio_processing/keyword_detector/models
-RUN gdown https://drive.google.com/uc?id=0B7XkCwpI5KDYNlNUTTlSS21pQmM
-RUN gunzip GoogleNews-vectors-negative300.bin.gz
-
-#Copy processing folder
-WORKDIR /var/lib/chemistry-dashboard
-COPY audio_processing audio_processing
-
 # Audio processing port
 EXPOSE 9000
 
