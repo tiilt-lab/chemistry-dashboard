@@ -5,6 +5,8 @@ WORKDIR /var/lib/
 RUN mkdir -p chemistry-dashboard/frontend/build && \
     chmod 777 -R chemistry-dashboard
 COPY frontend/entry.sh chemistry-dashboard/entry.sh
+COPY deploy/nginx.conf /etc/nginx/nginx.conf
+COPY deploy/nginx-headers.conf /etc/nginx/nginx-headers.conf
 
 EXPOSE 80 443 9000 9001 9003
 

@@ -40,8 +40,6 @@ services:
     volumes:
       - ./frontend/build:/var/lib/chemistry-dashboard/frontend/build
       - ./UA:/var/lib/chemistry-dashboard/UA
-      - ./deploy/nginx.conf:/etc/nginx/nginx.conf
-      - ./deploy/nginx-headers.conf:/etc/nginx/nginx-headers.conf
     ports:
       - "80:80"
       - "443:443"
