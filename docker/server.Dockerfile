@@ -13,6 +13,8 @@ WORKDIR /var/lib/chemistry-dashboard/
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
     python -m spacy download en_core_web_sm
+COPY server/entry.sh entry.sh
+RUN chmod +x entry.sh
 
 WORKDIR /var/lib/chemistry-dashboard/server
 
@@ -24,6 +26,6 @@ HEALTHCHECK --start-period=2m --interval=5m --timeout=10s --retries=3 \
     --header "Upgrade: websocket" \
     http://127.0.0.1:5000
 
-ENTRYPOINT ["./entry.sh"]
+ENTRYPOINT ["/var/lib/chemistry-dashboard/entry.sh"]
 
 CMD ["python", "discussion_capture.py"]
