@@ -7,6 +7,7 @@ import device_websockets
 import os
 import logging
 import database
+# import eventlet
 
 from routes.auth import api_routes as auth_api
 from routes.session import api_routes as session_api
@@ -43,7 +44,7 @@ def main():
 
 	device_websockets.run_server()
 	logging.info('Discussion Capture Server running...')
-	socketio.run(app, debug=cf.debug(), host="0.0.0.0", use_reloader=False)
+	socketio.run(app, debug=cf.debug(), host="0.0.0.0",port=5000, use_reloader=False)
 	scheduler.shutdown(wait=False)
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 import eventlet
-
+eventlet.monkey_patch() 
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask
 from flask_socketio import SocketIO
@@ -40,8 +40,8 @@ logger.addHandler(log_console)
 # Create app
 app = Flask(__name__)
 
-eventlet.patcher.monkey_patch(select=True, socket=True)
- 
+# eventlet.patcher.monkey_patch(select=True, socket=True)
+
 app.config['SECRET_KEY'] = '\xf9\xc5_!\x9c^t\x80\xce\xee\xbc\x8c_\xd2\xd6\xf3\x92C\x9e\xcb\x88\xc7\xa9('
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = cf.https()

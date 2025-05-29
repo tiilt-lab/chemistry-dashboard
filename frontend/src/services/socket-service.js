@@ -5,6 +5,8 @@ export class SocketService {
 
   // Creates socket connection to server.
   createSocket(endpoint, room = null) {
+    console.log("connection url");
+    console.log(window.location.protocol + '//' + window.location.host + '/' + endpoint);
     const socket = SocketIO.connect(window.location.protocol + '//' + window.location.host + '/' + endpoint, {transports: ['websocket'], upgrade: false});
     socket.on('connect', e => {
       if (room != null) {

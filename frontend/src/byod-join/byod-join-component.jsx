@@ -7,6 +7,7 @@ import { SessionDeviceModel } from "../models/session-device"
 import { SpeakerModel } from "../models/speaker"
 import { ApiService } from "../services/api-service"
 import fixWebmDuration from "fix-webm-duration"
+import { io } from "socket.io-client";
 
 /*
 BYOD Connection Order
@@ -485,8 +486,8 @@ function JoinPage() {
                     setAudioContext(context)
                     console.log("connect to websocket");
                     audiows.current = new WebSocket(
-                        apiService.getAudioWebsocketEndpoint(),
-                    )
+                        apiService.getAudioWebsocketEndpoint())
+                    
                     connect_audio_processor_service();
                     
                 } else if (
