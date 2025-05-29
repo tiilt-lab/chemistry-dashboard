@@ -65,9 +65,9 @@ redis_loc = "redis://redis:6379"
 
 # Create SocketIO app (engineio_logger=True for advance debug)
 if cf.cloud():
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"server:5000","audio_processor", "nginx", "server", "127.0.0.1"], manage_session=False, message_queue=redis_loc)
+	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"www."+cf.domain(),"server:5000","audio_processor", "nginx", "server", "127.0.0.1", "localhost"], manage_session=False, message_queue=redis_loc)
 else:
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"server:5000","audio_processor", "nginx", "server", "127.0.0.1"],manage_session=False, message_queue=redis_loc)
+	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"www."+cf.domain(),"server:5000","audio_processor", "nginx", "server", "127.0.0.1", "localhost"],manage_session=False, message_queue=redis_loc)
 
 # Create database
 DATABASE_SERVER = "blinc-db" #"blinc.c2tdsnprd97b.us-east-2.rds.amazonaws.com"
