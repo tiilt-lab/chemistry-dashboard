@@ -56,21 +56,19 @@ app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=2 if cf.cloud() else 1, x_proto=1)
 
 # Redis
-r = redis.Redis(host='redis', port=6379, db=0)
+r = redis.Redis(host='blinc-scrzmn.serverless.use2.cache.amazonaws.com', port=6379, db=0)
 
 # Set API Limiter
 limiter = Limiter(app, key_func=get_remote_address)
 
-redis_loc = "redis://redis:6379"
-
 # Create SocketIO app (engineio_logger=True for advance debug)
 if cf.cloud():
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"www."+cf.domain(),"server:5000","audio_processor", "nginx", "server", "127.0.0.1", "localhost"], manage_session=False, message_queue=redis_loc)
+	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"www."+cf.domain(),"server:5000","audio_processor", "nginx", "server", "127.0.0.1", "localhost"], manage_session=False, message_queue="redis://")
 else:
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"www."+cf.domain(),"server:5000","audio_processor", "nginx", "server", "127.0.0.1", "localhost"],manage_session=False, message_queue=redis_loc)
+	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"www."+cf.domain(),"server:5000","audio_processor", "nginx", "server", "127.0.0.1", "localhost"],manage_session=False, message_queue="redis://")
 
 # Create database
-DATABASE_SERVER = "blinc-db" #"blinc.c2tdsnprd97b.us-east-2.rds.amazonaws.com"
+DATABASE_SERVER = "blinc.c2tdsnprd97b.us-east-2.rds.amazonaws.com" #"blinc.c2tdsnprd97b.us-east-2.rds.amazonaws.com"
 DATABASE_FILE = os.path.dirname(os.path.abspath(__file__)) + '/discussion_capture.db'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://{0}@{1}/discussion_capture'.format(cf.database_user(), DATABASE_SERVER)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
