@@ -18,8 +18,11 @@ WORKDIR /var/lib/chemistry-dashboard/server
 
 EXPOSE 5000 9001
 
-HEALTHCHECK --start-period=2m --interval=30s --timeout=10s --retries=3 \
-  CMD ping -c 3 audio_processor || exit 1
+HEALTHCHECK --start-period=2m --interval=5m --timeout=10s --retries=3 \
+  CMD curl --include --no-buffer \
+    --header "Connection: close" \
+    --header "Upgrade: websocket" \
+    http://127.0.0.1:5000
 
 ENTRYPOINT ["./entry.sh"]
 

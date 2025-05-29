@@ -21,7 +21,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Audio processing port
 EXPOSE 9000
 
-HEALTHCHECK --start-period=2m --interval=30s --timeout=10s --retries=3 \
-  CMD ping -c 3 server || exitgt 1
+HEALTHCHECK --start-period=2m --interval=5m --timeout=10s --retries=3 \
+  CMD curl --include --no-buffer \
+    --header "Connection: close" \
+    --header "Upgrade: websocket" \
+    http://127.0.0.1:9000
 
 CMD ["python", "audio_processing/server.py"]
