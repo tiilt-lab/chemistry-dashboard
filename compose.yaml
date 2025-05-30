@@ -13,7 +13,7 @@ services:
   server:
     build:
       context: .
-      dockerfile: docker/server.Dockerfile
+      dockerfile: deploy/docker/server.Dockerfile
     image: blinc/server:latest
     volumes:
       - ./server:/var/lib/chemistry-dashboard/server
@@ -25,7 +25,7 @@ services:
   audio_processor:
     build:
       context: .
-      dockerfile: docker/audio.Dockerfile
+      dockerfile: deploy/docker/audio.Dockerfile
     image: blinc/audio_processor:latest
     volumes:
       - ./audio_processing:/var/lib/chemistry-dashboard/audio_processing
@@ -35,7 +35,7 @@ services:
   nginx:
     build:
       context: .
-      dockerfile: docker/nginx.Dockerfile
+      dockerfile: deploy/docker/nginx.Dockerfile
     image: blinc/nginx:latest
     volumes:
       - ./frontend/build:/var/lib/chemistry-dashboard/frontend/build
