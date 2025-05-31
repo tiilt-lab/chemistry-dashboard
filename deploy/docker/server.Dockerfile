@@ -14,7 +14,7 @@ RUN mkdir -p chemistry-dashboard/server && \
 COPY server/requirements.txt /var/lib/chemistry-dashboard/requirements.txt
 WORKDIR /var/lib/chemistry-dashboard/
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install setuptools==58.2.0 && \
+    pip install setuptools && \
     pip install --no-cache-dir -r requirements.txt && \
     python3 -m spacy download en_core_web_sm
 COPY server/entry.sh entry.sh
