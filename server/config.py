@@ -13,7 +13,7 @@ def https():
 def cloud():
     # TODO: probably want this as a separate config, but for now http/https is probably good enough
     # to determine if running in AWS
-    return https()
+    return str(config['server']['cloud']) in ['true', 'True', 't']
 
 def debug():
     return str(config['server']['debug']) in ['true', 'True', 't']
