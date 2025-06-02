@@ -10,6 +10,12 @@ def initialize():
 def https():
     return str(config['server']['https']) in ['true', 'True', 't']
 
+def redis():
+    return str(config['server']['redis'])
+
+def database():
+    return str(config['server']['database'])
+
 def cloud():
     # TODO: probably want this as a separate config, but for now http/https is probably good enough
     # to determine if running in AWS
