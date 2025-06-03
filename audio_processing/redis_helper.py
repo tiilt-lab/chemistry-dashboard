@@ -1,7 +1,7 @@
 import redis
 import config as cf
 
-r = redis.StrictRedis(host=cf.redis(), port=6379, db=0, decode_responses=True)
+r = redis.StrictRedis(host="blinc-scrzmn.serverless.use2.cache.amazonaws.com", port=6379, db=0, decode_responses=True)
 
 class RedisSessions:
 
