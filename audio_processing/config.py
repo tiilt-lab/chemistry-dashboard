@@ -59,3 +59,6 @@ def root_dir():
 
 def speaker_metrics_callback():
     return str(config['output']['speaker_metrics_callback'])
+
+def redis():
+    return str(config['server']['redis'])
