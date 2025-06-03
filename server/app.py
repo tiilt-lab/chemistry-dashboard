@@ -64,9 +64,9 @@ limiter = Limiter(app, key_func=get_remote_address)
 
 # Create SocketIO app (engineio_logger=True for advance debug)
 if cf.cloud():
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"www."+cf.domain(),"server:5000","audio_processor", "nginx", "server", "127.0.0.1", "localhost"], manage_session=False, message_queue="redis://")
+	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"www."+cf.domain(),"server:5000","audio_processor", "nginx", "server", "127.0.0.1", "localhost"], manage_session=False, message_queue="redis://"+cf.redis())
 else:
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"www."+cf.domain(),"server:5000","audio_processor", "nginx", "server", "127.0.0.1", "localhost"],manage_session=False, message_queue="redis://")
+	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"www."+cf.domain(),"server:5000","audio_processor", "nginx", "server", "127.0.0.1", "localhost"],manage_session=False, message_queue="redis://"+cf.redis())
 
 # Create database
 DATABASE_SERVER = cf.database() #"blinc.c2tdsnprd97b.us-east-2.rds.amazonaws.com"
