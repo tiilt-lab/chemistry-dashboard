@@ -50,7 +50,6 @@ class AudioProcessor:
 
         self.semantic_model = semantic_model
         logging.info("Start metrics process")
-        os.makedirs(cf.root_dir()+"chemistry-dashboard/audio_processing/speaker_diarization/results/", exist_ok=True)
         self.speaker_metrics_process = speaker_metrics.SpeakerProcessor(
             config, self.semantic_model)
 
