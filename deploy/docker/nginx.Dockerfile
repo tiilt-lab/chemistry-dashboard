@@ -13,6 +13,9 @@ RUN chmod +x /var/lib/chemistry-dashboard/entry.sh
 COPY deploy/nginx.conf /etc/nginx/nginx.conf
 COPY deploy/nginx-headers.conf /etc/nginx/nginx-headers.conf
 
+RUN ln -sf /dev/stdout /var/log/nginx/access.log && \
+    ln -sf /dev/stderr /var/log/nginx/error.log
+
 EXPOSE 80 443 9000 9001 9003
 
 HEALTHCHECK --start-period=2m --interval=30s --timeout=10s --retries=3 \
@@ -20,4 +23,4 @@ HEALTHCHECK --start-period=2m --interval=30s --timeout=10s --retries=3 \
 
 ENTRYPOINT [ "/var/lib/chemistry-dashboard/entry.sh" ]
 
-CMD ["tail", "-f", "/dev/stdout"]
+STOPSIGNAL SIGTERM
