@@ -24,3 +24,5 @@ HEALTHCHECK --start-period=2m --interval=30s --timeout=10s --retries=3 \
 ENTRYPOINT [ "/var/lib/chemistry-dashboard/entry.sh" ]
 
 STOPSIGNAL SIGTERM
+
+CMD ["tail", "-f", "/dev/stdout"]
