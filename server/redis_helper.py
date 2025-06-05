@@ -4,7 +4,7 @@ import json
 import config as cf
 import logging
 
-r = redis.StrictRedis(host=cf.redis(), port=6379, db=0, decode_responses=True)
+r = redis.StrictRedis(host=cf.redis(), port=6379, db=0, decode_responses=True, ssl=True)
 
 class RedisLogin:
     EXPIRATION_TIME = 60 * 5
