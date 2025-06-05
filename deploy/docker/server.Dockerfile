@@ -28,7 +28,7 @@ HEALTHCHECK --start-period=2m --interval=5m --timeout=10s --retries=3 \
   CMD curl --include --no-buffer \
     --header "Connection: close" \
     --header "Upgrade: websocket" \
-    http://127.0.0.1:5000
+    http://127.0.0.1:5000/socket.io
 
 ENTRYPOINT ["/var/lib/chemistry-dashboard/entry.sh"]
 

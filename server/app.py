@@ -62,11 +62,13 @@ r = redis.Redis(host=cf.redis(), port=6379, db=0)
 # Set API Limiter
 limiter = Limiter(app, key_func=get_remote_address)
 
+origins = [cf.domain(),"http://server:5000","http://audio_processor", "http://nginx", "http://server", "http://127.0.0.1", "http://localhost"]
+
 # Create SocketIO app (engineio_logger=True for advance debug)
 if cf.cloud():
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=["*"], manage_session=False, message_queue="redis://"+cf.redis())
+	socketio = SocketIO(app, log=logger, cors_allowed_origins="*", manage_session=False, message_queue="redis://"+cf.redis())
 else:
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=["*"],manage_session=False, message_queue="redis://"+cf.redis())
+	socketio = SocketIO(app, log=logger, cors_allowed_origins="*", manage_session=False, message_queue="redis://"+cf.redis())
 
 # Create database
 DATABASE_SERVER = cf.database() #"blinc.c2tdsnprd97b.us-east-2.rds.amazonaws.com"

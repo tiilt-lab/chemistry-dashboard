@@ -1,9 +1,5 @@
-FROM amazonlinux:latest
+FROM nginx:latest
 WORKDIR /var/lib/
-
-RUN dnf update -y && \
-    dnf install -y nginx
-RUN systemctl enable nginx
 
 # Create build folder and create database
 RUN mkdir -p chemistry-dashboard/frontend/build && \
@@ -22,7 +18,5 @@ HEALTHCHECK --start-period=2m --interval=30s --timeout=10s --retries=3 \
   CMD curl -sSf http://127.0.0.1 > /dev/stdout
 
 ENTRYPOINT [ "/var/lib/chemistry-dashboard/entry.sh" ]
-
-STOPSIGNAL SIGTERM
 
 CMD ["tail", "-f", "/dev/stdout"]
