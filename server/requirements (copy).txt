@@ -61,7 +61,7 @@ pytz==2022.1
 pytz-deprecation-shim==0.1.0.post0
 redis==3.2.1
 regex==2022.4.24
-requests==2.21.0
+requests==2.32.4
 scikit-learn==1.1.0
 scipy==1.8.0
 six==1.16.0
