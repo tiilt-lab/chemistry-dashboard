@@ -25,3 +25,4 @@ pyPDF2
 matplotlib
 nltk
 spacy
+eventlet
