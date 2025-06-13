@@ -14,6 +14,12 @@
     text-align: left;
 }
 
+.submitContainer {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
 .submitButton {
     background-color: #007bff;
     color: white;
@@ -25,6 +31,24 @@
     cursor: pointer;
     display: block;
 }
+
+.invalid {
+    border-left: 4px solid red;
+    padding-left: 8px;
+    background-color: #fff6f6;
+    border-radius: 6px;
+}
+
+.errorMessage {
+    color: #b00020;
+    background-color: #ffe6e6;
+    padding: 10px 14px;
+    border: 1px solid #ffb3b3;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
 
 .submitButton:hover {
     background-color: #0056b3;

@@ -37,10 +37,10 @@ const SessionFeedbackForm = () => {
       if (res.status !== 200) {
         throw new Error("Failed to submit feedback");
       }
-      console.log("Feedback submitted successfully!");
+      // console.log("Feedback submitted successfully!");
     } catch (err) {
-      console.error("Submission error:", err);
-      alert("Failed to submit feedback. Please try again later.");
+      // console.error("Submission error:", err);
+      throw err; 
     }
   };
 

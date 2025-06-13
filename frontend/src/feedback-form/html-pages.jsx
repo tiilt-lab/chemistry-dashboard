@@ -7,20 +7,40 @@ import styles from "./session-feedback-form.module.css"
 function FeedbackFormPage({ sessionId, questions = [], onSubmit }) {
     const [responses, setResponses] = useState({})
     const [submitted, setSubmitted] = useState(false)
+    const [invalidQuestions, setInvalidQuestions] = useState([]);
+    const [errorMessage, setErrorMessage] = useState("");
 
     const handleInputChange = (id, value) => {
         setResponses((prev) => ({ ...prev, [id]: value }))
     }
 
-    const handleSubmit = (e) => {
-        e.preventDefault()
-        if (onSubmit) {
-            onSubmit({ sessionId, responses })
-        } else {
-            console.log({ sessionId, responses })
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        const requiredQuestions = questions.filter((q) => q.show);
+        const unanswered = requiredQuestions.filter((q) => !responses[q.id]).map((q) => q.id);
+
+        if (unanswered.length > 0) {
+            setInvalidQuestions(unanswered);
+            setErrorMessage("Please answer all questions before submitting.");
+            return;
         }
-        setSubmitted(true)
-    }
+
+        setInvalidQuestions([]);
+        setErrorMessage("");
+
+        try {
+            if (onSubmit) {
+                await onSubmit({ sessionId, responses });
+            } else {
+                // console.log({ sessionId, responses });
+            }
+            setSubmitted(true);
+        } catch (error) {
+            // console.error("Error submitting feedback:", error);
+            setErrorMessage("Failed to submit feedback. Please try again.");
+        }
+    };
 
     return (
         <div className="main-container">
@@ -49,7 +69,7 @@ function FeedbackFormPage({ sessionId, questions = [], onSubmit }) {
                                     .map((q, index) => (
                                         <div
                                             key={q.id}
-                                            className={styles["questionBlock"]}
+                                            className={`${styles["questionBlock"]} ${invalidQuestions.includes(q.id) ? styles["invalid"] : ""}`}
                                         >
                                             <label className={styles["label"]}>
                                                 {index + 1}. {q.label}
@@ -57,9 +77,7 @@ function FeedbackFormPage({ sessionId, questions = [], onSubmit }) {
                                             {q.type === "likert" && (
                                                 <div
                                                     className={
-                                                        styles[
-                                                            "likertContainer"
-                                                        ]
+                                                        styles["likertContainer"]
                                                     }
                                                 >
                                                     {[
@@ -77,12 +95,7 @@ function FeedbackFormPage({ sessionId, questions = [], onSubmit }) {
                                                                     key={value}
                                                                     type="button"
                                                                     className={`${styles["likertButton"]} ${responses[q.id] === value ? styles["selected"] : ""}`}
-                                                                    onClick={() =>
-                                                                        handleInputChange(
-                                                                            q.id,
-                                                                            value,
-                                                                        )
-                                                                    }
+                                                                    onClick={() => handleInputChange(q.id, value,)}
                                                                 >
                                                                     {label}
                                                                 </button>
@@ -94,12 +107,14 @@ function FeedbackFormPage({ sessionId, questions = [], onSubmit }) {
                                         </div>
                                     ))}
                             </form>
-                            <button
-                                type="submit"
-                                className={styles["submitButton"]}
-                            >
-                                Submit Feedback
-                            </button>
+                            {errorMessage && (
+                                <div className={styles["errorMessage"]}>{errorMessage}</div>
+                            )}
+                            <div className={styles["submitContainer"]}>
+                                <button type="submit" className={styles["submitButton"]} onClick={handleSubmit}>
+                                    Submit Feedback
+                                </button>
+                            </div>
                         </>
                     )}
                 </div>

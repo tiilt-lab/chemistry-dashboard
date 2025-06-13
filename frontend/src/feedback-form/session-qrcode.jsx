@@ -6,7 +6,6 @@ function SessionQRCode({ sessionId }) {
   if (!sessionId) return null;
 
   const feedbackLink = `${window.location.origin}/feedback-form/${sessionId}`;
-  // const feedbackLink = "https://example.com/";
 
   console.log("Feedback Link:", feedbackLink);
   console.log("Session ID:", sessionId);
