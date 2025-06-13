@@ -17,7 +17,7 @@ This update improved the UI and reliability of the session feedback form by addi
 - `frontend/src/feedback-form/session-feedback-form.module.css`
 
 ### Where to Continue
-- Consider backend-side validation
+- Complete api side for submitting responses to db
 - Verify database for submitted feedback
 
 ### Branch
