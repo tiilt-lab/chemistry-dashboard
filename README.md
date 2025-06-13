@@ -1,5 +1,28 @@
 # Chemistry Dashboard
 
+## Feedback Form Validation – June 13, 2025 Update
+
+This update improved the UI and reliability of the session feedback form by adding response validation and ensuring error-safe submission handling. I also tried submitting to the backend with an API call but it seems to be erroring and I'm looking into it.
+
+### What's New
+- All visible questions must now be answered before submission.
+- Users are shown which questions are unanswered with inline indicators.
+- The "Thank you" message is only displayed after a successful submission.
+- Errors during submission are caught and displayed as alerts.
+
+### 📂 Files Updated
+- `frontend/src/feedback-form/html-pages.jsx`
+- `frontend/src/feedback-form/session-feedback-form.jsx`
+- `frontend/src/services/session-service.js`
+- `frontend/src/feedback-form/session-feedback-form.module.css`
+
+### Where to Continue
+- Consider backend-side validation
+- Verify database for submitted feedback
+
+### Branch
+- Current working branch: `feedback-validation`
+
 ## Docker Development Environment Setup
 
 ### Check configuration
