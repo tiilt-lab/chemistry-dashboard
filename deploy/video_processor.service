@@ -1,5 +1,5 @@
 [Unit]
-Description=Audio Processing Service
+Description=Video Processing Service
 After=network-online.target
 StartLimitIntervalSec=0
 
@@ -11,7 +11,7 @@ RestartSec=1
 LimitRTPRIO=99
 LimitRTTIME=infinity
 WorkingDirectory=/var/lib/chemistry-dashboard/
-ExecStart= /var/lib/chemistry-dashboard/video_processing/venv/bin/python3 video_processing/server.py
-
+ExecStart=/home/ubuntu/.pyenv/versions/video_processor/bin/python video_processing/server.py
+Environment="PATH=/home/ubuntu/.pyenv/versions/video_processor/bin:/home/ubuntu/.pyenv/shims:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 [Install]
 WantedBy=multi-user.target
