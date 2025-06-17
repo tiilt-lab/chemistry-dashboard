@@ -117,8 +117,8 @@ function ByodJoinPage(props) {
                                             className="dropdown small-section"
                                         >
                                             <option value="Audio">Audio</option>
-                                            {/*<option value="Video">Video</option>
-                    <option value="Videocartoonify">Video(Cartoon)</option>*/}
+                                            <option value="Video">Video</option>
+                                            <option value="Videocartoonify">Video(Cartoon)</option>
                                         </select>
                                     </div>
                                     <button
@@ -426,6 +426,8 @@ function ByodJoinPage(props) {
                                                         <video
                                                             controls={true}
                                                             muted={true}
+                                                            autoPlay={true}
+                                                            playsInline={true} 
                                                             style={{
                                                                 marginLeft:
                                                                     "20px",

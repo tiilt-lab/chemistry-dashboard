@@ -78,20 +78,21 @@ However, if you are seting this up for ubuntu 22.04, run these commands
 
 $ wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-ubuntu2204.pin
 $ sudo mv cuda-ubuntu2204.pin /etc/apt/preferences.d/cuda-repository-pin-600
-$ wget https://developer.download.nvidia.com/compute/cuda/12.1.0/local_installers/cuda-repo-ubuntu2204-12-1-local_12.1.0-530.30.02-1_amd64.deb
-$ sudo dpkg -i  cuda-repo-ubuntu2204-12-1-local_12.1.0-530.30.02-1_amd64.deb
-$ sudo cp /var/cuda-repo-ubuntu2204-12-1-local/cuda-*-keyring.gpg /usr/share/keyrings/
+$ wget https://developer.download.nvidia.com/compute/cuda/12.8.0/local_installers/cuda-repo-ubuntu2204-12-8-local_12.8.0-570.86.10-1_amd64.deb
+$ sudo dpkg -i cuda-repo-ubuntu2204-12-8-local_12.8.0-570.86.10-1_amd64.deb
+$ sudo cp /var/cuda-repo-ubuntu2204-12-8-local/cuda-*-keyring.gpg /usr/share/keyrings/
 $ sudo apt-get update
-$ sudo apt-get -y install cuda
+$ sudo apt-get -y install cuda-toolkit-12-8
 ```
 
 Install cudnn for ubuntu 22.04
 
 ```
-$ wget https://developer.nvidia.com/downloads/compute/cudnn/secure/8.8.1/local_installers/12.0/cudnn-local-repo-ubuntu2204-8.8.1.3_1.0-1_amd64.deb
-
-$ sudo apt install cudnn-local-repo-ubuntu2204-8.8.1.3_1.0-1_amd64.deb
-$ sudo cp /var/cudnn-local-repo-ubuntu2204-8.8.1.3/cudnn-local-*-keyring.gpg /usr/share/keyrings/
+$ wget https://developer.download.nvidia.com/compute/cudnn/9.5.1/local_installers/cudnn-local-repo-ubuntu2204-9.5.1_1.0-1_amd64.deb
+$ sudo dpkg -i cudnn-local-repo-ubuntu2204-9.5.1_1.0-1_amd64.deb
+$ sudo cp /var/cudnn-local-repo-ubuntu2204-9.5.1/cudnn-*-keyring.gpg /usr/share/keyrings/
+$ sudo apt-get update
+$ sudo apt-get -y install cudnn-cuda-12
 ```
 
 Finally, to verify the installation, check
@@ -102,24 +103,52 @@ $ nvcc -V
 ```
 
 ```
-cd ../../../video_processing
-python3 -m venv ./venv
-source venv/bin/activate
+Install pythin 3.8 for video processing
 
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-pip3 install cmake matplotlib ninja numpy opencv-python scipy tqdm wget imutils
+sudo add-apt-repository ppa:deadsnakes/ppa -y
+sudo apt update
+sudo apt install python3.8
+sudo apt install python3.8-dbg
+sudo apt install python3.8-dev
+sudo apt install python3.8-venv
+sudo apt install python3.8-distutils
+sudo apt install python3.8-lib2to3
+sudo apt install python3.8-gdbm
+sudo apt install python3.8-tk
+```
+```
+cd /var/lib/chemistry-dashboard/video_processing
+run python3.9 --version to get the version replace x.x.x below with the version number
+S python3.9 --version
+$ pyenv install x.x.x 
+
+$ pyenv virtualenv 3.9.21 video_processor
+$ pyenv local video_processor
+
+$ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+$ pip install -r requirements.txt
 
 install dlib with cuda enabled
 
+$ cd ~
 $ git clone https://github.com/davisking/dlib.git
 $ cd dlib
 $ mkdir build
 $ cd build
+$ pyenv local video_processor
 $ cmake .. -D DLIB_USE_CUDA=1 -D USE_AVX_INSTRUCTIONS=1 -D CMAKE_C_COMPILER=/usr/bin/gcc-11
 $ cmake --build .
 $ cd ..
+$ pyenv local video_processor
 $ python setup.py install --set DLIB_USE_CUDA=1 --set CMAKE_C_COMPILER=/usr/bin/gcc-11
 ```
+Install mish-cuda
+$ cd ~
+$ git clone https://github.com/thomasbrandon/mish-cuda
+$ cd mish-cuda
+$ sudo cp external/CUDAApplyUtils.cuh csrcs/CUDAApplyUtils.cuh
+$ pyenv local visdeo_processor
+$ python setup.py install
 
 ## Required parts of Server:
 

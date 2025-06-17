@@ -132,12 +132,6 @@ function JoinPage() {
         renderFrameFromBuffer()
     }, [frameBufferLength])
 
-    //Use effect to display processed cartoonized image
-    useEffect(() => {
-        console.log('inside renderframe buffer useeffect ', frameBufferLength)
-        renderFrameFromBuffer()
-    }, [frameBufferLength])
-
     useEffect(() => {
         if (constraintObj && pcode !== "" && joinwith !== "") handleStream()
     }, [constraintObj, pcode, joinwith])
@@ -226,7 +220,10 @@ function JoinPage() {
 
             const videoPlay = () => {
                 let video = document.querySelector("video")
+                console.log("video tag ", video)
+                console.log("streamReference ", streamReference)
                 video.srcObject = streamReference
+                console.log("video.srcObject ", video.srcObject)
                 video.onloadedmetadata = function (ev) {
                     video.play()
                     mediaRecorder.start(interval)
@@ -248,13 +245,14 @@ function JoinPage() {
             if (authenticated && joinwith === "Audio") {
                 loadWorklet().catch(console.error)
             } else if (
-                authenticated &&
+                authenticated && speakersValidated &&
                 (joinwith === "Video" || joinwith === "Videocartoonify")
             ) {
+                console.log(audioconnected,authenticated,speakersValidated)
                 videoPlay()
             }
         }
-    }, [authenticated])
+    }, [authenticated,speakersValidated])
 
     //Use effect to toggle video view pane
     useEffect(() => {
@@ -266,10 +264,10 @@ function JoinPage() {
     }, [preview])
 
     //Use effect to display processed cartoonized image
-    useEffect(() => {
-        console.log('inside renderframe buffer useeffect ', frameBufferLength)
-        renderFrameFromBuffer()
-    }, [frameBufferLength])
+    // useEffect(() => {
+    //     console.log('inside renderframe buffer useeffect ', frameBufferLength)
+    //     renderFrameFromBuffer()
+    // }, [frameBufferLength])
 
     const openForms = (form, speaker = null) => {
         setCurrentForm(form)
@@ -465,7 +463,8 @@ function JoinPage() {
                     .enumerateDevices()
                     .then((devices) => {
                         devices.forEach((device) => {
-                            //console.log(device.kind.toUpperCase(), device.label);
+                            
+                            // console.log(device.kind.toUpperCase(), device.label);
                             //, device.deviceId
                         })
                     })
@@ -477,12 +476,14 @@ function JoinPage() {
             if (navigator.mediaDevices != null) {
                 const stream =
                     await navigator.mediaDevices.getUserMedia(constraintObj)
+  
                 // media.then(function (stream) {
                 setStreamReference(stream)
+                //keep this here for now to enable to capturing of audio finger printing
+                const context = new AudioContext({ sampleRate: 16000 })
+                setSource(context.createMediaStreamSource(stream))
+                setAudioContext(context)
                 if (joinwith === "Audio") {
-                    const context = new AudioContext({ sampleRate: 16000 })
-                    setSource(context.createMediaStreamSource(stream))
-                    setAudioContext(context)
                     console.log("connect to websocket");
                     audiows.current = new WebSocket(
                         apiService.getAudioWebsocketEndpoint(),
@@ -508,6 +509,26 @@ function JoinPage() {
 
                     const mediaRec = new MediaRecorder(stream, opt)
                     setMediaRecorder(mediaRec)
+
+                    //Since we are implementing distributed  processing for audio and video,
+                    //The audio and  video socket needs to be enabled to receive the  video data
+                    // The server listening to the audio_socket will extract audio stream from the
+                    // video data for processing, while the server for video_socket will extract the video
+                    // for processing.
+
+                    audiows.current = new WebSocket(
+                        apiService.getAudioWebsocketEndpoint(),
+                    )
+                    
+                    connect_audio_processor_service();
+
+                    //activate video websocket 
+                    setVideoWs(
+                            new WebSocket(
+                                apiService.getVideoWebsocketEndpoint(),
+                            ),
+                        )
+                    
                 }
             } else {
                 setDisplayText("No media devices detected.")
@@ -567,18 +588,6 @@ function JoinPage() {
                         setConstraintObj(constraint)
                         setPcode(passcode)
                         setJoinwith(joinwith)
-
-                        //activate video websocket also if user joins with video
-                        if (
-                            joinwith === "Video" ||
-                            joinwith === "Videocartoonify"
-                        ) {
-                            setVideoWs(
-                                new WebSocket(
-                                    apiService.getVideoWebsocketEndpoint(),
-                                ),
-                            )
-                        }
                     })
                 } else if (response.status === 400 || response.status === 401) {
                     response.json().then((jsonObj) => {
@@ -686,6 +695,7 @@ function JoinPage() {
                 // Add the processed frame to the buffer
                 
                 setFrameBuffer(prevBuffer =>{
+                    console.log("image data received.. ", url)
                         const newItems = [...prevBuffer, url]
                         if (newItems.length % 40 == 0) {
                             setFrameBufferLength(newItems.length)
@@ -744,12 +754,14 @@ function JoinPage() {
                 numSpeakers: numSpeakers,
             }
         }
+        console.log(joinwith)
         audiows.current.send(JSON.stringify(message))
     }
 
     // Begin capturing and sending client video.
     const requestStartVideoProcessing = () => {
         let message = null
+        console.log('starting video processing')
         if (videows === null) {
             return
         }
@@ -783,7 +795,7 @@ function JoinPage() {
                 Video_cartoonify: true,
             }
         }
-
+        console.log(joinwith)
         videows.send(JSON.stringify(message))
     }
 

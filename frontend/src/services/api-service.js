@@ -29,12 +29,14 @@ export class ApiService {
   }
   
     getVideoWebsocketEndpoint() {
-    //   return (
-    //     "ws://129.105.44.121:8080/video_socket"
-    //   );
     return (
-      "wss://video.tiilt-blinc.com/video_socket"
+         this.getWSSProtocol() +
+      "//" +
+      // window.location.host.split(":")[0] +
+      window.location.host +
+      "/video_socket"
     );
+      
   }
 
    _generateHeaders(headers,data) {
