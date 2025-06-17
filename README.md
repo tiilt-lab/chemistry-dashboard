@@ -118,14 +118,15 @@ sudo apt install python3.8-tk
 ```
 ```
 cd /var/lib/chemistry-dashboard/video_processing
-run python3.8 --version to get the version replace x.x.x below with the version number
-pyenv install x.x.x 
+run python3.9 --version to get the version replace x.x.x below with the version number
+S python3.9 --version
+$ pyenv install x.x.x 
 
-pyenv virtualenv 3.9.21 discussion_capture
-pyenv local discussion_capture
+$ pyenv virtualenv 3.9.21 video_processor
+$ pyenv local video_processor
 
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-pip install -r requirements.txt
+$ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+$ pip install -r requirements.txt
 
 install dlib with cuda enabled
 
@@ -134,13 +135,20 @@ $ git clone https://github.com/davisking/dlib.git
 $ cd dlib
 $ mkdir build
 $ cd build
-$ pyenv local discussion_capture
+$ pyenv local video_processor
 $ cmake .. -D DLIB_USE_CUDA=1 -D USE_AVX_INSTRUCTIONS=1 -D CMAKE_C_COMPILER=/usr/bin/gcc-11
 $ cmake --build .
 $ cd ..
-$ pyenv local discussion_capture
+$ pyenv local video_processor
 $ python setup.py install --set DLIB_USE_CUDA=1 --set CMAKE_C_COMPILER=/usr/bin/gcc-11
 ```
+Install mish-cuda
+$ cd ~
+$ git clone https://github.com/thomasbrandon/mish-cuda
+$ cd mish-cuda
+$ sudo cp external/CUDAApplyUtils.cuh csrcs/CUDAApplyUtils.cuh
+$ pyenv local visdeo_processor
+$ python setup.py install
 
 ## Required parts of Server:
 

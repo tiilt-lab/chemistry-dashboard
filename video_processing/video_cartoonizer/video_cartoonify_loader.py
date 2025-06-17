@@ -21,7 +21,9 @@ class VideoCartoonifyLoader:
         self.cpu = False
         self.backbone = 'dualstylegan' #"dualstylegan | toonify"
         self.padding = [150,150,150,150]
-        self.batch_sizet = 4
+        self.batch_size = 40
+        self.video = True
+        self.parsing_map_path = None
 
     def load_model(self):
         if self.exstyle_path is None:

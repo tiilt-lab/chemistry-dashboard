@@ -695,6 +695,7 @@ function JoinPage() {
                 // Add the processed frame to the buffer
                 
                 setFrameBuffer(prevBuffer =>{
+                    console.log("image data received.. ", url)
                         const newItems = [...prevBuffer, url]
                         if (newItems.length % 40 == 0) {
                             setFrameBufferLength(newItems.length)
@@ -753,6 +754,7 @@ function JoinPage() {
                 numSpeakers: numSpeakers,
             }
         }
+        console.log(joinwith)
         audiows.current.send(JSON.stringify(message))
     }
 
@@ -793,7 +795,7 @@ function JoinPage() {
                 Video_cartoonify: true,
             }
         }
-
+        console.log(joinwith)
         videows.send(JSON.stringify(message))
     }
 

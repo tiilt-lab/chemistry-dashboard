@@ -169,7 +169,7 @@ class VideoProcessor:
 
                             resized_frame = cv2.resize(frame, (self.w, self.h),interpolation=cv2.INTER_AREA)
 
-                            for index, para in enumerate(paras):
+                            for index, para in enumerate(self.paras):
                                 top,bottom,left,right,lm,face_lm = para
                                 face = resized_frame[top:bottom, left:right] 
                                 
@@ -197,7 +197,7 @@ class VideoProcessor:
                     #this means the first valid frame have been detected and paras has value        
                     elif  self.paras is not None:
                         if self.scale <= 0.75:
-                        frame = cv2.sepFilter2D(frame, -1, kernel_1d, kernel_1d)
+                            frame = cv2.sepFilter2D(frame, -1, kernel_1d, kernel_1d)
                         if self.scale <= 0.375:
                             frame = cv2.sepFilter2D(frame, -1, kernel_1d, kernel_1d) 
 
@@ -291,23 +291,23 @@ class VideoProcessor:
                             frames_batch_copy = copy.deepcopy(self.frame_batch)
                             self.convert_image(self.frame_batch,None,500,375)
 
-                        #start attention tracking
-                        all_frames,face_object_detected = self.image_object_detection.detection(frames_batch_copy,self.batch_track)
-                        self.attention_detection.attention_tracking(face_object_detected,all_frames)
-                        self.frame_batch = []
-                        self.batch_track+=1
-                        logging.info('printing output of attentions')
-                        logging.info(self.persons_attention_track)
-                        payload = {'type': 'attention_data', 'data': self.persons_attention_track}
-                        self.send_json(payload)
+                            #start attention tracking
+                            all_frames,face_object_detected = self.image_object_detection.detection(frames_batch_copy,self.batch_track)
+                            self.attention_detection.attention_tracking(face_object_detected,all_frames)
+                            self.frame_batch = []
+                            self.batch_track+=1
+                            logging.info('printing output of attentions')
+                            logging.info(self.persons_attention_track)
+                            payload = {'type': 'attention_data', 'data': self.persons_attention_track}
+                            self.send_json(payload)
 
                                 
 
-                    self.frame_count = self.frame_count + 1  
+                        self.frame_count = self.frame_count + 1  
 
-                    # we just need 290 frames of the 10 sec chunks, and break if the frames capture  is more than 290    
-                    if  subclib_frame_count > 300:
-                        break
+                        # we just need 290 frames of the 10 sec chunks, and break if the frames capture  is more than 290    
+                        if  subclib_frame_count > 300:
+                            break
 
             
             except Exception as e:
@@ -315,7 +315,7 @@ class VideoProcessor:
 
         logging.info('frame cartoonization thread stopped for {0}.'.format(self.config.auth_key))
 
-        # end the tr
+        # Processing after session has ended (post hoc processing)
         if frame_processing_thread is not None:
             frame_processing_thread.join()
         # convert all image to cartoon and save
