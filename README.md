@@ -125,7 +125,7 @@ $ pyenv install x.x.x
 $ pyenv virtualenv 3.9.21 video_processor
 $ pyenv local video_processor
 
-$ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+$ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 $ pip install -r requirements.txt
 
 install dlib with cuda enabled
@@ -142,14 +142,15 @@ $ cd ..
 $ pyenv local video_processor
 $ python setup.py install --set DLIB_USE_CUDA=1 --set CMAKE_C_COMPILER=/usr/bin/gcc-11
 ```
+```
 Install mish-cuda
 $ cd ~
 $ git clone https://github.com/thomasbrandon/mish-cuda
 $ cd mish-cuda
-$ sudo cp external/CUDAApplyUtils.cuh csrcs/CUDAApplyUtils.cuh
-$ pyenv local visdeo_processor
+$ sudo cp external/CUDAApplyUtils.cuh csrc/CUDAApplyUtils.cuh
+$ pyenv local video_processor
 $ python setup.py install
-
+```
 ## Required parts of Server:
 
 Create a database in MySQL
