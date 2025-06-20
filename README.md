@@ -125,7 +125,7 @@ $ pyenv install x.x.x
 $ pyenv virtualenv 3.9.21 video_processor
 $ pyenv local video_processor
 
-$ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+$ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 $ pip install -r requirements.txt
 
 install dlib with cuda enabled
