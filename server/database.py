@@ -20,6 +20,7 @@ from tables.keyword_list_item import KeywordListItem
 from tables.keyword_list import KeywordList
 from tables.keyword import Keyword
 from tables.user import User
+from tables.student import Student
 from tables.api_client import APIClient
 from tables.folder import Folder
 from tables.topic_model import TopicModel
@@ -684,6 +685,37 @@ def update_user(user_id, data):
     db.session.commit()
     return user
 
+
+# -------------------------
+# Student
+# -------------------------
+
+def get_students(id=None, username=None):
+    query = db.session.query(Student)
+    if id != None:
+        return query.filter(Student.id == id).first()
+    if username != None:
+        return query.filter(Student.username == username).first()
+    return query.all()
+
+def add_student(lastname, firstname, username):
+    matched_student = get_students(username=username)
+    if matched_student:
+        return False, "Username already exists."
+    student = Student(lastname, firstname, username)
+    db.session.add(student)
+    db.session.commit()
+    return True, student
+
+def delete_student(id):
+    student = get_students(id=id)
+    if student:
+        #implement delete the fingerprint and image files later
+        db.session.delete(student)
+        db.session.commit()
+        return True
+    else:
+        return False
 # -------------------------
 # API Client
 # -------------------------

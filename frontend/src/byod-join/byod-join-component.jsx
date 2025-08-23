@@ -666,7 +666,7 @@ function JoinPage() {
 
     // Connects to video processor websocket server.
     const connect_video_processor_service = () => {
-        videows.binaryType = "arraybuffer"
+        videows.binaryType = "blob"
 
         videows.onopen = (e) => {
             console.log("[Connected to video processor services]")
@@ -695,12 +695,9 @@ function JoinPage() {
                 // Add the processed frame to the buffer
                 
                 setFrameBuffer(prevBuffer =>{
-                    console.log("image data received.. ", url)
                         const newItems = [...prevBuffer, url]
                         if (newItems.length % 40 == 0) {
                             setFrameBufferLength(newItems.length)
-                            // setCartoonImgBatch(prevCount => prevCount + 1)
-                            // setFrameBufferLength(prevCount => prevCount + 1)
                         }
                         
                         return newItems

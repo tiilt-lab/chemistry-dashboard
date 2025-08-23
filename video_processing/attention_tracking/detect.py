@@ -138,7 +138,7 @@ class ImageObjectDetection:
                         confs = frame_detection[2]
                         clss = frame_detection[3]
                         person_id = frame_detection[4]
-                        self.accumulate_head_track(bbox,confs,clss,person_id,accumulator,im0,int(p))
+                        self.accumulate_head_track(bbox,confs,clss,int(person_id),accumulator,im0,int(p))
                     
         return all_frames,accumulator
 

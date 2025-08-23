@@ -151,7 +151,7 @@ class AttentionDetection:
                                 self.track_person_freq_of_focus_on_object(person_id,other_objects[object_index][0])
                                 self.track_shared_attention_on_an_object(other_objects[object_index][2],person_id,int(frame_id[j]))
                         else: #out of frame gaze
-                            self.track_person_level_of_attention(-1,int(frame_id[j]))        
+                            self.track_person_level_of_attention(-1,person_id,int(frame_id[j]))        
                             self.track_person_freq_of_focus_on_object(person_id,-1)
                             self.track_shared_attention_on_an_object(-1,person_id,int(frame_id[j]))
                             

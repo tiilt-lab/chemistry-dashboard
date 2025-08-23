@@ -20,6 +20,7 @@ function SettingComponentPage(props) {
         <div className={style["section-header"]}>Account Settings</div>
         <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("ChangePassword")}>Change Password</div>
         {(props.user.isAdmin || props.user.isSuper) ?
+        <>
           <React.Fragment>
             <div className={style["section-header"]}>Manage Accounts</div>
             <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("ViewUsers", true)}>View Users</div>
@@ -30,6 +31,14 @@ function SettingComponentPage(props) {
             <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("UnlockUser", true)}>Unlock User</div>
             <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("ResetUser", true)}>Reset User Password</div>
           </React.Fragment>
+
+          <React.Fragment>
+            <div className={style["section-header"]}>Manage Student Profile</div>
+            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("ViewStudentProfile", true)}>View Students</div>
+            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("AddStudentProfile")}>Add Student Profile</div>
+            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("DeleteStudentProfile", true)}>Delete Student Profile</div>
+          </React.Fragment>
+          </>
           :
           <></>
         }
@@ -93,6 +102,29 @@ function SettingComponentPage(props) {
           <></>
         }
 
+        {props.currentForm === "ViewStudentProfile" ?
+          <div className={style["add-dialog"]}>
+            <div className={style["dialog-heading"]}>View Students</div>
+            <div className={style["user-table"]}>
+              <div className={style["user-row"]}>
+                <span className={style["user-name bold"]}>Username</span>
+                <span className={style["user-role bold"]}>First Name</span>
+                <span className={style["user-locked bold"]}>Last Name</span>
+              </div>
+              {props.students.map((s, index) => (
+                <div key={index} className={style["user-row"]}>
+                  <span className={style["user-name"]}>{s.username}</span>
+                  <span className={style["user-role"]}>{s.lastname}</span>
+                  <span className={style["user-locked"]}>{s.firstname}</span>
+                </div>
+              ))}
+            </div>
+            <button className={style["cancel-button"]} onClick={props.closeDialog}>Close</button>
+          </div>
+          :
+          <></>
+        }
+
         {props.currentForm === "AddUser" ?
           <div className={style["add-dialog"]}>
             <div className={style["dialog-heading"]}>Add User</div>
@@ -127,6 +159,23 @@ function SettingComponentPage(props) {
           :
           <></>
         }
+        {props.currentForm === "DeleteStudentProfile" ?
+          <div className={style["add-dialog"]}>
+            <div className={style["dialog-heading"]}>Delete Student</div>
+            <div className={style["input-header"]}>Select Student</div>
+            <select id='ddStudent' className={style["dropdown-input"]}>
+              {props.students.map((s, index) => (
+                <option key={index} value={s.id}>{s.username}</option>
+              ))}
+            </select>
+
+            {props.status ? <div className={style["error-status"]}>{props.status}</div> : <></>}
+            <button className={style["basic-button"]} onClick={() => props.confirmDeleteStudent(document.getElementById('ddStudent').value)}>Delete Student</button>
+            <button className={style["cancel-button"]} onClick={props.closeDialog}>Cancel</button>
+          </div>
+          :
+          <></>
+        }
         {props.currentForm === "ConfirmDeleteUser" ?
           <div className={style["add-dialog"]}>
             <div className={style["dialog-heading"]}>Are you sure you want to delete {props.userToDelete.email}?</div>
@@ -137,6 +186,15 @@ function SettingComponentPage(props) {
           <></>
         }
 
+        {props.currentForm === "ConfirmDeleteStudent" ?
+          <div className={style["add-dialog"]}>
+            <div className={style["dialog-heading"]}>Are you sure you want to delete {props.studentToDelete.username}?</div>
+            <button className={style["basic-button"]} onClick={props.deleteSelectedStudent}>Delete Student</button>
+            <button className={style["cancel-button"]} onClick={props.closeDialog}>Cancel</button>
+          </div>
+          :
+          <></>
+        }
         {props.currentForm === "LockUser" ?
           <div className={style["add-dialog"]}>
             <div className={style["dialog-heading"]}>Lock User</div>

@@ -3,6 +3,7 @@ import { DeviceService } from '../services/device-service';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserModel } from '../models/user';
+import {StudentModel} from '../models/student';
 import { DeviceModel } from '../models/device'
 import { SettingComponentPage } from './html-pages'
 
@@ -10,7 +11,9 @@ function SettingsComponent(props) {
 
   const user = props.userdata // The currently logged in user.
   const [users, setUsers] = useState()
-  const [userToDelete, setUserToDelete] = useState();
+  const [students, setStudents] = useState()
+  const [userToDelete, setUserToDelete] = useState(); 
+  const [studentToDelete, setStudentToDelete] = useState(); 
   const [devices, setDevices] = useState();
   const [currentForm, setCurrentForm] = useState("");
   const [statusTitle, setStatusTitle] = useState('');
@@ -24,7 +27,7 @@ function SettingsComponent(props) {
   }
 
   const openDialog = (newForm, loadUsers = false, loadDevices = false) => {
-    if (loadUsers) {
+    if (loadUsers &&  ["ViewUsers", "DeleteUser","UserRole","LockUser","UnlockUser","ResetUser"].includes(newForm)) {
       setCurrentForm("Loading");
       const fetchData = new AuthService().getUsers()
       fetchData.then(
@@ -35,6 +38,26 @@ function SettingsComponent(props) {
               userJson => {
                 const userObj = UserModel.fromJsonList(userJson)
                 setUsers(userObj.filter(u => u.id !== user.id));
+                setCurrentForm(newForm);
+              }
+            )
+          }
+        },
+        apierror => {
+          console.log("settingcomponent func : opendialog ", apierror)
+        }
+      )
+    }else if (loadUsers &&  ["ViewStudentProfile", "DeleteStudentProfile"].includes(newForm)) {
+      setCurrentForm("Loading");
+      const fetchData = new AuthService().getStudentProfiles()
+      fetchData.then(
+        response => {
+          if (response.status === 200) {
+            const respJson = response.json()
+            respJson.then(
+              studentJson => {
+                const stdsObj = StudentModel.fromJsonList(studentJson)
+                setStudents(stdsObj);
                 setCurrentForm(newForm);
               }
             )
@@ -130,6 +153,12 @@ function SettingsComponent(props) {
     setCurrentForm("ConfirmDeleteUser");
   }
 
+    const confirmDeleteStudent = (studentId) => {
+    studentId = +studentId;
+    setStudentToDelete(students.find(s => s.id === studentId));
+    setCurrentForm("ConfirmDeleteStudent");
+  }
+
   const deleteSelectedUser = () => {
     const fetchData = new AuthService().deleteUser(userToDelete.id)
     fetchData.then(
@@ -155,6 +184,30 @@ function SettingsComponent(props) {
     )
   }
 
+   const deleteSelectedStudent = () => {
+    const fetchData = new AuthService().deleteStudent(studentToDelete.id)
+    fetchData.then(
+      response => {
+        if (response.status === 200) {
+          const respJson = response.json()
+          respJson.then(
+            result => {
+              setStatusTitle('Student Deleted');
+              setStatus(studentToDelete.username + ' has been deleted.');
+            }, error => {
+              setStatusTitle('Failed to Delete Student')
+              setStatus(studentToDelete.username + ' could not be deleted.');
+            }
+          )
+        }
+      },
+      apierror => {
+        console.log("settingcomponent func : confirmDeleteUser", apierror)
+      }
+    ).finally(
+      () => setCurrentForm("Status")
+    )
+  }
   const lockUser = (userId) => {
     userId = +userId;
     const fetchData = new AuthService().lockUser(userId)
@@ -442,10 +495,14 @@ function SettingsComponent(props) {
       statusTitle={statusTitle}
       changePassword={changePassword}
       users={users}
+      students={students}
       devices = {devices}
       confirmDeleteUser={confirmDeleteUser}
+      confirmDeleteStudent={confirmDeleteStudent}
       userToDelete={userToDelete}
+      studentToDelete={studentToDelete}
       deleteSelectedUser={deleteSelectedUser}
+      deleteSelectedStudent={deleteSelectedStudent}
       revokeAPIAccess={revokeAPIAccess}
       allowAPIAccess={allowAPIAccess}
       deleteDeviceLogs={deleteDeviceLogs}

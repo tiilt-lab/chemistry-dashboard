@@ -73,7 +73,7 @@ sudo ubuntu-drivers install nvidia:525
 Install cuda
 
 ```
-visit https://developer.nvidia.com/cuda-12-1-0-download-archive and select the option that fits your architecture
+visit https://developer.nvidia.com/cuda-12-8-0-download-archive and select the option that fits your architecture
 However, if you are seting this up for ubuntu 22.04, run these commands
 
 $ wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-ubuntu2204.pin
