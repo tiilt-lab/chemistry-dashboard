@@ -54,6 +54,7 @@ class ServerProtocol(WebSocketServerProtocol):
         self.awaitingSpeakers = True
         self.speakers = None
         self.currSpeaker = None
+        self.currStudent = None
         self.currAlias = None
 
         logging.info('Loaded Diarization Model and Semantic Model...')
@@ -101,6 +102,18 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.currSpeaker = data['id']
                 self.currAlias = data['alias']
                 logging.info("preparing for speaker {}'s fingerprint".format(self.currSpeaker))
+        
+        if data['type'] == 'save-audio-video-fingerprinting':
+            self.currStudent = data['id']
+            self.stream_data = data['streamdata']
+            self.currAlias = data['alias']
+            if self.stream_data == 'audio-video-fingerprint':
+                    self.video_count = 1
+                    self.filename = os.path.join(cf.biometric_folder(), "{0}".format(self.currAlias))
+                    self.vid_recorder = VidRecorder(self.filename,16000, 2, 1)
+            logging.info('Audio process connected')
+            self.send_json({'type':'saveaudiovideo'})
+
         if data['type'] == 'start':
             valid, result = ProcessingConfig.from_json(data)
             logging.info(valid)
@@ -166,6 +179,9 @@ class ServerProtocol(WebSocketServerProtocol):
 
                 self.video_count = self.video_count + 1
                 logging.info('video binary recieved')
+        elif self.stream_data == 'audio-video-fingerprint':
+            self.vid_recorder.write(data)
+            self.send_json({'type': 'saved', 'message': "Biometric data captured successfully"})
         elif self.running and self.awaitingSpeakers:
             if self.currSpeaker:
                 new_data = self.reformat_data(data)
@@ -173,6 +189,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 logging.info("storing speaker {}'s fingerprint with alias {}".format(self.currSpeaker, self.currAlias))
                 self.currSpeaker = None
                 self.currAlias = None
+            
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 

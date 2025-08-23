@@ -16,6 +16,7 @@
     "react": "^18.2.0",
     "react-device-detect": "^2.2.2",
     "react-dom": "^18.2.0",
+    "react-media-recorder": "^1.7.1",
     "react-router-dom": "^6.3.0",
     "react-select": "^5.10.1",
     "react-slider": "^2.0.4",

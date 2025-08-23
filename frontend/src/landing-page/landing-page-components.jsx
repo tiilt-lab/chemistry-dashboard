@@ -34,6 +34,12 @@ const navigate = useNavigate();
   Sign In
   </button>
 
+<button className={isLargeScreen() ? "basic-button medium-button" : "basic-button small-button"} 
+   onClick={()=> navigate('/signup')}
+  >
+  Sign Up
+  </button>
+
   <button 
   className={isLargeScreen() ? "basic-button medium-button" : "basic-button small-button"}  
     onClick = {()=> navigate('/join')} 
