@@ -13,6 +13,7 @@ from scipy.io import wavfile
 import logging
 import copy
 import json
+import traceback
 
 class VideoProcessor:
     def __init__(self,cartoon_model,facial_emotion_detector,image_object_detection,attention_detection, \
@@ -197,6 +198,7 @@ class VideoProcessor:
                     #this means the first valid frame have been detected and paras has value        
                     elif  self.paras is not None:
                         if self.scale <= 0.75:
+                            
                             frame = cv2.sepFilter2D(frame, -1, kernel_1d, kernel_1d)
                         if self.scale <= 0.375:
                             frame = cv2.sepFilter2D(frame, -1, kernel_1d, kernel_1d) 
@@ -214,8 +216,9 @@ class VideoProcessor:
                         
                     processed_frame_track.append(resized_frame)
                         
-                except Exception as e: 
-                    logging.info('exception occured while converting video to cartoon: {0}'.format(e))
+                except Exception as e:
+                    error_str = traceback.format_exc()
+                    logging.info('exception occured while converting video to cartoon: {0}'.format(error_str))
                     continue  
                            
         cartoonized_faces = [] 
@@ -258,7 +261,9 @@ class VideoProcessor:
                 success, encoded_frame =  cv2.imencode('.jpeg', processed_frame_track[j])
                 if success:
                     payload = encoded_frame.tobytes() #base64.b64encode() 
+                    logging.info("i am about to send the cartoonized image")
                     self.web_socket_connection.sendMessage(payload, isBinary = True)
+                    logging.info("i have sent the cartoonized image")
                     # callbacks.post_cartoonized_image(self.config.auth_key,self.config.sessionId,self.config.deviceId, encoded_frame.tobytes())
                            
         
@@ -311,7 +316,8 @@ class VideoProcessor:
 
             
             except Exception as e:
-                logging.warning('Exception thrown while extracting image subclib {0} {1}'.format(e, self.config.auth_key))
+                error_str = traceback.format_exc()
+                logging.warning('Exception thrown while extracting image subclib {0} {1}'.format(error_str, self.config.auth_key))
 
         logging.info('frame cartoonization thread stopped for {0}.'.format(self.config.auth_key))
 

@@ -9,6 +9,7 @@ from device_websockets import ConnectionManager
 from io import BytesIO
 import base64
 import os
+import config as cf
 from redis_helper import RedisLogin
 from utility import json_response, sanitize
 
@@ -67,8 +68,14 @@ def delete_user(user_id, **kwargs):
 @api_routes.route('/api/v1/admin/students/<int:student_id>', methods=['DELETE'])
 @wrappers.verify_login(roles=['admin', 'super'])
 def delete_student(student_id, **kwargs):
-    success = database.delete_student(student_id)
-    if success:
+    student = database.delete_student(student_id)
+    if student is not None:
+        biometric_file_path = os.path.join(cf.root_dir(), "chemistry-dashboard/audio_processing/audiovideobiometrics","{0}.webm".format(student.username))
+        try:
+            if os.path.isfile(biometric_file_path):
+                os.remove(biometric_file_path)        
+        except Exception as e:
+            logging.info('Unable to delete biometric file: {0}'.format(e)) 
         return json_response()
     else:
         return json_response({'User not found.'}, 400)
