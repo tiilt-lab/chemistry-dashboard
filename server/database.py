@@ -710,12 +710,11 @@ def add_student(lastname, firstname, username):
 def delete_student(id):
     student = get_students(id=id)
     if student:
-        #implement delete the fingerprint and image files later
         db.session.delete(student)
         db.session.commit()
-        return True
+        return student
     else:
-        return False
+        return None
 # -------------------------
 # API Client
 # -------------------------
