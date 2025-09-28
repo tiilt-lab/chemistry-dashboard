@@ -106,6 +106,10 @@ class ServerProtocol(WebSocketServerProtocol):
             logging.info('Audio process connected')
             self.send_json({'type':'saveaudiovideo'})
 
+        if data['type'] == 'add-saved-fingerprint':
+            self.currSpeaker = data['id']
+            self.currAlias = data['alias']
+
         if data['type'] == 'start':
             valid, result = ProcessingConfig.from_json(data)
             if not valid:
@@ -152,7 +156,7 @@ class ServerProtocol(WebSocketServerProtocol):
             wavObj = wave.open(temp_aud_file+'.wav')
             audiobyte = self.reduce_wav_channel(1,wavObj)
 
-            if self.config.videocartoonify:
+            if self.config.videocartoonify: #--------- check this
                 self.video_queue.put(subclips.iter_frames(ps=10, dtype="uint8", with_times=True))
                 logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
 

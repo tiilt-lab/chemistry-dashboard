@@ -114,6 +114,18 @@ class ServerProtocol(WebSocketServerProtocol):
             logging.info('Audio process connected')
             self.send_json({'type':'saveaudiovideo'})
 
+        if data['type'] == 'add-saved-fingerprint':
+            currSpeaker = data['id']
+            currAlias = data['alias']
+            audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}".format(currAlias))
+            wavObj = wave.open(audio_fingerprint_file+'.wav')
+            byte_audio_data = self.read_bytes_from_wav(wavObj)
+            self.speakers[currSpeaker] = {"alias": currAlias, "data": byte_audio_data}
+            logging.info("storing registered speaker {}'s fingerprint with alias {}".format(currSpeaker, currAlias))
+            currSpeaker = None
+            currAlias = None
+            self.send_json({'type':'registeredfingerprintadded'})
+
         if data['type'] == 'start':
             valid, result = ProcessingConfig.from_json(data)
             logging.info(valid)
