@@ -28,7 +28,7 @@ def attention_tracking():
 def video_recordings_folder():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['videorecord']['video_recording_folder']))
 
-def video_recordings_folder():
+def facial_embedding_folder():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['facialembedding']['facial_embedding_folder']))
 
 def host_server_address():
