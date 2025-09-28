@@ -69,9 +69,10 @@ function SignupPage() {
                 }
 
                 mediaRecorder.ondataavailable = async function (ev) {
-                    if (ev.data.size) {
+                    
+                    if (ev.data.size && video_captured.current == null) {
                         video_captured.current = ev.data
-                        mediaRecorder.stop()
+                        stopRecording()
                     }
 
                 }
@@ -113,6 +114,9 @@ function SignupPage() {
                 setMediaRecorder(null)
             }
 
+            if(video_captured.current != null){
+            video_captured.current = null
+            }
             
             const url = URL.createObjectURL(videoBlob);
             document.getElementById('video_playback').src = url;
@@ -130,7 +134,7 @@ function SignupPage() {
                         video_captured.current,
                         interval,
                         (fixedblob) => {
-                            videows.send(fixedblob)
+                            videows.current.send(fixedblob)
                             audiows.current.send(fixedblob)
                         },
                     )
@@ -144,6 +148,15 @@ function SignupPage() {
             audiows.current.close();
             audiows.current = null;
         }
+
+        if (videows.current != null) {
+            videows.current.close();
+            videows.current = null;
+        }
+        if(video_captured.current != null){
+            video_captured.current = null
+        }
+
         navigateToLogin();
     }
 
@@ -152,6 +165,9 @@ function SignupPage() {
             //reset all parameter in case of video recapturing
             await acquireWakeLock()
             setIsRecordingStopped(false)
+            if(video_captured.current != null){
+            video_captured.current = null
+            }
             //handle older browsers that might implement getUserMedia in some way
             if (navigator.mediaDevices === undefined) {
                 navigator.mediaDevices = {}
@@ -214,7 +230,7 @@ function SignupPage() {
 
                 //activate video websocket 
                 audiows.current = new WebSocket(apiService.getAudioWebsocketEndpoint())
-                videows.current = new WebSocket(apiService.getVideoWebsocketEndpoint)
+                videows.current = new WebSocket(apiService.getVideoWebsocketEndpoint())
                 connect_audio_websocket_processor_service();
                 connect_video_websocket_processor_service();
 
@@ -288,7 +304,7 @@ function SignupPage() {
         };
 
         audiows.current.onclose = e => {
-            console.log('[Disconnected]');
+            console.log('[audio Disconnected]');
         };
     }
 
@@ -324,7 +340,7 @@ function SignupPage() {
         };
 
         videows.current.onclose = e => {
-            console.log('[Disconnected]');
+            console.log('[video Disconnected]');
         };
     }
 
