@@ -5,6 +5,7 @@ import { ByodJoinPage } from "./html-pages"
 import { SessionModel } from "../models/session"
 import { SessionDeviceModel } from "../models/session-device"
 import { SpeakerModel } from "../models/speaker"
+import { StudentModel } from "../models/student"
 import { ApiService } from "../services/api-service"
 import fixWebmDuration from "fix-webm-duration"
 
@@ -86,6 +87,10 @@ function JoinPage() {
     const [currBlob, setCurrBlob] = useState(null)
     const [invalidName, setInvalidName] = useState(false)
     const [constraintObj, setConstraintObj] = useState(null)
+    const [registeredStudentData, setRegisteredStudentData] = useState(null)
+    const [registeredUserAliasChanged,setRegisteredUserAliasChanged] = useState(false)
+    const [registeredAudioFingerprintAdded, setRegisteredAudioFingerprintAdded]= useState(false)
+    const [registeredVideoFingerprintAdded, setRegisteredVideoFingerprintAdded]= useState(false)
 
     const POD_COLOR = "#FF6655"
     const GLOW_COLOR = "#ffc3bd"
@@ -263,6 +268,31 @@ function JoinPage() {
         }
     }, [preview])
 
+    useEffect(() => {
+        if (registeredStudentData!=null) {
+            changeAliasName(registeredStudentData.username)
+        } 
+    }, [registeredStudentData])
+
+    useEffect(() => {
+        if (registeredUserAliasChanged) {
+            changeAliasName(registeredStudentData.username)
+        } 
+    }, [registeredUserAliasChanged])
+
+     useEffect(() => {
+        if (registeredAudioFingerprintAdded && registeredVideoFingerprintAdded) {
+            
+            const updatedSpeakers = speakers.map((s) =>
+            s.id === selectedSpeaker.id ? { ...s, fingerprinted: true } : s, )
+            setSpeakers(updatedSpeakers) 
+            setSelectedSpeaker(null)
+            console.log("register fingerprint for "+registeredStudentData.username+" Added")
+            setRegisteredStudentData(null)
+            closeDialog()
+        } 
+    }, [registeredAudioFingerprintAdded, registeredVideoFingerprintAdded])
+    
     //Use effect to display processed cartoonized image
     // useEffect(() => {
     //     console.log('inside renderframe buffer useeffect ', frameBufferLength)
@@ -271,7 +301,7 @@ function JoinPage() {
 
     const openForms = (form, speaker = null) => {
         setCurrentForm(form)
-        if (form === "fingerprintAudio" || form === "renameAlias") {
+        if (form === "fingerprintAudio" || form === "renameAlias" || form === "savedAudioVideoFingerprint") {
             setSelectedSpeaker(speaker)
         }
     }
@@ -383,6 +413,57 @@ function JoinPage() {
         closeDialog()
     }
 
+const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
+
+        const fetchData = new AuthService().createStudentProfile(registeredUsername)
+        fetchData
+        .then(
+            (response) => {
+                if (response.status === 200) {
+                    response.json().then((jsonObj) => {
+                        console.log(jsonObj)
+                        const student_data = StudentModel.fromJson(jsonObj)
+                        setRegisteredStudentData(student_data)
+                    })
+                } else {
+                    setInvalidName(true)
+                }
+            },
+            (apierror) => {
+                console.log(
+                    "byod-join-components func: addSavedSpeakerFingerprint 1 ",
+                    apierror,
+                )
+            },
+        )
+        .finally(() => {
+            closeDialog()
+        })
+        
+    }
+
+     const addSavedSpeakerFingerprint = async () => {
+        if (audiows.current === null) {
+            return
+        }
+
+        if (videows === null) {
+            return
+        }
+       
+        let message = null
+        message = {
+            type: "add-saved-fingerprint",
+            id: selectedSpeaker.id,
+            alias: registeredStudentData.username
+        }
+        
+        console.log(speakers)
+        audiows.current.send(JSON.stringify(message))
+        videows.send(JSON.stringify(message))
+
+    }
+
     const changeAliasName = (newAlias) => {
         if (newAlias === "") {
             setInvalidName(true)
@@ -411,7 +492,13 @@ function JoinPage() {
                                     : s,
                             )
                             setSpeakers(updatedSpeakers)
-                            setSelectedSpeaker(null)
+                            //only set to null when change alias is invoked by cicking the change alias option 
+                            if (registeredStudentData === null) {
+                                setSelectedSpeaker(null)
+                            }
+                            if (registeredStudentData !== null) {
+                                setRegisteredUserAliasChanged(true)
+                            }
                         })
                     } else {
                         setShowAlert(true)
@@ -632,6 +719,10 @@ function JoinPage() {
             setAuthenticated(true)
             if (message["type"] === "start") {
                 closeDialog()
+            }else if(message['type'] === 'registeredfingerprintadded'){
+
+                setRegisteredAudioFingerprintAdded(true)
+
             } else if (message["type"] === "error") {
                 disconnect(true)
                 setDisplayText(
@@ -681,6 +772,8 @@ function JoinPage() {
                     closeDialog();
                 }else if(message['type'] === 'attention_data'){
 
+                }else if(message['type'] === 'registeredfingerprintadded'){
+                    setRegisteredVideoFingerprintAdded(true)
                 }else if (message['type'] === 'error') {
                     disconnect(true);
                     setDisplayText('The connection to the session has been closed by the server.');

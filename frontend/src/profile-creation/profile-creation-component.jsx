@@ -19,7 +19,10 @@ function SignupPage() {
     const [videoAuthenticated, setVideoAuthenticated] = useState(false)
     const [audioSocketProccesorConnected, setAudioSocketProccesorConnected] = useState(false)
     const [videoSocketProccesorConnected, setVideoSocketProcesorConnected] = useState(false)
+    const [audioSaved, setAudioSaved] = useState(false)
+    const [videoSaved, setVideoSaved] = useState(false)
     const [videoBlob, setVideoBlob] = useState(null)
+     const [videoData, setVideoData] = useState(null)
     const [currentForm, setCurrentForm] = useState("")
     const [displayText, setDisplayText] = useState("")
     const video_captured = useRef(null)
@@ -39,6 +42,7 @@ function SignupPage() {
         if (studentObject != null) {
             setNextPage("video_audio_capture_page")
             const constraint = {}
+            constraint.audio = true
             constraint.video = {
                 facingMode: "user",
                 width: 500, //{ min: 640, ideal: 1280, max: 1920 },
@@ -72,6 +76,7 @@ function SignupPage() {
                     
                     if (ev.data.size && video_captured.current == null) {
                         video_captured.current = ev.data
+                        setVideoData(ev.data)
                         stopRecording()
                     }
 
@@ -123,6 +128,14 @@ function SignupPage() {
         }
     }, [isRecordingStopped])
 
+     useEffect(() => {
+        if (audioSaved && videoSaved) {
+            setDisplayText("Biometric data captured successfully")
+            setCurrentForm("success")
+        }
+    }, [audioSaved,videoSaved])
+
+    
     const stopRecording = () => {
         if (mediaRecorder && mediaRecorder.state === "recording") {
             mediaRecorder.stop(); // <-- this will fire mediaRecorder.onstop
@@ -131,13 +144,15 @@ function SignupPage() {
 
     const saveRecording = () => {
         fixWebmDuration(
-                        video_captured.current,
+                        videoData,
                         interval,
                         (fixedblob) => {
                             videows.current.send(fixedblob)
                             audiows.current.send(fixedblob)
+                            setCurrentForm("processing")
                         },
                     )
+        
     };
 
     const closeResources = ()=>{
@@ -297,8 +312,7 @@ function SignupPage() {
 
                 }
                 else if (message['type'] === 'saved') {
-                    setDisplayText("Biometric data captured successfully")
-                    setCurrentForm("success")
+                    setAudioSaved(true)
                 }
             } 
         };
@@ -333,8 +347,7 @@ function SignupPage() {
 
                 }
                 else if (message['type'] === 'saved') {
-                    setDisplayText("Biometric data captured successfully")
-                    setCurrentForm("success")
+                     setVideoSaved(true)
                 }
             } 
         };

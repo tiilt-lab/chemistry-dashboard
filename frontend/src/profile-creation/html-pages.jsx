@@ -118,7 +118,7 @@ function ProfileCreationPage(props) {
                                     {props.isRecordingStopped ?
                                         <div>
 
-                                            <video id="video_playback" controls autoPlay loop width={500} height={500} />
+                                            <video id="video_playback" controls autoPlay muted width={500} height={500} />
                                             <button className="toolbar-button z-40" onClick={props.startRecording} >Record Again</button>
                                             <button className="toolbar-button z-40" onClick={props.saveRecording} >Save Recording</button>
                                         </div>
@@ -400,6 +400,13 @@ function ProfileCreationPage(props) {
                 message={props.displayText}
                 show={props.currentForm === "success"}
                 closedialog={props.closeDialog}
+            />
+
+            <WaitingDialog
+                itsclass={"add-dialog"}
+                heading={"Processing..."}
+                message={"Please wait..."}
+                show={props.currentForm === "processing"}
             />
         </>
     )

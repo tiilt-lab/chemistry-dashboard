@@ -273,6 +273,18 @@ function ByodJoinPage(props) {
                                                             >
                                                                 Rename Alias
                                                             </div>
+
+                                                            <div
+                                                                className={`${style4["menu-item"]} ${style4["black"]}`}
+                                                                onClick={() => {
+                                                                    props.openForms(
+                                                                        "savedAudioVideoFingerprint",
+                                                                        speaker,
+                                                                    )
+                                                                }}
+                                                            >
+                                                                Saved Fingerprrint
+                                                            </div>
                                                         </AppContextMenu>
                                                     </div>
                                                 ),
@@ -634,7 +646,7 @@ function ByodJoinPage(props) {
                             <button
                                 className={style5["basic-button"]}
                                 onClick={() => {
-                                    props.changeAliasName(
+                                    props.addSpeakerFingerprint(
                                         document.getElementById("txtAlias")
                                             .value,
                                     )
@@ -651,7 +663,49 @@ function ByodJoinPage(props) {
                                 Cancel
                             </button>
                         </div>
-                    ))}
+                    ))||
+                    (props.currentForm === "savedAudioVideoFingerprint" && (
+                        <div
+                            className={style5["dialog-window"]}
+                            style={{ "min-width": adjDim(270) + "px" }}
+                        >
+                            <div className={style5["dialog-heading"]}>
+                               Enter Username:
+                            </div>
+                            <input
+                                id="registeredusername"
+                                defaultValue={props.selectedSpeaker.alias}
+                                className={style5["field-input"]}
+                                maxLength="64"
+                            />
+                            <div>
+                                {props.invalidName
+                                    ? "Record not found for the entered Username"
+                                    : ""}
+                            </div>
+                            <button
+                                className={style5["basic-button"]}
+                                onClick={() => {
+                                    props.startProcessingSavedSpeakerFingerprint(
+                                        document.getElementById("registeredusername")
+                                            .value,
+                                    )
+                                }}
+                            >
+                                {" "}
+                                Confirm
+                            </button>
+                            <button
+                                className={style5["cancel-button"]}
+                                onClick={props.closeDialog}
+                            >
+                                {" "}
+                                Cancel
+                            </button>
+                        </div>
+                    ))
+                    
+                    }
             </GenericDialogBox>
 
             <DialogBoxTwoOption
