@@ -167,7 +167,11 @@ class ServerProtocol(WebSocketServerProtocol):
                 temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
                 vidclip = mp.VideoFileClip(self.filename+'.webm')
                 subclips = vidclip.subclip((self.video_count-1)*self.interval,self.video_count*self.interval)
-                subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=16000,bitrate='50k') #nbytes=2,codec='pcm_s16le',
+                subclips.audio.write_audiofile(temp_aud_file+'.wav',
+                                                fps=16000,
+                                                nbytes=2,
+                                                codec="pcm_s16le",
+                                                ffmpeg_params=["-ac", "1", "-af", "aresample=resampler=soxr:precision=33"]) 
 
                 wavObj = wave.open(temp_aud_file+'.wav')
                 self.audio_buffer.append(self.read_bytes_from_wav(wavObj))

@@ -743,7 +743,7 @@ function JoinPage() {
                 sample_rate: 16000,
                 encoding: "pcm_f16le",
                 video_encoding: "video/mp4",
-                channels: 2,
+                channels: 1,
                 streamdata: "video",
                 embeddings_file: sessionDevice.embeddings,
                 deviceid: sessionDevice.id,
