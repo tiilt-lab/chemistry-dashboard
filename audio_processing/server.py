@@ -179,6 +179,14 @@ class ServerProtocol(WebSocketServerProtocol):
 
                 self.video_count = self.video_count + 1
                 logging.info('video binary recieved')
+    
+        elif self.running and self.awaitingSpeakers:
+            if self.currSpeaker:
+                new_data = self.reformat_data(data)
+                self.speakers[self.currSpeaker] = {"alias": self.currAlias, "data": new_data}
+                logging.info("storing speaker {}'s fingerprint with alias {}".format(self.currSpeaker, self.currAlias))
+                self.currSpeaker = None
+                self.currAlias = None
         elif self.stream_data == 'audio-video-fingerprint':
             self.vid_recorder.write(data)
             audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}".format(self.currAlias))
@@ -195,15 +203,8 @@ class ServerProtocol(WebSocketServerProtocol):
             if os.path.isfile(self.video_file+'.webm'):
                     os.remove(self.video_file+'.webm')
 
-            self.send_json({'type': 'saved', 'message': "Biometric data captured successfully"})
-        elif self.running and self.awaitingSpeakers:
-            if self.currSpeaker:
-                new_data = self.reformat_data(data)
-                self.speakers[self.currSpeaker] = {"alias": self.currAlias, "data": new_data}
-                logging.info("storing speaker {}'s fingerprint with alias {}".format(self.currSpeaker, self.currAlias))
-                self.currSpeaker = None
-                self.currAlias = None
-            
+            self.send_json({'type': 'saved', 'message': "Biometric data captured successfully"})   
+             
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 

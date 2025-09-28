@@ -13,6 +13,7 @@ import scipy.signal
 import config as cf
 import numpy as np
 import moviepy.editor as mp
+import face_recognition
 from recorder import VidRecorder
 from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager
@@ -48,6 +49,7 @@ class ServerProtocol(WebSocketServerProtocol):
         self.end_signaled = False
         self.interval = 10
         self.stream_data = False
+        self.awaitingSpeakers = True
         cm.add(self)
         logging.info('New client connected...')
 
@@ -99,7 +101,7 @@ class ServerProtocol(WebSocketServerProtocol):
             self.currAlias = data['alias']
             if self.stream_data == 'audio-video-fingerprint':
                     self.video_file = os.path.join(cf.video_recordings_folder(), "{0}".format(self.currAlias))
-                    self.vid_recorder = VidRecorder(self.video_file,16000, 2, 1)
+                    self.vid_recorder = VidRecorder(self.video_file,"none","none",cf.video_record_original(),16000, 2, 1)
                     
             logging.info('Audio process connected')
             self.send_json({'type':'saveaudiovideo'})
@@ -138,7 +140,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.send_json({'type':'start'})
 
     def process_binary(self, data):
-        if self.running:
+        if self.running and not self.awaitingSpeakers:
             if cf.video_record_original():
                 self.orig_vid_recorder.write(data)
 
@@ -151,7 +153,7 @@ class ServerProtocol(WebSocketServerProtocol):
             audiobyte = self.reduce_wav_channel(1,wavObj)
 
             if self.config.videocartoonify:
-                self.video_queue.put(subclips.iter_frames())
+                self.video_queue.put(subclips.iter_frames(ps=10, dtype="uint8", with_times=True))
                 logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
 
             # Save audio data only if cartoonization is activated.
@@ -163,9 +165,58 @@ class ServerProtocol(WebSocketServerProtocol):
                 os.remove(temp_aud_file+'.wav')
 
             self.video_count = self.video_count + 1
+        
+        elif self.running and self.awaitingSpeakers:
+            if self.currSpeaker:
+                new_data = self.reformat_data(data)
+                self.speakers[self.currSpeaker] = {"alias": self.currAlias, "data": new_data}
+                logging.info("storing speaker {}'s fingerprint with alias {}".format(self.currSpeaker, self.currAlias))
+                self.currSpeaker = None
+                self.currAlias = None
+
+        elif self.stream_data == 'audio-video-fingerprint':
+            self.vid_recorder.write(data)
+            
+            savedEmbedding = self.savefacialembedding()
+            
+            if os.path.isfile(self.video_file+'.webm'):
+                    os.remove(self.video_file+'.webm')
+
+            if savedEmbedding:
+                self.send_json({'type': 'saved', 'message': "Biometric data captured successfully"})
+            else:
+                self.send_json({'type': 'error', 'message': "Facial capuring failed, please record yourself again with better lighting"})
+            
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 
+    
+    def savefacialembedding(self):
+        embeddings = []
+        student_embedding = {}
+        facial_embedding_file = os.path.join(cf.facial_embedding_folder(), "{0}".format(self.currAlias))
+
+        vidclip = mp.VideoFileClip(self.video_file+'.webm')
+        for frame in vidclip.iter_frames(fps=10, dtype="uint8"):
+            # Detect face locations in the frame
+            face_locations = face_recognition.face_locations(frame)
+
+            # Get 128-D face embeddings for each detected face
+            encodings = face_recognition.face_encodings(frame, face_locations)
+        
+            if len(encodings) > 0:
+                embeddings.append(encodings[0])  # Take first detected face
+
+        if len(embeddings) == 0:
+            return False
+
+        # Compute average embedding
+        avg_embedding = np.mean(embeddings, axis=0)
+        student_embedding[self.currAlias] = avg_embedding
+        np.save(facial_embedding_file+".npy", student_embedding)
+        return True
+
+    
     def send_json(self, message):
         payload = json.dumps(message).encode('utf8')
         self.sendMessage(payload, isBinary = False)
