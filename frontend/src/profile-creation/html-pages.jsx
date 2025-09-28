@@ -1,6 +1,5 @@
 import React, { useState } from "react"
 import { Appheader } from "../header/header-component"
-import { ReactMediaRecorder } from "react-media-recorder";
 import { VoiceRecorder } from "react-voice-recorder-player"
 import {
     DialogBox,
@@ -119,14 +118,14 @@ function ProfileCreationPage(props) {
                                     {props.isRecordingStopped ?
                                         <div>
 
-                                            <video id="video_playback" controls width={500} height={500} />
+                                            <video id="video_playback" controls autoPlay loop width={500} height={500} />
                                             <button className="toolbar-button z-40" onClick={props.startRecording} >Record Again</button>
                                             <button className="toolbar-button z-40" onClick={props.saveRecording} >Save Recording</button>
                                         </div>
                                         :
                                         <div>
 
-                                            <video id="video_preview" controls autoPlay loop width={500} height={500} />
+                                            <video id="video_preview" controls muted width={500} height={500} />
                                             <button className="toolbar-button z-40" onClick={props.startRecording} >Start Recording</button>
                                             <button className="toolbar-button z-40" onClick={props.stopRecording} >Stop Recording</button>
                                         </div>

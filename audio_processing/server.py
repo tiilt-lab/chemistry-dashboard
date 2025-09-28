@@ -108,9 +108,9 @@ class ServerProtocol(WebSocketServerProtocol):
             self.stream_data = data['streamdata']
             self.currAlias = data['alias']
             if self.stream_data == 'audio-video-fingerprint':
-                    self.video_count = 1
-                    self.filename = os.path.join(cf.biometric_folder(), "{0}".format(self.currAlias))
-                    self.vid_recorder = VidRecorder(self.filename,16000, 2, 1)
+                    self.video_file = os.path.join(cf.video_recordings_folder(), "{0}".format(self.currAlias))
+                    self.vid_recorder = VidRecorder(self.video_file,16000, 2, 1)
+                    
             logging.info('Audio process connected')
             self.send_json({'type':'saveaudiovideo'})
 
@@ -181,6 +181,20 @@ class ServerProtocol(WebSocketServerProtocol):
                 logging.info('video binary recieved')
         elif self.stream_data == 'audio-video-fingerprint':
             self.vid_recorder.write(data)
+            audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}".format(self.currAlias))
+
+            vidclip = mp.VideoFileClip(self.video_file+'.webm')
+            subclips = vidclip.subclip(0,self.interval)
+            subclips.audio.write_audiofile(
+                                        audio_fingerprint_file + ".wav",
+                                        fps=16000,
+                                        nbytes=2,
+                                        codec="pcm_s16le",
+                                        ffmpeg_params=["-ac", "1", "-af", "aresample=resampler=soxr:precision=33"])
+            
+            if os.path.isfile(self.video_file+'.webm'):
+                    os.remove(self.video_file+'.webm')
+
             self.send_json({'type': 'saved', 'message': "Biometric data captured successfully"})
         elif self.running and self.awaitingSpeakers:
             if self.currSpeaker:
