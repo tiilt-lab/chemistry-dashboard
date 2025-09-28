@@ -80,6 +80,30 @@ class ServerProtocol(WebSocketServerProtocol):
         if not 'type' in data:
             logging.warning('Message does not contain "type".')
             return
+        
+        if data['type'] == 'speaker':
+            if data['id'] == "done":
+                self.awaitingSpeakers = False
+                for speaker in data['speakers']:
+                    self.speakers[speaker["id"]]["alias"] = speaker["alias"]
+                self.processor.setSpeakerFingerprints(self.speakers)
+                logging.info("Done awaiting all speakers info")
+            else:
+                self.currSpeaker = data['id']
+                self.currAlias = data['alias']
+                logging.info("preparing for speaker {}'s fingerprint".format(self.currSpeaker))
+        
+        if data['type'] == 'save-audio-video-fingerprinting':
+            self.currStudent = data['id']
+            self.stream_data = data['streamdata']
+            self.currAlias = data['alias']
+            if self.stream_data == 'audio-video-fingerprint':
+                    self.video_file = os.path.join(cf.video_recordings_folder(), "{0}".format(self.currAlias))
+                    self.vid_recorder = VidRecorder(self.video_file,16000, 2, 1)
+                    
+            logging.info('Audio process connected')
+            self.send_json({'type':'saveaudiovideo'})
+
         if data['type'] == 'start':
             valid, result = ProcessingConfig.from_json(data)
             if not valid:

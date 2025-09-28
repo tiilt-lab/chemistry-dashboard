@@ -15,14 +15,17 @@ function SignupPage() {
     const [constraintObj, setConstraintObj] = useState(null)
     const [streamReference, setStreamReference] = useState(null)
     const [mediaRecorder, setMediaRecorder] = useState(null)
-    const [authenticated, setAuthenticated] = useState(false)
-    const [socketProccesorConnected, setSocketProccesorConnected] = useState(false)
+    const [audioAuthenticated, setAudioAuthenticated] = useState(false)
+    const [videoAuthenticated, setVideoAuthenticated] = useState(false)
+    const [audioSocketProccesorConnected, setAudioSocketProccesorConnected] = useState(false)
+    const [videoSocketProccesorConnected, setVideoSocketProcesorConnected] = useState(false)
     const [videoBlob, setVideoBlob] = useState(null)
     const [currentForm, setCurrentForm] = useState("")
     const [displayText, setDisplayText] = useState("")
-    const chunk = useRef([])
+    const video_captured = useRef(null)
     const [isRecordingStopped, setIsRecordingStopped] = useState(false);
-    const ws = useRef(null)
+    const audiows = useRef(null)
+    const videows = useRef(null)
     const navigate = useNavigate()
 
     const apiService = new ApiService()
@@ -46,14 +49,14 @@ function SignupPage() {
     }, [studentObject])
 
     useEffect(() => {
-        if (socketProccesorConnected) {
+        if (audioSocketProccesorConnected && videoSocketProccesorConnected) {
             requestStartAudioVideoProcessing()
         }
-    }, [socketProccesorConnected])
+    }, [audioSocketProccesorConnected,videoSocketProccesorConnected])
 
 
     useEffect(() => {
-        if (authenticated) {
+        if (audioAuthenticated && videoAuthenticated) {
             const videoPlay = () => {
                 let video = document.getElementById('video_preview')
                 console.log("video tag ", video)
@@ -62,23 +65,21 @@ function SignupPage() {
                 console.log("video.srcObject ", video.srcObject)
                 video.onloadedmetadata = function (ev) {
                     video.play()
-                    mediaRecorder.start()
+                    mediaRecorder.start(interval)
                 }
 
                 mediaRecorder.ondataavailable = async function (ev) {
-                    // const blob = new Blob(ev.data, { type: mediaRecorder.mimeType });
-                    // ws.current.send(blob)
                     if (ev.data.size) {
-                        chunk.current.push(ev.data);
+                        video_captured.current = ev.data
+                        mediaRecorder.stop()
                     }
 
                 }
 
                 // When stopped, you can combine the chunks into a single Blob:
                 mediaRecorder.onstop = function () {
-                    const blob = new Blob(chunk.current, { type: mediaRecorder.mimeType });
+                    const blob = new Blob([video_captured.current], { type: mediaRecorder.mimeType });
                     setVideoBlob(blob)
-                    chunk.current = [];
                     video.pause();
                     video.srcObject = null;
                     setIsRecordingStopped(true)
@@ -90,13 +91,15 @@ function SignupPage() {
             videoPlay()
 
         }
-    }, [authenticated])
+    }, [audioAuthenticated,videoAuthenticated])
 
     useEffect(() => {
         if (document.getElementById('video_playback') !== null) {
 
-            setAuthenticated(false)
-            setSocketProccesorConnected(false)
+            setAudioAuthenticated(false)
+            setVideoAuthenticated(false)
+            setAudioSocketProccesorConnected(false)
+            setVideoSocketProcesorConnected(false)
             if (wakeLock) {
                 releaseWakeLock()
             }
@@ -123,15 +126,23 @@ function SignupPage() {
     };
 
     const saveRecording = () => {
-        ws.current.send(videoBlob)
+        fixWebmDuration(
+                        video_captured.current,
+                        interval,
+                        (fixedblob) => {
+                            videows.send(fixedblob)
+                            audiows.current.send(fixedblob)
+                        },
+                    )
     };
 
     const closeResources = ()=>{
         setIsRecordingStopped(false)
-        setSocketProccesorConnected(false)
-        if (ws.current != null) {
-            ws.current.close();
-            ws.current = null;
+        setAudioSocketProccesorConnected(false)
+        setVideoSocketProcesorConnected(false)
+        if (audiows.current != null) {
+            audiows.current.close();
+            audiows.current = null;
         }
         navigateToLogin();
     }
@@ -202,8 +213,11 @@ function SignupPage() {
 
 
                 //activate video websocket 
-                ws.current = new WebSocket(apiService.getAudioWebsocketEndpoint())
-                connect_websocket_processor_service();
+                audiows.current = new WebSocket(apiService.getAudioWebsocketEndpoint())
+                videows.current = new WebSocket(apiService.getVideoWebsocketEndpoint)
+                connect_audio_websocket_processor_service();
+                connect_video_websocket_processor_service();
+
 
             } else {
                 setShowAlert(true)
@@ -242,20 +256,20 @@ function SignupPage() {
     }
 
 
-    // Connects to video processor websocket server.
-    const connect_websocket_processor_service = () => {
-        ws.current.binaryType = "blob"
+    // Connects to audio processor websocket server.
+    const connect_audio_websocket_processor_service = () => {
+        audiows.current.binaryType = "blob"
 
-        ws.current.onopen = (e) => {
-            console.log("[Connected to webscoket processor services]")
-            setSocketProccesorConnected(true)
+        audiows.current.onopen = (e) => {
+            console.log("[Connected to audio webscoket processor services]")
+            setAudioSocketProccesorConnected(true)
         }
 
-        ws.current.onmessage = (e) => {
+        audiows.current.onmessage = (e) => {
             if (typeof e.data === 'string') {
                 const message = JSON.parse(e.data);
                 if (message['type'] === 'saveaudiovideo') {
-                    setAuthenticated(true);
+                    setAudioAuthenticated(true);
                 }
                 // else if(message['type'] === 'attention_data'){
 
@@ -273,18 +287,56 @@ function SignupPage() {
             } 
         };
 
-        ws.current.onclose = e => {
+        audiows.current.onclose = e => {
             console.log('[Disconnected]');
         };
     }
 
+// Connects to video processor websocket server.
+    const connect_video_websocket_processor_service = () => {
+        videows.current.binaryType = "blob"
 
+        videows.current.onopen = (e) => {
+            console.log("[Connected to video webscoket processor services]")
+            setVideoSocketProcesorConnected(true)
+        }
+
+        videows.current.onmessage = (e) => {
+            if (typeof e.data === 'string') {
+                const message = JSON.parse(e.data);
+                if (message['type'] === 'saveaudiovideo') {
+                    setVideoAuthenticated(true);
+                }
+                // else if(message['type'] === 'attention_data'){
+
+                // }
+                else if (message['type'] === 'error') {
+                    stopRecording();
+                    setAlertMessage(message['message']);
+                    setShowAlert(true);
+
+                }
+                else if (message['type'] === 'saved') {
+                    setDisplayText("Biometric data captured successfully")
+                    setCurrentForm("success")
+                }
+            } 
+        };
+
+        videows.current.onclose = e => {
+            console.log('[Disconnected]');
+        };
+    }
 
     // Begin capturing and sending student video sample.
     const requestStartAudioVideoProcessing = async () => {
         let message = null
         console.log('starting video processing')
-        if (ws.current === null) {
+        if (audiows.current === null) {
+            return
+        }
+
+         if (videows.current === null) {
             return
         }
 
@@ -300,8 +352,8 @@ function SignupPage() {
             channels: 2,
             streamdata: "audio-video-fingerprint"
         }
-        // await waitForOpen(ws.current);
-        ws.current.send(JSON.stringify(message))
+        audiows.current.send(JSON.stringify(message))
+        videows.current.send(JSON.stringify(message))
     }
 
 

@@ -42,7 +42,7 @@ sudo apt-get install redis-server
 sudo systemctl enable redis-server.service
 ```
 
-Installing MySQL server. When asked to provide a root password, enter "root" as the password.
+Installing MySQL server. When asked to provide a root password, enter "mudcat11" as the password.
 
 ```
 sudo apt-get install mysql-server
