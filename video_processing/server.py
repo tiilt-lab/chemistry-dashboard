@@ -50,6 +50,7 @@ class ServerProtocol(WebSocketServerProtocol):
         self.interval = 10
         self.stream_data = False
         self.awaitingSpeakers = True
+        self.facial_embeddings = None
         cm.add(self)
         logging.info('New client connected...')
 
@@ -107,8 +108,18 @@ class ServerProtocol(WebSocketServerProtocol):
             self.send_json({'type':'saveaudiovideo'})
 
         if data['type'] == 'add-saved-fingerprint':
-            self.currSpeaker = data['id']
-            self.currAlias = data['alias']
+            currSpeaker = data['id']
+            currAlias = data['alias']
+            facial_embedding_file = os.path.join(cf.facial_embedding_folder(), "{0}".format(currAlias))
+            try:
+                facials = np.load(facial_embedding_file+".npy", allow_pickle=True)
+                self.facial_embeddings[currSpeaker] = {"alias": currAlias, "data": facials}
+                logging.info("storing registered speaker {}'s fingerprint with alias {}".format(currSpeaker, currAlias))
+                self.send_json({'type':'registeredfingerprintadded'})
+            except Exception as e:
+                logging.info("error loading facial embedding for {} : {}".format(currSpeaker,e))
+            
+
 
         if data['type'] == 'start':
             valid, result = ProcessingConfig.from_json(data)
@@ -119,6 +130,10 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.config = result
                 cm.associate_keys(self, self.config.session_key, self.config.auth_key)
                 self.stream_data = data['streamdata']
+
+                if(data['numSpeakers'] != 0):
+                    self.facial_embeddings = dict()
+
                 self.video_count = 1
                 if cf.video_record_original():
                     aud_filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_audio".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, str(time.ctime())))
@@ -157,7 +172,7 @@ class ServerProtocol(WebSocketServerProtocol):
             audiobyte = self.reduce_wav_channel(1,wavObj)
 
             if self.config.videocartoonify: #--------- check this
-                self.video_queue.put(subclips.iter_frames(ps=10, dtype="uint8", with_times=True))
+                self.video_queue.put(subclips.iter_frames(fps=10, dtype="uint8", with_times=True))
                 logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
 
             # Save audio data only if cartoonization is activated.
@@ -169,14 +184,6 @@ class ServerProtocol(WebSocketServerProtocol):
                 os.remove(temp_aud_file+'.wav')
 
             self.video_count = self.video_count + 1
-        
-        elif self.running and self.awaitingSpeakers:
-            if self.currSpeaker:
-                new_data = self.reformat_data(data)
-                self.speakers[self.currSpeaker] = {"alias": self.currAlias, "data": new_data}
-                logging.info("storing speaker {}'s fingerprint with alias {}".format(self.currSpeaker, self.currAlias))
-                self.currSpeaker = None
-                self.currAlias = None
 
         elif self.stream_data == 'audio-video-fingerprint':
             self.vid_recorder.write(data)

@@ -7,6 +7,7 @@ import { SessionDeviceModel } from "../models/session-device"
 import { SpeakerModel } from "../models/speaker"
 import { StudentModel } from "../models/student"
 import { ApiService } from "../services/api-service"
+import { AuthService } from "../services/auth-service"
 import fixWebmDuration from "fix-webm-duration"
 
 /*
@@ -88,9 +89,9 @@ function JoinPage() {
     const [invalidName, setInvalidName] = useState(false)
     const [constraintObj, setConstraintObj] = useState(null)
     const [registeredStudentData, setRegisteredStudentData] = useState(null)
-    const [registeredUserAliasChanged,setRegisteredUserAliasChanged] = useState(false)
-    const [registeredAudioFingerprintAdded, setRegisteredAudioFingerprintAdded]= useState(false)
-    const [registeredVideoFingerprintAdded, setRegisteredVideoFingerprintAdded]= useState(false)
+    const [registeredUserAliasChanged, setRegisteredUserAliasChanged] = useState(false)
+    const [registeredAudioFingerprintAdded, setRegisteredAudioFingerprintAdded] = useState(false)
+    const [registeredVideoFingerprintAdded, setRegisteredVideoFingerprintAdded] = useState(false)
 
     const POD_COLOR = "#FF6655"
     const GLOW_COLOR = "#ffc3bd"
@@ -140,16 +141,16 @@ function JoinPage() {
     useEffect(() => {
         if (constraintObj && pcode !== "" && joinwith !== "") handleStream()
     }, [constraintObj, pcode, joinwith])
-/*
-    useEffect(() => {
-        if (
-            audiows.current != null
-        ) {
-            console.log("called connect_audio_processor_service")
-            connect_audio_processor_service()
-        }
-    }, [audiows.current])
-*/
+    /*
+        useEffect(() => {
+            if (
+                audiows.current != null
+            ) {
+                console.log("called connect_audio_processor_service")
+                connect_audio_processor_service()
+            }
+        }, [audiows.current])
+    */
     useEffect(() => {
         if (videows != null) {
             console.log("called connect_video_processor_service")
@@ -253,11 +254,11 @@ function JoinPage() {
                 authenticated && speakersValidated &&
                 (joinwith === "Video" || joinwith === "Videocartoonify")
             ) {
-                console.log(audioconnected,authenticated,speakersValidated)
+                console.log(audioconnected, authenticated, speakersValidated)
                 videoPlay()
             }
         }
-    }, [authenticated,speakersValidated])
+    }, [authenticated, speakersValidated])
 
     //Use effect to toggle video view pane
     useEffect(() => {
@@ -269,30 +270,40 @@ function JoinPage() {
     }, [preview])
 
     useEffect(() => {
-        if (registeredStudentData!=null) {
+        if (registeredStudentData != null) {
             changeAliasName(registeredStudentData.username)
-        } 
+        }
     }, [registeredStudentData])
 
     useEffect(() => {
         if (registeredUserAliasChanged) {
-            changeAliasName(registeredStudentData.username)
-        } 
+            addSavedSpeakerFingerprint()
+        }
     }, [registeredUserAliasChanged])
 
-     useEffect(() => {
-        if (registeredAudioFingerprintAdded && registeredVideoFingerprintAdded) {
-            
+    useEffect(() => {
+        let proceed = false
+        if (joinwith === "Video" || joinwith === "Videocartoonify")  {
+                if (registeredAudioFingerprintAdded && registeredVideoFingerprintAdded) {
+                    proceed = true
+                }
+            }else{
+                if (registeredAudioFingerprintAdded){
+                    proceed = true
+                }
+            }
+        if (proceed) {
+
             const updatedSpeakers = speakers.map((s) =>
-            s.id === selectedSpeaker.id ? { ...s, fingerprinted: true } : s, )
-            setSpeakers(updatedSpeakers) 
+            s.id === selectedSpeaker.id ? { ...s, fingerprinted: true } : s,)
+            setSpeakers(updatedSpeakers)
             setSelectedSpeaker(null)
-            console.log("register fingerprint for "+registeredStudentData.username+" Added")
+            console.log("register fingerprint for " + registeredStudentData.username + " Added")
             setRegisteredStudentData(null)
             closeDialog()
-        } 
+        }
     }, [registeredAudioFingerprintAdded, registeredVideoFingerprintAdded])
-    
+
     //Use effect to display processed cartoonized image
     // useEffect(() => {
     //     console.log('inside renderframe buffer useeffect ', frameBufferLength)
@@ -313,7 +324,7 @@ function JoinPage() {
     // Disconnects from websocket server and audio stream.
     const disconnect = (permanent = false) => {
         console.log("disconnect called", permanent)
-        if(ending.value)
+        if (ending.value)
             return
         if (permanent) {
             setPageTitle("Join Discussion")
@@ -413,54 +424,58 @@ function JoinPage() {
         closeDialog()
     }
 
-const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
+    const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
 
-        const fetchData = new AuthService().createStudentProfile(registeredUsername)
+        const fetchData = new AuthService().getStudentProfileByID(registeredUsername)
         fetchData
-        .then(
-            (response) => {
-                if (response.status === 200) {
-                    response.json().then((jsonObj) => {
-                        console.log(jsonObj)
-                        const student_data = StudentModel.fromJson(jsonObj)
-                        setRegisteredStudentData(student_data)
-                    })
-                } else {
-                    setInvalidName(true)
-                }
-            },
-            (apierror) => {
-                console.log(
-                    "byod-join-components func: addSavedSpeakerFingerprint 1 ",
-                    apierror,
-                )
-            },
-        )
-        .finally(() => {
-            closeDialog()
-        })
-        
+            .then(
+                (response) => {
+                    if (response.status === 200) {
+                        response.json().then((jsonObj) => {
+                            console.log(jsonObj)
+                            const student_data = StudentModel.fromJson(jsonObj)
+                            setRegisteredStudentData(student_data)
+                        })
+                    } else {
+                        setInvalidName(true)
+                    }
+                },
+                (apierror) => {
+                    console.log(
+                        "byod-join-components func: startProcessingSavedSpeakerFingerprint 1 ",
+                        apierror,
+                    )
+                },
+            )
+
     }
 
-     const addSavedSpeakerFingerprint = async () => {
-        if (audiows.current === null) {
-            return
-        }
+    const addSavedSpeakerFingerprint = async () => {
 
-        if (videows === null) {
-            return
-        }
-       
         let message = null
         message = {
             type: "add-saved-fingerprint",
             id: selectedSpeaker.id,
             alias: registeredStudentData.username
         }
-        
+
         console.log(speakers)
-        audiows.current.send(JSON.stringify(message))
-        videows.send(JSON.stringify(message))
+
+        if (joinwith === "Video" || joinwith === "Videocartoonify") {
+
+            if (videows === null || audiows.current === null) {
+                return
+            }
+            audiows.current.send(JSON.stringify(message))
+            videows.send(JSON.stringify(message))
+        } else {
+            if (audiows.current === null) {
+                return
+            }
+
+            audiows.current.send(JSON.stringify(message))
+        }
+
 
     }
 
@@ -550,7 +565,7 @@ const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
                     .enumerateDevices()
                     .then((devices) => {
                         devices.forEach((device) => {
-                            
+
                             // console.log(device.kind.toUpperCase(), device.label);
                             //, device.deviceId
                         })
@@ -563,7 +578,7 @@ const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
             if (navigator.mediaDevices != null) {
                 const stream =
                     await navigator.mediaDevices.getUserMedia(constraintObj)
-  
+
                 // media.then(function (stream) {
                 setStreamReference(stream)
                 //keep this here for now to enable to capturing of audio finger printing
@@ -576,7 +591,7 @@ const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
                         apiService.getAudioWebsocketEndpoint(),
                     )
                     connect_audio_processor_service();
-                    
+
                 } else if (
                     joinwith === "Video" ||
                     joinwith === "Videocartoonify"
@@ -606,16 +621,16 @@ const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
                     audiows.current = new WebSocket(
                         apiService.getAudioWebsocketEndpoint(),
                     )
-                    
+
                     connect_audio_processor_service();
 
                     //activate video websocket 
                     setVideoWs(
-                            new WebSocket(
-                                apiService.getVideoWebsocketEndpoint(),
-                            ),
-                        )
-                    
+                        new WebSocket(
+                            apiService.getVideoWebsocketEndpoint(),
+                        ),
+                    )
+
                 }
             } else {
                 setDisplayText("No media devices detected.")
@@ -671,7 +686,7 @@ const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
                         setSpeakers(
                             SpeakerModel.fromJsonList(jsonObj["speakers"]),
                         )
-                        setKey(jsonObj.key);                        
+                        setKey(jsonObj.key);
                         setConstraintObj(constraint)
                         setPcode(passcode)
                         setJoinwith(joinwith)
@@ -719,8 +734,8 @@ const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
             setAuthenticated(true)
             if (message["type"] === "start") {
                 closeDialog()
-            }else if(message['type'] === 'registeredfingerprintadded'){
-
+            } else if (message['type'] === 'registeredfingerprintadded') {
+                console.log("got a response from video endpoint....")
                 setRegisteredAudioFingerprintAdded(true)
 
             } else if (message["type"] === "error") {
@@ -765,16 +780,17 @@ const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
         }
 
         videows.onmessage = (e) => {
-            if (typeof e.data === 'string'){
+            if (typeof e.data === 'string') {
                 const message = JSON.parse(e.data);
                 if (message['type'] === 'start') {
                     setAuthenticated(true);
                     closeDialog();
-                }else if(message['type'] === 'attention_data'){
+                } else if (message['type'] === 'attention_data') {
 
-                }else if(message['type'] === 'registeredfingerprintadded'){
+                } else if (message['type'] === 'registeredfingerprintadded') {
+                    console.log("got a response from video endpoint....")
                     setRegisteredVideoFingerprintAdded(true)
-                }else if (message['type'] === 'error') {
+                } else if (message['type'] === 'error') {
                     disconnect(true);
                     setDisplayText('The connection to the session has been closed by the server.');
                     setCurrentForm('ClosedSession');
@@ -783,18 +799,18 @@ const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
                     setDisplayText('The session has been closed by the owner.');
                     setCurrentForm('ClosedSession');
                 }
-            }else if (e.data instanceof Blob){
+            } else if (e.data instanceof Blob) {
                 const url = URL.createObjectURL(e.data);
                 // Add the processed frame to the buffer
-                
-                setFrameBuffer(prevBuffer =>{
-                        const newItems = [...prevBuffer, url]
-                        if (newItems.length % 40 == 0) {
-                            setFrameBufferLength(newItems.length)
-                        }
-                        
-                        return newItems
-                    } 
+
+                setFrameBuffer(prevBuffer => {
+                    const newItems = [...prevBuffer, url]
+                    if (newItems.length % 40 == 0) {
+                        setFrameBufferLength(newItems.length)
+                    }
+
+                    return newItems
+                }
                 );
 
                 setRenderingStarted(true)
@@ -802,7 +818,7 @@ const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
         };
 
         videows.onclose = e => {
-            console.log('[Disconnected]',ending.value);
+            console.log('[Disconnected]', ending.value);
         };
     }
 
@@ -868,6 +884,7 @@ const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
                 embeddings_file: sessionDevice.embeddings,
                 deviceid: sessionDevice.id,
                 sessionid: session.id,
+                numSpeakers: numSpeakers,
             }
         } else if (joinwith === "Videocartoonify") {
             message = {
@@ -883,6 +900,7 @@ const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
                 deviceid: sessionDevice.id,
                 sessionid: session.id,
                 Video_cartoonify: true,
+                numSpeakers: numSpeakers,
             }
         }
         console.log(joinwith)
@@ -965,21 +983,21 @@ const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
 
     //function to render the cartoonized image
     const renderFrameFromBuffer = () => {
-        console.log('frameBufferLength = ', frameBufferLength,' cartoonImgBatch = ', cartoonImgBatch)
+        console.log('frameBufferLength = ', frameBufferLength, ' cartoonImgBatch = ', cartoonImgBatch)
         if (frameBufferLength > (40 * cartoonImgBatch)) {
-            for (var i = (cartoonImgBatch-1)*40; i < cartoonImgBatch*40; i++){
-                
+            for (var i = (cartoonImgBatch - 1) * 40; i < cartoonImgBatch * 40; i++) {
+
                 setInterval(() => {
                     setCartoonImgUrl(frameBuffer[i]);
                     console.log('i called setcartoonimgurl ', i)
                 }, 500)
-                
-            }    
-            setCartoonImgBatch(prevCount => prevCount + 1)
-          
-        } 
 
-      }
+            }
+            setCartoonImgBatch(prevCount => prevCount + 1)
+
+        }
+
+    }
 
     const ResetTimeRange = (values) => {
         if (session !== null) {
@@ -1205,8 +1223,9 @@ const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
             viewIndividual={viewIndividual}
             viewComparison={viewComparison}
             viewGroup={viewGroup}
-            cartoonImgUrl = {cartoonImgUrl}
+            cartoonImgUrl={cartoonImgUrl}
             invalidName={invalidName}
+            startProcessingSavedSpeakerFingerprint={startProcessingSavedSpeakerFingerprint}
         />
     )
 }
