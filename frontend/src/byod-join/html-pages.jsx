@@ -674,7 +674,6 @@ function ByodJoinPage(props) {
                             </div>
                             <input
                                 id="registeredusername"
-                                defaultValue={props.selectedSpeaker.alias}
                                 className={style5["field-input"]}
                                 maxLength="64"
                             />
