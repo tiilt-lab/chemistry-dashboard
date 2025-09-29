@@ -188,10 +188,11 @@ class ServerProtocol(WebSocketServerProtocol):
                 wavObj = wave.open(temp_aud_file+'.wav')
                 self.audio_buffer.append(self.read_bytes_from_wav(wavObj))
                 audiobyte = self.reduce_wav_channel(1,wavObj)
+                logging.info("retrned by size is  none {}. and size is. {} ".format(audiobyte is None , len(audiobyte)))
                 self.asr_audio_queue.put(audiobyte)
                 logging.info('After audio queue in video processing')
-                # if os.path.isfile(temp_aud_file+'.wav'):
-                #     os.remove(temp_aud_file+'.wav')
+                if os.path.isfile(temp_aud_file+'.wav'):
+                    os.remove(temp_aud_file+'.wav')
 
                 self.video_count = self.video_count + 1
                 logging.info('video binary recieved')
@@ -269,7 +270,7 @@ class ServerProtocol(WebSocketServerProtocol):
             ch_data = data[0::nch]
             return ch_data.tobytes()
         else:
-            self.read_bytes_from_wav(wav)
+            return self.read_bytes_from_wav(wav)
 
 
 
