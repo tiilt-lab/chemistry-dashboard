@@ -300,6 +300,9 @@ function JoinPage() {
             setSelectedSpeaker(null)
             console.log("register fingerprint for " + registeredStudentData.username + " Added")
             setRegisteredStudentData(null)
+            setRegisteredUserAliasChanged(false)
+            setRegisteredAudioFingerprintAdded(false)
+            setRegisteredVideoFingerprintAdded(false)
             closeDialog()
         }
     }, [registeredAudioFingerprintAdded, registeredVideoFingerprintAdded])
@@ -854,6 +857,7 @@ function JoinPage() {
                 video_encoding: "video/mp4",
                 channels: 1,
                 streamdata: "video",
+                tag: true,
                 embeddings_file: sessionDevice.embeddings,
                 deviceid: sessionDevice.id,
                 sessionid: session.id,

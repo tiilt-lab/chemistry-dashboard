@@ -190,8 +190,8 @@ class ServerProtocol(WebSocketServerProtocol):
                 audiobyte = self.reduce_wav_channel(1,wavObj)
                 self.asr_audio_queue.put(audiobyte)
                 logging.info('After audio queue in video processing')
-                if os.path.isfile(temp_aud_file+'.wav'):
-                    os.remove(temp_aud_file+'.wav')
+                # if os.path.isfile(temp_aud_file+'.wav'):
+                #     os.remove(temp_aud_file+'.wav')
 
                 self.video_count = self.video_count + 1
                 logging.info('video binary recieved')
