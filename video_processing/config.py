@@ -22,8 +22,8 @@ def video_record_reduced():
 def video_cartoonize():
     return str(config['videocartoonize']['cartoonize']) in ['true', 'True', 't', '1']
 
-def attention_tracking():
-    return str(config['attentiontracking']['attentiontracking']) in ['true', 'True', 't', '1']
+def process_video_analytics():
+    return str(config['videoanalyics']['processvideoanalytics']) in ['true', 'True', 't', '1']
     
 def video_recordings_folder():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['videorecord']['video_recording_folder']))

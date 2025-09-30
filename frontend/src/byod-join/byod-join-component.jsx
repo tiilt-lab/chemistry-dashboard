@@ -384,6 +384,7 @@ function JoinPage() {
                 speakers: speakers,
             }
             audiows.current.send(JSON.stringify(message))
+            videows.send(JSON.stringify(message))
             setSpeakersValidated(true)
         } else {
             setDisplayText(
@@ -744,8 +745,9 @@ function JoinPage() {
             } else if (message["type"] === "error") {
                 disconnect(true)
                 setDisplayText(
-                    "The connection to the session has been closed by the server.",
+                    "The connection to the session has been closed by the audio server.",
                 )
+                console.log("message from the audio server is "+ message["message"])
                 setCurrentForm("ClosedSession")
             } else if (message["type"] === "end") {
                 disconnect(true)
@@ -795,7 +797,8 @@ function JoinPage() {
                     setRegisteredVideoFingerprintAdded(true)
                 } else if (message['type'] === 'error') {
                     disconnect(true);
-                    setDisplayText('The connection to the session has been closed by the server.');
+                    setDisplayText('The connection to the session has been closed by the video server.');
+                     console.log("message from the video server is "+ message["message"])
                     setCurrentForm('ClosedSession');
                 } else if (message['type'] === 'end') {
                     disconnect(true);
@@ -887,6 +890,7 @@ function JoinPage() {
                 streamdata: "video",
                 embeddings_file: sessionDevice.embeddings,
                 deviceid: sessionDevice.id,
+                Video:true,
                 sessionid: session.id,
                 numSpeakers: numSpeakers,
             }
