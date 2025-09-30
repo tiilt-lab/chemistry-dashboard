@@ -163,12 +163,10 @@ def load_psp_standalone(checkpoint_path, device='cuda'):
     psp.register_forward_hook(add_latent_avg)
     return psp
 
-def get_facial_landmark(filepath, predictor, model):
-    if type(filepath) == str:
-        img = dlib.load_rgb_image(filepath)
-    else:
-        img = filepath
-    shape = get_landmark_shape(img, predictor,model)
+def get_facial_shape(img, predictor,bbox):
+    x, y, w, h = bbox
+    rect = dlib.rectangle(left=x, top=y, right=x + w, bottom=y + h)
+    shape =   predictor(img, rect)
     return shape
 
 def get_video_crop_parameter(filepath, predictor, model, padding=[200,200,200,200]):

@@ -7,7 +7,7 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 from .model.encoder.align_all_parallel import align_face
-from .util import  get_video_crop_parameter,get_facial_landmark,tensor2cv2
+from .util import  get_video_crop_parameter,get_facial_shape,tensor2cv2
 from moviepy.editor import *
 from scipy.io import wavfile
 import logging
@@ -17,9 +17,10 @@ import traceback
 
 class VideoProcessor:
     def __init__(self,cartoon_model,facial_emotion_detector,image_object_detection,attention_detection, \
-                video_queue,frame_queue,cartoon_image_queue,config,vid_img_dir,video_filename,aud_filename,sample_rate,depth,channels):
+                video_queue,frame_queue,cartoon_image_queue,config,cf,vid_img_dir,video_filename,aud_filename,sample_rate,depth,channels):
         
         self.config = config
+        self.cf = cf
         self.video_queue = video_queue
         self.frame_queue = frame_queue
         self.cartoon_image_queue = cartoon_image_queue
@@ -63,6 +64,12 @@ class VideoProcessor:
         if self.cartoon_model.video and self.cartoon_model.parsing_map_path is not None:
             self.x_p_hat = torch.tensor(np.load(self.cartoon_model.parsing_map_path))
 
+        # self.intensity = {"Extremely":4,
+        #                              "Very":3,
+        #                             "Moderately":2,
+        #                             "Slightly":1,
+        #                             "Neutral":0}
+        # self.emotions = {}
         self.non_cartoon_emotions = {"Extremely afraid":0,"Extremely alarmed":0,"Extremely annoyed":0,"Extremely aroused":0,"Extremely astonished":0,
                         "Extremely bored":0,"Extremely calm":0,"Extremely content":0,"Extremely delighted":0,"Extremely depressed":0,
                         "Extremely distressed":0,"Extremely droopy":0,"Extremely excited":0,"Extremely frustrated":0,"Extremely gloomy":0,
@@ -298,17 +305,23 @@ class VideoProcessor:
                         if (len(self.frame_batch) == self.batch_size):
                             logging.info('total appended per batch {0}'.format(len(self.frame_batch)))
                             frames_batch_copy = copy.deepcopy(self.frame_batch)
-                            self.convert_image(self.frame_batch,None,500,375)
 
-                            #start attention tracking
-                            all_frames,face_object_detected = self.image_object_detection.detection(frames_batch_copy,self.batch_track)
-                            self.attention_detection.attention_tracking(face_object_detected,all_frames)
+                            if self.config.videocartoonify:
+                                self.convert_image(self.frame_batch,None,500,375)
+
+                            if self.cf.process_video_analytics():
+                                #start attention tracking
+                                all_frames,face_object_detected = self.image_object_detection.detection(frames_batch_copy,self.batch_track)
+                                self.attention_detection.attention_tracking(face_object_detected,all_frames)
+                                face_lm = get_facial_shape(resized_img,self.cartoon_model.landmarkpredictor, self.cartoon_model.face_detector_model)
+                                logging.info('printing output of attentions')
+                                logging.info(self.persons_attention_track)
+                                payload = {'type': 'attention_data', 'data': self.persons_attention_track}
+                                self.send_json(payload)
+                            
                             self.frame_batch = []
                             self.batch_track+=1
-                            logging.info('printing output of attentions')
-                            logging.info(self.persons_attention_track)
-                            payload = {'type': 'attention_data', 'data': self.persons_attention_track}
-                            self.send_json(payload)
+                                
 
                                 
 
