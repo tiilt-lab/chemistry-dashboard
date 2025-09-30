@@ -88,8 +88,8 @@ class ServerProtocol(WebSocketServerProtocol):
             if data['id'] == "done":
                 self.awaitingSpeakers = False
                 for speaker in data['speakers']:
-                    self.speakers[speaker["id"]]["alias"] = speaker["alias"]
-                self.processor.setSpeakerFingerprints(self.speakers)
+                    self.facial_embeddings[speaker["id"]]["alias"] = speaker["alias"]
+                self.video_processor.setParticpantFacialEmbeddings(self.facial_embeddings)
                 logging.info("Done awaiting all speakers info")
             else:
                 self.currSpeaker = data['id']
@@ -113,7 +113,7 @@ class ServerProtocol(WebSocketServerProtocol):
             facial_embedding_file = os.path.join(cf.facial_embedding_folder(), "{0}".format(currAlias))
             try:
                 facials = np.load(facial_embedding_file+".npy", allow_pickle=True)
-                self.facial_embeddings[currSpeaker] = {"alias": currAlias, "data": facials}
+                self.facial_embeddings[currSpeaker] = {"alias": currAlias, "data": facials[currAlias]}
                 logging.info("storing registered speaker {}'s fingerprint with alias {}".format(currSpeaker, currAlias))
                 self.send_json({'type':'registeredfingerprintadded'})
             except Exception as e:
@@ -171,13 +171,13 @@ class ServerProtocol(WebSocketServerProtocol):
             wavObj = wave.open(temp_aud_file+'.wav')
             audiobyte = self.reduce_wav_channel(1,wavObj)
 
-            if self.config.videocartoonify: #--------- check this
+            if self.config.videocartoonify or cf.process_video_analytics(): #--------- check this
                 self.video_queue.put(subclips.iter_frames(fps=10, dtype="uint8", with_times=True))
                 logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
 
-            # Save audio data only if cartoonization is activated.
+            # Save audio data only if video saving is activated is activated.
             # as we need to merge the audio data with the carttonized video
-            if self.config.videocartoonify:
+            if cf.video_record_original or cf.video_record_original:
                 self.orig_vid_recorder.write_audio(audiobyte)
 
             if os.path.isfile(temp_aud_file+'.wav'):
@@ -298,7 +298,7 @@ if __name__ == '__main__':
         facial_emotion_detector.load_model()
 
     # Initialize attention tracking
-    if cf.attention_tracking():
+    if cf.process_video_analytics():
         image_object_detection.init_model(cartoon_model.batch_size)
         attention_detection.init_model(cartoon_model.batch_size)    
     # Run Server

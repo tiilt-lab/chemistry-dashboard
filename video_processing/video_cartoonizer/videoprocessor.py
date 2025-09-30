@@ -48,6 +48,7 @@ class VideoProcessor:
         self.s_w = []
         self.frame_batch = []
         self.web_socket_connection = None
+        self.facialEmbeddings = None
 
         self.object_of_interest = [1,63,67,68]
         self.persons_attention_track = {}
@@ -113,6 +114,9 @@ class VideoProcessor:
 
     def add_websocket_connection(self,web_socket):
         self.web_socket_connection = web_socket
+
+    def setParticpantFacialEmbeddings(self,facialEmbeddings):
+        self.facialEmbeddings = facialEmbeddings
 
     def send_json(self, message):
         payload = json.dumps(message).encode('utf8')
