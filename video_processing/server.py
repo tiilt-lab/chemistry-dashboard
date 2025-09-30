@@ -145,7 +145,7 @@ class ServerProtocol(WebSocketServerProtocol):
                         self.frame_queue = None
                         self.cartoon_image_queue = None
                         self.video_processor = VideoProcessor(self.cartoon_model,self.facial_emotion_detector,self.image_object_detection,self.attention_detection, \
-                                                                self.video_queue,self.frame_queue,self.cartoon_image_queue,self.config,self.frame_dir,self.filename,aud_filename,16000, 2,1)
+                                                                self.video_queue,self.frame_queue,self.cartoon_image_queue,self.config,cf,self.frame_dir,self.filename,aud_filename,16000, 2,1)
                         self.video_processor.add_websocket_connection(self)
                         
                 if cf.video_record_reduced():
@@ -171,7 +171,7 @@ class ServerProtocol(WebSocketServerProtocol):
             wavObj = wave.open(temp_aud_file+'.wav')
             audiobyte = self.reduce_wav_channel(1,wavObj)
 
-            if self.config.videocartoonify or cf.process_video_analytics(): #--------- check this
+            if self.config.videocartoonify or self.config.video: 
                 self.video_queue.put(subclips.iter_frames(fps=10, dtype="uint8", with_times=True))
                 logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
 
@@ -295,12 +295,13 @@ if __name__ == '__main__':
     # Initialize cartoonify
     if cf.video_cartoonize():
         cartoon_model.load_model()
-        facial_emotion_detector.load_model()
 
-    # Initialize attention tracking
+    # Initialize attention  and emotion tracking
     if cf.process_video_analytics():
         image_object_detection.init_model(cartoon_model.batch_size)
-        attention_detection.init_model(cartoon_model.batch_size)    
+        attention_detection.init_model(cartoon_model.batch_size)
+        facial_emotion_detector.load_model()    
+
     # Run Server
     logging.info('Starting video Processing Service...')
     poll_connections = task.LoopingCall(cm.check_connections)
