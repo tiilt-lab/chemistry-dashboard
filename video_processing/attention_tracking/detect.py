@@ -138,7 +138,7 @@ class ImageObjectDetection:
                         confs = frame_detection[2]
                         clss = frame_detection[3]
                         person_id = frame_detection[4]
-                        self.accumulate_head_track(bbox,confs,clss,int(person_id),accumulator,im0,int(p))
+                        self.accumulate_head_and_otherobject_track(bbox,confs,clss,int(person_id),accumulator,im0,int(p))
                     
         return all_frames,accumulator
 
@@ -241,13 +241,35 @@ class ImageObjectDetection:
         else:
             return "Unknown", best_score
     
-    def accumulate_head_track(self,bbox,conf,cls,person_id,accumulator,im0,p):
+    def accumulate_head_and_otherobject_track_V2(self,bbox,conf,cls,person_id,accumulator,im0,p):
+       
+        if cls == self.object_names_V_K.get('head', None): #only track the head 
+            if person_id in accumulator['head']:
+                accumulator['head'][person_id].append([p,person_id,bbox ])
+            else:
+                accumulator['head'][person_id] = [[p,person_id,bbox]]    
+            # also add the persion detected as an object, since another person gaze can be on this person
+            #, we append all the objects in a frame (based on fame id , p) together 
+            if p in accumulator['other_objects']:
+                accumulator['other_objects'][p].append([cls,self.object_names_K_V[int(cls)],person_id,bbox ])
+            else:
+                accumulator['other_objects'][p] = [[cls,self.object_names_K_V[int(cls)],person_id,bbox ]]    
+            
+        #accumulate all other objects except person    
+        elif cls != self.object_names_V_K.get('person', None):
+            if p in accumulator['other_objects']:
+                accumulator['other_objects'][p].append([cls,self.object_names_K_V[int(cls)],person_id,bbox ])
+            else:
+                accumulator['other_objects'][p] = [[cls,self.object_names_K_V[int(cls)],person_id,bbox ]]  
+
+    def accumulate_head_and_otherobject_track(self,bbox,conf,cls,person_id,accumulator,im0,p):
         if cls == self.object_names_V_K.get('head', None): #only track the head 
             if person_id in accumulator['head']:
                 accumulator['head'][person_id].append([p,person_id,int(bbox[0]),int(bbox[1]),int(bbox[2]),int(bbox[3]) ])
             else:
                 accumulator['head'][person_id] = [[p,person_id,int(bbox[0]),int(bbox[1]),int(bbox[2]),int(bbox[3])]]    
-
+            # also add the persion detected as an object, since another person gaze can be on this person
+            #, we append all the objects in a frame (based on fame id , p) together 
             if p in accumulator['other_objects']:
                 accumulator['other_objects'][p].append([cls,self.object_names_K_V[int(cls)],person_id,int(bbox[0]),int(bbox[1]),int(bbox[2]),int(bbox[3]) ])
             else:

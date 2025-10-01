@@ -308,8 +308,7 @@ class VideoProcessor:
 
                             logging.info('printing ocf detail attention: {} cartoonify: {} and {}'.format(self.cf.process_video_analytics(),self.cf.video_cartoonize(), self.config.videocartoonify))
                             if self.config.videocartoonify and self.cf.video_cartoonize():
-                                pass
-                                # self.convert_image(self.frame_batch,None,500,375)
+                                self.convert_image(self.frame_batch,None,500,375)
 
 
                             # if only one participant joins a session, then do not match the face
@@ -346,21 +345,22 @@ class VideoProcessor:
         logging.info('frame cartoonization thread stopped for {0}.'.format(self.config.auth_key))
 
         # Processing after session has ended (post hoc processing)
-        if frame_processing_thread is not None:
-            frame_processing_thread.join()
-        # convert all image to cartoon and save
-        Post_frame_batch = []
-        post_frame_name = []
-        for index,  s_frame in enumerate(self.frame_array):
-            Post_frame_batch.append(s_frame)
-            post_frame_name.append(os.path.join(self.vid_img_dir, "{0}.{1}".format(index+1,'png')))
-            if (len(Post_frame_batch) == self.batch_size):
-                self.running_processes += 1
-                self.convert_image(Post_frame_batch,post_frame_name,500,375)
-                Post_frame_batch =  [] 
-                post_frame_name = []     
+        if self.config.videocartoonify and self.cf.video_cartoonize():
+            if frame_processing_thread is not None:
+                frame_processing_thread.join()
+            # convert all image to cartoon and save
+            Post_frame_batch = []
+            post_frame_name = []
+            for index,  s_frame in enumerate(self.frame_array):
+                Post_frame_batch.append(s_frame)
+                post_frame_name.append(os.path.join(self.vid_img_dir, "{0}.{1}".format(index+1,'png')))
+                if (len(Post_frame_batch) == self.batch_size):
+                    self.running_processes += 1
+                    self.convert_image(Post_frame_batch,post_frame_name,500,375)
+                    Post_frame_batch =  [] 
+                    post_frame_name = []     
      
         # logging.info('i eventually called complete_callback')
         # self.__complete_callback() 
-        logging.info('frame cartoonization thread stopped for {0}.'.format(self.config.auth_key))
+        # logging.info('frame cartoonization thread stopped for {0}.'.format(self.config.auth_key))
           
