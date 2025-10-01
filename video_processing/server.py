@@ -177,7 +177,7 @@ class ServerProtocol(WebSocketServerProtocol):
 
             # Save audio data only if video saving is activated is activated.
             # as we need to merge the audio data with the carttonized video
-            if cf.video_record_original or cf.video_record_original:
+            if cf.video_record_original or cf.video_record_reduced:
                 self.orig_vid_recorder.write_audio(audiobyte)
 
             if os.path.isfile(temp_aud_file+'.wav'):

@@ -293,7 +293,7 @@ class VideoProcessor:
             
                 if subclip_frames is not None:
                     subclib_frame_count = 0
-                    for frame in subclip_frames:
+                    for time_marker, frame in subclip_frames:
                         subclib_frame_count =  subclib_frame_count + 1
                         # if frame_shape[1] > frame_shape[0]:
                         #     dim = (500,375)
@@ -306,14 +306,18 @@ class VideoProcessor:
                             logging.info('total appended per batch {0}'.format(len(self.frame_batch)))
                             frames_batch_copy = copy.deepcopy(self.frame_batch)
 
-                            if self.config.videocartoonify:
+                            if self.config.videocartoonify and self.cf.video_cartoonize():
                                 self.convert_image(self.frame_batch,None,500,375)
 
+
+                            # if only one participant joins a session, then do not match the face
+
+                            
                             if self.cf.process_video_analytics():
                                 #start attention tracking
                                 all_frames,face_object_detected = self.image_object_detection.detection(frames_batch_copy,self.batch_track)
                                 self.attention_detection.attention_tracking(face_object_detected,all_frames)
-                                face_lm = get_facial_shape(resized_img,self.cartoon_model.landmarkpredictor, self.cartoon_model.face_detector_model)
+                                face_lm = get_facial_shape(resized_img,self.cartoon_model.landmarkpredictor)
                                 logging.info('printing output of attentions')
                                 logging.info(self.persons_attention_track)
                                 payload = {'type': 'attention_data', 'data': self.persons_attention_track}
