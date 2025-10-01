@@ -739,7 +739,7 @@ function JoinPage() {
             if (message["type"] === "start") {
                 closeDialog()
             } else if (message['type'] === 'registeredfingerprintadded') {
-                console.log("got a response from video endpoint....")
+                console.log("got a response from audio endpoint....")
                 setRegisteredAudioFingerprintAdded(true)
 
             } else if (message["type"] === "error") {

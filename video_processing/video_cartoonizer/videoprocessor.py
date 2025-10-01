@@ -306,8 +306,10 @@ class VideoProcessor:
                             logging.info('total appended per batch {0}'.format(len(self.frame_batch)))
                             frames_batch_copy = copy.deepcopy(self.frame_batch)
 
+                            logging.info('printing ocf detail attention: {} cartoonify: {} and {}'.format(self.cf.process_video_analytics(),self.cf.video_cartoonize(), self.config.videocartoonify))
                             if self.config.videocartoonify and self.cf.video_cartoonize():
-                                self.convert_image(self.frame_batch,None,500,375)
+                                pass
+                                # self.convert_image(self.frame_batch,None,500,375)
 
 
                             # if only one participant joins a session, then do not match the face
@@ -315,13 +317,14 @@ class VideoProcessor:
                             
                             if self.cf.process_video_analytics():
                                 #start attention tracking
-                                all_frames,face_object_detected = self.image_object_detection.detection(frames_batch_copy,self.batch_track)
-                                self.attention_detection.attention_tracking(face_object_detected,all_frames)
-                                face_lm = get_facial_shape(resized_img,self.cartoon_model.landmarkpredictor)
+                                logging.info('inside process_video_analytics')
+                                all_frames,face_object_detected = self.image_object_detection.detection_with_facial_regonition(frames_batch_copy,self.facialEmbeddings,self.batch_track,self.vid_img_dir)
+                                # self.attention_detection.attention_tracking(face_object_detected,all_frames)
+                                # face_lm = get_facial_shape(resized_img,self.cartoon_model.landmarkpredictor)
                                 logging.info('printing output of attentions')
-                                logging.info(self.persons_attention_track)
-                                payload = {'type': 'attention_data', 'data': self.persons_attention_track}
-                                self.send_json(payload)
+                                # logging.info(self.persons_attention_track)
+                                # payload = {'type': 'attention_data', 'data': self.persons_attention_track}
+                                # self.send_json(payload)
                             
                             self.frame_batch = []
                             self.batch_track+=1
