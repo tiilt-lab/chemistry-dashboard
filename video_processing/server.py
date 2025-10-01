@@ -112,7 +112,7 @@ class ServerProtocol(WebSocketServerProtocol):
             currAlias = data['alias']
             facial_embedding_file = os.path.join(cf.facial_embedding_folder(), "{0}".format(currAlias))
             try:
-                facials = np.load(facial_embedding_file+".npy", allow_pickle=True)
+                facials = np.load(facial_embedding_file+".npy", allow_pickle=True).item()
                 self.facial_embeddings[currSpeaker] = {"alias": currAlias, "data": facials[currAlias]}
                 logging.info("storing registered speaker {}'s fingerprint with alias {}".format(currSpeaker, currAlias))
                 self.send_json({'type':'registeredfingerprintadded'})
@@ -140,7 +140,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_orig".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, str(time.ctime())))
                     self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_{1}_{2}_({3})".format(self.config.auth_key,self.config.sessionId,self.config.deviceId,  str(time.ctime())))
                     self.orig_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1)
-                    if self.config.videocartoonify:
+                    if self.config.videocartoonify or cf.process_video_analytics():
                         self.video_queue = queue.Queue()
                         self.frame_queue = None
                         self.cartoon_image_queue = None
