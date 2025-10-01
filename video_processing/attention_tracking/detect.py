@@ -86,8 +86,8 @@ class ImageObjectDetection:
             self.object_names_K_V = names_model_2
             self.object_names_V_K = {v: k for k, v in names_model_2.items()}
 
-    def detection(self,images,batch):
-        val_dataset = LoadImageDataset(images, batch, self.batch_size,img_size=self.imgsz, stride=self.stride)
+    def detection(self,images,batch_track):
+        val_dataset = LoadImageDataset(images, batch_track, self.batch_size,img_size=self.imgsz, stride=self.stride)
         dataset = torch.utils.data.DataLoader(dataset=val_dataset,
                                                batch_size=self.batch_size,
                                                shuffle=False,
@@ -125,7 +125,6 @@ class ImageObjectDetection:
                     # Rescale boxes from img_size to im0 size
                     det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
                     
-
                     result = Results(orig_img=im0, path=str(int(p)), names=self.object_names_K_V, boxes=det)
                     # Tracking Mechanism
                     detection_supervision = sv.Detections.from_ultralytics(result)
@@ -142,7 +141,68 @@ class ImageObjectDetection:
                     
         return all_frames,accumulator
 
+    def detection_with_facial_regonition(self,images,facial_embeddings,batch_track):
+        val_dataset = LoadImageDataset(images, batch_track, self.batch_size,img_size=self.imgsz, stride=self.stride)
+        dataset = torch.utils.data.DataLoader(dataset=val_dataset,
+                                               batch_size=self.batch_size,
+                                               shuffle=False,
+                                               num_workers=0)
+        
+        accumulator = {'head':dict(), 'other_objects':dict()}
+        all_frames = {}
+        for val_batch, (img_index, img, im0s) in enumerate(dataset): #path, img, im0s, vid_cap in dataset:
+            # all_frames.extend(im0s)
+            # img = torch.from_numpy(img).to(device)
+            img = img.to(self.device)
+            img = img.half() if self.half else img.float()  # uint8 to fp16/32
+            img /= 255.0  # 0 - 255 to 0.0 - 1.0
+            if img.ndimension() == 3:
+                img = img.unsqueeze(0)
 
+            # Inference
+            pred = self.model_1(img, augment=self.augment)[0]
+            pred2 = self.model_2(img, augment=self.augment)[0]
+            
+            # Apply NMS
+            pred = non_max_suppression(pred, self.model1_conf_thres, self.model1_iou_thres, classes=self.classes, agnostic=self.agnostic_nms)
+            pred2 = non_max_suppression(pred2, self.model2_conf_thres, self.model2_iou_thres, classes=self.classes, agnostic=self.agnostic_nms)
+            
+            #combine pred and pred 2, filter out all cls 0 (person) detection for pred. keep only head (cls 1) detection 
+            # and filter out all cls 1 (bicycle)  detection  pred 2
+            combined_pred = [torch.cat((pred[i][pred[i][:,5] >= 1],pred2[i][pred2[i][:,5] != 1])) for i in range(len(pred2))]
+            
+            for i, det in enumerate(combined_pred):  # detections per image
+                p, im0 = img_index[i], im0s[i].numpy()
+
+                all_frames[int(p)] = im0
+                # gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
+                if len(det):
+                    # Rescale boxes from img_size to im0 size
+                    det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
+                    
+                    for *xyxy, conf, cls in reversed(det):
+                        int_cls = int(cls)
+                        if int_cls == self.object_names_V_K.get('head', None):
+                            face = self.crop_from_bbox(im0,xyxy, "xyxy", False, 0.0, False)
+                        self.accumulate_head_track(bbox,confs,clss,int(person_id),accumulator,im0,int(p))
+
+
+                    # result = Results(orig_img=im0, path=str(int(p)), names=self.object_names_K_V, boxes=det)
+                    # # Tracking Mechanism
+                    # detection_supervision = sv.Detections.from_ultralytics(result)
+                    # detection_with_tracks = self.tracker.update_with_detections(detection_supervision)
+                    # # tracks["head"].append({})
+                
+                    # # Write results
+                    # for frame_detection in detection_with_tracks:
+                    #     bbox = frame_detection[0].tolist()
+                    #     confs = frame_detection[2]
+                    #     clss = frame_detection[3]
+                    #     person_id = frame_detection[4]
+                    #     self.accumulate_head_track(bbox,confs,clss,int(person_id),accumulator,im0,int(p))
+                    
+        return all_frames,accumulator
+    
     def accumulate_head_track(self,bbox,conf,cls,person_id,accumulator,im0,p):
         if cls == self.object_names_V_K.get('head', None): #only track the head 
             if person_id in accumulator['head']:
@@ -162,6 +222,76 @@ class ImageObjectDetection:
             else:
                 accumulator['other_objects'][p] = [[cls,self.object_names_K_V[int(cls)],person_id,int(bbox[0]),int(bbox[1]),int(bbox[2]),int(bbox[3]) ]]  
    
+    def crop_from_bbox(self,
+        img: np.ndarray,
+        bbox,
+        fmt: str = "xyxy",          # "xyxy" (xmin,ymin,xmax,ymax) or "xywh" (x,y,w,h)
+        normalized: bool = False,   # True if bbox values are in [0,1] relative to width/height
+        margin: float = 0.0,        # extra border around the face; if normalized, treat as ratio of diag
+        square: bool = False        # pad to a square crop
+        ):
+        """
+        Returns a cropped image as a NumPy array.
+
+        img: HxWxC (uint8 or float); works with grayscale too (HxW)
+        bbox: tuple/list of 4 numbers
+        margin: if >0, adds padding around bbox. If normalized=True, it's fraction of the bbox size.
+        """
+        h, w = img.shape[:2]
+
+        # Convert bbox to pixel xyxy
+        if fmt == "xyxy":
+            x1, y1, x2, y2 = bbox
+            if normalized:
+                x1, y1, x2, y2 = x1 * w, y1 * h, x2 * w, y2 * h
+        elif fmt == "xywh":
+            x, y, bw, bh = bbox
+            if normalized:
+                x, y, bw, bh = x * w, y * h, bw * w, bh * h
+            x1, y1, x2, y2 = x, y, x + bw, y + bh
+        else:
+            raise ValueError("fmt must be 'xyxy' or 'xywh'")
+
+        # Ensure proper ordering
+        x1, x2 = float(min(x1, x2)), float(max(x1, x2))
+        y1, y2 = float(min(y1, y2)), float(max(y1, y2))
+
+        # Add margin
+        if margin > 0:
+            if normalized:
+                # margin is treated as a fraction of bbox size
+                mx = margin * (x2 - x1)
+                my = margin * (y2 - y1)
+            else:
+                mx = my = margin
+            x1 -= mx
+            y1 -= my
+            x2 += mx
+            y2 += my
+
+        # Make square if requested (by symmetric padding)
+        if square:
+            bw = x2 - x1
+            bh = y2 - y1
+            side = max(bw, bh)
+            cx = (x1 + x2) / 2
+            cy = (y1 + y2) / 2
+            x1 = cx - side / 2
+            x2 = cx + side / 2
+            y1 = cy - side / 2
+            y2 = cy + side / 2
+
+        # Clamp to image bounds and cast to int for slicing
+        x1 = max(0, int(round(x1)))
+        y1 = max(0, int(round(y1)))
+        x2 = min(w, int(round(x2)))
+        y2 = min(h, int(round(y2)))
+
+        # Guard against empty or invalid crops
+        if x2 <= x1 or y2 <= y1:
+            raise ValueError("Invalid bbox after processing; no area to crop.")
+
+        return img[y1:y2, x1:x2].copy()
 
 # if __name__ == '__main__':
 #     imge_detect = ImageObjectDetection()
