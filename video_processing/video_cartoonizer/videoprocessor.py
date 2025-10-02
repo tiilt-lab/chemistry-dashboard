@@ -48,6 +48,7 @@ class VideoProcessor:
         self.scale= None
         self.s_w = []
         self.frame_batch = []
+        self.time_marker = []
         self.web_socket_connection = None
         self.facialEmbeddings = None
 
@@ -57,10 +58,12 @@ class VideoProcessor:
         self.object_by_id_in_frame_track = {}
         self.object_by_class_track = {}
         self.person_attention_focus_count = {}
+        self.persons_emotions_detected = {}
 
         self.attention_detection.set_persistent_variables(self.object_of_interest,self.persons_attention_track,self.person_object_focus_track, \
                                                           self.object_by_id_in_frame_track,self.object_by_class_track, self.person_attention_focus_count)
         
+        self.facial_emotion_detector.set_persistent_variables(self.persons_emotions_detected)
         if self.cartoon_model.video and self.cartoon_model.parsing_map_path is not None:
             self.x_p_hat = torch.tensor(np.load(self.cartoon_model.parsing_map_path))
 
@@ -293,8 +296,9 @@ class VideoProcessor:
             
                 if subclip_frames is not None:
                     subclib_frame_count = 0
-                    for time_marker, frame in subclip_frames:
+                    for time_stamp, frame in subclip_frames:
                         subclib_frame_count =  subclib_frame_count + 1
+                        # logging.info('tracking time stamp for frame {} in  batch : {} is  {}'.format(subclib_frame_count, self.batch_track, time_stamp))
                         # if frame_shape[1] > frame_shape[0]:
                         #     dim = (500,375)
                         # else:
@@ -302,6 +306,7 @@ class VideoProcessor:
                         # frame = cv2.resize(frame, (500,375),interpolation=cv2.INTER_AREA)
                         self.frame_array.append(frame)
                         self.frame_batch.append(frame)
+                        self.time_marker.append(time_stamp)
                         if (len(self.frame_batch) == self.batch_size):
                             logging.info('total appended per batch {0}'.format(len(self.frame_batch)))
                             frames_batch_copy = copy.deepcopy(self.frame_batch)
@@ -317,8 +322,9 @@ class VideoProcessor:
                             if self.cf.process_video_analytics():
                                 #start attention tracking
                                 logging.info('inside process_video_analytics')
-                                all_frames,face_object_detected = self.image_object_detection.detection_with_facial_regonition(frames_batch_copy,self.facialEmbeddings,self.batch_track,self.vid_img_dir)
-                                # self.attention_detection.attention_tracking(face_object_detected,all_frames)
+                                all_frames,face_object_detected = self.image_object_detection.detection_with_facial_regonition(frames_batch_copy,self.facialEmbeddings,self.batch_track,self.time_marker,self.vid_img_dir)
+                                self.attention_detection.attention_tracking(face_object_detected,all_frames)
+                                self.facial_emotion_detector.predict_facial_emotion_for_all_participants(all_frames,face_object_detected['head'].items(),self.image_object_detection.crop_face_from_fame_with_bbox)
                                 # face_lm = get_facial_shape(resized_img,self.cartoon_model.landmarkpredictor)
                                 logging.info('printing output of attentions')
                                 # logging.info(self.persons_attention_track)
@@ -326,6 +332,7 @@ class VideoProcessor:
                                 # self.send_json(payload)
                             
                             self.frame_batch = []
+                            self.time_marker = []
                             self.batch_track+=1
                                 
 

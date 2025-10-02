@@ -9,6 +9,7 @@ from .models.resmasking import resmasking_dropout1
 from .utils.utils import ensure_gray, ensure_color
 
 from .emotions_dlib import EmotionsDlib
+import dlib
 
 import logging
 
@@ -63,13 +64,39 @@ class EmotionDetectionModelV1:
 class EmotionDetectionModel:
     def __init__(self):
         self.base_path = os.path.dirname(os.path.abspath(__file__))
+        self.batch_size = None
+        self.landmarkpredictor = None
+        self.persons_emotions_detected = None
 
-    def load_model(self):
+    def load_model(self,batch_size,landmarkpredictor):
+        self.batch_size = batch_size
+        self.landmarkpredictor = landmarkpredictor
         self.emotion_estimator = EmotionsDlib(
                                         file_emotion_model=os.path.join( self.base_path,'facial_expression_model/model_emotion_pls=30_fullfeatures=False.joblib'), 
                                         file_frontalization_model=os.path.join( self.base_path,'facial_expression_model/model_frontalization.npy')
                                         )
 
+    def get_facial_shape(self,img,bbox):
+        x1, y1, x2, y2 = bbox
+        rect = dlib.rectangle(left=x1, top=y1, right=x2, bottom=y2)
+        shape =   self.landmarkpredictor(img, rect)
+        return shape
+    
+    def set_persistent_variables(self,persons_emotions_detected):
+        self.persons_emotions_detected = persons_emotions_detected
+
+    def predict_facial_emotion_for_all_participants(self, frames, faces,crop_face_from_fame_with_bbox):
+         for alias, person_detail in faces:
+            frame_index,alias,bbox,time_stamp  = person_detail
+            try:
+                face = crop_face_from_fame_with_bbox(frames[frame_index],bbox,"xyxy", False, 0.0, False) 
+                landmarks_object = self.get_facial_shape(face,bbox)
+                dict_emotions = self.emotion_estimator.get_emotions( landmarks_object )
+                emotion_name = dict_emotions['emotions']['name'] 
+            except Exception as e:
+                logging.info('exception occured while predicting facial emotion for {0} in frame {1} : {2}'.format(alias,frame_index,e))
+            # return emotion_name      
+    
     def predict_facial_emotion(self,landmarks_object):
         
         try:
