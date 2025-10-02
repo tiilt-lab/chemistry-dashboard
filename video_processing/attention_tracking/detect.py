@@ -142,7 +142,7 @@ class ImageObjectDetection:
                     
         return all_frames,accumulator
 
-    def detection_with_facial_regonition(self,images,facial_embeddings,batch_track,vid_img_dir):
+    def detection_with_facial_regonition(self,images,facial_embeddings,batch_track,time_marker,vid_img_dir):
         val_dataset = LoadImageDataset(images, batch_track, self.batch_size,img_size=self.imgsz, stride=self.stride)
         dataset = torch.utils.data.DataLoader(dataset=val_dataset,
                                                batch_size=self.batch_size,
@@ -180,36 +180,27 @@ class ImageObjectDetection:
                 if len(det):
                     # Rescale boxes from img_size to im0 size
                     det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
-                    
-                    row = 0
+                    detected_faces = 0
                     for *xyxy, conf, cls in reversed(det):
                         int_cls = int(cls)
+                        match = "Unknown"
+                        score = -1  # cosine similarity ranges -1 to 1
                         if int_cls == self.object_names_V_K.get('head', None):
-                            face = self.crop_from_bbox(im0,xyxy, "xyxy", False, 0.0, False)
-                           
+                            detected_faces = detected_faces+1
+                            face = self.crop_face_from_fame_with_bbox(im0,xyxy, "xyxy", False, 0.0, False)
+                            # save_to = os.path.join(vid_img_dir, "face_{0}_{1}.{2}".format(int(p),detected_faces,'png'))
+                            # cv2.imwrite(save_to,face)
                             x1, y1, x2, y2 = xyxy
                             face_location = (y1, x2, y2, x1)
                             face_embedding  = face_recognition.face_encodings(face, [face_location])
                             match, score = self.identify_student(face_embedding, facial_embeddings, threshold=0.5)
-                            print(f"Match: {match}, Confidence: {score:.3f}")
-                            # save_to = os.path.join(vid_img_dir, "{0}.{1}".format(row+1,'png'))
-                            # cv2.imwrite(save_to,face)
-                        # self.accumulate_head_track(bbox,confs,clss,int(person_id),accumulator,im0,int(p))
-
-
-                    # result = Results(orig_img=im0, path=str(int(p)), names=self.object_names_K_V, boxes=det)
-                    # # Tracking Mechanism
-                    # detection_supervision = sv.Detections.from_ultralytics(result)
-                    # detection_with_tracks = self.tracker.update_with_detections(detection_supervision)
-                    # # tracks["head"].append({})
-                
-                    # # Write results
-                    # for frame_detection in detection_with_tracks:
-                    #     bbox = frame_detection[0].tolist()
-                    #     confs = frame_detection[2]
-                    #     clss = frame_detection[3]
-                    #     person_id = frame_detection[4]
-                    #     self.accumulate_head_track(bbox,confs,clss,int(person_id),accumulator,im0,int(p))
+                            if match != "Unknown":
+                            #    print(f"Match: {match}, Confidence: {score:.3f}")
+                               self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_face",match,accumulator,time_marker,im0,int(p)) 
+                        
+                        #accumulate all other objects except person         
+                        elif int_cls != self.object_names_V_K.get('person', None):
+                            self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_other_objects","non face object",accumulator,time_marker,im0,int(p)) 
                     
         return all_frames,accumulator
     
@@ -230,7 +221,7 @@ class ImageObjectDetection:
         for person in store_facial_embeddings:
             stored_embedding = store_facial_embeddings[person]["data"]
             student = store_facial_embeddings[person]["alias"]
-            print("student is ......"+student)
+            # print("student is ......"+student)
             score = self.cosine_similarity(face_embedding, stored_embedding)
             if score > best_score:
                 best_score = score
@@ -241,26 +232,27 @@ class ImageObjectDetection:
         else:
             return "Unknown", best_score
     
-    def accumulate_head_and_otherobject_track_V2(self,bbox,conf,cls,person_id,accumulator,im0,p):
-       
-        if cls == self.object_names_V_K.get('head', None): #only track the head 
-            if person_id in accumulator['head']:
-                accumulator['head'][person_id].append([p,person_id,bbox ])
+    def accumulate_head_and_otherobject_track_V2(self,bbox,object_detected_id,object_detected_type,alias,accumulator,time_marker,frame_image,frame_index):
+
+        time_stamp = time_marker[frame_index%self.batch_size]
+        if object_detected_type == "detected_face": #only track the head 
+            if alias in accumulator['head']:
+                accumulator['head'][alias].append([frame_index,alias,bbox,time_stamp ])
             else:
-                accumulator['head'][person_id] = [[p,person_id,bbox]]    
+                accumulator['head'][alias] = [[frame_index,alias,bbox,time_stamp]]    
             # also add the persion detected as an object, since another person gaze can be on this person
             #, we append all the objects in a frame (based on fame id , p) together 
-            if p in accumulator['other_objects']:
-                accumulator['other_objects'][p].append([cls,self.object_names_K_V[int(cls)],person_id,bbox ])
+            if frame_index in accumulator['other_objects']:
+                accumulator['other_objects'][frame_index].append([object_detected_id,self.object_names_K_V[object_detected_id],alias,bbox,time_stamp ])
             else:
-                accumulator['other_objects'][p] = [[cls,self.object_names_K_V[int(cls)],person_id,bbox ]]    
+                accumulator['other_objects'][frame_index] = [[object_detected_id,self.object_names_K_V[object_detected_id],alias,bbox,time_stamp ]]    
             
-        #accumulate all other objects except person    
-        elif cls != self.object_names_V_K.get('person', None):
-            if p in accumulator['other_objects']:
-                accumulator['other_objects'][p].append([cls,self.object_names_K_V[int(cls)],person_id,bbox ])
+        #accumulate all other objects   
+        elif object_detected_type == "detected_other_objects":
+            if frame_index in accumulator['other_objects']:
+                accumulator['other_objects'][frame_index].append([object_detected_id,self.object_names_K_V[object_detected_id],alias,bbox, time_stamp])
             else:
-                accumulator['other_objects'][p] = [[cls,self.object_names_K_V[int(cls)],person_id,bbox ]]  
+                accumulator['other_objects'][frame_index] = [[object_detected_id,self.object_names_K_V[object_detected_id],alias,bbox, time_stamp]]  
 
     def accumulate_head_and_otherobject_track(self,bbox,conf,cls,person_id,accumulator,im0,p):
         if cls == self.object_names_V_K.get('head', None): #only track the head 
@@ -282,7 +274,7 @@ class ImageObjectDetection:
             else:
                 accumulator['other_objects'][p] = [[cls,self.object_names_K_V[int(cls)],person_id,int(bbox[0]),int(bbox[1]),int(bbox[2]),int(bbox[3]) ]]  
    
-    def crop_from_bbox(self,
+    def crop_face_from_fame_with_bbox(self,
         img: np.ndarray,
         bbox,
         fmt: str = "xyxy",          # "xyxy" (xmin,ymin,xmax,ymax) or "xywh" (x,y,w,h)

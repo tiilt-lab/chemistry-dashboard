@@ -300,7 +300,7 @@ if __name__ == '__main__':
     if cf.process_video_analytics():
         image_object_detection.init_model(cartoon_model.batch_size)
         attention_detection.init_model(cartoon_model.batch_size)
-        facial_emotion_detector.load_model()    
+        facial_emotion_detector.load_model(cartoon_model.batch_size, cartoon_model.landmarkpredictor)    
 
     # Run Server
     logging.info('Starting video Processing Service...')
