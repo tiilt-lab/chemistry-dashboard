@@ -55,13 +55,13 @@ class VideoProcessor:
         self.object_of_interest = [1,63,67,68]
         self.persons_attention_track = {}
         self.person_object_focus_track = {}
-        self.object_by_id_in_frame_track = {}
+        self.shared_attention_track = {}
         self.object_by_class_track = {}
         self.person_attention_focus_count = {}
         self.persons_emotions_detected = {}
 
         self.attention_detection.set_persistent_variables(self.object_of_interest,self.persons_attention_track,self.person_object_focus_track, \
-                                                          self.object_by_id_in_frame_track,self.object_by_class_track, self.person_attention_focus_count)
+                                                          self.shared_attention_track,self.object_by_class_track, self.person_attention_focus_count)
         
         self.facial_emotion_detector.set_persistent_variables(self.persons_emotions_detected)
         if self.cartoon_model.video and self.cartoon_model.parsing_map_path is not None:
@@ -327,7 +327,9 @@ class VideoProcessor:
                                 self.facial_emotion_detector.predict_facial_emotion_for_all_participants(all_frames,face_object_detected['head'].items(),self.image_object_detection.crop_face_from_fame_with_bbox)
                                 # face_lm = get_facial_shape(resized_img,self.cartoon_model.landmarkpredictor)
                                 logging.info('printing output of attentions')
-                                # logging.info(self.persons_attention_track)
+                                logging.info(self.persons_attention_track)
+                                logging.info('printing output of emotion detection')
+                                logging.info(self.persons_emotions_detected)
                                 # payload = {'type': 'attention_data', 'data': self.persons_attention_track}
                                 # self.send_json(payload)
                             
