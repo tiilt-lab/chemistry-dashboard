@@ -181,6 +181,7 @@ class ImageObjectDetection:
                     # Rescale boxes from img_size to im0 size
                     det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
                     detected_faces = 0
+                    #use this for face tracking across frames
                     for *xyxy, conf, cls in reversed(det):
                         int_cls = int(cls)
                         match = "Unknown"
@@ -197,13 +198,29 @@ class ImageObjectDetection:
                             if match != "Unknown":
                             #    print(f"Match: {match}, Confidence: {score:.3f}")
                                self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_face",match,accumulator,time_marker,im0,int(p)) 
-                        
-                        #accumulate all other objects except person         
-                        elif int_cls != self.object_names_V_K.get('person', None):
-                            self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_other_objects","non face object",accumulator,time_marker,im0,int(p)) 
+
+                    #use this for tracking other objects asides face
+                    result = Results(orig_img=im0, path=str(int(p)), names=self.object_names_K_V, boxes=det)
+                    # Tracking Mechanism
+                    detection_supervision = sv.Detections.from_ultralytics(result)
+                    detection_with_tracks = self.tracker.update_with_detections(detection_supervision)
+                    # tracks["head"].append({})
+                
+                    # Write results
+                    for frame_detection in detection_with_tracks:
+                        bbox = frame_detection[0].tolist()
+                        confs = frame_detection[2]
+                        clss = frame_detection[3]
+                        object_id = frame_detection[4]
+                        if int(clss) != self.object_names_V_K.get('person', None) and int(clss) != self.object_names_V_K.get('head', None):
+                            #accumulate all other objects except person  
+                            self.accumulate_head_and_otherobject_track_V2(bbox,int(clss),"detected_other_objects",str(object_id),accumulator,time_marker,im0,int(p))    
+                               
                     
         return all_frames,accumulator
     
+    
+
     def cosine_similarity(self,vec1, vec2):
         """Compute cosine similarity between two vectors."""
         return float(np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2)))
@@ -232,27 +249,27 @@ class ImageObjectDetection:
         else:
             return "Unknown", best_score
     
-    def accumulate_head_and_otherobject_track_V2(self,bbox,object_detected_id,object_detected_type,alias,accumulator,time_marker,frame_image,frame_index):
+    def accumulate_head_and_otherobject_track_V2(self,bbox,object_class_id,object_detected_type,object_track_id,accumulator,time_marker,frame_image,frame_index):
 
         time_stamp = time_marker[frame_index%self.batch_size]
         if object_detected_type == "detected_face": #only track the head 
-            if alias in accumulator['head']:
-                accumulator['head'][alias].append([frame_index,alias,bbox,time_stamp ])
+            if object_track_id in accumulator['head']:
+                accumulator['head'][object_track_id].append([frame_index,object_track_id,bbox,time_stamp ])
             else:
-                accumulator['head'][alias] = [[frame_index,alias,bbox,time_stamp]]    
+                accumulator['head'][object_track_id] = [[frame_index,object_track_id,bbox,time_stamp]]    
             # also add the persion detected as an object, since another person gaze can be on this person
             #, we append all the objects in a frame (based on fame id , p) together 
             if frame_index in accumulator['other_objects']:
-                accumulator['other_objects'][frame_index].append([object_detected_id,self.object_names_K_V[object_detected_id],alias,bbox,time_stamp ])
+                accumulator['other_objects'][frame_index].append([object_class_id,self.object_names_K_V[object_class_id],object_track_id,bbox,time_stamp ])
             else:
-                accumulator['other_objects'][frame_index] = [[object_detected_id,self.object_names_K_V[object_detected_id],alias,bbox,time_stamp ]]    
+                accumulator['other_objects'][frame_index] = [[object_class_id,self.object_names_K_V[object_class_id],object_track_id,bbox,time_stamp ]]    
             
         #accumulate all other objects   
         elif object_detected_type == "detected_other_objects":
             if frame_index in accumulator['other_objects']:
-                accumulator['other_objects'][frame_index].append([object_detected_id,self.object_names_K_V[object_detected_id],alias,bbox, time_stamp])
+                accumulator['other_objects'][frame_index].append([object_class_id,self.object_names_K_V[object_class_id],object_track_id,bbox, time_stamp])
             else:
-                accumulator['other_objects'][frame_index] = [[object_detected_id,self.object_names_K_V[object_detected_id],alias,bbox, time_stamp]]  
+                accumulator['other_objects'][frame_index] = [[object_class_id,self.object_names_K_V[object_class_id],object_track_id,bbox, time_stamp]]  
 
     def accumulate_head_and_otherobject_track(self,bbox,conf,cls,person_id,accumulator,im0,p):
         if cls == self.object_names_V_K.get('head', None): #only track the head 
