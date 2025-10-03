@@ -53,7 +53,9 @@ class AttentionDetection:
         min_distance = float("inf")
         object_of_index = None
         for index, objects in enumerate(other_objects_on_frame):
-            object_centroid = (int((objects[3]+objects[5])/2),int((objects[4]+objects[6])/2))
+            _,_,_,bbox, _ = objects
+            x1,y1,x2,y2 = bbox
+            object_centroid = (int((x1+x2)/2),int((y1+y2)/2))
             euclid_dist = distance.euclidean(object_centroid,gaze_point)
             if euclid_dist < min_distance:
                 min_distance =  euclid_dist
@@ -61,30 +63,39 @@ class AttentionDetection:
         
         return object_of_index
 
-    def track_person_level_of_attention(self,object_focused_on,person_id,frame_index):
+    def track_person_level_of_attention(self,object_focused_on,person_id, timestamp):
         if  object_focused_on in self.object_of_interest:
+            #increment the count if its within object of focus
             self.person_attention_focus_count[person_id] = self.person_attention_focus_count[person_id] +1
-            self.persons_attention_track[person_id].append([frame_index+1,self.person_attention_focus_count[person_id]])
+            self.persons_attention_track[person_id].append([timestamp,self.person_attention_focus_count[person_id]])
         else:
+            #decrement the count
             self.person_attention_focus_count[person_id] = self.person_attention_focus_count[person_id] - 1 if self.person_attention_focus_count[person_id] - 1 > 0 else 0
-            self.persons_attention_track[person_id].append([frame_index+1, self.person_attention_focus_count[person_id]])  
+            self.persons_attention_track[person_id].append([timestamp, self.person_attention_focus_count[person_id]])  
       
 
-    def track_person_freq_of_focus_on_object(self,person_id,object_focused_on):
+    def track_person_freq_of_focus_on_object(self,object_focused_on,person_id,timestamp):
         if  object_focused_on in  self.person_object_focus_track[person_id]:
-             self.person_object_focus_track[person_id][object_focused_on] =  self.person_object_focus_track[person_id][object_focused_on]+1
+             self.person_object_focus_track[person_id][object_focused_on].append([timestamp,self.person_object_focus_track[person_id][object_focused_on][1]+1])
         else:
-             self.person_object_focus_track[person_id][object_focused_on] = 0 
+             self.person_object_focus_track[person_id][object_focused_on] = [[timestamp,1]] 
 
-    def track_shared_attention_on_an_object(self,object_by_id_in_frame,person_id,frame_id):
-        if  frame_id in  self.object_by_id_in_frame_track:
-            if object_by_id_in_frame in  self.object_by_id_in_frame_track[frame_id]:
-                self.object_by_id_in_frame_track[frame_id][object_by_id_in_frame].append(person_id)
-            else:
-                self.object_by_id_in_frame_track[frame_id][object_by_id_in_frame]=[person_id] 
+    def track_shared_attention_on_an_object(self,object_by_id_in_frame,person_id,frame_id,timestamp):
+        if object_by_id_in_frame in  self.object_by_id_in_frame_track:
+            self.object_by_id_in_frame_track[object_by_id_in_frame]["persons"].append(person_id)
+            self.object_by_id_in_frame_track[object_by_id_in_frame]["timestamps"].append(timestamp)
         else:
-            self.object_by_id_in_frame_track[frame_id] = {}
-            self.object_by_id_in_frame_track[frame_id][object_by_id_in_frame] = [person_id]   
+            self.object_by_id_in_frame_track[object_by_id_in_frame]={"persons":[person_id], "timestamps":[timestamp]}
+
+
+        # if  frame_id in  self.object_by_id_in_frame_track:
+        #     if object_by_id_in_frame in  self.object_by_id_in_frame_track[frame_id]:
+        #         self.object_by_id_in_frame_track[frame_id][object_by_id_in_frame].append(person_id)
+        #     else:
+        #         self.object_by_id_in_frame_track[frame_id][object_by_id_in_frame]=[person_id] 
+        # else:
+        #     self.object_by_id_in_frame_track[frame_id] = {}
+        #     self.object_by_id_in_frame_track[frame_id][object_by_id_in_frame] = [person_id]   
 
     def attention_tracking(self,face_object_detected,frames):
         for person_id, person_detail in sorted(face_object_detected['head'].items()):
@@ -108,7 +119,7 @@ class AttentionDetection:
         
         
             with torch.no_grad():
-                for val_batch, (val_img, val_face, val_head_channel, headbox, imsize, frame_id,track_id) in enumerate(val_loader):
+                for val_batch, (val_img, val_face, val_head_channel, headbox, imsize, frame_id) in enumerate(val_loader):
                     
                     val_images = val_img.cuda().to(self.device)
                     val_head = val_head_channel.cuda().to(self.device)
@@ -139,19 +150,21 @@ class AttentionDetection:
                             # get all other objects in the frame
                             other_objects = face_object_detected['other_objects'][int(frame_id[j])]
                             #find the closest object of focus
-                            object_index = self.find_closest_object_of_focus((int(norm_p[0]*width), int(norm_p[1]*height)), other_objects)
-                            
-                            #if head gaze is focused on itself reduce the focus
-                            if(int(person_id) == int(other_objects[object_index][2])):
-                                self.track_person_level_of_attention(-1,person_id,int(frame_id[j]))        
-                                self.track_person_freq_of_focus_on_object(person_id,-1)
-                                self.track_shared_attention_on_an_object(-1,person_id,int(frame_id[j]))
+                            closest_object_index = self.find_closest_object_of_focus((int(norm_p[0]*width), int(norm_p[1]*height)), other_objects)
+                            if closest_object_index is not None:
+                                object_class_id,object_class_name,object_id,bbox, time_stamp = other_objects[closest_object_index]
+                                #if head gaze is focused on other object
+                                if(person_id != object_id):
+                                    self.track_person_level_of_attention(object_class_id,person_id,time_stamp)  
+                                    self.track_person_freq_of_focus_on_object(object_class_id,person_id,time_stamp)
+                                    self.track_shared_attention_on_an_object(object_id,person_id,int(frame_id[j]),time_stamp)
                             else:
-                                self.track_person_level_of_attention(other_objects[object_index][0],person_id,int(frame_id[j]))  
-                                self.track_person_freq_of_focus_on_object(person_id,other_objects[object_index][0])
-                                self.track_shared_attention_on_an_object(other_objects[object_index][2],person_id,int(frame_id[j]))
+                                #the gaze is not focused on any object detected 
+                                self.track_person_level_of_attention(-1,person_id,time_stamp)        
+                                # self.track_person_freq_of_focus_on_object(-1,person_id,time_stamp)
+                                # self.track_shared_attention_on_an_object(-1,person_id,int(frame_id[j]),time_stamp)       
                         else: #out of frame gaze
-                            self.track_person_level_of_attention(-1,person_id,int(frame_id[j]))        
-                            self.track_person_freq_of_focus_on_object(person_id,-1)
-                            self.track_shared_attention_on_an_object(-1,person_id,int(frame_id[j]))
+                            self.track_person_level_of_attention(-1,person_id,time_stamp)        
+                            # self.track_person_freq_of_focus_on_object(-1,person_id,time_stamp)
+                            # self.track_shared_attention_on_an_object(-1,person_id,int(frame_id[j]),time_stamp)
                             

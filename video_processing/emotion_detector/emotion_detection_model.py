@@ -87,14 +87,19 @@ class EmotionDetectionModel:
 
     def predict_facial_emotion_for_all_participants(self, frames, faces,crop_face_from_fame_with_bbox):
          for alias, person_detail in faces:
-            frame_index,alias,bbox,time_stamp  = person_detail
-            try:
-                face = crop_face_from_fame_with_bbox(frames[frame_index],bbox,"xyxy", False, 0.0, False) 
-                landmarks_object = self.get_facial_shape(face,bbox)
-                dict_emotions = self.emotion_estimator.get_emotions( landmarks_object )
-                emotion_name = dict_emotions['emotions']['name'] 
-            except Exception as e:
-                logging.info('exception occured while predicting facial emotion for {0} in frame {1} : {2}'.format(alias,frame_index,e))
+            for face_detail_by_frame in person_detail:
+                frame_index,alias,bbox,time_stamp  = face_detail_by_frame 
+                try:
+                    face = crop_face_from_fame_with_bbox(frames[frame_index],bbox,"xyxy", False, 0.0, False) 
+                    landmarks_object = self.get_facial_shape(face,bbox)
+                    dict_emotions = self.emotion_estimator.get_emotions( landmarks_object )
+                    emotion_name = dict_emotions['emotions']['name'] 
+                    if alias in self.persons_emotions_detected:
+                        self.persons_emotions_detected[alias].append([time_stamp,emotion_name])
+                    else:
+                        self.persons_emotions_detected[alias] = [[time_stamp,emotion_name]]
+                except Exception as e:
+                    logging.info('exception occured while predicting facial emotion for {0} in frame {1} : {2}'.format(alias,frame_index,e))
             # return emotion_name      
     
     def predict_facial_emotion(self,landmarks_object):

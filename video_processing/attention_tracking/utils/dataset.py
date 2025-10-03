@@ -26,9 +26,9 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 class AttentionFlow(Dataset):
-    def __init__(self, frames, head_bboxes, transform, input_size=224, output_size=64):        
-        self.head_bboxes = head_bboxes
-        self.length = len(head_bboxes)
+    def __init__(self, frames, person_details_by_frames, transform, input_size=224, output_size=64):        
+        self.person_details = person_details_by_frames
+        self.length = len(person_details_by_frames)
     
         
         self.frames = frames
@@ -38,14 +38,12 @@ class AttentionFlow(Dataset):
         self.output_size = output_size
   
     def __getitem__(self, index):
-        face = self.head_bboxes[index]
-        img = Image.fromarray(np.uint8(self.frames[int(face[0])]))#.detach().clone().numpy()
-        frame_name = face[0]
-        person_id = face[1]
-        x_min = face[2]
-        y_min = face[3]
-        x_max = face[4]
-        y_max = face[5]
+        frame_index,alias,bbox,time_stamp = self.person_details[index]
+        img = Image.fromarray(np.uint8(self.frames[int(frame_index)]))#.detach().clone().numpy()
+        x_min = bbox[0]
+        y_min = bbox[1]
+        x_max = bbox[2]
+        y_max = bbox[3]
         headbox = torch.IntTensor([x_min,y_min,x_max,y_max])
         # expand face bbox a bit
         k = 0.1
@@ -72,7 +70,7 @@ class AttentionFlow(Dataset):
             img = self.transform(img)
             face = self.transform(face)
 
-        return img, face, head_channel,headbox, imsize, frame_name, person_id
+        return img, face, head_channel,headbox, imsize, frame_index
         
 
     def __len__(self):
