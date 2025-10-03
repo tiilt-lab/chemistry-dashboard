@@ -32,11 +32,11 @@ class AttentionDetection:
         self.model.train(False)
         self.transform = self._get_transform()
 
-    def set_persistent_variables(self,object_of_interest,persons_attention_track,person_object_focus_track,object_by_id_in_frame_track,object_by_class_track,person_attention_focus_count):
+    def set_persistent_variables(self,object_of_interest,persons_attention_track,person_object_focus_track,shared_attention_track,object_by_class_track,person_attention_focus_count):
         self.object_of_interest = object_of_interest
         self.persons_attention_track = persons_attention_track
         self.person_object_focus_track = person_object_focus_track
-        self.object_by_id_in_frame_track = object_by_id_in_frame_track
+        self.shared_attention_track = shared_attention_track
         self.object_by_class_track = object_by_class_track
         self.person_attention_focus_count = person_attention_focus_count
 
@@ -76,26 +76,28 @@ class AttentionDetection:
 
     def track_person_freq_of_focus_on_object(self,object_focused_on,person_id,timestamp):
         if  object_focused_on in  self.person_object_focus_track[person_id]:
-             self.person_object_focus_track[person_id][object_focused_on].append([timestamp,self.person_object_focus_track[person_id][object_focused_on][1]+1])
+            last_index =  len(self.person_object_focus_track[person_id][object_focused_on])-1
+            new_count = self.person_object_focus_track[person_id][object_focused_on][last_index][1] +1
+            self.person_object_focus_track[person_id][object_focused_on].append([timestamp,new_count])
         else:
              self.person_object_focus_track[person_id][object_focused_on] = [[timestamp,1]] 
 
     def track_shared_attention_on_an_object(self,object_by_id_in_frame,person_id,frame_id,timestamp):
-        if object_by_id_in_frame in  self.object_by_id_in_frame_track:
-            self.object_by_id_in_frame_track[object_by_id_in_frame]["persons"].append(person_id)
-            self.object_by_id_in_frame_track[object_by_id_in_frame]["timestamps"].append(timestamp)
+        if object_by_id_in_frame in  self.shared_attention_track:
+            self.shared_attention_track[object_by_id_in_frame]["persons"].append(person_id)
+            self.shared_attention_track[object_by_id_in_frame]["timestamps"].append(timestamp)
         else:
-            self.object_by_id_in_frame_track[object_by_id_in_frame]={"persons":[person_id], "timestamps":[timestamp]}
+            self.shared_attention_track[object_by_id_in_frame]={"persons":[person_id], "timestamps":[timestamp]}
 
 
-        # if  frame_id in  self.object_by_id_in_frame_track:
-        #     if object_by_id_in_frame in  self.object_by_id_in_frame_track[frame_id]:
-        #         self.object_by_id_in_frame_track[frame_id][object_by_id_in_frame].append(person_id)
+        # if  frame_id in  self.shared_attention_track:
+        #     if object_by_id_in_frame in  self.shared_attention_track[frame_id]:
+        #         self.shared_attention_track[frame_id][object_by_id_in_frame].append(person_id)
         #     else:
-        #         self.object_by_id_in_frame_track[frame_id][object_by_id_in_frame]=[person_id] 
+        #         self.shared_attention_track[frame_id][object_by_id_in_frame]=[person_id] 
         # else:
-        #     self.object_by_id_in_frame_track[frame_id] = {}
-        #     self.object_by_id_in_frame_track[frame_id][object_by_id_in_frame] = [person_id]   
+        #     self.shared_attention_track[frame_id] = {}
+        #     self.shared_attention_track[frame_id][object_by_id_in_frame] = [person_id]   
 
     def attention_tracking(self,face_object_detected,frames):
         for person_id, person_detail in sorted(face_object_detected['head'].items()):

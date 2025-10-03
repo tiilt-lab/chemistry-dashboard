@@ -40,10 +40,11 @@ class AttentionFlow(Dataset):
     def __getitem__(self, index):
         frame_index,alias,bbox,time_stamp = self.person_details[index]
         img = Image.fromarray(np.uint8(self.frames[int(frame_index)]))#.detach().clone().numpy()
-        x_min = bbox[0]
-        y_min = bbox[1]
-        x_max = bbox[2]
-        y_max = bbox[3]
+        x1,y1,x2,y2 = bbox
+        x_min = int(x1)
+        y_min = int(y1)
+        x_max = int(x2)
+        y_max = int(y2)
         headbox = torch.IntTensor([x_min,y_min,x_max,y_max])
         # expand face bbox a bit
         k = 0.1
