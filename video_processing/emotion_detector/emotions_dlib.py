@@ -52,12 +52,41 @@ class EmotionsDlib():
             jawline, are excluded, resulting in a feature dimensionality of
             1275.
         '''
-            
+        try:
+            import scipy.linalg as _sla
+        except ImportError:
+            _sla = None
+
+        def _compat_pinv(a, cond=None, rcond=None, return_rank=False, check_finite=True):
+            """
+            Replacement for deprecated scipy.linalg.pinv2.
+            Uses numpy.linalg.pinv under the hood.
+            """
+            if rcond is None and cond is not None:
+                rcond = cond
+            pinv = np.linalg.pinv(a, rcond=rcond)
+
+            if return_rank:
+                s = np.linalg.svd(a, full_matrices=False, compute_uv=False)
+                rank = int(np.sum(s > (s.max() * (rcond if rcond is not None else 1e-15))))
+                return pinv, rank
+
+            return pinv
+
+        if _sla is not None:
+            if not hasattr(_sla, "pinv2"):
+                _sla.pinv2 = _compat_pinv   # Monkey-patch back
+            if not hasattr(_sla, "pinv"):   # Optional
+                _sla.pinv = _compat_pinv
+        # ---- end shim ----
+#     
         model = None
         self.full_features = True  # default feature size
         # loading pickled emotion model
         try:
             model = load(file_emotion_model)
+            # Patch missing attributes if they exist in the new API
+            self.patch_pls_recursive(model)
             print('Emotion model loaded successfully.')
         except Exception as e: 
             print('Problem loading emotion model! {0}'.format(e))
@@ -76,8 +105,41 @@ class EmotionsDlib():
         self.frontalizer = LandmarkFrontalizationDlib(
             file_frontalization_model=file_frontalization_model
             )
-        
-        
+
+    def _patch_single_pls(self,m):
+        def alias(dst, srcs):
+            for s in srcs:
+                if hasattr(m, s):
+                    m.__dict__[dst] = getattr(m, s)
+                    return
+        alias('_x_mean', ('x_mean_', 'x_mean'))
+        alias('_y_mean', ('y_mean_', 'y_mean'))
+        alias('_x_std',  ('x_std_',  'x_std'))
+        alias('_y_std',  ('y_std_',  'y_std'))
+
+    def patch_pls_recursive(self,obj, seen=None):
+        from sklearn.cross_decomposition import PLSRegression
+        from sklearn.base import BaseEstimator
+        if seen is None: seen = set()
+        if id(obj) in seen: return
+        seen.add(id(obj))
+
+        if isinstance(obj, PLSRegression):
+            self._patch_single_pls(obj); return
+
+        # Walk common sklearn containers/estimator params
+        if isinstance(obj, BaseEstimator):
+            try:
+                for _, v in obj.get_params(deep=False).items():
+                    if v is not obj:
+                        self.patch_pls_recursive(v, seen)
+            except Exception:
+                pass
+        if isinstance(obj, dict):
+            for v in obj.values(): self.patch_pls_recursive(v, seen)
+        elif isinstance(obj, (list, tuple, set)):
+            for v in obj: self.patch_pls_recursive(v, seen)
+
         
     def get_emotions(self, landmarks_object):
         # Estimates dimensional emotions given a set of DLIB facial landmarks

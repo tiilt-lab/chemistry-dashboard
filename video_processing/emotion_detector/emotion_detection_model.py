@@ -37,14 +37,14 @@ class EmotionDetectionModelV1:
         
         self.model.load_state_dict(self.state["net"])
         self.model.eval()
+        print('Emotion model loaded successfully.')
 
-    def predict_facial_emotion(self,image,x, y, w, h):
+    def predict_facial_emotion(self,image,bbox, bbox_type):
         try:
+            face = None
             gray = ensure_gray(image)
-            # cv2.rectangle(image, (x, y), (x + w, y + h), (179, 255, 179), 2)
-            face = gray[y : y + h, x : x + w]
+            face = gray
             face = ensure_color(face)
-
             face = cv2.resize(face, self.image_size)
             face = self.transform(face).cuda()
             face = torch.unsqueeze(face, dim=0)
@@ -57,9 +57,29 @@ class EmotionDetectionModelV1:
             emo_proba = emo_proba.item()
 
             emo_label = self.FER_2013_EMO_DICT[emo_idx]
+            return emo_label  
         except Exception as e:
-            logging.info('exception occured while predicting facial emotion: {0}'.format(e))
-        return emo_label  
+            logging.info('EmotionDetectionModelV1: exception occured while predicting facial emotion: {0}'.format(e))
+       
+    
+    def set_persistent_variables(self,persons_emotions_detected):
+        self.persons_emotions_detected = persons_emotions_detected
+
+    def predict_facial_emotion_for_all_participants(self, frames, faces,crop_face_from_fame_with_bbox):
+         for alias, person_detail in faces:
+            for face_detail_by_frame in person_detail:
+                frame_index,alias,bbox,time_stamp  = face_detail_by_frame 
+                try:
+                    face = crop_face_from_fame_with_bbox(frames[frame_index],bbox,"xyxy", False, 0.0, False) 
+                    
+                    emotion_name = self.predict_facial_emotion(face,bbox, "xyxy")
+                    if alias in self.persons_emotions_detected:
+                        self.persons_emotions_detected[alias].append([time_stamp,emotion_name])
+                    else:
+                        self.persons_emotions_detected[alias] = [[time_stamp,emotion_name]]
+                except Exception as e:
+                    logging.info('EmotionDetectionModelV1: exception occured while predicting facial emotion for {0} in frame {1} : {2}'.format(alias,frame_index,e))
+
 
 class EmotionDetectionModel:
     def __init__(self):
