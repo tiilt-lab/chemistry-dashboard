@@ -198,7 +198,8 @@ class ImageObjectDetection:
                             if match != "Unknown":
                             #    print(f"Match: {match}, Confidence: {score:.3f}")
                                self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_face",match,accumulator,time_marker,im0,int(p)) 
-
+                        else:
+                          pass #print("Other object dtected is: ",self.object_names_K_V.get(int_cls, None))
                     #use this for tracking other objects asides face
                     result = Results(orig_img=im0, path=str(int(p)), names=self.object_names_K_V, boxes=det)
                     # Tracking Mechanism
@@ -212,7 +213,9 @@ class ImageObjectDetection:
                         confs = frame_detection[2]
                         clss = frame_detection[3]
                         object_id = frame_detection[4]
+                        
                         if int(clss) != self.object_names_V_K.get('person', None) and int(clss) != self.object_names_V_K.get('head', None):
+                            # print("Other object detected is: ",self.object_names_K_V.get(int(clss), None))
                             #accumulate all other objects except person  
                             self.accumulate_head_and_otherobject_track_V2(bbox,int(clss),"detected_other_objects",str(object_id),accumulator,time_marker,im0,int(p))    
                                
@@ -270,6 +273,7 @@ class ImageObjectDetection:
                 accumulator['other_objects'][frame_index].append([object_class_id,self.object_names_K_V[object_class_id],object_track_id,bbox, time_stamp])
             else:
                 accumulator['other_objects'][frame_index] = [[object_class_id,self.object_names_K_V[object_class_id],object_track_id,bbox, time_stamp]]  
+            # print("object detected is: ",self.object_names_K_V[object_class_id])    
 
     def accumulate_head_and_otherobject_track(self,bbox,conf,cls,person_id,accumulator,im0,p):
         if cls == self.object_names_V_K.get('head', None): #only track the head 

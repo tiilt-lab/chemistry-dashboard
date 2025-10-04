@@ -49,11 +49,15 @@ class AttentionDetection:
         return transforms.Compose(transform_list)           
     
 
-    def find_closest_object_of_focus(self,gaze_point, other_objects_on_frame):
+    def find_closest_object_of_focus(self,gaze_point,person_id, other_objects_on_frame):
         min_distance = float("inf")
         object_of_index = None
         for index, objects in enumerate(other_objects_on_frame):
-            _,_,_,bbox, _ = objects
+            _,_,object_id,bbox, _ = objects
+
+            #if the other object is same same as the person, skipp
+            if person_id == object_id:
+                continue
             x1,y1,x2,y2 = bbox
             object_centroid = (int((x1+x2)/2),int((y1+y2)/2))
             euclid_dist = distance.euclidean(object_centroid,gaze_point)
@@ -67,10 +71,12 @@ class AttentionDetection:
         if  object_focused_on in self.object_of_interest:
             #increment the count if its within object of focus
             self.person_attention_focus_count[person_id] = self.person_attention_focus_count[person_id] +1
+            print("checking inrement ... ",timestamp, self.person_attention_focus_count[person_id])
             self.persons_attention_track[person_id].append([timestamp,self.person_attention_focus_count[person_id]])
         else:
             #decrement the count
             self.person_attention_focus_count[person_id] = self.person_attention_focus_count[person_id] - 1 if self.person_attention_focus_count[person_id] - 1 > 0 else 0
+            print("checking decrement ... ",timestamp, self.person_attention_focus_count[person_id])
             self.persons_attention_track[person_id].append([timestamp, self.person_attention_focus_count[person_id]])  
       
 
@@ -144,7 +150,6 @@ class AttentionDetection:
                 
                         frame_raw = frames[int(frame_id[j])]#.detach().clone().numpy()
                         
-                        
                         if inout < self.out_threshold: # in-frame gaze
                             pred_x, pred_y = argmax_pts(raw_hm)
                             norm_p = [pred_x/self.output_resolution, pred_y/self.output_resolution]
@@ -152,20 +157,23 @@ class AttentionDetection:
                             # get all other objects in the frame
                             other_objects = face_object_detected['other_objects'][int(frame_id[j])]
                             #find the closest object of focus
-                            closest_object_index = self.find_closest_object_of_focus((int(norm_p[0]*width), int(norm_p[1]*height)), other_objects)
+                            closest_object_index = self.find_closest_object_of_focus((int(norm_p[0]*width), int(norm_p[1]*height)), person_id,other_objects)
                             if closest_object_index is not None:
                                 object_class_id,object_class_name,object_id,bbox, time_stamp = other_objects[closest_object_index]
                                 #if head gaze is focused on other object
+                                print("person_id != object_id: ",person_id, object_id)
                                 if(person_id != object_id):
                                     self.track_person_level_of_attention(object_class_id,person_id,time_stamp)  
                                     self.track_person_freq_of_focus_on_object(object_class_id,person_id,time_stamp)
                                     self.track_shared_attention_on_an_object(object_id,person_id,int(frame_id[j]),time_stamp)
                             else:
+                                print("no closer object: ")
                                 #the gaze is not focused on any object detected 
                                 self.track_person_level_of_attention(-1,person_id,time_stamp)        
                                 # self.track_person_freq_of_focus_on_object(-1,person_id,time_stamp)
                                 # self.track_shared_attention_on_an_object(-1,person_id,int(frame_id[j]),time_stamp)       
                         else: #out of frame gaze
+                            print("no gaze detected ")
                             self.track_person_level_of_attention(-1,person_id,time_stamp)        
                             # self.track_person_freq_of_focus_on_object(-1,person_id,time_stamp)
                             # self.track_shared_attention_on_an_object(-1,person_id,int(frame_id[j]),time_stamp)

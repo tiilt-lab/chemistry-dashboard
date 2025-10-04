@@ -23,13 +23,14 @@ from twisted.internet import reactor, task
 from autobahn.twisted.websocket import WebSocketServerFactory
 from autobahn.twisted.websocket import WebSocketServerProtocol
 from video_cartoonizer.video_cartoonify_loader import VideoCartoonifyLoader
-from emotion_detector.emotion_detection_model import EmotionDetectionModel
+from emotion_detector.emotion_detection_model import EmotionDetectionModel, EmotionDetectionModelV1
 from attention_tracking.detect import ImageObjectDetection
 from attention_tracking.attention_tracking import AttentionDetection
 
 cm = ConnectionManager()
 cartoon_model = VideoCartoonifyLoader()
 facial_emotion_detector = EmotionDetectionModel()
+facial_emotion_detector_V1 = EmotionDetectionModelV1()
 image_object_detection = ImageObjectDetection()
 attention_detection = AttentionDetection()
 
@@ -41,7 +42,7 @@ class ServerProtocol(WebSocketServerProtocol):
         self.running = False
         self.processor = None
         self.cartoon_model = cartoon_model
-        self.facial_emotion_detector = facial_emotion_detector
+        self.facial_emotion_detector = facial_emotion_detector_V1 #facial_emotion_detector
         self.image_object_detection = image_object_detection
         self.attention_detection = attention_detection
         self.video_processor = None
@@ -300,7 +301,8 @@ if __name__ == '__main__':
     if cf.process_video_analytics():
         image_object_detection.init_model(cartoon_model.batch_size)
         attention_detection.init_model(cartoon_model.batch_size)
-        facial_emotion_detector.load_model(cartoon_model.batch_size, cartoon_model.landmarkpredictor)    
+        # facial_emotion_detector.load_model(cartoon_model.batch_size, cartoon_model.landmarkpredictor)  
+        facial_emotion_detector_V1.load_model()  
 
     # Run Server
     logging.info('Starting video Processing Service...')
