@@ -73,13 +73,15 @@ class GoogleASR():
             if not result.alternatives:
                 continue
             if result.is_final and len(result.alternatives[0].words) > 0:
-                end_time = result.result_end_time
-                end_time.seconds, end_time.nanos = self.adjust_time(end_time.seconds, end_time.nanos, audio_start_time)
-                for word in result.alternatives[0].words:
-                    start = word.start_time
-                    end = word.end_time
-                    start.seconds, start.nanos = self.adjust_time(start.seconds, start.nanos, audio_start_time)
-                    end.seconds, end.nanos = self.adjust_time(end.seconds, end.nanos, audio_start_time)
+                # are these tme calculations really needed? does not appear to be used anywhere
+                # end_time = result.result_end_time
+                # end_time.seconds, end_time.nanos = self.adjust_time(end_time.seconds, end_time.nanos, audio_start_time)
+                # are these tme calculations really needed? does not appear to be used anywhere
+                # for word in result.alternatives[0].words:
+                #     start = word.start_time
+                #     end = word.end_time
+                #     start.seconds, start.nanos = self.adjust_time(start.seconds, start.nanos, audio_start_time)
+                #     end.seconds, end.nanos = self.adjust_time(end.seconds, end.nanos, audio_start_time)
                 self.transcript_queue.put(result)
 
     def process_wav_responses(self, response, audio_start_time):
@@ -88,11 +90,12 @@ class GoogleASR():
                 return
             
             if  len(result.alternatives[0].words) > 0:
-                for word in result.alternatives[0].words:
-                    start = word.start_time
-                    end = word.end_time
-                    start.seconds, start.nanos = self.adjust_time(start.seconds, start.nanos, audio_start_time)
-                    end.seconds, end.nanos = self.adjust_time(end.seconds, end.nanos, audio_start_time)
+                # for word in result.alternatives[0].words:
+                    # are these tme calculations really needed? does not appear to be used anywhere
+                    # start = word.start_time
+                    # end = word.end_time
+                    # start.seconds, start.nanos = self.adjust_time(start.seconds, start.nanos, audio_start_time)
+                    # end.seconds, end.nanos = self.adjust_time(end.seconds, end.nanos, audio_start_time)
                 self.transcript_queue.put(result)
 
     def adjust_time(self, seconds, nanos, offset):
