@@ -324,7 +324,7 @@ class VideoProcessor:
                                 logging.info('inside process_video_analytics')
                                 all_frames,face_object_detected = self.image_object_detection.detection_with_facial_regonition(frames_batch_copy,self.facialEmbeddings,self.batch_track,self.time_marker,self.vid_img_dir)
                                 self.attention_detection.attention_tracking(face_object_detected,all_frames)
-                                # self.facial_emotion_detector.predict_facial_emotion_for_all_participants(all_frames,face_object_detected['head'].items(),self.image_object_detection.crop_face_from_fame_with_bbox)
+                                self.facial_emotion_detector.predict_facial_emotion_for_all_participants(all_frames,face_object_detected['head'].items(),self.image_object_detection.crop_face_from_fame_with_bbox)
                                 # face_lm = get_facial_shape(resized_img,self.cartoon_model.landmarkpredictor)
                                 logging.info('printing output of attentions')
                                 logging.info(self.persons_attention_track)
