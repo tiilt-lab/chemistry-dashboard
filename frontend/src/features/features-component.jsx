@@ -1,73 +1,38 @@
-import { useEffect, useState } from 'react';
-import {FeaturePage} from './html-pages'
+import { useEffect, useMemo, useState } from "react";
+import { FeaturePage } from "./html-pages";
 
 function AppFeaturesComponent(props) {
-  // @Input('session') session: SessionModel;
-  
-  // @Input('transcripts')
-  // set setTranscripts(value: any) {
-  //   this._transcripts = value;
-  //   this.updateGraphs();
-  // }
+  // Check if we're in multi-session Group mode
+  const isMultiMode = props.mode === 'Group' && 
+                      Array.isArray(props.multiSeries) && 
+                      props.multiSeries.length > 0;
+
+  // === ORIGINAL LOGIC FOR INDIVIDUAL/COMPARISON MODES ===
   const svgWidth = 74;
   const svgHeight = 39;
-  //const [_transcripts, setTranscript] = useState([]);
-  const [features, setFeatures] = useState([]);
+  const [singleFeatures, setSingleFeatures] = useState([]);
   const [featureDescription, setFeatureDescription] = useState(null);
   const [featureHeader, setFeatureHeader] = useState(null);
   const [showFeatureDialog, setShowFeatureDialog] = useState(false);
-  const [trigger, setTrigger] = useState(0);
 
-  useEffect(()=>{
-    updateGraphs()
-  },[props.transcripts])
-  
-  
-  useEffect(()=>{
-    if (trigger > 0) {
-      console.log("reloaded page");
-    }
-  },[trigger])
-  
-  const updateGraphs = ()=> {
-    //////attempt to change this into d3 radar chart before making a folder for this
-    //general format of my data (time-independent)
-    /*let radfeatures = [];
-    let raddata = props.transcripts;
-    let analytical_sum = 0;
-    let authenticity_sum = 0;
-    let certainty_sum = 0;
-    let clout_sum = 0;
-    let emotional_sum = 0;
-    for (const i in raddata) {
-      analytical_sum += parseInt(raddata[i].analytic_thinking_value);
-      authenticity_sum += parseInt(raddata[i].authenticity_value);
-      certainty_sum += parseInt(raddata[i].certainty_value);
-      clout_sum += parseInt(raddata[i].clout_value);
-      emotional_sum += parseInt(raddata[i].emotional_tone_value);
-    }
-    let total_sum = analytical_sum+authenticity_sum+
-    certainty_sum+clout_sum+emotional_sum;
-    radfeatures.push({"axis": "Analytical", "value": Math.round(100*analytical_sum/total_sum)/100});
-    radfeatures.push({"axis": "Authenticity", "value": Math.round(100*authenticity_sum/total_sum)/100});
-    radfeatures.push({"axis": "Certainty", "value": Math.round(100*certainty_sum/total_sum)/100});
-    radfeatures.push({"axis": "Clout", "value": Math.round(100*clout_sum/total_sum)/100});
-    radfeatures.push({"axis": "Emotional", "value": Math.round(100*emotional_sum/total_sum)/100});
-    //console.log([radfeatures]);*/
+  // Original updateGraphs for single-transcript mode
+  const updateGraphs = () => {
+    const valueArrays = [
+      { name: 'Emotional tone', values: [] },
+      { name: 'Analytic thinking', values: [] },
+      { name: 'Clout', values: [] },
+      { name: 'Authenticity', values: [] },
+      { name: 'Confusion', values: [] }
+    ];
     
-    // Create feature array.
-    const valueArrays = [{ 'name': 'Emotional tone', 'values': [] },
-                        { 'name': 'Analytic thinking', 'values': [] },
-                        { 'name': 'Clout', 'values': [] },
-                        { 'name': 'Authenticity', 'values': [] },
-                        { 'name': 'Confusion', 'values': [] }];
-      props.transcripts.map(t => {
+    props.transcripts.map(t => {
       valueArrays[0].values.push(t.emotional_tone_value);
       valueArrays[1].values.push(t.analytic_thinking_value);
       valueArrays[2].values.push(t.clout_value);
       valueArrays[3].values.push(t.authenticity_value);
       valueArrays[4].values.push(t.certainty_value);
     });
+    
     for (const valueArray of valueArrays) {
       const length = valueArray.values.length;
       const average = valueArray.values.reduce((sum, current) => sum + current, 0) / ((length > 0) ? length : 1);
@@ -85,51 +50,129 @@ function AppFeaturesComponent(props) {
       valueArray['trend'] = trend;
       valueArray['path'] = path;
     }
-    setFeatures(valueArrays);
-  }
+    setSingleFeatures(valueArrays);
+  };
 
-  const getInfo = (featureName) =>{
-    switch (featureName) {
-      case 'Emotional tone': {
-        setFeatureDescription('Scores above 50 indicate a positive emotional tone. Scores below 50 indicate a negative emotional tone.');
-      }
-      break;
-      case 'Analytic thinking': {
-        setFeatureDescription('Scores above 50 indicate analytic thinking. Scores below 50 indicate narrative thinking.');
-      }
-      break;
-      case 'Clout': {
-        setFeatureDescription('Scores above 50 indicate higher levels of confidence or leadership.');
-      }
-      break;
-      case 'Authenticity': {
-        setFeatureDescription('Scores above 50 indicate higher levels of honesty or authentic communication.');
-      }
-      break;
-      case 'Confusion': {
-        setFeatureDescription('Scores above 50 indicate higher levels of confusion in a speaker’s communication.');
-      }
-      break;
+  useEffect(() => {
+    if (!isMultiMode) {
+      updateGraphs();
     }
-    setFeatureHeader(featureName);
+  }, [props.transcripts, isMultiMode]);
+
+  // === NEW MULTI-SESSION LOGIC FOR GROUP MODE ===
+  const spec = useMemo(
+    () => [
+      { name: "Emotional tone", key: "emotional_tone_value" },
+      { name: "Analytic thinking", key: "analytic_thinking_value" },
+      { name: "Clout", key: "clout_value" },
+      { name: "Authenticity", key: "authenticity_value" },
+      { name: "Confusion", key: "certainty_value" },
+    ],
+    []
+  );
+
+  // Normalize to devices array (only for multi-mode)
+  const devices = useMemo(() => {
+    if (!isMultiMode) return [];
+    
+    const src = props.multiSeries;
+    if (src && src.length) {
+      return src.map((d) => ({
+        id: String(d.id),
+        label: d.label ?? String(d.id),
+        transcripts: Array.isArray(d.transcripts) ? d.transcripts : [],
+      }));
+    }
+
+    // fallback: single-session from transcripts
+    const t = Array.isArray(props.transcripts) ? props.transcripts : [];
+    return [{ id: "current", label: "Current session", transcripts: t }];
+  }, [props.multiSeries, props.transcripts, isMultiMode]);
+
+  // Compute features with per-device series (only for multi-mode)
+  const multiFeatures = useMemo(() => {
+    if (!isMultiMode) return [];
+    
+    const W = 120, H = 36;
+
+    const pathFrom = (values) => {
+      const n = values.length;
+      if (!n) return "";
+      const x = (i) => (n === 1 ? W : i * (W / (n - 1)));
+      const y = (v) => H - Math.max(0, Math.min(100, Number(v) || 0)) * (H / 100);
+      let d = `M ${x(0)} ${y(values[0])}`;
+      for (let i = 1; i < n; i++) d += ` L ${x(i)} ${y(values[i])}`;
+      return d;
+    };
+
+    const summarize = (arr) => {
+      const n = arr.length || 1;
+      const sum = arr.reduce((a, v) => a + (Number.isFinite(v) ? v : 0), 0);
+      const avg = sum / n;
+      const last = arr.length ? arr[arr.length - 1] : 0;
+      const trend = last > avg ? 1 : last < avg ? -1 : 0;
+      return { average: avg, last, trend };
+    };
+
+    return spec.map(({ name, key }) => {
+      const series = devices.map((dev) => {
+        const values = dev.transcripts.map((t) => Number(t?.[key] ?? 0));
+        const { average, last, trend } = summarize(values);
+        return {
+          deviceId: dev.id,
+          deviceLabel: dev.label,
+          values,
+          average,
+          last,
+          trend,
+          path: pathFrom(values),
+        };
+      });
+
+      // If only one device in series, still maintain series structure for consistent UI
+      return { name, series };
+    });
+  }, [devices, spec, isMultiMode]);
+
+  // Info dialog handlers
+  const getInfo = (name) => {
+    const map = {
+      "Emotional tone": "Scores above 50 indicate positive tone; below 50 negative.",
+      "Analytic thinking": "Scores above 50 indicate analytic thinking; below 50 narrative.",
+      Clout: "Higher scores suggest confidence/leadership.",
+      Authenticity: "Higher scores suggest more honesty/authenticity.",
+      Confusion: "Your pipeline labels this 'certainty'. Higher = more certain.",
+    };
+    setFeatureDescription(map[name] || null);
+    setFeatureHeader(name);
     setShowFeatureDialog(true);
-  }
+  };
+  
+  const closeDialog = () => setShowFeatureDialog(false);
 
-  const closeDialog = ()=> {
-    setShowFeatureDialog(false);
-  }
+  // Choose features based on mode
+  const features = isMultiMode ? multiFeatures : singleFeatures;
+  const optionList = isMultiMode ? props.deviceOptions : undefined;
+  const selectedIds = isMultiMode ? props.selectedDeviceIds : undefined;
+  const selectionHandler = isMultiMode ? props.onDeviceSelectionChange : undefined;
 
-  return(
+  return (
     <FeaturePage
-    featureHeader = {featureHeader}
-    featureDescription = {featureDescription}
-    closeDialog = {closeDialog}
-    showFeatureDialog = {showFeatureDialog}
-    features = {features}
-    getInfo = {getInfo}
-    showFeatures = {props.showFeatures}
+      features={features}
+      showFeatures={props.showFeatures}
+      deviceOptions={optionList}
+      selectedDeviceIds={selectedIds}
+      onDeviceSelectionChange={selectionHandler}
+      currentSessionDeviceId={props.currentSessionDeviceId}
+      featureHeader={featureHeader}
+      featureDescription={featureDescription}
+      showFeatureDialog={showFeatureDialog}
+      closeDialog={closeDialog}
+      isMulti={isMultiMode}
+      getInfo={getInfo}
+      mode={props.mode}
     />
-  )
+  );
 }
 
-export {AppFeaturesComponent}
+export { AppFeaturesComponent };
