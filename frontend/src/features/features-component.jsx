@@ -56,18 +56,26 @@ function AppFeaturesComponent(props) {
     //console.log([radfeatures]);*/
     
     // Create feature array.
-    const valueArrays = [{ 'name': 'Emotional tone', 'values': [] },
-                        { 'name': 'Analytic thinking', 'values': [] },
-                        { 'name': 'Clout', 'values': [] },
-                        { 'name': 'Authenticity', 'values': [] },
-                        { 'name': 'Confusion', 'values': [] }];
+    const valueArrays = [{ 'name': 'Emotional tone', 'values': [],'time':[] },
+                        { 'name': 'Analytic thinking', 'values': [],'time':[] },
+                        { 'name': 'Clout', 'values': [],'time':[] },
+                        { 'name': 'Authenticity', 'values': [],'time':[] },
+                        { 'name': 'Confusion', 'values': [],'time':[] }];
       props.transcripts.map(t => {
       valueArrays[0].values.push(t.emotional_tone_value);
       valueArrays[1].values.push(t.analytic_thinking_value);
       valueArrays[2].values.push(t.clout_value);
       valueArrays[3].values.push(t.authenticity_value);
       valueArrays[4].values.push(t.certainty_value);
+
+      valueArrays[0].time.push(t.start_time);
+      valueArrays[1].time.push(t.start_time);
+      valueArrays[2].time.push(t.start_time);
+      valueArrays[3].time.push(t.start_time);
+      valueArrays[4].time.push(t.start_time);
     });
+
+    // console.log("transcript data: ", valueArrays)
     for (const valueArray of valueArrays) {
       const length = valueArray.values.length;
       const average = valueArray.values.reduce((sum, current) => sum + current, 0) / ((length > 0) ? length : 1);
@@ -119,6 +127,25 @@ function AppFeaturesComponent(props) {
     setShowFeatureDialog(false);
   }
 
+  // const data = {
+  //   labels: xs,
+  //   datasets: [{
+  //     data: ys,
+  //     stepped: true,
+  //     borderWidth: 2,
+  //     pointRadius: 0,
+  //   }],
+  // };
+
+  // const options = {
+  //   responsive: true,
+  //   plugins: { legend: { display: false } },
+  //   scales: {
+  //     x: { title: { text: "Time (s)", display: true } },
+  //     y: { title: { text: "Emotion Code", display: true } },
+  //   },
+  // };
+  
   return(
     <FeaturePage
     featureHeader = {featureHeader}

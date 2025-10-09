@@ -17,7 +17,7 @@ import traceback
 
 class VideoProcessor:
     def __init__(self,cartoon_model,facial_emotion_detector,image_object_detection,attention_detection, \
-                video_queue,frame_queue,cartoon_image_queue,config,cf,vid_img_dir,video_filename,aud_filename,sample_rate,depth,channels):
+                video_queue,frame_queue,cartoon_image_queue,config,cf,vid_img_dir,video_filename,aud_filename,sample_rate,depth,channels,video_interval):
         
         self.config = config
         self.cf = cf
@@ -51,6 +51,8 @@ class VideoProcessor:
         self.time_marker = []
         self.web_socket_connection = None
         self.facialEmbeddings = None
+        self.video_interval = video_interval
+        self.video_chunk_count = -1
 
         self.object_of_interest = [1,63,67,68]
         self.persons_attention_track = {}
@@ -286,7 +288,10 @@ class VideoProcessor:
                 save_to = os.path.join(self.vid_img_dir, "{0}.{1}".format(i+1,'png'))
                 cv2.imwrite(save_to,cv2.resize(processed_frame, (width,height), interpolation = cv2.INTER_AREA))
 
-                  
+    def adjust_time(self,frame_sec_mark):
+        offset = self.config.start_offset
+        return round(offset+ (frame_sec_mark + (self.video_interval * self.video_chunk_count)))
+    
     def processing(self):
         logging.info('frame cartoonization thread started for {0}.'.format(self.config.auth_key))
         frame_processing_thread = None
@@ -295,6 +300,7 @@ class VideoProcessor:
                 subclip_frames = None if self.video_queue.empty() else self.video_queue.get(block=False)
             
                 if subclip_frames is not None:
+                    self.video_chunk_count+=1
                     subclib_frame_count = 0
                     for time_stamp, frame in subclip_frames:
                         subclib_frame_count =  subclib_frame_count + 1
@@ -306,7 +312,7 @@ class VideoProcessor:
                         # frame = cv2.resize(frame, (500,375),interpolation=cv2.INTER_AREA)
                         self.frame_array.append(frame)
                         self.frame_batch.append(frame)
-                        self.time_marker.append(time_stamp)
+                        self.time_marker.append(self.adjust_time(time_stamp))
                         if (len(self.frame_batch) == self.batch_size):
                             logging.info('total appended per batch {0}'.format(len(self.frame_batch)))
                             frames_batch_copy = copy.deepcopy(self.frame_batch)
