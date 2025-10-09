@@ -77,6 +77,22 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
+
+# Add with other imports
+from llm_routes import llm_bp
+# Register LLM routes
+app.register_blueprint(llm_bp)
+
+# Add CORS headers for regular HTTP requests
+from flask import make_response
+
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', cf.domain())
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
+
 # Scheduled tasks
 TIMEOUT = 10 * 60 # Time in seconds without transcripts before timeout occurs
 

@@ -5,6 +5,7 @@ import { AppFeaturesComponent } from "../../features/features-component";
 import { AppRadarComponent } from "../../radar/radar-component";
 import { AppKeywordsComponent } from "../../keywords/keywords-component";
 import { AppIndividualFeaturesComponent } from "../individualmetrics/features-component";
+import { LLMSupportPanel } from "../../llm-support/LLMSupportPanel";
 import React from "react";
 
 function AppInfographicsComparison(props) {
@@ -191,6 +192,17 @@ function AppInfographicsComparison(props) {
               />
             </AppSectionBoxComponent>
           )}
+
+          {/* AI Analysis Panel - always visible at bottom */}
+          <AppSectionBoxComponent type={"wide-section"} heading={"AI Analysis"}>
+            <LLMSupportPanel
+              transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
+              sessionDevice={props.sessionDevice}
+              startTime={props.startTime}
+              endTime={props.endTime}
+              multiSeries={props.details === "Group" ? props.multiSeries : undefined}
+            />
+          </AppSectionBoxComponent>
         </div>
       )}
     </>

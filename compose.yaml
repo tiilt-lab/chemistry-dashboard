@@ -17,6 +17,8 @@ services:
     image: blinc/server:latest
     volumes:
       - ./server:/var/lib/chemistry-dashboard/server
+    env_file:
+      - ./server/.env
     depends_on:
       blinc-db:
         condition: service_healthy

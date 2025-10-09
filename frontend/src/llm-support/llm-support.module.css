@@ -1,0 +1,91 @@
+/* frontend/src/llm-support/llm-support.module.css */
+.llmPanel {
+  padding: 0;
+  min-height: 100px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.taskSelect {
+  flex: 0 0 auto;
+  min-width: 150px;
+}
+
+.generateBtn {
+  transition: background-color 0.2s;
+}
+
+.generateBtn:hover:not(:disabled) {
+  background-color: #015a90 !important;
+}
+
+.clearBtn {
+  transition: background-color 0.2s;
+}
+
+.clearBtn:hover {
+  background-color: #f5f5f5 !important;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error {
+  animation: fadeIn 0.3s;
+}
+
+.analysisResult {
+  animation: fadeIn 0.3s;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.noData {
+  text-align: center;
+  font-style: italic;
+}
+
+.usage {
+  border-top: 1px solid #e0e0e0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .taskSelect {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+  
+  .generateBtn {
+    width: 100%;
+    margin-right: 0 !important;
+    margin-bottom: 8px;
+  }
+}

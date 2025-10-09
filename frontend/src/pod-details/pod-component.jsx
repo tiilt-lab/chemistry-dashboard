@@ -67,7 +67,7 @@ function PodComponent() {
     setShowBoxes(
       [
         "Timeline control","Discussion timeline","Keyword detection","Discussion features","Radar chart",
-        "Participation","Social Impact","Responsivity","Internal Cohesion","Newness","Communication Density",
+        "Participation","AI Analysis","Social Impact","Responsivity","Internal Cohesion","Newness","Communication Density",
       ].map((label, idx) => ({ label, value: idx, clicked: true }))
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
