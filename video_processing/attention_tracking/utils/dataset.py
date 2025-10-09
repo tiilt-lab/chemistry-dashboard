@@ -71,7 +71,7 @@ class AttentionFlow(Dataset):
             img = self.transform(img)
             face = self.transform(face)
 
-        return img, face, head_channel,headbox, imsize, frame_index
+        return img, face, head_channel,headbox, imsize, frame_index,time_stamp
         
 
     def __len__(self):

@@ -146,7 +146,7 @@ class ServerProtocol(WebSocketServerProtocol):
                         self.frame_queue = None
                         self.cartoon_image_queue = None
                         self.video_processor = VideoProcessor(self.cartoon_model,self.facial_emotion_detector,self.image_object_detection,self.attention_detection, \
-                                                                self.video_queue,self.frame_queue,self.cartoon_image_queue,self.config,cf,self.frame_dir,self.filename,aud_filename,16000, 2,1)
+                                                                self.video_queue,self.frame_queue,self.cartoon_image_queue,self.config,cf,self.frame_dir,self.filename,aud_filename,16000, 2,1,self.interval)
                         self.video_processor.add_websocket_connection(self)
                         
                 if cf.video_record_reduced():

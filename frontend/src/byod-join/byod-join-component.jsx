@@ -384,7 +384,10 @@ function JoinPage() {
                 speakers: speakers,
             }
             audiows.current.send(JSON.stringify(message))
-            videows.send(JSON.stringify(message))
+            
+            if (joinwith === "Video" || joinwith === "Videocartoonify")  {
+                videows.send(JSON.stringify(message))
+            }
             setSpeakersValidated(true)
         } else {
             setDisplayText(
