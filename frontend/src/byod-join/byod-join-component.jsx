@@ -673,8 +673,8 @@ function JoinPage() {
             constraint.audio = true
             constraint.video = {
                 facingMode: "user",
-                width: 150, //{ min: 640, ideal: 1280, max: 1920 },
-                height: 80, //{ min: 480, ideal: 720, max: 1080 }
+                width: 640, //{ min: 640, ideal: 1280, max: 1920 },
+                height: 480, //{ min: 480, ideal: 720, max: 1080 }
             }
         } else {
             constraint.audio = true

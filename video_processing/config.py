@@ -48,3 +48,12 @@ def redis_session_key_callback():
 
 def redis_session_config_callback():
     return str(config['output']['redis_get_session_config_callback']) 
+
+def video_metrics_callback():
+    return str(config['output']['video_metrics_callback'])
+
+def connect_callback():
+    return str(config['output']['connect_callback'])
+
+def disconnect_callback():
+    return str(config['output']['disconnect_callback'])

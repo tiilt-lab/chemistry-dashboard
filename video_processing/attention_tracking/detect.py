@@ -12,11 +12,13 @@ import numpy as np
 import supervision as sv
 import face_recognition
 from ultralytics.engine.results import Results
+from .utils.dataset import AttentionFlow
 sys.path.insert(0,'./yolo_head')
 from yolo_head.models.experimental import attempt_load
 from yolo_head.utils.datasets import LoadStreams, LoadImages, LoadImageDataset
 from yolo_head.utils.general import check_img_size, non_max_suppression, scale_coords
 from yolo_head.utils.torch_utils import select_device
+from yolo_head.utils.plots import plot_one_box
 
 
 class ImageObjectDetection:
@@ -151,6 +153,7 @@ class ImageObjectDetection:
         
         accumulator = {'head':dict(), 'other_objects':dict()}
         all_frames = {}
+        print("number of facial embeddings is "+str(len(facial_embeddings)))
         for val_batch, (img_index, img, im0s) in enumerate(dataset): #path, img, im0s, vid_cap in dataset:
             # all_frames.extend(im0s)
             # img = torch.from_numpy(img).to(device)
@@ -177,6 +180,7 @@ class ImageObjectDetection:
 
                 all_frames[int(p)] = im0
                 # gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
+                
                 if len(det):
                     # Rescale boxes from img_size to im0 size
                     det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
@@ -189,17 +193,25 @@ class ImageObjectDetection:
                         if int_cls == self.object_names_V_K.get('head', None):
                             detected_faces = detected_faces+1
                             face = self.crop_face_from_fame_with_bbox(im0,xyxy, "xyxy", False, 0.0, False)
-                            # save_to = os.path.join(vid_img_dir, "face_{0}_{1}.{2}".format(int(p),detected_faces,'png'))
+                            # plot_one_box(xyxy, im0, label=self.object_names_K_V.get(int_cls, None), color=[random.randint(0, 255) for _ in range(3)], line_thickness=3)
+                            # save_to = os.path.join(vid_img_dir, "face_{0}_{1}_{2}.{3}".format(int(p),self.object_names_K_V.get(int_cls, None),detected_faces,'png'))
                             # cv2.imwrite(save_to,face)
                             x1, y1, x2, y2 = xyxy
-                            face_location = (y1, x2, y2, x1)
-                            face_embedding  = face_recognition.face_encodings(face, [face_location])
-                            match, score = self.identify_student(face_embedding, facial_embeddings, threshold=0.5)
-                            if match != "Unknown":
-                            #    print(f"Match: {match}, Confidence: {score:.3f}")
-                               self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_face",match,accumulator,time_marker,im0,int(p)) 
+                            # face_location = (int(y1), int(x2), int(y2), int(x1))
+                            face_locations = face_recognition.face_locations(face)
+                            # print(f"face locations is : {face_locations}")
+                            if face_locations:
+                                face_embedding  = face_recognition.face_encodings(face, face_locations,num_jitters=1)
+                                match, cos_score,L2_score = self.identify_student(face_embedding[0], facial_embeddings, "face_"+str(detected_faces),cos_threshold=0.95,L2_threshold=0.3)
+                                # print(f"Match: {match}, Confidence: {score:.3f}, Frame:{int(p)}, Bbox:{[int(x1),int(y1),int(x2),int(y2)]}")
+                                if match != "Unknown":
+                                    # print(f"Match: {match}, Confidence: {cos_score:.3f}")
+                                    self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_face",match,accumulator,time_marker,im0,int(p)) 
                         else:
                           pass #print("Other object dtected is: ",self.object_names_K_V.get(int_cls, None))
+                    # print("number of detected faces for frame ",str(i)+" is "+str(detected_faces))
+                    # save_to = os.path.join(vid_img_dir, "frame_{0}.{1}".format(int(p),'png'))
+                    # cv2.imwrite(save_to,im0)
                     #use this for tracking other objects asides face
                     result = Results(orig_img=im0, path=str(int(p)), names=self.object_names_K_V, boxes=det)
                     # Tracking Mechanism
@@ -223,34 +235,51 @@ class ImageObjectDetection:
         return all_frames,accumulator
     
     
+    def normalize(self,v):
+        return v / np.linalg.norm(v)
 
     def cosine_similarity(self,vec1, vec2):
         """Compute cosine similarity between two vectors."""
         return float(np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2)))
 
-    def identify_student(self,face_embedding, store_facial_embeddings, threshold=0.5):
+    def debug_embed(self,name, v):
+        print(f"{name}: shape={v.shape}, dtype={v.dtype}, "
+            f"min={np.min(v):.6f}, max={np.max(v):.6f}, "
+            f"norm={np.linalg.norm(v):.6f}, "
+            f"nan?={np.isnan(v).any()}, inf?={np.isinf(v).any()}")
+    
+    def identify_student(self,face_embedding, store_facial_embeddings,detect_img_name, cos_threshold=0.95,L2_threshold=0.3):
         """
         Identify student by comparing a new face embedding against stored gallery.
         :param face_embedding: embedding vector of the new face
         :param student_gallery: dict {student_name: avg_embedding}
         :param threshold: similarity threshold (tune ~0.4–0.6 depending on model)
-        :return: (best_match, score) or ("Unknown", None)
+        :return: (best_match, score) or ("Unknown", score)
         """
         best_match = "Unknown"
-        best_score = -1  # cosine similarity ranges -1 to 1
+        best_cos_score = -1  # cosine similarity ranges -1 to 1
+        best_L2_score = 1
         for person in store_facial_embeddings:
             stored_embedding = store_facial_embeddings[person]["data"]
             student = store_facial_embeddings[person]["alias"]
             # print("student is ......"+student)
-            score = self.cosine_similarity(face_embedding, stored_embedding)
-            if score > best_score:
-                best_score = score
+            # self.debug_embed(detect_img_name,face_embedding)
+            # self.debug_embed(student,stored_embedding)
+            u = self.normalize(face_embedding)
+            v = self.normalize(stored_embedding)
+            score = float(np.dot(u, v)) #self.cosine_similarity(face_embedding, stored_embedding)
+            Euc_dist = float(np.linalg.norm(u - v))
+            print("score are Euclidean and cos simillarity:", Euc_dist,score)
+            if score > best_cos_score and Euc_dist < best_L2_score:
+                best_cos_score = score
+                best_L2_score = Euc_dist
                 best_match = student
 
-        if best_score >= threshold:
-            return best_match, best_score
+        if best_cos_score >= cos_threshold and best_L2_score <= L2_threshold:
+            print("student is ......"+student+" and score are cos_simmilarity: "+str(best_cos_score)+" Euclidean Dist: "+str(best_L2_score))
+            return best_match, best_cos_score, best_L2_score
         else:
-            return "Unknown", best_score
+            return "Unknown", best_cos_score,best_L2_score
     
     def accumulate_head_and_otherobject_track_V2(self,bbox,object_class_id,object_detected_type,object_track_id,accumulator,time_marker,frame_image,frame_index):
 
@@ -366,6 +395,8 @@ class ImageObjectDetection:
 
         return img[y1:y2, x1:x2].copy()
 
+    
+    
 # if __name__ == '__main__':
 #     imge_detect = ImageObjectDetection()
 #     imge_detect.init_model()
