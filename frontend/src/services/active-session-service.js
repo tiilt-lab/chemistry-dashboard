@@ -6,6 +6,7 @@ import { SessionModel } from "../models/session"
 import { SessionDeviceModel } from "../models/session-device"
 import { TranscriptModel } from "../models/transcript"
 import { SpeakerMetricsModel } from "../models/speaker-metrics"
+import { SpeakerVideoMetricsModel } from "models/speaker-video-metrics"
 
 export class ActiveSessionService {
     socketService = new SocketService()
@@ -14,6 +15,7 @@ export class ActiveSessionService {
     sessionSource = new BehaviorSubject(null)
     sessionDeviceSource = new BehaviorSubject([])
     transcriptSource = new BehaviorSubject([])
+    videoMetricSource = new BehaviorSubject([])
 
     socket
     sessionId
@@ -168,6 +170,19 @@ export class ActiveSessionService {
             }
             this.transcriptSource.next(transcripts)
         })
+
+        // Update speaker video metrics.
+        this.socket.on("video_metrics_update", (e) => {
+            const data = JSON.parse(e)
+
+            const speaker_video_metrics = SpeakerVideoMetricsModel.fromJsonList(
+                data["speaker_video_metrics"],
+            )
+            const currentVideoMetrics = this.videoMetricSource.getValue()
+
+            currentVideoMetrics.push(speaker_video_metrics)
+            this.videoMetricSource.next(currentVideoMetrics)
+        })
     }
 
     close() {
@@ -212,7 +227,30 @@ export class ActiveSessionService {
 
         return this.transcriptSource
     }
+
     getTranscripts() {
         return this.transcriptSource
+    }
+
+    getSessionDeviceVideoMetrics(sessionDeviceId, setState) {
+        this.videoMetricSource.subscribe((e) => {
+            if (Object.keys(e).length !== 0) {
+                const data = e
+                    .filter(
+                        (v) =>
+                            v.session_device_id ===
+                            parseInt(sessionDeviceId, 10),
+                    )
+                    .sort((a, b) => (a.time_stamp > b.time_stamp ? 1 : -1))
+                //console.log(data,'still debugging ...')
+                setState(data)
+            }
+        })
+
+        return this.videoMetricSource
+    }
+
+    getVideoMetrics() {
+        return this.videoMetricSource
     }
 }

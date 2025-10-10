@@ -160,7 +160,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.signal_start()
                 self.send_json({'type':'start'})
                 logging.info('Video process connected')
-                callbacks.post_connect(self.config.auth_key)
+                # callbacks.post_connect(self.config.auth_key)
 
     def process_binary(self, data):
         if self.running and not self.awaitingSpeakers:
@@ -272,7 +272,7 @@ class ServerProtocol(WebSocketServerProtocol):
             self.video_processor.stop()
 
         if self.config:
-            callbacks.post_disconnect(self.config.auth_key)
+            # callbacks.post_disconnect(self.config.auth_key)
             cm.remove(self, self.config.session_key, self.config.auth_key)
         else:
             cm.remove(self, None, None)
