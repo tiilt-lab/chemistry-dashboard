@@ -1,5 +1,6 @@
 import logging
 import threading
+import time
 import numpy as np
 import cv2
 import os
@@ -320,6 +321,7 @@ class VideoProcessor:
                         self.frame_batch.append(frame)
                         self.time_marker.append(self.adjust_time(time_stamp))
                         if (len(self.frame_batch) == self.batch_size):
+                            processing_timer = time.time()
                             logging.info('total appended per batch {0}'.format(len(self.frame_batch)))
                             frames_batch_copy = copy.deepcopy(self.frame_batch)
 
@@ -343,7 +345,11 @@ class VideoProcessor:
                                 if video_metrics: 
                                     logging.info('printing video_metrics')
                                     logging.info(video_metrics)
-                                    success, transcript_id = callbacks.post_transcripts(self.config.auth_key, video_metrics)
+                                    success = callbacks.post_transcripts(self.config.auth_key, video_metrics)
+
+                                    processing_time = time.time() - processing_timer
+                                    if success:
+                                        logging.info( f"Video processing results posted successfully for client {self.config.auth_key} (Processing time: {processing_time})")
                                 
                                 
                             

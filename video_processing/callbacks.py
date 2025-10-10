@@ -88,8 +88,7 @@ def post_video_metrics(source, video_metrics):
     }
     try:
         response = requests.post(config.video_metrics_callback(), json=result)
-        transcript_id = response.json()['transcript_id'] if response.status_code == 200 else -1
-        return response.status_code == 200, transcript_id
+        return response.status_code == 200
     except Exception as e:
-        logging.warning('Transcript callback failed: {0}'.format(e))
-        return False, -1
+        logging.warning('video metric callback failed: {0}'.format(e))
+        return False

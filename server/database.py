@@ -26,6 +26,7 @@ from tables.folder import Folder
 from tables.topic_model import TopicModel
 from tables.speaker import Speaker
 from tables.speaker_transcript_metrics import SpeakerTranscriptMetrics
+from tables.speaker_video_metrics import SpeakerVideoMetrics
 
 # Saves changes made to database (models)
 def save_changes():
@@ -133,6 +134,61 @@ def delete_speaker_transcript_metrics(id = None, speaker_id = None, transcript_i
           .delete(synchronize_session='fetch')
     db.session.commit()
     return True
+
+
+# -------------------------
+# Video Metrics
+# -------------------------
+
+def get_speaker_video_metrics(id = None, student_username=None, session_device_id=None,):
+    query = db.session.query(SpeakerVideoMetrics)
+    if id != None:
+        return query.filter(SpeakerVideoMetrics.id == id).first()
+    if student_username != None:
+        query = query.filter(SpeakerVideoMetrics.student_username == student_username)
+    if session_device_id != None:
+        query = query.filter(SpeakerVideoMetrics.session_device_id == session_device_id)
+    return query.all()
+
+def add_speaker_video_metrics(session_device_id,student_username, time_stamp, facial_emotion,attention_level,object_on_focus):
+    metrics = SpeakerVideoMetrics(session_device_id,student_username, time_stamp, facial_emotion,attention_level,object_on_focus)
+    db.session.add(metrics)
+    db.session.commit()
+    return metrics
+
+def update_speaker_video_metrics(id, session_device_id=None,student_username=None, time_stamp=None, facial_emotion=None,attention_level=None,object_on_focus=None):
+    metrics = get_speaker_video_metrics(id)
+
+    if metrics:
+        if session_device_id:
+            metrics.session_device_id = session_device_id
+        if student_username:
+            metrics.student_username = student_username
+        if time_stamp:
+            metrics.time_stamp = time_stamp
+        if facial_emotion:
+            metrics.facial_emotion = facial_emotion
+        if attention_level:
+            metrics.attention_level = attention_level
+        if object_on_focus:
+            metrics.object_on_focus = object_on_focus
+        db.session.commit()
+        return(metrics)
+
+    return None
+
+def delete_speaker_video_metrics(id = None,student_username=None, session_device_id=None):
+    if id:
+        db.session.query(SpeakerVideoMetrics).filter(SpeakerVideoMetrics.id == id).delete(synchronize_session='fetch')
+    if student_username:
+        db.session.query(SpeakerVideoMetrics).filter(SpeakerVideoMetrics.student_username == student_username)\
+            .delete(synchronize_session='fetch')
+    elif session_device_id:
+        db.session.query(SpeakerVideoMetrics).filter(SpeakerVideoMetrics.session_device_id == session_device_id)\
+          .delete(synchronize_session='fetch')
+    db.session.commit()
+    return True
+
 
 # -------------------------
 # Topic Models

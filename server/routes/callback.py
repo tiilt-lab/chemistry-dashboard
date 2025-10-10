@@ -198,6 +198,41 @@ def add_speaker_transcript_metrics(**kwargs):
     res = {'transcript_id':transcript.__hash__()}
   return json_response(payload=res)
 
+@api_routes.route('/api/v1/callback/speakervideometrics', methods=['POST'])
+def add_speaker_video_metrics(**kwargs):
+  # EXPECTED FORMAT
+  # {
+  #     'source': str
+  #     'video_metrics': {"person_id_1" :[[time_stamp_1 :int, 
+                                          # facial_emotion_1 :str, 
+                                          # attention_level_1 : int,
+                                          # object_focused_on_1 : str], ... ]
+                          
+                          # .... }
+  # }
+  content = request.get_json()
+  key = content.get('source', '')
+  video_metrics = content.get('video_metrics', {})
+  
+
+  session_device = database.get_session_devices(processing_key=key)
+  if session_device:
+    logging.info("Video Metrics received for session device %s for session %s." %
+                 (session_device.id, session_device.session_id))
+    
+    room_name = str(session_device.session_id)
+    added_metrics = []
+    for persion_id in video_metrics:
+      for metric in video_metrics[persion_id]:
+        time_stamp, facial_emotion,attention_level,object_on_focus = metric
+        added_metric = database.add_speaker_video_metrics(session_device.id,persion_id,time_stamp, facial_emotion,attention_level,object_on_focus)
+
+        added_metrics.append(added_metric.json())
+    
+    socketio.emit('video_metrics_update', json.dumps({'speaker_video_metrics':added_metrics}), room=room_name, namespace="/session")
+      
+  return json_response()
+
 
 @api_routes.route('/api/v1/callback/tag', methods=['POST'])
 @wrappers.verify_local

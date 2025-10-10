@@ -14,7 +14,7 @@ class VideoMetricAnalytics:
             val_gaze_heatmap_pred, val_attmap, val_inout_pred = self.AttentionTracking.compute_gaze_direction(val_img, val_face, val_head_channel)
             for index in range(len(val_gaze_heatmap_pred)): 
                 pred_attention_level = 0
-                pred_shared_attention = None
+                pred_object_focused_on = "Nothing"
                 frame_index,person_alias,bbox,time_stamp = persons_detail[index]
                 
                 #guarding code
@@ -33,10 +33,7 @@ class VideoMetricAnalytics:
                         object_class_id,object_class_name,object_id,bbox, t_stamp = other_objects_in_frame[closest_object_index]
                         #if head gaze is focused on other object
                         pred_attention_level = self.AttentionTracking.track_person_level_of_attention(object_class_id,person_id)
-
-                        # self.track_person_level_of_attention(object_class_id,person_id,t_stamp)  
-                        # self.track_person_freq_of_focus_on_object(object_class_id,person_id,t_stamp)
-                        # self.track_shared_attention_on_an_object(object_id,person_id,int(frame_id[j]),t_stamp)
+                        pred_object_focused_on = object_class_name
                     else:
                         print("no closer object: ")
                         #the gaze is not focused on any object detected 
@@ -46,8 +43,8 @@ class VideoMetricAnalytics:
                 
                 
                 if person_id not in video_metrics:
-                    video_metrics[person_id] = [[time_stamp,pred_emotion,pred_attention_level]]
+                    video_metrics[person_id] = [[time_stamp,pred_emotion,pred_attention_level,pred_object_focused_on]]
                 else:
-                    video_metrics[person_id].append([time_stamp,pred_emotion,pred_attention_level])   
+                    video_metrics[person_id].append([time_stamp,pred_emotion,pred_attention_level,pred_object_focused_on])   
 
         return video_metrics
