@@ -14,6 +14,7 @@ import config as cf
 import numpy as np
 import moviepy.editor as mp
 import face_recognition
+import cv2
 from recorder import VidRecorder
 from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager
@@ -158,6 +159,8 @@ class ServerProtocol(WebSocketServerProtocol):
 
                 self.signal_start()
                 self.send_json({'type':'start'})
+                logging.info('Video process connected')
+                callbacks.post_connect(self.config.auth_key)
 
     def process_binary(self, data):
         if self.running and not self.awaitingSpeakers:
@@ -211,10 +214,11 @@ class ServerProtocol(WebSocketServerProtocol):
         vidclip = mp.VideoFileClip(self.video_file+'.webm')
         for frame in vidclip.iter_frames(fps=10, dtype="uint8"):
             # Detect face locations in the frame
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             face_locations = face_recognition.face_locations(frame)
 
             # Get 128-D face embeddings for each detected face
-            encodings = face_recognition.face_encodings(frame, face_locations)
+            encodings = face_recognition.face_encodings(frame, face_locations,num_jitters=5)
         
             if len(encodings) > 0:
                 embeddings.append(encodings[0])  # Take first detected face
@@ -268,6 +272,7 @@ class ServerProtocol(WebSocketServerProtocol):
             self.video_processor.stop()
 
         if self.config:
+            callbacks.post_disconnect(self.config.auth_key)
             cm.remove(self, self.config.session_key, self.config.auth_key)
         else:
             cm.remove(self, None, None)

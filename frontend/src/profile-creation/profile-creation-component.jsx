@@ -45,8 +45,8 @@ function SignupPage() {
             constraint.audio = true
             constraint.video = {
                 facingMode: "user",
-                width: 500, //{ min: 640, ideal: 1280, max: 1920 },
-                height: 500, //{ min: 480, ideal: 720, max: 1080 }
+                width: 640, //{ min: 640, ideal: 1280, max: 1920 },
+                height: 480, //{ min: 480, ideal: 720, max: 1080 }
             }
             setConstraintObj(constraint)
         }

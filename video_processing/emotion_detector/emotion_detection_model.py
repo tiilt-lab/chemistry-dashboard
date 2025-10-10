@@ -39,7 +39,7 @@ class EmotionDetectionModelV1:
         self.model.eval()
         print('Emotion model loaded successfully.')
 
-    def predict_facial_emotion(self,image,bbox, bbox_type):
+    def predict_facial_emotion(self,image):
         try:
             face = None
             gray = ensure_gray(image)
@@ -72,7 +72,7 @@ class EmotionDetectionModelV1:
                 try:
                     face = crop_face_from_fame_with_bbox(frames[frame_index],bbox,"xyxy", False, 0.0, False) 
                     
-                    emotion_name = self.predict_facial_emotion(face,bbox, "xyxy")
+                    emotion_name = self.predict_facial_emotion(face)
                     if alias in self.persons_emotions_detected:
                         self.persons_emotions_detected[alias].append([time_stamp,emotion_name])
                     else:
@@ -80,6 +80,16 @@ class EmotionDetectionModelV1:
                 except Exception as e:
                     logging.info('EmotionDetectionModelV1: exception occured while predicting facial emotion for {0} in frame {1} : {2}'.format(alias,frame_index,e))
 
+    def predict_facial_emotion_for_single_participant(self, image, bbox,crop_face_from_fame_with_bbox):
+        try:
+            face = crop_face_from_fame_with_bbox(image,bbox,"xyxy", False, 0.0, False) 
+            
+            emotion_name = self.predict_facial_emotion(face)
+            return emotion_name
+        except Exception as e:
+            logging.info('EmotionDetectionModelV1: exception occured while predicting facial emotion for {0} in frame {1} : {2}'.format(alias,frame_index,e))
+    
+         
 
 class EmotionDetectionModel:
     def __init__(self):

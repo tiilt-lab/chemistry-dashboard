@@ -14,6 +14,8 @@ import logging
 import copy
 import json
 import traceback
+import callbacks
+from .VideoMetricProcessor import VideoMetricAnalytics
 
 class VideoProcessor:
     def __init__(self,cartoon_model,facial_emotion_detector,image_object_detection,attention_detection, \
@@ -54,20 +56,23 @@ class VideoProcessor:
         self.video_interval = video_interval
         self.video_chunk_count = -1
 
-        self.object_of_interest = [1,63,67,68]
-        self.persons_attention_track = {}
-        self.person_object_focus_track = {}
-        self.shared_attention_track = {}
-        self.object_by_class_track = {}
-        self.person_attention_focus_count = {}
-        self.persons_emotions_detected = {}
+        # self.object_of_interest = [1,63,67,68]
+        # self.persons_attention_track = {}
+        # self.person_object_focus_track = {}
+        # self.shared_attention_track = {}
+        # self.object_by_class_track = {}
+        # self.person_attention_focus_count = {}
+        # self.persons_emotions_detected = {}
 
-        self.attention_detection.set_persistent_variables(self.object_of_interest,self.persons_attention_track,self.person_object_focus_track, \
-                                                          self.shared_attention_track,self.object_by_class_track, self.person_attention_focus_count)
+        # self.attention_detection.set_persistent_variables(self.object_of_interest,self.persons_attention_track,self.person_object_focus_track, \
+        #                                                   self.shared_attention_track,self.object_by_class_track, self.person_attention_focus_count)
         
-        self.facial_emotion_detector.set_persistent_variables(self.persons_emotions_detected)
+        # self.facial_emotion_detector.set_persistent_variables(self.persons_emotions_detected)
+
         if self.cartoon_model.video and self.cartoon_model.parsing_map_path is not None:
             self.x_p_hat = torch.tensor(np.load(self.cartoon_model.parsing_map_path))
+
+        self.VideoMetricAnalytics = VideoMetricAnalytics(self.attention_detection,self.facial_emotion_detector,self.image_object_detection)     
 
         # self.intensity = {"Extremely":4,
         #                              "Very":3,
@@ -310,6 +315,7 @@ class VideoProcessor:
                         # else:
                         #      dim = (375,500)   
                         # frame = cv2.resize(frame, (500,375),interpolation=cv2.INTER_AREA)
+                        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                         self.frame_array.append(frame)
                         self.frame_batch.append(frame)
                         self.time_marker.append(self.adjust_time(time_stamp))
@@ -329,15 +335,17 @@ class VideoProcessor:
                                 #start attention tracking
                                 logging.info('inside process_video_analytics')
                                 all_frames,face_object_detected = self.image_object_detection.detection_with_facial_regonition(frames_batch_copy,self.facialEmbeddings,self.batch_track,self.time_marker,self.vid_img_dir)
-                                self.attention_detection.attention_tracking(face_object_detected,all_frames)
-                                self.facial_emotion_detector.predict_facial_emotion_for_all_participants(all_frames,face_object_detected['head'].items(),self.image_object_detection.crop_face_from_fame_with_bbox)
+                                # self.attention_detection.attention_tracking(face_object_detected,all_frames)
+                                # self.facial_emotion_detector.predict_facial_emotion_for_all_participants(all_frames,face_object_detected['head'].items(),self.image_object_detection.crop_face_from_fame_with_bbox)
                                 # face_lm = get_facial_shape(resized_img,self.cartoon_model.landmarkpredictor)
-                                logging.info('printing output of attentions')
-                                logging.info(self.persons_attention_track)
-                                logging.info('printing output of emotion detection')
-                                logging.info(self.persons_emotions_detected)
-                                # payload = {'type': 'attention_data', 'data': self.persons_attention_track}
-                                # self.send_json(payload)
+                                video_metrics = self.VideoMetricAnalytics.compute_videoMetrics(all_frames,face_object_detected)
+
+                                if video_metrics: 
+                                    logging.info('printing video_metrics')
+                                    logging.info(video_metrics)
+                                    success, transcript_id = callbacks.post_transcripts(self.config.auth_key, video_metrics)
+                                
+                                
                             
                             self.frame_batch = []
                             self.time_marker = []

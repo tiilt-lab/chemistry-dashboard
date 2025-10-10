@@ -17,6 +17,8 @@ class AttentionDetection:
         self.input_resolution = 224
         self.output_resolution = 64
         self.model = None
+        self.object_of_interest = [1,63,67,68]
+        self.person_attention_focus_count = {}
 
     def init_model(self,batch_size):
         self.batch_size = batch_size
@@ -32,13 +34,13 @@ class AttentionDetection:
         self.model.train(False)
         self.transform = self._get_transform()
 
-    def set_persistent_variables(self,object_of_interest,persons_attention_track,person_object_focus_track,shared_attention_track,object_by_class_track,person_attention_focus_count):
-        self.object_of_interest = object_of_interest
-        self.persons_attention_track = persons_attention_track
-        self.person_object_focus_track = person_object_focus_track
-        self.shared_attention_track = shared_attention_track
-        self.object_by_class_track = object_by_class_track
-        self.person_attention_focus_count = person_attention_focus_count
+    # def set_persistent_variables(self,object_of_interest,persons_attention_track,person_object_focus_track,shared_attention_track,object_by_class_track,person_attention_focus_count):
+    #     self.object_of_interest = object_of_interest
+    #     self.persons_attention_track = persons_attention_track
+    #     self.person_object_focus_track = person_object_focus_track
+    #     self.shared_attention_track = shared_attention_track
+    #     self.object_by_class_track = object_by_class_track
+    #     self.person_attention_focus_count = person_attention_focus_count
 
 
     def _get_transform(self):
@@ -67,37 +69,43 @@ class AttentionDetection:
         
         return object_of_index
 
-    def track_person_level_of_attention(self,object_focused_on,person_id, timestamp):
-        if  object_focused_on in self.object_of_interest:
-            #increment the count if its within object of focus
-            if self.persons_attention_track[person_id] is None:
-                self.persons_attention_track[person_id] = [[timestamp,1]]  
+    def track_person_level_of_attention(self, object_focused_on,person_id,action="Y"):
+        # this means the attention level was neither distracted or focus so just return the last count
+        if action == "N":
+            if person_id in self.person_attention_focus_count:
+                return self.person_attention_focus_count[person_id]
             else:
-                self.person_attention_focus_count[person_id] = self.person_attention_focus_count[person_id] +1
-                self.persons_attention_track[person_id].append([timestamp,self.person_attention_focus_count[person_id]])
+                return 0
         else:
-            #decrement the count
-            if self.persons_attention_track[person_id] is None:
-                self.persons_attention_track[person_id] = [[timestamp,0]] 
-            else:    
-                self.person_attention_focus_count[person_id] = self.person_attention_focus_count[person_id] - 1 if self.person_attention_focus_count[person_id] - 1 > 0 else 0
-                self.persons_attention_track[person_id].append([timestamp, self.person_attention_focus_count[person_id]])  
-      
+            if  object_focused_on in self.object_of_interest:
+                #increment the count if its within object of focus
+                if person_id not in self.person_attention_focus_count:
+                    self.person_attention_focus_count[person_id] = 1  
+                else:
+                    self.person_attention_focus_count[person_id] = self.person_attention_focus_count[person_id] +1
+            else:
+                #decrement the count
+                if person_id not in self.person_attention_focus_count:
+                    self.person_attention_focus_count[person_id] = 0  
+                else:    
+                    self.person_attention_focus_count[person_id] = self.person_attention_focus_count[person_id] - 1 if self.person_attention_focus_count[person_id] - 1 > 0 else 0
+        
+            return self.person_attention_focus_count[person_id]
 
-    def track_person_freq_of_focus_on_object(self,object_focused_on,person_id,timestamp):
-        if  object_focused_on in  self.person_object_focus_track[person_id]:
-            last_index =  len(self.person_object_focus_track[person_id][object_focused_on])-1
-            new_count = self.person_object_focus_track[person_id][object_focused_on][last_index][1] +1
-            self.person_object_focus_track[person_id][object_focused_on].append([timestamp,new_count])
-        else:
-             self.person_object_focus_track[person_id][object_focused_on] = [[timestamp,1]] 
+    # def track_person_freq_of_focus_on_object(self,object_focused_on,person_id,timestamp):
+    #     if  object_focused_on in  self.person_object_focus_track[person_id]:
+    #         last_index =  len(self.person_object_focus_track[person_id][object_focused_on])-1
+    #         new_count = self.person_object_focus_track[person_id][object_focused_on][last_index][1] +1
+    #         self.person_object_focus_track[person_id][object_focused_on].append([timestamp,new_count])
+    #     else:
+    #          self.person_object_focus_track[person_id][object_focused_on] = [[timestamp,1]] 
 
-    def track_shared_attention_on_an_object(self,object_by_id_in_frame,person_id,frame_id,timestamp):
-        if object_by_id_in_frame in  self.shared_attention_track:
-            self.shared_attention_track[object_by_id_in_frame]["persons"].append(person_id)
-            self.shared_attention_track[object_by_id_in_frame]["timestamps"].append(timestamp)
-        else:
-            self.shared_attention_track[object_by_id_in_frame]={"persons":[person_id], "timestamps":[timestamp]}
+    # def track_shared_attention_on_an_object(self,object_by_id_in_frame,person_id,frame_id,timestamp):
+    #     if object_by_id_in_frame in  self.shared_attention_track:
+    #         self.shared_attention_track[object_by_id_in_frame]["persons"].append(person_id)
+    #         self.shared_attention_track[object_by_id_in_frame]["timestamps"].append(timestamp)
+    #     else:
+    #         self.shared_attention_track[object_by_id_in_frame]={"persons":[person_id], "timestamps":[timestamp]}
 
 
         # if  frame_id in  self.shared_attention_track:
@@ -109,76 +117,117 @@ class AttentionDetection:
         #     self.shared_attention_track[frame_id] = {}
         #     self.shared_attention_track[frame_id][object_by_id_in_frame] = [person_id]   
 
-    def attention_tracking(self,face_object_detected,frames):
-        for person_id, person_detail in sorted(face_object_detected['head'].items()):
-            
-            if person_id not in self.person_attention_focus_count:
-                self.person_attention_focus_count[person_id] = 0
+    def get_batched_facial_data(self,person_detail,frames):
+        # Prepare data
+        val_dataset = AttentionFlow(frames, person_detail,self.transform, input_size=self.input_resolution, output_size=self.output_resolution)
+        val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
+                                            batch_size=self.batch_size,
+                                            shuffle=False,
+                                            num_workers=0)
+    
+    
+        val_img, val_face, val_head_channel, headbox, imsize, frame_id, time_stamp = next(iter(val_loader))
 
-            #create the person id field to hold the attention tracking data
-            if person_id not in self.persons_attention_track:
-                self.persons_attention_track[person_id] = None
+        return val_img, val_face, val_head_channel, headbox, imsize, frame_id, time_stamp
+    
+    def compute_gaze_direction(self,val_img, val_face, val_head_channel):
+        
+        with torch.no_grad():
+            val_images = val_img.cuda().to(self.device)
+            val_head = val_head_channel.cuda().to(self.device)
+            val_faces = val_face.cuda().to(self.device)
+            val_gaze_heatmap_pred, val_attmap, val_inout_pred = self.model(val_images, val_head, val_faces)
+        
+        return val_gaze_heatmap_pred, val_attmap, val_inout_pred
+    
+    def get_gaze_direction_point(self,val_gaze_heatmap_pred, val_inout_pred, imsize):
 
-            if person_id not in self.person_object_focus_track:
-                self.person_object_focus_track[person_id] = {}
+        with torch.no_grad():
+            raw_hm = val_gaze_heatmap_pred.cpu().detach().numpy() * 255
+            raw_hm = raw_hm.squeeze()
+            inout = val_inout_pred.cpu().detach().numpy()
+            inout = 1 / (1 + np.exp(-inout))
+            inout = (1 - inout) * 255
+            width, height = int(imsize[0]), int(imsize[1])
+            if inout < self.out_threshold: # in-frame gaze
+                pred_x, pred_y = argmax_pts(raw_hm)
+                norm_p = [pred_x/self.output_resolution, pred_y/self.output_resolution]
+                return int(norm_p[0]*width), int(norm_p[1]*height)
+            else:
+                return None,None   
+
+
+
+    # def attention_tracking(self,face_object_detected,frames):
+    #     for person_id, person_detail in sorted(face_object_detected['head'].items()):
             
-            # Prepare data
-            val_dataset = AttentionFlow(frames, person_detail,self.transform, input_size=self.input_resolution, output_size=self.output_resolution)
-            val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
-                                                batch_size=self.batch_size,
-                                                shuffle=False,
-                                                num_workers=0)
+    #         if person_id not in self.person_attention_focus_count:
+    #             self.person_attention_focus_count[person_id] = 0
+
+    #         #create the person id field to hold the attention tracking data
+    #         if person_id not in self.persons_attention_track:
+    #             self.persons_attention_track[person_id] = None
+
+    #         if person_id not in self.person_object_focus_track:
+    #             self.person_object_focus_track[person_id] = {}
+            
+    #         # Prepare data
+    #         val_dataset = AttentionFlow(frames, person_detail,self.transform, input_size=self.input_resolution, output_size=self.output_resolution)
+    #         val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
+    #                                             batch_size=self.batch_size,
+    #                                             shuffle=False,
+    #                                             num_workers=0)
+            
         
-        
-            with torch.no_grad():
-                for val_batch, (val_img, val_face, val_head_channel, headbox, imsize, frame_id,time_stamp) in enumerate(val_loader):
+    #         with torch.no_grad():
+    #             for val_batch, (val_img, val_face, val_head_channel, headbox, imsize, frame_id,time_stamp) in enumerate(val_loader):
                     
-                    val_images = val_img.cuda().to(self.device)
-                    val_head = val_head_channel.cuda().to(self.device)
-                    val_faces = val_face.cuda().to(self.device)
-                    val_gaze_heatmap_pred, val_attmap, val_inout_pred = self.model(val_images, val_head, val_faces)
+    #                 val_images = val_img.cuda().to(self.device)
+    #                 val_head = val_head_channel.cuda().to(self.device)
+    #                 val_faces = val_face.cuda().to(self.device)
+    #                 val_gaze_heatmap_pred, val_attmap, val_inout_pred = self.model(val_images, val_head, val_faces)
                     
-                    for j in range(len(val_gaze_heatmap_pred)):
-                        #heatmap modulation
-                        raw_hm = val_gaze_heatmap_pred[j].cpu().detach().numpy() * 255
-                        raw_hm = raw_hm.squeeze()
-                        inout = val_inout_pred[j].cpu().detach().numpy()
-                        inout = 1 / (1 + np.exp(-inout))
-                        inout = (1 - inout) * 255
-                        # print('Frame ',int(frame_id[j]), inout)
-                        width, height = int(imsize[j][0]), int(imsize[j][1])
-                        x1,y1,x2,y2 = int(headbox[j][0]), int(headbox[j][1]), int(headbox[j][2]), int(headbox[j][3])
+    #                 for j in range(len(val_gaze_heatmap_pred)):
+    #                     #heatmap modulation
+    #                     raw_hm = val_gaze_heatmap_pred[j].cpu().detach().numpy() * 255
+    #                     raw_hm = raw_hm.squeeze()
+    #                     inout = val_inout_pred[j].cpu().detach().numpy()
+    #                     inout = 1 / (1 + np.exp(-inout))
+    #                     inout = (1 - inout) * 255
+    #                     # print('Frame ',int(frame_id[j]), inout)
+    #                     width, height = int(imsize[j][0]), int(imsize[j][1])
+    #                     x1,y1,x2,y2 = int(headbox[j][0]), int(headbox[j][1]), int(headbox[j][2]), int(headbox[j][3])
                 
-                        norm_map = cv2.resize(raw_hm,(height, width)) - inout # imresize(raw_hm, (height, width)) - inout
+    #                     norm_map = cv2.resize(raw_hm,(height, width)) - inout # imresize(raw_hm, (height, width)) - inout
                         
                 
-                        frame_raw = frames[int(frame_id[j])]#.detach().clone().numpy()
+    #                     frame_raw = frames[int(frame_id[j])]#.detach().clone().numpy()
                         
-                        if inout < self.out_threshold: # in-frame gaze
-                            pred_x, pred_y = argmax_pts(raw_hm)
-                            norm_p = [pred_x/self.output_resolution, pred_y/self.output_resolution]
+    #                     if inout < self.out_threshold: # in-frame gaze
+    #                         pred_x, pred_y = argmax_pts(raw_hm)
+    #                         norm_p = [pred_x/self.output_resolution, pred_y/self.output_resolution]
                             
-                            # get all other objects in the frame
-                            other_objects = face_object_detected['other_objects'][int(frame_id[j])]
-                            #find the closest object of focus
-                            closest_object_index = self.find_closest_object_of_focus((int(norm_p[0]*width), int(norm_p[1]*height)), person_id,other_objects)
-                            if closest_object_index is not None:
-                                object_class_id,object_class_name,object_id,bbox, t_stamp = other_objects[closest_object_index]
-                                #if head gaze is focused on other object
-                                print("person_id != object_id: ",person_id, object_id)
-                                if(person_id != object_id):
-                                    self.track_person_level_of_attention(object_class_id,person_id,t_stamp)  
-                                    self.track_person_freq_of_focus_on_object(object_class_id,person_id,t_stamp)
-                                    self.track_shared_attention_on_an_object(object_id,person_id,int(frame_id[j]),t_stamp)
-                            else:
-                                print("no closer object: ")
-                                #the gaze is not focused on any object detected 
-                                self.track_person_level_of_attention(-1,person_id,time_stamp[j])        
-                                # self.track_person_freq_of_focus_on_object(-1,person_id,time_stamp)
-                                # self.track_shared_attention_on_an_object(-1,person_id,int(frame_id[j]),time_stamp)       
-                        else: #out of frame gaze
-                            print("no gaze detected ")
-                            self.track_person_level_of_attention(-1,person_id,time_stamp[j])        
-                            # self.track_person_freq_of_focus_on_object(-1,person_id,time_stamp)
-                            # self.track_shared_attention_on_an_object(-1,person_id,int(frame_id[j]),time_stamp)
+    #                         # get all other objects in the frame
+    #                         other_objects = face_object_detected['other_objects'][int(frame_id[j])]
+    #                         #find the closest object of focus
+    #                         closest_object_index = self.find_closest_object_of_focus((int(norm_p[0]*width), int(norm_p[1]*height)), person_id,other_objects)
+    #                         if closest_object_index is not None:
+    #                             object_class_id,object_class_name,object_id,bbox, t_stamp = other_objects[closest_object_index]
+    #                             #if head gaze is focused on other object
+    #                             print("person_id != object_id: ",person_id, object_id)
+    #                             # if(person_id != object_id):
+    #                             self.track_person_level_of_attention(object_class_id,person_id,t_stamp)  
+    #                             self.track_person_freq_of_focus_on_object(object_class_id,person_id,t_stamp)
+    #                             self.track_shared_attention_on_an_object(object_id,person_id,int(frame_id[j]),t_stamp)
+    #                         else:
+    #                             print("no closer object: ")
+    #                             #the gaze is not focused on any object detected 
+    #                             self.track_person_level_of_attention(-1,person_id,int(time_stamp[j]))        
+    #                             # self.track_person_freq_of_focus_on_object(-1,person_id,time_stamp)
+    #                             # self.track_shared_attention_on_an_object(-1,person_id,int(frame_id[j]),time_stamp)       
+    #                     else: #out of frame gaze
+    #                         print("no gaze detected ")
+    #                         self.track_person_level_of_attention(-1,person_id,int(time_stamp[j]))        
+    #                         # self.track_person_freq_of_focus_on_object(-1,person_id,time_stamp)
+    #                         # self.track_shared_attention_on_an_object(-1,person_id,int(frame_id[j]),time_stamp)
                             
