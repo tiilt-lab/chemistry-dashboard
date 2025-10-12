@@ -140,8 +140,10 @@ def delete_speaker_transcript_metrics(id = None, speaker_id = None, transcript_i
 # Video Metrics
 # -------------------------
 
-def get_speaker_video_metrics(id = None, student_username=None, session_device_id=None,):
+def get_speaker_video_metrics(id = None, student_username=None, session_id=None, session_device_id=None):
     query = db.session.query(SpeakerVideoMetrics)
+    if session_id != None:
+        query = query.filter(SessionDevice.session_id == session_id)
     if id != None:
         return query.filter(SpeakerVideoMetrics.id == id).first()
     if student_username != None:
@@ -498,10 +500,15 @@ def delete_session(session_id):
     sub_query = db.session.query(Transcript.id).\
         filter(Transcript.session_device_id == SessionDevice.id).\
         filter(SessionDevice.session_id == session_id).subquery()
+
+    sub_query2 = db.session.query(SpeakerVideoMetrics.id).\
+        filter(SpeakerVideoMetrics.session_device_id == SessionDevice.id).\
+        filter(SessionDevice.session_id == session_id).subquery()
         
     db.session.query(KeywordUsage).filter(KeywordUsage.transcript_id.in_(sub_query)).delete(synchronize_session='fetch')
     db.session.query(Keyword).filter(Keyword.session_id == session_id).delete()
     db.session.query(Transcript).filter(Transcript.id.in_(sub_query)).delete(synchronize_session='fetch')
+    db.session.query(SpeakerVideoMetrics).filter(SpeakerVideoMetrics.id.in_(sub_query2)).delete(synchronize_session='fetch')
     db.session.query(SessionDevice).filter(SessionDevice.session_id == session_id).delete()
     db.session.query(Session).filter(Session.id == session_id).delete()
     db.session.commit()
@@ -577,6 +584,7 @@ def set_session_device_status(session_device_id, status):
 def delete_session_device(session_device_id):
     db.session.query(KeywordUsage).filter(KeywordUsage.transcript_id == Transcript.id).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')
     db.session.query(Transcript).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')
+    db.session.query(SpeakerVideoMetrics).filter(SpeakerVideoMetrics.session_device_id == session_device_id).delete(synchronize_session='fetch')
     db.session.query(SessionDevice).filter(SessionDevice.id == session_device_id).delete()
     db.session.commit()
     return True
