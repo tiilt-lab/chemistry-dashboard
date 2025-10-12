@@ -45,6 +45,7 @@ function PodComponentPages(props) {
                     <div className="center-column-container">
                         <AppInfographicsComparison
                             displayTranscripts={props.displayTranscripts}
+                            displayVideoMetrics={props.displayVideoMetrics}
                             fromclient={false}
                             onClickedTimeline={props.onClickedTimeline}
                             radarTrigger={props.radarTrigger}
@@ -62,7 +63,10 @@ function PodComponentPages(props) {
                             setSelectedSpkrId2={props.setSelectedSpkrId2}
                             spkr1Transcripts={props.spkr1Transcripts}
                             spkr2Transcripts={props.spkr2Transcripts}
+                            spkr1VideoMetrics={props.spkr1VideoMetrics}
+                            spkr2VideoMetrics={props.spkr2VideoMetrics}
                             details={props.details}
+                            getSpeakerAliasFromID={props.getSpeakerAliasFromID}
                         ></AppInfographicsComparison>
                     </div>
                 </div>

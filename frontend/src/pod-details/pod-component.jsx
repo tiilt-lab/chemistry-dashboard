@@ -15,8 +15,10 @@ function PodComponent() {
   const [sessionDevice, setSessionDevice] = useState({});
   const [session, setSession] = useState({});
   const [transcripts, setTranscripts] = useState([]);
+  const [videoMetrics, setVideoMetrics] = useState([])
   const [speakerMetrics, setSpeakerMetrics] = useState([]);
   const [displayTranscripts, setDisplayTranscripts] = useState([]);
+  const [displayVideoMetrics, setDisplayVideoMetrics] = useState([])
   const [currentTranscript, setCurrentTranscript] = useState({});
   const [currentForm, setCurrentForm] = useState("");
   const [sessionClosing, setSessionClosing] = useState(false);
@@ -37,6 +39,8 @@ function PodComponent() {
   const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1);
   const [spkr1Transcripts, setSpkr1Transcripts] = useState([]);
   const [spkr2Transcripts, setSpkr2Transcripts] = useState([]);
+  const [spkr1VideoMetrics, setSpkr1VideoMetrics] = useState([])
+  const [spkr2VideoMetrics, setSpkr2VideoMetrics] = useState([])
   const [open, setOpen] = useState(true);
 
   const { sessionDeviceId } = useParams();
@@ -78,13 +82,39 @@ function PodComponent() {
           setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100);
         }
       });
+      
       subscriptions.push(transcriptSub);
     }
+    
+
+    if (videoMetrics.length <= 0) {
+      const videoMetricsSub = activeSessionService.getVideoMetrics();
+      videoMetricsSub.subscribe((e) => {
+        if (Object.keys(e).length !== 0) {
+          const data = e
+            .filter(
+              (v) => v.session_device_id === parseInt(sessionDeviceId, 10)
+            )
+            .sort((a, b) => (a.time_stamp > b.time_stamp ? 1 : -1));
+          setVideoMetrics(data);
+          // console.log(data,session, 'testing refresh still debugging ...')
+
+          const sessionLen =
+            Object.keys(session).length > 0 ? session.length : 0;
+          //console.log("Start and end times changed default useeffect");
+          setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100);
+          setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100);
+        }
+      });
+      
+      subscriptions.push(videoMetricsSub);
+    }
+    
 
     // Refresh based on timeslider.
     setIntervalId(
       setInterval(() => {
-        //console.log("Fetched onto pod-component");
+        // console.log("Fetched onto pod-component");
         //ResetTimeRange(timeRange);
         if (session === undefined || !session.recording) {
           clearInterval(intervalId);
@@ -94,34 +124,39 @@ function PodComponent() {
 
     // initialize the options toolbar
     let featuresArr = [
-      "Emotional tone",
-      "Analytic thinking",
-      "Clout",
-      "Authenticity",
-      "Confusion",
-      "Participation",
-      "Social Impact",
-      "Responsivity",
-      "Internal Cohesion",
-      "Newness",
-      "Communication Density",
-    ];
-    initChecklistData(featuresArr, setShowFeatures);
+        "Emotional tone",
+        "Analytic thinking",
+        "Clout",
+        "Authenticity",
+        "Confusion",
+        "Participation",
+        "Social Impact",
+        "Responsivity",
+        "Internal Cohesion",
+        "Newness",
+        "Communication Density",
+        "Attention Level",
+        "Facial Emotions",
+        "Object Focused On"
+    ]
+    initChecklistData(featuresArr, setShowFeatures)
     // initialize the components toolbar
     let boxArr = [
-      "Timeline control",
-      "Discussion timeline",
-      "Keyword detection",
-      "Discussion features",
-      "Radar chart",
-      "Participation",
-      "Social Impact",
-      "Responsivity",
-      "Internal Cohesion",
-      "Newness",
-      "Communication Density",
-    ];
-    initChecklistData(boxArr, setShowBoxes);
+        "Timeline control",
+        "Discussion timeline",
+        "Keyword detection",
+        "Discussion features",
+        "Radar chart",
+        "Participation",
+        "Social Impact",
+        "Responsivity",
+        "Internal Cohesion",
+        "Newness",
+        "Communication Density",
+        "Video Metrics"
+    ]
+    initChecklistData(boxArr, setShowBoxes)
+
 
     return () => {
       subscriptions.map((sub) => {
@@ -140,14 +175,20 @@ function PodComponent() {
     setStartTime(sTime);
     setEndTime(eTime);
     generateDisplayTranscripts(sTime, eTime);
-  }, [startTime, endTime, transcripts, timeRange]);
+    generateDisplayVideoMetrics(sTime, eTime);
+  }, [startTime, endTime, transcripts,videoMetrics, timeRange]);
 
   useEffect(() => {
     if (displayTranscripts) {
       console.log("reloaded page - display transcripts");
       setSpeakerTranscripts(displayTranscripts);
     }
-  }, [displayTranscripts, selectedSpkrId1, selectedSpkrId2, details]);
+
+    if(displayVideoMetrics){
+            console.log("reloaded page - displayVideoMetrics")
+            setSpeakerVideoMetrics(displayVideoMetrics)
+        }
+  }, [displayTranscripts, displayVideoMetrics, selectedSpkrId1, selectedSpkrId2, details]);
 
   useEffect(() => {
     if (trigger > 0) {
@@ -206,11 +247,57 @@ function PodComponent() {
     }
   };
 
+  const setSpeakerVideoMetrics = () => {
+        if (displayVideoMetrics.length) {
+            let speakerAlias1 = getSpeakerAliasFromID(selectedSpkrId1)
+            let speakerAlias2 = getSpeakerAliasFromID(selectedSpkrId2)
+            setSpkr1VideoMetrics(
+                displayVideoMetrics.reduce((values, videometrics) => {
+                    if (
+                        selectedSpkrId1 === -1 ||
+                        videometrics.student_username === speakerAlias1
+                    )
+                        values.push(videometrics)
+                    return values
+                }, []),
+            )
+            setSpkr2VideoMetrics(
+                displayTranscripts.reduce((values, videometrics) => {
+                    if (
+                        selectedSpkrId2 === -1 ||
+                        videometrics.student_username === speakerAlias2
+                    )
+                        values.push(videometrics)
+                    return values
+                }, []),
+            )
+        } else {
+            setSpkr1VideoMetrics([])
+            setSpkr2VideoMetrics([])
+        }
+    }
   const generateDisplayTranscripts = (s, e) => {
     setDisplayTranscripts(
       transcripts.filter((t) => t.start_time >= s && t.start_time <= e)
     );
   };
+
+  const generateDisplayVideoMetrics = (s, e) => {
+        setDisplayVideoMetrics(
+            videoMetrics.filter((v) => v.time_stamp >= s && v.time_stamp <= e),
+        )
+    }
+
+    const getSpeakerAliasFromID = (selectedSpkrId)=>{
+        if (selectedSpkrId !== -1){
+             const speaker = speakers.filter((s) => s.id === selectedSpkrId )
+             if(speaker.length !== 0){
+                return speaker[0].alias
+             }
+        }else{
+            return -1
+        }
+    }
 
   const navigateToSession = () => {
     navigate("/sessions/" + session.id);
@@ -346,6 +433,7 @@ function PodComponent() {
       onClickedTimeline={onClickedTimeline}
       session={session}
       displayTranscripts={displayTranscripts}
+      displayVideoMetrics={displayVideoMetrics}
       startTime={startTime}
       endTime={endTime}
       transcripts={transcripts}
@@ -371,6 +459,9 @@ function PodComponent() {
       setSelectedSpkrId2={setSelectedSpkrId2}
       spkr1Transcripts={spkr1Transcripts}
       spkr2Transcripts={spkr2Transcripts}
+      spkr1VideoMetrics={spkr1VideoMetrics}
+      spkr2VideoMetrics={spkr2VideoMetrics}
+      getSpeakerAliasFromID = {getSpeakerAliasFromID}
       details={details}
       setDetails={setDetails}
       viewIndividual={viewIndividual}

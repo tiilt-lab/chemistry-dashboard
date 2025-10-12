@@ -4,7 +4,7 @@ class SpeakerVideoMetrics(db.Model):
     __tablename__ = 'speaker_video_metrics'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     session_device_id = db.Column(db.Integer, db.ForeignKey('session_device.id'), nullable=False)
-    student_username = db.Column(db.String(), nullable=False)
+    student_username = db.Column(db.String(20), nullable=False)
     time_stamp = db.Column(db.Integer, nullable=False)
     facial_emotion = db.Column(db.String(64), nullable=False)
     attention_level = db.Column(db.Integer)

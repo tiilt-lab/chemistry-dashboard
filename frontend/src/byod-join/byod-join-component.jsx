@@ -53,15 +53,19 @@ function JoinPage() {
     const apiService = new ApiService()
 
     const [transcripts, setTranscripts] = useState([])
+    const [videoMetrics, setVideoMetrics] = useState([])
     const [startTime, setStartTime] = useState()
     const [endTime, setEndTime] = useState()
     const [displayTranscripts, setDisplayTranscripts] = useState([])
+    const [displayVideoMetrics, setDisplayVideoMetrics] = useState([])
     const [currentTranscript, setCurrentTranscript] = useState({})
     const [timeRange, setTimeRange] = useState([0, 1])
     const [selectedSpkrId1, setSelectedSpkrId1] = useState(-1)
     const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1)
     const [spkr1Transcripts, setSpkr1Transcripts] = useState([])
     const [spkr2Transcripts, setSpkr2Transcripts] = useState([])
+    const [spkr1VideoMetrics, setSpkr1VideoMetrics] = useState([])
+    const [spkr2VideoMetrics, setSpkr2VideoMetrics] = useState([])
     const [details, setDetails] = useState("Group")
 
     const [currentForm, setCurrentForm] = useState("")
@@ -113,6 +117,9 @@ function JoinPage() {
             "Internal Cohesion",
             "Newness",
             "Communication Density",
+            "Attention Level",
+            "Facial Emotions",
+            "Object Focused On"
         ]
         initChecklistData(featuresArr, setShowFeatures)
         // initialize the components toolbar
@@ -128,6 +135,7 @@ function JoinPage() {
             "Internal Cohesion",
             "Newness",
             "Communication Density",
+            "Video Metrics"
         ]
         initChecklistData(boxArr, setShowBoxes)
     }, [])
@@ -164,9 +172,10 @@ function JoinPage() {
         // fetch the transcript
         if (session !== null && sessionDevice !== null) {
             fetchTranscript(sessionDevice.id)
-
+            fetchVideoMetric(sessionDevice.id)
             intervalLoad = setInterval(() => {
                 fetchTranscript(sessionDevice.id)
+                fetchVideoMetric(sessionDevice.id)
             }, 2000)
         }
 
@@ -184,15 +193,20 @@ function JoinPage() {
             setStartTime(sTime)
             setEndTime(eTime)
             generateDisplayTranscripts(sTime, eTime)
+            generateDisplayVideoMetrics(sTime, eTime)
         }
-    }, [transcripts, startTime, endTime, session, speakersValidated, timeRange])
+    }, [transcripts, videoMetrics,startTime, endTime, session, speakersValidated, timeRange])
 
     useEffect(() => {
         if (displayTranscripts) {
             console.log("reloaded page - displayTranscripts")
             setSpeakerTranscripts()
         }
-    }, [displayTranscripts, selectedSpkrId1, selectedSpkrId2, details])
+        if(displayVideoMetrics){
+            console.log("reloaded page - displayVideoMetrics")
+            setSpeakerVideoMetrics()
+        }
+    }, [displayTranscripts, displayVideoMetrics,selectedSpkrId1, selectedSpkrId2, details])
 
     //Use effect to start audio and video processing
     useEffect(() => {
@@ -814,7 +828,7 @@ function JoinPage() {
 
                 setFrameBuffer(prevBuffer => {
                     const newItems = [...prevBuffer, url]
-                    if (newItems.length % 40 == 0) {
+                    if (newItems.length % 40 === 0) {
                         setFrameBufferLength(newItems.length)
                     }
 
@@ -937,6 +951,17 @@ function JoinPage() {
         }
     }
 
+    const getSpeakerAliasFromID = (selectedSpkrId)=>{
+        if (selectedSpkrId !== -1){
+             const speaker = speakers.filter((s) => s.id === selectedSpkrId )
+             if(speaker.length !== 0){
+                return speaker[0].alias
+             }
+        }else{
+            return -1
+        }
+    }
+
     const fetchSpeakerMetrics = async (transcript) => {
         try {
             const response = await sessionService.getTranscriptSpeakerMetrics(
@@ -992,6 +1017,31 @@ function JoinPage() {
         }
     }
 
+    const fetchVideoMetric = async (deviceid) => {
+        try {
+            const response =
+                await sessionService.getSessionDeviceVideoMetricsForClient(
+                    deviceid,
+                )
+
+            if (response.status === 200) {
+                const jsonObj = await response.json()
+                const fetched_video_metrics = jsonObj.sort((a, b) =>
+                    a.time_stamp > b.time_stamp ? 1 : -1,
+                )
+
+                setVideoMetrics(fetched_video_metrics)
+            } else if (response.status === 400 || response.status === 401) {
+                console.log(response, "no videometrics obj")
+            }
+        } catch (error) {
+            console.log(
+                "byod-join-component error func : fetch video metrics",
+                error,
+            )
+        }
+    }
+
     //function to render the cartoonized image
     const renderFrameFromBuffer = () => {
         console.log('frameBufferLength = ', frameBufferLength, ' cartoonImgBatch = ', cartoonImgBatch)
@@ -1029,6 +1079,12 @@ function JoinPage() {
         )
     }
 
+    const generateDisplayVideoMetrics = (s, e) => {
+        setDisplayVideoMetrics(
+            videoMetrics.filter((v) => v.time_stamp >= s && v.time_stamp <= e),
+        )
+    }
+
     const setSpeakerTranscripts = () => {
         if (displayTranscripts.length) {
             setSpkr1Transcripts(
@@ -1054,6 +1110,36 @@ function JoinPage() {
         } else {
             setSpkr1Transcripts([])
             setSpkr2Transcripts([])
+        }
+    }
+
+    const setSpeakerVideoMetrics = () => {
+        if (displayVideoMetrics.length) {
+            let speakerAlias1 = getSpeakerAliasFromID(selectedSpkrId1)
+            let speakerAlias2 = getSpeakerAliasFromID(selectedSpkrId2)
+            setSpkr1VideoMetrics(
+                displayVideoMetrics.reduce((values, videometrics) => {
+                    if (
+                        selectedSpkrId1 === -1 ||
+                        videometrics.student_username === speakerAlias1
+                    )
+                        values.push(videometrics)
+                    return values
+                }, []),
+            )
+            setSpkr2VideoMetrics(
+                displayTranscripts.reduce((values, videometrics) => {
+                    if (
+                        selectedSpkrId2 === -1 ||
+                        videometrics.student_username === speakerAlias2
+                    )
+                        values.push(videometrics)
+                    return values
+                }, []),
+            )
+        } else {
+            setSpkr1VideoMetrics([])
+            setSpkr2VideoMetrics([])
         }
     }
 
@@ -1198,6 +1284,7 @@ function JoinPage() {
             onClickedKeyword={onClickedKeyword}
             session={session}
             displayTranscripts={displayTranscripts}
+            displayVideoMetrics={displayVideoMetrics}
             startTime={startTime}
             endTime={endTime}
             transcripts={transcripts}
@@ -1220,9 +1307,12 @@ function JoinPage() {
             setSelectedSpkrId1={setSelectedSpkrId1}
             selectedSpkrId2={selectedSpkrId2}
             setSelectedSpkrId2={setSelectedSpkrId2}
+            getSpeakerAliasFromID = {getSpeakerAliasFromID}
             spkr1Transcripts={spkr1Transcripts}
             spkr2Transcripts={spkr2Transcripts}
             selectedSpeaker={selectedSpeaker}
+            spkr1VideoMetrics={spkr1VideoMetrics}
+            spkr2VideoMetrics={spkr2VideoMetrics}
             setSelectedSpeaker={setSelectedSpeaker}
             saveAudioFingerprint={saveAudioFingerprint}
             addSpeakerFingerprint={addSpeakerFingerprint}

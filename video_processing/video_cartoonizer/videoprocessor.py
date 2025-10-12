@@ -345,7 +345,7 @@ class VideoProcessor:
                                 if video_metrics: 
                                     logging.info('printing video_metrics')
                                     logging.info(video_metrics)
-                                    success = callbacks.post_transcripts(self.config.auth_key, video_metrics)
+                                    success = callbacks.post_video_metrics(self.config.auth_key, video_metrics)
 
                                     processing_time = time.time() - processing_timer
                                     if success:

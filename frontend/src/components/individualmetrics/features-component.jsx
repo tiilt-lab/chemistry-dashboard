@@ -58,7 +58,7 @@ function AppIndividualFeaturesComponent(props) {
       valueArrays[4].time.push(t.start_time);
     });
 
-    console.log("transcript data: ", valueArrays)
+    // console.log("transcript data: ", valueArrays)
     
     //smooth the values of the value array over 10 values
     for (const valueArray of valueArrays) {

@@ -92,6 +92,14 @@ class SessionService {
     );
   }
 
+  getSessionDeviceVideoMetricsForClient(sessionDeviceId, startTime = 0) {
+    return this.api.httpRequestCall(
+      `api/v1/devices/${sessionDeviceId}/videometrics/client`,
+      "GET",
+      {}
+    );
+  }
+
   getSpeakerIdTranscripts(deviceId, speakerId) {
     return this.api.httpRequestCall(
       `api/v1/sessions/devices/${deviceId}>/speakers/${speakerId}/transcripts`,

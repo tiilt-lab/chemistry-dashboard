@@ -493,6 +493,9 @@ function ByodJoinPage(props) {
                                                 displayTranscripts={
                                                     props.displayTranscripts
                                                 }
+                                                displayVideoMetrics={
+                                                    props.displayVideoMetrics
+                                                }
                                                 fromclient={true}
                                                 onClickedTimeline={
                                                     props.onClickedTimeline
@@ -515,6 +518,10 @@ function ByodJoinPage(props) {
                                                 selectedSpkrId1={
                                                     props.selectedSpkrId1
                                                 }
+                                                getSpeakerAliasFromID={
+                                                    props.getSpeakerAliasFromID
+                                                }
+                                                
                                                 setSelectedSpkrId1={
                                                     props.setSelectedSpkrId1
                                                 }
@@ -529,6 +536,12 @@ function ByodJoinPage(props) {
                                                 }
                                                 spkr2Transcripts={
                                                     props.spkr2Transcripts
+                                                }
+                                                spkr1VideoMetrics={
+                                                    props.spkr1VideoMetrics
+                                                }
+                                                spkr2VideoMetrics={
+                                                    props.spkr2VideoMetrics
                                                 }
                                                 details={props.details}
                                             />
