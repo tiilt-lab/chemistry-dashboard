@@ -42,6 +42,7 @@ function PodComponent() {
   const [spkr1VideoMetrics, setSpkr1VideoMetrics] = useState([])
   const [spkr2VideoMetrics, setSpkr2VideoMetrics] = useState([])
   const [open, setOpen] = useState(true);
+  const [selectedSpkralias, setSelectedSpkralias] = useState("");
   const [participantDisplayed, setParticipantDisplayed] = useState([])
   const [selectedParticipantTranscripts, setSelectedParticipantTranscripts] = useState([]);
   const [selectedParticipantVideoMetrics, setSelectedParticipantVideoMetrics] = useState([])
@@ -469,6 +470,7 @@ function PodComponent() {
 
     setParticipantDisplayed([speakerId, speakrAlias])
     setSelectedSpkrId1(speakerId)
+    setSelectedSpkralias(speakrAlias)
     setDetails("Individual");
   }
 
@@ -517,6 +519,7 @@ function PodComponent() {
       open={open}
       setOpen={setOpen}
       loadSpeakerMetrics={loadSpeakerMetrics}
+      selectedSpkralias={selectedSpkralias}
       selectedParticipantTranscripts={selectedParticipantTranscripts}
       selectedParticipantVideoMetrics={selectedParticipantVideoMetrics}
     />

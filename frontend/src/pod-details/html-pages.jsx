@@ -12,7 +12,7 @@ function PodComponentPages(props) {
         <>
             <div className="main-container">
                 <Appheader
-                    title={props.sessionDevice.name}
+                    title={props.details === "Group" ? props.sessionDevice.name : props.selectedSpkralias}
                     leftText={false}
                     rightText={"Option"}
                     rightEnabled={true}
