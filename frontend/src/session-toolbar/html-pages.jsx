@@ -17,6 +17,31 @@ function AppSessionPage(props) {
                         Total duration
                     </div>
                 </span>
+
+
+
+                {props.speakers && props.speakers.length ? (
+                    <div className="flex relative max-w-4/6 flex-1 flex-row items-center justify-center sm:w-min sm:flex-col sm:max-w-full 
+                                border-2 border-blue-500 rounded-lg px-2 mt-8 before:content-[attr(data-label)] 
+                    before:absolute before:-top-3 before:left-4  before:px-2 before:bg-white before:text-blue-500 before:font-semibold"
+                            data-label="Participants">
+                    {props.speakers.map((part, index) => (
+                        
+                            <button
+                                className="toolbar-button"
+                                onClick={part.action}
+                                key={index}
+                            >{`${part.alias}`}</button>
+                        
+                    ))
+                }
+                </div>) :
+
+                    (
+                        <></>
+                    )}
+
+
                 <div className="flex relative max-w-4/6 flex-1 flex-row items-center justify-center sm:w-min sm:flex-col sm:max-w-full">
                     {props.menus && props.menus.length ? (
                         props.menus.map((menu, index) => (
@@ -30,6 +55,7 @@ function AppSessionPage(props) {
                         <></>
                     )}
                 </div>
+
                 <button
                     className="relative mx-2 box-border w-19 cursor-pointer rounded-4xl border bg-[#FF6363] px-1 py-2 text-center font-sans text-base/normal font-normal text-[#FAFAFC] transition-shadow hover:shadow-2xl disabled:hidden sm:w-33 sm:text-xl/loose sm:mx-0 sm:my-5"
                     onClick={props.onEndSession}

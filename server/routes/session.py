@@ -208,6 +208,13 @@ def session_device_speakers(session_id, device_id, **kwargs):
     speakers = database.get_speakers(session_device_id=device_id)
     return json_response([speaker.json() for speaker in speakers])
 
+@api_routes.route('/api/v1/sessions/<int:session_id>/speakers', methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def session_speakers(session_id, **kwargs):
+    speakers = database.get_speakers(session_id=session_id)
+    return json_response([speaker.json() for speaker in speakers])
+
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/keywords', methods=['GET'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access

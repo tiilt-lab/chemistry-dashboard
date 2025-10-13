@@ -35,7 +35,7 @@ function IndividualVideoMetricPage(props) {
                             </th>
                             <th
                                 className={style["graph-header"]}
-                                style={{ width: adjDim(133) + "px" }}
+                                style={{ width: adjDim(300) + "px" }}
                             >
                                 Graph
                             </th>
@@ -69,7 +69,7 @@ function IndividualVideoMetricPage(props) {
                                                     }
                                                     style={{
                                                         width:
-                                                            adjDim(133) + "px",
+                                                            adjDim(300) + "px",
                                                     }}
                                                 ></div>
                                             ) : (

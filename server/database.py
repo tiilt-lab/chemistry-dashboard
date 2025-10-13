@@ -39,13 +39,21 @@ def close_session():
 # Speakers
 # -------------------------
 
-def get_speakers(session_device_id=None, id = None):
+def get_speakers(session_id=None, session_device_id=None, id = None):
     query = db.session.query(Speaker)
+    if session_id != None:
+        query = query.join(SessionDevice).filter(SessionDevice.session_id == session_id)
+    if session_device_id != None:
+        query = query.filter(Speaker.session_device_id == session_device_id)    
     if id != None:
         return query.filter(Speaker.id == id).first()
-    if session_device_id != None:
-        query = query.filter(Speaker.session_device_id == session_device_id)
+    
     return query.all()
+
+def get_speaker_video_metrics(id = None, student_username=None, session_id=None, session_device_id=None):
+    query = db.session.query(SpeakerVideoMetrics)
+    if session_id != None:
+        query = query.filter(SessionDevice.session_id == session_id)
 
 def get_speaker_tags(session_device_id=None):
     query = db.session.query(Transcript).filter(session_device_id=session_device_id).distinct(Transcript.speaker_tag)

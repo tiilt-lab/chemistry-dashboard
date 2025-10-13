@@ -17,6 +17,7 @@ function AppIndividualVideoFeaturesComponent(props) {
   const [featureHeader, setFeatureHeader] = useState(null);
   const [showFeatureDialog, setShowFeatureDialog] = useState(false);
 
+  
   useEffect(() => {
     updateGraphs();
   });
@@ -29,14 +30,16 @@ function AppIndividualVideoFeaturesComponent(props) {
       { name:"Object Focused On", values: [], time:[]}
       
     ];
-    if(!props.videometrics || !props.videometrics.length || props.spkrId === -1)
+    if(!props.videometrics || !props.videometrics.length)
     {
       setFeatures(valueArrays);
       return;
     }
     //filter speaker metrics from video metrics based on the spkrId
-    const speaker_video_metric = props.videometrics.filter(v => v.student_username === props.spkrId)
-    speaker_video_metric.forEach((v) => {
+    // const speaker_video_metric = props.videometrics.filter(v => v.student_username === props.spkrId)
+    
+    
+    props.videometrics.forEach((v) => {
       
       //accumulate each score into their value array
       valueArrays[0].values.push(v.facial_emotion);
