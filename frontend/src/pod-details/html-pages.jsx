@@ -29,15 +29,22 @@ function PodComponentPages(props) {
                                     title: "Group",
                                     action: () => props.viewGroup(),
                                 },
-                                {
-                                    title: "Individual",
-                                    action: () => props.viewIndividual(),
-                                },
+                                // {
+                                //     title: "Individual",
+                                //     action: () => props.viewIndividual(),
+                                // },
                                 {
                                     title: "Comparison",
                                     action: () => props.viewComparison(),
                                 },
                             ]}
+                            participants={ props.speakers.map((speaker, index) => (
+                                {
+                                    alias: speaker.alias,
+                                    action: () => props.loadSpeakerMetrics(speaker.id,speaker.alias),
+                                }
+                            ))}
+
                         />
                     ) : (
                         <></>
@@ -67,6 +74,8 @@ function PodComponentPages(props) {
                             spkr2VideoMetrics={props.spkr2VideoMetrics}
                             details={props.details}
                             getSpeakerAliasFromID={props.getSpeakerAliasFromID}
+                            selectedParticipantTranscripts={props.selectedParticipantTranscripts}
+                            selectedParticipantVideoMetrics={props.selectedParticipantVideoMetrics}
                         ></AppInfographicsComparison>
                     </div>
                 </div>
@@ -103,7 +112,7 @@ function PodComponentPages(props) {
                     <></>
                 )}
 
-                {props.currentForm == "Options" ? (
+                {props.currentForm === "Options" ? (
                     <div className={style["dialog-content"]}>
                         <div className={style["dialog-heading"]}>
                             Section Boxes
@@ -149,7 +158,7 @@ function PodComponentPages(props) {
                     <></>
                 )}
 
-                {props.currentForm == "RemoveDevice" ? (
+                {props.currentForm === "RemoveDevice" ? (
                     <div className={style["dialog-content"]}>
                         <div className={style["dialog-heading"]}>
                             Disconnect Device

@@ -14,7 +14,7 @@ function PodsOverviewPages(props) {
     const POD_ON_COLOR = "#FF6655"
     const POD_OFF_COLOR = "#D0D0D0"
     const GLOW_COLOR = "#ffc3bd"
-
+    
     return (
         <>
             <div className="main-container">
@@ -53,6 +53,13 @@ function PodsOverviewPages(props) {
                                     action: () => props.goToGraph(),
                                 },
                             ]}
+                            participants={ props.sessionSpeaker.map((speaker, index) => (
+                                {
+                                    alias: speaker.alias,
+                                    action: () => props.loadSpeakerMetrics(speaker.id,speaker.alias),
+                                }
+                            ))}
+
                         ></AppSessionToolbar>
                     ) : (
                         <></>

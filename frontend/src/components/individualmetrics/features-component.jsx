@@ -32,7 +32,7 @@ function AppIndividualFeaturesComponent(props) {
       { name: "Communication Density", values: [],'time':[] },
       
     ];
-    if(!props.transcripts || !props.transcripts.length || props.spkrId === -1)
+    if(!props.transcripts || !props.transcripts.length )
     {
       setFeatures(valueArrays);
       return;

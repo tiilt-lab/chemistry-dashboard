@@ -42,6 +42,9 @@ function PodComponent() {
   const [spkr1VideoMetrics, setSpkr1VideoMetrics] = useState([])
   const [spkr2VideoMetrics, setSpkr2VideoMetrics] = useState([])
   const [open, setOpen] = useState(true);
+  const [participantDisplayed, setParticipantDisplayed] = useState([])
+  const [selectedParticipantTranscripts, setSelectedParticipantTranscripts] = useState([]);
+  const [selectedParticipantVideoMetrics, setSelectedParticipantVideoMetrics] = useState([])
 
   const { sessionDeviceId } = useParams();
   const navigate = useNavigate();
@@ -82,10 +85,10 @@ function PodComponent() {
           setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100);
         }
       });
-      
+
       subscriptions.push(transcriptSub);
     }
-    
+
 
     if (videoMetrics.length <= 0) {
       const videoMetricsSub = activeSessionService.getVideoMetrics();
@@ -106,10 +109,10 @@ function PodComponent() {
           setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100);
         }
       });
-      
+
       subscriptions.push(videoMetricsSub);
     }
-    
+
 
     // Refresh based on timeslider.
     setIntervalId(
@@ -124,36 +127,36 @@ function PodComponent() {
 
     // initialize the options toolbar
     let featuresArr = [
-        "Emotional tone",
-        "Analytic thinking",
-        "Clout",
-        "Authenticity",
-        "Confusion",
-        "Participation",
-        "Social Impact",
-        "Responsivity",
-        "Internal Cohesion",
-        "Newness",
-        "Communication Density",
-        "Attention Level",
-        "Facial Emotions",
-        "Object Focused On"
+      "Emotional tone",
+      "Analytic thinking",
+      "Clout",
+      "Authenticity",
+      "Confusion",
+      "Participation",
+      "Social Impact",
+      "Responsivity",
+      "Internal Cohesion",
+      "Newness",
+      "Communication Density",
+      "Attention Level",
+      "Facial Emotions",
+      "Object Focused On"
     ]
     initChecklistData(featuresArr, setShowFeatures)
     // initialize the components toolbar
     let boxArr = [
-        "Timeline control",
-        "Discussion timeline",
-        "Keyword detection",
-        "Discussion features",
-        "Radar chart",
-        "Participation",
-        "Social Impact",
-        "Responsivity",
-        "Internal Cohesion",
-        "Newness",
-        "Communication Density",
-        "Video Metrics"
+      "Timeline control",
+      "Discussion timeline",
+      "Keyword detection",
+      "Discussion features",
+      "Radar chart",
+      "Participation",
+      "Social Impact",
+      "Responsivity",
+      "Internal Cohesion",
+      "Newness",
+      "Communication Density",
+      "Video Metrics"
     ]
     initChecklistData(boxArr, setShowBoxes)
 
@@ -176,19 +179,25 @@ function PodComponent() {
     setEndTime(eTime);
     generateDisplayTranscripts(sTime, eTime);
     generateDisplayVideoMetrics(sTime, eTime);
-  }, [startTime, endTime, transcripts,videoMetrics, timeRange]);
+  }, [startTime, endTime, transcripts, videoMetrics, timeRange]);
 
   useEffect(() => {
     if (displayTranscripts) {
       console.log("reloaded page - display transcripts");
-      setSpeakerTranscripts(displayTranscripts);
+      setSpeakerTranscripts();
     }
 
-    if(displayVideoMetrics){
-            console.log("reloaded page - displayVideoMetrics")
-            setSpeakerVideoMetrics(displayVideoMetrics)
-        }
-  }, [displayTranscripts, displayVideoMetrics, selectedSpkrId1, selectedSpkrId2, details]);
+    if (displayVideoMetrics) {
+      console.log("reloaded page - displayVideoMetrics")
+      setSpeakerVideoMetrics()
+    }
+
+    if (participantDisplayed.length > 0) {
+      setSelectedParticipantData(participantDisplayed[0], participantDisplayed[1])
+      console.log("loaded displayed participant data");
+    }
+
+  }, [displayTranscripts, displayVideoMetrics, selectedSpkrId1, selectedSpkrId2, details, participantDisplayed]);
 
   useEffect(() => {
     if (trigger > 0) {
@@ -201,6 +210,15 @@ function PodComponent() {
     else setSpeakers([]);
     console.log("loaded speaker data");
   }, [sessionDeviceId, session]);
+
+  // useEffect(() => {
+  //   if (participantDisplayed.length > 0) {
+  //     setSelectedParticipantData(participantDisplayed[0], participantDisplayed[1])
+  //   }
+  //   console.log("loaded displayed participant data");
+  // }, [participantDisplayed]);
+
+
 
   //console.log(session, transcripts, '-', sessionDevice, '-', displayTranscripts, '-', startTime, '-', endTime, '-', 'session .......')
 
@@ -248,34 +266,34 @@ function PodComponent() {
   };
 
   const setSpeakerVideoMetrics = () => {
-        if (displayVideoMetrics.length) {
-            let speakerAlias1 = getSpeakerAliasFromID(selectedSpkrId1)
-            let speakerAlias2 = getSpeakerAliasFromID(selectedSpkrId2)
-            setSpkr1VideoMetrics(
-                displayVideoMetrics.reduce((values, videometrics) => {
-                    if (
-                        selectedSpkrId1 === -1 ||
-                        videometrics.student_username === speakerAlias1
-                    )
-                        values.push(videometrics)
-                    return values
-                }, []),
-            )
-            setSpkr2VideoMetrics(
-                displayTranscripts.reduce((values, videometrics) => {
-                    if (
-                        selectedSpkrId2 === -1 ||
-                        videometrics.student_username === speakerAlias2
-                    )
-                        values.push(videometrics)
-                    return values
-                }, []),
-            )
-        } else {
-            setSpkr1VideoMetrics([])
-            setSpkr2VideoMetrics([])
-        }
+    if (displayVideoMetrics.length) {
+      let speakerAlias1 = getSpeakerAliasFromID(selectedSpkrId1)
+      let speakerAlias2 = getSpeakerAliasFromID(selectedSpkrId2)
+      setSpkr1VideoMetrics(
+        displayVideoMetrics.reduce((values, videometrics) => {
+          if (
+            selectedSpkrId1 === -1 ||
+            videometrics.student_username === speakerAlias1
+          )
+            values.push(videometrics)
+          return values
+        }, []),
+      )
+      setSpkr2VideoMetrics(
+        displayTranscripts.reduce((values, videometrics) => {
+          if (
+            selectedSpkrId2 === -1 ||
+            videometrics.student_username === speakerAlias2
+          )
+            values.push(videometrics)
+          return values
+        }, []),
+      )
+    } else {
+      setSpkr1VideoMetrics([])
+      setSpkr2VideoMetrics([])
     }
+  }
   const generateDisplayTranscripts = (s, e) => {
     setDisplayTranscripts(
       transcripts.filter((t) => t.start_time >= s && t.start_time <= e)
@@ -283,21 +301,21 @@ function PodComponent() {
   };
 
   const generateDisplayVideoMetrics = (s, e) => {
-        setDisplayVideoMetrics(
-            videoMetrics.filter((v) => v.time_stamp >= s && v.time_stamp <= e),
-        )
-    }
+    setDisplayVideoMetrics(
+      videoMetrics.filter((v) => v.time_stamp >= s && v.time_stamp <= e),
+    )
+  }
 
-    const getSpeakerAliasFromID = (selectedSpkrId)=>{
-        if (selectedSpkrId !== -1){
-             const speaker = speakers.filter((s) => s.id === selectedSpkrId )
-             if(speaker.length !== 0){
-                return speaker[0].alias
-             }
-        }else{
-            return -1
-        }
+  const getSpeakerAliasFromID = (selectedSpkrId) => {
+    if (selectedSpkrId !== -1) {
+      const speaker = speakers.filter((s) => s.id === selectedSpkrId)
+      if (speaker.length !== 0) {
+        return speaker[0].alias
+      }
+    } else {
+      return -1
     }
+  }
 
   const navigateToSession = () => {
     navigate("/sessions/" + session.id);
@@ -311,11 +329,11 @@ function PodComponent() {
     if (currentTranscript !== undefined) {
       navigate(
         "/sessions/" +
-          session.id +
-          "/pods/" +
-          sessionDeviceId +
-          "/transcripts?index=" +
-          currentTranscript.id
+        session.id +
+        "/pods/" +
+        sessionDeviceId +
+        "/transcripts?index=" +
+        currentTranscript.id
       );
     } else {
       navigate(
@@ -338,7 +356,7 @@ function PodComponent() {
         if (response.status === 200)
           response.json().then((jsonObj) => {
             const input = SpeakerModel.fromJsonList(jsonObj)
-            if(input && input.length){
+            if (input && input.length) {
               setSpeakers(input);
             }
           });
@@ -425,6 +443,35 @@ function PodComponent() {
     setDetails("Group");
   }
 
+  const setSelectedParticipantData = (speakerId, speakrAlias) => {
+    if (displayTranscripts.length) {
+      setSelectedParticipantTranscripts(
+        displayTranscripts.reduce((values, transcript) => {
+          if (transcript.speaker_id === speakerId)
+            values.push(transcript);
+          return values;
+        }, [])
+      );
+    }
+
+    if (displayVideoMetrics.length) {
+      setSelectedParticipantVideoMetrics(
+        displayVideoMetrics.reduce((values, videometric) => {
+          if (videometric.student_username === speakrAlias)
+            values.push(videometric);
+          return values;
+        }, [])
+      );
+    }
+  }
+
+  const loadSpeakerMetrics = (speakerId, speakrAlias) => {
+
+    setParticipantDisplayed([speakerId, speakrAlias])
+    setSelectedSpkrId1(speakerId)
+    setDetails("Individual");
+  }
+
   return (
     <PodComponentPages
       sessionDevice={sessionDevice}
@@ -451,7 +498,7 @@ function PodComponent() {
       showBoxes={showBoxes}
       handleCheckFeats={handleCheckFeats}
       handleCheckBoxes={handleCheckBoxes}
-      radarTrigger={radarTrigger}  
+      radarTrigger={radarTrigger}
       speakers={speakers}
       selectedSpkrId1={selectedSpkrId1}
       setSelectedSpkrId1={setSelectedSpkrId1}
@@ -461,7 +508,7 @@ function PodComponent() {
       spkr2Transcripts={spkr2Transcripts}
       spkr1VideoMetrics={spkr1VideoMetrics}
       spkr2VideoMetrics={spkr2VideoMetrics}
-      getSpeakerAliasFromID = {getSpeakerAliasFromID}
+      getSpeakerAliasFromID={getSpeakerAliasFromID}
       details={details}
       setDetails={setDetails}
       viewIndividual={viewIndividual}
@@ -469,6 +516,9 @@ function PodComponent() {
       viewGroup={viewGroup}
       open={open}
       setOpen={setOpen}
+      loadSpeakerMetrics={loadSpeakerMetrics}
+      selectedParticipantTranscripts={selectedParticipantTranscripts}
+      selectedParticipantVideoMetrics={selectedParticipantVideoMetrics}
     />
   );
 }

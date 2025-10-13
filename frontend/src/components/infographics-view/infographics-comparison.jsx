@@ -13,7 +13,7 @@ function AppInfographicsComparison(props) {
         <>
             {props.speakers && (
                 <div className="infographics-container">
-                    {props.details !== "Group" && (
+                    {props.details !== "Group" && props.details!== "Individual" && (
                         <div className="flex flex-col @sm:flex-row relative box-border wide-section justify-center my-2 max-h-12">
                             <select
                                 id="speaker1"
@@ -82,7 +82,7 @@ function AppInfographicsComparison(props) {
                                 <AppTimeline
                                     clickedTimeline={props.onClickedTimeline}
                                     session={props.session}
-                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
+                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.selectedParticipantTranscripts}
                                     start={props.startTime}
                                     end={props.endTime}
                                 />
@@ -115,7 +115,7 @@ function AppInfographicsComparison(props) {
                                 <AppKeywordsComponent
                                     session={props.session}
                                     sessionDevice={props.sessionDevice}
-                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
+                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.selectedParticipantTranscripts }
                                     start={props.startTime}
                                     end={props.endTime}
                                     fromclient={props.fromclient}
@@ -144,14 +144,14 @@ function AppInfographicsComparison(props) {
                     
                     {props.details !== "Group" &&
                         props.showBoxes.length > 0 &&
-                        props.showBoxes[11]["clicked"] && (
+                        props.showBoxes[11]["clicked"] && ( 
                             <AppSectionBoxComponent
-                                type={"small-section"}
+                                type={"wide-section"}
                                 heading={`Visual Analytics`}
                             >
                                 <AppIndividualVideoFeaturesComponent
                                     session={props.session}
-                                    videometrics={props.displayVideoMetrics}
+                                    videometrics={props.selectedParticipantVideoMetrics}
                                     spkrId={props.getSpeakerAliasFromID(props.selectedSpkrId1)}
                                     showFeatures={props.showFeatures}
                                 />
@@ -183,7 +183,7 @@ function AppInfographicsComparison(props) {
                             >
                                 <AppIndividualFeaturesComponent
                                     session={props.session}
-                                    transcripts={props.displayTranscripts}
+                                    transcripts={props.selectedParticipantTranscripts}
                                     spkrId={props.selectedSpkrId1}
                                     showFeatures={props.showFeatures}
                                 />
@@ -214,7 +214,7 @@ function AppInfographicsComparison(props) {
                             >
                                 <AppFeaturesComponent
                                     session={props.session}
-                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
+                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.selectedParticipantTranscripts}
                                     showFeatures={props.showFeatures}
                                 />
                             </AppSectionBoxComponent>
@@ -243,7 +243,7 @@ function AppInfographicsComparison(props) {
                             >
                                 <AppRadarComponent
                                     session={props.session}
-                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
+                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.selectedParticipantTranscripts}
                                     radarTrigger={props.radarTrigger}
                                     start={props.startTime}
                                     end={props.endTime}
