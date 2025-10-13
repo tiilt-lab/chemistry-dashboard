@@ -190,13 +190,15 @@ export class ActiveSessionService {
         // Update speaker video metrics.
         this.socket.on("video_metrics_update", (e) => {
             const data = JSON.parse(e)
-
-            const speaker_video_metrics = SpeakerVideoMetricsModel.fromJsonList(
-                data["speaker_video_metrics"]
-            )
             const currentVideoMetrics = this.videoMetricSource.getValue()
+            for(const metric of data["speaker_video_metrics"]){
+                const speaker_video_metrics = SpeakerVideoMetricsModel.fromJson(metric)
+                currentVideoMetrics.push(metric)
+            }
+            //  console.log(" speaker_video_metrics from Video metrics ", speaker_video_metrics)
+            
 
-            currentVideoMetrics.push(speaker_video_metrics)
+            
             this.videoMetricSource.next(currentVideoMetrics)
         })
     }
