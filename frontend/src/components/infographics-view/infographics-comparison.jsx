@@ -9,6 +9,7 @@ import { AppIndividualVideoFeaturesComponent } from "../individualVideometrics/v
 import React from "react"
 
 function AppInfographicsComparison(props) {
+    
     return (
         <>
             {props.speakers && (
@@ -82,7 +83,7 @@ function AppInfographicsComparison(props) {
                                 <AppTimeline
                                     clickedTimeline={props.onClickedTimeline}
                                     session={props.session}
-                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.selectedParticipantTranscripts}
+                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
                                     start={props.startTime}
                                     end={props.endTime}
                                 />
@@ -115,7 +116,7 @@ function AppInfographicsComparison(props) {
                                 <AppKeywordsComponent
                                     session={props.session}
                                     sessionDevice={props.sessionDevice}
-                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.selectedParticipantTranscripts }
+                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts }
                                     start={props.startTime}
                                     end={props.endTime}
                                     fromclient={props.fromclient}
@@ -151,7 +152,7 @@ function AppInfographicsComparison(props) {
                             >
                                 <AppIndividualVideoFeaturesComponent
                                     session={props.session}
-                                    videometrics={props.selectedParticipantVideoMetrics}
+                                    videometrics={props.spkr1VideoMetrics}
                                     spkrId={props.getSpeakerAliasFromID(props.selectedSpkrId1)}
                                     showFeatures={props.showFeatures}
                                 />
@@ -167,7 +168,7 @@ function AppInfographicsComparison(props) {
                             >
                                 <AppIndividualVideoFeaturesComponent
                                     session={props.session}
-                                    transcripts={props.displayVideoMetrics}
+                                    videometrics={props.spkr2VideoMetrics}
                                     spkrId={props.getSpeakerAliasFromID(props.selectedSpkrId2)}
                                     showFeatures={props.showFeatures}
                                 />
@@ -183,7 +184,7 @@ function AppInfographicsComparison(props) {
                             >
                                 <AppIndividualFeaturesComponent
                                     session={props.session}
-                                    transcripts={props.selectedParticipantTranscripts}
+                                    transcripts={props.spkr1Transcripts}
                                     spkrId={props.selectedSpkrId1}
                                     showFeatures={props.showFeatures}
                                 />
@@ -199,7 +200,7 @@ function AppInfographicsComparison(props) {
                             >
                                 <AppIndividualFeaturesComponent
                                     session={props.session}
-                                    transcripts={props.displayTranscripts}
+                                    transcripts={props.spkr2Transcripts}
                                     spkrId={props.selectedSpkrId2}
                                     showFeatures={props.showFeatures}
                                 />
@@ -214,7 +215,7 @@ function AppInfographicsComparison(props) {
                             >
                                 <AppFeaturesComponent
                                     session={props.session}
-                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.selectedParticipantTranscripts}
+                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
                                     showFeatures={props.showFeatures}
                                 />
                             </AppSectionBoxComponent>
@@ -243,7 +244,7 @@ function AppInfographicsComparison(props) {
                             >
                                 <AppRadarComponent
                                     session={props.session}
-                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.selectedParticipantTranscripts}
+                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
                                     radarTrigger={props.radarTrigger}
                                     start={props.startTime}
                                     end={props.endTime}
