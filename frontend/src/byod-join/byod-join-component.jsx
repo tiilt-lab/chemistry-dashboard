@@ -66,6 +66,7 @@ function JoinPage() {
     const [spkr2Transcripts, setSpkr2Transcripts] = useState([])
     const [spkr1VideoMetrics, setSpkr1VideoMetrics] = useState([])
     const [spkr2VideoMetrics, setSpkr2VideoMetrics] = useState([])
+    const [selectedSpkralias, setSelectedSpkralias] = useState("");
     const [details, setDetails] = useState("Group")
 
     const [currentForm, setCurrentForm] = useState("")
@@ -96,6 +97,7 @@ function JoinPage() {
     const [registeredUserAliasChanged, setRegisteredUserAliasChanged] = useState(false)
     const [registeredAudioFingerprintAdded, setRegisteredAudioFingerprintAdded] = useState(false)
     const [registeredVideoFingerprintAdded, setRegisteredVideoFingerprintAdded] = useState(false)
+    
 
     const POD_COLOR = "#FF6655"
     const GLOW_COLOR = "#ffc3bd"
@@ -1085,63 +1087,62 @@ function JoinPage() {
         )
     }
 
-    const setSpeakerTranscripts = () => {
-        if (displayTranscripts.length) {
-            setSpkr1Transcripts(
-                displayTranscripts.reduce((values, transcript) => {
-                    if (
-                        selectedSpkrId1 === -1 ||
-                        transcript.speaker_id === selectedSpkrId1
-                    )
-                        values.push(transcript)
-                    return values
-                }, []),
-            )
-            setSpkr2Transcripts(
-                displayTranscripts.reduce((values, transcript) => {
-                    if (
-                        selectedSpkrId2 === -1 ||
-                        transcript.speaker_id === selectedSpkrId2
-                    )
-                        values.push(transcript)
-                    return values
-                }, []),
-            )
-        } else {
-            setSpkr1Transcripts([])
-            setSpkr2Transcripts([])
-        }
-    }
 
-    const setSpeakerVideoMetrics = () => {
-        if (displayVideoMetrics.length) {
-            let speakerAlias1 = getSpeakerAliasFromID(selectedSpkrId1)
-            let speakerAlias2 = getSpeakerAliasFromID(selectedSpkrId2)
-            setSpkr1VideoMetrics(
-                displayVideoMetrics.reduce((values, videometrics) => {
-                    if (
-                        selectedSpkrId1 === -1 ||
-                        videometrics.student_username === speakerAlias1
-                    )
-                        values.push(videometrics)
-                    return values
-                }, []),
-            )
-            setSpkr2VideoMetrics(
-                displayTranscripts.reduce((values, videometrics) => {
-                    if (
-                        selectedSpkrId2 === -1 ||
-                        videometrics.student_username === speakerAlias2
-                    )
-                        values.push(videometrics)
-                    return values
-                }, []),
-            )
-        } else {
-            setSpkr1VideoMetrics([])
-            setSpkr2VideoMetrics([])
-        }
+    const setSpeakerTranscripts = () => {
+    if (displayTranscripts.length) {
+      setSpkr1Transcripts(
+        displayTranscripts.reduce((values, transcript) => {
+          
+          if (transcript.speaker_id === selectedSpkrId1
+          ){
+            values.push(transcript);
+          }
+          return values;
+        }, [])
+      );
+      setSpkr2Transcripts(
+        displayTranscripts.reduce((values, transcript) => {
+          if (transcript.speaker_id === selectedSpkrId2
+          ){
+            values.push(transcript);
+         }
+          return values;
+        }, [])
+      );
+    } else {
+      setSpkr1Transcripts([]);
+      setSpkr2Transcripts([]);
     }
+  };
+
+  const setSpeakerVideoMetrics = () => {
+    console.log(selectedSpkrId1,selectedSpkrId2)
+    if (displayVideoMetrics.length) {
+      let speakerAlias1 = getSpeakerAliasFromID(selectedSpkrId1)
+      let speakerAlias2 = getSpeakerAliasFromID(selectedSpkrId2)
+      setSpkr1VideoMetrics(
+        displayVideoMetrics.reduce((values, videometrics) => {
+          if (videometrics.student_username === speakerAlias1
+          ){
+            values.push(videometrics)
+          }
+          return values
+        }, []),
+      )
+      setSpkr2VideoMetrics(
+        displayVideoMetrics.reduce((values, videometrics) => {
+          if (videometrics.student_username === speakerAlias2
+          ){
+            values.push(videometrics)  
+          }
+          return values
+        }, []),
+      )
+    } else {
+      setSpkr1VideoMetrics([])
+      setSpkr2VideoMetrics([])
+    }
+  }
 
     const seeAllTranscripts = () => {
         if (Object.keys(currentTranscript) > 0 && sessionDevice !== null) {
@@ -1254,6 +1255,12 @@ function JoinPage() {
     const sessionDevBtnPressed =
         sessionDevice !== null ? sessionDevice.button_pressed : null
 
+    const loadSpeakerMetrics = (speakerId, speakrAlias) => {
+    setSelectedSpkrId1(speakerId)
+    setSelectedSpkralias(speakrAlias)
+    setDetails("Individual");
+  }
+
     return (
         <ByodJoinPage
             connected={audioconnected}
@@ -1327,6 +1334,8 @@ function JoinPage() {
             cartoonImgUrl={cartoonImgUrl}
             invalidName={invalidName}
             startProcessingSavedSpeakerFingerprint={startProcessingSavedSpeakerFingerprint}
+            loadSpeakerMetrics={loadSpeakerMetrics}
+            selectedSpkralias={selectedSpkralias}
         />
     )
 }

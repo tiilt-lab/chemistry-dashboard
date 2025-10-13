@@ -74,8 +74,6 @@ function PodComponentPages(props) {
                             spkr2VideoMetrics={props.spkr2VideoMetrics}
                             details={props.details}
                             getSpeakerAliasFromID={props.getSpeakerAliasFromID}
-                            selectedParticipantTranscripts={props.selectedParticipantTranscripts}
-                            selectedParticipantVideoMetrics={props.selectedParticipantVideoMetrics}
                         ></AppInfographicsComparison>
                     </div>
                 </div>

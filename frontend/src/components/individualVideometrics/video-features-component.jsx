@@ -35,6 +35,7 @@ function AppIndividualVideoFeaturesComponent(props) {
       setFeatures(valueArrays);
       return;
     }
+    
     //filter speaker metrics from video metrics based on the spkrId
     // const speaker_video_metric = props.videometrics.filter(v => v.student_username === props.spkrId)
     
@@ -50,7 +51,7 @@ function AppIndividualVideoFeaturesComponent(props) {
       valueArrays[1].time.push(v.time_stamp);
       valueArrays[2].time.push(v.time_stamp);
     });
-
+    // console.log("i returned ", props.spkrId)
     // console.log("video mtric data: ", valueArrays)
     
     // //smooth the values of the value array over 10 values

@@ -43,10 +43,6 @@ function PodComponent() {
   const [spkr2VideoMetrics, setSpkr2VideoMetrics] = useState([])
   const [open, setOpen] = useState(true);
   const [selectedSpkralias, setSelectedSpkralias] = useState("");
-  const [participantDisplayed, setParticipantDisplayed] = useState([])
-  const [selectedParticipantTranscripts, setSelectedParticipantTranscripts] = useState([]);
-  const [selectedParticipantVideoMetrics, setSelectedParticipantVideoMetrics] = useState([])
-
   const { sessionDeviceId } = useParams();
   const navigate = useNavigate();
 
@@ -193,12 +189,8 @@ function PodComponent() {
       setSpeakerVideoMetrics()
     }
 
-    if (participantDisplayed.length > 0) {
-      setSelectedParticipantData(participantDisplayed[0], participantDisplayed[1])
-      console.log("loaded displayed participant data");
-    }
 
-  }, [displayTranscripts, displayVideoMetrics, selectedSpkrId1, selectedSpkrId2, details, participantDisplayed]);
+  }, [displayTranscripts, displayVideoMetrics, selectedSpkrId1, selectedSpkrId2, details]);
 
   useEffect(() => {
     if (trigger > 0) {
@@ -242,21 +234,20 @@ function PodComponent() {
     if (displayTranscripts.length) {
       setSpkr1Transcripts(
         displayTranscripts.reduce((values, transcript) => {
-          if (
-            selectedSpkrId1 === -1 ||
-            transcript.speaker_id === selectedSpkrId1
-          )
+          
+          if (transcript.speaker_id === selectedSpkrId1
+          ){
             values.push(transcript);
+          }
           return values;
         }, [])
       );
       setSpkr2Transcripts(
         displayTranscripts.reduce((values, transcript) => {
-          if (
-            selectedSpkrId2 === -1 ||
-            transcript.speaker_id === selectedSpkrId2
-          )
+          if (transcript.speaker_id === selectedSpkrId2
+          ){
             values.push(transcript);
+         }
           return values;
         }, [])
       );
@@ -267,26 +258,25 @@ function PodComponent() {
   };
 
   const setSpeakerVideoMetrics = () => {
+    console.log(selectedSpkrId1,selectedSpkrId2)
     if (displayVideoMetrics.length) {
       let speakerAlias1 = getSpeakerAliasFromID(selectedSpkrId1)
       let speakerAlias2 = getSpeakerAliasFromID(selectedSpkrId2)
       setSpkr1VideoMetrics(
         displayVideoMetrics.reduce((values, videometrics) => {
-          if (
-            selectedSpkrId1 === -1 ||
-            videometrics.student_username === speakerAlias1
-          )
+          if (videometrics.student_username === speakerAlias1
+          ){
             values.push(videometrics)
+          }
           return values
         }, []),
       )
       setSpkr2VideoMetrics(
-        displayTranscripts.reduce((values, videometrics) => {
-          if (
-            selectedSpkrId2 === -1 ||
-            videometrics.student_username === speakerAlias2
-          )
-            values.push(videometrics)
+        displayVideoMetrics.reduce((values, videometrics) => {
+          if (videometrics.student_username === speakerAlias2
+          ){
+            values.push(videometrics)  
+          }
           return values
         }, []),
       )
@@ -444,31 +434,8 @@ function PodComponent() {
     setDetails("Group");
   }
 
-  const setSelectedParticipantData = (speakerId, speakrAlias) => {
-    if (displayTranscripts.length) {
-      setSelectedParticipantTranscripts(
-        displayTranscripts.reduce((values, transcript) => {
-          if (transcript.speaker_id === speakerId)
-            values.push(transcript);
-          return values;
-        }, [])
-      );
-    }
-
-    if (displayVideoMetrics.length) {
-      setSelectedParticipantVideoMetrics(
-        displayVideoMetrics.reduce((values, videometric) => {
-          if (videometric.student_username === speakrAlias)
-            values.push(videometric);
-          return values;
-        }, [])
-      );
-    }
-  }
 
   const loadSpeakerMetrics = (speakerId, speakrAlias) => {
-
-    setParticipantDisplayed([speakerId, speakrAlias])
     setSelectedSpkrId1(speakerId)
     setSelectedSpkralias(speakrAlias)
     setDetails("Individual");
@@ -520,8 +487,6 @@ function PodComponent() {
       setOpen={setOpen}
       loadSpeakerMetrics={loadSpeakerMetrics}
       selectedSpkralias={selectedSpkralias}
-      selectedParticipantTranscripts={selectedParticipantTranscripts}
-      selectedParticipantVideoMetrics={selectedParticipantVideoMetrics}
     />
   );
 }
