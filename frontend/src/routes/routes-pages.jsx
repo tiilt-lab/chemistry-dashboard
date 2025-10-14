@@ -14,6 +14,7 @@ import {DiscussionGraphComponent} from '../discussion-graph/discussion-graph-com
 import {FileUploadComponent} from '../file-upload/file-upload-component'
 import { SettingsComponent } from '../settings/settings-component';
 import { PodComponent } from '../pod-details/pod-component';
+import {PodComponentSession} from '../pod-details-session/pod-component-session'
 import {TranscriptsComponent} from '../transcripts/transcripts-component'
 import {TopicListComponent} from '../topic-list/topic-list-component'
 import {ManageTopicModelsComponent} from '../manage-topic-models/manage-topic-models-component'
@@ -41,6 +42,7 @@ function PageRouter() {
                     <Route path='overview' element={<ProtectedRoute component={PodsOverviewComponent}/>} />
                     <Route path='graph' element={<ProtectedRoute component={DiscussionGraphComponent}/>} />
                     <Route path='pods/:sessionDeviceId' element={<ProtectedRoute component={PodComponent}/>} />
+                    <Route path='pods_session/:speakerId' element={<ProtectedRoute component={PodComponentSession}/>} />
                     <Route path='pods/:sessionDeviceId/transcripts' element={<ProtectedRoute component={TranscriptsComponent}/>} />
                 </Route> 
                 <Route path='/topic-models' element={<ProtectedRoute component={ManageTopicModelsComponent}/>} />

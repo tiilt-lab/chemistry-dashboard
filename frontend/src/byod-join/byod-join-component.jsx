@@ -1258,6 +1258,7 @@ function JoinPage() {
     const loadSpeakerMetrics = (speakerId, speakrAlias) => {
     setSelectedSpkrId1(speakerId)
     setSelectedSpkralias(speakrAlias)
+    setPageTitle(speakrAlias)
     setDetails("Individual");
   }
 
