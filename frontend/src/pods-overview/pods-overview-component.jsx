@@ -64,6 +64,10 @@ function PodsOverviewComponent() {
     navigate("/sessions/" + session.id + "/pods/" + sessionDevice.id);
   };
 
+  const goToSpeakerMetrics = (speakerID) => {
+    navigate("/sessions/" + session.id + "/pods_session/" + speakerID);
+  };
+
   const onSessionClosing = (isClosing) => {
     setSessionClosing(isClosing);
   };
@@ -261,6 +265,7 @@ function PodsOverviewComponent() {
       initialized={activeSessionService.initialized}
       sessionSpeaker={sessionSpeaker}
       devices={devices}
+      goToSpeakerMetrics={goToSpeakerMetrics}
     />
   );
 }

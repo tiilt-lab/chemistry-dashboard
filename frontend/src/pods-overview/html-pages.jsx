@@ -56,7 +56,7 @@ function PodsOverviewPages(props) {
                             participants={ props.sessionSpeaker.map((speaker, index) => (
                                 {
                                     alias: speaker.alias,
-                                    action: () => props.loadSpeakerMetrics(speaker.id,speaker.alias),
+                                    action: () => props.goToSpeakerMetrics(speaker.id),
                                 }
                             ))}
 
