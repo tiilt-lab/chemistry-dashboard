@@ -13,7 +13,7 @@ export class ApiService {
     //     "http://129.105.44.121:8080/"
     //   );
     return (
-      "https://videodev.tiilt-blinc.com"
+      "videodev.tiilt-blinc.com"
     );
     
   }
