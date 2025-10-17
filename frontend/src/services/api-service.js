@@ -13,7 +13,7 @@ export class ApiService {
     //     "http://129.105.44.121:8080/"
     //   );
     return (
-      "https://video.tiilt-blinc.com"
+      "https://videodev.tiilt-blinc.com"
     );
     
   }
@@ -31,10 +31,7 @@ export class ApiService {
     getVideoWebsocketEndpoint() {
     return (
          this.getWSSProtocol() +
-      "//" +
-      // window.location.host.split(":")[0] +
-      window.location.host +
-      "/video_socket"
+      "//" +getVideoServerEndpoint() +"/video_socket"
     );
       
   }
