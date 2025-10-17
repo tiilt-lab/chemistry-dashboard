@@ -37,6 +37,7 @@ function AppIndividualFeaturesComponent(props) {
       setFeatures(valueArrays);
       return;
     }
+    // console.log("sent transcript is ", props.transcripts)
     props.transcripts.forEach((t) => {
       //select speaker metrics from transcripts based on the spkrId
       const speaker_metric = t.speaker_metrics.find(

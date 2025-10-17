@@ -492,7 +492,7 @@ function ByodJoinPage(props) {
                                                 )}
                                             <AppInfographicsComparison
                                                 displayTranscripts={props.displayTranscripts}
-                                                displayVideoMetrics={ props.displayVideoMetrics}
+                                                displayVideoMetrics={props.displayVideoMetrics}
                                                 fromclient={true}
                                                 onClickedTimeline={props.onClickedTimeline}
                                                 radarTrigger={props.radarTrigger}
@@ -508,7 +508,7 @@ function ByodJoinPage(props) {
                                                 setSelectedSpkrId1={props.setSelectedSpkrId1}
                                                 selectedSpkrId2={props.selectedSpkrId2}
                                                 setSelectedSpkrId2={props.setSelectedSpkrId2}
-                                                spkr1Transcripts={props.spkr1Transcripts }
+                                                spkr1Transcripts={props.spkr1Transcripts}
                                                 spkr2Transcripts={props.spkr2Transcripts}
                                                 spkr1VideoMetrics={props.spkr1VideoMetrics}
                                                 spkr2VideoMetrics={props.spkr2VideoMetrics}
@@ -731,6 +731,12 @@ function ByodJoinPage(props) {
                 heading={"Connecting..."}
                 message={"Please wait..."}
                 show={props.currentForm === "Connecting"}
+            />
+            <WaitingDialog
+                itsclass={"add-dialog"}
+                heading={"Processing..."}
+                message={"Please wait..."}
+                show={props.currentForm === "processing"}
             />
 
             <DialogBox

@@ -35,7 +35,7 @@ class VideoMetricAnalytics:
                         pred_attention_level = self.AttentionTracking.track_person_level_of_attention(object_class_id,person_id)
                         pred_object_focused_on = object_class_name
                     else:
-                        print("no closer object: ")
+                        # print("no closer object: ")
                         #the gaze is not focused on any object detected 
                         pred_attention_level = self.AttentionTracking.track_person_level_of_attention(None,person_id,action="N")
                 else:

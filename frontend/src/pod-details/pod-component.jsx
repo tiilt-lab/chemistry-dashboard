@@ -258,7 +258,7 @@ function PodComponent() {
   };
 
   const setSpeakerVideoMetrics = () => {
-    console.log(selectedSpkrId1,selectedSpkrId2)
+    
     if (displayVideoMetrics.length) {
       let speakerAlias1 = getSpeakerAliasFromID(selectedSpkrId1)
       let speakerAlias2 = getSpeakerAliasFromID(selectedSpkrId2)

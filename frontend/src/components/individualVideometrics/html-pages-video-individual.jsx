@@ -17,13 +17,15 @@ function IndividualVideoMetricPage(props) {
                         happy: 3,
                         neutral: 4,
                         surprise: 5,
+                        sad:6
                         };
     const emotionLabels = Object.keys(emotionMap);
+    
     return (
         <>
-            <div className="small-section">
+            <div className="wide-section">
                 <table
-                    className={style["features-table"]}
+                    className={style["features-table"]} 
                 >
                     <thead>
                         <tr>
@@ -61,7 +63,7 @@ function IndividualVideoMetricPage(props) {
                                             {feature.name}
                                         </td>
 
-                                        <td>
+                                        <td height={500}>
                                             {feature.values.length === 0 ? (
                                                 <div
                                                     className={
@@ -74,7 +76,7 @@ function IndividualVideoMetricPage(props) {
                                                 ></div>
                                             ) : (
                                                     feature.name == "Facial Emotions"  ? (
-                                                     
+                                                    // props.emotionTimelineCategorical(feature, 720, 360)
                                                     <Line 
                                                     data={{
                                                             labels: feature.time,
@@ -94,10 +96,13 @@ function IndividualVideoMetricPage(props) {
                                                                 y: { title: { text: feature.name, display: true } ,
                                                                 ticks: {
                                                                         stepSize: 1,
+                                                                        precision: 0,
+                                                                        autoSkip: false,
+                                                                        maxTicksLimit: 7,
                                                                         callback: (value) => emotionLabels[value] ?? "",
                                                                         },
                                                                 min: 0,
-                                                                max: emotionLabels.length - 1,
+                                                                max: emotionLabels.length-1,
                                                                 }},
                                                             }} 
                                                 />

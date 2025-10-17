@@ -12,7 +12,7 @@ class ConnectionManager:
     def check_connections(self):
         with self.lock:
             for connection in list(self.connections):
-                if time.time() - connection.last_message > 30:
+                if time.time() - connection.last_message > 300:
                     logging.warning('Closing client due to inactivity.')
                     connection.send_close('Connection closed due to inactivity.')
                     connection.signal_end()

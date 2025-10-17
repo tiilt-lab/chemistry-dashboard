@@ -144,7 +144,7 @@ class ImageObjectDetection:
                     
         return all_frames,accumulator
 
-    def detection_with_facial_regonition(self,images,facial_embeddings,batch_track,time_marker,vid_img_dir):
+    def detection_with_facial_regonition(self,images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key):
         val_dataset = LoadImageDataset(images, batch_track, self.batch_size,img_size=self.imgsz, stride=self.stride)
         dataset = torch.utils.data.DataLoader(dataset=val_dataset,
                                                batch_size=self.batch_size,
@@ -174,7 +174,6 @@ class ImageObjectDetection:
             #combine pred and pred 2, filter out all cls 0 (person) detection for pred. keep only head (cls 1) detection 
             # and filter out all cls 1 (bicycle)  detection  pred 2
             combined_pred = [torch.cat((pred[i][pred[i][:,5] >= 1],pred2[i][pred2[i][:,5] != 1])) for i in range(len(pred2))]
-            
             for i, det in enumerate(combined_pred):  # detections per image
                 p, im0 = img_index[i], im0s[i].numpy()
 
@@ -229,7 +228,7 @@ class ImageObjectDetection:
                         if int(clss) != self.object_names_V_K.get('person', None) and int(clss) != self.object_names_V_K.get('head', None):
                             # print("Other object detected is: ",self.object_names_K_V.get(int(clss), None))
                             #accumulate all other objects except person  
-                            self.accumulate_head_and_otherobject_track_V2(bbox,int(clss),"detected_other_objects",str(object_id),accumulator,time_marker,im0,int(p))    
+                            self.accumulate_head_and_otherobject_track_V2(bbox,int(clss),"detected_other_objects",str(object_id),accumulator,time_marker,im0,int(p))  
                                
                     
         return all_frames,accumulator
@@ -269,14 +268,14 @@ class ImageObjectDetection:
             v = self.normalize(stored_embedding)
             score = float(np.dot(u, v)) #self.cosine_similarity(face_embedding, stored_embedding)
             Euc_dist = float(np.linalg.norm(u - v))
-            print("score are Euclidean and cos simillarity:", Euc_dist,score)
+            # print("score are Euclidean and cos simillarity:", Euc_dist,score)
             if score > best_cos_score and Euc_dist < best_L2_score:
                 best_cos_score = score
                 best_L2_score = Euc_dist
                 best_match = student
 
         if best_cos_score >= cos_threshold and best_L2_score <= L2_threshold:
-            print("student is ......"+student+" and score are cos_simmilarity: "+str(best_cos_score)+" Euclidean Dist: "+str(best_L2_score))
+            # print("student is ......"+student+" and score are cos_simmilarity: "+str(best_cos_score)+" Euclidean Dist: "+str(best_L2_score))
             return best_match, best_cos_score, best_L2_score
         else:
             return "Unknown", best_cos_score,best_L2_score

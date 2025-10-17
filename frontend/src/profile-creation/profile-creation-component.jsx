@@ -27,6 +27,7 @@ function SignupPage() {
     const [displayText, setDisplayText] = useState("")
     const video_captured = useRef(null)
     const [isRecordingStopped, setIsRecordingStopped] = useState(false);
+    // const [userProfileDetails, setUserProfileDetail] = useState(null)
     const audiows = useRef(null)
     const videows = useRef(null)
     const navigate = useNavigate()
@@ -45,8 +46,8 @@ function SignupPage() {
             constraint.audio = true
             constraint.video = {
                 facingMode: "user",
-                width: 640, //{ min: 640, ideal: 1280, max: 1920 },
-                height: 480, //{ min: 480, ideal: 720, max: 1080 }
+                width: 500, //{ min: 640, ideal: 1280, max: 1920 },
+                height: 500, //{ min: 480, ideal: 720, max: 1080 }
             }
             setConstraintObj(constraint)
         }
@@ -63,10 +64,7 @@ function SignupPage() {
         if (audioAuthenticated && videoAuthenticated) {
             const videoPlay = () => {
                 let video = document.getElementById('video_preview')
-                console.log("video tag ", video)
-                console.log("streamReference ", streamReference)
                 video.srcObject = streamReference
-                console.log("video.srcObject ", video.srcObject)
                 video.onloadedmetadata = function (ev) {
                     video.play()
                     mediaRecorder.start(interval)
@@ -282,6 +280,7 @@ function SignupPage() {
             setShowAlert(true);
             document.getElementById("username").focus();
         } else {
+            // setUserProfileDetail([lastname, firstname, username])
             new AuthService().createStudentProfile(lastname, firstname, username, setStudentObject, setAlertMessage, setShowAlert);
         }
     }

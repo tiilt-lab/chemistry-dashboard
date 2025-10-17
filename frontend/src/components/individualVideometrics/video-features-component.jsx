@@ -1,5 +1,18 @@
 import { useEffect, useState } from "react";
 import { IndividualVideoMetricPage } from "./html-pages-video-individual";
+import { Line } from "react-chartjs-2";
+import {
+  Chart,
+  LineElement,
+  PointElement,
+  LinearScale,   // x scale (time as numbers/seconds)
+  CategoryScale, // y scale (categories)
+  Tooltip,
+  Legend,
+  Title,
+} from "chart.js";
+
+Chart.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend, Title);
 
 function AppIndividualVideoFeaturesComponent(props) {
   // @Input('session') session: SessionModel;
@@ -44,11 +57,10 @@ function AppIndividualVideoFeaturesComponent(props) {
       
       //accumulate each score into their value array
       valueArrays[0].values.push(v.facial_emotion);
-      valueArrays[1].values.push(v.attention_level);
-      valueArrays[2].values.push(v.object_on_focus);
-
       valueArrays[0].time.push(v.time_stamp);
+      valueArrays[1].values.push(v.attention_level);
       valueArrays[1].time.push(v.time_stamp);
+      valueArrays[2].values.push(v.object_on_focus);
       valueArrays[2].time.push(v.time_stamp);
     });
     // console.log("i returned ", props.spkrId)
@@ -118,6 +130,65 @@ function AppIndividualVideoFeaturesComponent(props) {
     setShowFeatureDialog(false);
   };
 
+  const emotionTimelineCategorical = (feature, height = 320, width = 640 ) =>{
+  // Build (x,y) objects directly; y is categorical (emotion string)
+  const points = feature.time.map((t, i) => ({ x: t, y: feature.values[i] }));
+
+  // Optional: fix the category order so the y-axis doesn’t reorder dynamically
+  const emotionOrder = ["angry", "disgust", "fear", "happy", "neutral", "surprise", "sad"];
+
+  const data = {
+    datasets: [
+      {
+        label: feature.name,
+        data: points,          // [{x: 0.0, y: "neutral"}, ...]
+        parsing: false,        // tell Chart.js we’re giving explicit {x,y}
+        stepped: true,         // step timeline look
+        borderWidth: 2,
+        pointRadius: 0,
+      },
+    ],
+  };
+
+  const options = {
+    responsive: false,        // we’ll control canvas size via props
+    plugins: {
+      legend: { display: false },
+      title: { display: true, text: "Emotion Over Time (Categorical Y)" },
+      tooltip: {
+        callbacks: {
+          // Show clean tooltip like: Time: 1.2s — Emotion: happy
+          label: (ctx) => `Emotion: ${ctx.parsed.y}`,
+          title: (items) =>
+            items?.length ? `Time: ${items[0].parsed.x}s` : "",
+        },
+      },
+    },
+    scales: {
+      x: {
+        type: "linear",
+        title: { display: true, text: "Time (s)" },
+        ticks: { autoSkip: false },
+        grid: { drawOnChartArea: true },
+      },
+      y: {
+        type: "category",
+        // If you want to lock order, set labels explicitly; otherwise Chart.js uses the data’s order
+        labels: emotionOrder,
+        title: { display: true, text: feature.name },
+        ticks: { autoSkip: false }, // show every emotion row
+        grid: { drawOnChartArea: true },
+      },
+    },
+  } 
+
+  return (
+    <div>
+      <Line data={data} options={options} height={height} width={width} />
+    </div>
+  );
+}
+
   return (
     <IndividualVideoMetricPage
       featureHeader={featureHeader}
@@ -127,6 +198,7 @@ function AppIndividualVideoFeaturesComponent(props) {
       features={features}
       getInfo={getInfo}
       showFeatures={props.showFeatures}
+      emotionTimelineCategorical={emotionTimelineCategorical}
     />
   );
 }
