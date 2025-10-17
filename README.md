@@ -2,12 +2,16 @@
 
 ## Installing Dependencies
 
-Update system packages
+### PLEASE DO NO RUN THE FOLLOWING COMMAND/SETUPS ON THE. GLAMDRING.CS.NORTHWESTERN SERVER ###
 
+
+Update system packages
+#### THE FOLLOWINGS ARE ALREADY SETUP/CONFIGURED IN THE GLAMDRING.CS.NORTHWESTERN SERVER ####
 ```
 sudo apt-get update
 sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3 python3-pip python3-dev python3-venv python3-tk python3-openssl git sqlite nginx pkg-config libfreetype6-dev libsndfile1
 ```
+#### END ####
 
 Install pyenv
 
@@ -34,7 +38,7 @@ Restart the Shell
 ```
 exec "$SHELL"
 ```
-
+#### THE FOLLOWINGS ARE ALREADY SETUP/CONFIGURED IN THE GLAMDRING.CS.NORTHWESTERN SERVER ####
 Install Redis
 
 ```
@@ -49,9 +53,11 @@ sudo apt-get install mysql-server
 sudo systemctl start mysql
 sudo systemctl enable mysql
 ```
+#### END ####
+
 
 ## For Video Processing (Optional):
-
+#### THE FOLLOWINGS ARE ALREADY SETUP/CONFIGURED IN THE GLAMDRING.CS.NORTHWESTERN SERVER ####
 Install nvidia driver, cuda, and cudnn for ubuntu version 22.04
 
 Install nvidia driver (if it is not already installed)
@@ -116,7 +122,23 @@ sudo apt install python3.8-lib2to3
 sudo apt install python3.8-gdbm
 sudo apt install python3.8-tk
 ```
+
+#### END ####
+
+Go to var/lib foloder and pull the git repo
+
 ```
+cd /var/lib/
+sudo git clone https://github.com/tiilt-lab/chemistry-dashboard.git
+sudo chmod 777 -R chemistry-dashboard
+cd chemistry-dashboard
+```
+
+Create python3 virtual environments with pyenv and install packages.
+
+```
+pyenv install 3.9.21
+
 cd /var/lib/chemistry-dashboard/video_processing
 run python3.9 --version to get the version replace x.x.x below with the version number
 S python3.9 --version
@@ -151,7 +173,19 @@ $ sudo cp external/CUDAApplyUtils.cuh csrc/CUDAApplyUtils.cuh
 $ pyenv local video_processor
 $ python setup.py install
 ```
-## Required parts of Server:
+## Required Dependencies and models to download:
+pip install gdown
+cd video_processing/attention_tracking/
+mkdir -p pretrained-models
+gdown https://drive.google.com/file/d/1UEB_b0QmbMn8753tIBku54hTlcq3yhIs
+gdown https://drive.google.com/file/d/1eCBaBEV47bpCRsKNMVorX-ujfZNoIENB
+gdown https://drive.google.com/file/d/1Bp_4B204Hu-dr-rPYhABQD1b58kD469A
+gdown https://drive.google.com/file/d/1UpE3LlPtc40I4MKyYv20RK3x0XJi5Rl8
+
+cd ../emotion_detector
+mkdir -p checkpoints
+gdown https://drive.google.com/file/d/1MGvRiPaOLBTyPhT4qtMaWmOtHX0zle4f
+
 
 Create a database in MySQL
 
@@ -164,19 +198,7 @@ FLUSH PRIVILEGES;
 exit
 ```
 
-Go to var/lib foloder and pull the git repo
 
-```
-cd /var/lib/
-sudo git clone https://github.com/tiilt-lab/chemistry-dashboard.git
-sudo chmod 777 -R chemistry-dashboard
-cd chemistry-dashboard
-```
-
-Create python3 virtual environments with pyenv and install packages.
-
-```
-pyenv install 3.9.21
 
 cd server
 pyenv virtualenv 3.9.21 discussion_capture
