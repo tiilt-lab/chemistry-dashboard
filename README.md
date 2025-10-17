@@ -174,6 +174,7 @@ $ pyenv local video_processor
 $ python setup.py install
 ```
 ## Required Dependencies and models to download:
+```
 $ pip install gdown
 $ cd video_processing/attention_tracking/
 $ mkdir -p pretrained-models
@@ -185,7 +186,7 @@ $. gdown https://drive.google.com/file/d/1UpE3LlPtc40I4MKyYv20RK3x0XJi5Rl8
 $ cd ../emotion_detector
 $ mkdir -p checkpoints
 $ gdown https://drive.google.com/file/d/1MGvRiPaOLBTyPhT4qtMaWmOtHX0zle4f
-
+```
 
 Create a database in MySQL
 
