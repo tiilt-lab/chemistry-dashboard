@@ -101,25 +101,7 @@ class GoogleASR():
                     break
         finally:
             # Ensure we always account for time we streamed, even on early returns
-            self.audio_time += elapsed
-
-    # def generator(self):
-    #     generator_time = 0
-    #     while self.running and generator_time < GoogleASR.STREAM_LIMIT:
-    #         chunk = self.audio_queue.get()
-    #         data = [chunk]
-    #         if chunk is None:
-    #             return
-    #         while not self.audio_queue.empty():
-    #             chunk = self.audio_queue.get(block=False)
-    #             if chunk is None:
-    #                 return
-    #             data.append(chunk)
-    #         for chunk in data:
-    #             generator_time += (len(chunk) / GoogleASR.DEPTH) / GoogleASR.SAMPLE_RATE
-    #         yield b''.join(data)
-    #     self.audio_time += generator_time
-        
+            self.audio_time += elapsed        
 
     def process_responses(self, responses, audio_start_time):
         for response in responses:

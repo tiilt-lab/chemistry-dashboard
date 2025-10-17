@@ -50,11 +50,6 @@ def get_speakers(session_id=None, session_device_id=None, id = None):
     
     return query.all()
 
-def get_speaker_video_metrics(id = None, student_username=None, session_id=None, session_device_id=None):
-    query = db.session.query(SpeakerVideoMetrics)
-    if session_id != None:
-        query = query.filter(SessionDevice.session_id == session_id)
-
 def get_speaker_tags(session_device_id=None):
     query = db.session.query(Transcript).filter(session_device_id=session_device_id).distinct(Transcript.speaker_tag)
     return query.count()
@@ -151,7 +146,7 @@ def delete_speaker_transcript_metrics(id = None, speaker_id = None, transcript_i
 def get_speaker_video_metrics(id = None, student_username=None, session_id=None, session_device_id=None):
     query = db.session.query(SpeakerVideoMetrics)
     if session_id != None:
-        query = query.filter(SessionDevice.session_id == session_id)
+        query = query.join(SessionDevice).filter(SessionDevice.session_id == session_id)
     if id != None:
         return query.filter(SpeakerVideoMetrics.id == id).first()
     if student_username != None:
