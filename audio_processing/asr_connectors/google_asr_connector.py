@@ -5,6 +5,7 @@ from google.cloud.speech_v1p1beta1 import enums
 from google.cloud.speech_v1p1beta1 import types
 from google.api_core import exceptions
 from google.cloud import speech as speechV1
+from queue import Empty
 import os
 import time
 import math
@@ -48,21 +49,76 @@ class GoogleASR():
         self.running = False
 
     def generator(self):
-        generator_time = 0
-        while self.running and generator_time < GoogleASR.STREAM_LIMIT:
-            chunk = self.audio_queue.get()
-            data = [chunk]
-            if chunk is None:
-                return
-            while not self.audio_queue.empty():
-                chunk = self.audio_queue.get(block=False)
+        BYTES_PER_SAMPLE = GoogleASR.DEPTH          # e.g., 2 for 16-bit
+        SR = GoogleASR.SAMPLE_RATE                  # e.g., 16000
+        CH = getattr(GoogleASR, "CHANNELS", 1)      # default mono if missing
+        STREAM_LIMIT = GoogleASR.STREAM_LIMIT       # seconds
+        TARGET_BATCH_SEC = 0.20                     # ~200 ms per yield (tune to taste)
+
+        def secs_from_bytes(nbytes: int) -> float:
+            return nbytes / (SR * BYTES_PER_SAMPLE * CH)
+
+        elapsed = 0.0
+        try:
+            while self.running and elapsed < STREAM_LIMIT:
+                # Block briefly for the first chunk to avoid spin
+                try:
+                    chunk = self.audio_queue.get(timeout=0.25)
+                except Empty:
+                    continue
+
                 if chunk is None:
-                    return
-                data.append(chunk)
-            for chunk in data:
-                generator_time += (len(chunk) / GoogleASR.DEPTH) / GoogleASR.SAMPLE_RATE
-            yield b''.join(data)
-        self.audio_time += generator_time
+                    break  # graceful shutdown
+
+                batch = [chunk]
+                total_bytes = len(chunk)
+                stop_after_yield = False
+
+                # Drain quickly up to TARGET_BATCH_SEC without racing on .empty()
+                target_bytes = int(TARGET_BATCH_SEC * SR * BYTES_PER_SAMPLE * CH)
+                while total_bytes < target_bytes:
+                    try:
+                        nxt = self.audio_queue.get_nowait()
+                    except Empty:
+                        break
+                    if nxt is None:
+                        stop_after_yield = True  # flush, then exit
+                        break
+                    batch.append(nxt)
+                    total_bytes += len(nxt)
+
+                secs = secs_from_bytes(total_bytes)
+
+                # Optional: cap at STREAM_LIMIT boundary (simple: stop after this yield)
+                if elapsed + secs > STREAM_LIMIT:
+                    # You could split the last chunk here if you need exact limits.
+                    pass
+
+                elapsed += secs
+                yield b"".join(batch)
+
+                if stop_after_yield:
+                    break
+        finally:
+            # Ensure we always account for time we streamed, even on early returns
+            self.audio_time += elapsed
+
+    # def generator(self):
+    #     generator_time = 0
+    #     while self.running and generator_time < GoogleASR.STREAM_LIMIT:
+    #         chunk = self.audio_queue.get()
+    #         data = [chunk]
+    #         if chunk is None:
+    #             return
+    #         while not self.audio_queue.empty():
+    #             chunk = self.audio_queue.get(block=False)
+    #             if chunk is None:
+    #                 return
+    #             data.append(chunk)
+    #         for chunk in data:
+    #             generator_time += (len(chunk) / GoogleASR.DEPTH) / GoogleASR.SAMPLE_RATE
+    #         yield b''.join(data)
+    #     self.audio_time += generator_time
         
 
     def process_responses(self, responses, audio_start_time):

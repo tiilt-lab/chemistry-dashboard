@@ -16,7 +16,10 @@ import copy
 import json
 import traceback
 import callbacks
+from concurrent.futures import ThreadPoolExecutor
+from queue import Empty
 from .VideoMetricProcessor import VideoMetricAnalytics
+from global_singleton_lock import get_detector, detector_lock
 
 class VideoProcessor:
     def __init__(self,cartoon_model,facial_emotion_detector,image_object_detection,attention_detection, \
@@ -56,31 +59,19 @@ class VideoProcessor:
         self.facialEmbeddings = None
         self.video_interval = video_interval
         self.video_chunk_count = -1
+        self.STOP = object()  # sentinel
+        # One shared pool instead of creating threads per batch
+        self.pool = ThreadPoolExecutor(max_workers=1)
 
-        # self.object_of_interest = [1,63,67,68]
-        # self.persons_attention_track = {}
-        # self.person_object_focus_track = {}
-        # self.shared_attention_track = {}
-        # self.object_by_class_track = {}
-        # self.person_attention_focus_count = {}
-        # self.persons_emotions_detected = {}
 
-        # self.attention_detection.set_persistent_variables(self.object_of_interest,self.persons_attention_track,self.person_object_focus_track, \
-        #                                                   self.shared_attention_track,self.object_by_class_track, self.person_attention_focus_count)
-        
-        # self.facial_emotion_detector.set_persistent_variables(self.persons_emotions_detected)
+
 
         if self.cartoon_model.video and self.cartoon_model.parsing_map_path is not None:
             self.x_p_hat = torch.tensor(np.load(self.cartoon_model.parsing_map_path))
 
         self.VideoMetricAnalytics = VideoMetricAnalytics(self.attention_detection,self.facial_emotion_detector,self.image_object_detection)     
 
-        # self.intensity = {"Extremely":4,
-        #                              "Very":3,
-        #                             "Moderately":2,
-        #                             "Slightly":1,
-        #                             "Neutral":0}
-        # self.emotions = {}
+      
         self.non_cartoon_emotions = {"Extremely afraid":0,"Extremely alarmed":0,"Extremely annoyed":0,"Extremely aroused":0,"Extremely astonished":0,
                         "Extremely bored":0,"Extremely calm":0,"Extremely content":0,"Extremely delighted":0,"Extremely depressed":0,
                         "Extremely distressed":0,"Extremely droopy":0,"Extremely excited":0,"Extremely frustrated":0,"Extremely gloomy":0,
@@ -140,25 +131,25 @@ class VideoProcessor:
         payload = json.dumps(message).encode('utf8')
         self.web_socket_connection.sendMessage(payload, isBinary = False)
         
-    def __complete_callback(self):
-        try:
-            self.convert_dat_to_wav()
-            sortedfiles = [int(f.split(".")[0]) for f in os.listdir(self.vid_img_dir)]
-            sortedfiles.sort()
-            file_path = [os.path.join(self.vid_img_dir,str(fp)+".png") for fp in sortedfiles] 
-            video = ImageSequenceClip(file_path,fps=29)
-            audio_clip = AudioFileClip(self.wav_filename)
-            new_audio_clip = CompositeAudioClip([audio_clip])
-            video.audio = new_audio_clip
-            video.write_videofile(self.cart_vid)
+    # def __complete_callback(self):
+    #     try:
+    #         self.convert_dat_to_wav()
+    #         sortedfiles = [int(f.split(".")[0]) for f in os.listdir(self.vid_img_dir)]
+    #         sortedfiles.sort()
+    #         file_path = [os.path.join(self.vid_img_dir,str(fp)+".png") for fp in sortedfiles] 
+    #         video = ImageSequenceClip(file_path,fps=29)
+    #         audio_clip = AudioFileClip(self.wav_filename)
+    #         new_audio_clip = CompositeAudioClip([audio_clip])
+    #         video.audio = new_audio_clip
+    #         video.write_videofile(self.cart_vid)
 
-            for file in os.listdir(self.vid_img_dir):
-                os.remove(os.path.join(self.vid_img_dir,file))
-            os.rmdir(self.vid_img_dir)
-            os.remove(self.wav_filename)
+    #         for file in os.listdir(self.vid_img_dir):
+    #             os.remove(os.path.join(self.vid_img_dir,file))
+    #         os.rmdir(self.vid_img_dir)
+    #         os.remove(self.wav_filename)
         
-        except Exception as e:
-            logging.info('Unable to build cartoonized frames into video or delete video file: {0}'.format(e))
+    #     except Exception as e:
+    #         logging.info('Unable to build cartoonized frames into video or delete video file: {0}'.format(e))
 
 
 
@@ -179,7 +170,7 @@ class VideoProcessor:
         faces_in_frame = {}
         processed_frame_track = []
         for frame_index, frame in enumerate(frames):
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             if self.cartoon_model.scale_image:
                 try:
                     if self.first_valid_frame:
@@ -298,98 +289,166 @@ class VideoProcessor:
         offset = self.config.start_offset
         return round(offset+ (frame_sec_mark + (self.video_interval * self.video_chunk_count)))
     
+    def process_video_analytics(self,batch_frames,facialEmbeddings,batch_track,time_marker,vid_img_dir,auth_key):
+        # with self.lock:
+            processing_timer = time.monotonic()
+            video_metrics=None
+            with detector_lock():  # serialize CUDA/NMS across all users in this process
+                # det = get_detector(None)  # second call ignores lambda
+                all_frames,face_object_detected = self.image_object_detection.detection_with_facial_regonition(batch_frames,facialEmbeddings,batch_track,time_marker,vid_img_dir,auth_key)
+            
+            video_metrics = self.VideoMetricAnalytics.compute_videoMetrics(all_frames,face_object_detected)
+
+            if video_metrics: 
+                # logging.info('printing video_metrics')
+                # logging.info(video_metrics)
+                success = callbacks.post_video_metrics(self.config.auth_key, video_metrics)
+
+                processing_time = time.monotonic() - processing_timer
+                if success:
+                    logging.info( f"Video processing results posted successfully for client {self.config.auth_key} (Processing time: {processing_time})")
+
+    def worker_process(self,frames_batch, time_markers, batch_idx):
+        # Do cvtColor here if needed (OpenCV releases GIL, ok in threads)
+        frames_batch = [cv2.cvtColor(f, cv2.COLOR_BGR2RGB) for f in frames_batch]
+       
+        if self.cf.process_video_analytics():
+            self.process_video_analytics(frames_batch, self.facialEmbeddings, batch_idx, time_markers, self.vid_img_dir,self.config.auth_key)
+            
+        if self.config.videocartoonify and self.cf.video_cartoonize():
+            self.convert_image(frames_batch, None, 500, 375)
+
+
     def processing(self):
-        logging.info('frame cartoonization thread started for {0}.'.format(self.config.auth_key))
-        frame_processing_thread = None
-        while self.running or not self.video_queue.empty():
+        while self.running:
             try:
-                subclip_frames = None if self.video_queue.empty() else self.video_queue.get(block=False)
+                # block briefly to avoid CPU spin; adjust timeout for latency needs
+                subclip_frames = self.video_queue.get(timeout=0.25)
+            except Empty:
+                continue
+
+            if subclip_frames is self.STOP:
+                break
             
-                if subclip_frames is not None:
-                    self.video_chunk_count+=1
-                    subclib_frame_count = 0
-                    for time_stamp, frame in subclip_frames:
-                        subclib_frame_count =  subclib_frame_count + 1
-                        # logging.info('tracking time stamp for frame {} in  batch : {} is  {}'.format(subclib_frame_count, self.batch_track, time_stamp))
-                        # if frame_shape[1] > frame_shape[0]:
-                        #     dim = (500,375)
-                        # else:
-                        #      dim = (375,500)   
-                        # frame = cv2.resize(frame, (500,375),interpolation=cv2.INTER_AREA)
-                        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        self.frame_array.append(frame)
-                        self.frame_batch.append(frame)
-                        self.time_marker.append(self.adjust_time(time_stamp))
-                        if (len(self.frame_batch) == self.batch_size):
-                            processing_timer = time.time()
-                            logging.info('total appended per batch {0}'.format(len(self.frame_batch)))
-                            frames_batch_copy = copy.deepcopy(self.frame_batch)
+            try:
+                subclib_frame_count = 0
+                for ts, frame in subclip_frames:
+                    subclib_frame_count =  subclib_frame_count + 1
+                    # defer expensive cvtColor unless strictly needed now
+                    # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-                            logging.info('printing ocf detail attention: {} cartoonify: {} and {}'.format(self.cf.process_video_analytics(),self.cf.video_cartoonize(), self.config.videocartoonify))
-                            if self.config.videocartoonify and self.cf.video_cartoonize():
-                                self.convert_image(self.frame_batch,None,500,375)
+                    self.frame_batch.append(frame)
+                    self.time_marker.append(self.adjust_time(ts))
 
+                    if len(self.frame_batch) >= self.batch_size:
+                        # hand off current lists; start fresh ones for the producer
+                        frames = self.frame_batch
+                        markers = self.time_marker
+                        b_tracker = self.batch_track
+                        self.frame_batch = []
+                        self.time_marker = []
 
-                            # if only one participant joins a session, then do not match the face
+                        # submit to the pool
+                        self.pool.submit(self.worker_process, frames, markers, b_tracker)
+                        self.batch_track+=1
 
-                            
-                            if self.cf.process_video_analytics():
-                                #start attention tracking
-                                logging.info('inside process_video_analytics')
-                                all_frames,face_object_detected = self.image_object_detection.detection_with_facial_regonition(frames_batch_copy,self.facialEmbeddings,self.batch_track,self.time_marker,self.vid_img_dir)
-                                # self.attention_detection.attention_tracking(face_object_detected,all_frames)
-                                # self.facial_emotion_detector.predict_facial_emotion_for_all_participants(all_frames,face_object_detected['head'].items(),self.image_object_detection.crop_face_from_fame_with_bbox)
-                                # face_lm = get_facial_shape(resized_img,self.cartoon_model.landmarkpredictor)
-                                video_metrics = self.VideoMetricAnalytics.compute_videoMetrics(all_frames,face_object_detected)
-
-                                if video_metrics: 
-                                    logging.info('printing video_metrics')
-                                    logging.info(video_metrics)
-                                    success = callbacks.post_video_metrics(self.config.auth_key, video_metrics)
-
-                                    processing_time = time.time() - processing_timer
-                                    if success:
-                                        logging.info( f"Video processing results posted successfully for client {self.config.auth_key} (Processing time: {processing_time})")
-                                
-                                
-                            
-                            self.frame_batch = []
-                            self.time_marker = []
-                            self.batch_track+=1
-                                
-
-                                
-
-                        self.frame_count = self.frame_count + 1  
-
-                        # we just need 290 frames of the 10 sec chunks, and break if the frames capture  is more than 290    
-                        if  subclib_frame_count > 300:
-                            break
-
-            
+                    # we just need 290 frames of the 10 sec chunks, and break if the frames capture  is more than 290    
+                    if  subclib_frame_count > 300:
+                        break
             except Exception as e:
                 error_str = traceback.format_exc()
                 logging.warning('Exception thrown while extracting image subclib {0} {1}'.format(error_str, self.config.auth_key))
 
+        # drain remaining frames
+        if self.frame_batch:
+            frames = self.frame_batch
+            markers = self.time_marker
+            b_tracker = self.batch_track
+            self.frame_batch = []
+            self.time_marker = []
+            self.pool.submit(self.worker_process, frames, markers, b_tracker)
+
+        self.pool.shutdown(wait=True)
         logging.info('frame cartoonization thread stopped for {0}.'.format(self.config.auth_key))
 
-        # Processing after session has ended (post hoc processing)
-        if self.config.videocartoonify and self.cf.video_cartoonize():
-            if frame_processing_thread is not None:
-                frame_processing_thread.join()
-            # convert all image to cartoon and save
-            Post_frame_batch = []
-            post_frame_name = []
-            for index,  s_frame in enumerate(self.frame_array):
-                Post_frame_batch.append(s_frame)
-                post_frame_name.append(os.path.join(self.vid_img_dir, "{0}.{1}".format(index+1,'png')))
-                if (len(Post_frame_batch) == self.batch_size):
-                    self.running_processes += 1
-                    self.convert_image(Post_frame_batch,post_frame_name,500,375)
-                    Post_frame_batch =  [] 
-                    post_frame_name = []     
-     
-        # logging.info('i eventually called complete_callback')
-        # self.__complete_callback() 
-        # logging.info('frame cartoonization thread stopped for {0}.'.format(self.config.auth_key))
-          
+    # def processing(self):
+    #     logging.info('frame cartoonization thread started for {0}.'.format(self.config.auth_key))
+    #     frame_processing_thread = None
+    #     while self.running or not self.video_queue.empty():
+    #         try:
+    #             subclip_frames = None if self.video_queue.empty() else self.video_queue.get(block=False)
+            
+    #             if subclip_frames is not None:
+    #                 self.video_chunk_count+=1
+    #                 subclib_frame_count = 0
+    #                 for time_stamp, frame in subclip_frames:
+    #                     subclib_frame_count =  subclib_frame_count + 1
+    #                     # logging.info('tracking time stamp for frame {} in  batch : {} is  {}'.format(subclib_frame_count, self.batch_track, time_stamp))
+    #                     # if frame_shape[1] > frame_shape[0]:
+    #                     #     dim = (500,375)
+    #                     # else:
+    #                     #      dim = (375,500)   
+    #                     # frame = cv2.resize(frame, (500,375),interpolation=cv2.INTER_AREA)
+    #                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    #                     self.frame_array.append(frame)
+    #                     self.frame_batch.append(frame)
+    #                     self.time_marker.append(self.adjust_time(time_stamp))
+    #                     if (len(self.frame_batch) == self.batch_size):
+    #                         # logging.info('total appended per batch {0}'.format(len(self.frame_batch)))
+    #                         frames_batch_copy = copy.deepcopy(self.frame_batch)
+
+    #                         # logging.info('printing ocf detail attention: {} cartoonify: {} and {}'.format(self.cf.process_video_analytics(),self.cf.video_cartoonize(), self.config.videocartoonify))
+    #                         if self.config.videocartoonify and self.cf.video_cartoonize():
+    #                             self.convert_image(self.frame_batch,None,500,375)
+
+                            
+    #                         if self.cf.process_video_analytics():
+    #                             #start attention tracking
+    #                             video_processing_thread = threading.Thread(target=self.process_video_analytics, args=(frames_batch_copy,self.facialEmbeddings,self.batch_track,self.time_marker,self.vid_img_dir))
+    #                             video_processing_thread.daemon = True
+    #                             video_processing_thread.start()
+                                
+                                
+                            
+    #                         self.frame_batch = []
+    #                         self.time_marker = []
+    #                         self.batch_track+=1
+                                
+
+                                
+
+    #                     self.frame_count = self.frame_count + 1  
+
+    #                     # we just need 290 frames of the 10 sec chunks, and break if the frames capture  is more than 290    
+    #                     if  subclib_frame_count > 300:
+    #                         break
+
+            
+    #         except Exception as e:
+    #             error_str = traceback.format_exc()
+    #             logging.warning('Exception thrown while extracting image subclib {0} {1}'.format(error_str, self.config.auth_key))
+
+    #     logging.info('frame cartoonization thread stopped for {0}.'.format(self.config.auth_key))
+
+    #     # Processing after session has ended (post hoc processing)
+    #     if self.config.videocartoonify and self.cf.video_cartoonize():
+    #         if frame_processing_thread is not None:
+    #             frame_processing_thread.join()
+    #         # convert all image to cartoon and save
+    #         Post_frame_batch = []
+    #         post_frame_name = []
+    #         for index,  s_frame in enumerate(self.frame_array):
+    #             Post_frame_batch.append(s_frame)
+    #             post_frame_name.append(os.path.join(self.vid_img_dir, "{0}.{1}".format(index+1,'png')))
+    #             if (len(Post_frame_batch) == self.batch_size):
+    #                 self.running_processes += 1
+    #                 self.convert_image(Post_frame_batch,post_frame_name,500,375)
+    #                 Post_frame_batch =  [] 
+    #                 post_frame_name = []   
+    #     # logging.info('i eventually called complete_callback')
+    #     # self.__complete_callback() 
+    #     # logging.info('frame cartoonization thread stopped for {0}.'.format(self.config.auth_key))
+            
+
+   
+                                

@@ -611,6 +611,7 @@
 
 .features-table {
   table-layout: fixed;
+  width: 100%;
   /*width: 343px;*/
   border-spacing: 0px;
 }
@@ -630,6 +631,12 @@
   color: #58585c;
   padding: 0 0 12px 0;
   border-bottom: 1px solid rgba(69, 69, 153, 0.2);
+}
+/* widen the 2nd column */
+.features-table th:nth-child(2),
+.features-table td:nth-child(2) {
+  width: 500px;         /* fixed width */
+  min-width: 320px;     /* ensure it won’t shrink */
 }
 
 .features-table .desc-header {

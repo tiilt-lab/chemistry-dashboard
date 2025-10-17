@@ -314,6 +314,7 @@ function JoinPage() {
             s.id === selectedSpeaker.id ? { ...s, fingerprinted: true } : s,)
             setSpeakers(updatedSpeakers)
             setSelectedSpeaker(null)
+            setCurrentForm("")
             console.log("register fingerprint for " + registeredStudentData.username + " Added")
             setRegisteredStudentData(null)
             setRegisteredUserAliasChanged(false)
@@ -491,6 +492,7 @@ function JoinPage() {
             }
             audiows.current.send(JSON.stringify(message))
             videows.send(JSON.stringify(message))
+            setCurrentForm("processing")
         } else {
             if (audiows.current === null) {
                 return

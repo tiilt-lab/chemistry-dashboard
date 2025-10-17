@@ -20,6 +20,8 @@ import numpy as np
 from joblib import load
 from topic_modeling.topic_modeling import preprocess_transcript
 import config as cf
+from concurrent.futures import ThreadPoolExecutor
+from queue import Empty
 # from source_seperation import source_seperation_pre_trained
 # from server.topic_modeling.topicmodeling import get_topics_with_prob
 # For converting nano seconds to seconds.
@@ -47,6 +49,7 @@ class AudioProcessor:
         self.topic_model = None
         self.fingerprints = None
         self.cohesion_window = 20
+        self.pool = ThreadPoolExecutor(max_workers=1)
 
         self.semantic_model = semantic_model
         logging.info("Start metrics process")

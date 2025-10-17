@@ -25,31 +25,27 @@ function PodComponentSeesionPages(props) {
                             session={props.session}
                             closingSession={props.onSessionClosing}
                             menus={[
-                                {
-                                    title: "Group",
-                                    action: () => props.viewGroup(),
-                                },
                                 // {
-                                //     title: "Individual",
-                                //     action: () => props.viewIndividual(),
+                                //     title: "Group",
+                                //     action: () => props.viewGroup(),
                                 // },
-                                {
-                                    title: "Comparison",
-                                    action: () => props.viewComparison(),
-                                },
+                                // // {
+                                // //     title: "Individual",
+                                // //     action: () => props.viewIndividual(),
+                                // // },
+                                // {
+                                //     title: "Comparison",
+                                //     action: () => props.viewComparison(),
+                                // },
                             ]}
-                            participants={ props.speakers.map((speaker, index) => (
-                                {
-                                    alias: speaker.alias,
-                                    action: () => props.loadSpeakerMetrics(speaker.id,speaker.alias),
-                                }
-                            ))}
+                            participants={ []}
 
                         />
                     ) : (
                         <></>
                     )}
-                    <div className="center-column-container">
+                    {props.selectedSpkrId1 !== -1 && props.spkr1Transcripts && props.spkr1VideoMetrics?(
+                        <div className="center-column-container">
                         <AppInfographicsComparison
                             displayTranscripts={props.displayTranscripts}
                             displayVideoMetrics={props.displayVideoMetrics}
@@ -76,6 +72,11 @@ function PodComponentSeesionPages(props) {
                             getSpeakerAliasFromID={props.getSpeakerAliasFromID}
                         ></AppInfographicsComparison>
                     </div>
+                    ):
+                    (
+                        <></>
+                    )}
+                    
                 </div>
                 {props.loading() ? <AppSpinner></AppSpinner> : <></>}
             </div>

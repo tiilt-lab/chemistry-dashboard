@@ -1,4 +1,8 @@
 import os
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
 import json
 import time
 import glob
@@ -11,15 +15,21 @@ import weakref
 import wave
 import scipy.signal
 import config as cf
+import cv2
 import numpy as np
+import torch
+import torch.backends.cudnn as cudnn
 import moviepy.editor as mp
 import face_recognition
-import cv2
+
 from recorder import VidRecorder
 from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager
 from video_cartoonizer.videoprocessor import VideoProcessor
 from datetime import datetime
+cv2.setNumThreads(1)
+torch.set_num_threads(1)
+torch.set_num_interop_threads(1)
 from twisted.internet import reactor, task
 from autobahn.twisted.websocket import WebSocketServerFactory
 from autobahn.twisted.websocket import WebSocketServerProtocol
@@ -27,12 +37,13 @@ from video_cartoonizer.video_cartoonify_loader import VideoCartoonifyLoader
 from emotion_detector.emotion_detection_model import EmotionDetectionModel, EmotionDetectionModelV1
 from attention_tracking.detect import ImageObjectDetection
 from attention_tracking.attention_tracking import AttentionDetection
+from global_singleton_lock import get_detector
 
 cm = ConnectionManager()
 cartoon_model = VideoCartoonifyLoader()
 facial_emotion_detector = EmotionDetectionModel()
 facial_emotion_detector_V1 = EmotionDetectionModelV1()
-image_object_detection = ImageObjectDetection()
+image_object_detection = None #ImageObjectDetection()
 attention_detection = AttentionDetection()
 
 class ServerProtocol(WebSocketServerProtocol):
@@ -146,6 +157,7 @@ class ServerProtocol(WebSocketServerProtocol):
                         self.video_queue = queue.Queue()
                         self.frame_queue = None
                         self.cartoon_image_queue = None
+                         
                         self.video_processor = VideoProcessor(self.cartoon_model,self.facial_emotion_detector,self.image_object_detection,self.attention_detection, \
                                                                 self.video_queue,self.frame_queue,self.cartoon_image_queue,self.config,cf,self.frame_dir,self.filename,aud_filename,16000, 2,1,self.interval)
                         self.video_processor.add_websocket_connection(self)
@@ -160,7 +172,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.signal_start()
                 self.send_json({'type':'start'})
                 logging.info('Video process connected')
-                # callbacks.post_connect(self.config.auth_key)
+                callbacks.post_connect(self.config.auth_key)
 
     def process_binary(self, data):
         if self.running and not self.awaitingSpeakers:
@@ -272,7 +284,7 @@ class ServerProtocol(WebSocketServerProtocol):
             self.video_processor.stop()
 
         if self.config:
-            # callbacks.post_disconnect(self.config.auth_key)
+            callbacks.post_disconnect(self.config.auth_key)
             cm.remove(self, self.config.session_key, self.config.auth_key)
         else:
             cm.remove(self, None, None)
@@ -282,6 +294,11 @@ class ServerProtocol(WebSocketServerProtocol):
         # Begin Post Processing
         if cf.video_record_original() and self.stream_data == 'video':
             self.orig_vid_recorder.close()
+
+def _create_detector():
+    det = ImageObjectDetection()
+    det.init_model(cartoon_model.batch_size)  # load weights, allocate GPU
+    return det
 
 if __name__ == '__main__':
     cf.initialize()
@@ -304,7 +321,9 @@ if __name__ == '__main__':
 
     # Initialize attention  and emotion tracking
     if cf.process_video_analytics():
-        image_object_detection.init_model(cartoon_model.batch_size)
+        
+        image_object_detection = get_detector(_create_detector)
+        # image_object_detection.init_model(cartoon_model.batch_size)
         attention_detection.init_model(cartoon_model.batch_size)
         # facial_emotion_detector.load_model(cartoon_model.batch_size, cartoon_model.landmarkpredictor)  
         facial_emotion_detector_V1.load_model()  

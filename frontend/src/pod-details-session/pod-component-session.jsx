@@ -174,16 +174,10 @@ function PodComponentSession() {
   }, [startTime, endTime, transcripts, videoMetrics, timeRange]);
 
   useEffect(() => {
-    if (displayTranscripts) {
-      console.log("reloaded page - display transcripts");
+    if (displayTranscripts && displayVideoMetrics && selectedSpkrId1!==-1 ) {
       setSpeakerTranscripts();
-    }
-
-    if (displayVideoMetrics) {
-      console.log("reloaded page - displayVideoMetrics")
       setSpeakerVideoMetrics()
     }
-
 
   }, [displayTranscripts, displayVideoMetrics, selectedSpkrId1]);
 
@@ -261,7 +255,6 @@ function PodComponentSession() {
   };
 
   const setSpeakerVideoMetrics = () => {
-    console.log(selectedSpkrId1,selectedSpkrId2)
     if (displayVideoMetrics.length) {
       let speakerAlias1 = getSpeakerAliasFromID(selectedSpkrId1)
       let speakerAlias2 = getSpeakerAliasFromID(selectedSpkrId2)
