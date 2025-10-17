@@ -31,7 +31,7 @@ export class ApiService {
     getVideoWebsocketEndpoint() {
     return (
          this.getWSSProtocol() +
-      "//" +getVideoServerEndpoint() +"/video_socket"
+      "//" + this.getVideoServerEndpoint() +"/video_socket"
     );
       
   }
