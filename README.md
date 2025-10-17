@@ -2,16 +2,16 @@
 
 ## Installing Dependencies
 
-### PLEASE DO NO RUN THE FOLLOWING COMMAND/SETUPS ON THE. GLAMDRING.CS.NORTHWESTERN SERVER ###
+### Please do not run the following commands/setups on the glamdring.cs.northwestern.edu server ###
 
 
+#### The followings are already. setup/configured in the glamdring.cs.northwestern.edu server ####
 Update system packages
-#### THE FOLLOWINGS ARE ALREADY SETUP/CONFIGURED IN THE GLAMDRING.CS.NORTHWESTERN SERVER ####
 ```
 sudo apt-get update
 sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3 python3-pip python3-dev python3-venv python3-tk python3-openssl git sqlite nginx pkg-config libfreetype6-dev libsndfile1
 ```
-#### END ####
+#### End ####
 
 Install pyenv
 
@@ -38,7 +38,7 @@ Restart the Shell
 ```
 exec "$SHELL"
 ```
-#### THE FOLLOWINGS ARE ALREADY SETUP/CONFIGURED IN THE GLAMDRING.CS.NORTHWESTERN SERVER ####
+#### The followings are already. setup/configured in the glamdring.cs.northwestern.edu server ####
 Install Redis
 
 ```
@@ -53,11 +53,11 @@ sudo apt-get install mysql-server
 sudo systemctl start mysql
 sudo systemctl enable mysql
 ```
-#### END ####
+#### End ####
 
 
+#### The followings are already. setup/configured in the glamdring.cs.northwestern.edu server ####
 ## For Video Processing (Optional):
-#### THE FOLLOWINGS ARE ALREADY SETUP/CONFIGURED IN THE GLAMDRING.CS.NORTHWESTERN SERVER ####
 Install nvidia driver, cuda, and cudnn for ubuntu version 22.04
 
 Install nvidia driver (if it is not already installed)
@@ -123,7 +123,7 @@ sudo apt install python3.8-gdbm
 sudo apt install python3.8-tk
 ```
 
-#### END ####
+#### End ####
 
 Go to var/lib foloder and pull the git repo
 
