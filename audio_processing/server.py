@@ -299,6 +299,9 @@ class ServerProtocol(WebSocketServerProtocol):
         if self.config:
             callbacks.post_disconnect(self.config.auth_key)
             cm.remove(self, self.config.session_key, self.config.auth_key)
+
+        if os.path.isfile(self.filename+'.webm'):
+            os.remove(self.filename+'.webm')    
         else:
             cm.remove(self, None, None)
         logging.info('Closing client connection...')
