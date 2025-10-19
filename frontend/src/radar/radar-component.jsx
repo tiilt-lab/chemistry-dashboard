@@ -71,14 +71,14 @@ function AppRadarComponent(props) {
       
       for (const i in raddata) {
         // Check time range
-        if (!props.start || !props.end || 
-            (props.start <= raddata[i].start_time && raddata[i].start_time <= props.end)) {
+        //if (!props.start || !props.end || 
+           // (props.start <= raddata[i].start_time && raddata[i].start_time <= props.end)) {
           analytical_sum += parseInt(raddata[i].analytic_thinking_value || 0);
           authenticity_sum += parseInt(raddata[i].authenticity_value || 0);
           certainty_sum += parseInt(raddata[i].certainty_value || 0);
           clout_sum += parseInt(raddata[i].clout_value || 0);
           emotional_sum += parseInt(raddata[i].emotional_tone_value || 0);
-        }
+        //}
       }
       
       const total_sum = analytical_sum + authenticity_sum + 

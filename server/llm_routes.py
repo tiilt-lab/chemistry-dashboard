@@ -38,6 +38,28 @@ def prepare_context_data(data):
 
 def generate_prompt(task_type, data):
     """Generate appropriate prompt based on task type"""
+
+    time_range = data.get('timeRange', {})
+    time_context = ""
+    time_instruction = ""
+    
+    if not time_range.get('isFullRange', True):
+        start_sec = time_range.get('start', 0)
+        end_sec = time_range.get('end', 0)
+        total_sec = time_range.get('totalLength', 0)
+        
+        # Convert to minutes:seconds format
+        start_min, start_s = divmod(int(start_sec), 60)
+        end_min, end_s = divmod(int(end_sec), 60)
+        
+        # Calculate percentage
+        percentage = 0
+        if total_sec > 0:
+            percentage = round(((end_sec - start_sec) / total_sec) * 100)
+        
+        time_context = f"\nSelected time range: {start_min}:{start_s:02d} to {end_min}:{end_s:02d} ({percentage}% of session)\n"
+
+        time_instruction = f"NOTE: You are analyzing only a portion of the session from {start_min}:{start_s:02d} to {end_min}:{end_s:02d}. Mention this information at the start of your response."
     
     if task_type == 'summary':
         metrics = data.get('metrics', {})
@@ -54,8 +76,7 @@ def generate_prompt(task_type, data):
         
         return f"""Analyze this discussion session and provide a concise summary:
 
-Session: {session_info.get('name', 'Current Session')}
-Time Range: {time_range.get('start', 0)} to {time_range.get('end', 'end')} seconds
+Session: {session_info.get('name', 'Current Session')}{time_context}{time_instruction}
 
 Metrics:
 - Emotional Tone: {metrics.get('emotional', 'N/A')}% (>50 = positive)
@@ -77,7 +98,7 @@ Keep the response under 200 words."""
 
     elif task_type == 'metrics':
         metrics = data.get('metrics', {})
-        return f"""Interpret these communication metrics and explain what they reveal about the discussion:
+        return f"""{time_context}Interpret these communication metrics and explain what they reveal about the discussion:
 
 - Emotional Tone: {metrics.get('emotional', 'N/A')}%
 - Analytic Thinking: {metrics.get('analytic', 'N/A')}%
@@ -90,7 +111,7 @@ Provide specific insights about:
 2. Potential strengths and areas for improvement
 3. What these patterns suggest about group dynamics
 
-Keep response under 150 words."""
+Keep response under 200 words."""
 
     elif task_type == 'themes':
         transcripts = data.get('transcripts', [])

@@ -160,6 +160,7 @@ function AppInfographicsComparison(props) {
             </AppSectionBoxComponent>
           )}
 
+          <div className="small-section" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {/* Radar chart */}
           {props.showBoxes.length > 0 && props.showBoxes[4].clicked && (
             <AppSectionBoxComponent type={"small-section"} heading={"Radar chart"}>
@@ -178,7 +179,9 @@ function AppInfographicsComparison(props) {
               />
             </AppSectionBoxComponent>
           )}
+          
 
+          
           {props.details === "Comparison" && props.showBoxes.length > 0 && props.showBoxes[4].clicked && (
             <AppSectionBoxComponent type={"small-section"} heading={"Radar chart"}>
               <AppRadarComponent
@@ -193,8 +196,8 @@ function AppInfographicsComparison(props) {
             </AppSectionBoxComponent>
           )}
 
-          {/* AI Analysis Panel - always visible at bottom */}
-          <AppSectionBoxComponent type={"wide-section"} heading={"AI Analysis"}>
+          {/* LLM Analysis Panel */}
+          <AppSectionBoxComponent type={"small-section"} heading={"LLM Analysis"}>
             <LLMSupportPanel
               transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
               sessionDevice={props.sessionDevice}
@@ -203,6 +206,7 @@ function AppInfographicsComparison(props) {
               multiSeries={props.details === "Group" ? props.multiSeries : undefined}
             />
           </AppSectionBoxComponent>
+          </div>
         </div>
       )}
     </>

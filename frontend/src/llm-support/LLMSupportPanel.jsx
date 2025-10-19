@@ -1,4 +1,3 @@
-// frontend/src/llm-support/LLMSupportPanel.jsx
 import React, { useState, useMemo } from 'react';
 import { adjDim } from '../myhooks/custom-hooks';
 import style from './llm-support.module.css';
@@ -75,19 +74,27 @@ function LLMSupportPanel(props) {
     setAnalysis('');
     
     try {
+    
       // Prepare request data based on task type
-      let requestData = {
-        metrics: currentMetrics,
-        transcripts: props.transcripts || [],
-        sessionInfo: {
-          name: props.sessionDevice?.name || 'Current Session',
-          id: props.sessionDevice?.id
-        },
-        timeRange: {
-          start: props.startTime,
-          end: props.endTime
-        }
-      };
+    const sessionLength = props.session?.length || 0;
+    const isFullRange = props.startTime <= 0.01 && 
+                       props.endTime >= (sessionLength - 0.01);
+    
+    // Update requestData to include range info
+    let requestData = {
+      metrics: currentMetrics,
+      transcripts: props.transcripts || [],
+      sessionInfo: {
+        name: props.sessionDevice?.name || 'Current Session',
+        id: props.sessionDevice?.id
+      },
+      timeRange: {
+        start: props.startTime,
+        end: props.endTime,
+        isFullRange: isFullRange,  
+        totalLength: sessionLength  
+      }
+    };
       
       // Add multi-session data for comparison if available
       if (taskType === 'comparison' && props.multiSeries) {
@@ -256,7 +263,7 @@ function LLMSupportPanel(props) {
         </div>
       )}
 
-      {/* Usage Info (optional) */}
+      {/* Usage Info */}
       {usage && (
         <div className={style.usage} style={{
           marginTop: adjDim(8) + 'px',
@@ -265,8 +272,7 @@ function LLMSupportPanel(props) {
           color: '#999',
           textAlign: 'right'
         }}>
-          Tokens used: {usage.total_tokens || 0} | 
-          Est. cost: ${((usage.total_tokens || 0) * 0.000002).toFixed(4)}
+          Tokens used: {usage.total_tokens || 0}
         </div>
       )}
 

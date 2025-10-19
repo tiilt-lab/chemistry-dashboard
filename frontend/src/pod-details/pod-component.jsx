@@ -118,6 +118,7 @@ function PodComponent() {
       try {
         const r = await fetch("/api/v1/sessions");
         sessions = r.ok ? await r.json() : [];
+        console.log('Session data structure:', sessions[0]);
       } catch { 
         sessions = []; 
       }
@@ -133,9 +134,21 @@ function PodComponent() {
         }
 
         for (const d of devices) {
+          let dateStr = '';
+          if (s.creation_date) {
+            // Parse the UTC date string and format it nicely
+            const date = new Date(s.creation_date.replace(' UTC', ''));
+            dateStr = date.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric',
+              year: 'numeric'
+            });
+          }
+
           out.push({
             id: `${s.id}:${d.id}`,
-            label: `${s.name || s.id} (${d.name || d.id})`,
+            label: `${s.name || s.id}${dateStr ? ` (${dateStr})` : ''} - ${d.name || d.id}`,
+            date: dateStr // Also store it separately for use in the legend
           });
         }
       }
@@ -188,21 +201,23 @@ function PodComponent() {
     // current pair uses the live slice already cached above
     if (pairsCache.current.has(pairId)) return pairsCache.current.get(pairId);
 
-    const [sid, did] = pairId.split(":");
-    let label = deviceOptions.find(o => o.id === pairId)?.label || pairId;
+  const [sid, did] = pairId.split(":");
+  let option = deviceOptions.find(o => o.id === pairId);
+  let label = option?.label || pairId;
+  let date = option?.date || ''; // Get the date from the option
 
-    let arr = [];
-    try {
-      const r = await fetch(`/api/v1/sessions/${sid}/devices/${did}/transcripts`);
-      arr = r.ok ? await r.json() : [];
-    } catch { 
-      arr = []; 
-    }
-
-    const payload = { id: pairId, label, transcripts: arr.sort((a, b) => a.start_time - b.start_time) };
-    pairsCache.current.set(pairId, payload);
-    return payload;
+  let arr = [];
+  try {
+    const r = await fetch(`/api/v1/sessions/${sid}/devices/${did}/transcripts`);
+    arr = r.ok ? await r.json() : [];
+  } catch { 
+    arr = []; 
   }
+
+  const payload = { id: pairId, label, date, transcripts: arr.sort((a, b) => a.start_time - b.start_time) };
+  pairsCache.current.set(pairId, payload);
+  return payload;
+}
 
   async function handleDeviceSelection(nextIds) {
     // Only handle in Group mode
