@@ -119,7 +119,7 @@ class GoogleASR():
                     start = word.start_time
                     end = word.end_time
                     start.seconds, start.nanos = self.adjust_time(start.seconds, start.nanos, audio_start_time)
-                    end.seconds, end.nanos = self.adjust_time(end.seconds, end.nanos, audio_start_time)
+                    end.seconds, end.nanos = self.adjust_time(end.seconds, end.nanos, audio_start_time)  
                 self.transcript_queue.put(result)
 
     def process_wav_responses(self, response, audio_start_time):
@@ -146,7 +146,6 @@ class GoogleASR():
     def processing(self):
         logging.info('Google ASR thread started for {0}.'.format(self.config.auth_key))
         language_code = 'en-US'
-
         client = speech.SpeechClient()
         recognition_config = types.RecognitionConfig(
             encoding=enums.RecognitionConfig.AudioEncoding.LINEAR16,
@@ -158,10 +157,10 @@ class GoogleASR():
         streaming_config = types.StreamingRecognitionConfig(
             config= recognition_config,
             interim_results=False)
-
         # This loop runs to get around the (currently) 65-second time limit for streaming audio recognition.
         # Each generator closes after 55 seconds of audio, allowing for a new stream to open.
         # NOTE: Audio can still clip on stream change overs.  Might need VAD in the future to avoid clipping speech.
+        logging.info('self.running {0}'.format(self.running))
         while self.running:
             try:
                 audio_generator = self.generator()

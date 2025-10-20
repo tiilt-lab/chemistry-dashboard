@@ -143,7 +143,7 @@ class AudioProcessor:
 
     def process(self):
         logging.info("Processing loop started for %s", self.config.auth_key)
-
+        self.embeddings_file = self.config.embeddings_file
         while not self.asr_complete:
             try:
                 transcript_data = self.transcript_queue.get(timeout=0.25)  # avoid tight block on shutdown
@@ -172,7 +172,7 @@ class AudioProcessor:
                 end_time = words[-1].end_time.seconds + \
                     (words[-1].end_time.nanos / NANO)
                 transcript_audio_data = self.audio_buffer.extract(
-                    start_time, end_time)
+                    start_time, end_time)   
             except Exception:
                 logging.error("Failed to prepare transcript job")
                 continue
@@ -180,13 +180,12 @@ class AudioProcessor:
             # Submit work to pool
             with self._lock:
                 self.running_processes += 1
-            fut = self._pool.submit(self.process_transcript, transcript_data, transcript_audio_data, start_time, end_time)
+            fut = self.pool.submit(self.process_transcript, transcript_data, transcript_audio_data, start_time, end_time)
             fut.add_done_callback(self._dec_and_maybe_complete)
 
         logging.info("Processing loop exiting for %s", self.config.auth_key)
-        self._pool.shutdown(wait=True)  # join worker threads cleanly
+        self.pool.shutdown(wait=True)  # join worker threads cleanly
 
-    
 
     # Processes a transcript and its related audio data.
     def process_transcript(self, transcript_data, audio_data, start_time, end_time):
@@ -210,26 +209,17 @@ class AudioProcessor:
             topics = None
             topic_id = -1
             if self.topic_model:
-                logging.info("Text for topic modeling")
-                logging.info(transcript_text)
                 preprocessed = preprocess_transcript(transcript_text, [""])
-                logging.info("Preprocessed")
-                logging.info(preprocessed)
                 logging.info(self.topic_model.id2word)
                 text2bow = self.topic_model.id2word.doc2bow(preprocessed)
-                logging.info("Corpus")
-                logging.info(text2bow)
                 if len(text2bow):
                     topics = self.topic_model[text2bow]
-                    logging.info("Topics distribution: ")
-                    logging.info(topics)
                     #    topics = get_topics_with_prob(transcript_text)
                     if len(topics) > 0:
                         max = 0
                         for topic in topics:
                             if topic[1] > max:
                                 topic_id = topic[0]
-                logging.info(topic_id)
 
             # Get DoA (Direction of Arrival)
             doa = None
