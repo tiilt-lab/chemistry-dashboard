@@ -108,8 +108,8 @@ class ServerProtocol(WebSocketServerProtocol):
             self.stream_data = data['streamdata']
             self.currAlias = data['alias']
             if self.stream_data == 'audio-video-fingerprint':
-                    self.video_file = os.path.join(cf.video_recordings_folder(), "{0}".format(self.currAlias))
-                    self.vid_recorder = VidRecorder(self.video_file,16000, 2, 1)
+                self.video_file = os.path.join(cf.video_recordings_folder(), "{0}".format(self.currAlias))
+                self.vid_recorder = VidRecorder(self.video_file,16000, 2, 1)
                     
             logging.info('Audio process connected')
             self.send_json({'type':'saveaudiovideo'})
