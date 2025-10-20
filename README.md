@@ -2,12 +2,16 @@
 
 ## Installing Dependencies
 
-Update system packages
+### Please do not run the following commands/setups on the glamdring.cs.northwestern.edu server ###
 
+
+#### The followings are already setup/configured in the glamdring.cs.northwestern.edu server ####
+Update system packages
 ```
 sudo apt-get update
 sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3 python3-pip python3-dev python3-venv python3-tk python3-openssl git sqlite nginx pkg-config libfreetype6-dev libsndfile1
 ```
+### End 
 
 Install pyenv
 
@@ -34,7 +38,7 @@ Restart the Shell
 ```
 exec "$SHELL"
 ```
-
+### The followings are already setup/configured in the glamdring.cs.northwestern.edu server 
 Install Redis
 
 ```
@@ -42,16 +46,18 @@ sudo apt-get install redis-server
 sudo systemctl enable redis-server.service
 ```
 
-Installing MySQL server. When asked to provide a root password, enter "root" as the password.
+Installing MySQL server. When asked to provide a root password, enter "mudcat11" as the password.
 
 ```
 sudo apt-get install mysql-server
 sudo systemctl start mysql
 sudo systemctl enable mysql
 ```
+### End 
 
+
+### The followings are already setup/configured in the glamdring.cs.northwestern.edu server ####
 ## For Video Processing (Optional):
-
 Install nvidia driver, cuda, and cudnn for ubuntu version 22.04
 
 Install nvidia driver (if it is not already installed)
@@ -73,7 +79,7 @@ sudo ubuntu-drivers install nvidia:525
 Install cuda
 
 ```
-visit https://developer.nvidia.com/cuda-12-1-0-download-archive and select the option that fits your architecture
+visit https://developer.nvidia.com/cuda-12-8-0-download-archive and select the option that fits your architecture
 However, if you are seting this up for ubuntu 22.04, run these commands
 
 $ wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-ubuntu2204.pin
@@ -116,7 +122,23 @@ sudo apt install python3.8-lib2to3
 sudo apt install python3.8-gdbm
 sudo apt install python3.8-tk
 ```
+
+### End 
+
+Go to var/lib foloder and pull the git repo
+
 ```
+cd /var/lib/
+sudo git clone https://github.com/tiilt-lab/chemistry-dashboard.git
+sudo chmod 777 -R chemistry-dashboard
+cd chemistry-dashboard
+```
+
+Create python3 virtual environments with pyenv and install packages.
+
+```
+pyenv install 3.9.21
+
 cd /var/lib/chemistry-dashboard/video_processing
 run python3.9 --version to get the version replace x.x.x below with the version number
 S python3.9 --version
@@ -142,15 +164,29 @@ $ cd ..
 $ pyenv local video_processor
 $ python setup.py install --set DLIB_USE_CUDA=1 --set CMAKE_C_COMPILER=/usr/bin/gcc-11
 ```
+```
 Install mish-cuda
 $ cd ~
 $ git clone https://github.com/thomasbrandon/mish-cuda
 $ cd mish-cuda
-$ sudo cp external/CUDAApplyUtils.cuh csrcs/CUDAApplyUtils.cuh
-$ pyenv local visdeo_processor
+$ sudo cp external/CUDAApplyUtils.cuh csrc/CUDAApplyUtils.cuh
+$ pyenv local video_processor
 $ python setup.py install
+```
+## Required Dependencies and models to download:
+```
+$ pip install gdown
+$ cd video_processing/attention_tracking/
+$ mkdir -p pretrained-models
+$ gdown https://drive.google.com/file/d/1UEB_b0QmbMn8753tIBku54hTlcq3yhIs
+$ gdown https://drive.google.com/file/d/1eCBaBEV47bpCRsKNMVorX-ujfZNoIENB
+$ gdown https://drive.google.com/file/d/1Bp_4B204Hu-dr-rPYhABQD1b58kD469A
+$. gdown https://drive.google.com/file/d/1UpE3LlPtc40I4MKyYv20RK3x0XJi5Rl8
 
-## Required parts of Server:
+$ cd ../emotion_detector
+$ mkdir -p checkpoints
+$ gdown https://drive.google.com/file/d/1MGvRiPaOLBTyPhT4qtMaWmOtHX0zle4f
+```
 
 Create a database in MySQL
 
@@ -163,19 +199,7 @@ FLUSH PRIVILEGES;
 exit
 ```
 
-Go to var/lib foloder and pull the git repo
 
-```
-cd /var/lib/
-sudo git clone https://github.com/tiilt-lab/chemistry-dashboard.git
-sudo chmod 777 -R chemistry-dashboard
-cd chemistry-dashboard
-```
-
-Create python3 virtual environments with pyenv and install packages.
-
-```
-pyenv install 3.9.21
 
 cd server
 pyenv virtualenv 3.9.21 discussion_capture

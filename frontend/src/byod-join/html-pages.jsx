@@ -49,13 +49,13 @@ function ByodJoinPage(props) {
                             rightText={"Option"}
                             rightEnabled={
                                 props.joinwith === "Video" ||
-                                props.joinwith === "Videocartoonify"
+                                    props.joinwith === "Videocartoonify"
                                     ? true
                                     : false
                             }
                             rightTextClick={() =>
                                 props.joinwith === "Video" ||
-                                props.joinwith === "Videocartoonify"
+                                    props.joinwith === "Videocartoonify"
                                     ? props.openDialog("Options")
                                     : props.openDialog("")
                             }
@@ -174,7 +174,7 @@ function ByodJoinPage(props) {
                                                 <div
                                                     className={
                                                         style3[
-                                                            "load-text onload"
+                                                        "load-text onload"
                                                         ]
                                                     }
                                                 >
@@ -186,14 +186,14 @@ function ByodJoinPage(props) {
                                                     <div
                                                         className={
                                                             style3[
-                                                                "empty-keyword-list"
+                                                            "empty-keyword-list"
                                                             ]
                                                         }
                                                     >
                                                         <div
                                                             className={
                                                                 style3[
-                                                                    "load-text"
+                                                                "load-text"
                                                                 ]
                                                             }
                                                         >
@@ -203,7 +203,7 @@ function ByodJoinPage(props) {
                                                         <div
                                                             className={
                                                                 style3[
-                                                                    "load-text-description"
+                                                                "load-text-description"
                                                                 ]
                                                             }
                                                         >
@@ -233,10 +233,10 @@ function ByodJoinPage(props) {
                                                         <div
                                                             className={
                                                                 style3[
-                                                                    "click-mask"
+                                                                "click-mask"
                                                                 ]
                                                             }
-                                                            onClick={() => {}}
+                                                            onClick={() => { }}
                                                         ></div>
                                                         <div className="flew-row flex grow text-center">
                                                             <div className="grow font-sans text-lg/loose font-bold text-[#58585C]">
@@ -246,7 +246,7 @@ function ByodJoinPage(props) {
                                                         <AppContextMenu
                                                             className={
                                                                 style3[
-                                                                    "keyword-list-options"
+                                                                "keyword-list-options"
                                                                 ]
                                                             }
                                                         >
@@ -272,6 +272,18 @@ function ByodJoinPage(props) {
                                                                 }}
                                                             >
                                                                 Rename Alias
+                                                            </div>
+
+                                                            <div
+                                                                className={`${style4["menu-item"]} ${style4["black"]}`}
+                                                                onClick={() => {
+                                                                    props.openForms(
+                                                                        "savedAudioVideoFingerprint",
+                                                                        speaker,
+                                                                    )
+                                                                }}
+                                                            >
+                                                                Saved Fingerprrint
                                                             </div>
                                                         </AppContextMenu>
                                                     </div>
@@ -308,16 +320,17 @@ function ByodJoinPage(props) {
                                                             props.viewGroup(),
                                                     },
                                                     {
-                                                        title: "Individual",
-                                                        action: () =>
-                                                            props.viewIndividual(),
-                                                    },
-                                                    {
                                                         title: "Comparison",
                                                         action: () =>
                                                             props.viewComparison(),
                                                     },
                                                 ]}
+                                                participants={props.speakers.map((speaker, index) => (
+                                                    {
+                                                        alias: speaker.alias,
+                                                        action: () => props.loadSpeakerMetrics(speaker.id, speaker.alias),
+                                                    }
+                                                ))}
                                             />
                                         ) : (
                                             <></>
@@ -331,7 +344,7 @@ function ByodJoinPage(props) {
                                                     <div
                                                         className={
                                                             style[
-                                                                "pod-overview-button"
+                                                            "pod-overview-button"
                                                             ]
                                                         }
                                                         style={{
@@ -413,7 +426,7 @@ function ByodJoinPage(props) {
                                                     <div
                                                         className={
                                                             style[
-                                                                "video-container"
+                                                            "video-container"
                                                             ]
                                                         }
                                                         style={{
@@ -427,7 +440,7 @@ function ByodJoinPage(props) {
                                                             controls={true}
                                                             muted={true}
                                                             autoPlay={true}
-                                                            playsInline={true} 
+                                                            playsInline={true}
                                                             style={{
                                                                 marginLeft:
                                                                     "20px",
@@ -439,88 +452,71 @@ function ByodJoinPage(props) {
 
                                             {props.joinwith ===
                                                 "Videocartoonify" && (
-                                                <AppSectionBoxComponent
-                                                    heading={"Video control:"}
-                                                >
-                                                    <div
-                                                        className={
-                                                            style[
-                                                                "video-container"
-                                                            ]
-                                                        }
-                                                        style={{
-                                                            display:
-                                                                props.preview
-                                                                    ? "block"
-                                                                    : "none",
-                                                        }}
+                                                    <AppSectionBoxComponent
+                                                        heading={"Video control:"}
                                                     >
-                                                        <video
-                                                            controls={true}
-                                                            muted={true}
-                                                            style={{
-                                                                marginLeft:
-                                                                    "20px",
-                                                            }}
-                                                        />
-                                                        <img
-                                                            style={{
-                                                                marginLeft:
-                                                                    "12px",
-                                                            }}
-                                                            width="150"
-                                                            height="80"
-                                                            src={
-                                                                props.cartoonImgUrl
+                                                        <div
+                                                            className={
+                                                                style[
+                                                                "video-container"
+                                                                ]
                                                             }
-                                                        />
-                                                    </div>
-                                                </AppSectionBoxComponent>
-                                            )}
+                                                            style={{
+                                                                display:
+                                                                    props.preview
+                                                                        ? "block"
+                                                                        : "none",
+                                                            }}
+                                                        >
+                                                            <video
+                                                                controls={true}
+                                                                muted={true}
+                                                                style={{
+                                                                    marginLeft:
+                                                                        "20px",
+                                                                }}
+                                                            />
+                                                            <img
+                                                                style={{
+                                                                    marginLeft:
+                                                                        "12px",
+                                                                }}
+                                                                width="150"
+                                                                height="80"
+                                                                src={
+                                                                    props.cartoonImgUrl
+                                                                }
+                                                            />
+                                                        </div>
+                                                    </AppSectionBoxComponent>
+                                                )}
                                             <AppInfographicsComparison
-                                                displayTranscripts={
-                                                    props.displayTranscripts
-                                                }
+                                                displayTranscripts={props.displayTranscripts}
+                                                displayVideoMetrics={props.displayVideoMetrics}
                                                 fromclient={true}
-                                                onClickedTimeline={
-                                                    props.onClickedTimeline
-                                                }
-                                                radarTrigger={
-                                                    props.radarTrigger
-                                                }
+                                                onClickedTimeline={props.onClickedTimeline}
+                                                radarTrigger={props.radarTrigger}
                                                 session={props.session}
-                                                sessionDevice={
-                                                    props.sessionDevice
-                                                }
+                                                sessionDevice={props.sessionDevice}
                                                 setRange={props.setRange}
                                                 showBoxes={props.showBoxes}
-                                                showFeatures={
-                                                    props.showFeatures
-                                                }
+                                                showFeatures={props.showFeatures}
                                                 startTime={props.startTime}
                                                 endTime={props.endTime}
                                                 speakers={props.speakers}
-                                                selectedSpkrId1={
-                                                    props.selectedSpkrId1
-                                                }
-                                                setSelectedSpkrId1={
-                                                    props.setSelectedSpkrId1
-                                                }
-                                                selectedSpkrId2={
-                                                    props.selectedSpkrId2
-                                                }
-                                                setSelectedSpkrId2={
-                                                    props.setSelectedSpkrId2
-                                                }
-                                                spkr1Transcripts={
-                                                    props.spkr1Transcripts
-                                                }
-                                                spkr2Transcripts={
-                                                    props.spkr2Transcripts
-                                                }
+                                                selectedSpkrId1={props.selectedSpkrId1}
+                                                setSelectedSpkrId1={props.setSelectedSpkrId1}
+                                                selectedSpkrId2={props.selectedSpkrId2}
+                                                setSelectedSpkrId2={props.setSelectedSpkrId2}
+                                                spkr1Transcripts={props.spkr1Transcripts}
+                                                spkr2Transcripts={props.spkr2Transcripts}
+                                                spkr1VideoMetrics={props.spkr1VideoMetrics}
+                                                spkr2VideoMetrics={props.spkr2VideoMetrics}
                                                 details={props.details}
+                                                getSpeakerAliasFromID={props.getSpeakerAliasFromID}
                                             />
                                         </div>
+
                                         {props.loading() ? (
                                             <AppSpinner></AppSpinner>
                                         ) : (
@@ -634,7 +630,7 @@ function ByodJoinPage(props) {
                             <button
                                 className={style5["basic-button"]}
                                 onClick={() => {
-                                    props.changeAliasName(
+                                    props.addSpeakerFingerprint(
                                         document.getElementById("txtAlias")
                                             .value,
                                     )
@@ -651,7 +647,48 @@ function ByodJoinPage(props) {
                                 Cancel
                             </button>
                         </div>
-                    ))}
+                    )) ||
+                    (props.currentForm === "savedAudioVideoFingerprint" && (
+                        <div
+                            className={style5["dialog-window"]}
+                            style={{ "min-width": adjDim(270) + "px" }}
+                        >
+                            <div className={style5["dialog-heading"]}>
+                                Enter Username:
+                            </div>
+                            <input
+                                id="registeredusername"
+                                className={style5["field-input"]}
+                                maxLength="64"
+                            />
+                            <div>
+                                {props.invalidName
+                                    ? "Record not found for the entered Username"
+                                    : ""}
+                            </div>
+                            <button
+                                className={style5["basic-button"]}
+                                onClick={() => {
+                                    props.startProcessingSavedSpeakerFingerprint(
+                                        document.getElementById("registeredusername")
+                                            .value,
+                                    )
+                                }}
+                            >
+                                {" "}
+                                Confirm
+                            </button>
+                            <button
+                                className={style5["cancel-button"]}
+                                onClick={props.closeDialog}
+                            >
+                                {" "}
+                                Cancel
+                            </button>
+                        </div>
+                    ))
+
+                }
             </GenericDialogBox>
 
             <DialogBoxTwoOption
@@ -694,6 +731,12 @@ function ByodJoinPage(props) {
                 heading={"Connecting..."}
                 message={"Please wait..."}
                 show={props.currentForm === "Connecting"}
+            />
+            <WaitingDialog
+                itsclass={"add-dialog"}
+                heading={"Processing..."}
+                message={"Please wait..."}
+                show={props.currentForm === "processing"}
             />
 
             <DialogBox

@@ -20,6 +20,8 @@ import numpy as np
 from joblib import load
 from topic_modeling.topic_modeling import preprocess_transcript
 import config as cf
+from concurrent.futures import ThreadPoolExecutor
+from queue import Empty
 # from source_seperation import source_seperation_pre_trained
 # from server.topic_modeling.topicmodeling import get_topics_with_prob
 # For converting nano seconds to seconds.
@@ -47,6 +49,9 @@ class AudioProcessor:
         self.topic_model = None
         self.fingerprints = None
         self.cohesion_window = 20
+        self.pool = ThreadPoolExecutor(max_workers=2)
+        self._lock = threading.Lock()  # protects running_process
+        self._got_sentinel = False
 
         self.semantic_model = semantic_model
         logging.info("Start metrics process")
@@ -85,6 +90,16 @@ class AudioProcessor:
                 logging.info(ex)
             np.savetxt(cf.root_dir()+"chemistry-dashboard/audio_processing/speaker_diarization/results/{}.txt".format(
                 time.strftime("%Y%m%d-%H%M%S")), self.speakers)
+
+    def _dec_and_maybe_complete(self, fut):
+        # Decrement safely when a task finishes; call complete when no work left.
+        with self._lock:
+            self.running_processes -= 1
+            if self._got_sentinel and self.running_processes == 0:
+                try:
+                    self.__complete_callback()
+                except Exception:
+                    logging.error("complete callback failed")
 
     def setSpeakerFingerprints(self, fingerprints):
         self.fingerprints = fingerprints
@@ -127,32 +142,50 @@ class AudioProcessor:
         return '{0}:{1}:{2}:{3}'.format(str(hours).zfill(2), str(minutes).zfill(2), str(seconds).zfill(2), str(milliseconds).zfill(4))
 
     def process(self):
-        logging.info('Processing thread started for {0}.'.format(
-            self.config.auth_key))
+        logging.info("Processing loop started for %s", self.config.auth_key)
         self.embeddings_file = self.config.embeddings_file
         while not self.asr_complete:
-            transcript_data = self.transcript_queue.get()
+            try:
+                transcript_data = self.transcript_queue.get(timeout=0.25)  # avoid tight block on shutdown
+            except Empty:
+                continue
+
             if transcript_data is None:
-                self.asr_complete = True
-            else:
+                # Sentinel: no more incoming work; mark and possibly finish after workers drain
+                with self._lock:
+                    self._got_sentinel = True
+                    if self.running_processes == 0:
+                        self.__complete_callback()
+                        self.asr_complete = True
+                        # break
+                # don’t break yet; keep looping until inflight drains
+                continue
+
+            # Build inputs defensively
+            try:
                 # Gather audio data related to the transcript.
                 words = transcript_data.alternatives[0].words
+                if not words:
+                    continue
                 start_time = words[0].start_time.seconds + \
                     (words[0].start_time.nanos / NANO)
                 end_time = words[-1].end_time.seconds + \
                     (words[-1].end_time.nanos / NANO)
                 transcript_audio_data = self.audio_buffer.extract(
-                    start_time, end_time)
-                # Start processing thread for DoA, keywords, feature, etc.
+                    start_time, end_time)   
+            except Exception:
+                logging.error("Failed to prepare transcript job")
+                continue
+
+            # Submit work to pool
+            with self._lock:
                 self.running_processes += 1
-                transcript_thread = threading.Thread(target=self.process_transcript, args=(
-                    transcript_data, transcript_audio_data, start_time, end_time))
-                transcript_thread.daemon = True
-                transcript_thread.start()
-        if self.running_processes == 0:
-            self.__complete_callback()
-        logging.info('Processing thread stopped for {0}.'.format(
-            self.config.auth_key))
+            fut = self.pool.submit(self.process_transcript, transcript_data, transcript_audio_data, start_time, end_time)
+            fut.add_done_callback(self._dec_and_maybe_complete)
+
+        logging.info("Processing loop exiting for %s", self.config.auth_key)
+        self.pool.shutdown(wait=True)  # join worker threads cleanly
+
 
     # Processes a transcript and its related audio data.
     def process_transcript(self, transcript_data, audio_data, start_time, end_time):
@@ -176,28 +209,19 @@ class AudioProcessor:
             topics = None
             topic_id = -1
             if self.topic_model:
-                logging.info("Text for topic modeling")
-                logging.info(transcript_text)
                 preprocessed = preprocess_transcript(transcript_text, [""])
-                logging.info("Preprocessed")
-                logging.info(preprocessed)
                 logging.info(self.topic_model.id2word)
                 text2bow = self.topic_model.id2word.doc2bow(preprocessed)
-                logging.info("Corpus")
-                logging.info(text2bow)
                 if len(text2bow):
                     topics = self.topic_model[text2bow]
-                    logging.info("Topics distribution: ")
-                    logging.info(topics)
                     #    topics = get_topics_with_prob(transcript_text)
                     if len(topics) > 0:
                         max = 0
                         for topic in topics:
                             if topic[1] > max:
                                 topic_id = topic[0]
-                logging.info(topic_id)
 
-            # Get DoA
+            # Get DoA (Direction of Arrival)
             doa = None
             if self.config.doa and self.config.channels == 6:
                 word_timings = [(word.start_time.seconds + (word.start_time.nanos / NANO),
@@ -275,7 +299,4 @@ class AudioProcessor:
             logging.error("Processing FAILED for client %d: %s",
                           self.config.auth_key, e)
 
-        # Check if this was the final process of the transmission.
-        self.running_processes -= 1
-        if self.asr_complete and self.running_processes == 0:
-            self.__complete_callback()
+       

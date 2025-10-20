@@ -34,8 +34,11 @@ def checkFingerprints(x, fingerprints, verification):
   for speaker in fingerprints:
     logging.info("Checking speaker {}".format(speaker))
     speaker_signal = torch.tensor(np.frombuffer(fingerprints[speaker]["data"], dtype=np.dtype('int16')))
-    score, prediction = verification.verify_batch(np_signal, speaker_signal)
-    logging.info("Current prediction is {} with score of {}".format(prediction.item(), score.item()))
+    try:
+      score, prediction = verification.verify_batch(np_signal, speaker_signal)
+      logging.info("Current prediction is {} with score of {}".format(prediction.item(), score.item()))
+    except Exception as e:
+      logging.info("Error occured. while checking fingerprint: {0}".format(e))  
     if prediction.item():
       if score.item() > max_score:
         max_score = score

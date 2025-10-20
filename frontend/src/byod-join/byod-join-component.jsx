@@ -5,7 +5,9 @@ import { ByodJoinPage } from "./html-pages"
 import { SessionModel } from "../models/session"
 import { SessionDeviceModel } from "../models/session-device"
 import { SpeakerModel } from "../models/speaker"
+import { StudentModel } from "../models/student"
 import { ApiService } from "../services/api-service"
+import { AuthService } from "../services/auth-service"
 import fixWebmDuration from "fix-webm-duration"
 
 /*
@@ -51,15 +53,20 @@ function JoinPage() {
     const apiService = new ApiService()
 
     const [transcripts, setTranscripts] = useState([])
+    const [videoMetrics, setVideoMetrics] = useState([])
     const [startTime, setStartTime] = useState()
     const [endTime, setEndTime] = useState()
     const [displayTranscripts, setDisplayTranscripts] = useState([])
+    const [displayVideoMetrics, setDisplayVideoMetrics] = useState([])
     const [currentTranscript, setCurrentTranscript] = useState({})
     const [timeRange, setTimeRange] = useState([0, 1])
     const [selectedSpkrId1, setSelectedSpkrId1] = useState(-1)
     const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1)
     const [spkr1Transcripts, setSpkr1Transcripts] = useState([])
     const [spkr2Transcripts, setSpkr2Transcripts] = useState([])
+    const [spkr1VideoMetrics, setSpkr1VideoMetrics] = useState([])
+    const [spkr2VideoMetrics, setSpkr2VideoMetrics] = useState([])
+    const [selectedSpkralias, setSelectedSpkralias] = useState("");
     const [details, setDetails] = useState("Group")
 
     const [currentForm, setCurrentForm] = useState("")
@@ -86,6 +93,11 @@ function JoinPage() {
     const [currBlob, setCurrBlob] = useState(null)
     const [invalidName, setInvalidName] = useState(false)
     const [constraintObj, setConstraintObj] = useState(null)
+    const [registeredStudentData, setRegisteredStudentData] = useState(null)
+    const [registeredUserAliasChanged, setRegisteredUserAliasChanged] = useState(false)
+    const [registeredAudioFingerprintAdded, setRegisteredAudioFingerprintAdded] = useState(false)
+    const [registeredVideoFingerprintAdded, setRegisteredVideoFingerprintAdded] = useState(false)
+    
 
     const POD_COLOR = "#FF6655"
     const GLOW_COLOR = "#ffc3bd"
@@ -107,6 +119,9 @@ function JoinPage() {
             "Internal Cohesion",
             "Newness",
             "Communication Density",
+            "Attention Level",
+            "Facial Emotions",
+            "Object Focused On"
         ]
         initChecklistData(featuresArr, setShowFeatures)
         // initialize the components toolbar
@@ -122,6 +137,7 @@ function JoinPage() {
             "Internal Cohesion",
             "Newness",
             "Communication Density",
+            "Video Metrics"
         ]
         initChecklistData(boxArr, setShowBoxes)
     }, [])
@@ -135,16 +151,16 @@ function JoinPage() {
     useEffect(() => {
         if (constraintObj && pcode !== "" && joinwith !== "") handleStream()
     }, [constraintObj, pcode, joinwith])
-/*
-    useEffect(() => {
-        if (
-            audiows.current != null
-        ) {
-            console.log("called connect_audio_processor_service")
-            connect_audio_processor_service()
-        }
-    }, [audiows.current])
-*/
+    /*
+        useEffect(() => {
+            if (
+                audiows.current != null
+            ) {
+                console.log("called connect_audio_processor_service")
+                connect_audio_processor_service()
+            }
+        }, [audiows.current])
+    */
     useEffect(() => {
         if (videows != null) {
             console.log("called connect_video_processor_service")
@@ -158,9 +174,10 @@ function JoinPage() {
         // fetch the transcript
         if (session !== null && sessionDevice !== null) {
             fetchTranscript(sessionDevice.id)
-
+            fetchVideoMetric(sessionDevice.id)
             intervalLoad = setInterval(() => {
                 fetchTranscript(sessionDevice.id)
+                fetchVideoMetric(sessionDevice.id)
             }, 2000)
         }
 
@@ -178,15 +195,20 @@ function JoinPage() {
             setStartTime(sTime)
             setEndTime(eTime)
             generateDisplayTranscripts(sTime, eTime)
+            generateDisplayVideoMetrics(sTime, eTime)
         }
-    }, [transcripts, startTime, endTime, session, speakersValidated, timeRange])
+    }, [transcripts, videoMetrics,startTime, endTime, session, speakersValidated, timeRange])
 
     useEffect(() => {
         if (displayTranscripts) {
             console.log("reloaded page - displayTranscripts")
             setSpeakerTranscripts()
         }
-    }, [displayTranscripts, selectedSpkrId1, selectedSpkrId2, details])
+        if(displayVideoMetrics){
+            console.log("reloaded page - displayVideoMetrics")
+            setSpeakerVideoMetrics()
+        }
+    }, [displayTranscripts, displayVideoMetrics,selectedSpkrId1, selectedSpkrId2, details])
 
     //Use effect to start audio and video processing
     useEffect(() => {
@@ -248,11 +270,11 @@ function JoinPage() {
                 authenticated && speakersValidated &&
                 (joinwith === "Video" || joinwith === "Videocartoonify")
             ) {
-                console.log(audioconnected,authenticated,speakersValidated)
+                console.log(audioconnected, authenticated, speakersValidated)
                 videoPlay()
             }
         }
-    }, [authenticated,speakersValidated])
+    }, [authenticated, speakersValidated])
 
     //Use effect to toggle video view pane
     useEffect(() => {
@@ -263,6 +285,45 @@ function JoinPage() {
         }
     }, [preview])
 
+    useEffect(() => {
+        if (registeredStudentData != null) {
+            changeAliasName(registeredStudentData.username)
+        }
+    }, [registeredStudentData])
+
+    useEffect(() => {
+        if (registeredUserAliasChanged) {
+            addSavedSpeakerFingerprint()
+        }
+    }, [registeredUserAliasChanged])
+
+    useEffect(() => {
+        let proceed = false
+        if (joinwith === "Video" || joinwith === "Videocartoonify")  {
+                if (registeredAudioFingerprintAdded && registeredVideoFingerprintAdded) {
+                    proceed = true
+                }
+            }else{
+                if (registeredAudioFingerprintAdded){
+                    proceed = true
+                }
+            }
+        if (proceed) {
+
+            const updatedSpeakers = speakers.map((s) =>
+            s.id === selectedSpeaker.id ? { ...s, fingerprinted: true } : s,)
+            setSpeakers(updatedSpeakers)
+            setSelectedSpeaker(null)
+            setCurrentForm("")
+            console.log("register fingerprint for " + registeredStudentData.username + " Added")
+            setRegisteredStudentData(null)
+            setRegisteredUserAliasChanged(false)
+            setRegisteredAudioFingerprintAdded(false)
+            setRegisteredVideoFingerprintAdded(false)
+            closeDialog()
+        }
+    }, [registeredAudioFingerprintAdded, registeredVideoFingerprintAdded])
+
     //Use effect to display processed cartoonized image
     // useEffect(() => {
     //     console.log('inside renderframe buffer useeffect ', frameBufferLength)
@@ -271,7 +332,7 @@ function JoinPage() {
 
     const openForms = (form, speaker = null) => {
         setCurrentForm(form)
-        if (form === "fingerprintAudio" || form === "renameAlias") {
+        if (form === "fingerprintAudio" || form === "renameAlias" || form === "savedAudioVideoFingerprint") {
             setSelectedSpeaker(speaker)
         }
     }
@@ -283,7 +344,7 @@ function JoinPage() {
     // Disconnects from websocket server and audio stream.
     const disconnect = (permanent = false) => {
         console.log("disconnect called", permanent)
-        if(ending.value)
+        if (ending.value)
             return
         if (permanent) {
             setPageTitle("Join Discussion")
@@ -340,6 +401,10 @@ function JoinPage() {
                 speakers: speakers,
             }
             audiows.current.send(JSON.stringify(message))
+            
+            if (joinwith === "Video" || joinwith === "Videocartoonify")  {
+                videows.send(JSON.stringify(message))
+            }
             setSpeakersValidated(true)
         } else {
             setDisplayText(
@@ -383,6 +448,62 @@ function JoinPage() {
         closeDialog()
     }
 
+    const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
+
+        const fetchData = new AuthService().getStudentProfileByID(registeredUsername)
+        fetchData
+            .then(
+                (response) => {
+                    if (response.status === 200) {
+                        response.json().then((jsonObj) => {
+                            console.log(jsonObj)
+                            const student_data = StudentModel.fromJson(jsonObj)
+                            setRegisteredStudentData(student_data)
+                        })
+                    } else {
+                        setInvalidName(true)
+                    }
+                },
+                (apierror) => {
+                    console.log(
+                        "byod-join-components func: startProcessingSavedSpeakerFingerprint 1 ",
+                        apierror,
+                    )
+                },
+            )
+
+    }
+
+    const addSavedSpeakerFingerprint = async () => {
+
+        let message = null
+        message = {
+            type: "add-saved-fingerprint",
+            id: selectedSpeaker.id,
+            alias: registeredStudentData.username
+        }
+
+        console.log(speakers)
+
+        if (joinwith === "Video" || joinwith === "Videocartoonify") {
+
+            if (videows === null || audiows.current === null) {
+                return
+            }
+            audiows.current.send(JSON.stringify(message))
+            videows.send(JSON.stringify(message))
+            setCurrentForm("processing")
+        } else {
+            if (audiows.current === null) {
+                return
+            }
+
+            audiows.current.send(JSON.stringify(message))
+        }
+
+
+    }
+
     const changeAliasName = (newAlias) => {
         if (newAlias === "") {
             setInvalidName(true)
@@ -411,7 +532,13 @@ function JoinPage() {
                                     : s,
                             )
                             setSpeakers(updatedSpeakers)
-                            setSelectedSpeaker(null)
+                            //only set to null when change alias is invoked by cicking the change alias option 
+                            if (registeredStudentData === null) {
+                                setSelectedSpeaker(null)
+                            }
+                            if (registeredStudentData !== null) {
+                                setRegisteredUserAliasChanged(true)
+                            }
                         })
                     } else {
                         setShowAlert(true)
@@ -463,7 +590,7 @@ function JoinPage() {
                     .enumerateDevices()
                     .then((devices) => {
                         devices.forEach((device) => {
-                            
+
                             // console.log(device.kind.toUpperCase(), device.label);
                             //, device.deviceId
                         })
@@ -476,7 +603,7 @@ function JoinPage() {
             if (navigator.mediaDevices != null) {
                 const stream =
                     await navigator.mediaDevices.getUserMedia(constraintObj)
-  
+
                 // media.then(function (stream) {
                 setStreamReference(stream)
                 //keep this here for now to enable to capturing of audio finger printing
@@ -489,7 +616,7 @@ function JoinPage() {
                         apiService.getAudioWebsocketEndpoint(),
                     )
                     connect_audio_processor_service();
-                    
+
                 } else if (
                     joinwith === "Video" ||
                     joinwith === "Videocartoonify"
@@ -519,16 +646,16 @@ function JoinPage() {
                     audiows.current = new WebSocket(
                         apiService.getAudioWebsocketEndpoint(),
                     )
-                    
+
                     connect_audio_processor_service();
 
                     //activate video websocket 
                     setVideoWs(
-                            new WebSocket(
-                                apiService.getVideoWebsocketEndpoint(),
-                            ),
-                        )
-                    
+                        new WebSocket(
+                            apiService.getVideoWebsocketEndpoint(),
+                        ),
+                    )
+
                 }
             } else {
                 setDisplayText("No media devices detected.")
@@ -564,8 +691,8 @@ function JoinPage() {
             constraint.audio = true
             constraint.video = {
                 facingMode: "user",
-                width: 150, //{ min: 640, ideal: 1280, max: 1920 },
-                height: 80, //{ min: 480, ideal: 720, max: 1080 }
+                width: 640, //{ min: 640, ideal: 1280, max: 1920 },
+                height: 480, //{ min: 480, ideal: 720, max: 1080 }
             }
         } else {
             constraint.audio = true
@@ -584,7 +711,7 @@ function JoinPage() {
                         setSpeakers(
                             SpeakerModel.fromJsonList(jsonObj["speakers"]),
                         )
-                        setKey(jsonObj.key);                        
+                        setKey(jsonObj.key);
                         setConstraintObj(constraint)
                         setPcode(passcode)
                         setJoinwith(joinwith)
@@ -632,11 +759,16 @@ function JoinPage() {
             setAuthenticated(true)
             if (message["type"] === "start") {
                 closeDialog()
+            } else if (message['type'] === 'registeredfingerprintadded') {
+                console.log("got a response from audio endpoint....")
+                setRegisteredAudioFingerprintAdded(true)
+
             } else if (message["type"] === "error") {
                 disconnect(true)
                 setDisplayText(
-                    "The connection to the session has been closed by the server.",
+                    "The connection to the session has been closed by the audio server.",
                 )
+                console.log("message from the audio server is "+ message["message"])
                 setCurrentForm("ClosedSession")
             } else if (message["type"] === "end") {
                 disconnect(true)
@@ -666,7 +798,7 @@ function JoinPage() {
 
     // Connects to video processor websocket server.
     const connect_video_processor_service = () => {
-        videows.binaryType = "arraybuffer"
+        videows.binaryType = "blob"
 
         videows.onopen = (e) => {
             console.log("[Connected to video processor services]")
@@ -674,37 +806,38 @@ function JoinPage() {
         }
 
         videows.onmessage = (e) => {
-            if (typeof e.data === 'string'){
+            if (typeof e.data === 'string') {
                 const message = JSON.parse(e.data);
                 if (message['type'] === 'start') {
                     setAuthenticated(true);
                     closeDialog();
-                }else if(message['type'] === 'attention_data'){
+                } else if (message['type'] === 'attention_data') {
 
-                }else if (message['type'] === 'error') {
+                } else if (message['type'] === 'registeredfingerprintadded') {
+                    console.log("got a response from video endpoint....")
+                    setRegisteredVideoFingerprintAdded(true)
+                } else if (message['type'] === 'error') {
                     disconnect(true);
-                    setDisplayText('The connection to the session has been closed by the server.');
+                    setDisplayText('The connection to the session has been closed by the video server.');
+                     console.log("message from the video server is "+ message["message"])
                     setCurrentForm('ClosedSession');
                 } else if (message['type'] === 'end') {
                     disconnect(true);
                     setDisplayText('The session has been closed by the owner.');
                     setCurrentForm('ClosedSession');
                 }
-            }else if (e.data instanceof Blob){
+            } else if (e.data instanceof Blob) {
                 const url = URL.createObjectURL(e.data);
                 // Add the processed frame to the buffer
-                
-                setFrameBuffer(prevBuffer =>{
-                    console.log("image data received.. ", url)
-                        const newItems = [...prevBuffer, url]
-                        if (newItems.length % 40 == 0) {
-                            setFrameBufferLength(newItems.length)
-                            // setCartoonImgBatch(prevCount => prevCount + 1)
-                            // setFrameBufferLength(prevCount => prevCount + 1)
-                        }
-                        
-                        return newItems
-                    } 
+
+                setFrameBuffer(prevBuffer => {
+                    const newItems = [...prevBuffer, url]
+                    if (newItems.length % 40 === 0) {
+                        setFrameBufferLength(newItems.length)
+                    }
+
+                    return newItems
+                }
                 );
 
                 setRenderingStarted(true)
@@ -712,7 +845,7 @@ function JoinPage() {
         };
 
         videows.onclose = e => {
-            console.log('[Disconnected]',ending.value);
+            console.log('[Disconnected]', ending.value);
         };
     }
 
@@ -746,8 +879,9 @@ function JoinPage() {
                 sample_rate: 16000,
                 encoding: "pcm_f16le",
                 video_encoding: "video/mp4",
-                channels: 2,
+                channels: 1,
                 streamdata: "video",
+                tag: true,
                 embeddings_file: sessionDevice.embeddings,
                 deviceid: sessionDevice.id,
                 sessionid: session.id,
@@ -777,7 +911,9 @@ function JoinPage() {
                 streamdata: "video",
                 embeddings_file: sessionDevice.embeddings,
                 deviceid: sessionDevice.id,
+                Video:true,
                 sessionid: session.id,
+                numSpeakers: numSpeakers,
             }
         } else if (joinwith === "Videocartoonify") {
             message = {
@@ -793,6 +929,7 @@ function JoinPage() {
                 deviceid: sessionDevice.id,
                 sessionid: session.id,
                 Video_cartoonify: true,
+                numSpeakers: numSpeakers,
             }
         }
         console.log(joinwith)
@@ -815,6 +952,17 @@ function JoinPage() {
             disconnect(true)
             setCurrentForm("")
             return navigate("/")
+        }
+    }
+
+    const getSpeakerAliasFromID = (selectedSpkrId)=>{
+        if (selectedSpkrId !== -1){
+             const speaker = speakers.filter((s) => s.id === selectedSpkrId )
+             if(speaker.length !== 0){
+                return speaker[0].alias
+             }
+        }else{
+            return -1
         }
     }
 
@@ -873,23 +1021,48 @@ function JoinPage() {
         }
     }
 
+    const fetchVideoMetric = async (deviceid) => {
+        try {
+            const response =
+                await sessionService.getSessionDeviceVideoMetricsForClient(
+                    deviceid,
+                )
+
+            if (response.status === 200) {
+                const jsonObj = await response.json()
+                const fetched_video_metrics = jsonObj.sort((a, b) =>
+                    a.time_stamp > b.time_stamp ? 1 : -1,
+                )
+
+                setVideoMetrics(fetched_video_metrics)
+            } else if (response.status === 400 || response.status === 401) {
+                console.log(response, "no videometrics obj")
+            }
+        } catch (error) {
+            console.log(
+                "byod-join-component error func : fetch video metrics",
+                error,
+            )
+        }
+    }
+
     //function to render the cartoonized image
     const renderFrameFromBuffer = () => {
-        console.log('frameBufferLength = ', frameBufferLength,' cartoonImgBatch = ', cartoonImgBatch)
+        console.log('frameBufferLength = ', frameBufferLength, ' cartoonImgBatch = ', cartoonImgBatch)
         if (frameBufferLength > (40 * cartoonImgBatch)) {
-            for (var i = (cartoonImgBatch-1)*40; i < cartoonImgBatch*40; i++){
-                
+            for (var i = (cartoonImgBatch - 1) * 40; i < cartoonImgBatch * 40; i++) {
+
                 setInterval(() => {
                     setCartoonImgUrl(frameBuffer[i]);
                     console.log('i called setcartoonimgurl ', i)
                 }, 500)
-                
-            }    
-            setCartoonImgBatch(prevCount => prevCount + 1)
-          
-        } 
 
-      }
+            }
+            setCartoonImgBatch(prevCount => prevCount + 1)
+
+        }
+
+    }
 
     const ResetTimeRange = (values) => {
         if (session !== null) {
@@ -910,33 +1083,68 @@ function JoinPage() {
         )
     }
 
-    const setSpeakerTranscripts = () => {
-        if (displayTranscripts.length) {
-            setSpkr1Transcripts(
-                displayTranscripts.reduce((values, transcript) => {
-                    if (
-                        selectedSpkrId1 === -1 ||
-                        transcript.speaker_id === selectedSpkrId1
-                    )
-                        values.push(transcript)
-                    return values
-                }, []),
-            )
-            setSpkr2Transcripts(
-                displayTranscripts.reduce((values, transcript) => {
-                    if (
-                        selectedSpkrId2 === -1 ||
-                        transcript.speaker_id === selectedSpkrId2
-                    )
-                        values.push(transcript)
-                    return values
-                }, []),
-            )
-        } else {
-            setSpkr1Transcripts([])
-            setSpkr2Transcripts([])
-        }
+    const generateDisplayVideoMetrics = (s, e) => {
+        setDisplayVideoMetrics(
+            videoMetrics.filter((v) => v.time_stamp >= s && v.time_stamp <= e),
+        )
     }
+
+
+    const setSpeakerTranscripts = () => {
+    if (displayTranscripts.length) {
+      setSpkr1Transcripts(
+        displayTranscripts.reduce((values, transcript) => {
+          
+          if (transcript.speaker_id === selectedSpkrId1
+          ){
+            values.push(transcript);
+          }
+          return values;
+        }, [])
+      );
+      setSpkr2Transcripts(
+        displayTranscripts.reduce((values, transcript) => {
+          if (transcript.speaker_id === selectedSpkrId2
+          ){
+            values.push(transcript);
+         }
+          return values;
+        }, [])
+      );
+    } else {
+      setSpkr1Transcripts([]);
+      setSpkr2Transcripts([]);
+    }
+  };
+
+  const setSpeakerVideoMetrics = () => {
+    console.log(selectedSpkrId1,selectedSpkrId2)
+    if (displayVideoMetrics.length) {
+      let speakerAlias1 = getSpeakerAliasFromID(selectedSpkrId1)
+      let speakerAlias2 = getSpeakerAliasFromID(selectedSpkrId2)
+      setSpkr1VideoMetrics(
+        displayVideoMetrics.reduce((values, videometrics) => {
+          if (videometrics.student_username === speakerAlias1
+          ){
+            values.push(videometrics)
+          }
+          return values
+        }, []),
+      )
+      setSpkr2VideoMetrics(
+        displayVideoMetrics.reduce((values, videometrics) => {
+          if (videometrics.student_username === speakerAlias2
+          ){
+            values.push(videometrics)  
+          }
+          return values
+        }, []),
+      )
+    } else {
+      setSpkr1VideoMetrics([])
+      setSpkr2VideoMetrics([])
+    }
+  }
 
     const seeAllTranscripts = () => {
         if (Object.keys(currentTranscript) > 0 && sessionDevice !== null) {
@@ -1049,6 +1257,13 @@ function JoinPage() {
     const sessionDevBtnPressed =
         sessionDevice !== null ? sessionDevice.button_pressed : null
 
+    const loadSpeakerMetrics = (speakerId, speakrAlias) => {
+    setSelectedSpkrId1(speakerId)
+    setSelectedSpkralias(speakrAlias)
+    setPageTitle(speakrAlias)
+    setDetails("Individual");
+  }
+
     return (
         <ByodJoinPage
             connected={audioconnected}
@@ -1079,6 +1294,7 @@ function JoinPage() {
             onClickedKeyword={onClickedKeyword}
             session={session}
             displayTranscripts={displayTranscripts}
+            displayVideoMetrics={displayVideoMetrics}
             startTime={startTime}
             endTime={endTime}
             transcripts={transcripts}
@@ -1101,9 +1317,12 @@ function JoinPage() {
             setSelectedSpkrId1={setSelectedSpkrId1}
             selectedSpkrId2={selectedSpkrId2}
             setSelectedSpkrId2={setSelectedSpkrId2}
+            getSpeakerAliasFromID = {getSpeakerAliasFromID}
             spkr1Transcripts={spkr1Transcripts}
             spkr2Transcripts={spkr2Transcripts}
             selectedSpeaker={selectedSpeaker}
+            spkr1VideoMetrics={spkr1VideoMetrics}
+            spkr2VideoMetrics={spkr2VideoMetrics}
             setSelectedSpeaker={setSelectedSpeaker}
             saveAudioFingerprint={saveAudioFingerprint}
             addSpeakerFingerprint={addSpeakerFingerprint}
@@ -1115,8 +1334,11 @@ function JoinPage() {
             viewIndividual={viewIndividual}
             viewComparison={viewComparison}
             viewGroup={viewGroup}
-            cartoonImgUrl = {cartoonImgUrl}
+            cartoonImgUrl={cartoonImgUrl}
             invalidName={invalidName}
+            startProcessingSavedSpeakerFingerprint={startProcessingSavedSpeakerFingerprint}
+            loadSpeakerMetrics={loadSpeakerMetrics}
+            selectedSpkralias={selectedSpkralias}
         />
     )
 }

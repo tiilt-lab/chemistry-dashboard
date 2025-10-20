@@ -1,6 +1,7 @@
 
 import { ApiService } from "./api-service";
 import { UserModel } from "../models/user";
+import { StudentModel } from "../models/student";
 class AuthService {
 
   login(email, password, setLoginStatus, setAuthObject) {
@@ -29,6 +30,54 @@ class AuthService {
 
   logout() {
     return new ApiService().httpRequestCall("api/v1/logout", 'POST', {});
+  }
+
+  createStudentProfile(lastname, firstname, username,setStudentObject,setAlertMessage,setShowAlert) {
+    const body = {
+      lastname: lastname,
+      firstname: firstname,
+      username: username
+    };
+    const fetchRes =  new ApiService().httpRequestCall("api/v1/student/addstudent", 'POST', body);
+    fetchRes.then(
+      (response) => {
+        if (response.status === 200) {
+          response.json().then(
+            userobj => {
+              const student = StudentModel.fromJson(userobj);
+              setStudentObject(student)
+            }
+          )
+        }else if (response.status === 400) {
+           response.json().then(
+            err => {
+              if (err["message"] === "Username already exists."){
+                const student = StudentModel.fromJson(err["data"] );
+                setAlertMessage("The Username has been selected by anothr student, please enter a different one")
+                setShowAlert(true)
+                // setStudentObject(student)
+              }else{
+                setAlertMessage(err["message"])
+                setShowAlert(true)
+              }
+            }
+          )
+          
+          }
+      },
+      (apiError) => {
+        apiError.status = 600
+        setAlertMessage("A fatal error occured!!!");
+        setShowAlert(true);
+      })
+  }
+
+  getStudentProfileByID(username) {
+    return new ApiService().httpRequestCall("api/v1/student/getstudentbyid/"+ username, 'GET', {});
+  }
+
+  getStudentProfiles() {
+    return new ApiService().httpRequestCall("api/v1/admin/students", 'GET', {});
   }
 
   me(stateSetter) {
@@ -71,6 +120,10 @@ class AuthService {
 
   deleteUser(userId) {
     return new ApiService().httpRequestCall("api/v1/admin/users/" + userId, 'DELETE', {});
+  }
+
+  deleteStudent(studentId) {
+    return new ApiService().httpRequestCall("api/v1/admin/students/" + studentId, 'DELETE', {});
   }
 
   getUsers() {

@@ -55,7 +55,11 @@ def update_session(session_id, user, **kwargs):
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access
 def delete_session(session_id, **kwargs):
-    success = database.delete_session(session_id)
+    success =False
+    try:
+        success = database.delete_session(session_id) 
+    except Exception as e:
+        logging.info("error occured while deleting session: {0}".format(e))    
     if success:
         return json_response()
     else:
@@ -167,6 +171,13 @@ def session_device_transcripts_for_client(device_id, **kwargs):
     transcripts = database.get_transcripts(session_device_id=device_id)
     return json_response([transcript.json() for transcript in transcripts])
 
+@api_routes.route('/api/v1/devices/<int:device_id>/videometrics/client', methods=['GET'])
+# @wrappers.verify_login(public=True)
+# @wrappers.verify_session_access
+def session_device_videometrics_for_client(device_id, **kwargs):
+    videometrics = database.get_speaker_video_metrics(session_device_id=device_id)
+    return json_response([videometric.json() for videometric in videometrics])
+
 @api_routes.route('/api/v1/devices/<int:device_id>/transcripts/speaker_metrics', methods=['GET'])
 def session_device_speaker_metrics(device_id, **kwargs):
     speaker_metrics = database.get_speaker_transcript_metrics(session_device_id=device_id)
@@ -195,6 +206,13 @@ def speaker_id_transcripts_for_client(device_id, speaker_id, **kwargs):
 @wrappers.verify_session_access
 def session_device_speakers(session_id, device_id, **kwargs):
     speakers = database.get_speakers(session_device_id=device_id)
+    return json_response([speaker.json() for speaker in speakers])
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/speakers', methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def session_speakers(session_id, **kwargs):
+    speakers = database.get_speakers(session_id=session_id)
     return json_response([speaker.json() for speaker in speakers])
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/keywords', methods=['GET'])

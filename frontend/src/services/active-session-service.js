@@ -6,6 +6,7 @@ import { SessionModel } from "../models/session"
 import { SessionDeviceModel } from "../models/session-device"
 import { TranscriptModel } from "../models/transcript"
 import { SpeakerMetricsModel } from "../models/speaker-metrics"
+import { SpeakerVideoMetricsModel } from "../models/speaker-video-metrics"
 
 export class ActiveSessionService {
     socketService = new SocketService()
@@ -14,6 +15,7 @@ export class ActiveSessionService {
     sessionSource = new BehaviorSubject(null)
     sessionDeviceSource = new BehaviorSubject([])
     transcriptSource = new BehaviorSubject([])
+    videoMetricSource = new BehaviorSubject([])
 
     socket
     sessionId
@@ -100,9 +102,13 @@ export class ActiveSessionService {
             const currentTranscripts = this.transcriptSource
                 .getValue()
                 .filter((d) => d.session_device_id !== removedDeviceId)
+            const currentVideoMetrics = this.videoMetricSource
+                .getValue()
+                .filter((d) => d.session_device_id !== removedDeviceId)    
 
             this.sessionDeviceSource.next(currentDevices)
             this.transcriptSource.next(currentTranscripts)
+            this.videoMetricSource.next(currentVideoMetrics)
         })
 
         // Update session.
@@ -138,7 +144,6 @@ export class ActiveSessionService {
         // Update transcripts and speaker metrics.
         this.socket.on("transcript_metrics_update", (e) => {
             const data = JSON.parse(e)
-
             const speaker_metrics = SpeakerMetricsModel.fromJsonList(
                 data["speaker_metrics"],
             )
@@ -168,6 +173,34 @@ export class ActiveSessionService {
             }
             this.transcriptSource.next(transcripts)
         })
+
+        // Initial digest of speaker video metrics.
+        this.socket.on("video_metrics_digest", (e) => {
+            const data = JSON.parse(e)
+            const videoMetrics = this.videoMetricSource.getValue()
+            for (const metrics of data) {
+                const speaker_video_metrics = SpeakerVideoMetricsModel.fromJson(
+                    metrics["speaker_video_metrics"]
+                )
+                videoMetrics.push(speaker_video_metrics)
+            }
+            this.videoMetricSource.next(videoMetrics)
+        })
+
+        // Update speaker video metrics.
+        this.socket.on("video_metrics_update", (e) => {
+            const data = JSON.parse(e)
+            const currentVideoMetrics = this.videoMetricSource.getValue()
+            for(const metric of data["speaker_video_metrics"]){
+                const speaker_video_metrics = SpeakerVideoMetricsModel.fromJson(metric)
+                currentVideoMetrics.push(metric)
+            }
+            //  console.log(" speaker_video_metrics from Video metrics ", speaker_video_metrics)
+            
+
+            
+            this.videoMetricSource.next(currentVideoMetrics)
+        })
     }
 
     close() {
@@ -179,6 +212,7 @@ export class ActiveSessionService {
         this.sessionSource.next(null)
         this.sessionDeviceSource.next([])
         this.transcriptSource.next([])
+        this.videoMetricSource.next([])
     }
 
     getSession() {
@@ -212,7 +246,30 @@ export class ActiveSessionService {
 
         return this.transcriptSource
     }
+
     getTranscripts() {
         return this.transcriptSource
+    }
+
+    getSessionDeviceVideoMetrics(sessionDeviceId, setState) {
+        this.videoMetricSource.subscribe((e) => {
+            if (Object.keys(e).length !== 0) {
+                const data = e
+                    .filter(
+                        (v) =>
+                            v.session_device_id ===
+                            parseInt(sessionDeviceId, 10),
+                    )
+                    .sort((a, b) => (a.time_stamp > b.time_stamp ? 1 : -1))
+                //console.log(data,'still debugging ...')
+                setState(data)
+            }
+        })
+
+        return this.videoMetricSource
+    }
+
+    getVideoMetrics() {
+        return this.videoMetricSource
     }
 }

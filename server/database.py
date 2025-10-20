@@ -20,11 +20,13 @@ from tables.keyword_list_item import KeywordListItem
 from tables.keyword_list import KeywordList
 from tables.keyword import Keyword
 from tables.user import User
+from tables.student import Student
 from tables.api_client import APIClient
 from tables.folder import Folder
 from tables.topic_model import TopicModel
 from tables.speaker import Speaker
 from tables.speaker_transcript_metrics import SpeakerTranscriptMetrics
+from tables.speaker_video_metrics import SpeakerVideoMetrics
 
 # Saves changes made to database (models)
 def save_changes():
@@ -37,12 +39,15 @@ def close_session():
 # Speakers
 # -------------------------
 
-def get_speakers(session_device_id=None, id = None):
+def get_speakers(session_id=None, session_device_id=None, id = None):
     query = db.session.query(Speaker)
+    if session_id != None:
+        query = query.join(SessionDevice).filter(SessionDevice.session_id == session_id)
+    if session_device_id != None:
+        query = query.filter(Speaker.session_device_id == session_device_id)    
     if id != None:
         return query.filter(Speaker.id == id).first()
-    if session_device_id != None:
-        query = query.filter(Speaker.session_device_id == session_device_id)
+    
     return query.all()
 
 def get_speaker_tags(session_device_id=None):
@@ -132,6 +137,63 @@ def delete_speaker_transcript_metrics(id = None, speaker_id = None, transcript_i
           .delete(synchronize_session='fetch')
     db.session.commit()
     return True
+
+
+# -------------------------
+# Video Metrics
+# -------------------------
+
+def get_speaker_video_metrics(id = None, student_username=None, session_id=None, session_device_id=None):
+    query = db.session.query(SpeakerVideoMetrics)
+    if session_id != None:
+        query = query.join(SessionDevice).filter(SessionDevice.session_id == session_id)
+    if id != None:
+        return query.filter(SpeakerVideoMetrics.id == id).first()
+    if student_username != None:
+        query = query.filter(SpeakerVideoMetrics.student_username == student_username)
+    if session_device_id != None:
+        query = query.filter(SpeakerVideoMetrics.session_device_id == session_device_id)
+    return query.all()
+
+def add_speaker_video_metrics(session_device_id,student_username, time_stamp, facial_emotion,attention_level,object_on_focus):
+    metrics = SpeakerVideoMetrics(session_device_id,student_username, time_stamp, facial_emotion,attention_level,object_on_focus)
+    db.session.add(metrics)
+    db.session.commit()
+    return metrics
+
+def update_speaker_video_metrics(id, session_device_id=None,student_username=None, time_stamp=None, facial_emotion=None,attention_level=None,object_on_focus=None):
+    metrics = get_speaker_video_metrics(id)
+
+    if metrics:
+        if session_device_id:
+            metrics.session_device_id = session_device_id
+        if student_username:
+            metrics.student_username = student_username
+        if time_stamp:
+            metrics.time_stamp = time_stamp
+        if facial_emotion:
+            metrics.facial_emotion = facial_emotion
+        if attention_level:
+            metrics.attention_level = attention_level
+        if object_on_focus:
+            metrics.object_on_focus = object_on_focus
+        db.session.commit()
+        return(metrics)
+
+    return None
+
+def delete_speaker_video_metrics(id = None,student_username=None, session_device_id=None):
+    if id:
+        db.session.query(SpeakerVideoMetrics).filter(SpeakerVideoMetrics.id == id).delete(synchronize_session='fetch')
+    if student_username:
+        db.session.query(SpeakerVideoMetrics).filter(SpeakerVideoMetrics.student_username == student_username)\
+            .delete(synchronize_session='fetch')
+    elif session_device_id:
+        db.session.query(SpeakerVideoMetrics).filter(SpeakerVideoMetrics.session_device_id == session_device_id)\
+          .delete(synchronize_session='fetch')
+    db.session.commit()
+    return True
+
 
 # -------------------------
 # Topic Models
@@ -441,10 +503,15 @@ def delete_session(session_id):
     sub_query = db.session.query(Transcript.id).\
         filter(Transcript.session_device_id == SessionDevice.id).\
         filter(SessionDevice.session_id == session_id).subquery()
+
+    sub_query2 = db.session.query(SpeakerVideoMetrics.id).\
+        filter(SpeakerVideoMetrics.session_device_id == SessionDevice.id).\
+        filter(SessionDevice.session_id == session_id).subquery()
         
     db.session.query(KeywordUsage).filter(KeywordUsage.transcript_id.in_(sub_query)).delete(synchronize_session='fetch')
     db.session.query(Keyword).filter(Keyword.session_id == session_id).delete()
     db.session.query(Transcript).filter(Transcript.id.in_(sub_query)).delete(synchronize_session='fetch')
+    db.session.query(SpeakerVideoMetrics).filter(SpeakerVideoMetrics.id.in_(sub_query2)).delete(synchronize_session='fetch')
     db.session.query(SessionDevice).filter(SessionDevice.session_id == session_id).delete()
     db.session.query(Session).filter(Session.id == session_id).delete()
     db.session.commit()
@@ -520,6 +587,7 @@ def set_session_device_status(session_device_id, status):
 def delete_session_device(session_device_id):
     db.session.query(KeywordUsage).filter(KeywordUsage.transcript_id == Transcript.id).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')
     db.session.query(Transcript).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')
+    db.session.query(SpeakerVideoMetrics).filter(SpeakerVideoMetrics.session_device_id == session_device_id).delete(synchronize_session='fetch')
     db.session.query(SessionDevice).filter(SessionDevice.id == session_device_id).delete()
     db.session.commit()
     return True
@@ -684,6 +752,36 @@ def update_user(user_id, data):
     db.session.commit()
     return user
 
+
+# -------------------------
+# Student
+# -------------------------
+
+def get_students(id=None, username=None):
+    query = db.session.query(Student)
+    if id != None:
+        return query.filter(Student.id == id).first()
+    if username != None:
+        return query.filter(Student.username == username).first()
+    return query.all()
+
+def add_student(lastname, firstname, username):
+    matched_student = get_students(username=username)
+    if matched_student:
+        return False, "Username already exists."
+    student = Student(lastname, firstname, username)
+    db.session.add(student)
+    db.session.commit()
+    return True, student
+
+def delete_student(id):
+    student = get_students(id=id)
+    if student:
+        db.session.delete(student)
+        db.session.commit()
+        return student
+    else:
+        return None
 # -------------------------
 # API Client
 # -------------------------

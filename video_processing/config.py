@@ -22,11 +22,14 @@ def video_record_reduced():
 def video_cartoonize():
     return str(config['videocartoonize']['cartoonize']) in ['true', 'True', 't', '1']
 
-def attention_tracking():
-    return str(config['attentiontracking']['attentiontracking']) in ['true', 'True', 't', '1']
+def process_video_analytics():
+    return str(config['videoanalyics']['processvideoanalytics']) in ['true', 'True', 't', '1']
     
 def video_recordings_folder():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['videorecord']['video_recording_folder']))
+
+def facial_embedding_folder():
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['facialembedding']['facial_embedding_folder']))
 
 def host_server_address():
     return str(config['output']['host_server_address'])
@@ -45,3 +48,12 @@ def redis_session_key_callback():
 
 def redis_session_config_callback():
     return str(config['output']['redis_get_session_config_callback']) 
+
+def video_metrics_callback():
+    return str(config['output']['video_metrics_callback'])
+
+def connect_callback():
+    return str(config['output']['connect_callback'])
+
+def disconnect_callback():
+    return str(config['output']['disconnect_callback'])

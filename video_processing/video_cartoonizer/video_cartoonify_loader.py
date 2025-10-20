@@ -3,6 +3,7 @@ from torchvision import transforms
 import torch
 import dlib
 import numpy as np
+import wget, bz2
 from .model.vtoonify import VToonify
 from .model.bisenet.model import BiSeNet
 from .util import load_psp_standalone
@@ -25,6 +26,16 @@ class VideoCartoonifyLoader:
         self.video = True
         self.parsing_map_path = None
 
+        modelname = os.path.join( self.base_path,'checkpoint/shape_predictor_68_face_landmarks.dat')
+        self.face_detector_model = os.path.join( self.base_path,'checkpoint/mmod_human_face_detector.dat')
+
+        if not os.path.exists(modelname):
+            wget.download('http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2', modelname+'.bz2')
+            zipfile = bz2.BZ2File(modelname+'.bz2')
+            data = zipfile.read()
+            open(modelname, 'wb').write(data) 
+        self.landmarkpredictor = dlib.shape_predictor(modelname)
+
     def load_model(self):
         if self.exstyle_path is None:
             self.exstyle_path = os.path.join( self.base_path,'checkpoint/vtoonify_d_comic', 'exstyle_code.npy')
@@ -43,16 +54,7 @@ class VideoCartoonifyLoader:
         self.parsingpredictor.load_state_dict(torch.load(self.faceparsing_path, map_location=lambda storage, loc: storage))
         self.parsingpredictor.to(device).eval()
 
-        modelname = os.path.join( self.base_path,'checkpoint/shape_predictor_68_face_landmarks.dat')
-        self.face_detector_model = os.path.join( self.base_path,'checkpoint/mmod_human_face_detector.dat')
-
-        if not os.path.exists(modelname):
-            import wget, bz2
-            wget.download('http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2', modelname+'.bz2')
-            zipfile = bz2.BZ2File(modelname+'.bz2')
-            data = zipfile.read()
-            open(modelname, 'wb').write(data) 
-        self.landmarkpredictor = dlib.shape_predictor(modelname)
+        
 
         self.pspencoder = load_psp_standalone(self.style_encoder_path, device)
 

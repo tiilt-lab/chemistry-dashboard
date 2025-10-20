@@ -16,7 +16,6 @@ function AppSessionToolbar(props) {
     const location = useLocation()
 
 
-
     useEffect(() => {
         console.log(props.session.length,'session length')
         if(props.fromClient)
@@ -79,6 +78,7 @@ function AppSessionToolbar(props) {
             session={props.session}
             onEndSession={onEndSession}
             menus={props.menus}
+            speakers = {props.participants}
             fromClient={props.fromClient}
         />
     )
