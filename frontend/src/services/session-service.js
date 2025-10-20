@@ -84,9 +84,25 @@ class SessionService {
     );
   }
 
+  getSessionSpeakers(sessionId) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/speakers`,
+      "GET",
+      {}
+    );
+  }
+
   getSessionDeviceTranscriptsForClient(sessionDeviceId, startTime = 0) {
     return this.api.httpRequestCall(
       `api/v1/devices/${sessionDeviceId}/transcripts/client`,
+      "GET",
+      {}
+    );
+  }
+
+  getSessionDeviceVideoMetricsForClient(sessionDeviceId, startTime = 0) {
+    return this.api.httpRequestCall(
+      `api/v1/devices/${sessionDeviceId}/videometrics/client`,
       "GET",
       {}
     );

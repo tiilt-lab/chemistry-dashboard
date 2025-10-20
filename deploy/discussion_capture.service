@@ -10,8 +10,8 @@ Restart=always
 RestartSec=1
 LimitRTPRIO=99
 LimitRTTIME=infinity
-WorkingDirectory=/var/lib/chemistry-dashboard/
-ExecStart=/home/ubuntu/.pyenv/versions/discussion_capture/bin/python server/discussion_capture.py
+WorkingDirectory=/home/tde3218/chemistry-dashboard/
+ExecStart=/home/tde3218/.pyenv/versions/discussion_capture/bin/python server/discussion_capture.py
 
 [Install]
 WantedBy=multi-user.target

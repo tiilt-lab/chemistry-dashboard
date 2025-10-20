@@ -13,7 +13,7 @@ import supervision as sv
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
 sys.path.insert(0,'./yolo_head')
-print(sys.path)
+# print(sys.path)
 from yolo_head.models.experimental import attempt_load
 from yolo_head.utils.datasets import LoadStreams, LoadImages, LoadImageDataset
 from yolo_head.utils.general import check_img_size, check_requirements, check_imshow, non_max_suppression, apply_classifier, \

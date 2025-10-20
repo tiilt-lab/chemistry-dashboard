@@ -1,6 +1,6 @@
 from app import app, db, DATABASE_FILE, socketio, scheduler
 from routes import socket
-from tables import folder, device, session_device, session, transcript, keyword, keyword_usage, keyword_list, keyword_list_item, user
+from tables import folder, device, session_device, session, transcript, keyword, keyword_usage, keyword_list, keyword_list_item, user,student,speaker_video_metrics
 import scheduled_tasks
 import config as cf
 import device_websockets
@@ -17,6 +17,7 @@ from routes.admin import api_routes as admin_api
 from routes.folder import api_routes as folder_api
 from routes.topic_model import api_routes as topicmodel_api
 from routes.speaker import api_routes as speaker_api
+from routes.student import api_routes as student_api
 
 app.register_blueprint(admin_api)
 app.register_blueprint(auth_api)
@@ -27,7 +28,7 @@ app.register_blueprint(callback_api)
 app.register_blueprint(folder_api)
 app.register_blueprint(topicmodel_api)
 app.register_blueprint(speaker_api)
-
+app.register_blueprint(student_api)
 
 
 def main():

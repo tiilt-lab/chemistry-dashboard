@@ -24,18 +24,20 @@ function AppIndividualFeaturesComponent(props) {
   //update new metrics (individual)
   const updateGraphs = () => {
     const valueArrays = [
-      { name: "Participation", values: [] },
-      { name: "Social Impact", values: [] },
-      { name: "Responsivity", values: [] },
-      { name: "Internal Cohesion", values: [] },
-      { name: "Newness", values: [] },
-      { name: "Communication Density", values: [] },
+      { name: "Participation", values: [],'time':[] },
+      { name: "Social Impact", values: [],'time':[] },
+      { name: "Responsivity", values: [],'time':[] },
+      { name: "Internal Cohesion", values: [],'time':[] },
+      { name: "Newness", values: [],'time':[] },
+      { name: "Communication Density", values: [],'time':[] },
+      
     ];
     if(!props.transcripts || !props.transcripts.length || props.spkrId === -1)
     {
       setFeatures(valueArrays);
       return;
     }
+    // console.log("sent transcript is ", props.transcripts)
     props.transcripts.forEach((t) => {
       //select speaker metrics from transcripts based on the spkrId
       const speaker_metric = t.speaker_metrics.find(
@@ -49,8 +51,16 @@ function AppIndividualFeaturesComponent(props) {
       valueArrays[3].values.push(speaker_metric.internal_cohesion * 100);
       valueArrays[4].values.push(speaker_metric.newness * 100);
       valueArrays[5].values.push(speaker_metric.communication_density * 100);
+
+      valueArrays[0].time.push(t.start_time);
+      valueArrays[1].time.push(t.start_time);
+      valueArrays[2].time.push(t.start_time);
+      valueArrays[3].time.push(t.start_time);
+      valueArrays[4].time.push(t.start_time);
     });
 
+    // console.log("transcript data: ", valueArrays)
+    
     //smooth the values of the value array over 10 values
     for (const valueArray of valueArrays) {
       const length = valueArray.values.length;

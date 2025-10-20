@@ -249,7 +249,8 @@ class VideoProcessor:
                 if subclip_frames is not None:
                     subclib_frame_count = 0
                     frame_batch = []
-                    for frame in subclip_frames:
+                    for time, frame in subclip_frames:
+                        logging.info(f"Time: {time:.2f}s, Frame shape: {frame.shape}")
                         subclib_frame_count =  subclib_frame_count + 1
                         # if frame_shape[1] > frame_shape[0]:
                         #     dim = (500,375)

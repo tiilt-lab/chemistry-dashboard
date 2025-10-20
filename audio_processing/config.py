@@ -21,6 +21,9 @@ def record_reduced():
 def recordings_folder():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['record']['recording_folder']))
 
+def biometric_folder():
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['biometrics']['biometrics_folder']))
+
 def video_record_original():
     return str(config['videorecord']['original']) in ['true', 'True', 't', '1']
 

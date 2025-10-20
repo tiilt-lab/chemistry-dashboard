@@ -177,6 +177,8 @@ google-cloud-key.json
 audio_processing/recordings/
 video_processing/videorecordings/
 audio_processing/speaker_diarization/results/
+ByteTrack/
+attention-target-detection/
 video_processing/VToonify/
 video_processing/video_cartoonizer/checkpoint/
 video_processing/video_cartoonizer/data/

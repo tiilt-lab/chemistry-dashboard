@@ -12,7 +12,7 @@ function PodComponentPages(props) {
         <>
             <div className="main-container">
                 <Appheader
-                    title={props.sessionDevice.name}
+                    title={props.details === "Group" ? props.sessionDevice.name : props.selectedSpkralias}
                     leftText={false}
                     rightText={"Option"}
                     rightEnabled={true}
@@ -29,15 +29,22 @@ function PodComponentPages(props) {
                                     title: "Group",
                                     action: () => props.viewGroup(),
                                 },
-                                {
-                                    title: "Individual",
-                                    action: () => props.viewIndividual(),
-                                },
+                                // {
+                                //     title: "Individual",
+                                //     action: () => props.viewIndividual(),
+                                // },
                                 {
                                     title: "Comparison",
                                     action: () => props.viewComparison(),
                                 },
                             ]}
+                            participants={ props.speakers.map((speaker, index) => (
+                                {
+                                    alias: speaker.alias,
+                                    action: () => props.loadSpeakerMetrics(speaker.id,speaker.alias),
+                                }
+                            ))}
+
                         />
                     ) : (
                         <></>
@@ -45,6 +52,7 @@ function PodComponentPages(props) {
                     <div className="center-column-container">
                         <AppInfographicsComparison
                             displayTranscripts={props.displayTranscripts}
+                            displayVideoMetrics={props.displayVideoMetrics}
                             fromclient={false}
                             onClickedTimeline={props.onClickedTimeline}
                             radarTrigger={props.radarTrigger}
@@ -62,7 +70,10 @@ function PodComponentPages(props) {
                             setSelectedSpkrId2={props.setSelectedSpkrId2}
                             spkr1Transcripts={props.spkr1Transcripts}
                             spkr2Transcripts={props.spkr2Transcripts}
+                            spkr1VideoMetrics={props.spkr1VideoMetrics}
+                            spkr2VideoMetrics={props.spkr2VideoMetrics}
                             details={props.details}
+                            getSpeakerAliasFromID={props.getSpeakerAliasFromID}
                         ></AppInfographicsComparison>
                     </div>
                 </div>
@@ -99,7 +110,7 @@ function PodComponentPages(props) {
                     <></>
                 )}
 
-                {props.currentForm == "Options" ? (
+                {props.currentForm === "Options" ? (
                     <div className={style["dialog-content"]}>
                         <div className={style["dialog-heading"]}>
                             Section Boxes
@@ -145,7 +156,7 @@ function PodComponentPages(props) {
                     <></>
                 )}
 
-                {props.currentForm == "RemoveDevice" ? (
+                {props.currentForm === "RemoveDevice" ? (
                     <div className={style["dialog-content"]}>
                         <div className={style["dialog-heading"]}>
                             Disconnect Device
