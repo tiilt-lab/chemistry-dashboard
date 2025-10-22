@@ -1,4 +1,4 @@
-"""_summary_
+"""Audio Processor with Concept Mapping Support
 
 Returns:
     _description_
@@ -20,8 +20,8 @@ import numpy as np
 from joblib import load
 from topic_modeling.topic_modeling import preprocess_transcript
 import config as cf
-# from source_seperation import source_seperation_pre_trained
-# from server.topic_modeling.topicmodeling import get_topics_with_prob
+from concept_mapping.concept_extractor import ConceptExtractor
+
 # For converting nano seconds to seconds.
 NANO = 1000000000
 
@@ -53,12 +53,24 @@ class AudioProcessor:
         self.speaker_metrics_process = speaker_metrics.SpeakerProcessor(
             config, self.semantic_model)
 
+        # INITIALIZE CONCEPT EXTRACTOR
+        self.concept_extractor = None
+        if hasattr(config, 'concept_mapping') and config.concept_mapping:
+            self.concept_extractor = ConceptExtractor(config)
+            logging.info(f"Initialized concept extractor for session {config.sessionId}:{config.deviceId}")
+
         cf.initialize()
 
     def start(self):
         self.running = True
         self.asr_complete = False
         self.running_processes = 0
+
+        if hasattr(self.config, 'concept_mapping') and self.config.concept_mapping:
+            logging.info(f"Resetting concept extractor for new session: {self.config.sessionId}:{self.config.deviceId}")
+            self.concept_extractor = ConceptExtractor(self.config)
+            self.concept_extractor.first_extraction = True
+
         self.processing_thread = threading.Thread(target=self.process)
         self.processing_thread.daemon = True
         if self.config.topic_model:
@@ -73,11 +85,6 @@ class AudioProcessor:
 
     def __complete_callback(self):
         logging.info("completing callback")
-        '''
-        self.speaker_transcript_queue.put(None)
-        self.speaker_metrics_process.join()
-        self.speaker_metrics_process.close()
-        '''
         if self.config.diarization:
             try:
                 self.send_speaker_taggings()
@@ -189,7 +196,6 @@ class AudioProcessor:
                     topics = self.topic_model[text2bow]
                     logging.info("Topics distribution: ")
                     logging.info(topics)
-                    #    topics = get_topics_with_prob(transcript_text)
                     if len(topics) > 0:
                         max = 0
                         for topic in topics:
@@ -253,25 +259,49 @@ class AudioProcessor:
                     })
 
                     np.save(self.embeddings_file, np.array(self.embeddings))
-                success, transcript_id = callbacks.post_transcripts(
-                    self.config.auth_key, start_time, end_time,
-                    transcript_text, doa, questions, keywords,
-                    features, topic_id, speaker_tag, speaker_id)
+                
+            # In process_transcript method, replace the concept extraction section with:
+            if self.concept_extractor and transcript_text and hasattr(self.config, 'concept_mapping') and self.config.concept_mapping:
+                try:
+                    concept_update = self.concept_extractor.add_transcript(
+                        transcript_text,
+                        speaker_id,
+                        start_time,
+                        end_time
+                    )
+                    if concept_update:
+                        # Use the actual session_device_id from config
+                        # This should match what's in the database
+                        # session_device_id = self.config.sessionId  # Use just the ID, not "sessionId:deviceId"
+                        session_device_id = int(self.config.auth_key.split('-')[0])
+                        
+                        success = callbacks.post_concept_update(
+                            session_device_id,
+                            concept_update,
+                            end_time
+                        )
+                        if success:
+                            logging.info(f"Posted concept update for session_device {session_device_id}")
+                        else:
+                            logging.error(f"Failed to post concept update for session_device {session_device_id}")
+                except Exception as e:
+                    logging.error(f"Concept extraction failed: {e}", exc_info=True)
+                
+            success, transcript_id = callbacks.post_transcripts(
+                self.config.auth_key, start_time, end_time,
+                transcript_text, doa, questions, keywords,
+                features, topic_id, speaker_tag, speaker_id)
 
-                processing_time = time.time() - processing_timer
+            processing_time = time.time() - processing_timer
 
-                if success:
-                    logging.info( f"Processing results posted successfully for client {self.config.auth_key} (Processing time: {processing_time}) @ {start_time} for transcript {transcript_id}")
-                else:
-                    logging.warning(f"Processing results FAILED to post for client {self.config.auth_key} (Processing time: {processing_time})")
-
-            # Get source seperation
-            # if self.config.source_seperation:
-            #   source_seperation = source_seperation_pre_trained(audio_data)
+            if success:
+                logging.info(f"Processing results posted successfully for client {self.config.auth_key} (Processing time: {processing_time}) @ {start_time} for transcript {transcript_id}")
+            else:
+                logging.warning(f"Processing results FAILED to post for client {self.config.auth_key} (Processing time: {processing_time})")
 
         except Exception as e:
-            logging.error("Processing FAILED for client %d: %s",
-                          self.config.auth_key, e)
+            logging.error("Processing FAILED for client %s: %s",
+                          self.config.auth_key, e, exc_info=True)
 
         # Check if this was the final process of the transmission.
         self.running_processes -= 1

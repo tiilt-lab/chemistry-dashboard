@@ -25,6 +25,9 @@ from tables.folder import Folder
 from tables.topic_model import TopicModel
 from tables.speaker import Speaker
 from tables.speaker_transcript_metrics import SpeakerTranscriptMetrics
+from tables.concept_session import ConceptSession
+from tables.concept_node import ConceptNode
+from tables.concept_edge import ConceptEdge
 
 # Saves changes made to database (models)
 def save_changes():

@@ -1,0 +1,136 @@
+.conceptMapContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+  position: relative;
+}
+
+.header, .expandedHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.expandedHeader {
+  padding: 16px;
+  background: white;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.info {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.discourseType {
+  font-size: 14px;
+  color: #666;
+}
+
+.lastUpdate {
+  font-size: 12px;
+  color: #999;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+}
+
+.resetButton, .expandButton, .minimizeButton {
+  padding: 6px 12px;
+  background: #0173B2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s;
+}
+
+.resetButton:hover, .expandButton:hover, .minimizeButton:hover {
+  background: #015a8d;
+}
+
+.expandButton, .minimizeButton {
+  background: #27ae60;
+}
+
+.expandButton:hover, .minimizeButton:hover {
+  background: #229954;
+}
+
+.cytoscapeContainer {
+  background: #fafafa;
+  position: relative;
+}
+
+.expandedOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 9999;  /* Increased z-index */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.expandedContainer {
+  width: 90vw;
+  height: 90vh;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+}
+
+.expandedCytoscapeContainer {
+  background: #fafafa;
+  flex: 1;
+  border-radius: 0 0 8px 8px;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  color: #666;
+}
+
+.noData {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  color: #999;
+  font-style: italic;
+}
+
+
+.expandedHeader {
+  padding: 16px;
+  background: white;
+  border-bottom: 2px solid #e0e0e0;
+  position: relative;  /* ADD THIS */
+  z-index: 10;         /* ADD THIS */
+}
+
+.expandedCytoscapeContainer {
+  background: #fafafa;
+  flex: 1;
+  border-radius: 0 0 8px 8px;
+  position: relative;  /* ADD THIS */
+  z-index: 1;          /* ADD THIS */
+}

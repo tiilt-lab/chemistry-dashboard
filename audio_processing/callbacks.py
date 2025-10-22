@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 import logging
 import base64
+import json
 
 def post_transcripts(source, start_time, end_time, transcript, doa, questions, keywords, features, topic_id, speaker_tag, speaker_id):
     result = {
@@ -73,7 +74,7 @@ def post_disconnect(source):
     except Exception as e:
         logging.info('disconnect callback failed: {0}'.format(e))
         return False
-#Post speaker metrics with transcript data
+
 def post_speaker_transcript_metrics(transcript_data, speakers, participation_scores, internal_cohesion, responsivity, social_impact, newness, communication_density):
     result = {
         'source': transcript_data['source'],
@@ -100,4 +101,72 @@ def post_speaker_transcript_metrics(transcript_data, speakers, participation_sco
         return response.status_code == 200
     except Exception as e:
         logging.warning('Speaker Metrics callback failed: {0}'.format(e))
+        return False
+
+
+def post_concept_update(session_device_id, concept_update, timestamp):
+    """Post concept graph updates to the server
+    
+    Args:
+        session_device_id: Format "sessionId:deviceId" (e.g., "123:456")
+        concept_update: Dictionary containing nodes, edges, and discourse info
+        timestamp: Time of the update
+    """
+    try:
+        url = "http://server:5000/api/v1/concepts"
+        
+        data = {
+            'source': session_device_id,
+            'concept_update': concept_update,
+            'timestamp': timestamp
+        }
+        
+        logging.info(f"=== CONCEPT POST DEBUG ===")
+        logging.info(f"URL: {url}")
+        logging.info(f"Session Device ID: {session_device_id}")
+        logging.info(f"Timestamp: {timestamp}")
+        logging.info(f"Update type: {concept_update.get('type', 'unknown')}")
+        logging.info(f"Nodes count: {len(concept_update.get('nodes', []))}")
+        logging.info(f"Edges count: {len(concept_update.get('edges', []))}")
+        
+        # Log sample data for debugging
+        if concept_update.get('nodes'):
+            logging.info(f"First node: {json.dumps(concept_update['nodes'][0], indent=2)}")
+        if concept_update.get('edges'):
+            logging.info(f"First edge: {json.dumps(concept_update['edges'][0], indent=2)}")
+        
+        # Make the HTTP request
+        response = requests.post(url, json=data, timeout=10)
+        
+        logging.info(f"Response status: {response.status_code}")
+        if response.status_code != 200:
+            logging.error(f"Response body: {response.text}")
+        
+        # Broadcast via WebSocket after successful save
+        if response.status_code == 200:
+            try:
+                # Import here to avoid circular dependencies
+                import requests as req
+                websocket_url = "http://server:5000/api/v1/concepts/broadcast"
+                broadcast_data = {
+                    'session_device_id': session_device_id,
+                    'concept_update': concept_update
+                }
+                req.post(websocket_url, json=broadcast_data, timeout=5)
+                logging.info(f"WebSocket broadcast triggered for {session_device_id}")
+            except Exception as ws_error:
+                logging.warning(f"WebSocket broadcast failed (non-critical): {ws_error}")
+        
+        return response.status_code == 200
+            
+    except requests.exceptions.Timeout:
+        logging.error(f"TIMEOUT: Concept update request timed out for {session_device_id}")
+        return False
+    except requests.exceptions.ConnectionError as e:
+        logging.error(f"CONNECTION ERROR: Cannot reach concept server at {url}: {e}")
+        return False
+    except Exception as e:
+        logging.error(f"EXCEPTION in post_concept_update: {e}")
+        import traceback
+        logging.error(f"Traceback: {traceback.format_exc()}")
         return False

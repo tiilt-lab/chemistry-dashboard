@@ -5,7 +5,7 @@ import logging
 import config as cf
 
 class ProcessingConfig:
-    def __init__(self, auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, transcribe, keywords, doa, features, tag, diarization, embeddings_file, topic_model, owner,sessionId,deviceId,videocartoonify):
+    def __init__(self, auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, transcribe, keywords, doa, features, tag, diarization, embeddings_file, topic_model, owner,sessionId,deviceId,videocartoonify,concept_mapping):
         self.auth_key = auth_key
         self.session_key = session_key
         self.server_start = server_start
@@ -26,6 +26,7 @@ class ProcessingConfig:
         self.sessionId = sessionId
         self.deviceId = deviceId
         self.videocartoonify = videocartoonify
+        self.concept_mapping = concept_mapping
 
     @staticmethod
     def from_json(data):
@@ -85,6 +86,7 @@ class ProcessingConfig:
             doa = session_config.get('doa', False)
             topic_model = session_config.get('topic_model', None)
             owner = session_config.get('owner', None)
+            concept_mapping = session_config.get('concept_mapping', True)
 
         else:
             logging.warning('Invalid key sent by device.')
@@ -93,7 +95,7 @@ class ProcessingConfig:
         return True, ProcessingConfig(auth_key, session_key, server_start, start_offset,
                                       sample_rate, encoding, channels, transcribe, keywords,
                                       doa, features, tag, diarization, embeddings_file,
-                                      topic_model, owner,sessionId,deviceId,videocartoonify)
+                                      topic_model, owner,sessionId,deviceId,videocartoonify,concept_mapping)
 
     def is_valid_key(self):
         return RedisSessions.get_device_key(self.auth_key) is not None

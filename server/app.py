@@ -1,7 +1,7 @@
 import eventlet
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from flask import Flask
+from flask import Flask, make_response, jsonify
 from flask_socketio import SocketIO
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -16,6 +16,7 @@ from datetime import timedelta
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import config as cf
+
 
 # Initialize config file
 cf.initialize()
@@ -75,16 +76,22 @@ DATABASE_FILE = os.path.dirname(os.path.abspath(__file__)) + '/discussion_captur
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://{0}@{1}/discussion_capture'.format(cf.database_user(), DATABASE_SERVER)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+import database
 migrate = Migrate(app, db)
 
 
 # Add with other imports
 from llm_routes import llm_bp
+from concept_routes import concept_bp
+from websocket_handler import init_concept_websocket
+
 # Register LLM routes
 app.register_blueprint(llm_bp)
+app.register_blueprint(concept_bp)
+
+init_concept_websocket(socketio)
 
 # Add CORS headers for regular HTTP requests
-from flask import make_response
 
 @app.after_request
 def after_request(response):
