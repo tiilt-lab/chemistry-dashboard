@@ -5,7 +5,7 @@ import logging
 import config as cf
 
 class ProcessingConfig:
-    def __init__(self, auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, transcribe, keywords, doa, features, tag, diarization, embeddings_file, topic_model, owner,sessionId,deviceId,videocartoonify):
+    def __init__(self, auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, transcribe, keywords, doa, features, tag, diarization, embeddings_file, topic_model, owner,sessionId,deviceId,videocartoonify,mimeExtension):
         self.auth_key = auth_key
         self.session_key = session_key
         self.server_start = server_start
@@ -26,6 +26,7 @@ class ProcessingConfig:
         self.sessionId = sessionId
         self.deviceId = deviceId
         self.videocartoonify = videocartoonify
+        self.mimeExtension = mimeExtension
 
     @staticmethod
     def from_json(data):
@@ -68,6 +69,7 @@ class ProcessingConfig:
         # Check if diarization is requested and possible.
         diarization = data.get('tag', False)
         embeddings_file = data.get('embeddings_file', None)
+        mimeExtension = data.get('mimeextension',None)
 
         # check if video cartoonify is activated and  selected by user
         videocartoonify = data.get('Video_cartoonify',False) and cf.video_cartoonize()
@@ -93,7 +95,7 @@ class ProcessingConfig:
         return True, ProcessingConfig(auth_key, session_key, server_start, start_offset,
                                       sample_rate, encoding, channels, transcribe, keywords,
                                       doa, features, tag, diarization, embeddings_file,
-                                      topic_model, owner,sessionId,deviceId,videocartoonify)
+                                      topic_model, owner,sessionId,deviceId,videocartoonify,mimeExtension)
 
     def is_valid_key(self):
         return RedisSessions.get_device_key(self.auth_key) is not None

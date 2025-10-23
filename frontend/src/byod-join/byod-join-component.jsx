@@ -9,7 +9,9 @@ import { StudentModel } from "../models/student"
 import { ApiService } from "../services/api-service"
 import { AuthService } from "../services/auth-service"
 import fixWebmDuration from "fix-webm-duration"
-
+import * as MP4Box from 'mp4box';
+// import 'mp4box/dist/mp4box.all.js';
+// await import('mp4box/dist/mp4box.all.js');
 /*
 BYOD Connection Order
 
@@ -93,11 +95,14 @@ function JoinPage() {
     const [currBlob, setCurrBlob] = useState(null)
     const [invalidName, setInvalidName] = useState(false)
     const [constraintObj, setConstraintObj] = useState(null)
+    const [mimetype, setMimeType] = useState(null)
+    const [mimeExtension, setMimeExtension] = useState(null);
     const [registeredStudentData, setRegisteredStudentData] = useState(null)
     const [registeredUserAliasChanged, setRegisteredUserAliasChanged] = useState(false)
     const [registeredAudioFingerprintAdded, setRegisteredAudioFingerprintAdded] = useState(false)
     const [registeredVideoFingerprintAdded, setRegisteredVideoFingerprintAdded] = useState(false)
-    
+    const [MP4BoxAPI, setMP4BoxAPI] = useState(null);
+
 
     const POD_COLOR = "#FF6655"
     const GLOW_COLOR = "#ffc3bd"
@@ -140,6 +145,7 @@ function JoinPage() {
             "Video Metrics"
         ]
         initChecklistData(boxArr, setShowBoxes)
+
     }, [])
 
     //Use effect to display processed cartoonized image
@@ -149,8 +155,8 @@ function JoinPage() {
     }, [frameBufferLength])
 
     useEffect(() => {
-        if (constraintObj && pcode !== "" && joinwith !== "") handleStream()
-    }, [constraintObj, pcode, joinwith])
+        if (constraintObj !== null && mimetype !== null && pcode !== "" && joinwith !== "") handleStream()
+    }, [constraintObj, pcode, joinwith, mimetype])
     /*
         useEffect(() => {
             if (
@@ -197,18 +203,18 @@ function JoinPage() {
             generateDisplayTranscripts(sTime, eTime)
             generateDisplayVideoMetrics(sTime, eTime)
         }
-    }, [transcripts, videoMetrics,startTime, endTime, session, speakersValidated, timeRange])
+    }, [transcripts, videoMetrics, startTime, endTime, session, speakersValidated, timeRange])
 
     useEffect(() => {
         if (displayTranscripts) {
             console.log("reloaded page - displayTranscripts")
             setSpeakerTranscripts()
         }
-        if(displayVideoMetrics){
+        if (displayVideoMetrics) {
             console.log("reloaded page - displayVideoMetrics")
             setSpeakerVideoMetrics()
         }
-    }, [displayTranscripts, displayVideoMetrics,selectedSpkrId1, selectedSpkrId2, details])
+    }, [displayTranscripts, displayVideoMetrics, selectedSpkrId1, selectedSpkrId2, details])
 
     //Use effect to start audio and video processing
     useEffect(() => {
@@ -252,15 +258,32 @@ function JoinPage() {
                 }
 
                 mediaRecorder.ondataavailable = async function (ev) {
+
                     const bufferdata = await ev.data.arrayBuffer()
-                    fixWebmDuration(
-                        ev.data,
-                        interval * 6 * 60 * 24,
-                        (fixedblob) => {
-                            videows.send(fixedblob)
-                            audiows.current.send(fixedblob)
-                        },
-                    )
+
+                    if (ev.data && ev.data.size !== 0) {
+                        if (ev.data.type.startsWith('video/webm')) {
+                            // const buggyBlob = new Blob([ev.data], { type: "video/webm" });
+                            // const fixed = await fixWebmDuration(buggyBlob, duration);
+                            // videows.send(fixed)
+                            // audiows.current.send(fixed)
+                            fixWebmDuration(
+                                ev.data,
+                                interval * 6 * 60 * 24,
+                                (fixedblob) => {
+                                    videows.send(fixedblob)
+                                    audiows.current.send(fixedblob)
+                                },
+                            )
+                        } else if (ev.data.type.startsWith('video/mp4')) {
+                            console.log("inside mp4 send")
+                            const repairedMp4Data = await fixMp4DurationWithMp4Box(ev.data)
+                            videows.send(repairedMp4Data)
+                            audiows.current.send(repairedMp4Data)
+                        }
+
+                    }
+
                 }
             }
 
@@ -299,23 +322,23 @@ function JoinPage() {
 
     useEffect(() => {
         let proceed = false
-        if (joinwith === "Video" || joinwith === "Videocartoonify")  {
-                if (registeredAudioFingerprintAdded && registeredVideoFingerprintAdded) {
-                    proceed = true
-                }
-            }else{
-                if (registeredAudioFingerprintAdded){
-                    proceed = true
-                }
+        if (joinwith === "Video" || joinwith === "Videocartoonify") {
+            if (registeredAudioFingerprintAdded && registeredVideoFingerprintAdded) {
+                proceed = true
             }
+        } else {
+            if (registeredAudioFingerprintAdded) {
+                proceed = true
+            }
+        }
         if (proceed) {
 
             const updatedSpeakers = speakers.map((s) =>
-            s.id === selectedSpeaker.id ? { ...s, fingerprinted: true } : s,)
+                s.id === selectedSpeaker.id ? { ...s, fingerprinted: true } : s,)
             setSpeakers(updatedSpeakers)
             setSelectedSpeaker(null)
             setCurrentForm("")
-            console.log("register fingerprint for " + registeredStudentData.username + " Added")
+            // console.log("register fingerprint for " + registeredStudentData.username + " Added")
             setRegisteredStudentData(null)
             setRegisteredUserAliasChanged(false)
             setRegisteredAudioFingerprintAdded(false)
@@ -324,11 +347,79 @@ function JoinPage() {
         }
     }, [registeredAudioFingerprintAdded, registeredVideoFingerprintAdded])
 
-    //Use effect to display processed cartoonized image
-    // useEffect(() => {
-    //     console.log('inside renderframe buffer useeffect ', frameBufferLength)
-    //     renderFrameFromBuffer()
-    // }, [frameBufferLength])
+
+    //The is usefull to keep the connection alive while th users are adding their finger prints.
+    //This will stop sending heartbeats once the fingerprints are added
+    useEffect(() => {
+        let Intervalid = 0
+        if (speakersValidated) {
+            clearInterval(Intervalid);
+        }else if (audioconnected && videoconnected && authenticated) {
+            if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN || videows === null || videows.readyState !== WebSocket.OPEN) return;
+
+            const send = () => {
+                if (audiows.current.readyState === WebSocket.OPEN && videows.readyState === WebSocket.OPEN) {
+                    audiows.current.send(JSON.stringify({ type: "heartbeat" }));
+                    videows.send(JSON.stringify({ type: "heartbeat" }));
+
+                } else {
+                    clearInterval(Intervalid);
+                }
+            };
+
+            // fire once immediately, then on interval
+            send();
+            Intervalid = setInterval(send, 40000);
+
+            return () => {
+                clearInterval(Intervalid);
+            };
+        } 
+    }, [audiows, videows, audioconnected, videoconnected, authenticated, speakersValidated]);
+
+
+
+    const fixMp4DurationWithMp4Box = async (blob) => {
+
+        const isMp4 = blob.type?.startsWith("video/mp4");
+        if (!isMp4) return blob; // WebM/others pass-through
+
+        // if (!MP4Box) console.log("MP4Box not loaded yet");
+
+        const ab = await blob.arrayBuffer();
+        // MP4Box API expects `fileStart` on each appended buffer.
+        ab.fileStart = 0;
+
+        return new Promise((resolve, reject) => {
+            try {
+                const MP4Box = (window).MP4Box;
+                const mp4boxfile = MP4Box.createFile();
+                let outBuffer = null;
+
+                mp4boxfile.onError = (e) => reject(e);
+                mp4boxfile.onReady = (info) => {
+                    const secs = info?.duration && info?.timescale
+                        ? info.duration / info.timescale
+                        : null;
+                    console.log("duration is. .... ", secs)
+                    // Export a finalized, non-fragmented MP4 with proper duration.
+                    const out = mp4boxfile.exportFile(); // ArrayBuffer
+                    outBuffer = out;
+                };
+
+                mp4boxfile.appendBuffer(ab);
+                mp4boxfile.flush();
+
+                if (!outBuffer) {
+                    reject(new Error("MP4Box failed to export file"));
+                    return;
+                }
+                resolve(new Blob([outBuffer], { type: "video/mp4" }));
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
 
     const openForms = (form, speaker = null) => {
         setCurrentForm(form)
@@ -401,8 +492,8 @@ function JoinPage() {
                 speakers: speakers,
             }
             audiows.current.send(JSON.stringify(message))
-            
-            if (joinwith === "Video" || joinwith === "Videocartoonify")  {
+
+            if (joinwith === "Video" || joinwith === "Videocartoonify") {
                 videows.send(JSON.stringify(message))
             }
             setSpeakersValidated(true)
@@ -474,7 +565,7 @@ function JoinPage() {
 
     }
 
-    const addSavedSpeakerFingerprint = async () => {
+    const addSavedSpeakerFingerprint = () => {
 
         let message = null
         message = {
@@ -601,8 +692,7 @@ function JoinPage() {
             }
 
             if (navigator.mediaDevices != null) {
-                const stream =
-                    await navigator.mediaDevices.getUserMedia(constraintObj)
+                const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
 
                 // media.then(function (stream) {
                 setStreamReference(stream)
@@ -621,40 +711,34 @@ function JoinPage() {
                     joinwith === "Video" ||
                     joinwith === "Videocartoonify"
                 ) {
-                    var opt
-                    if (
-                        MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-                    ) {
-                        opt = { mimeType: "video/webm; codecs=vp9,opus" }
-                    } else if (
-                        MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
-                    ) {
-                        opt = { mimeType: "video/webm; codecs=vp8,opus" }
+
+                    if (mimetype !== "") {
+                        const mediaRec = new MediaRecorder(stream, { mimeType: mimetype })
+                        setMediaRecorder(mediaRec)
+
+                        //Since we are implementing distributed  processing for audio and video,
+                        //The audio and  video socket needs to be enabled to receive the  video data
+                        // The server listening to the audio_socket will extract audio stream from the
+                        // video data for processing, while the server for video_socket will extract the video
+                        // for processing.
+
+                        audiows.current = new WebSocket(
+                            apiService.getAudioWebsocketEndpoint(),
+                        )
+
+                        connect_audio_processor_service();
+
+                        //activate video websocket 
+                        setVideoWs(
+                            new WebSocket(
+                                apiService.getVideoWebsocketEndpoint(),
+                            ),
+                        )
                     } else {
-                        opt = { mimeType: "video/webm" }
+                        setShowAlert(true)
+                        setAlertMessage("Failed to get user audio source...........")
                     }
 
-                    const mediaRec = new MediaRecorder(stream, opt)
-                    setMediaRecorder(mediaRec)
-
-                    //Since we are implementing distributed  processing for audio and video,
-                    //The audio and  video socket needs to be enabled to receive the  video data
-                    // The server listening to the audio_socket will extract audio stream from the
-                    // video data for processing, while the server for video_socket will extract the video
-                    // for processing.
-
-                    audiows.current = new WebSocket(
-                        apiService.getAudioWebsocketEndpoint(),
-                    )
-
-                    connect_audio_processor_service();
-
-                    //activate video websocket 
-                    setVideoWs(
-                        new WebSocket(
-                            apiService.getVideoWebsocketEndpoint(),
-                        ),
-                    )
 
                 }
             } else {
@@ -683,7 +767,7 @@ function JoinPage() {
     }
 
     // Requests session access from the server.
-    const requestAccessKey = (names, passcode, collaborators, joinwith) => {
+    const requestAccessKey = async (names, passcode, collaborators, joinwith) => {
         ending.value = false
         setCurrentForm("Connecting")
         const constraint = {}
@@ -698,6 +782,8 @@ function JoinPage() {
             constraint.audio = true
             constraint.video = false
         }
+        const mediaType = await pickMimeType(constraint)
+        const mediaExt = (mediaType !== "" && mediaType.indexOf("webm") !== -1) ? "webm" : (mediaType !== "" && mediaType.indexOf("mp4") !== -1) ? "mp4" : ""
         sessionService.joinByodSession(names, passcode, collaborators).then(
             (response) => {
                 if (response.status === 200) {
@@ -713,6 +799,8 @@ function JoinPage() {
                         )
                         setKey(jsonObj.key);
                         setConstraintObj(constraint)
+                        setMimeType(mediaType)
+                        setMimeExtension(mediaExt)
                         setPcode(passcode)
                         setJoinwith(joinwith)
                     })
@@ -736,6 +824,35 @@ function JoinPage() {
         )
     }
 
+    const pickMimeType = async (constraintObj) => {
+        const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
+        const hasAudio = stream.getAudioTracks().length > 0;
+
+        // Try best-to-widest support order.
+        const candidates = [
+            // WebM (Android/desktop Chrome)
+            hasAudio ? "video/webm;codecs=vp9,opus" : "video/webm;codecs=vp9",
+            hasAudio ? "video/webm;codecs=vp8,opus" : "video/webm;codecs=vp8",
+            "video/webm",
+
+            // MP4 (iOS/iPadOS Safari/WebKit, incl. Chrome on iPad)
+            // H.264 (avc1) + AAC (mp4a) are the usual fourccs
+            hasAudio ? "video/mp4;codecs=h264,aac" : "video/mp4;codecs=h264",
+            hasAudio ? "video/mp4;codecs=avc1.42E01E,mp4a.40.2" : "video/mp4;codecs=avc1.42E01E",
+        ];
+
+        for (const mt of candidates) {
+            try {
+                if (typeof MediaRecorder.isTypeSupported === "function" &&
+                    MediaRecorder.isTypeSupported(mt)) {
+                    return mt;
+                }
+            } catch { /* some engines throw on probe; ignore and continue */ }
+        }
+        return ""; // no explicit mimeType — let the browser pick or we’ll handle failure
+    }
+
+
     const closeAlert = () => {
         setShowAlert(false)
     }
@@ -756,8 +873,9 @@ function JoinPage() {
 
         audiows.current.onmessage = (e) => {
             const message = JSON.parse(e.data)
-            setAuthenticated(true)
+
             if (message["type"] === "start") {
+                setAuthenticated(true)
                 closeDialog()
             } else if (message['type'] === 'registeredfingerprintadded') {
                 console.log("got a response from audio endpoint....")
@@ -768,7 +886,7 @@ function JoinPage() {
                 setDisplayText(
                     "The connection to the session has been closed by the audio server.",
                 )
-                console.log("message from the audio server is "+ message["message"])
+                console.log("message from the audio server is " + message["message"])
                 setCurrentForm("ClosedSession")
             } else if (message["type"] === "end") {
                 disconnect(true)
@@ -819,7 +937,7 @@ function JoinPage() {
                 } else if (message['type'] === 'error') {
                     disconnect(true);
                     setDisplayText('The connection to the session has been closed by the video server.');
-                     console.log("message from the video server is "+ message["message"])
+                    console.log("message from the video server is " + message["message"])
                     setCurrentForm('ClosedSession');
                 } else if (message['type'] === 'end') {
                     disconnect(true);
@@ -881,6 +999,7 @@ function JoinPage() {
                 video_encoding: "video/mp4",
                 channels: 1,
                 streamdata: "video",
+                mimeextension: mimeExtension,
                 tag: true,
                 embeddings_file: sessionDevice.embeddings,
                 deviceid: sessionDevice.id,
@@ -909,9 +1028,10 @@ function JoinPage() {
                 video_encoding: "video/mp4",
                 channels: 2,
                 streamdata: "video",
+                mimeextension: mimeExtension,
                 embeddings_file: sessionDevice.embeddings,
                 deviceid: sessionDevice.id,
-                Video:true,
+                Video: true,
                 sessionid: session.id,
                 numSpeakers: numSpeakers,
             }
@@ -925,6 +1045,7 @@ function JoinPage() {
                 video_encoding: "video/mp4",
                 channels: 2,
                 streamdata: "video",
+                mimeextension: mimeExtension,
                 embeddings_file: sessionDevice.embeddings,
                 deviceid: sessionDevice.id,
                 sessionid: session.id,
@@ -955,13 +1076,13 @@ function JoinPage() {
         }
     }
 
-    const getSpeakerAliasFromID = (selectedSpkrId)=>{
-        if (selectedSpkrId !== -1){
-             const speaker = speakers.filter((s) => s.id === selectedSpkrId )
-             if(speaker.length !== 0){
+    const getSpeakerAliasFromID = (selectedSpkrId) => {
+        if (selectedSpkrId !== -1) {
+            const speaker = speakers.filter((s) => s.id === selectedSpkrId)
+            if (speaker.length !== 0) {
                 return speaker[0].alias
-             }
-        }else{
+            }
+        } else {
             return -1
         }
     }
@@ -1091,60 +1212,60 @@ function JoinPage() {
 
 
     const setSpeakerTranscripts = () => {
-    if (displayTranscripts.length) {
-      setSpkr1Transcripts(
-        displayTranscripts.reduce((values, transcript) => {
-          
-          if (transcript.speaker_id === selectedSpkrId1
-          ){
-            values.push(transcript);
-          }
-          return values;
-        }, [])
-      );
-      setSpkr2Transcripts(
-        displayTranscripts.reduce((values, transcript) => {
-          if (transcript.speaker_id === selectedSpkrId2
-          ){
-            values.push(transcript);
-         }
-          return values;
-        }, [])
-      );
-    } else {
-      setSpkr1Transcripts([]);
-      setSpkr2Transcripts([]);
-    }
-  };
+        if (displayTranscripts.length) {
+            setSpkr1Transcripts(
+                displayTranscripts.reduce((values, transcript) => {
 
-  const setSpeakerVideoMetrics = () => {
-    console.log(selectedSpkrId1,selectedSpkrId2)
-    if (displayVideoMetrics.length) {
-      let speakerAlias1 = getSpeakerAliasFromID(selectedSpkrId1)
-      let speakerAlias2 = getSpeakerAliasFromID(selectedSpkrId2)
-      setSpkr1VideoMetrics(
-        displayVideoMetrics.reduce((values, videometrics) => {
-          if (videometrics.student_username === speakerAlias1
-          ){
-            values.push(videometrics)
-          }
-          return values
-        }, []),
-      )
-      setSpkr2VideoMetrics(
-        displayVideoMetrics.reduce((values, videometrics) => {
-          if (videometrics.student_username === speakerAlias2
-          ){
-            values.push(videometrics)  
-          }
-          return values
-        }, []),
-      )
-    } else {
-      setSpkr1VideoMetrics([])
-      setSpkr2VideoMetrics([])
+                    if (transcript.speaker_id === selectedSpkrId1
+                    ) {
+                        values.push(transcript);
+                    }
+                    return values;
+                }, [])
+            );
+            setSpkr2Transcripts(
+                displayTranscripts.reduce((values, transcript) => {
+                    if (transcript.speaker_id === selectedSpkrId2
+                    ) {
+                        values.push(transcript);
+                    }
+                    return values;
+                }, [])
+            );
+        } else {
+            setSpkr1Transcripts([]);
+            setSpkr2Transcripts([]);
+        }
+    };
+
+    const setSpeakerVideoMetrics = () => {
+        console.log(selectedSpkrId1, selectedSpkrId2)
+        if (displayVideoMetrics.length) {
+            let speakerAlias1 = getSpeakerAliasFromID(selectedSpkrId1)
+            let speakerAlias2 = getSpeakerAliasFromID(selectedSpkrId2)
+            setSpkr1VideoMetrics(
+                displayVideoMetrics.reduce((values, videometrics) => {
+                    if (videometrics.student_username === speakerAlias1
+                    ) {
+                        values.push(videometrics)
+                    }
+                    return values
+                }, []),
+            )
+            setSpkr2VideoMetrics(
+                displayVideoMetrics.reduce((values, videometrics) => {
+                    if (videometrics.student_username === speakerAlias2
+                    ) {
+                        values.push(videometrics)
+                    }
+                    return values
+                }, []),
+            )
+        } else {
+            setSpkr1VideoMetrics([])
+            setSpkr2VideoMetrics([])
+        }
     }
-  }
 
     const seeAllTranscripts = () => {
         if (Object.keys(currentTranscript) > 0 && sessionDevice !== null) {
@@ -1258,11 +1379,11 @@ function JoinPage() {
         sessionDevice !== null ? sessionDevice.button_pressed : null
 
     const loadSpeakerMetrics = (speakerId, speakrAlias) => {
-    setSelectedSpkrId1(speakerId)
-    setSelectedSpkralias(speakrAlias)
-    setPageTitle(speakrAlias)
-    setDetails("Individual");
-  }
+        setSelectedSpkrId1(speakerId)
+        setSelectedSpkralias(speakrAlias)
+        setPageTitle(speakrAlias)
+        setDetails("Individual");
+    }
 
     return (
         <ByodJoinPage
@@ -1317,7 +1438,7 @@ function JoinPage() {
             setSelectedSpkrId1={setSelectedSpkrId1}
             selectedSpkrId2={selectedSpkrId2}
             setSelectedSpkrId2={setSelectedSpkrId2}
-            getSpeakerAliasFromID = {getSpeakerAliasFromID}
+            getSpeakerAliasFromID={getSpeakerAliasFromID}
             spkr1Transcripts={spkr1Transcripts}
             spkr2Transcripts={spkr2Transcripts}
             selectedSpeaker={selectedSpeaker}

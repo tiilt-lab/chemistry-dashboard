@@ -153,7 +153,7 @@ class ImageObjectDetection:
         
         accumulator = {'head':dict(), 'other_objects':dict()}
         all_frames = {}
-        print("number of facial embeddings is "+str(len(facial_embeddings)))
+        print("number of facial embeddings is "+str(len(facial_embeddings))+"number of frames "+str(len(images)))
         for val_batch, (img_index, img, im0s) in enumerate(dataset): #path, img, im0s, vid_cap in dataset:
             # all_frames.extend(im0s)
             # img = torch.from_numpy(img).to(device)

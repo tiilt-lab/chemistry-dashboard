@@ -22,6 +22,7 @@ import MicIcon from "@icons/Mic"
 import Checkmark from "@assets/img/checkmark.svg"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
+import {RecordingCoach} from "./recording-coach"
 
 function ProfileCreationPage(props) {
     // console.log(props, 'props')
@@ -95,7 +96,13 @@ function ProfileCreationPage(props) {
                     )}
                     {props.nextPage === "video_audio_capture_page" && (
                         <React.Fragment>
-                            <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto text-center">
+                            <RecordingCoach
+                                maxDurationSec={60}
+                                minDurationSec={15}
+                                onTestClip={(blob, diag) => console.log('test', blob, diag)}
+                                onComplete={props.saveRecording}
+                            />
+                            {/* <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto h-screen text-center">
                                 <div className="w-[300px] px-2 sm:w-[400px] lg:w-3xl">
                                     <div className="my-1.5 font-sans text-base/loose font-medium text-[#727278]">
                                         Please add a Speaker Fingerprint
@@ -103,7 +110,7 @@ function ProfileCreationPage(props) {
                                     </div>
                                     <div className="my-1.5 font-sans text-xs/normal font-normal text-[#727278]">
                                         Each speaker must record and
-                                        temporarily save a short 3-5
+                                        temporarily save a short 10
                                         second sample of their voice.
                                         This is used to track each
                                         speaker's metrics throughout a
@@ -141,10 +148,10 @@ function ProfileCreationPage(props) {
                                         Finish
                                     </button>
                                 </div>
-                            </div>
+                            </div> */}
                         </React.Fragment>
                     )}
-                    
+
                 </div>
             )}
             <DialogBox

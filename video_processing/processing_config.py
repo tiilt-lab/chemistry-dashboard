@@ -6,7 +6,7 @@ import logging
 import config as cf
 
 class ProcessingConfig:
-    def __init__(self, auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, embeddingsFile,sessionId,deviceId,videocartoonify,video):
+    def __init__(self, auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, embeddingsFile,sessionId,deviceId,videocartoonify,video,mimeExtension):
         self.auth_key = auth_key
         self.session_key = session_key
         self.server_start = server_start
@@ -20,6 +20,7 @@ class ProcessingConfig:
         self.deviceId = deviceId
         self.videocartoonify = videocartoonify
         self.video = video
+        self.mimeExtension = mimeExtension
 
     @staticmethod
     def from_json(data):
@@ -66,6 +67,7 @@ class ProcessingConfig:
         # check if video only is activated and  selected by user
         video = data.get('Video',False) or cf.video_record_original() or cf.video_record_reduced()
 
+        mimeExtension = data.get('mimeextension',None)
         # Check if auth is required and if key is valid.
         try:
             session_key = callbacks.get_redis_session_key(auth_key)
@@ -77,7 +79,7 @@ class ProcessingConfig:
                 logging.warning('Invalid key sent by device.')
                 return False, "Invalid key."
 
-            return True, ProcessingConfig(auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, embeddingsFile,sessionId,deviceId,videocartoonify,video)
+            return True, ProcessingConfig(auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, embeddingsFile,sessionId,deviceId,videocartoonify,video,mimeExtension)
         except Exception as e:
             return False, "could not verify auth_key"
 

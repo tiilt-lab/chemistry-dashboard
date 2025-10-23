@@ -768,8 +768,9 @@ def get_students(id=None, username=None):
 def add_student(lastname, firstname, username):
     matched_student = get_students(username=username)
     if matched_student:
-        return False, "Username already exists."
-    student = Student(lastname, firstname, username)
+        return False, matched_student
+    biometric_captured="no"
+    student = Student(lastname, firstname, username,biometric_captured)
     db.session.add(student)
     db.session.commit()
     return True, student
@@ -782,6 +783,21 @@ def delete_student(id):
         return student
     else:
         return None
+
+
+def update_student(id, lastname=None, firstname=None,biometric_captured=None):
+    student = get_students(id=id)
+    if student:
+        if lastname:
+            student.name = lastname
+        if firstname:
+            student.firstname = firstname
+        if biometric_captured:
+            student.biometric_captured = biometric_captured    
+        db.session.commit()
+        return True,student
+    return False, None
+
 # -------------------------
 # API Client
 # -------------------------
