@@ -6,6 +6,7 @@ export class StudentModel {
   lastname;
   firstname;
   username;
+  biometric_captured;
   creation_date;
 
   
@@ -15,6 +16,7 @@ export class StudentModel {
     model.lastname = json['lastname'];
     model.firstname = json['firstname'];
     model.username = json['username']
+    model.biometric_captured = json['biometric_captured']
     model.creation_date = stringToDate(json['creation_date']);
     return model;
   }
