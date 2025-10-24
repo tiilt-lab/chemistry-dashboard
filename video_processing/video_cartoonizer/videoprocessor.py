@@ -331,6 +331,7 @@ class VideoProcessor:
                 break
             
             try:
+                self.video_chunk_count+=1
                 subclib_frame_count = 0
                 for ts, frame in subclip_frames:
                     subclib_frame_count =  subclib_frame_count + 1
@@ -339,6 +340,7 @@ class VideoProcessor:
 
                     self.frame_batch.append(frame)
                     self.time_marker.append(self.adjust_time(ts))
+                    self.raw_time.append(ts)
 
                     if len(self.frame_batch) >= self.batch_size:
                         # hand off current lists; start fresh ones for the producer

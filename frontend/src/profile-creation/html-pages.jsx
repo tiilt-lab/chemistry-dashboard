@@ -100,7 +100,8 @@ function ProfileCreationPage(props) {
                                 maxDurationSec={60}
                                 minDurationSec={15}
                                 onTestClip={(blob, diag) => console.log('test', blob, diag)}
-                                onComplete={props.saveRecording}
+                                onComplete={(blob, diag) => console.log('full', blob, diag)}
+                                saveRecording={props.saveRecording}
                             />
                             {/* <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto h-screen text-center">
                                 <div className="w-[300px] px-2 sm:w-[400px] lg:w-3xl">
