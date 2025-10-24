@@ -141,10 +141,6 @@ function SignupPage() {
     useEffect(() => {
         if (document.getElementById('video_playback') !== null) {
 
-            setAudioAuthenticated(false)
-            setVideoAuthenticated(false)
-            setAudioSocketProccesorConnected(false)
-            setVideoSocketProcesorConnected(false)
             if (wakeLock) {
                 releaseWakeLock()
             }
@@ -156,10 +152,6 @@ function SignupPage() {
             if (mediaRecorder != null) {
                 mediaRecorder.stop()
                 setMediaRecorder(null)
-            }
-
-            if (video_captured.current != null) {
-                video_captured.current = null
             }
 
             const url = URL.createObjectURL(videoBlob);
@@ -193,6 +185,7 @@ function SignupPage() {
 
             const send = () => {
                 if (audiows.current.readyState === WebSocket.OPEN && videows.current.readyState === WebSocket.OPEN) {
+                    console.log("i am firering heartbeat")
                     audiows.current.send(JSON.stringify({ type: "heartbeat" }));
                     videows.current.send(JSON.stringify({ type: "heartbeat" }));
 
@@ -203,16 +196,11 @@ function SignupPage() {
 
             // fire once immediately, then on interval
             send();
-            const id = setInterval(send, 40000);
-
-            // const stop = () => clearInterval(id);
-            // ws.addEventListener("close", stop);
-            // ws.addEventListener("error", stop);
+            const id = setInterval(send, 20000);
 
             return () => {
+                console.log("i called clear interval...")
                 clearInterval(id);
-                // ws.removeEventListener("close", stop);
-                // ws.removeEventListener("error", stop);
             };
         }
     }, [audiows, videows, audioAuthenticated, videoAuthenticated]);
@@ -224,24 +212,41 @@ function SignupPage() {
         }
     };
 
-    const saveRecording = () => {
-        if (videoData) {
+    const saveRecording = async (videoBlob, duration) => {
+        if (videoBlob) {
             if (mimetype.startsWith('video/webm')) {
-                fixWebmDuration(
-                    videoData,
-                    interval,
-                    (fixedblob) => {
-                        videows.current.send(fixedblob)
-                        audiows.current.send(fixedblob)
-                        setCurrentForm("processing")
-                    },
-                )
+                const fixedBlob = await fixWebmDuration(videoBlob, duration*1000);
+                console.log("videoBlob- duration ", videoBlob, duration)
+                videows.current.send(fixedBlob)
+                audiows.current.send(fixedBlob)
+                setCurrentForm("processing")
             } else if (mimetype.startsWith('video/mp4')) {
 
             }
 
         }
     };
+
+    // const saveRecording = () => {
+    //     if (videoData) {
+    //         if (mimetype.startsWith('video/webm')) {
+    //             fixWebmDuration(
+    //                 videoData,
+    //                 interval,
+    //                 (fixedblob) => {
+    //                     videows.current.send(fixedblob)
+    //                     audiows.current.send(fixedblob)
+    //                     setCurrentForm("processing")
+    //                 },
+    //             )
+    //         } else if (mimetype.startsWith('video/mp4')) {
+
+    //         }
+
+    //     }
+    // };
+
+
 
 
 
@@ -362,10 +367,25 @@ function SignupPage() {
         }
 
         if (mediaRecorder != null) {
-            mediaRecorder.stop()
+            stopRecorder(mediaRecorder)
+            // mediaRecorder.stop()
             setMediaRecorder(null)
         }
         navigateToLogin();
+    }
+
+    function stopRecorder(mediarec) {
+        if (!mediarec) return Promise.resolve();
+        if (mediarec.state === 'inactive') return Promise.resolve();
+
+        return new Promise (res => {
+            const onStop = () => {
+                mediarec.removeEventListener('stop', onStop);
+                res();
+            };
+            mediarec.addEventListener('stop', onStop, { once: true });
+            try { mediarec.stop(); } catch { res(); }
+        });
     }
 
     const detectMediaSouceType = async () => {
@@ -539,6 +559,9 @@ function SignupPage() {
 
     const closeDialog = () => {
         setCurrentForm("")
+        if (studentUpdate) {
+            closeResources()
+        }
     }
 
 

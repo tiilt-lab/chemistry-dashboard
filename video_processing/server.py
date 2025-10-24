@@ -234,7 +234,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     os.remove(self.video_file+'.'+self.mediaExt)
 
             if savedEmbedding:
-                logging.info('video bioemtrics saved')
+                logging.info('video biometrics saved')
                 self.send_json({'type': 'saved', 'message': "Biometric data captured successfully"})
             else:
                 self.send_json({'type': 'error', 'message': "Facial capuring failed, please record yourself again with better lighting"})

@@ -369,7 +369,7 @@ function JoinPage() {
 
             // fire once immediately, then on interval
             send();
-            Intervalid = setInterval(send, 40000);
+            Intervalid = setInterval(send, 20000);
 
             return () => {
                 clearInterval(Intervalid);

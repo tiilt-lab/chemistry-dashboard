@@ -48,18 +48,20 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 //    minDurationSec?: number; // recommend at least this long
 //    onComplete?: (blob: Blob, diagnostics: Diagnostics) => void;
 //    onTestClip?: (blob: Blob, diagnostics: Diagnostics) => void;
+//    saveRecording: calls saverecoding from parent component  
 //    showScript?: boolean;
 //    scriptText?: string;
 //  };
 
 const DEFAULT_SCRIPT = `Please read the following passage in a clear, natural voice:
 
-“Today I am recording a short sample so my face and voice can be matched accurately. I am looking straight at the camera in a well‑lit room with a plain background. I will speak at a consistent pace and volume.”`;
+“Today I am recording a short sample so my face and voice can be matched accurately. I am looking straight at the camera  and Will turn my head to the Right, Left, Up and Down. I will speak at a consistent pace and volume.”`;
 
 function RecordingCoach({
     maxDurationSec = 60,
-    minDurationSec = 15,
+    minDurationSec = 10,
     onComplete,
+    saveRecording,
     onTestClip,
     showScript = true,
     scriptText = DEFAULT_SCRIPT,
@@ -99,6 +101,7 @@ function RecordingCoach({
     const [hintsVideo, setHintsVideo] = useState([]);
     const [hintsAudio, setHintsAudio] = useState([]);
     const [videoBlobData, setVideoBlobData] = useState(null)
+    const [actualTimeElapsed, setActualTimeElapsed] = useState(0)
 
     const FaceDetectorApi = useMemo(() => (typeof window !== 'undefined' && (window).FaceDetector ? new (window).FaceDetector({ fastMode: true }) : null), []);
 
@@ -309,9 +312,9 @@ function RecordingCoach({
                 device: { cameraId: camId, micId: micId },
             };
             if (mode === 'test') onTestClip?.(blob, diagnostics);
-            else{
+            else {
                 setVideoBlobData(blob) //onComplete?.(blob, diagnostics);
-            } 
+            }
         };
 
         // countdown
@@ -346,11 +349,20 @@ function RecordingCoach({
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
             mediaRecorderRef.current.stop();
         }
+        if (isRecording) {
+            setIsRecordingStopped(true)
+        }
         setIsRecording(false);
         setIsTesting(false);
-        setIsRecordingStopped(true)
+        setActualTimeElapsed(elapsed)
+
     };
 
+    const startSaveRecording = () => {
+        if (videoBlobData !== null && actualTimeElapsed !== 0) {
+            saveRecording(videoBlobData, actualTimeElapsed)
+        }
+    }
     const runCountdown = (n) =>
         new Promise((resolve) => {
             let val = n;
@@ -388,7 +400,7 @@ function RecordingCoach({
     return (
         <div className="mx-auto max-w-5xl p-6 space-y-6 overflow-y-auto h-screen">
             <header className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold">Recording Coach</h1>
+                <h1 className="text-2xl font-semibold">Recording Guide</h1>
                 <div className="text-sm text-gray-500">Optimized for face+voice capture</div>
             </header>
 
@@ -397,13 +409,24 @@ function RecordingCoach({
                 <div className="rounded-2xl border p-4 shadow-sm">
                     <h2 className="mb-2 font-medium">Preflight</h2>
                     <ul className="space-y-2 text-sm">
-                        <li>• Sit 50–80 cm from camera; eyes at top‑third of frame.</li>
+                        <li>• Ensure your face is within the rectangular box.</li>
                         <li>• Face a window or soft light; avoid strong backlight.</li>
                         <li>• Plain background; remove hats/hoods; keep glasses clean.</li>
                         <li>• Quiet room; turn off fans/AC where possible.</li>
                         <li>• Speak at normal pace; avoid sudden shouting/laughter.</li>
                     </ul>
                 </div>
+
+
+                <div className="rounded-2xl border p-4 shadow-sm text-sm text-gray-600">
+                    <div className="font-medium text-gray-800">Capture Tips (FR + Diarization)</div>
+                    <ul className="mt-1 list-inside list-disc">
+                        <li>Keep head upright, look at camera; avoid extreme angles & occlusions.</li>
+                        <li>Maintain neutral to mild expressions for FR enrollment; smile only if consistent with target set.</li>
+                        <li>You could turn your head to the right, left, up and down while speaking; to ensure all head orientations are captured.</li>
+                    </ul>
+                </div>
+
                 <div className="rounded-2xl border p-4 shadow-sm">
                     <h2 className="mb-2 font-medium">Devices</h2>
                     <div className="flex gap-3">
@@ -424,6 +447,12 @@ function RecordingCoach({
                         <button className="rounded-xl bg-black px-4 py-2 text-white shadow" onClick={startPreview} disabled={isPreviewing}>Start Preview</button>
                         <button className="rounded-xl border px-4 py-2" onClick={stopEverything}>Stop</button>
                     </div>
+                </div>
+
+                <div className="rounded-2xl border p-4 shadow-sm">
+                    <h3 className="mb-2 font-medium">Mic Levels</h3>
+                    <LevelMeter rmsDb={rmsDb} peakDb={peakDb} clipping={clipping} />
+                    <div className="mt-1 text-xs text-gray-500">Target RMS: −35 to −18 dBFS (green zone)</div>
                 </div>
             </section>
 
@@ -450,23 +479,10 @@ function RecordingCoach({
                         <Badge ok={noiseFloorDb !== null && noiseFloorDb < -40} label={`Noise floor: ${noiseFloorDb === null ? '…' : noiseFloorDb.toFixed(1) + ' dB'}`} />
                         {FaceDetectorApi && <Badge ok={faceOk} label={`Face centered: ${faceOk ? 'OK' : 'Adjust'}`} />}
                     </div>
-                    {(hintsVideo.length > 0 || hintsAudio.length > 0) && (
-                        <div className="mt-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
-                            <div className="font-medium">Suggestions</div>
-                            <ul className="list-inside list-disc">
-                                {[...hintsVideo, ...hintsAudio].map((h, i) => <li key={i}>{h}</li>)}
-                            </ul>
-                        </div>
-                    )}
                 </div>
 
-                {/* Audio meter & script */}
+                {/* script */}
                 <div className="flex flex-col gap-4">
-                    <div className="rounded-2xl border p-4 shadow-sm">
-                        <h3 className="mb-2 font-medium">Mic Levels</h3>
-                        <LevelMeter rmsDb={rmsDb} peakDb={peakDb} clipping={clipping} />
-                        <div className="mt-1 text-xs text-gray-500">Target RMS: −35 to −18 dBFS (green zone)</div>
-                    </div>
 
                     {showScript && (
                         <div className="rounded-2xl border p-4 shadow-sm">
@@ -479,52 +495,39 @@ function RecordingCoach({
 
                     {/* Controls */}
                     <div className="rounded-2xl border p-4 shadow-sm">
-                        <button className="rounded-xl border px-4 py-2" onClick={() => beginRecording('test')} disabled={!isPreviewing || isRecording || isTesting}>Test 5s</button>
-                        <button className="rounded-xl bg-emerald-600 px-4 py-2 text-white shadow disabled:opacity-50" onClick={() => beginRecording('full')} disabled={!isPreviewing || isRecording || isTesting}>
-                            {isRecording ? 'Recording…' : 'Start Recording'}
-                        </button>
-                        {(isRecording || isTesting) && (
-                            <button className="rounded-xl bg-red-600 px-4 py-2 text-white" onClick={stopRecording}>Stop</button>
-                        )}
+                        <div className="flex flex-wrap items-center gap-3">
+                            <button className="rounded-xl border px-4 py-2" onClick={() => beginRecording('test')} disabled={!isPreviewing || isRecording || isTesting}>Test 5s</button>
+                            <button className="rounded-xl bg-emerald-600 px-4 py-2 text-white shadow disabled:opacity-50" onClick={() => beginRecording('full')} disabled={!isPreviewing || isRecording || isTesting}>
+                                {isRecording ? 'Recording…' : 'Start Recording'}
+                            </button>
+                            {(isRecording || isTesting) && (
+                                <button className="rounded-xl bg-red-600 px-4 py-2 text-white" onClick={stopRecording}>Stop</button>
+                            )}
 
-                        {(isRecordingStopped && !isRecording) && (
-                            <button className="rounded-xl bg-red-600 px-4 py-2 text-white" onClick={stopRecording}>Save</button>
-                        )}
-                        
-                        {countdown !== null && <span className="ml-2 text-lg font-semibold">{countdown}</span>}
-                        <span className="ml-auto text-sm text-gray-600">{elapsed}s / {maxDurationSec}s</span>
-                        <div className="mt-1 text-xs text-gray-500">Recommended duration ≥ {minDurationSec}s. Files are saved as WebM (VP8/9 + Opus).</div>
+                            {isRecordingStopped && (
+                                <button className="rounded-xl bg-red-600 px-4 py-2 text-white" onClick={startSaveRecording}>Save</button>
+                                // startSaveRecording
+                            )}
+                            {countdown !== null && <span className="ml-2 text-lg font-semibold">{countdown}</span>}
+                            <span className="ml-auto text-sm text-gray-600">{elapsed}s / {maxDurationSec}s</span>
+                        </div>
+                        <div className="mt-2 text-xs text-gray-500">Recommended duration ≥ {minDurationSec}s.</div>
                     </div>
                 </div>
             </section>
 
             {/* Controls */}
             <section className="rounded-2xl border p-4 shadow-sm">
-                <div className="flex flex-wrap items-center gap-3">
-                    <button className="rounded-xl border px-4 py-2" onClick={() => beginRecording('test')} disabled={!isPreviewing || isRecording || isTesting}>Test 5s</button>
-                    <button className="rounded-xl bg-emerald-600 px-4 py-2 text-white shadow disabled:opacity-50" onClick={() => beginRecording('full')} disabled={!isPreviewing || isRecording || isTesting}>
-                        {isRecording ? 'Recording…' : 'Start Recording'}
-                    </button>
-                    {(isRecording || isTesting) && (
-                        <button className="rounded-xl bg-red-600 px-4 py-2 text-white" onClick={stopRecording}>Stop</button>
+                 {(hintsVideo.length > 0 || hintsAudio.length > 0) && (
+                        <div className="mt-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+                            <div className="font-medium">Suggestions</div>
+                            <ul className="list-inside list-disc">
+                                {[...hintsVideo, ...hintsAudio].map((h, i) => <li key={i}>{h}</li>)}
+                            </ul>
+                        </div>
                     )}
-                    {countdown !== null && <span className="ml-2 text-lg font-semibold">{countdown}</span>}
-                    <span className="ml-auto text-sm text-gray-600">{elapsed}s / {maxDurationSec}s</span>
-                </div>
-                <div className="mt-2 text-xs text-gray-500">Recommended duration ≥ {minDurationSec}s. Files are saved as WebM (VP8/9 + Opus).</div>
             </section>
 
-            {/* Footer tips */}
-            <section className="rounded-2xl border p-4 shadow-sm text-sm text-gray-600">
-                <div className="font-medium text-gray-800">Capture Tips (FR + Diarization)</div>
-                <ul className="mt-1 list-inside list-disc">
-                    <li>Keep head upright, look at camera; avoid extreme angles & occlusions.</li>
-                    <li>Maintain neutral to mild expressions for FR enrollment; smile only if consistent with target set.</li>
-                    <li>Avoid sudden head turns while speaking; steady framing improves lip/speech alignment.</li>
-                    <li>If possible, record 10–15 seconds of silence at start for noise profiling (we auto‑sample ~1.5s).</li>
-                    <li>Prefer 48 kHz mono audio, echo cancellation on, AGC off; avoid Bluetooth mics with aggressive DSP.</li>
-                </ul>
-            </section>
         </div>
     );
 }
