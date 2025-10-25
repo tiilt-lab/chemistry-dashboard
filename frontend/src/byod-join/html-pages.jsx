@@ -149,7 +149,7 @@ function ByodJoinPage(props) {
                                 </div>
                             </React.Fragment>
                         )}
-                        {props.connected &&
+                        {props.connected && props.joinwith === "Audio" &&
                             props.authenticated &&
                             !props.speakersValidated && (
                                 <React.Fragment>
@@ -300,7 +300,163 @@ function ByodJoinPage(props) {
                                         </div>
                                     </div>
                                 </React.Fragment>
-                            )}
+                            )
+                        }
+
+                        {props.connected && (props.joinwith === "Video" || props.joinwith === "Videocartoonify") &&
+                            props.authenticated && props.videoAuthenticated &&
+                            !props.speakersValidated && (
+                                <React.Fragment>
+                                    <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto text-center">
+                                        <div className="w-[300px] px-2 sm:w-[400px] lg:w-3xl">
+                                            <div className="my-1.5 font-sans text-base/loose font-medium text-[#727278]">
+                                                Please add a Speaker Fingerprint
+                                                for each speaker
+                                            </div>
+                                            <div className="my-1.5 font-sans text-xs/normal font-normal text-[#727278]">
+                                                Each speaker must record and
+                                                temporarily save a short 3-5
+                                                second sample of their voice.
+                                                This is used to track each
+                                                speaker's metrics throughout a
+                                                discussion and is deleted upon
+                                                ending the discussion.
+                                            </div>
+                                        </div>
+                                        <div className="mt-2 h-fit w-[300px] sm:w-[400px] lg:w-3xl">
+                                            {!props.speakers && (
+                                                <div
+                                                    className={
+                                                        style3[
+                                                        "load-text onload"
+                                                        ]
+                                                    }
+                                                >
+                                                    Loading...
+                                                </div>
+                                            )}
+                                            {props.speakers &&
+                                                props.speakers.length === 0 && (
+                                                    <div
+                                                        className={
+                                                            style3[
+                                                            "empty-keyword-list"
+                                                            ]
+                                                        }
+                                                    >
+                                                        <div
+                                                            className={
+                                                                style3[
+                                                                "load-text"
+                                                                ]
+                                                            }
+                                                        >
+                                                            {" "}
+                                                            No Speakers{" "}
+                                                        </div>
+                                                        <div
+                                                            className={
+                                                                style3[
+                                                                "load-text-description"
+                                                                ]
+                                                            }
+                                                        >
+                                                            {" "}
+                                                            Tap the button below
+                                                            to add a speaker or
+                                                            other button to join
+                                                            automatically detect
+                                                            speakers(less
+                                                            accurate){" "}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            {props.speakers.map(
+                                                (speaker, count) => (
+                                                    <div
+                                                        key={"speaker" + count}
+                                                        className="my-3 flex flex-row items-center justify-between rounded-md border px-2 py-2"
+                                                    >
+                                                        {speaker.fingerprinted && (
+                                                            <img
+                                                                className="h-8 w-8"
+                                                                alt="question"
+                                                                src={Checkmark}
+                                                            />
+                                                        )}
+                                                        <div
+                                                            className={
+                                                                style3[
+                                                                "click-mask"
+                                                                ]
+                                                            }
+                                                            onClick={() => { }}
+                                                        ></div>
+                                                        <div className="flew-row flex grow text-center">
+                                                            <div className="grow font-sans text-lg/loose font-bold text-[#58585C]">
+                                                                {speaker.alias}
+                                                            </div>
+                                                        </div>
+                                                        <AppContextMenu
+                                                            className={
+                                                                style3[
+                                                                "keyword-list-options"
+                                                                ]
+                                                            }
+                                                        >
+                                                            <div
+                                                                className={`${style4["menu-item"]} ${style4["black"]}`}
+                                                                onClick={() => {
+                                                                    props.openForms(
+                                                                        "fingerprintAudio",
+                                                                        speaker,
+                                                                    )
+                                                                }}
+                                                            >
+                                                                Record
+                                                                Fingerprint
+                                                            </div>
+                                                            <div
+                                                                className={`${style4["menu-item"]} ${style4["black"]}`}
+                                                                onClick={() => {
+                                                                    props.openForms(
+                                                                        "renameAlias",
+                                                                        speaker,
+                                                                    )
+                                                                }}
+                                                            >
+                                                                Rename Alias
+                                                            </div>
+
+                                                            <div
+                                                                className={`${style4["menu-item"]} ${style4["black"]}`}
+                                                                onClick={() => {
+                                                                    props.openForms(
+                                                                        "savedAudioVideoFingerprint",
+                                                                        speaker,
+                                                                    )
+                                                                }}
+                                                            >
+                                                                Saved Fingerprrint
+                                                            </div>
+                                                        </AppContextMenu>
+                                                    </div>
+                                                ),
+                                            )}
+                                        </div>
+                                        <div>
+                                            <button
+                                                className="wide-button"
+                                                onClick={props.confirmSpeakers}
+                                            >
+                                                Join Discussion
+                                            </button>
+                                        </div>
+                                    </div>
+                                </React.Fragment>
+                            )
+                        }
+
                         {props.connected &&
                             props.authenticated &&
                             props.speakersValidated && (

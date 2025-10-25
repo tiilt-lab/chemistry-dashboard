@@ -340,7 +340,6 @@ class VideoProcessor:
 
                     self.frame_batch.append(frame)
                     self.time_marker.append(self.adjust_time(ts))
-                    self.raw_time.append(ts)
 
                     if len(self.frame_batch) >= self.batch_size:
                         # hand off current lists; start fresh ones for the producer

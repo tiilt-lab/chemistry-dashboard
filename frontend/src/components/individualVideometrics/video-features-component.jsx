@@ -26,6 +26,9 @@ function AppIndividualVideoFeaturesComponent(props) {
   const svgHeight = 39;
   //const [_transcripts, setTranscript] = useState([]);
   const [features, setFeatures] = useState([]);
+  const [facialEmotionDataset, setFacialEmotionDataset] = useState([]);
+  const [objectFocusedDataset, setObjectFocusedDataset] = useState([]);
+  const [attentionLevelDataset, setAttentionLevelDataset] = useState({});
   const [featureDescription, setFeatureDescription] = useState(null);
   const [featureHeader, setFeatureHeader] = useState(null);
   const [showFeatureDialog, setShowFeatureDialog] = useState(false);
@@ -43,6 +46,8 @@ function AppIndividualVideoFeaturesComponent(props) {
       { name:"Object Focused On", values: [], time:[]}
       
     ];
+    const facial_emotion_data = []
+    const object_focused_data = []
     if(!props.videometrics || !props.videometrics.length)
     {
       setFeatures(valueArrays);
@@ -62,6 +67,11 @@ function AppIndividualVideoFeaturesComponent(props) {
       valueArrays[1].time.push(v.time_stamp);
       valueArrays[2].values.push(v.object_on_focus);
       valueArrays[2].time.push(v.time_stamp);
+
+
+      facial_emotion_data.push({time:v.time_stamp, category: v.facial_emotion })
+      object_focused_data.push({time:v.time_stamp, category: v.object_on_focus })
+
     });
     // console.log("i returned ", props.spkrId)
     // console.log("video mtric data: ", valueArrays)
@@ -100,6 +110,10 @@ function AppIndividualVideoFeaturesComponent(props) {
     //   valueArray["path"] = path;
     // }
     setFeatures(valueArrays);
+    setFacialEmotionDataset(facial_emotion_data)
+    setObjectFocusedDataset(object_focused_data)
+    setAttentionLevelDataset({values: valueArrays[1].values ,time:valueArrays[1].time})
+
   };
 
   const getInfo = (featureName) => {
@@ -196,6 +210,9 @@ function AppIndividualVideoFeaturesComponent(props) {
       closeDialog={closeDialog}
       showFeatureDialog={showFeatureDialog}
       features={features}
+      facialEmotionDataset={facialEmotionDataset}
+      objectFocusedDataset={objectFocusedDataset}
+      attentionLevelDataset={attentionLevelDataset}
       getInfo={getInfo}
       showFeatures={props.showFeatures}
       emotionTimelineCategorical={emotionTimelineCategorical}
