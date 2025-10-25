@@ -30,6 +30,7 @@ function JoinPage() {
     const [audioconnected, setAudioConnected] = useState(false)
     const [videoconnected, setVideoConnected] = useState(false)
     const [authenticated, setAuthenticated] = useState(false)
+    const [videoAuthenticated, setVideoAuthenticated] = useState(false)
     const [streamReference, setStreamReference] = useState(null)
     const [audioContext, setAudioContext] = useState(null)
     const [mediaRecorder, setMediaRecorder] = useState(null)
@@ -228,7 +229,7 @@ function JoinPage() {
 
     //Use effect to start the camera and microphone for video and audio capturing
     useEffect(() => {
-        if (authenticated) {
+        if (authenticated || videoAuthenticated) {
             const loadWorklet = async () => {
                 await audioContext.audioWorklet.addModule(
                     "audio-sender-processor.js",
@@ -289,15 +290,13 @@ function JoinPage() {
 
             if (authenticated && joinwith === "Audio") {
                 loadWorklet().catch(console.error)
-            } else if (
-                authenticated && speakersValidated &&
+            } else if (authenticated && videoAuthenticated && speakersValidated &&
                 (joinwith === "Video" || joinwith === "Videocartoonify")
             ) {
-                console.log(audioconnected, authenticated, speakersValidated)
                 videoPlay()
             }
         }
-    }, [authenticated, speakersValidated])
+    }, [authenticated, videoAuthenticated, speakersValidated])
 
     //Use effect to toggle video view pane
     useEffect(() => {
@@ -352,30 +351,55 @@ function JoinPage() {
     //This will stop sending heartbeats once the fingerprints are added
     useEffect(() => {
         let Intervalid = 0
+
         if (speakersValidated) {
             clearInterval(Intervalid);
-        }else if (audioconnected && videoconnected && authenticated) {
-            if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN || videows === null || videows.readyState !== WebSocket.OPEN) return;
+        } else {
+            if (joinwith === "Audio") {
+                if (audioconnected && authenticated) {
+                    if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN) return;
 
-            const send = () => {
-                if (audiows.current.readyState === WebSocket.OPEN && videows.readyState === WebSocket.OPEN) {
-                    audiows.current.send(JSON.stringify({ type: "heartbeat" }));
-                    videows.send(JSON.stringify({ type: "heartbeat" }));
+                    const send = () => {
+                        if (audiows.current.readyState === WebSocket.OPEN) {
+                            audiows.current.send(JSON.stringify({ type: "heartbeat" }));
 
-                } else {
-                    clearInterval(Intervalid);
+                        } else {
+                            clearInterval(Intervalid);
+                        }
+                    };
+
+                    // fire once immediately, then on interval
+                    send();
+                    Intervalid = setInterval(send, 20000);
+
+                    return () => {
+                        clearInterval(Intervalid);
+                    };
                 }
-            };
 
-            // fire once immediately, then on interval
-            send();
-            Intervalid = setInterval(send, 20000);
+            } else if (joinwith === "Video" || joinwith === "Videocartoonify") {
+                if (audioconnected && videoconnected && authenticated && videoAuthenticated) {
+                    if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN || videows === null || videows.readyState !== WebSocket.OPEN) return;
+                    const send = () => {
+                        if (audiows.current.readyState === WebSocket.OPEN && videows.readyState === WebSocket.OPEN) {
+                            audiows.current.send(JSON.stringify({ type: "heartbeat" }));
+                            videows.send(JSON.stringify({ type: "heartbeat" }));
 
-            return () => {
-                clearInterval(Intervalid);
-            };
-        } 
-    }, [audiows, videows, audioconnected, videoconnected, authenticated, speakersValidated]);
+                        } else {
+                            clearInterval(Intervalid);
+                        }
+                    };
+                    // fire once immediately, then on interval
+                    send();
+                    Intervalid = setInterval(send, 20000);
+
+                    return () => {
+                        clearInterval(Intervalid);
+                    };
+                }
+            }
+        }
+    }, [audiows, videows, audioconnected, videoconnected, authenticated, videoAuthenticated, speakersValidated]);
 
 
 
@@ -471,6 +495,7 @@ function JoinPage() {
         setAudioConnected(false)
         setVideoConnected(false)
         setAuthenticated(false)
+        setVideoAuthenticated(false)
 
         if (audiows.current != null) {
             audiows.current.close();
@@ -927,7 +952,7 @@ function JoinPage() {
             if (typeof e.data === 'string') {
                 const message = JSON.parse(e.data);
                 if (message['type'] === 'start') {
-                    setAuthenticated(true);
+                    setVideoAuthenticated(true);
                     closeDialog();
                 } else if (message['type'] === 'attention_data') {
 
@@ -1389,6 +1414,7 @@ function JoinPage() {
         <ByodJoinPage
             connected={audioconnected}
             authenticated={authenticated}
+            videoAuthenticated={videoAuthenticated}
             GLOW_COLOR={GLOW_COLOR}
             POD_COLOR={POD_COLOR}
             button_pressed={sessionDevBtnPressed}

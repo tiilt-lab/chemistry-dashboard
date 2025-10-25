@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 /**
  * RecordingCoach
- * A production‑ready React component that helps users capture **high‑quality** face + voice recordings
+ * A React component that helps users capture **high‑quality** face + voice recordings
  * for facial recognition and speaker diarization workflows.
  *
  * Features
@@ -17,41 +17,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
  * - Test‑record + playback, then Full recording
  * - Records to WebM (VP8/VP9 + Opus) with sensible getUserMedia constraints
  *
- * Usage
- *   <RecordingCoach onComplete={(blob, diagnostics) => { ...upload or save... }} />
- *
- * Styling: TailwindCSS utility classes are used by default.
  */
-
-// Types
-//  type Diagnostics = {
-//    video: {
-//      averageLuma: number; // 0..255
-//      faceOk: boolean;
-//      faceBox?: { x: number; y: number; width: number; height: number };
-//      hints: string[];
-//    };
-//    audio: {
-//      noiseFloorDb: number; // estimated during silence window
-//      rmsDb: number; // live speech RMS (approx)
-//      clipping: boolean;
-//      hints: string[];
-//    };
-//    device: {
-//      cameraId?: string;
-//      micId?: string;
-//    };
-//  };
-
-//  type Props = {
-//    maxDurationSec?: number; // hard stop for full recording
-//    minDurationSec?: number; // recommend at least this long
-//    onComplete?: (blob: Blob, diagnostics: Diagnostics) => void;
-//    onTestClip?: (blob: Blob, diagnostics: Diagnostics) => void;
-//    saveRecording: calls saverecoding from parent component  
-//    showScript?: boolean;
-//    scriptText?: string;
-//  };
 
 const DEFAULT_SCRIPT = `Please read the following passage in a clear, natural voice:
 
