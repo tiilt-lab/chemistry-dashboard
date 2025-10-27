@@ -12,10 +12,8 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 
-# Load environment variables
 load_dotenv()
 
-# Initialize OpenAI client
 api_key = os.getenv("OPENAI_API_KEY")
 client = None
 if api_key:
@@ -24,11 +22,9 @@ if api_key:
 else:
     logging.warning("OPENAI_API_KEY not set. LLM routes will be disabled.")
 
-# Create Blueprint for LLM routes
 llm_bp = Blueprint('llm', __name__)
 
 def get_all_node_types():
-    """Get all possible node types across all schemas"""
     return ['question', 'idea', 'elaboration', 'example', 'uncertainty',
             'problem', 'cause', 'solution', 'constraint', 'evaluation',
             'goal', 'task', 'resource', 'timeline', 'dependency',
@@ -40,7 +36,6 @@ def get_all_node_types():
             'anecdote', 'trade_off', 'workaround']
 
 def get_all_edge_types():
-    """Get all possible edge types across all schemas"""
     return ['explores', 'relates_to', 'contrasts_with', 'builds_on',
             'causes', 'solves', 'constrains', 'evaluates',
             'requires', 'precedes', 'enables', 'blocks',
@@ -53,7 +48,6 @@ def get_all_edge_types():
             'qualifies', 'follows', 'refers_to']
 
 def prepare_context_data(data):
-    """Prepare and limit data for token management"""
     metrics = data.get('metrics', {})
     transcripts = data.get('transcripts', [])
     session_info = data.get('sessionInfo', {})
@@ -67,8 +61,6 @@ def prepare_context_data(data):
     }
 
 def generate_prompt(task_type, data):
-    """Generate appropriate prompt based on task type"""
-
     time_range = data.get('timeRange', {})
     time_context = ""
     time_instruction = ""
@@ -103,43 +95,33 @@ def generate_prompt(task_type, data):
         ])
         
         return f"""Analyze this discussion session and provide a concise summary:
+        Session: {session_info.get('name', 'Current Session')}{time_context}{time_instruction}
+        Metrics:
+        - Emotional Tone: {metrics.get('emotional', 'N/A')}% (>50 = positive)
+        - Analytic Thinking: {metrics.get('analytic', 'N/A')}% (>50 = analytic)
+        - Clout: {metrics.get('clout', 'N/A')}% (higher = more confident)
+        - Authenticity: {metrics.get('authenticity', 'N/A')}% (higher = more authentic)
+        - Certainty: {metrics.get('certainty', 'N/A')}% (higher = more certain)
 
-Session: {session_info.get('name', 'Current Session')}{time_context}{time_instruction}
+        Recent Transcript Excerpts:
+        {transcript_text}
 
-Metrics:
-- Emotional Tone: {metrics.get('emotional', 'N/A')}% (>50 = positive)
-- Analytic Thinking: {metrics.get('analytic', 'N/A')}% (>50 = analytic)
-- Clout: {metrics.get('clout', 'N/A')}% (higher = more confident)
-- Authenticity: {metrics.get('authenticity', 'N/A')}% (higher = more authentic)
-- Certainty: {metrics.get('certainty', 'N/A')}% (higher = more certain)
+        Please consider these aspects: 1. Overall communication style assessment; 2. Key discussion themes; 3. Notable patterns in the conversation; 4. Suggestions for potential improvement.
 
-Recent Transcript Excerpts:
-{transcript_text}
-
-Please consider these aspects:
-1. Overall communication style assessment
-2. Key discussion themes
-3. Notable patterns in the conversation
-4. Suggestions for potential improvement
-
-Keep the response under 200 words."""
+        Keep the response under 200 words."""
 
     elif task_type == 'metrics':
         metrics = data.get('metrics', {})
         return f"""{time_context}Interpret these communication metrics and explain what they reveal about the discussion:
+        - Emotional Tone: {metrics.get('emotional', 'N/A')}%
+        - Analytic Thinking: {metrics.get('analytic', 'N/A')}%
+        - Clout: {metrics.get('clout', 'N/A')}%
+        - Authenticity: {metrics.get('authenticity', 'N/A')}%
+        - Certainty: {metrics.get('certainty', 'N/A')}%
 
-- Emotional Tone: {metrics.get('emotional', 'N/A')}%
-- Analytic Thinking: {metrics.get('analytic', 'N/A')}%
-- Clout: {metrics.get('clout', 'N/A')}%
-- Authenticity: {metrics.get('authenticity', 'N/A')}%
-- Certainty: {metrics.get('certainty', 'N/A')}%
+        Provide specific insights about: 1. The overall communication dynamics; 2. Potential strengths and areas for improvement; 3. What these patterns suggest about group dynamics.
 
-Provide specific insights about:
-1. The overall communication dynamics
-2. Potential strengths and areas for improvement
-3. What these patterns suggest about group dynamics
-
-Keep response under 200 words."""
+        Keep response under 200 words."""
 
     elif task_type == 'themes':
         transcripts = data.get('transcripts', [])
@@ -148,16 +130,12 @@ Keep response under 200 words."""
         
         return f"""Extract and categorize the main themes from this discussion:
 
-Transcript Excerpts:
-{transcript_text}
+        Transcript Excerpts:
+        {transcript_text}
 
-Identify:
-1. Main topics discussed
-2. Recurring themes
-3. Points of agreement/disagreement
-4. Action items or decisions (if any)
+        Identify: 1. Main topics discussed; 2. Recurring themes; 3. Points of agreement/disagreement; 4. Action items or decisions (if any).
 
-Format as a bulleted list."""
+        Format as a bulleted list."""
 
     elif task_type == 'comparison':
         multi_sessions = data.get('multiSessions', [])
@@ -175,15 +153,11 @@ Format as a bulleted list."""
         ])
         
         return f"""Compare these discussion sessions:
+        {session_text}
 
-{session_text}
+        Identify: 1. Key differences between sessions; 2. Trends or patterns across sessions; 3. Which session had the most effective communication and why.
 
-Identify:
-1. Key differences between sessions
-2. Trends or patterns across sessions
-3. Which session had the most effective communication and why
-
-Keep response under 200 words."""
+        Keep response under 200 words."""
     
     else:
         return generate_prompt('summary', data)
@@ -199,17 +173,13 @@ def analyze():
         task_type = request_data.get('taskType', 'summary')
         data = request_data.get('data', {})
         
-        # Prepare data
         prepared_data = prepare_context_data(data)
         
-        # Add multiSessions if present
         if 'multiSessions' in data:
             prepared_data['multiSessions'] = data['multiSessions']
         
-        # Generate prompt
         prompt = generate_prompt(task_type, prepared_data)
         
-        # Call OpenAI API
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
@@ -261,21 +231,17 @@ def extract_concepts():
         request_data = request.get_json()
         context = request_data.get('context', {})
         
-        # Log incoming request
         logging.info(f"Concept extraction request received with {len(context.get('speaker_segments', {}))} speakers")
         
-        # Build transcript with ALL details
         speaker_text = ""
         for speaker, segments in context.get('speaker_segments', {}).items():
             speaker_text += f"\nSpeaker {speaker}: {' '.join(segments)}"
         
-        # Include recent concepts
         recent_concepts_text = ""
         if context.get('recent_concepts'):
             concepts_list = [f"{c.get('text')} ({c.get('type')})" for c in context['recent_concepts']]
             recent_concepts_text = f"\nPrevious concepts: {', '.join(concepts_list)}"
         
-        # Check if we have content to process
         if not speaker_text.strip():
             logging.warning("No transcript text to process for concept extraction")
             return jsonify({
@@ -290,12 +256,11 @@ Discussion:{speaker_text}
 {recent_concepts_text}
 
 EXTRACTION RULES:
-1. Extract AT LEAST one concept for every 2-3 sentences spoken
-2. Include ALL of: main ideas, sub-points, examples, questions, clarifications
-3. Keep concept text concise but complete (3-15 words is fine)
-4. Don't oversummarize - "multimodal learning analytics for collaboration" is better than just "analytics"
-5. Extract concepts even if they seem minor - better to have too many than too few
-6. **speaker**: The speaker ID (e.g., 1, 2, "Unknown") who said the concept. This ID comes from the "Speaker {{ID}}" prefix.
+1. Extract AT LEAST one concept for every 2-3 sentences spoken;
+2. Include ALL of: main ideas, sub-points, examples, questions, clarifications;
+3. Keep concept text concise but complete (3-15 words is fine);
+4. Don't oversummarize - "multimodal learning analytics" is better than just "analytics";
+5. **speaker**: The speaker ID (e.g., 1, 2, "Unknown") who said the concept. This ID comes from the "Speaker {{ID}}" prefix.
 
 CONCEPT TYPES to extract:
 - Core ideas and claims (type: "idea")
@@ -320,7 +285,7 @@ RELATIONSHIPS (connect everything relevant):
 
 Extract generously. If someone says "We need better tools for analyzing student collaboration, maybe something with video", extract:
 - "need better collaboration analysis tools" (type: "problem")
-- "video-based analysis possibility" (type: "solution")
+- "video-based tools" (type: "solution")
 - "student collaboration analysis" (type: "goal")
 
 Return JSON:
@@ -352,23 +317,20 @@ Return JSON:
                     "content": prompt
                 }
             ],
-            temperature=0.4,  # Slightly higher for more extraction
-            max_tokens=2000  # More tokens for richer extraction
+            temperature=0.4, 
+            max_tokens=2000 
         )
         
         result = json.loads(response.choices[0].message.content)
         
-        # Log for monitoring
         logging.info(f"Extracted {len(result.get('new_nodes', []))} concepts from {len(speaker_text.split())} words")
 
-        # Handle different response formats from LLM
         nodes = result.get("new_nodes") or result.get("concepts") or []
         edges = result.get("new_edges") or result.get("relationships") or []
         
-        # Validate and clean the extracted data
         valid_nodes = []
         for node in nodes:
-            if node.get('text'):  # Must have text at minimum
+            if node.get('text'): 
                 valid_nodes.append({
                     'text': node.get('text', ''),
                     'type': node.get('type', 'concept'),
@@ -413,7 +375,6 @@ Return JSON:
 
 @llm_bp.route('/api/v1/llm/usage', methods=['GET'])
 def get_usage():
-    """Get usage statistics (placeholder for now)"""
     return jsonify({
         'success': True,
         'usage': {
@@ -425,7 +386,6 @@ def get_usage():
 
 @llm_bp.route('/api/v1/llm/health', methods=['GET'])
 def health_check():
-    """Health check endpoint to verify LLM service is running"""
     if client is None:
         return jsonify({
             'status': 'disabled',

@@ -18,7 +18,7 @@ function ConceptMapView({ sessionId, sessionDeviceId, socketConnection }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const lastNodeCount = useRef(0);
 
-  // Professional color scheme
+
   const nodeColors = {
     question: '#e74c3c',
     idea: '#3498db',
@@ -49,6 +49,14 @@ function ConceptMapView({ sessionId, sessionDeviceId, socketConnection }) {
   const formatEdgeLabel = (type) => {
     if (!type) return '';
     return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const ANIMATION_TIMING = {
+    nodeDelay: 800,           // Time between node appearances (ms)
+    edgeDelay: 500,           // Time between edge appearances (ms)
+    nodeFadeDuration: 400,    // How long node fade-in takes (ms)
+    edgeFadeDuration: 600,    // How long edge drawing takes (ms)
+    highlightDuration: 1500   // How long green highlight stays (ms)
   };
 
   const initCytoscape = useCallback((container) => {
@@ -145,12 +153,140 @@ function ConceptMapView({ sessionId, sessionDeviceId, socketConnection }) {
     });
   }, []);
 
-  // Main effect - runs only when sessionDeviceId or isExpanded changes
+  const addNodeWithAnimation = useCallback((cy, node) => {
+    const color = nodeColors[node.type] || nodeColors.default;
+    const borderColor = darkenColor(color, 0.2);
+    
+    cy.add({
+      group: 'nodes',
+      data: {
+        id: node.id,
+        label: node.text || 'Concept',
+        color: color,
+        borderColor: borderColor,
+        type: node.type || 'concept',
+        speaker: node.speaker_id || 'Unknown'
+      },
+      style: {
+        'opacity': 0
+      }
+    });
+    
+    // Get node element using getElementById (handles special characters)
+    const nodeElement = cy.getElementById(node.id);
+    
+    // Fade in with green highlight
+    nodeElement
+      .addClass('new-node')
+      .animate({
+        style: { 'opacity': 1 }
+      }, {
+        duration: ANIMATION_TIMING.nodeFadeDuration,
+        easing: 'ease-out',
+        complete: () => {
+          // Update layout incrementally
+          cy.layout({
+            name: 'dagre',
+            rankDir: 'TB',
+            animate: true,
+            animationDuration: 300,
+            fit: false,
+            padding: 40,
+            spacingFactor: 1.5,
+            nodeSep: 100,
+            rankSep: 120,
+            edgeSep: 50
+          }).run();
+        }
+      });
+    
+    // Remove green highlight after duration
+    setTimeout(() => {
+      cy.getElementById(node.id).removeClass('new-node');
+    }, ANIMATION_TIMING.highlightDuration);
+  }, [nodeColors, darkenColor]);
+
+  const addEdgeWithAnimation = useCallback((cy, edge) => {
+    const sourceExists = cy.getElementById(edge.source).length > 0;
+    const targetExists = cy.getElementById(edge.target).length > 0;
+    
+    if (!sourceExists || !targetExists) {
+      console.warn(`Edge ${edge.id} skipped: source or target doesn't exist`);
+      return;
+    }
+    
+    cy.add({
+      group: 'edges',
+      data: {
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        label: formatEdgeLabel(edge.type || '')
+      },
+      style: {
+        'opacity': 0,
+        'line-color': '#27ae60',
+        'target-arrow-color': '#27ae60'
+      }
+    });
+    
+    // Get edge element using getElementById (handles special characters)
+    const edgeElement = cy.getElementById(edge.id);
+    
+    // Fade in edge with drawing effect
+    edgeElement
+      .addClass('new-edge')
+      .animate({
+        style: { 'opacity': 1 }
+      }, {
+        duration: ANIMATION_TIMING.edgeFadeDuration,
+        easing: 'ease-in-out'
+      });
+    
+    // Change to normal color after animation
+    setTimeout(() => {
+      cy.getElementById(edge.id)
+        .removeClass('new-edge')
+        .style({
+          'line-color': '#7f8c8d',
+          'target-arrow-color': '#7f8c8d'
+        });
+    }, ANIMATION_TIMING.highlightDuration);
+  }, [formatEdgeLabel]);
+
+  // Animate elements sequentially for streaming visualization effect
+  const animateElementsSequentially = useCallback((cy, newNodes, newEdges) => {
+    const sortedNodes = [...newNodes].sort((a, b) => 
+      (a.timestamp || 0) - (b.timestamp || 0)
+    );
+    
+    const sortedEdges = [...newEdges].sort((a, b) => 
+      (a.timestamp || 0) - (b.timestamp || 0)
+    );
+    
+    // Animate nodes first, one by one
+    sortedNodes.forEach((node, index) => {
+      setTimeout(() => {
+        addNodeWithAnimation(cy, node);
+      }, index * ANIMATION_TIMING.nodeDelay);
+    });
+    
+    // Calculate when nodes finish animating
+    const nodesFinishTime = sortedNodes.length * ANIMATION_TIMING.nodeDelay;
+    
+    // Animate edges after nodes, one by one
+    sortedEdges.forEach((edge, index) => {
+      setTimeout(() => {
+        addEdgeWithAnimation(cy, edge);
+      }, nodesFinishTime + (index * ANIMATION_TIMING.edgeDelay));
+    });
+  }, [addNodeWithAnimation, addEdgeWithAnimation]);
+
+  // Runs only when sessionDeviceId or isExpanded changes
   useEffect(() => {
     const currentContainer = isExpanded ? expandedContainerRef.current : containerRef.current;
     if (!currentContainer || !sessionDeviceId) return;
     
-    // Initialize or update Cytoscape
     if (!cyRef.current) {
       const cy = initCytoscape(currentContainer);
       cyRef.current = cy;
@@ -162,7 +298,6 @@ function ConceptMapView({ sessionId, sessionDeviceId, socketConnection }) {
       }, 100);
     }
     
-    // Load initial data once
     fetch(`/api/v1/concepts/${sessionDeviceId}`)
       .then(response => response.ok ? response.json() : null)
       .then(data => {
@@ -226,7 +361,7 @@ function ConceptMapView({ sessionId, sessionDeviceId, socketConnection }) {
       })
       .catch(() => setIsLoading(false));
     
-    // Connect to WebSocket
+    // Connect to WebSocket for real-time updates
     const socket = io(window.location.origin, {
       transports: ['polling', 'websocket']
     });
@@ -235,10 +370,20 @@ function ConceptMapView({ sessionId, sessionDeviceId, socketConnection }) {
       session_device_id: sessionDeviceId
     });
 
+    // Handle real-time concept updates with streaming animation
     socket.on('concept_update', (data) => {
-      const isUpdate = data.nodes.length > lastNodeCount.current;
+      if (!cyRef.current) return;
+      
+      const cy = cyRef.current;
+      const existingNodeIds = new Set(cy.nodes().map(n => n.id()));
+      const existingEdgeIds = new Set(cy.edges().map(e => e.id()));
+      
+      const newNodes = data.nodes.filter(n => !existingNodeIds.has(n.id));
+      const newEdges = data.edges.filter(e => !existingEdgeIds.has(e.id));
+      
       lastNodeCount.current = data.nodes.length;
       
+      // Update state
       setConceptData({
         nodes: [...data.nodes],
         edges: [...data.edges]
@@ -246,76 +391,9 @@ function ConceptMapView({ sessionId, sessionDeviceId, socketConnection }) {
       setDiscourseType(data.discourse_type || 'exploratory');
       setLastUpdate(new Date());
       
-      // Update graph with new nodes/edges
-      if (cyRef.current && data.nodes && data.edges) {
-        const cy = cyRef.current;
-        const existingNodeIds = new Set(cy.nodes().map(n => n.id()));
-        const existingEdgeIds = new Set(cy.edges().map(e => e.id()));
-        let hasNewElements = false;
-        
-        data.nodes.forEach((node) => {
-          if (!existingNodeIds.has(node.id)) {
-            hasNewElements = true;
-            const color = nodeColors[node.type] || nodeColors.default;
-            const borderColor = darkenColor(color, 0.2);
-            
-            cy.add({
-              group: 'nodes',
-              data: {
-                id: node.id,
-                label: node.text || 'Concept',
-                color: color,
-                borderColor: borderColor,
-                type: node.type || 'concept',
-                speaker: node.speaker_id || 'Unknown'
-              },
-              classes: isUpdate ? 'new-node' : ''
-            });
-          }
-        });
-        
-        data.edges.forEach(edge => {
-          if (!existingEdgeIds.has(edge.id)) {
-            const sourceExists = cy.getElementById(edge.source).length > 0;
-            const targetExists = cy.getElementById(edge.target).length > 0;
-            
-            if (sourceExists && targetExists) {
-              hasNewElements = true;
-              cy.add({
-                group: 'edges',
-                data: {
-                  id: edge.id,
-                  source: edge.source,
-                  target: edge.target,
-                  label: formatEdgeLabel(edge.type || '')
-                },
-                classes: isUpdate ? 'new-edge' : ''
-              });
-            }
-          }
-        });
-        
-        if (hasNewElements) {
-          cy.layout({
-            name: 'dagre',
-            rankDir: 'TB',
-            animate: isUpdate,
-            animationDuration: isUpdate ? 800 : 0,
-            fit: false,
-            padding: 40,
-            spacingFactor: 1.5,
-            nodeSep: 100,
-            rankSep: 120,
-            edgeSep: 50
-          }).run();
-          
-          if (isUpdate) {
-            setTimeout(() => {
-              cy.$('.new-node').removeClass('new-node');
-              cy.$('.new-edge').removeClass('new-edge');
-            }, 1000);
-          }
-        }
+      // If there are new elements, animate them sequentially for streaming effect
+      if (newNodes.length > 0 || newEdges.length > 0) {
+        animateElementsSequentially(cy, newNodes, newEdges);
       }
     });
 
