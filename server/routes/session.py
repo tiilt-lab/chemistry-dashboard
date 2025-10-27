@@ -34,6 +34,30 @@ def get_sessions(user, **kwargs):
 def get_session(session, **kwargs):
     return json_response(session.json())
 
+@api_routes.route('/api/v1/sessions/student/passcode/<string:passcode>', methods=['GET'])
+def get_session_by_passcode(passcode, **kwargs):
+    sessions = database.get_sessions(passcode=passcode, active=True)
+    if sessions:
+        return json_response([session.json() for session in sessions])
+    else:
+        return json_response({'message': 'Session  not found.'}, 400)
+
+@api_routes.route('/api/v1/sessions/student/sessionid/<int:session_id>', methods=['GET'])
+def get_session_by_id(session_id, **kwargs):
+    session = database.get_sessions(id=session_id)
+    if session:
+        return json_response(session.json())
+    else:
+        return json_response({'message': 'Session  not found.'}, 400)
+
+@api_routes.route('/api/v1/sessions/student/alias/<string:alias>', methods=['GET'])
+def get_sessions_by_alias(alias, **kwargs):
+    sessions = database.get_Session_by_alias(alias=alias)
+    if sessions:
+         return json_response([session.json() for session in sessions])
+    else:
+        return json_response({'message': 'Session  not found.'}, 400)
+
 @api_routes.route('/api/v1/sessions/<int:session_id>', methods=['PUT'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access
@@ -177,6 +201,25 @@ def session_device_transcripts_for_client(device_id, **kwargs):
 def session_device_videometrics_for_client(device_id, **kwargs):
     videometrics = database.get_speaker_video_metrics(session_device_id=device_id)
     return json_response([videometric.json() for videometric in videometrics])
+
+
+@api_routes.route('/api/v1/session/<int:session_id>/transcripts/student/<string:alias>', methods=['GET'])
+def session_transcripts_for_client(session_id, alias, **kwargs):
+    transcript_speaker_metrics = []
+    transcripts = database.get_transcripts_by_session_alias(session_id=session_id,speaker_tag=alias)
+    for transcript in transcripts:
+        speaker_metrics = database.get_speaker_transcript_metrics(transcript_id=transcript.id)
+        transcript_speaker_metrics.append({'transcript': transcript.json(),
+                                            'speaker_metrics': [speaker_metric.json() for speaker_metric in speaker_metrics]})
+    
+    return json_response(transcript_speaker_metrics) 
+    
+
+@api_routes.route('/api/v1/session/<int:session_id>/videometrics/student/<string:alias>', methods=['GET'])
+def session_videometrics_for_client(session_id,alias, **kwargs):
+    videoMetrics = database.get_speaker_video_metrics_by_session_alias(session_id=session_id,student_username=alias)
+    return json_response([videometric.json() for videometric in videoMetrics])
+
 
 @api_routes.route('/api/v1/devices/<int:device_id>/transcripts/speaker_metrics', methods=['GET'])
 def session_device_speaker_metrics(device_id, **kwargs):

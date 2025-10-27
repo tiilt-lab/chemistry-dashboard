@@ -33,33 +33,34 @@ function AppIndividualVideoFeaturesComponent(props) {
   const [featureHeader, setFeatureHeader] = useState(null);
   const [showFeatureDialog, setShowFeatureDialog] = useState(false);
 
-  
+
   useEffect(() => {
-    updateGraphs();
+      updateGraphs();
   });
+
 
   //update new metrics (individual)
   const updateGraphs = () => {
     const valueArrays = [
-      { name: "Facial Emotions", values: [],time:[] },
-      { name: "Attention Level", values: [],time:[] },
-      { name:"Object Focused On", values: [], time:[]}
-      
+      { name: "Facial Emotions", values: [], time: [] },
+      { name: "Attention Level", values: [], time: [] },
+      { name: "Object Focused On", values: [], time: [] }
+
     ];
     const facial_emotion_data = []
     const object_focused_data = []
-    if(!props.videometrics || !props.videometrics.length)
-    {
+    if (props.videometrics.length <= 0) {
+      console.log("no videometrics or speaker id")
       setFeatures(valueArrays);
       return;
     }
-    
+
     //filter speaker metrics from video metrics based on the spkrId
     // const speaker_video_metric = props.videometrics.filter(v => v.student_username === props.spkrId)
-    
-    
+
+
     props.videometrics.forEach((v) => {
-      
+
       //accumulate each score into their value array
       valueArrays[0].values.push(v.facial_emotion);
       valueArrays[0].time.push(v.time_stamp);
@@ -69,13 +70,13 @@ function AppIndividualVideoFeaturesComponent(props) {
       valueArrays[2].time.push(v.time_stamp);
 
 
-      facial_emotion_data.push({time:v.time_stamp, category: v.facial_emotion })
-      object_focused_data.push({time:v.time_stamp, category: v.object_on_focus })
+      facial_emotion_data.push({ time: v.time_stamp, category: v.facial_emotion })
+      object_focused_data.push({ time: v.time_stamp, category: v.object_on_focus })
 
     });
     // console.log("i returned ", props.spkrId)
     // console.log("video mtric data: ", valueArrays)
-    
+
     // //smooth the values of the value array over 10 values
     // for (const valueArray of valueArrays) {
     //   const length = valueArray.values.length;
@@ -112,8 +113,7 @@ function AppIndividualVideoFeaturesComponent(props) {
     setFeatures(valueArrays);
     setFacialEmotionDataset(facial_emotion_data)
     setObjectFocusedDataset(object_focused_data)
-    setAttentionLevelDataset({values: valueArrays[1].values ,time:valueArrays[1].time})
-
+    setAttentionLevelDataset({ values: valueArrays[1].values, time: valueArrays[1].time })
   };
 
   const getInfo = (featureName) => {
@@ -144,64 +144,64 @@ function AppIndividualVideoFeaturesComponent(props) {
     setShowFeatureDialog(false);
   };
 
-  const emotionTimelineCategorical = (feature, height = 320, width = 640 ) =>{
-  // Build (x,y) objects directly; y is categorical (emotion string)
-  const points = feature.time.map((t, i) => ({ x: t, y: feature.values[i] }));
+  const emotionTimelineCategorical = (feature, height = 320, width = 640) => {
+    // Build (x,y) objects directly; y is categorical (emotion string)
+    const points = feature.time.map((t, i) => ({ x: t, y: feature.values[i] }));
 
-  // Optional: fix the category order so the y-axis doesn’t reorder dynamically
-  const emotionOrder = ["angry", "disgust", "fear", "happy", "neutral", "surprise", "sad"];
+    // Optional: fix the category order so the y-axis doesn’t reorder dynamically
+    const emotionOrder = ["angry", "disgust", "fear", "happy", "neutral", "surprise", "sad"];
 
-  const data = {
-    datasets: [
-      {
-        label: feature.name,
-        data: points,          // [{x: 0.0, y: "neutral"}, ...]
-        parsing: false,        // tell Chart.js we’re giving explicit {x,y}
-        stepped: true,         // step timeline look
-        borderWidth: 2,
-        pointRadius: 0,
-      },
-    ],
-  };
+    const data = {
+      datasets: [
+        {
+          label: feature.name,
+          data: points,          // [{x: 0.0, y: "neutral"}, ...]
+          parsing: false,        // tell Chart.js we’re giving explicit {x,y}
+          stepped: true,         // step timeline look
+          borderWidth: 2,
+          pointRadius: 0,
+        },
+      ],
+    };
 
-  const options = {
-    responsive: false,        // we’ll control canvas size via props
-    plugins: {
-      legend: { display: false },
-      title: { display: true, text: "Emotion Over Time (Categorical Y)" },
-      tooltip: {
-        callbacks: {
-          // Show clean tooltip like: Time: 1.2s — Emotion: happy
-          label: (ctx) => `Emotion: ${ctx.parsed.y}`,
-          title: (items) =>
-            items?.length ? `Time: ${items[0].parsed.x}s` : "",
+    const options = {
+      responsive: false,        // we’ll control canvas size via props
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: "Emotion Over Time (Categorical Y)" },
+        tooltip: {
+          callbacks: {
+            // Show clean tooltip like: Time: 1.2s — Emotion: happy
+            label: (ctx) => `Emotion: ${ctx.parsed.y}`,
+            title: (items) =>
+              items?.length ? `Time: ${items[0].parsed.x}s` : "",
+          },
         },
       },
-    },
-    scales: {
-      x: {
-        type: "linear",
-        title: { display: true, text: "Time (s)" },
-        ticks: { autoSkip: false },
-        grid: { drawOnChartArea: true },
+      scales: {
+        x: {
+          type: "linear",
+          title: { display: true, text: "Time (s)" },
+          ticks: { autoSkip: false },
+          grid: { drawOnChartArea: true },
+        },
+        y: {
+          type: "category",
+          // If you want to lock order, set labels explicitly; otherwise Chart.js uses the data’s order
+          labels: emotionOrder,
+          title: { display: true, text: feature.name },
+          ticks: { autoSkip: false }, // show every emotion row
+          grid: { drawOnChartArea: true },
+        },
       },
-      y: {
-        type: "category",
-        // If you want to lock order, set labels explicitly; otherwise Chart.js uses the data’s order
-        labels: emotionOrder,
-        title: { display: true, text: feature.name },
-        ticks: { autoSkip: false }, // show every emotion row
-        grid: { drawOnChartArea: true },
-      },
-    },
-  } 
+    }
 
-  return (
-    <div>
-      <Line data={data} options={options} height={height} width={width} />
-    </div>
-  );
-}
+    return (
+      <div>
+        <Line data={data} options={options} height={height} width={width} />
+      </div>
+    );
+  }
 
   return (
     <IndividualVideoMetricPage

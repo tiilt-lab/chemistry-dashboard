@@ -34,15 +34,27 @@ function AppIndividualFeaturesComponent(props) {
     ];
     if(!props.transcripts || !props.transcripts.length || props.spkrId === -1)
     {
+      console.log("no transcript or speaker id")  
       setFeatures(valueArrays);
       return;
     }
+
+    var speaker_metric;
     // console.log("sent transcript is ", props.transcripts)
     props.transcripts.forEach((t) => {
-      //select speaker metrics from transcripts based on the spkrId
-      const speaker_metric = t.speaker_metrics.find(
+      if(props.spkrId !== "sessiontranscriptcomparison"){
+        //select speaker metrics from transcripts based on the spkrId
+        speaker_metric = t.speaker_metrics.find(
         (item) => item.speaker_id === props.spkrId
       );
+      }else{
+       //select speaker metrics from transcripts based on the spkrId
+        speaker_metric = t.speaker_metrics.find(
+        (item) => item.speaker_id !== null
+      );
+      }
+      
+      // console.log("speaker metric is ", speaker_metric)
 
       //accumulate each score into their value array
       valueArrays[0].values.push(speaker_metric.participation_score * 100);

@@ -164,6 +164,9 @@ function PodComponentSession() {
   }, []);
 
   useEffect(() => {
+    console.log("session", session);
+    console.log("Object.keys(session", Object.keys(session));
+    console.log("session.length", session.length);
     const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
     const sTime = Math.round(sessionLen * timeRange[0] * 100) / 100;
     const eTime = Math.round(sessionLen * timeRange[1] * 100) / 100;
