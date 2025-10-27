@@ -132,7 +132,8 @@ class ServerProtocol(WebSocketServerProtocol):
                 logging.info("currentSpeaker and CurrentAlias are {0} {1}".format(currSpeaker,currAlias))    
 
         if data['type'] == 'heartbeat':
-            logging.info("Recieved Heartbeat from client")
+            auth_key = data.get('key', None)
+            logging.info("Recieved Heartbeat from client with authkey {0}".format(auth_key))
 
         if data['type'] == 'start':
             valid, result = ProcessingConfig.from_json(data)

@@ -137,7 +137,8 @@ class ServerProtocol(WebSocketServerProtocol):
                 logging.info("error loading facial embedding for {} : {}".format(currSpeaker,e))
             
         if data['type'] == 'heartbeat':
-            logging.info("Recieved Heartbeat from client")
+            auth_key = data.get('key', None)
+            logging.info("Recieved Heartbeat from client with authkey {0}".format(auth_key))
 
         if data['type'] == 'start':
             valid, result = ProcessingConfig.from_json(data)

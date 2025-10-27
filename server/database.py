@@ -155,6 +155,17 @@ def get_speaker_video_metrics(id = None, student_username=None, session_id=None,
         query = query.filter(SpeakerVideoMetrics.session_device_id == session_device_id)
     return query.all()
 
+def get_speaker_video_metrics_by_session_alias(session_id=None, student_username=None):
+    query = db.session.query(SpeakerVideoMetrics).order_by(SpeakerVideoMetrics.time_stamp.asc()) 
+    if session_id != None:
+        query = query.join(SessionDevice).filter(SpeakerVideoMetrics.session_device_id == SessionDevice.id)
+        query = query.filter(SessionDevice.session_id == session_id) 
+
+    if student_username != None:
+        query = query.join().filter(SpeakerVideoMetrics.student_username == student_username)
+
+    return query.all()
+
 def add_speaker_video_metrics(session_device_id,student_username, time_stamp, facial_emotion,attention_level,object_on_focus):
     metrics = SpeakerVideoMetrics(session_device_id,student_username, time_stamp, facial_emotion,attention_level,object_on_focus)
     db.session.add(metrics)
@@ -482,6 +493,17 @@ def get_sessions(id=None, owner_id=None, active=None, folder_ids=None, passcode=
         return query.first()
     return query.all()
 
+def get_Session_by_alias(alias=None):
+    query = db.session.query(Session)
+    query = query.join(SessionDevice).filter(SessionDevice.session_id == Session.id)
+    query = query.join(Speaker).filter(Speaker.session_device_id == SessionDevice.id)
+
+    if alias != None:
+        query = query.filter(Speaker.alias == alias) 
+
+    query = query.distinct().order_by(Session.creation_date.desc())
+    return query.all()
+
 def create_session(user_id, keyword_list_id, topic_model_id, name="Unnamed", folder=None):
     # TODO get the topic model from the db and somehow add it to the discussion.
     session = Session(user_id, name, folder, topic_model_id)
@@ -679,7 +701,7 @@ def set_speaker_tag(transcript, tag):
     return True
 
 def get_transcripts(session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
-    query = db.session.query(Transcript)
+    query = db.session.query(Transcript).order_by(Transcript.start_time.asc())  
     if session_id != None:
         query = query.filter(SessionDevice.session_id == session_id)
     if session_device_id != None:
@@ -690,7 +712,20 @@ def get_transcripts(session_id=None, session_device_id=None, start_time=0, end_t
         query = query.filter(Transcript.start_time < end_time)
     if speaker_id != -1:
         query = query.filter(Transcript.speaker_id == speaker_id)
+
     return query.all()
+
+def get_transcripts_by_session_alias(session_id=None, speaker_tag=None):
+    query = db.session.query(Transcript).order_by(Transcript.start_time.asc()) 
+    if session_id != None:
+        query = query.join(SessionDevice).filter(Transcript.session_device_id == SessionDevice.id)
+        query = query.filter(SessionDevice.session_id == session_id) 
+
+    if speaker_tag != None:
+        query = query.join().filter(Transcript.speaker_tag == speaker_tag)
+
+    return query.all()    
+
 
 def delete_device_transcripts(session_device_id):
     db.session.query(KeywordUsage).filter(KeywordUsage.transcript_id == Transcript.id).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')

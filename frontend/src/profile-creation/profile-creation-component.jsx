@@ -186,8 +186,8 @@ function SignupPage() {
             const send = () => {
                 if (audiows.current.readyState === WebSocket.OPEN && videows.current.readyState === WebSocket.OPEN) {
                     console.log("i am firering heartbeat")
-                    audiows.current.send(JSON.stringify({ type: "heartbeat" }));
-                    videows.current.send(JSON.stringify({ type: "heartbeat" }));
+                    audiows.current.send(JSON.stringify({ type: "heartbeat", key:"No key" }));
+                    videows.current.send(JSON.stringify({ type: "heartbeat",key:"no key" }));
 
                 } else {
                     clearInterval(id);

@@ -352,16 +352,16 @@ function JoinPage() {
     useEffect(() => {
         let Intervalid = 0
 
-        if (speakersValidated) {
-            clearInterval(Intervalid);
-        } else {
+        // if (speakersValidated) {
+        //     clearInterval(Intervalid);
+        // } else {
             if (joinwith === "Audio") {
                 if (audioconnected && authenticated) {
                     if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN) return;
 
                     const send = () => {
                         if (audiows.current.readyState === WebSocket.OPEN) {
-                            audiows.current.send(JSON.stringify({ type: "heartbeat" }));
+                            audiows.current.send(JSON.stringify({ type: "heartbeat",key:key }));
 
                         } else {
                             clearInterval(Intervalid);
@@ -382,7 +382,7 @@ function JoinPage() {
                     if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN || videows === null || videows.readyState !== WebSocket.OPEN) return;
                     const send = () => {
                         if (audiows.current.readyState === WebSocket.OPEN && videows.readyState === WebSocket.OPEN) {
-                            audiows.current.send(JSON.stringify({ type: "heartbeat" }));
+                            audiows.current.send(JSON.stringify({ type: "heartbeat",key:key }));
                             videows.send(JSON.stringify({ type: "heartbeat" }));
 
                         } else {
@@ -398,8 +398,8 @@ function JoinPage() {
                     };
                 }
             }
-        }
-    }, [audiows, videows, audioconnected, videoconnected, authenticated, videoAuthenticated, speakersValidated]);
+        // }
+    }, [audiows, videows, audioconnected, videoconnected, authenticated, videoAuthenticated]); //speakersValidated
 
 
 
