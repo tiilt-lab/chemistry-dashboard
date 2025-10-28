@@ -105,7 +105,8 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.awaitingSpeakers = False
                 for speaker in data['speakers']:
                     self.facial_embeddings[speaker["id"]]["alias"] = speaker["alias"]
-                self.video_processor.setParticpantFacialEmbeddings(self.facial_embeddings)
+                if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()):     
+                    self.video_processor.setParticpantFacialEmbeddings(self.facial_embeddings)
                 logging.info("Done awaiting all speakers info")
             else:
                 self.currSpeaker = data['id']
@@ -139,6 +140,10 @@ class ServerProtocol(WebSocketServerProtocol):
         if data['type'] == 'heartbeat':
             auth_key = data.get('key', None)
             logging.info("Recieved Heartbeat from client with authkey {0}".format(auth_key))
+            if auth_key != "no key":
+                if (self.config.videocartoonify or self.config.video) and not cf.video_cartoonize() and not cf.process_video_analytics(): 
+                    self.send_json({'type':'heartbeat'}) 
+                    logging.info("Sent Heartbeat response to client with authkey {0}".format(auth_key))   
 
         if data['type'] == 'start':
             valid, result = ProcessingConfig.from_json(data)
@@ -177,11 +182,15 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_{1}_{2}_({3})".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, datetime.today().strftime('%Y-%m-%d')))
                     self.redu_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1,self.config.mimeExtension)
 
-
-                self.signal_start()
-                self.send_json({'type':'start'})
-                logging.info('Video process connected')
-                callbacks.post_connect(self.config.auth_key)
+                if (self.config.videocartoonify or self.config.video) and not cf.video_cartoonize() and not cf.process_video_analytics(): 
+                    self.send_json({'type':'start','message':'Video processing not activated to start video processor'})
+                    logging.info('Video process connected but video processing not activated')
+                    callbacks.post_connect(self.config.auth_key)
+                else:
+                    self.signal_start()
+                    self.send_json({'type':'start', 'message':'Video processing started'})
+                    logging.info('Video process connected')
+                    callbacks.post_connect(self.config.auth_key)
 
     def process_binary(self, data):
         if self.running and not self.awaitingSpeakers:
@@ -207,7 +216,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 wavObj = wave.open(temp_aud_file+'.wav')
                 audiobyte = self.reduce_wav_channel(1,wavObj)
 
-                if self.config.videocartoonify or self.config.video: 
+                if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()): 
                     self.video_queue.put(subclips.iter_frames(fps=10, dtype="uint8", with_times=True))
                     logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
 
@@ -313,9 +322,9 @@ class ServerProtocol(WebSocketServerProtocol):
 
 
     def signal_start(self):
-        if self.video_processor:
+        if self.video_processor and (cf.video_cartoonize() or cf.process_video_analytics()):
             self.video_processor.start()
-        self.running = True
+            self.running = True
 
     def send_close(self, message):
         self.send_json({'type': 'end', 'message': message})

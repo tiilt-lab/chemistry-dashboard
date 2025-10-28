@@ -102,7 +102,8 @@ function JoinPage() {
     const [registeredUserAliasChanged, setRegisteredUserAliasChanged] = useState(false)
     const [registeredAudioFingerprintAdded, setRegisteredAudioFingerprintAdded] = useState(false)
     const [registeredVideoFingerprintAdded, setRegisteredVideoFingerprintAdded] = useState(false)
-    const [MP4BoxAPI, setMP4BoxAPI] = useState(null);
+    const [videoProcessingNotActivated, setVideoProcessingNotActivated] = useState(false);
+
 
 
     const POD_COLOR = "#FF6655"
@@ -272,8 +273,11 @@ function JoinPage() {
                                 ev.data,
                                 interval * 6 * 60 * 24,
                                 (fixedblob) => {
-                                    videows.send(fixedblob)
-                                    audiows.current.send(fixedblob)
+                                    //only send when video processing is activated on the server
+                                    console.log("inside webm send ", videoProcessingNotActivated)
+                                    if(!videoProcessingNotActivated){
+                                        videows.send(fixedblob)
+                                    }
                                 },
                             )
                         } else if (ev.data.type.startsWith('video/mp4')) {
@@ -293,10 +297,11 @@ function JoinPage() {
             } else if (authenticated && videoAuthenticated && speakersValidated &&
                 (joinwith === "Video" || joinwith === "Videocartoonify")
             ) {
+                loadWorklet().catch(console.error)
                 videoPlay()
             }
         }
-    }, [authenticated, videoAuthenticated, speakersValidated])
+    }, [authenticated, videoAuthenticated,videoProcessingNotActivated, speakersValidated])
 
     //Use effect to toggle video view pane
     useEffect(() => {
@@ -355,49 +360,51 @@ function JoinPage() {
         // if (speakersValidated) {
         //     clearInterval(Intervalid);
         // } else {
-            if (joinwith === "Audio") {
-                if (audioconnected && authenticated) {
-                    if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN) return;
+        if (joinwith === "Audio") {
+            if (audioconnected && authenticated) {
+                if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN) return;
 
-                    const send = () => {
-                        if (audiows.current.readyState === WebSocket.OPEN) {
-                            audiows.current.send(JSON.stringify({ type: "heartbeat",key:key }));
+                const send = () => {
+                    if (audiows.current.readyState === WebSocket.OPEN) {
+                        audiows.current.send(JSON.stringify({ type: "heartbeat", key: key }));
 
-                        } else {
-                            clearInterval(Intervalid);
-                        }
-                    };
-
-                    // fire once immediately, then on interval
-                    send();
-                    Intervalid = setInterval(send, 20000);
-
-                    return () => {
+                    } else {
+                        console.log("clearing interval heartbeat inside audio");
                         clearInterval(Intervalid);
-                    };
-                }
+                    }
+                };
 
-            } else if (joinwith === "Video" || joinwith === "Videocartoonify") {
-                if (audioconnected && videoconnected && authenticated && videoAuthenticated) {
-                    if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN || videows === null || videows.readyState !== WebSocket.OPEN) return;
-                    const send = () => {
-                        if (audiows.current.readyState === WebSocket.OPEN && videows.readyState === WebSocket.OPEN) {
-                            audiows.current.send(JSON.stringify({ type: "heartbeat",key:key }));
-                            videows.send(JSON.stringify({ type: "heartbeat" }));
+                // fire once immediately, then on interval
+                send();
+                Intervalid = setInterval(send, 20000);
 
-                        } else {
-                            clearInterval(Intervalid);
-                        }
-                    };
-                    // fire once immediately, then on interval
-                    send();
-                    Intervalid = setInterval(send, 20000);
 
-                    return () => {
-                        clearInterval(Intervalid);
-                    };
-                }
             }
+
+        } else if (joinwith === "Video" || joinwith === "Videocartoonify") {
+            if (audioconnected && videoconnected && authenticated && videoAuthenticated) {
+                if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN || videows === null || videows.readyState !== WebSocket.OPEN) return;
+                const send = () => {
+                    if (audiows.current.readyState === WebSocket.OPEN && videows.readyState === WebSocket.OPEN) {
+                        audiows.current.send(JSON.stringify({ type: "heartbeat", key: key }));
+                        videows.send(JSON.stringify({ type: "heartbeat", key: key }));
+
+                    } else {
+                        console.log("clearing interval heartbeat inside video");
+                        clearInterval(Intervalid);
+                    }
+                };
+                // fire once immediately, then on interval
+                send();
+                Intervalid = setInterval(send, 20000);
+
+            }
+        }
+
+        return () => {
+            console.log("clearing interval heartbeat inside return");
+            clearInterval(Intervalid);
+        };
         // }
     }, [audiows, videows, audioconnected, videoconnected, authenticated, videoAuthenticated]); //speakersValidated
 
@@ -952,7 +959,10 @@ function JoinPage() {
             if (typeof e.data === 'string') {
                 const message = JSON.parse(e.data);
                 if (message['type'] === 'start') {
-                    setVideoAuthenticated(true);
+                    if(message["message"] === "Video processing not activated to start video processor"){
+                        setVideoProcessingNotActivated(true);
+                    } 
+                    setVideoAuthenticated(true);  
                     closeDialog();
                 } else if (message['type'] === 'attention_data') {
 
@@ -968,7 +978,9 @@ function JoinPage() {
                     disconnect(true);
                     setDisplayText('The session has been closed by the owner.');
                     setCurrentForm('ClosedSession');
-                }
+                }else if (message['type'] === 'heartbeat') {
+                    console.log("got a a heattbeat response from video endpoint....")
+                } 
             } else if (e.data instanceof Blob) {
                 const url = URL.createObjectURL(e.data);
                 // Add the processed frame to the buffer
@@ -1019,12 +1031,10 @@ function JoinPage() {
                 type: "start",
                 key: key,
                 start_time: 0.0,
-                sample_rate: 16000,
-                encoding: "pcm_f16le",
-                video_encoding: "video/mp4",
+                sample_rate: audioContext.sampleRate,
+                encoding: "pcm_f32le",
                 channels: 1,
-                streamdata: "video",
-                mimeextension: mimeExtension,
+                streamdata: "audio",
                 tag: true,
                 embeddings_file: sessionDevice.embeddings,
                 deviceid: sessionDevice.id,
