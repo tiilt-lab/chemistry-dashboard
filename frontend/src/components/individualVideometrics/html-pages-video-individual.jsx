@@ -25,7 +25,7 @@ function IndividualVideoMetricPage(props) {
     return (
         <>
             <div className="wide-section">
-
+             
                 {props.facialEmotionDataset.length > 0 && props.features.length >= 1  && (
                     <CategoricalDistributionChart
                         data={props.facialEmotionDataset}

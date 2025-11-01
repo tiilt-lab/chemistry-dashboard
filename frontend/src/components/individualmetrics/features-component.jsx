@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useCallback,useState } from "react";
 import { IndividualFeaturePage } from "./html-pages-individual";
 
 function AppIndividualFeaturesComponent(props) {
@@ -17,12 +17,12 @@ function AppIndividualFeaturesComponent(props) {
   const [featureHeader, setFeatureHeader] = useState(null);
   const [showFeatureDialog, setShowFeatureDialog] = useState(false);
 
-  useEffect(() => {
-    updateGraphs();
-  });
+  // useEffect(() => {
+  //   updateGraphs();
+  // },[]);
 
   //update new metrics (individual)
-  const updateGraphs = () => {
+  const updateGraphs = useCallback((transcripts) => {
     const valueArrays = [
       { name: "Participation", values: [],'time':[] },
       { name: "Social Impact", values: [],'time':[] },
@@ -32,16 +32,16 @@ function AppIndividualFeaturesComponent(props) {
       { name: "Communication Density", values: [],'time':[] },
       
     ];
-    if(!props.transcripts || !props.transcripts.length || props.spkrId === -1)
+    if(!transcripts || !transcripts.length===0 || props.spkrId === -1)
     {
-      console.log("no transcript or speaker id")  
+      // console.log("no transcript or speaker id")  
       setFeatures(valueArrays);
       return;
     }
 
     var speaker_metric;
     // console.log("sent transcript is ", props.transcripts)
-    props.transcripts.forEach((t) => {
+    transcripts.forEach((t) => {
       if(props.spkrId !== "sessiontranscriptcomparison"){
         //select speaker metrics from transcripts based on the spkrId
         speaker_metric = t.speaker_metrics.find(
@@ -107,7 +107,12 @@ function AppIndividualFeaturesComponent(props) {
       valueArray["path"] = path;
     }
     setFeatures(valueArrays);
-  };
+  },[]);
+
+   useEffect(() => {
+    if (props.transcripts.length === 0) return;
+    updateGraphs(props.transcripts);
+  }, [props.transcripts, updateGraphs]);
 
   const getInfo = (featureName) => {
     switch (featureName) {

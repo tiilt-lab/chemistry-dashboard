@@ -12,7 +12,6 @@ import { adjDim, isLargeScreen } from "../myhooks/custom-hooks"
 function StudentSessionDashboardPages(props) {
     return (
         <>
-
             <div className="main-container">
                 <Appheader
                     title={props.pageTitle}
@@ -85,7 +84,14 @@ function StudentSessionDashboardPages(props) {
 
                 {props.nextPage === "displayreportpage" && (
                     <>
-                       
+                         {(!props.transcriptDoneLoading && !props.videoMetricDoneLoading) ? (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            <div className={style["load-text"]}>
+                                Loading Session Data...
+                            </div>
+                            <AppSpinner />
+                        </div>
+                    ):(
                         <div className="toolbar-view-container">
                             {props.sessiontype === "previoussessions" && (
                                 <AppSessionToolbar
@@ -106,14 +112,12 @@ function StudentSessionDashboardPages(props) {
                                     seesions={props.previousSessions.map((session, index) => (
                                         {
                                             title: session.name + ": " + new Date(session.creation_date).toDateString(),
-                                            action: () => props.loadPreviousSessionMetrics(session),
+                                            action: () => props.loadSelectedSessionMetrics(session),
                                         }
                                     ))}
 
                                 />
                             )}
-
-
                             {props.selectedSessionId1 !== -1 && (props.session1Transcripts.length >= 0 || props.session1VideoMetrics.length >= 0) ? (
                                 <div className="center-column-container">
                                     <AppInfographicsSessionComparison
@@ -140,6 +144,7 @@ function StudentSessionDashboardPages(props) {
                                         session2VideoMetrics={props.session2VideoMetrics}
                                         details={props.details}
                                         userDetail={props.userDetail}
+                                        loadComparedSessionMetrics={props.loadComparedSessionMetrics}
                                     ></AppInfographicsSessionComparison>
                                 </div>
                             ) :
@@ -148,6 +153,7 @@ function StudentSessionDashboardPages(props) {
                                 )}
 
                         </div>
+                    )}
                     </>
                 )}
             </div>
