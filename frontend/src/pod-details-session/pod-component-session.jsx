@@ -190,7 +190,6 @@ function PodComponentSession() {
   useEffect(() => {
     if (session.id) getSessionSpeakers();
     else setSpeakers([]);
-    console.log("loaded speaker data");
   }, [session]);
 
   useEffect(() => {

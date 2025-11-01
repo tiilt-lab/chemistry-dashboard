@@ -4,6 +4,7 @@ import { LoginPage } from '../login/login-component'
 import {HomeScreen} from '../homescreen/homescreen-component'
 import {JoinPage} from '../byod-join/byod-join-component';
 import {SignupPage} from '../profile-creation/profile-creation-component';
+import {StudentSessionDashboard} from '../student-dashboard/student-dashboard-component'
 import {ManageKeywordListsComponent} from '../manage-keyword-lists/manage-keyword-lists-component';
 import {KeywordListItemsComponent} from '../keyword-list-items/keyword-list-items-component';
 import {SessionsComponent} from '../sessions/sessions-component'
@@ -30,6 +31,7 @@ function PageRouter() {
                 <Route path="/login" element={<LoginPage  />} /> 
                 <Route path="/signup" element={<SignupPage />} />
                 <Route path="/join" element={<JoinPage />} />
+                <Route path="/dashboard" element={<StudentSessionDashboard />} />
                 <Route path='/home' element={<ProtectedRoute component={HomeScreen} />}/>
                 <Route path='/keyword-lists' element={<ProtectedRoute  component={ManageKeywordListsComponent} />}/>
                 <Route path='/keyword-lists/new' element={<ProtectedRoute  component={KeywordListItemsComponent}/>}/>

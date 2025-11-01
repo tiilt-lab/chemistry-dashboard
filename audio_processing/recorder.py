@@ -36,8 +36,8 @@ class WaveRecorder:
 
 class VidRecorder:
 
-    def __init__(self, filename,sample_rate,depth,channels):
-        self.vid_filename = filename + '.webm'
+    def __init__(self, filename,sample_rate,depth,channels,mediaExt):
+        self.vid_filename = filename + '.'+mediaExt
         self.cart_vid = filename+'_caart'+'.mp4'
         self.img_file = filename
         self.closed = False

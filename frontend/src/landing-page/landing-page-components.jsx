@@ -46,6 +46,13 @@ const navigate = useNavigate();
   > 
   Join Discussion
   </button >
+
+  <button 
+  className={isLargeScreen() ? "basic-button medium-button" : "basic-button small-button"}  
+    onClick = {()=> navigate('/dashboard')} 
+  > 
+  Dashboard
+  </button >
   </div >
   )
 }

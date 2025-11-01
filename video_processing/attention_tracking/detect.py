@@ -153,7 +153,7 @@ class ImageObjectDetection:
         
         accumulator = {'head':dict(), 'other_objects':dict()}
         all_frames = {}
-        print("number of facial embeddings is "+str(len(facial_embeddings)))
+        print("number of facial embeddings is "+str(len(facial_embeddings))+"number of frames "+str(len(images)))
         for val_batch, (img_index, img, im0s) in enumerate(dataset): #path, img, im0s, vid_cap in dataset:
             # all_frames.extend(im0s)
             # img = torch.from_numpy(img).to(device)
@@ -291,9 +291,9 @@ class ImageObjectDetection:
             # also add the persion detected as an object, since another person gaze can be on this person
             #, we append all the objects in a frame (based on fame id , p) together 
             if frame_index in accumulator['other_objects']:
-                accumulator['other_objects'][frame_index].append([object_class_id,self.object_names_K_V[object_class_id],object_track_id,bbox,time_stamp ])
+                accumulator['other_objects'][frame_index].append([object_class_id,object_track_id,object_track_id,bbox,time_stamp ])
             else:
-                accumulator['other_objects'][frame_index] = [[object_class_id,self.object_names_K_V[object_class_id],object_track_id,bbox,time_stamp ]]    
+                accumulator['other_objects'][frame_index] = [[object_class_id,object_track_id,object_track_id,bbox,time_stamp ]]    
             
         #accumulate all other objects   
         elif object_detected_type == "detected_other_objects":

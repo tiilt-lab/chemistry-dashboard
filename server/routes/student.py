@@ -34,8 +34,22 @@ def add_students(**kwargs):
         database.save_changes()
         return json_response(student.json())
     else:
-        if student == "Username already exists.":
-            exStudent = database.get_students(username=username)
-            return json_response({'message': student, "data":exStudent.json()}, 400)
-        else:
-            return json_response({'message': student}, 400)
+        return json_response({'message': "Username already exists.", "data":student.json()}, 400)
+       
+        
+@api_routes.route('/api/v1/student/updatestudent', methods=['POST'])
+def update_students(**kwargs):
+    content = request.json
+    id = content.get('id',None)
+    if not id:
+        return json_response({'message': 'Student  Id must be provided '}, 400)
+    lastname = content.get('lastname', None)
+    firstname = content.get('firstname', None)
+    biometric_captured = content.get('biometric_captured', None)
+    
+    success, student = database.update_student(id,lastname, firstname,biometric_captured)
+    if success:
+        database.save_changes()
+        return json_response(student.json())
+    else:
+        return json_response({'message': "Update unsuccessful"}, 400)

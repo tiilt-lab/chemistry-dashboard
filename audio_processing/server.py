@@ -84,7 +84,8 @@ class ServerProtocol(WebSocketServerProtocol):
                 except Exception as e:
                     logging.warning('Error processing json: {0}'.format(e))
 
-    def onClose(self, *args, **kwargs):
+    def onClose(self, wasClean, code, reason):
+        logging.info("close was trigered externally..... wasclean {0}, code {1}, reason {2}".format( wasClean, code, reason))
         self.signal_end()
 
     def process_json(self, data):
@@ -105,13 +106,14 @@ class ServerProtocol(WebSocketServerProtocol):
         
         if data['type'] == 'save-audio-video-fingerprinting':
             self.currStudent = data['id']
-            self.stream_data = data['streamdata']
+            self.stream_data  = data['streamdata']
+            self.mediaExt = data['mimeextension']
             self.currAlias = data['alias']
             if self.stream_data == 'audio-video-fingerprint':
                 self.video_file = os.path.join(cf.video_recordings_folder(), "{0}".format(self.currAlias))
-                self.vid_recorder = VidRecorder(self.video_file,16000, 2, 1)
+                self.vid_recorder = VidRecorder(self.video_file,16000, 2, 1,self.mediaExt)
                     
-            logging.info('Audio process connected')
+            logging.info('save-audio-video-fingerprinting: Audio process connected')
             self.send_json({'type':'saveaudiovideo'})
 
         if data['type'] == 'add-saved-fingerprint':
@@ -119,12 +121,19 @@ class ServerProtocol(WebSocketServerProtocol):
             currAlias = data['alias']
             audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}".format(currAlias))
             wavObj = wave.open(audio_fingerprint_file+'.wav')
-            byte_audio_data = self.read_bytes_from_wav(wavObj)
-            self.speakers[currSpeaker] = {"alias": currAlias, "data": byte_audio_data}
-            logging.info("storing registered speaker {}'s fingerprint with alias {}".format(currSpeaker, currAlias))
-            currSpeaker = None
-            currAlias = None
-            self.send_json({'type':'registeredfingerprintadded'})
+            byte_audio_data = self.read_bytes_from_wav(wavObj) 
+            if currSpeaker and currAlias:
+                self.speakers[currSpeaker] = {"alias": currAlias, "data": byte_audio_data}
+                logging.info("storing registered speaker {}'s fingerprint with alias {}".format(currSpeaker, currAlias))
+                currSpeaker = None
+                currAlias = None
+                self.send_json({'type':'registeredfingerprintadded'})
+            else:
+                logging.info("currentSpeaker and CurrentAlias are {0} {1}".format(currSpeaker,currAlias))    
+
+        if data['type'] == 'heartbeat':
+            auth_key = data.get('key', None)
+            logging.info("Recieved Heartbeat from client with authkey {0}".format(auth_key))
 
         if data['type'] == 'start':
             valid, result = ProcessingConfig.from_json(data)
@@ -136,8 +145,10 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.config = result
                 cm.associate_keys(self, self.config.session_key, self.config.auth_key)
                 self.stream_data = data['streamdata']
+                logging.info(" numSpeakers is {}".format(data['numSpeakers'])) 
                 if(data['numSpeakers'] != 0):
                     self.speakers = dict()
+                    logging.info(" speaeker object was set  {}".format(self.speakers )) 
 
                 if self.stream_data == 'audio':
                     if cf.record_original():
@@ -149,7 +160,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 elif self.stream_data == 'video':
                     self.video_count = 1
                     self.filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_orig".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, str(time.ctime())))
-                    self.orig_vid_recorder = VidRecorder(self.filename,16000, 2, 1)
+                    self.orig_vid_recorder = VidRecorder(self.filename,16000, 2, 1,self.config.mimeExtension)
                 self.signal_start()
                 self.send_json({'type':'start'})
                 logging.info('Audio process connected')
@@ -177,7 +188,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 logging.info('I got into video processing')
                 self.orig_vid_recorder.write(data)
                 temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
-                vidclip = mp.VideoFileClip(self.filename+'.webm')
+                vidclip = mp.VideoFileClip(self.filename+'.'+self.config.mimeExtension)
                 subclips = vidclip.subclip((self.video_count-1)*self.interval,self.video_count*self.interval)
                 subclips.audio.write_audiofile(temp_aud_file+'.wav',
                                                 fps=16000,
@@ -206,21 +217,51 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.currAlias = None
         elif self.stream_data == 'audio-video-fingerprint':
             self.vid_recorder.write(data)
-            audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}".format(self.currAlias))
+            err = ""
+            src = self.video_file+'.'+self.mediaExt
+            audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}.{1}".format(self.currAlias,"wav"))
 
-            vidclip = mp.VideoFileClip(self.video_file+'.webm')
-            subclips = vidclip.subclip(0,self.interval)
-            subclips.audio.write_audiofile(
-                                        audio_fingerprint_file + ".wav",
+            with mp.VideoFileClip(src, audio=True) as clip:
+                # keep subclip within the media duration
+                end = min(float(self.interval), float(clip.duration or 0))
+                if end <= 0:
+                    err = "Clip has zero/unknown duration"
+                else:
+                    sub = clip.subclip(0, end)
+                    if sub.audio is not None:
+                        sub.audio.write_audiofile(
+                                        audio_fingerprint_file ,
                                         fps=16000,
                                         nbytes=2,
                                         codec="pcm_s16le",
                                         ffmpeg_params=["-ac", "1", "-af", "aresample=resampler=soxr:precision=33"])
+                    else:
+                        # Fallback: there’s no audio track
+                        err = "No audio stream"
             
-            if os.path.isfile(self.video_file+'.webm'):
-                    os.remove(self.video_file+'.webm')
+            if os.path.isfile(src):
+                os.remove(src)
 
-            self.send_json({'type': 'saved', 'message': "Biometric data captured successfully"})   
+            if err!="":
+                self.send_json({'type': 'error', 'message': err})  
+            else:
+                logging.info('Audio biometrics saved')
+                self.send_json({'type': 'saved', 'message': "Biometric data captured successfully"})      
+
+            
+            # vidclip = mp.VideoFileClip(self.video_file+'.'+self.mediaExt)
+            # subclips = vidclip.subclip(0,self.interval)
+            # subclips.audio.write_audiofile(
+            #                             audio_fingerprint_file ,
+            #                             fps=16000,
+            #                             nbytes=2,
+            #                             codec="pcm_s16le",
+            #                             ffmpeg_params=["-ac", "1", "-af", "aresample=resampler=soxr:precision=33"])
+            
+            # if os.path.isfile(self.video_file+'.'+self.mediaExt):
+            #         os.remove(self.video_file+'.'+self.mediaExt)
+
+            # self.send_json({'type': 'saved', 'message': "Biometric data captured successfully"})   
              
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
@@ -300,8 +341,7 @@ class ServerProtocol(WebSocketServerProtocol):
             callbacks.post_disconnect(self.config.auth_key)
             cm.remove(self, self.config.session_key, self.config.auth_key)
 
-        if os.path.isfile(self.filename+'.webm'):
-            os.remove(self.filename+'.webm')    
+       
         else:
             cm.remove(self, None, None)
         logging.info('Closing client connection...')

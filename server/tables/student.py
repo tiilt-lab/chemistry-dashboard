@@ -14,6 +14,7 @@ class Student(db.Model):
     lastname = db.Column(db.String(50), nullable=False)
     firstname = db.Column(db.String(50), nullable=False)
     username = db.Column(db.String(10), nullable=False)
+    biometric_captured = db.Column(db.String(3), nullable=True) 
     creation_date = db.Column(db.DateTime, nullable=False)
 
 
@@ -24,10 +25,11 @@ class Student(db.Model):
     def __hash__(self):
         return hash(self.id)
 
-    def __init__(self, lastname, firstname, username):
+    def __init__(self, lastname, firstname, username,biometric_captured):
         self.lastname = lastname
         self.firstname = firstname
         self.username = username
+        self.biometric_captured = biometric_captured
         self.creation_date = datetime.utcnow()
 
     def json(self):
@@ -36,6 +38,7 @@ class Student(db.Model):
             lastname=self.lastname,
             firstname=self.firstname,
             username=self.username,
+            biometric_captured=self.biometric_captured,
             creation_date=str(self.creation_date) + ' UTC'
         )
 

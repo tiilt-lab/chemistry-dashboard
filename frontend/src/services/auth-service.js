@@ -53,11 +53,51 @@ class AuthService {
             err => {
               if (err["message"] === "Username already exists."){
                 const student = StudentModel.fromJson(err["data"] );
-                setAlertMessage("The Username has been selected by anothr student, please enter a different one")
+                if (student.biometric_captured === "yes"){
+                  setAlertMessage("The Username has been selected by anothr student, please enter a different one")
+                  setShowAlert(true)
+                }else{
+                  setStudentObject(student)
+                }
+              }
+            }
+          )
+          
+          }
+      },
+      (apiError) => {
+        apiError.status = 600
+        setAlertMessage("A fatal error occured!!!");
+        setShowAlert(true);
+      })
+  }
+
+    updateStudentProfile(id,lastname, firstname,biometric_captured,setStudentUpdated,setAlertMessage,setShowAlert) {
+    const body = {
+      id:id,
+      lastname: lastname,
+      firstname: firstname,
+      biometric_captured: biometric_captured
+    };
+    const fetchRes =  new ApiService().httpRequestCall("api/v1/student/updatestudent", 'POST', body);
+    fetchRes.then(
+      (response) => {
+        if (response.status === 200) {
+          response.json().then(
+            userobj => {
+              const student = StudentModel.fromJson(userobj);
+              setStudentUpdated(true)
+              console.log("i successfully updated")
+            }
+          )
+        }else if (response.status === 400) {
+           response.json().then(
+            err => {
+              if (err["message"] === "Update unsuccessful"){
+                setAlertMessage("The profile update is unsuccessful, please contact administrator")
                 setShowAlert(true)
-                // setStudentObject(student)
-              }else{
-                setAlertMessage(err["message"])
+              }else if(err["message"]==="Student  Id must be provided"){
+                setAlertMessage("Student  Id must be provided, please contact administrator")
                 setShowAlert(true)
               }
             }
