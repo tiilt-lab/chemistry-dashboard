@@ -7,46 +7,23 @@ import { AppKeywordsComponent } from "../../keywords/keywords-component"
 import { AppIndividualFeaturesComponent } from "../individualmetrics/features-component"
 import { AppIndividualVideoFeaturesComponent } from "../individualVideometrics/video-features-component"
 
-import { AppSpinner } from "../../spinner/spinner-component"
-
-import style from "../../student-dashboard/student-dashboard.module.css"
-
 import React from "react"
 
 function AppInfographicsSessionComparison(props) {
-    
     return (
         <>
-         {props.session1Transcripts.length <= 0 || props.session1VideoMetrics.length <=0 ? (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <div className={style["load-text"]}>
-                                Loading Session Data...
-                            </div>
-                            <AppSpinner />
-                        </div>
-                    ) : (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <div className={style["load-text"]}>
-                                Nothing Loading ...
-                            </div>
-                            <AppSpinner />
-                        </div>
-                    )}
         <div className="infographics-container">
+
             {props.details === "Comparison"  && (
                 <div className="flex flex-col @sm:flex-row relative box-border wide-section justify-center my-2 max-h-12">
                     <select
                         id="session1"
                         className="dropdown small-section"
                         value={props.selectedSessionId1}
-                        onChange={(e) =>
-                            props.setSelectedSessionId1(
-                                parseInt(e.target.value, 10),
-                            )
-                        }
+                        onChange={(e) => props.loadComparedSessionMetrics(parseInt(e.target.value, 10),"sessionOne")}
                     >
                         <option value="-1">Select Session</option>
-                        {props.previousSessions.map((sess) => (
+                        {props.previousSessions.map((sess,index) => (
                             <option
                                 key={sess.id}
                                 value={sess.id}
@@ -61,11 +38,7 @@ function AppInfographicsSessionComparison(props) {
                             id="speaker2"
                             className="dropdown small-section"
                             value={props.selectedSessionId2}
-                            onChange={(e) =>
-                                props.setSelectedSessionId2(
-                                    parseInt(e.target.value, 10),
-                                )
-                            }
+                            onChange={(e) => props.loadComparedSessionMetrics(parseInt(e.target.value, 10),"sessionTwo")}
                         >
                             <option value="-1">Select Session</option>
                            {props.previousSessions.map((sess) => (
@@ -161,24 +134,7 @@ function AppInfographicsSessionComparison(props) {
                     </AppSectionBoxComponent>
                 )}
 
-                    {props.session1Transcripts.length <= 0 || props.session1VideoMetrics.length <=0 ? (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <div className={style["load-text"]}>
-                                Loading Session Data...
-                            </div>
-                            <AppSpinner />
-                        </div>
-                    ) : (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <div className={style["load-text"]}>
-                                Nothing Loading ...
-                            </div>
-                            <AppSpinner />
-                        </div>
-                    )}
-
-            {props.details === "Individual" &&
-                props.showBoxes.length > 0 &&
+            {props.showBoxes.length > 0 &&
                 props.showBoxes[11]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"wide-section"}
@@ -197,7 +153,7 @@ function AppInfographicsSessionComparison(props) {
                 props.showBoxes.length > 0 &&
                 props.showBoxes[11]["clicked"] && (
                     <AppSectionBoxComponent
-                        type={"small-section"}
+                        type={"wide-section"}
                         heading={`Visual Analytics`}
                     >
                         <AppIndividualVideoFeaturesComponent
@@ -209,8 +165,7 @@ function AppInfographicsSessionComparison(props) {
                     </AppSectionBoxComponent>
                 )}
 
-            {props.details === "Individual" &&
-                props.showBoxes.length > 0 &&
+            {props.showBoxes.length > 0 &&
                 props.showBoxes[5]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"small-section"}

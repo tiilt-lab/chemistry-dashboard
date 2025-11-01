@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom"
 import { StudentSessionDashboardPages } from "./html-pages";
 import { AuthService } from "../services/auth-service"
@@ -17,6 +17,7 @@ function StudentSessionDashboard() {
   const [showBoxes, setShowBoxes] = useState([])
   const [sessiontype, setSessiontype] = useState("")
   const [session, setSession] = useState(null)
+  const [sessionId, setSessionId] = useState(-1)
   const [previousSessions, setPreviousSessions] = useState([])
   const [wrongInput, setWrongInput] = useState(false)
   const [pcode, setPcode] = useState("")
@@ -45,6 +46,15 @@ function StudentSessionDashboard() {
   const [session1VideoMetrics, setSession1VideoMetrics] = useState([])
   const [session2VideoMetrics, setSession2VideoMetrics] = useState([])
   const [displaySingleSession, setDisplaySingleSession] = useState(false);
+  const [displayCompareSession, setDisplayCompareSession] = useState(false);
+  const [firstLoad, setFirstLoad] = useState(false);
+  const [transcriptDoneLoading, setTranscriptDoneLoading] = useState(false);
+  const [videoMetricDoneLoading, setVideoMetricDoneLoading] = useState(false);
+  const [currentSessionRunning, setCurrentSessionRunning] = useState(false);
+  const [sessionPart, setSessionPart] = useState("");
+
+  const sessionDataObjects = useRef({});
+  const sessionsObjects = useRef({});
 
   const navigate = useNavigate()
 
@@ -92,12 +102,13 @@ function StudentSessionDashboard() {
   useEffect(() => {
     let intervalLoad
     // fetch the transcript
-    if (session !== null && userDetail !== null && sessiontype !== "") {
+    if (session !== null && userDetail !== null && sessiontype !== "" && !firstLoad) {
       fetchTranscript(session.id, setTranscripts)
       fetchVideoMetric(session.id, setVideoMetrics)
 
       //only load for current session every 2 seconds
       if (sessiontype === "currentsession") {
+        setCurrentSessionRunning(true);
         intervalLoad = setInterval(() => {
           fetchTranscript(session.id, setTranscripts)
           fetchVideoMetric(session.id, setVideoMetrics)
@@ -113,51 +124,72 @@ function StudentSessionDashboard() {
 
 
   useEffect(() => {
-    if (session !== null) {
+    if (session !== null && !firstLoad) {
       const sessionLen =
         Object.keys(session).length > 0 ? session.length : 0
       const sTime = Math.round(sessionLen * timeRange[0] * 100) / 100
       const eTime = Math.round(sessionLen * timeRange[1] * 100) / 100
       setStartTime(sTime)
       setEndTime(eTime)
-      generateDisplayTranscripts(sTime, eTime)
-      generateDisplayVideoMetrics(sTime, eTime)
+      generateDisplayTranscripts(transcripts, sTime, eTime)
+      generateDisplayVideoMetrics(videoMetrics, sTime, eTime)
+    } else if (session !== null && firstLoad && currentSessionRunning) {
+      const sessionLen =
+        Object.keys(session).length > 0 ? session.length : 0
+      const sTime = Math.round(sessionLen * timeRange[0] * 100) / 100
+      const eTime = Math.round(sessionLen * timeRange[1] * 100) / 100
+      setStartTime(sTime)
+      setEndTime(eTime)
+      generateDisplayTranscripts(transcripts, sTime, eTime)
+      generateDisplayVideoMetrics(videoMetrics, sTime, eTime)
     }
-  }, [transcripts, videoMetrics, startTime, endTime, session, timeRange])
 
+  }, [transcripts, videoMetrics, session, timeRange, currentSessionRunning])
 
 
   useEffect(() => {
-    if (displayTranscripts.length > 0) {
-      setSession1Transcripts(displayTranscripts);
-    }
-
-    if (displayVideoMetrics.length > 0) {
-      setSession1VideoMetrics(displayVideoMetrics)
-    }
-
-    if (displayTranscripts.length > 0 || displayVideoMetrics.length > 0) {
+    if (transcriptDoneLoading && videoMetricDoneLoading && !firstLoad) {
       setSelectedSessionId1(session.id);
+
+      if (!sessionDataObjects.current.hasOwnProperty(sessionId)) {
+        sessionDataObjects.current[sessionId] = {
+          transcripts: transcripts,
+          videoMetrics: videoMetrics
+        }
+      }
+      setNextPage("displayreportpage")
+      setFirstLoad(true);
+    }
+
+  }, [transcriptDoneLoading, videoMetricDoneLoading]);
+
+  useEffect(() => {
+
+    if (displayCompareSession || displaySingleSession) {
+      setSessionTranscripts()
+      setSessionVideoMetrics()
+    }
+    if (details === "Individual" && displaySingleSession) {
+      setDisplaySingleSession(false);
+    } else if (details === "Comparison" && displayCompareSession) {
+      setDisplayCompareSession(false);
+    }
+
+  }, [details, displaySingleSession, displayCompareSession]);
+
+
+  useEffect(() => {
+    if (transcriptDoneLoading && videoMetricDoneLoading && firstLoad) {
+      if (!sessionDataObjects.current.hasOwnProperty(sessionId)) {
+        sessionDataObjects.current[sessionId] = {
+          transcripts: session1Transcripts,
+          videoMetrics: session1VideoMetrics
+        }
+      }
       setNextPage("displayreportpage")
     }
 
-
-
-  }, [displayTranscripts, displayVideoMetrics]);
-
-  useEffect(() => {
-
-    if (details === "Comparison") {
-      setSessionTranscripts()
-
-      setSessionVideoMetrics()
-
-    }else if(displaySingleSession){
-      setSessionTranscripts()
-      setSessionVideoMetrics()
-    }
-
-  }, [selectedSessionId1, selectedSessionId2, details,displaySingleSession]);
+  }, [transcriptDoneLoading, videoMetricDoneLoading, firstLoad]);
 
   const initChecklistData = (featuresArr, setFn) => {
     let valueInd = 0
@@ -182,6 +214,11 @@ function StudentSessionDashboard() {
                 if (session_data.length > 0) {
                   setSession(session_data[0])
                   setPageTitle(session_data[0].name)
+                  setSessionId(session_data[0].id);
+
+                  session_data.forEach((s) => {
+                    sessionsObjects.current[s.id] = s
+                  })
                 }
               })
             } else {
@@ -256,7 +293,8 @@ function StudentSessionDashboard() {
             response.json().then((jsonObj) => {
               const session_data = SessionModel.fromJsonList(jsonObj)
               setSession(session_data[0])
-               setPageTitle(session_data[0].name)
+              setPageTitle(session_data[0].name)
+              setSessionId(session_data[0].id);
             })
           } else {
             setAlertMessage("Invalid Passcode or Session Expired");
@@ -284,11 +322,13 @@ function StudentSessionDashboard() {
           return { ...trancript_metrics['transcript'], speaker_metrics: trancript_metrics['speaker_metrics'] }
         })
 
-        setMetric(fetched_trancript_metrics)
         const sessionLen =
           Object.keys(session).length > 0 ? session.length : 0
         setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100)
         setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100)
+
+        setMetric(fetched_trancript_metrics)
+        setTranscriptDoneLoading(true);
       } else if (response.status === 400 || response.status === 401) {
         console.log(response, "no transcript obj")
       }
@@ -307,7 +347,9 @@ function StudentSessionDashboard() {
 
       if (response.status === 200) {
         const fetched_video_metrics = await response.json()
+
         setMetric(fetched_video_metrics)
+        setVideoMetricDoneLoading(true);
       } else if (response.status === 400 || response.status === 401) {
         console.log(response, "no videometrics obj")
       }
@@ -320,53 +362,115 @@ function StudentSessionDashboard() {
   }
 
 
-  const loadPreviousSessionMetrics = (session) => {
-    setSelectedSessionId1(session.id)
-    setPageTitle(session.name)
-    setSession(session)
+  const loadSelectedSessionMetrics = (newSession) => {
+    setTranscriptDoneLoading(false);
+    setVideoMetricDoneLoading(false);
+    setSession1Transcripts([]);
+    setSession1VideoMetrics([]);
+    setSession2Transcripts([]);
+    setSession2VideoMetrics([]);
+    setSelectedSessionId1(newSession.id)
+    setSessionId(newSession.id);
+    setSelectedSessionId2(-1)
+    setPageTitle(newSession.name)
+    setSession(newSession)
     setDetails("Individual");
     setDisplaySingleSession(true);
   }
 
+  const loadComparedSessionMetrics = (selectedSessionId, sessionPart) => {
+    setTranscriptDoneLoading(false);
+    setVideoMetricDoneLoading(false);
+    setSessionPart(sessionPart);
+    if (sessionPart === "sessionOne") {
+      setSession1Transcripts([]);
+      setSession1VideoMetrics([]);
+      setSelectedSessionId1(selectedSessionId)
+    } else if (sessionPart === "sessionTwo") {
+      setSession2Transcripts([]);
+      setSession2VideoMetrics([]);
+      setSelectedSessionId2(selectedSessionId)
+    }
+    setSessionId(selectedSessionId);
+    setPageTitle("Comparing Sessions")
+    setDisplayCompareSession(true);
+  }
 
 
-  const generateDisplayTranscripts = (s, e) => {
-    setDisplayTranscripts(
+  const generateDisplayTranscripts = (transcripts, s, e) => {
+    setSession1Transcripts(
       transcripts.filter((t) => t.start_time >= s && t.start_time <= e),
     )
   }
 
-  const generateDisplayVideoMetrics = (s, e) => {
-    setDisplayVideoMetrics(
+  const generateDisplayVideoMetrics = (videoMetrics, s, e) => {
+    setSession1VideoMetrics(
       videoMetrics.filter((v) => v.time_stamp >= s && v.time_stamp <= e),
     )
   }
 
   const setSessionTranscripts = () => {
-
     if (selectedSessionId1 !== -1) {
-      fetchTranscript(selectedSessionId1, setSession1Transcripts)
+      if (sessionDataObjects.current.hasOwnProperty(selectedSessionId1)) {
+        console.log("loading saved session transcript metrics for session 1")
+        loadSavedSessionTranscriptMetrics(selectedSessionId1, sessionDataObjects.current[selectedSessionId1].transcripts, setSession1Transcripts)
+      } else {
+        fetchTranscript(selectedSessionId1, setSession1Transcripts)
+      }
     }
 
     if (selectedSessionId2 !== -1) {
-      fetchTranscript(selectedSessionId2, setSession2Transcripts)
+      if (sessionDataObjects.current.hasOwnProperty(selectedSessionId2)) {
+        console.log("loading saved session transcript metrics for session 2")
+        loadSavedSessionTranscriptMetrics(selectedSessionId2, sessionDataObjects.current[selectedSessionId2].transcripts, setSession2Transcripts)
+      } else {
+        fetchTranscript(selectedSessionId2, setSession2Transcripts)
+      }
     }
   }
 
   const setSessionVideoMetrics = () => {
     if (selectedSessionId1 !== -1) {
-      fetchVideoMetric(selectedSessionId1, setSession1VideoMetrics)
+        if (sessionDataObjects.current.hasOwnProperty(selectedSessionId1)) {
+          console.log("loading saved session video metrics for session 1")
+        loadSavedSessionVideoMetrics(sessionDataObjects.current[selectedSessionId1].videoMetrics, setSession1VideoMetrics)
+      } else {
+        fetchVideoMetric(selectedSessionId1, setSession1VideoMetrics)
+      }
+      
     }
 
     if (selectedSessionId2 !== -1) {
-      fetchVideoMetric(selectedSessionId2, setSession2VideoMetrics)
+        if (sessionDataObjects.current.hasOwnProperty(selectedSessionId2)) {
+          console.log("loading saved session video metrics for session 2")
+        loadSavedSessionVideoMetrics(sessionDataObjects.current[selectedSessionId2].videoMetrics, setSession2VideoMetrics)
+      } else {
+        fetchVideoMetric(selectedSessionId2, setSession2VideoMetrics)
+      }
     }
   }
 
 
+  const loadSavedSessionTranscriptMetrics = (sessionId, transcript, setSessionTranscript) => {
+    const sessionData = sessionsObjects.current[sessionId];
+    const sessionLen =
+      Object.keys(sessionData).length > 0 ? sessionData.length : 0
+    setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100)
+    setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100)
+
+    setSessionTranscript(transcript)
+    setTranscriptDoneLoading(true);
+  }
+
+  const loadSavedSessionVideoMetrics = (videoMetric, setSessionVideoMetric) => {
+    setSessionVideoMetric(videoMetric)
+    setVideoMetricDoneLoading(true);
+  }
+
 
   const viewComparison = () => {
     setDetails("Comparison")
+    setDisplaySingleSession(false);
   }
 
   const viewIndividual = () => {
@@ -382,7 +486,8 @@ function StudentSessionDashboard() {
       const end = Math.round(sessionLen * values[1] * 100) / 100
       setStartTime(start)
       setEndTime(end)
-      generateDisplayTranscripts(start, end)
+      generateDisplayTranscripts(session1Transcripts, start, end)
+      generateDisplayVideoMetrics(session1VideoMetrics, start, end)
     }
   }
 
@@ -465,7 +570,8 @@ function StudentSessionDashboard() {
       details={details}
       viewComparison={viewComparison}
       viewIndividual={viewIndividual}
-      loadPreviousSessionMetrics={loadPreviousSessionMetrics}
+      loadSelectedSessionMetrics={loadSelectedSessionMetrics}
+      loadComparedSessionMetrics={loadComparedSessionMetrics}
       selectedSessionId1={selectedSessionId1}
       setSelectedSessionId1={setSelectedSessionId1}
       selectedSessionId2={selectedSessionId2}
@@ -476,7 +582,8 @@ function StudentSessionDashboard() {
       session2VideoMetrics={session2VideoMetrics}
       seeAllTranscripts={seeAllTranscripts}
       currentTranscript={currentTranscript}
-
+      transcriptDoneLoading={transcriptDoneLoading}
+      videoMetricDoneLoading={videoMetricDoneLoading}
     />
   );
 }

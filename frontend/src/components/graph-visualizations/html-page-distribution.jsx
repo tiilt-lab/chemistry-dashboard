@@ -1,8 +1,11 @@
 import React from "react"
+import { AppSpinner } from "../../spinner/spinner-component"
+
+import style from "../../student-dashboard/student-dashboard.module.css"
 
 function CategoryDistributionPage(props) {
-
     return (
+      <> 
     <div className="w-full max-w-5xl mx-auto">
       <h3 className="text-base font-semibold mb-2">{props.title} Distribution</h3>
       <div className="text-xs text-gray-500 mb-3">Total duration: {props.formatSeconds(props.duration)}</div>
@@ -49,6 +52,7 @@ function CategoryDistributionPage(props) {
         })}
       </svg>
     </div>
+    </>
   );
 
     

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { IndividualVideoMetricPage } from "./html-pages-video-individual";
 import { Line } from "react-chartjs-2";
 import {
@@ -15,6 +15,7 @@ import {
 Chart.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend, Title);
 
 function AppIndividualVideoFeaturesComponent(props) {
+  //  console.log("session1 video metrics AppIndividualVideoFeaturesComponent");
   // @Input('session') session: SessionModel;
 
   // @Input('transcripts')
@@ -34,13 +35,14 @@ function AppIndividualVideoFeaturesComponent(props) {
   const [showFeatureDialog, setShowFeatureDialog] = useState(false);
 
 
-  useEffect(() => {
-      updateGraphs();
-  });
+  // useEffect(() => {
+  //   // console.log("updating video metrics component", props.videometrics);
+  //     updateGraphs();
+  // },[]);
 
 
   //update new metrics (individual)
-  const updateGraphs = () => {
+  const updateGraphs = useCallback((videometrics) => {
     const valueArrays = [
       { name: "Facial Emotions", values: [], time: [] },
       { name: "Attention Level", values: [], time: [] },
@@ -49,8 +51,8 @@ function AppIndividualVideoFeaturesComponent(props) {
     ];
     const facial_emotion_data = []
     const object_focused_data = []
-    if (props.videometrics.length <= 0) {
-      console.log("no videometrics or speaker id")
+    if (videometrics.length === 0) {
+      // console.log("no videometrics or speaker id")
       setFeatures(valueArrays);
       return;
     }
@@ -59,7 +61,7 @@ function AppIndividualVideoFeaturesComponent(props) {
     // const speaker_video_metric = props.videometrics.filter(v => v.student_username === props.spkrId)
 
 
-    props.videometrics.forEach((v) => {
+    videometrics.forEach((v) => {
 
       //accumulate each score into their value array
       valueArrays[0].values.push(v.facial_emotion);
@@ -73,48 +75,21 @@ function AppIndividualVideoFeaturesComponent(props) {
       facial_emotion_data.push({ time: v.time_stamp, category: v.facial_emotion })
       object_focused_data.push({ time: v.time_stamp, category: v.object_on_focus })
 
-    });
-    // console.log("i returned ", props.spkrId)
-    // console.log("video mtric data: ", valueArrays)
+    }
+  );
 
-    // //smooth the values of the value array over 10 values
-    // for (const valueArray of valueArrays) {
-    //   const length = valueArray.values.length;
-    //   const average =
-    //     valueArray.values.reduce((sum, current) => sum + current, 0) /
-    //     (length > 0 ? length : 1);
-    //   const last = length > 0 ? valueArray.values[length - 1] : 0;
-    //   const trend = last > average ? 1 : last === average ? 0 : -1;
-    //   let path = "";
-    //   const smoothedValues = [];
 
-    //   // Calculate the average of each 10 x units
-    //   for (let i = 0; i < length; i += 10) {
-    //     const chunk = valueArray.values.slice(i, i + 10);
-    //     const chunkAverage =
-    //       chunk.reduce((sum, current) => sum + current, 0) / chunk.length;
-    //     smoothedValues.push(chunkAverage);
-    //   }
-
-    //   // Generate the SVG path using the smoothed values
-    //   for (let i = 0; i < smoothedValues.length; i++) {
-    //     const xPos = Math.round(((i + 1) / smoothedValues.length) * svgWidth);
-    //     const yPos =
-    //       svgHeight - Math.round((smoothedValues[i] / 100) * svgHeight);
-    //     path += i === 0 ? "M" : "L";
-    //     path += `${xPos} ${yPos} `;
-    //   }
-
-    //   valueArray["average"] = average;
-    //   valueArray["last"] = last;
-    //   valueArray["trend"] = trend;
-    //   valueArray["path"] = path;
-    // }
     setFeatures(valueArrays);
     setFacialEmotionDataset(facial_emotion_data)
     setObjectFocusedDataset(object_focused_data)
     setAttentionLevelDataset({ values: valueArrays[1].values, time: valueArrays[1].time })
-  };
+  },[]);
+
+  useEffect(() => {
+    if (props.videometrics.length === 0) return;
+    updateGraphs(props.videometrics);
+  }, [props.videometrics, updateGraphs]);
+
 
   const getInfo = (featureName) => {
     switch (featureName) {
