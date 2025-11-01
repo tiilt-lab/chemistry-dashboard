@@ -22,6 +22,7 @@ import MicIcon from "@icons/Mic"
 import Checkmark from "@assets/img/checkmark.svg"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
+import {RecordingCoach} from "./recording-coach"
 
 function ProfileCreationPage(props) {
     // console.log(props, 'props')
@@ -95,56 +96,16 @@ function ProfileCreationPage(props) {
                     )}
                     {props.nextPage === "video_audio_capture_page" && (
                         <React.Fragment>
-                            <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto text-center">
-                                <div className="w-[300px] px-2 sm:w-[400px] lg:w-3xl">
-                                    <div className="my-1.5 font-sans text-base/loose font-medium text-[#727278]">
-                                        Please add a Speaker Fingerprint
-                                        for each speaker
-                                    </div>
-                                    <div className="my-1.5 font-sans text-xs/normal font-normal text-[#727278]">
-                                        Each speaker must record and
-                                        temporarily save a short 3-5
-                                        second sample of their voice.
-                                        This is used to track each
-                                        speaker's metrics throughout a
-                                        discussion and is deleted upon
-                                        ending the discussion.
-                                    </div>
-                                </div>
-                                <div className="min-w-{300px} flex h-60 flex-col items-center justify-around text-center sm:h-70">
-                                    <div className="sans text-base/normal font-bold sm:text-xl/loose">
-                                        Record Speaker Fingerprint:
-                                    </div>
-                                    {props.isRecordingStopped ?
-                                        <div>
-
-                                            <video id="video_playback" controls autoPlay muted width={500} height={500} />
-                                            <button className="toolbar-button z-40" onClick={props.startRecording} >Record Again</button>
-                                            <button className="toolbar-button z-40" onClick={props.saveRecording} >Save Recording</button>
-                                        </div>
-                                        :
-                                        <div>
-
-                                            <video id="video_preview" controls muted width={500} height={500} />
-                                            <button className="toolbar-button z-40" onClick={props.startRecording} >Start Recording</button>
-                                            <button className="toolbar-button z-40" onClick={props.stopRecording} >Stop Recording</button>
-                                        </div>
-                                    }
-
-
-                                </div>
-                                <div>
-                                    <button
-                                        className="wide-button"
-                                        onClick={props.closeResources}
-                                    >
-                                        Finish
-                                    </button>
-                                </div>
-                            </div>
+                            <RecordingCoach
+                                maxDurationSec={60}
+                                minDurationSec={15}
+                                onTestClip={(blob, diag) => console.log('test', blob, diag)}
+                                onComplete={(blob, diag) => console.log('full', blob, diag)}
+                                saveRecording={props.saveRecording}
+                            />
                         </React.Fragment>
                     )}
-                    
+
                 </div>
             )}
             <DialogBox

@@ -79,6 +79,7 @@ function AppSessionToolbar(props) {
             onEndSession={onEndSession}
             menus={props.menus}
             speakers = {props.participants}
+            seesions={props.seesions}
             fromClient={props.fromClient}
         />
     )

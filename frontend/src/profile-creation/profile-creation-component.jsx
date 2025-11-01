@@ -22,11 +22,16 @@ function SignupPage() {
     const [audioSaved, setAudioSaved] = useState(false)
     const [videoSaved, setVideoSaved] = useState(false)
     const [videoBlob, setVideoBlob] = useState(null)
-     const [videoData, setVideoData] = useState(null)
+    const [videoData, setVideoData] = useState(null)
     const [currentForm, setCurrentForm] = useState("")
     const [displayText, setDisplayText] = useState("")
     const video_captured = useRef(null)
     const [isRecordingStopped, setIsRecordingStopped] = useState(false);
+    const [mimetype, setMimeType] = useState(null)
+    const [mimeExtension, setMimeExtension] = useState(null);
+    const [studentUpdate, setStudentUpdated] = useState(false)
+    const [audioDisconnected, setAudioDisconnected] = useState(false)
+    const [videoDisconnected, setVideoDisconnected] = useState(false)
     // const [userProfileDetails, setUserProfileDetail] = useState(null)
     const audiows = useRef(null)
     const videows = useRef(null)
@@ -41,7 +46,7 @@ function SignupPage() {
 
     useEffect(() => {
         if (studentObject != null) {
-            setNextPage("video_audio_capture_page")
+            setCurrentForm("processing")
             const constraint = {}
             constraint.audio = true
             constraint.video = {
@@ -54,14 +59,48 @@ function SignupPage() {
     }, [studentObject])
 
     useEffect(() => {
-        if (audioSocketProccesorConnected && videoSocketProccesorConnected) {
-            requestStartAudioVideoProcessing()
+        if (constraintObj !== null) {
+            detectMediaSouceType()
+
         }
-    }, [audioSocketProccesorConnected,videoSocketProccesorConnected])
+    }, [constraintObj])
+
 
 
     useEffect(() => {
+        if (mimeExtension !== null && mimetype !== null) {
+            if (mimeExtension !== "" && (mimetype.endsWith("opus") || mimetype.endsWith("aac") || mimetype.endsWith("mp4a.40.2"))) {
+                //activate video websocket 
+                audiows.current = new WebSocket(apiService.getAudioWebsocketEndpoint())
+                videows.current = new WebSocket(apiService.getVideoWebsocketEndpoint())
+                connect_audio_websocket_processor_service();
+                connect_video_websocket_processor_service();
+            } else {
+                setAlertMessage("No Audio Source detected, please use another device");
+                setShowAlert(true);
+            }
+        }
+    }, [mimetype, mimeExtension])
+
+    useEffect(() => {
+        if (audioSocketProccesorConnected && videoSocketProccesorConnected) {
+            requestStartAudioVideoProcessing()
+        }
+    }, [audioSocketProccesorConnected, videoSocketProccesorConnected])
+
+    useEffect(() => {
         if (audioAuthenticated && videoAuthenticated) {
+            setCurrentForm("")
+            setNextPage("video_audio_capture_page")
+
+        } else {
+            // setCurrentForm("processing")
+        }
+    }, [audioAuthenticated, videoAuthenticated])
+
+    useEffect(() => {
+        if (streamReference && mediaRecorder) {
+            setCurrentForm("")
             const videoPlay = () => {
                 let video = document.getElementById('video_preview')
                 video.srcObject = streamReference
@@ -71,18 +110,20 @@ function SignupPage() {
                 }
 
                 mediaRecorder.ondataavailable = async function (ev) {
-                    
-                    if (ev.data.size && video_captured.current == null) {
-                        video_captured.current = ev.data
-                        setVideoData(ev.data)
-                        stopRecording()
+
+                    if (ev.data.size && video_captured.current === null) {
+                        if (ev.data && ev.data.size !== 0) {
+                            video_captured.current = ev.data
+                            setVideoData(ev.data)
+                            stopRecording()
+                        }
                     }
 
                 }
 
                 // When stopped, you can combine the chunks into a single Blob:
                 mediaRecorder.onstop = function () {
-                    const blob = new Blob([video_captured.current], { type: mediaRecorder.mimeType });
+                    const blob = new Blob([video_captured.current], { type: mimetype });
                     setVideoBlob(blob)
                     video.pause();
                     video.srcObject = null;
@@ -95,15 +136,11 @@ function SignupPage() {
             videoPlay()
 
         }
-    }, [audioAuthenticated,videoAuthenticated])
+    }, [streamReference, mediaRecorder])
 
     useEffect(() => {
         if (document.getElementById('video_playback') !== null) {
 
-            setAudioAuthenticated(false)
-            setVideoAuthenticated(false)
-            setAudioSocketProccesorConnected(false)
-            setVideoSocketProcesorConnected(false)
             if (wakeLock) {
                 releaseWakeLock()
             }
@@ -117,70 +154,130 @@ function SignupPage() {
                 setMediaRecorder(null)
             }
 
-            if(video_captured.current != null){
-            video_captured.current = null
-            }
-            
             const url = URL.createObjectURL(videoBlob);
             document.getElementById('video_playback').src = url;
         }
     }, [isRecordingStopped])
 
-     useEffect(() => {
+    useEffect(() => {
         if (audioSaved && videoSaved) {
+            new AuthService().updateStudentProfile(studentObject.id, studentObject.lastname, studentObject.firstname, "yes", setStudentUpdated, setAlertMessage, setShowAlert);
+        }
+    }, [audioSaved, videoSaved])
+
+    useEffect(() => {
+        if (studentUpdate) {
             setDisplayText("Biometric data captured successfully")
             setCurrentForm("success")
         }
-    }, [audioSaved,videoSaved])
+    }, [studentUpdate])
 
-    
+    useEffect(() => {
+        if (audioDisconnected || videoDisconnected) {
+            setAlertMessage("You are Disconnected from the Server, please reload the page");
+            setShowAlert(true);
+        }
+    }, [audioDisconnected, videoDisconnected])
+
+    useEffect(() => {
+        if (audioAuthenticated && videoAuthenticated) {
+            if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN || videows.current === null || videows.current.readyState !== WebSocket.OPEN) return;
+
+            const send = () => {
+                if (audiows.current.readyState === WebSocket.OPEN && videows.current.readyState === WebSocket.OPEN) {
+                    console.log("i am firering heartbeat")
+                    audiows.current.send(JSON.stringify({ type: "heartbeat", key:"no key" }));
+                    videows.current.send(JSON.stringify({ type: "heartbeat",key:"no key" }));
+
+                } else {
+                    clearInterval(id);
+                }
+            };
+
+            // fire once immediately, then on interval
+            send();
+            const id = setInterval(send, 20000);
+
+            return () => {
+                console.log("i called clear interval...")
+                clearInterval(id);
+            };
+        }
+    }, [audiows, videows, audioAuthenticated, videoAuthenticated]);
+
+
     const stopRecording = () => {
         if (mediaRecorder && mediaRecorder.state === "recording") {
             mediaRecorder.stop(); // <-- this will fire mediaRecorder.onstop
         }
     };
 
-    const saveRecording = () => {
-        fixWebmDuration(
-                        videoData,
-                        interval,
-                        (fixedblob) => {
-                            videows.current.send(fixedblob)
-                            audiows.current.send(fixedblob)
-                            setCurrentForm("processing")
-                        },
-                    )
-        
+    const saveRecording = async (videoBlob, duration) => {
+        if (videoBlob) {
+            if (mimetype.startsWith('video/webm')) {
+                const fixedBlob = await fixWebmDuration(videoBlob, duration*1000);
+                console.log("videoBlob- duration ", videoBlob, duration)
+                videows.current.send(fixedBlob)
+                audiows.current.send(fixedBlob)
+                setCurrentForm("processing")
+            } else if (mimetype.startsWith('video/mp4')) {
+
+            }
+
+        }
     };
 
-    const closeResources = ()=>{
-        setIsRecordingStopped(false)
-        setAudioSocketProccesorConnected(false)
-        setVideoSocketProcesorConnected(false)
-        if (audiows.current != null) {
-            audiows.current.close();
-            audiows.current = null;
-        }
+    // const saveRecording = () => {
+    //     if (videoData) {
+    //         if (mimetype.startsWith('video/webm')) {
+    //             fixWebmDuration(
+    //                 videoData,
+    //                 interval,
+    //                 (fixedblob) => {
+    //                     videows.current.send(fixedblob)
+    //                     audiows.current.send(fixedblob)
+    //                     setCurrentForm("processing")
+    //                 },
+    //             )
+    //         } else if (mimetype.startsWith('video/mp4')) {
 
-        if (videows.current != null) {
-            videows.current.close();
-            videows.current = null;
+    //         }
+
+    //     }
+    // };
+
+
+
+
+
+    const resetForRecording = () => {
+        if (videoData !== null) {
+            setVideoData(null)
         }
-        if(video_captured.current != null){
+        if (video_captured.current != null) {
             video_captured.current = null
         }
+        if (isRecordingStopped) {
+            setIsRecordingStopped(false)
+        }
+        if (streamReference != null) {
+            streamReference.getAudioTracks().forEach((track) => track.stop())
+            setStreamReference(null)
+        }
 
-        navigateToLogin();
+        if (mediaRecorder != null) {
+            mediaRecorder.stop()
+            setMediaRecorder(null)
+        }
     }
 
     const startRecording = async () => {
         try {
             //reset all parameter in case of video recapturing
             await acquireWakeLock()
-            setIsRecordingStopped(false)
-            if(video_captured.current != null){
-            video_captured.current = null
-            }
+
+            resetForRecording()
+
             //handle older browsers that might implement getUserMedia in some way
             if (navigator.mediaDevices === undefined) {
                 navigator.mediaDevices = {}
@@ -222,30 +319,14 @@ function SignupPage() {
             if (navigator.mediaDevices != null) {
                 const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
 
-                setStreamReference(stream)
 
-                var opt
-                if (
-                    MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-                ) {
-                    opt = { mimeType: "video/webm; codecs=vp9,opus" }
-                } else if (
-                    MediaRecorder.isTypeSupported("video/webm;codecs=vp8")
-                ) {
-                    opt = { mimeType: "video/webm; codecs=vp8,opus" }
-                } else {
-                    opt = { mimeType: "video/webm" }
+
+                if (mimetype !== "") {
+                    const mediaRec = new MediaRecorder(stream, { mimeType: mimetype })
+                    setStreamReference(stream)
+                    setMediaRecorder(mediaRec)
                 }
 
-                const mediaRec = new MediaRecorder(stream, opt)
-                setMediaRecorder(mediaRec)
-
-
-                //activate video websocket 
-                audiows.current = new WebSocket(apiService.getAudioWebsocketEndpoint())
-                videows.current = new WebSocket(apiService.getVideoWebsocketEndpoint())
-                connect_audio_websocket_processor_service();
-                connect_video_websocket_processor_service();
 
 
             } else {
@@ -260,6 +341,86 @@ function SignupPage() {
         }
     };
 
+    const closeResources = () => {
+        setIsRecordingStopped(false)
+        setAudioSocketProccesorConnected(false)
+        setVideoSocketProcesorConnected(false)
+        if (audiows.current != null) {
+            audiows.current.close();
+            audiows.current = null;
+        }
+
+        if (videows.current != null) {
+            videows.current.close();
+            videows.current = null;
+        }
+        if (video_captured.current != null) {
+            video_captured.current = null
+        }
+
+        if (isRecordingStopped) {
+            setIsRecordingStopped(false)
+        }
+        if (streamReference != null) {
+            streamReference.getAudioTracks().forEach((track) => track.stop())
+            setStreamReference(null)
+        }
+
+        if (mediaRecorder != null) {
+            stopRecorder(mediaRecorder)
+            // mediaRecorder.stop()
+            setMediaRecorder(null)
+        }
+        navigateToLogin();
+    }
+
+    function stopRecorder(mediarec) {
+        if (!mediarec) return Promise.resolve();
+        if (mediarec.state === 'inactive') return Promise.resolve();
+
+        return new Promise (res => {
+            const onStop = () => {
+                mediarec.removeEventListener('stop', onStop);
+                res();
+            };
+            mediarec.addEventListener('stop', onStop, { once: true });
+            try { mediarec.stop(); } catch { res(); }
+        });
+    }
+
+    const detectMediaSouceType = async () => {
+        const mediaType = await pickMimeType(constraintObj)
+        const mediaExt = (mediaType !== "" && mediaType.indexOf("webm") !== -1) ? "webm" : (mediaType !== "" && mediaType.indexOf("mp4") !== -1) ? "mp4" : ""
+        setMimeType(mediaType)
+        setMimeExtension(mediaExt)
+    }
+
+    const pickMimeType = async (constraintObj) => {
+        const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
+        const hasAudio = stream.getAudioTracks().length > 0;
+
+        // Try best-to-widest support order.
+        const candidates = [
+            // WebM (Android/desktop Chrome)
+            hasAudio ? "video/webm;codecs=vp9,opus" : "video/webm;codecs=vp9",
+            hasAudio ? "video/webm;codecs=vp8,opus" : "video/webm;codecs=vp8",
+            "video/webm",
+
+            // MP4 (iOS/iPadOS Safari/WebKit, incl. Chrome on iPad)
+            // H.264 (avc1) + AAC (mp4a) are the usual fourccs
+            hasAudio ? "video/mp4;codecs=h264,aac" : "video/mp4;codecs=h264",
+            hasAudio ? "video/mp4;codecs=avc1.42E01E,mp4a.40.2" : "video/mp4;codecs=avc1.42E01E",
+        ];
+        for (const mt of candidates) {
+            try {
+                if (typeof MediaRecorder.isTypeSupported === "function" &&
+                    MediaRecorder.isTypeSupported(mt)) {
+                    return mt;
+                }
+            } catch { /* some engines throw on probe; ignore and continue */ }
+        }
+        return ""; // no explicit mimeType — let the browser pick or we’ll handle failure
+    }
 
 
     const verifyUserProfileInput = (lastname, firstname, username) => {
@@ -313,15 +474,16 @@ function SignupPage() {
                 else if (message['type'] === 'saved') {
                     setAudioSaved(true)
                 }
-            } 
+            }
         };
 
         audiows.current.onclose = e => {
+            setAudioDisconnected(true)
             console.log('[audio Disconnected]');
         };
     }
 
-// Connects to video processor websocket server.
+    // Connects to video processor websocket server.
     const connect_video_websocket_processor_service = () => {
         videows.current.binaryType = "blob"
 
@@ -346,12 +508,13 @@ function SignupPage() {
 
                 }
                 else if (message['type'] === 'saved') {
-                     setVideoSaved(true)
+                    setVideoSaved(true)
                 }
-            } 
+            }
         };
 
         videows.current.onclose = e => {
+            setVideoDisconnected(true)
             console.log('[video Disconnected]');
         };
     }
@@ -364,7 +527,7 @@ function SignupPage() {
             return
         }
 
-         if (videows.current === null) {
+        if (videows.current === null) {
             return
         }
 
@@ -376,12 +539,15 @@ function SignupPage() {
             start_time: 0.0,
             sample_rate: 16000,
             encoding: "pcm_f16le",
-            video_encoding: "video/mp4",
+            video_encoding: "video/webm",
+            mimeextension: mimeExtension,
             channels: 2,
             streamdata: "audio-video-fingerprint"
         }
+
         audiows.current.send(JSON.stringify(message))
         videows.current.send(JSON.stringify(message))
+
     }
 
 
@@ -393,6 +559,9 @@ function SignupPage() {
 
     const closeDialog = () => {
         setCurrentForm("")
+        if (studentUpdate) {
+            closeResources()
+        }
     }
 
 
@@ -461,7 +630,7 @@ function SignupPage() {
             closeDialog={closeDialog}
             displayText={displayText}
             currentForm={currentForm}
-        
+
         />
     )
 }

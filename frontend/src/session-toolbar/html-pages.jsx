@@ -20,7 +20,7 @@ function AppSessionPage(props) {
 
 
 
-                {props.speakers && props.speakers.length ? (
+                {props.speakers && props.speakers.length !== 0 ? (
                     <div className="flex relative max-w-4/6 flex-1 flex-row items-center justify-center sm:w-min sm:flex-col sm:max-w-full 
                                 border-2 border-blue-500 rounded-lg px-2 mt-8 before:content-[attr(data-label)] 
                     before:absolute before:-top-3 before:left-4  before:px-2 before:bg-white before:text-blue-500 before:font-semibold"
@@ -32,6 +32,27 @@ function AppSessionPage(props) {
                                 onClick={part.action}
                                 key={index}
                             >{`${part.alias}`}</button>
+                        
+                    ))
+                }
+                </div>) :
+
+                    (
+                        <></>
+                    )}
+
+                    {props.seesions && props.seesions.length !== 0 ? (
+                    <div className="flex relative max-w-4/6 flex-1 flex-row items-center justify-center sm:w-min sm:flex-col sm:max-w-full 
+                                border-2 border-blue-500 rounded-lg px-2 mt-8 before:content-[attr(data-label)] 
+                    before:absolute before:-top-3 before:left-4  before:px-2 before:bg-white before:text-blue-500 before:font-semibold"
+                            data-label="Sessions">
+                    {props.seesions.map((part, index) => (
+                        
+                            <button
+                                className="toolbar-button"
+                                onClick={part.action}
+                                key={index}
+                            >{`${part.title}`}</button>
                         
                     ))
                 }

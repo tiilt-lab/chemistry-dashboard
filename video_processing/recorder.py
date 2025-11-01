@@ -9,8 +9,8 @@ from moviepy.editor import *
 
 class VidRecorder:
 
-    def __init__(self, filename,aud_filename,vid_img_dir, is_save,sample_rate,depth,channels):
-        self.vid_filename = filename + '.webm'
+    def __init__(self,filename,aud_filename,vid_img_dir, is_save,sample_rate,depth,channels,mediaExt):
+        self.vid_filename = filename + '.'+mediaExt
         self.cart_vid = filename+'_caart'+'.mp4'
         self.img_file = filename
         self.closed = False
@@ -29,9 +29,9 @@ class VidRecorder:
         except Exception as e:
             print('Unable to write data to file: {0}'.format(e))
 
-    def write(self, data):
+    def write(self, data,path):
         try:
-            with open(self.vid_filename, "ab") as f:
+            with open(path, "ab") as f:
                 f.write(data)
         except Exception as e:
             print('Unable to write data to file: {0}'.format(e))
@@ -53,11 +53,11 @@ class VidRecorder:
         wavfile.write(self.wav_filename, self.sample_rate, all_data)
         os.remove(self.dat_filename)
 
-    def close(self):
+    def close(self,path):
         if not self.closed:
             try:
-                if not self.save_video and  os.path.isfile(self.vid_filename):
-                    os.remove(self.vid_filename)        
+                if not self.save_video and  os.path.isfile(path):
+                    os.remove(path)        
             except Exception as e:
               logging.info('Unable to delete video file: {0}'.format(e))         
             

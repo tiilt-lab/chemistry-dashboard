@@ -298,7 +298,7 @@ class VideoProcessor:
                 all_frames,face_object_detected = self.image_object_detection.detection_with_facial_regonition(batch_frames,facialEmbeddings,batch_track,time_marker,vid_img_dir,auth_key)
             
             video_metrics = self.VideoMetricAnalytics.compute_videoMetrics(all_frames,face_object_detected)
-
+            # print("video_metrics ", video_metrics)
             if video_metrics: 
                 # logging.info('printing video_metrics')
                 # logging.info(video_metrics)
@@ -331,6 +331,7 @@ class VideoProcessor:
                 break
             
             try:
+                self.video_chunk_count+=1
                 subclib_frame_count = 0
                 for ts, frame in subclip_frames:
                     subclib_frame_count =  subclib_frame_count + 1
