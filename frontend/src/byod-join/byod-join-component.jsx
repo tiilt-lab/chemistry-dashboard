@@ -9,9 +9,7 @@ import { StudentModel } from "../models/student"
 import { ApiService } from "../services/api-service"
 import { AuthService } from "../services/auth-service"
 import fixWebmDuration from "fix-webm-duration"
-import * as MP4Box from 'mp4box';
-// import 'mp4box/dist/mp4box.all.js';
-// await import('mp4box/dist/mp4box.all.js');
+
 /*
 BYOD Connection Order
 
