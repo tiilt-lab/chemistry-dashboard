@@ -197,7 +197,7 @@ class AudioProcessor:
                                 topic_id = topic[0]
                 logging.info(topic_id)
 
-            # Get DoA
+            # Get DoA (Direction of Arrival)
             doa = None
             if self.config.doa and self.config.channels == 6:
                 word_timings = [(word.start_time.seconds + (word.start_time.nanos / NANO),
@@ -279,3 +279,5 @@ class AudioProcessor:
         self.running_processes -= 1
         if self.asr_complete and self.running_processes == 0:
             self.__complete_callback()
+
+       

@@ -2,6 +2,7 @@ import { SessionService } from "../services/session-service";
 import { SessionModel } from "../models/session";
 import { DeviceService } from "../services/device-service";
 import { DeviceModel } from "../models/device";
+import { SpeakerModel } from "../models/speaker";
 import { useState, useEffect } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { PodsOverviewPages } from "./html-pages";
@@ -11,6 +12,7 @@ function PodsOverviewComponent() {
   const [openingDialog, setOpeningDialog] = useState(false);
   const [sessionDevices, setSessionDevices] = useState(null);
   const [session, setSession] = useState(null);
+  const [sessionSpeaker, setSessionSpeakers] = useState([])
   const [selectedSessionDevice, setSelectedSessionDevice] = useState(null);
   //const [subscriptions, setSubscriptions] = useState([]);
   const [devices, setDevices] = useState([]);
@@ -28,6 +30,9 @@ function PodsOverviewComponent() {
       const nextSessionDevices = activeSessionService.getSessionDevices();
       setSessionDevices(nextSessionDevices);
       console.log("set Interval");
+
+      getSessionSpeakers(nextSession.id)
+      
       let intervalLoad = setInterval(() => {
         console.log("processing interval");
         const nextSession = activeSessionService.getSession();
@@ -57,6 +62,10 @@ function PodsOverviewComponent() {
 
   const goToDevice = (sessionDevice) => {
     navigate("/sessions/" + session.id + "/pods/" + sessionDevice.id);
+  };
+
+  const goToSpeakerMetrics = (speakerID) => {
+    navigate("/sessions/" + session.id + "/pods_session/" + speakerID);
   };
 
   const onSessionClosing = (isClosing) => {
@@ -210,6 +219,33 @@ function PodsOverviewComponent() {
     }
   };
 
+  const getSessionSpeakers = (sessionID) => {
+      const fetchData = new SessionService().getSessionSpeakers(sessionID);
+      fetchData.then(
+        (response) => {
+          if (response.status === 200)
+            response.json().then((jsonObj) => {
+              const input = SpeakerModel.fromJsonList(jsonObj)
+              const identified_speakers = []
+              const uniqueSpeakers = []
+              if(input && input.length){
+                input.map((spkr, index)=>{
+                  if(identified_speakers.indexOf(spkr.alias) == -1){
+                    uniqueSpeakers.push(spkr)
+                    identified_speakers.push(spkr.alias)
+                  }
+                })
+                 setSessionSpeakers(uniqueSpeakers);
+              }
+            });
+        },
+        (apierror) => {
+          console.log("pod-overview-component func getspeakers 1", apierror);
+        }
+      );
+    };
+
+    
   return (
     <PodsOverviewPages
       righttext={getPasscode()}
@@ -227,7 +263,9 @@ function PodsOverviewComponent() {
       copyPasscode={copyPasscode}
       onSessionClosing={onSessionClosing}
       initialized={activeSessionService.initialized}
+      sessionSpeaker={sessionSpeaker}
       devices={devices}
+      goToSpeakerMetrics={goToSpeakerMetrics}
     />
   );
 }

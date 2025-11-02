@@ -50,13 +50,13 @@ function ByodJoinPage(props) {
                             rightText={"Option"}
                             rightEnabled={
                                 props.joinwith === "Video" ||
-                                props.joinwith === "Videocartoonify"
+                                    props.joinwith === "Videocartoonify"
                                     ? true
                                     : false
                             }
                             rightTextClick={() =>
                                 props.joinwith === "Video" ||
-                                props.joinwith === "Videocartoonify"
+                                    props.joinwith === "Videocartoonify"
                                     ? props.openDialog("Options")
                                     : props.openDialog("")
                             }
@@ -118,8 +118,8 @@ function ByodJoinPage(props) {
                                             className="dropdown small-section"
                                         >
                                             <option value="Audio">Audio</option>
-                                            {/*<option value="Video">Video</option>
-                    <option value="Videocartoonify">Video(Cartoon)</option>*/}
+                                            <option value="Video">Video</option>
+                                            <option value="Videocartoonify">Video(Cartoon)</option>
                                         </select>
                                     </div>
                                     <button
@@ -150,7 +150,7 @@ function ByodJoinPage(props) {
                                 </div>
                             </React.Fragment>
                         )}
-                        {props.connected &&
+                        {props.connected && props.joinwith === "Audio" &&
                             props.authenticated &&
                             !props.speakersValidated && (
                                 <React.Fragment>
@@ -175,7 +175,7 @@ function ByodJoinPage(props) {
                                                 <div
                                                     className={
                                                         style3[
-                                                            "load-text onload"
+                                                        "load-text onload"
                                                         ]
                                                     }
                                                 >
@@ -187,14 +187,14 @@ function ByodJoinPage(props) {
                                                     <div
                                                         className={
                                                             style3[
-                                                                "empty-keyword-list"
+                                                            "empty-keyword-list"
                                                             ]
                                                         }
                                                     >
                                                         <div
                                                             className={
                                                                 style3[
-                                                                    "load-text"
+                                                                "load-text"
                                                                 ]
                                                             }
                                                         >
@@ -204,7 +204,7 @@ function ByodJoinPage(props) {
                                                         <div
                                                             className={
                                                                 style3[
-                                                                    "load-text-description"
+                                                                "load-text-description"
                                                                 ]
                                                             }
                                                         >
@@ -234,10 +234,10 @@ function ByodJoinPage(props) {
                                                         <div
                                                             className={
                                                                 style3[
-                                                                    "click-mask"
+                                                                "click-mask"
                                                                 ]
                                                             }
-                                                            onClick={() => {}}
+                                                            onClick={() => { }}
                                                         ></div>
                                                         <div className="flew-row flex grow text-center">
                                                             <div className="grow font-sans text-lg/loose font-bold text-[#58585C]">
@@ -247,7 +247,7 @@ function ByodJoinPage(props) {
                                                         <AppContextMenu
                                                             className={
                                                                 style3[
-                                                                    "keyword-list-options"
+                                                                "keyword-list-options"
                                                                 ]
                                                             }
                                                         >
@@ -274,6 +274,18 @@ function ByodJoinPage(props) {
                                                             >
                                                                 Rename Alias
                                                             </div>
+
+                                                            <div
+                                                                className={`${style4["menu-item"]} ${style4["black"]}`}
+                                                                onClick={() => {
+                                                                    props.openForms(
+                                                                        "savedAudioVideoFingerprint",
+                                                                        speaker,
+                                                                    )
+                                                                }}
+                                                            >
+                                                                Saved Fingerprrint
+                                                            </div>
                                                         </AppContextMenu>
                                                     </div>
                                                 ),
@@ -289,7 +301,163 @@ function ByodJoinPage(props) {
                                         </div>
                                     </div>
                                 </React.Fragment>
-                            )}
+                            )
+                        }
+
+                        {props.connected && (props.joinwith === "Video" || props.joinwith === "Videocartoonify") &&
+                            props.authenticated && props.videoAuthenticated &&
+                            !props.speakersValidated && (
+                                <React.Fragment>
+                                    <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto text-center">
+                                        <div className="w-[300px] px-2 sm:w-[400px] lg:w-3xl">
+                                            <div className="my-1.5 font-sans text-base/loose font-medium text-[#727278]">
+                                                Please add a Speaker Fingerprint
+                                                for each speaker
+                                            </div>
+                                            <div className="my-1.5 font-sans text-xs/normal font-normal text-[#727278]">
+                                                Each speaker must record and
+                                                temporarily save a short 3-5
+                                                second sample of their voice.
+                                                This is used to track each
+                                                speaker's metrics throughout a
+                                                discussion and is deleted upon
+                                                ending the discussion.
+                                            </div>
+                                        </div>
+                                        <div className="mt-2 h-fit w-[300px] sm:w-[400px] lg:w-3xl">
+                                            {!props.speakers && (
+                                                <div
+                                                    className={
+                                                        style3[
+                                                        "load-text onload"
+                                                        ]
+                                                    }
+                                                >
+                                                    Loading...
+                                                </div>
+                                            )}
+                                            {props.speakers &&
+                                                props.speakers.length === 0 && (
+                                                    <div
+                                                        className={
+                                                            style3[
+                                                            "empty-keyword-list"
+                                                            ]
+                                                        }
+                                                    >
+                                                        <div
+                                                            className={
+                                                                style3[
+                                                                "load-text"
+                                                                ]
+                                                            }
+                                                        >
+                                                            {" "}
+                                                            No Speakers{" "}
+                                                        </div>
+                                                        <div
+                                                            className={
+                                                                style3[
+                                                                "load-text-description"
+                                                                ]
+                                                            }
+                                                        >
+                                                            {" "}
+                                                            Tap the button below
+                                                            to add a speaker or
+                                                            other button to join
+                                                            automatically detect
+                                                            speakers(less
+                                                            accurate){" "}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            {props.speakers.map(
+                                                (speaker, count) => (
+                                                    <div
+                                                        key={"speaker" + count}
+                                                        className="my-3 flex flex-row items-center justify-between rounded-md border px-2 py-2"
+                                                    >
+                                                        {speaker.fingerprinted && (
+                                                            <img
+                                                                className="h-8 w-8"
+                                                                alt="question"
+                                                                src={Checkmark}
+                                                            />
+                                                        )}
+                                                        <div
+                                                            className={
+                                                                style3[
+                                                                "click-mask"
+                                                                ]
+                                                            }
+                                                            onClick={() => { }}
+                                                        ></div>
+                                                        <div className="flew-row flex grow text-center">
+                                                            <div className="grow font-sans text-lg/loose font-bold text-[#58585C]">
+                                                                {speaker.alias}
+                                                            </div>
+                                                        </div>
+                                                        <AppContextMenu
+                                                            className={
+                                                                style3[
+                                                                "keyword-list-options"
+                                                                ]
+                                                            }
+                                                        >
+                                                            <div
+                                                                className={`${style4["menu-item"]} ${style4["black"]}`}
+                                                                onClick={() => {
+                                                                    props.openForms(
+                                                                        "fingerprintAudio",
+                                                                        speaker,
+                                                                    )
+                                                                }}
+                                                            >
+                                                                Record
+                                                                Fingerprint
+                                                            </div>
+                                                            <div
+                                                                className={`${style4["menu-item"]} ${style4["black"]}`}
+                                                                onClick={() => {
+                                                                    props.openForms(
+                                                                        "renameAlias",
+                                                                        speaker,
+                                                                    )
+                                                                }}
+                                                            >
+                                                                Rename Alias
+                                                            </div>
+
+                                                            <div
+                                                                className={`${style4["menu-item"]} ${style4["black"]}`}
+                                                                onClick={() => {
+                                                                    props.openForms(
+                                                                        "savedAudioVideoFingerprint",
+                                                                        speaker,
+                                                                    )
+                                                                }}
+                                                            >
+                                                                Saved Fingerprrint
+                                                            </div>
+                                                        </AppContextMenu>
+                                                    </div>
+                                                ),
+                                            )}
+                                        </div>
+                                        <div>
+                                            <button
+                                                className="wide-button"
+                                                onClick={props.confirmSpeakers}
+                                            >
+                                                Join Discussion
+                                            </button>
+                                        </div>
+                                    </div>
+                                </React.Fragment>
+                            )
+                        }
+
                         {props.connected &&
                             props.authenticated &&
                             props.speakersValidated && (
@@ -309,16 +477,17 @@ function ByodJoinPage(props) {
                                                             props.viewGroup(),
                                                     },
                                                     {
-                                                        title: "Individual",
-                                                        action: () =>
-                                                            props.viewIndividual(),
-                                                    },
-                                                    {
                                                         title: "Comparison",
                                                         action: () =>
                                                             props.viewComparison(),
                                                     },
                                                 ]}
+                                                participants={props.speakers.map((speaker, index) => (
+                                                    {
+                                                        alias: speaker.alias,
+                                                        action: () => props.loadSpeakerMetrics(speaker.id, speaker.alias),
+                                                    }
+                                                ))}
                                             />
                                         ) : (
                                             <></>
@@ -332,7 +501,7 @@ function ByodJoinPage(props) {
                                                     <div
                                                         className={
                                                             style[
-                                                                "pod-overview-button"
+                                                            "pod-overview-button"
                                                             ]
                                                         }
                                                         style={{
@@ -414,7 +583,7 @@ function ByodJoinPage(props) {
                                                     <div
                                                         className={
                                                             style[
-                                                                "video-container"
+                                                            "video-container"
                                                             ]
                                                         }
                                                         style={{
@@ -427,6 +596,8 @@ function ByodJoinPage(props) {
                                                         <video
                                                             controls={true}
                                                             muted={true}
+                                                            autoPlay={true}
+                                                            playsInline={true}
                                                             style={{
                                                                 marginLeft:
                                                                     "20px",
@@ -438,88 +609,71 @@ function ByodJoinPage(props) {
 
                                             {props.joinwith ===
                                                 "Videocartoonify" && (
-                                                <AppSectionBoxComponent
-                                                    heading={"Video control:"}
-                                                >
-                                                    <div
-                                                        className={
-                                                            style[
-                                                                "video-container"
-                                                            ]
-                                                        }
-                                                        style={{
-                                                            display:
-                                                                props.preview
-                                                                    ? "block"
-                                                                    : "none",
-                                                        }}
+                                                    <AppSectionBoxComponent
+                                                        heading={"Video control:"}
                                                     >
-                                                        <video
-                                                            controls={true}
-                                                            muted={true}
-                                                            style={{
-                                                                marginLeft:
-                                                                    "20px",
-                                                            }}
-                                                        />
-                                                        <img
-                                                            style={{
-                                                                marginLeft:
-                                                                    "12px",
-                                                            }}
-                                                            width="150"
-                                                            height="80"
-                                                            src={
-                                                                props.cartoonImgUrl
+                                                        <div
+                                                            className={
+                                                                style[
+                                                                "video-container"
+                                                                ]
                                                             }
-                                                        />
-                                                    </div>
-                                                </AppSectionBoxComponent>
-                                            )}
+                                                            style={{
+                                                                display:
+                                                                    props.preview
+                                                                        ? "block"
+                                                                        : "none",
+                                                            }}
+                                                        >
+                                                            <video
+                                                                controls={true}
+                                                                muted={true}
+                                                                style={{
+                                                                    marginLeft:
+                                                                        "20px",
+                                                                }}
+                                                            />
+                                                            <img
+                                                                style={{
+                                                                    marginLeft:
+                                                                        "12px",
+                                                                }}
+                                                                width="150"
+                                                                height="80"
+                                                                src={
+                                                                    props.cartoonImgUrl
+                                                                }
+                                                            />
+                                                        </div>
+                                                    </AppSectionBoxComponent>
+                                                )}
                                             <AppInfographicsComparison
-                                                displayTranscripts={
-                                                    props.displayTranscripts
-                                                }
+                                                displayTranscripts={props.displayTranscripts}
+                                                displayVideoMetrics={props.displayVideoMetrics}
                                                 fromclient={true}
-                                                onClickedTimeline={
-                                                    props.onClickedTimeline
-                                                }
-                                                radarTrigger={
-                                                    props.radarTrigger
-                                                }
+                                                onClickedTimeline={props.onClickedTimeline}
+                                                radarTrigger={props.radarTrigger}
                                                 session={props.session}
-                                                sessionDevice={
-                                                    props.sessionDevice
-                                                }
+                                                sessionDevice={props.sessionDevice}
                                                 setRange={props.setRange}
                                                 showBoxes={props.showBoxes}
-                                                showFeatures={
-                                                    props.showFeatures
-                                                }
+                                                showFeatures={props.showFeatures}
                                                 startTime={props.startTime}
                                                 endTime={props.endTime}
                                                 speakers={props.speakers}
-                                                selectedSpkrId1={
-                                                    props.selectedSpkrId1
-                                                }
-                                                setSelectedSpkrId1={
-                                                    props.setSelectedSpkrId1
-                                                }
-                                                selectedSpkrId2={
-                                                    props.selectedSpkrId2
-                                                }
-                                                setSelectedSpkrId2={
-                                                    props.setSelectedSpkrId2
-                                                }
-                                                spkr1Transcripts={
-                                                    props.spkr1Transcripts
-                                                }
-                                                spkr2Transcripts={
-                                                    props.spkr2Transcripts
-                                                }
+                                                selectedSpkrId1={props.selectedSpkrId1}
+                                                setSelectedSpkrId1={props.setSelectedSpkrId1}
+                                                selectedSpkrId2={props.selectedSpkrId2}
+                                                setSelectedSpkrId2={props.setSelectedSpkrId2}
+                                                spkr1Transcripts={props.spkr1Transcripts}
+                                                spkr2Transcripts={props.spkr2Transcripts}
+                                                spkr1VideoMetrics={props.spkr1VideoMetrics}
+                                                spkr2VideoMetrics={props.spkr2VideoMetrics}
                                                 details={props.details}
+                                                getSpeakerAliasFromID={props.getSpeakerAliasFromID}
                                             />
                                         </div>
+
                                         {props.loading() ? (
                                             <AppSpinner></AppSpinner>
                                         ) : (
@@ -633,7 +787,7 @@ function ByodJoinPage(props) {
                             <button
                                 className={style5["basic-button"]}
                                 onClick={() => {
-                                    props.changeAliasName(
+                                    props.addSpeakerFingerprint(
                                         document.getElementById("txtAlias")
                                             .value,
                                     )
@@ -650,7 +804,48 @@ function ByodJoinPage(props) {
                                 Cancel
                             </button>
                         </div>
-                    ))}
+                    )) ||
+                    (props.currentForm === "savedAudioVideoFingerprint" && (
+                        <div
+                            className={style5["dialog-window"]}
+                            style={{ "min-width": adjDim(270) + "px" }}
+                        >
+                            <div className={style5["dialog-heading"]}>
+                                Enter Username:
+                            </div>
+                            <input
+                                id="registeredusername"
+                                className={style5["field-input"]}
+                                maxLength="64"
+                            />
+                            <div>
+                                {props.invalidName
+                                    ? "Record not found for the entered Username"
+                                    : ""}
+                            </div>
+                            <button
+                                className={style5["basic-button"]}
+                                onClick={() => {
+                                    props.startProcessingSavedSpeakerFingerprint(
+                                        document.getElementById("registeredusername")
+                                            .value,
+                                    )
+                                }}
+                            >
+                                {" "}
+                                Confirm
+                            </button>
+                            <button
+                                className={style5["cancel-button"]}
+                                onClick={props.closeDialog}
+                            >
+                                {" "}
+                                Cancel
+                            </button>
+                        </div>
+                    ))
+
+                }
             </GenericDialogBox>
 
             <DialogBoxTwoOption
@@ -696,6 +891,12 @@ function ByodJoinPage(props) {
                 heading={"Connecting..."}
                 message={"Please wait..."}
                 show={props.currentForm === "Connecting"}
+            />
+            <WaitingDialog
+                itsclass={"add-dialog"}
+                heading={"Processing..."}
+                message={"Please wait..."}
+                show={props.currentForm === "processing"}
             />
 
             <DialogBox

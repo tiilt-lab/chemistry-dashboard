@@ -22,6 +22,19 @@ class SessionService {
     return this.api.httpRequestCall(`api/v1/sessions/${sessionId}`, "GET", {});
   }
 
+  getSessionByPasscode(passcode) {
+    return this.api.httpRequestCall(`api/v1/sessions/student/passcode/${passcode}`, "GET", {});
+  }
+
+  getSessionById(sessionId) {
+    return this.api.httpRequestCall(`/api/v1/sessions/student/sessionid/${sessionId}`, "GET", {});
+  }
+
+ 
+  getSessionsByAlias(alias) {
+    return this.api.httpRequestCall(`/api/v1/sessions/student/alias/${alias}`, "GET", {});
+  }
+
   deleteSession(sessionId) {
     return this.api.httpRequestCall(
       `api/v1/sessions/${sessionId}`,
@@ -84,9 +97,41 @@ class SessionService {
     );
   }
 
+  getSessionSpeakers(sessionId) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/speakers`,
+      "GET",
+      {}
+    );
+  }
+
   getSessionDeviceTranscriptsForClient(sessionDeviceId, startTime = 0) {
     return this.api.httpRequestCall(
       `api/v1/devices/${sessionDeviceId}/transcripts/client`,
+      "GET",
+      {}
+    );
+  }
+
+  getSessionDeviceVideoMetricsForClient(sessionDeviceId, startTime = 0) {
+    return this.api.httpRequestCall(
+      `api/v1/devices/${sessionDeviceId}/videometrics/client`,
+      "GET",
+      {}
+    );
+  }
+
+  getSessionTranscriptsForClient(sessionId, alias,startTime = 0) {
+    return this.api.httpRequestCall(
+      `api/v1/session/${sessionId}/transcripts/student/${alias}`,
+      "GET",
+      {}
+    );
+  }
+
+  getSessionVideoMetricsForClient(sessionId, alias,startTime = 0) {
+    return this.api.httpRequestCall(
+      `api/v1/session/${sessionId}/videometrics/student/${alias}`,
       "GET",
       {}
     );
@@ -108,7 +153,7 @@ class SessionService {
     );
   }
 
-  getSessionSpeakerMetrics(sessionId){
+  getSessionSpeakerMetrics(sessionId) {
     const body = {
       sessionId: sessionId,
     };

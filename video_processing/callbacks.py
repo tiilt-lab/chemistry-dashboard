@@ -53,3 +53,42 @@ def get_redis_session_config(session_key):
     except Exception as e:
         logging.info('get_redis_session_config callback  failed: {0}'.format(e))
         return None  
+    
+def post_connect(source):
+    connection = {
+        'source': source,
+        'time': str(datetime.utcnow())
+    }
+    try:
+        logging.info('end point')
+        logging.info(config.connect_callback())
+        response = requests.post(config.connect_callback(), json=connection)
+        logging.info(response.status_code)
+        return response.status_code == 200
+    except Exception as e:
+        logging.info('connect callback failed: {0}'.format(e))
+        return False
+
+def post_disconnect(source):
+    disconnection = {
+        'source': source,
+        'time': str(datetime.utcnow())
+    }
+    try:
+        response = requests.post(config.disconnect_callback(), json=disconnection)
+        return response.status_code == 200
+    except Exception as e:
+        logging.info('disconnect callback failed: {0}'.format(e))
+        return False
+    
+def post_video_metrics(source, video_metrics):
+    result = {
+        'source': source,
+        'video_metrics': video_metrics
+    }
+    try:
+        response = requests.post(config.video_metrics_callback(), json=result)
+        return response.status_code == 200
+    except Exception as e:
+        logging.warning('video metric callback failed: {0}'.format(e))
+        return False

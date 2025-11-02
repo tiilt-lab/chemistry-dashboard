@@ -12,6 +12,7 @@ eyed3==0.8.12
 pydub==0.24.0
 transformers>=4.34.0
 scipy==1.12.0
+moviepy==1.0.2
 librosa
 hmmlearn
 sentence-transformers

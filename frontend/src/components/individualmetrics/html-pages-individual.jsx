@@ -2,6 +2,8 @@ import style from "./features.module.css"
 import { DialogBox } from "../../dialog/dialog-component"
 import questIcon from "../../assets/img/question.svg"
 import { adjDim } from "../../myhooks/custom-hooks"
+import { Line } from "react-chartjs-2";
+import { Chart as ChartJS } from "chart.js/auto";
 import React from "react"
 
 function IndividualFeaturePage(props) {
@@ -98,27 +100,48 @@ function IndividualFeaturePage(props) {
                                                     }}
                                                 ></div>
                                             ) : (
-                                                <svg
-                                                    viewBox="0 -0.5 74 39.5"
-                                                    className={style.svg}
-                                                    style={{
-                                                        width:
-                                                            adjDim(74) + "px",
-                                                    }}
-                                                >
-                                                    <path
-                                                        d={feature.path}
-                                                        fill="none"
-                                                        className={
-                                                            feature.trend >= 0
-                                                                ? style.positive
-                                                                : feature.trend ===
-                                                                    -1
-                                                                  ? style.negative
-                                                                  : ""
-                                                        }
-                                                    ></path>
-                                                </svg>
+
+                                                    <Line 
+                                                    data={{
+                                                            labels: feature.time,
+                                                            datasets: [{
+                                                            data: feature.values,
+                                                            // stepped: true,
+                                                            borderWidth: 2,
+                                                            pointRadius: 0,
+                                                            }],
+                                                        }}
+                                                                                                        
+                                                    options={{
+                                                                responsive: true,
+                                                                plugins: { legend: { display: false } },
+                                                                scales: {
+                                                                x: { title: { text: "Time (s)", display: true } },
+                                                                y: { title: { text: feature.name, display: true } },
+                                                                },
+                                                            }} 
+                                                />
+                                                // <svg
+                                                //     viewBox="0 -0.5 74 39.5"
+                                                //     className={style.svg}
+                                                //     style={{
+                                                //         width:
+                                                //             adjDim(74) + "px",
+                                                //     }}
+                                                // >
+                                                //     <path
+                                                //         d={feature.path}
+                                                //         fill="none"
+                                                //         className={
+                                                //             feature.trend >= 0
+                                                //                 ? style.positive
+                                                //                 : feature.trend ===
+                                                //                     -1
+                                                //                   ? style.negative
+                                                //                   : ""
+                                                //         }
+                                                //     ></path>
+                                                // </svg>
                                             )}
                                         </td>
                                     </tr>

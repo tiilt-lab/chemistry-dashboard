@@ -26,3 +26,6 @@ def domain():
 def database_user():
     user = str(config['server']['database_user'])
     return "{0}:{1}".format(user, user)
+
+def root_dir():
+    return str(config['rootpath']['root_dir'])

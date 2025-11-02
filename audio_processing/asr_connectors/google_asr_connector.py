@@ -5,12 +5,14 @@ from google.cloud.speech_v1p1beta1 import enums
 from google.cloud.speech_v1p1beta1 import types
 from google.api_core import exceptions
 from google.cloud import speech as speechV1
+from queue import Empty
 import os
 import time
 import math
 import logging
 import threading
 import config as cf
+import numpy as np
 
 # For converting nano seconds to seconds.
 NANO = 1000000000
@@ -19,6 +21,7 @@ NANO = 1000000000
 cf.initialize()
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = cf.root_dir()+'chemistry-dashboard/audio_processing/asr_connectors/google-cloud-key.json'
 os.environ['GRPC_DNS_RESOLVER'] = 'native'
+
 class GoogleASR():
     STREAM_LIMIT = 55.0
     SAMPLE_RATE = 16000
@@ -72,8 +75,10 @@ class GoogleASR():
             if not result.alternatives:
                 continue
             if result.is_final and len(result.alternatives[0].words) > 0:
+                # are these tme calculations really needed? does not appear to be used anywhere
                 end_time = result.result_end_time
                 end_time.seconds, end_time.nanos = self.adjust_time(end_time.seconds, end_time.nanos, audio_start_time)
+                # are these tme calculations really needed? does not appear to be used anywhere
                 for word in result.alternatives[0].words:
                     start = word.start_time
                     end = word.end_time
@@ -88,6 +93,7 @@ class GoogleASR():
             
             if  len(result.alternatives[0].words) > 0:
                 for word in result.alternatives[0].words:
+                    # are these tme calculations really needed? does not appear to be used anywhere
                     start = word.start_time
                     end = word.end_time
                     start.seconds, start.nanos = self.adjust_time(start.seconds, start.nanos, audio_start_time)

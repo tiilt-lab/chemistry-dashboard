@@ -2,12 +2,16 @@
 
 ## Installing Dependencies
 
-Update system packages
+### Please do not run the following commands/setups on the glamdring.cs.northwestern.edu server ###
 
+
+#### The followings are already setup/configured in the glamdring.cs.northwestern.edu server ####
+Update system packages
 ```
 sudo apt-get update
 sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3 python3-pip python3-dev python3-venv python3-tk python3-openssl git sqlite nginx pkg-config libfreetype6-dev libsndfile1
 ```
+### End 
 
 Install pyenv
 
@@ -34,7 +38,7 @@ Restart the Shell
 ```
 exec "$SHELL"
 ```
-
+### The followings are already setup/configured in the glamdring.cs.northwestern.edu server 
 Install Redis
 
 ```
@@ -42,16 +46,18 @@ sudo apt-get install redis-server
 sudo systemctl enable redis-server.service
 ```
 
-Installing MySQL server. When asked to provide a root password, enter "root" as the password.
+Installing MySQL server. When asked to provide a root password, enter "mudcat11" as the password.
 
 ```
 sudo apt-get install mysql-server
 sudo systemctl start mysql
 sudo systemctl enable mysql
 ```
+### End 
 
+
+### The followings are already setup/configured in the glamdring.cs.northwestern.edu server ####
 ## For Video Processing (Optional):
-
 Install nvidia driver, cuda, and cudnn for ubuntu version 22.04
 
 Install nvidia driver (if it is not already installed)
@@ -73,25 +79,26 @@ sudo ubuntu-drivers install nvidia:525
 Install cuda
 
 ```
-visit https://developer.nvidia.com/cuda-12-1-0-download-archive and select the option that fits your architecture
+visit https://developer.nvidia.com/cuda-12-8-0-download-archive and select the option that fits your architecture
 However, if you are seting this up for ubuntu 22.04, run these commands
 
 $ wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-ubuntu2204.pin
 $ sudo mv cuda-ubuntu2204.pin /etc/apt/preferences.d/cuda-repository-pin-600
-$ wget https://developer.download.nvidia.com/compute/cuda/12.1.0/local_installers/cuda-repo-ubuntu2204-12-1-local_12.1.0-530.30.02-1_amd64.deb
-$ sudo dpkg -i  cuda-repo-ubuntu2204-12-1-local_12.1.0-530.30.02-1_amd64.deb
-$ sudo cp /var/cuda-repo-ubuntu2204-12-1-local/cuda-*-keyring.gpg /usr/share/keyrings/
+$ wget https://developer.download.nvidia.com/compute/cuda/12.8.0/local_installers/cuda-repo-ubuntu2204-12-8-local_12.8.0-570.86.10-1_amd64.deb
+$ sudo dpkg -i cuda-repo-ubuntu2204-12-8-local_12.8.0-570.86.10-1_amd64.deb
+$ sudo cp /var/cuda-repo-ubuntu2204-12-8-local/cuda-*-keyring.gpg /usr/share/keyrings/
 $ sudo apt-get update
-$ sudo apt-get -y install cuda
+$ sudo apt-get -y install cuda-toolkit-12-8
 ```
 
 Install cudnn for ubuntu 22.04
 
 ```
-$ wget https://developer.nvidia.com/downloads/compute/cudnn/secure/8.8.1/local_installers/12.0/cudnn-local-repo-ubuntu2204-8.8.1.3_1.0-1_amd64.deb
-
-$ sudo apt install cudnn-local-repo-ubuntu2204-8.8.1.3_1.0-1_amd64.deb
-$ sudo cp /var/cudnn-local-repo-ubuntu2204-8.8.1.3/cudnn-local-*-keyring.gpg /usr/share/keyrings/
+$ wget https://developer.download.nvidia.com/compute/cudnn/9.5.1/local_installers/cudnn-local-repo-ubuntu2204-9.5.1_1.0-1_amd64.deb
+$ sudo dpkg -i cudnn-local-repo-ubuntu2204-9.5.1_1.0-1_amd64.deb
+$ sudo cp /var/cudnn-local-repo-ubuntu2204-9.5.1/cudnn-*-keyring.gpg /usr/share/keyrings/
+$ sudo apt-get update
+$ sudo apt-get -y install cudnn-cuda-12
 ```
 
 Finally, to verify the installation, check
@@ -102,37 +109,21 @@ $ nvcc -V
 ```
 
 ```
-cd ../../../video_processing
-python3 -m venv ./venv
-source venv/bin/activate
+Install pythin 3.8 for video processing
 
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-pip3 install cmake matplotlib ninja numpy opencv-python scipy tqdm wget imutils
-
-install dlib with cuda enabled
-
-$ git clone https://github.com/davisking/dlib.git
-$ cd dlib
-$ mkdir build
-$ cd build
-$ cmake .. -D DLIB_USE_CUDA=1 -D USE_AVX_INSTRUCTIONS=1 -D CMAKE_C_COMPILER=/usr/bin/gcc-11
-$ cmake --build .
-$ cd ..
-$ python setup.py install --set DLIB_USE_CUDA=1 --set CMAKE_C_COMPILER=/usr/bin/gcc-11
+sudo add-apt-repository ppa:deadsnakes/ppa -y
+sudo apt update
+sudo apt install python3.8
+sudo apt install python3.8-dbg
+sudo apt install python3.8-dev
+sudo apt install python3.8-venv
+sudo apt install python3.8-distutils
+sudo apt install python3.8-lib2to3
+sudo apt install python3.8-gdbm
+sudo apt install python3.8-tk
 ```
 
-## Required parts of Server:
-
-Create a database in MySQL
-
-```
-sudo mysql -u root -p
-CREATE DATABASE discussion_capture;
-CREATE USER 'vagrant'@'localhost' IDENTIFIED BY 'vagrant';
-GRANT ALL PRIVILEGES ON discussion_capture.* TO 'vagrant'@'localhost';
-FLUSH PRIVILEGES;
-exit
-```
+### End 
 
 Go to var/lib foloder and pull the git repo
 
@@ -147,6 +138,68 @@ Create python3 virtual environments with pyenv and install packages.
 
 ```
 pyenv install 3.9.21
+
+cd /var/lib/chemistry-dashboard/video_processing
+run python3.9 --version to get the version replace x.x.x below with the version number
+S python3.9 --version
+$ pyenv install x.x.x 
+
+$ pyenv virtualenv 3.9.21 video_processor
+$ pyenv local video_processor
+
+$ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+$ pip install -r requirements.txt
+
+install dlib with cuda enabled
+
+$ cd ~
+$ git clone https://github.com/davisking/dlib.git
+$ cd dlib
+$ mkdir build
+$ cd build
+$ pyenv local video_processor
+$ cmake .. -D DLIB_USE_CUDA=1 -D USE_AVX_INSTRUCTIONS=1 -D CMAKE_C_COMPILER=/usr/bin/gcc-11
+$ cmake --build .
+$ cd ..
+$ pyenv local video_processor
+$ python setup.py install --set DLIB_USE_CUDA=1 --set CMAKE_C_COMPILER=/usr/bin/gcc-11
+```
+```
+Install mish-cuda
+$ cd ~
+$ git clone https://github.com/thomasbrandon/mish-cuda
+$ cd mish-cuda
+$ sudo cp external/CUDAApplyUtils.cuh csrc/CUDAApplyUtils.cuh
+$ pyenv local video_processor
+$ python setup.py install
+```
+## Required Dependencies and models to download:
+```
+$ pip install gdown
+$ cd video_processing/attention_tracking/
+$ mkdir -p pretrained-models
+$ gdown https://drive.google.com/file/d/1UEB_b0QmbMn8753tIBku54hTlcq3yhIs
+$ gdown https://drive.google.com/file/d/1eCBaBEV47bpCRsKNMVorX-ujfZNoIENB
+$ gdown https://drive.google.com/file/d/1Bp_4B204Hu-dr-rPYhABQD1b58kD469A
+$. gdown https://drive.google.com/file/d/1UpE3LlPtc40I4MKyYv20RK3x0XJi5Rl8
+
+$ cd ../emotion_detector
+$ mkdir -p checkpoints
+$ gdown https://drive.google.com/file/d/1MGvRiPaOLBTyPhT4qtMaWmOtHX0zle4f
+```
+
+Create a database in MySQL
+
+```
+sudo mysql -u root -p
+CREATE DATABASE discussion_capture;
+CREATE USER 'vagrant'@'localhost' IDENTIFIED BY 'vagrant';
+GRANT ALL PRIVILEGES ON discussion_capture.* TO 'vagrant'@'localhost';
+FLUSH PRIVILEGES;
+exit
+```
+
+
 
 cd server
 pyenv virtualenv 3.9.21 discussion_capture

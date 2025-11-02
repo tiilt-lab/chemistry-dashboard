@@ -32,10 +32,26 @@ function LandingPageComponent() {
                 Sign In
             </button>
 
-            <button className="lanky-button" onClick={() => navigate("/join")}>
-                Join Discussion
-            </button>
-        </div>
-    )
+<button className={isLargeScreen() ? "basic-button medium-button" : "basic-button small-button"} 
+   onClick={()=> navigate('/signup')}
+  >
+  Sign Up
+  </button>
+
+  <button 
+  className={isLargeScreen() ? "basic-button medium-button" : "basic-button small-button"}  
+    onClick = {()=> navigate('/join')} 
+  > 
+  Join Discussion
+  </button >
+
+  <button 
+  className={isLargeScreen() ? "basic-button medium-button" : "basic-button small-button"}  
+    onClick = {()=> navigate('/dashboard')} 
+  > 
+  Dashboard
+  </button >
+  </div >
+  )
 }
 export default LandingPageComponent

@@ -1,5 +1,6 @@
 import logging
 import threading
+import time
 import numpy as np
 import cv2
 import os
@@ -7,16 +8,25 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 from .model.encoder.align_all_parallel import align_face
-from .util import  get_video_crop_parameter,get_facial_landmark
+from .util import  get_video_crop_parameter,get_facial_shape,tensor2cv2
 from moviepy.editor import *
 from scipy.io import wavfile
 import logging
+import copy
+import json
+import traceback
 import callbacks
-import time
+from concurrent.futures import ThreadPoolExecutor
+from queue import Empty
+from .VideoMetricProcessor import VideoMetricAnalytics
+from global_singleton_lock import get_detector, detector_lock
 
 class VideoProcessor:
-    def __init__(self,cartoon_model,facial_emotion_detector,video_queue,frame_queue,cartoon_image_queue,config,vid_img_dir,video_filename,aud_filename,sample_rate,depth,channels):
+    def __init__(self,cartoon_model,facial_emotion_detector,image_object_detection,attention_detection, \
+                video_queue,frame_queue,cartoon_image_queue,config,cf,vid_img_dir,video_filename,aud_filename,sample_rate,depth,channels,video_interval):
+        
         self.config = config
+        self.cf = cf
         self.video_queue = video_queue
         self.frame_queue = frame_queue
         self.cartoon_image_queue = cartoon_image_queue
@@ -32,7 +42,36 @@ class VideoProcessor:
         self.frame_array = []
         self.cartoon_model = cartoon_model
         self.facial_emotion_detector = facial_emotion_detector
+        self.image_object_detection = image_object_detection
+        self.attention_detection = attention_detection
         self.lock = threading.Lock()
+        self.batch_size = cartoon_model.batch_size
+        self.batch_track = 1
+        self.first_valid_frame = True
+        self.paras = None
+        self.h = None
+        self.w = None
+        self.scale= None
+        self.s_w = []
+        self.frame_batch = []
+        self.time_marker = []
+        self.web_socket_connection = None
+        self.facialEmbeddings = None
+        self.video_interval = video_interval
+        self.video_chunk_count = -1
+        self.STOP = object()  # sentinel
+        # One shared pool instead of creating threads per batch
+        self.pool = ThreadPoolExecutor(max_workers=1)
+
+
+
+
+        if self.cartoon_model.video and self.cartoon_model.parsing_map_path is not None:
+            self.x_p_hat = torch.tensor(np.load(self.cartoon_model.parsing_map_path))
+
+        self.VideoMetricAnalytics = VideoMetricAnalytics(self.attention_detection,self.facial_emotion_detector,self.image_object_detection)     
+
+      
         self.non_cartoon_emotions = {"Extremely afraid":0,"Extremely alarmed":0,"Extremely annoyed":0,"Extremely aroused":0,"Extremely astonished":0,
                         "Extremely bored":0,"Extremely calm":0,"Extremely content":0,"Extremely delighted":0,"Extremely depressed":0,
                         "Extremely distressed":0,"Extremely droopy":0,"Extremely excited":0,"Extremely frustrated":0,"Extremely gloomy":0,
@@ -82,25 +121,35 @@ class VideoProcessor:
         self.running = False
         self.vid_pro_thread.join()
 
-    def __complete_callback(self):
-        try:
-            self.convert_dat_to_wav()
-            sortedfiles = [int(f.split(".")[0]) for f in os.listdir(self.vid_img_dir)]
-            sortedfiles.sort()
-            file_path = [os.path.join(self.vid_img_dir,str(fp)+".png") for fp in sortedfiles] 
-            video = ImageSequenceClip(file_path,fps=29)
-            audio_clip = AudioFileClip(self.wav_filename)
-            new_audio_clip = CompositeAudioClip([audio_clip])
-            video.audio = new_audio_clip
-            video.write_videofile(self.cart_vid)
+    def add_websocket_connection(self,web_socket):
+        self.web_socket_connection = web_socket
 
-            for file in os.listdir(self.vid_img_dir):
-                os.remove(os.path.join(self.vid_img_dir,file))
-            os.rmdir(self.vid_img_dir)
-            os.remove(self.wav_filename)
+    def setParticpantFacialEmbeddings(self,facialEmbeddings):
+        self.facialEmbeddings = facialEmbeddings
+
+    def send_json(self, message):
+        payload = json.dumps(message).encode('utf8')
+        self.web_socket_connection.sendMessage(payload, isBinary = False)
         
-        except Exception as e:
-            logging.info('Unable to build cartoonized frames into video or delete video file: {0}'.format(e))
+    # def __complete_callback(self):
+    #     try:
+    #         self.convert_dat_to_wav()
+    #         sortedfiles = [int(f.split(".")[0]) for f in os.listdir(self.vid_img_dir)]
+    #         sortedfiles.sort()
+    #         file_path = [os.path.join(self.vid_img_dir,str(fp)+".png") for fp in sortedfiles] 
+    #         video = ImageSequenceClip(file_path,fps=29)
+    #         audio_clip = AudioFileClip(self.wav_filename)
+    #         new_audio_clip = CompositeAudioClip([audio_clip])
+    #         video.audio = new_audio_clip
+    #         video.write_videofile(self.cart_vid)
+
+    #         for file in os.listdir(self.vid_img_dir):
+    #             os.remove(os.path.join(self.vid_img_dir,file))
+    #         os.rmdir(self.vid_img_dir)
+    #         os.remove(self.wav_filename)
+        
+    #     except Exception as e:
+    #         logging.info('Unable to build cartoonized frames into video or delete video file: {0}'.format(e))
 
 
 
@@ -115,187 +164,292 @@ class VideoProcessor:
 
 
     def convert_image(self,frames,savetopath,width,height):
-        with self.lock:
-            device = "cpu" if self.cartoon_model.cpu else "cuda"
-            kernel_1d = np.array([[0.125],[0.375],[0.375],[0.125]])
-            for frame_index, frame in enumerate(frames):
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                #logging.info('variable name device has value  {0}'.format(device))
-                if self.cartoon_model.scale_image:
-                    try:
-                        paras,h,w,scale = get_video_crop_parameter(cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY), self.cartoon_model.landmarkpredictor, self.cartoon_model.face_detector_model,self.cartoon_model.padding)
-                        
-                        if paras is not None:
-                            if scale <= 0.75:
+        device = "cpu" if self.cartoon_model.cpu else "cuda"
+        kernel_1d = np.array([[0.125],[0.375],[0.375],[0.125]])
+        frame_faces_accumulator = []
+        faces_in_frame = {}
+        processed_frame_track = []
+        for frame_index, frame in enumerate(frames):
+            # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            if self.cartoon_model.scale_image:
+                try:
+                    if self.first_valid_frame:
+                        self.paras,self.h,self.w,self.scale = get_video_crop_parameter(cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY), self.cartoon_model.landmarkpredictor, self.cartoon_model.face_detector_model,self.cartoon_model.padding)
+                        if self.paras is not None:
+                            if self.scale <= 0.75:
                                 frame = cv2.sepFilter2D(frame, -1, kernel_1d, kernel_1d)
-                            if scale <= 0.375:
+                            if self.scale <= 0.375:
                                 frame = cv2.sepFilter2D(frame, -1, kernel_1d, kernel_1d) 
 
-                            resized_frame = cv2.resize(frame, (w, h),interpolation=cv2.INTER_AREA)
+                            resized_frame = cv2.resize(frame, (self.w, self.h),interpolation=cv2.INTER_AREA)
 
-                            for index, para in enumerate(paras):
+                            for index, para in enumerate(self.paras):
                                 top,bottom,left,right,lm,face_lm = para
-                                #left = x
-                                #top  == y
-                                # right = x + w
-                                # bottom  == y + h
-                                face = resized_frame[top:bottom, left:right]  
-                                if savetopath:
-                                    # emo_det = self.facial_emotion_detector.predict_facial_emotion(face,left,top,right,bottom)
-                                    emo_det = self.facial_emotion_detector.predict_facial_emotion(face_lm)
-                                    self.non_cartoon_emotions[emo_det] = self.non_cartoon_emotions[emo_det] + 1
-                                    
-                                    logging.info('Non cartonized image emotion is  {0}'.format(emo_det))    
-                                try:
-                                    with torch.no_grad():
-                                        I = align_face(face,lm)
-                                        I = self.cartoon_model.transform(I).unsqueeze(dim=0).to(device)
-                                        s_w = self.cartoon_model.pspencoder(I)
-                                        s_w = self.cartoon_model.vtoonify.zplus2wplus(s_w)
-                                        if self.cartoon_model.vtoonify.backbone == 'dualstylegan':
-                                            if self.cartoon_model.color_transfer:
-                                                s_w = self.cartoon_model.exstyle
-                                            else:
-                                                s_w[:,:7] = self.cartoon_model.exstyle[:,:7]
+                                face = resized_frame[top:bottom, left:right] 
+                                
+                                with torch.no_grad():
+                                    I = align_face(face,lm)
+                                    I = self.cartoon_model.transform(I).unsqueeze(dim=0).to(device)
+                                    inner_s_w = self.cartoon_model.pspencoder(I)
+                                    inner_s_w = self.cartoon_model.vtoonify.zplus2wplus(inner_s_w)
+                                    if self.cartoon_model.vtoonify.backbone == 'dualstylegan':
+                                        if self.cartoon_model.color_transfer:
+                                            inner_s_w = self.cartoon_model.exstyle
+                                        else:
+                                            inner_s_w[:,:7] = self.cartoon_model.exstyle[:,:7]
 
-                                        x = self.cartoon_model.transform(face).unsqueeze(dim=0).to(device)
-                                        # parsing network works best on 512x512 images, so we predict parsing maps on upsmapled frames
-                                        # followed by downsampling the parsing maps
-                                        x_p = F.interpolate(self.cartoon_model.parsingpredictor(2*(F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=False)))[0], 
-                                                            scale_factor=0.5, recompute_scale_factor=False).detach()
-                                        # we give parsing maps lower weight (1/16)
-                                        inputs = torch.cat((x, x_p/16.), dim=1)
-                                        # d_s has no effect when backbone is toonify
-            
-                                        y_tilde = self.cartoon_model.vtoonify(inputs, s_w.repeat(inputs.size(0), 1, 1), d_s = self.cartoon_model.style_degree)        
-                                    
-                                        y_tilde = torch.clamp(y_tilde, -1, 1)
-                                        
+                                    self.s_w.append(inner_s_w)
+                                    #append a particular face across frames in the key corresponding to the paras index
+                                    if index in faces_in_frame:
+                                        faces_in_frame[index]+= [self.cartoon_model.transform(face).unsqueeze(dim=0).to(device)]
+                                    else:
+                                        faces_in_frame[index] = [self.cartoon_model.transform(face).unsqueeze(dim=0).to(device)]
 
-                                        cartooned_image =((y_tilde[0].cpu().cpu().numpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8) 
-                                        
-                                        resized_img = cv2.resize(cartooned_image, (face.shape[1], face.shape[0]), interpolation = cv2.INTER_AREA)
-                                        emo_det = ""
-                                        if savetopath:
-                                            face_lm = get_facial_landmark(resized_img,self.cartoon_model.landmarkpredictor, self.cartoon_model.face_detector_model)
-                                            # emo_det = self.facial_emotion_detector.predict_facial_emotion(resized_img,left,top,right,bottom)
-                                            if face_lm:
-                                                emo_det = self.facial_emotion_detector.predict_facial_emotion(face_lm)
-                                                self.cartoon_emotions[emo_det] = self.cartoon_emotions[emo_det] + 1
-                                                
-                                            logging.info('cartonized image emotion is  {0}'.format(emo_det)) 
-                                        
-                                        resized_frame[top:bottom, left:right,:] = resized_img
-
-                                        label_size, base_line = cv2.getTextSize("{}".format(emo_det), cv2.FONT_HERSHEY_SIMPLEX, 0.8, 2)
-                                        resized_frame = cv2.rectangle(
-                                                        resized_frame,
-                                                        # (x, y), (x + w, y + h)
-                                                        (left, top), (right,bottom),
-                                                        # (left + right, top + bottom - label_size[1]),
-                                                        # (left + right + label_size[0], top + 1 + base_line),
-                                                        (223, 128, 255),1)
-
-                                        resized_frame = cv2.putText(
-                                            resized_frame,
-                                            "{}".format(emo_det),
-                                            # (left + right, top + bottom),
-                                            (left , top),
-                                            cv2.FONT_HERSHEY_SIMPLEX,
-                                            0.8,
-                                            (0, 0, 0),
-                                            2) 
-                                        
-
-                                except Exception as e: 
-                                    logging.info('exception occured while converting video to cartoon: {0}'.format(e))
-                                    continue   
-
-                            if savetopath is None:
-                                success, encoded_frame =  cv2.imencode('.png', resized_frame)
-                                if success:
-                                    callbacks.post_cartoonized_image(self.config.auth_key,self.config.sessionId,self.config.deviceId, encoded_frame.tobytes())       
+                            # frame_faces_accumulator.append(torch.stack(faces))
+                            processed_frame_track.append(resized_frame)
+                            self.first_valid_frame = False
+                    #this means the first valid frame have been detected and paras has value        
+                    elif  self.paras is not None:
+                        if self.scale <= 0.75:
                             
-                            if savetopath is not None:
-                                cv2.imwrite(savetopath[frame_index],cv2.resize(resized_frame, (width,height), interpolation = cv2.INTER_AREA))
-                        else:
-                            if savetopath is not None:
-                                cv2.imwrite(savetopath[frame_index],cv2.resize(frame, (width,height), interpolation = cv2.INTER_AREA))
+                            frame = cv2.sepFilter2D(frame, -1, kernel_1d, kernel_1d)
+                        if self.scale <= 0.375:
+                            frame = cv2.sepFilter2D(frame, -1, kernel_1d, kernel_1d) 
 
-                    except Exception as e: 
-                        logging.info('exception occured in the entire convert image: {0}'.format(e))  
-            if savetopath is not None:
-                # Check if this was the final process of the transmission.
-                self.running_processes -= 1
-                if (not self.running) and self.running_processes == 0 and self.video_queue.empty():
-                    logging.info('i eventually called complete_callback from convert_image')
-                    logging.info('Non cartoonized image emotions:')
-                    for key, value in self.non_cartoon_emotions.items():
-                        logging.info('{0} : {1}'.format(key,value)) 
-                    logging.info('Cartoonized image emotions: ')
-                    for key, value in self.cartoon_emotions.items():
-                        logging.info('{0} : {1}'.format(key,value))
-                    self.__complete_callback()  
-                    # logging.info('i am done with the lock')           
-      
+                    resized_frame = cv2.resize(frame, (self.w, self.h),interpolation=cv2.INTER_AREA)
+                    for index, para in enumerate(self.paras):
+                        top,bottom,left,right,lm,face_lm = para
+                        face = resized_frame[top:bottom, left:right] 
+
+                        #append a particular face across frames in the key corresponding to the paras index
+                        if index in faces_in_frame:
+                            faces_in_frame[index]+= [self.cartoon_model.transform(face).unsqueeze(dim=0).to(device)]
+                        else:
+                            faces_in_frame[index] = [self.cartoon_model.transform(face).unsqueeze(dim=0).to(device)]
+                        
+                    processed_frame_track.append(resized_frame)
+                        
+                except Exception as e:
+                    error_str = traceback.format_exc()
+                    logging.info('exception occured while converting video to cartoon: {0}'.format(error_str))
+                    continue  
+                           
+        cartoonized_faces = [] 
+        for key, face_across_frame in faces_in_frame.items():   
+            x = torch.cat(face_across_frame, dim=0)
+            with torch.no_grad():
+                if self.cartoon_model.video and self.cartoon_model.parsing_map_path is not None:
+                    len_frames = len(frame_faces_accumulator)     
+                    x_p = self.x_p_hat[len_frames+1-x.size(0):len_frames+1].to(device)
+                else:
+                    x_p = F.interpolate(self.cartoon_model.parsingpredictor(2*(F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=False)))[0], 
+                                    scale_factor=0.5, recompute_scale_factor=False).detach()
+                # we give parsing maps lower weight (1/16)
+                inputs = torch.cat((x, x_p/16.), dim=1)
+                # d_s has no effect when backbone is toonify
+
+                y_tilde = self.cartoon_model.vtoonify(inputs, self.s_w[key].repeat(inputs.size(0), 1, 1), d_s = self.cartoon_model.style_degree)        
+            
+                y_tilde = torch.clamp(y_tilde, -1, 1)
+                cartoonized_faces.append(y_tilde)                    
+
+        reversed_face_across_frame = zip(*cartoonized_faces)
+
+        for j, faces_in_frame in enumerate(reversed_face_across_frame):
+            for k, cart_face in enumerate(faces_in_frame):
+                i_top = self.paras[k][0]
+                i_bottom = self.paras[k][1]
+                i_left = self.paras[k][2]
+                i_right = self.paras[k][3]
+                H =  i_bottom - i_top
+                W =  i_right - i_left
+                cartooned_image = tensor2cv2(cart_face.cpu())
+                # logging.info('shape of cartoon image {0} {1}'.format(cartooned_image.shape,(W,H)))
+                # save_to = os.path.join(self.vid_img_dir, "{0}_{1}.{2}".format(j,k,'png'))
+                # cv2.imwrite(save_to,cartooned_image)
+                resized_img = cv2.resize(cartooned_image, (W, H), interpolation = cv2.INTER_AREA)
+                processed_frame_track[j][i_top:i_bottom, i_left:i_right,:] = resized_img
+
+            if savetopath is None:
+                success, encoded_frame =  cv2.imencode('.jpeg', processed_frame_track[j])
+                if success:
+                    payload = encoded_frame.tobytes() #base64.b64encode() 
+                    logging.info("i am about to send the cartoonized image")
+                    self.web_socket_connection.sendMessage(payload, isBinary = True)
+                    logging.info("i have sent the cartoonized image")
+                    # callbacks.post_cartoonized_image(self.config.auth_key,self.config.sessionId,self.config.deviceId, encoded_frame.tobytes())
+                           
+        
+        if savetopath is not None:
+            for i, processed_frame in enumerate(processed_frame_track):
+                save_to = os.path.join(self.vid_img_dir, "{0}.{1}".format(i+1,'png'))
+                cv2.imwrite(save_to,cv2.resize(processed_frame, (width,height), interpolation = cv2.INTER_AREA))
+
+    def adjust_time(self,frame_sec_mark):
+        offset = self.config.start_offset
+        return round(offset+ (frame_sec_mark + (self.video_interval * self.video_chunk_count)))
+    
+    def process_video_analytics(self,batch_frames,facialEmbeddings,batch_track,time_marker,vid_img_dir,auth_key):
+        # with self.lock:
+            processing_timer = time.monotonic()
+            video_metrics=None
+            with detector_lock():  # serialize CUDA/NMS across all users in this process
+                # det = get_detector(None)  # second call ignores lambda
+                all_frames,face_object_detected = self.image_object_detection.detection_with_facial_regonition(batch_frames,facialEmbeddings,batch_track,time_marker,vid_img_dir,auth_key)
+            
+            video_metrics = self.VideoMetricAnalytics.compute_videoMetrics(all_frames,face_object_detected)
+            # print("video_metrics ", video_metrics)
+            if video_metrics: 
+                # logging.info('printing video_metrics')
+                # logging.info(video_metrics)
+                success = callbacks.post_video_metrics(self.config.auth_key, video_metrics)
+
+                processing_time = time.monotonic() - processing_timer
+                if success:
+                    logging.info( f"Video processing results posted successfully for client {self.config.auth_key} (Processing time: {processing_time})")
+
+    def worker_process(self,frames_batch, time_markers, batch_idx):
+        # Do cvtColor here if needed (OpenCV releases GIL, ok in threads)
+        frames_batch = [cv2.cvtColor(f, cv2.COLOR_BGR2RGB) for f in frames_batch]
+       
+        if self.cf.process_video_analytics():
+            self.process_video_analytics(frames_batch, self.facialEmbeddings, batch_idx, time_markers, self.vid_img_dir,self.config.auth_key)
+            
+        if self.config.videocartoonify and self.cf.video_cartoonize():
+            self.convert_image(frames_batch, None, 500, 375)
+
 
     def processing(self):
-        logging.info('frame cartoonization thread started for {0}.'.format(self.config.auth_key))
-        frame_processing_thread = None
-        while self.running or not self.video_queue.empty():
+        while self.running:
             try:
-                subclip_frames = None if self.video_queue.empty() else self.video_queue.get(block=False)
+                # block briefly to avoid CPU spin; adjust timeout for latency needs
+                subclip_frames = self.video_queue.get(timeout=0.25)
+            except Empty:
+                continue
+
+            if subclip_frames is self.STOP:
+                break
             
-                if subclip_frames is not None:
-                    subclib_frame_count = 0
-                    frame_batch = []
-                    for frame in subclip_frames:
-                        subclib_frame_count =  subclib_frame_count + 1
-                        # if frame_shape[1] > frame_shape[0]:
-                        #     dim = (500,375)
-                        # else:
-                        #      dim = (375,500)   
-                        # frame = cv2.resize(frame, (500,375),interpolation=cv2.INTER_AREA)
-                        self.frame_array.append(frame)
-                        if self.frame_count % 29 == 0:
-                            frame_batch.append(frame)
-                            if (len(frame_batch) >= 9):
-                                frame_processing_thread = threading.Thread(target=self.convert_image, args=(frame_batch,None,500,375))
-                                frame_processing_thread.daemon = True
-                                frame_processing_thread.start()
-                                frame_batch = []
+            try:
+                self.video_chunk_count+=1
+                subclib_frame_count = 0
+                for ts, frame in subclip_frames:
+                    subclib_frame_count =  subclib_frame_count + 1
+                    # defer expensive cvtColor unless strictly needed now
+                    # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+                    self.frame_batch.append(frame)
+                    self.time_marker.append(self.adjust_time(ts))
+
+                    if len(self.frame_batch) >= self.batch_size:
+                        # hand off current lists; start fresh ones for the producer
+                        frames = self.frame_batch
+                        markers = self.time_marker
+                        b_tracker = self.batch_track
+                        self.frame_batch = []
+                        self.time_marker = []
+
+                        # submit to the pool
+                        self.pool.submit(self.worker_process, frames, markers, b_tracker)
+                        self.batch_track+=1
+
+                    # we just need 290 frames of the 10 sec chunks, and break if the frames capture  is more than 290    
+                    if  subclib_frame_count > 300:
+                        break
+            except Exception as e:
+                error_str = traceback.format_exc()
+                logging.warning('Exception thrown while extracting image subclib {0} {1}'.format(error_str, self.config.auth_key))
+
+        # drain remaining frames
+        if self.frame_batch:
+            frames = self.frame_batch
+            markers = self.time_marker
+            b_tracker = self.batch_track
+            self.frame_batch = []
+            self.time_marker = []
+            self.pool.submit(self.worker_process, frames, markers, b_tracker)
+
+        self.pool.shutdown(wait=True)
+        logging.info('frame cartoonization thread stopped for {0}.'.format(self.config.auth_key))
+
+    # def processing(self):
+    #     logging.info('frame cartoonization thread started for {0}.'.format(self.config.auth_key))
+    #     frame_processing_thread = None
+    #     while self.running or not self.video_queue.empty():
+    #         try:
+    #             subclip_frames = None if self.video_queue.empty() else self.video_queue.get(block=False)
+            
+    #             if subclip_frames is not None:
+    #                 self.video_chunk_count+=1
+    #                 subclib_frame_count = 0
+    #                 for time_stamp, frame in subclip_frames:
+    #                     subclib_frame_count =  subclib_frame_count + 1
+    #                     # logging.info('tracking time stamp for frame {} in  batch : {} is  {}'.format(subclib_frame_count, self.batch_track, time_stamp))
+    #                     # if frame_shape[1] > frame_shape[0]:
+    #                     #     dim = (500,375)
+    #                     # else:
+    #                     #      dim = (375,500)   
+    #                     # frame = cv2.resize(frame, (500,375),interpolation=cv2.INTER_AREA)
+    #                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    #                     self.frame_array.append(frame)
+    #                     self.frame_batch.append(frame)
+    #                     self.time_marker.append(self.adjust_time(time_stamp))
+    #                     if (len(self.frame_batch) == self.batch_size):
+    #                         # logging.info('total appended per batch {0}'.format(len(self.frame_batch)))
+    #                         frames_batch_copy = copy.deepcopy(self.frame_batch)
+
+    #                         # logging.info('printing ocf detail attention: {} cartoonify: {} and {}'.format(self.cf.process_video_analytics(),self.cf.video_cartoonize(), self.config.videocartoonify))
+    #                         if self.config.videocartoonify and self.cf.video_cartoonize():
+    #                             self.convert_image(self.frame_batch,None,500,375)
+
+                            
+    #                         if self.cf.process_video_analytics():
+    #                             #start attention tracking
+    #                             video_processing_thread = threading.Thread(target=self.process_video_analytics, args=(frames_batch_copy,self.facialEmbeddings,self.batch_track,self.time_marker,self.vid_img_dir))
+    #                             video_processing_thread.daemon = True
+    #                             video_processing_thread.start()
+                                
+                                
+                            
+    #                         self.frame_batch = []
+    #                         self.time_marker = []
+    #                         self.batch_track+=1
                                 
 
-                        self.frame_count = self.frame_count + 1  
+                                
 
-                        # we just need 290 frames of the 10 sec chunks, and break if the frames capture  is more than 290    
-                        if  subclib_frame_count > 300:
-                            break
+    #                     self.frame_count = self.frame_count + 1  
+
+    #                     # we just need 290 frames of the 10 sec chunks, and break if the frames capture  is more than 290    
+    #                     if  subclib_frame_count > 300:
+    #                         break
 
             
-            except Exception as e:
-                logging.warning('Exception thrown while extracting image subclib {0} {1}'.format(e, self.config.auth_key))
+    #         except Exception as e:
+    #             error_str = traceback.format_exc()
+    #             logging.warning('Exception thrown while extracting image subclib {0} {1}'.format(error_str, self.config.auth_key))
 
-        logging.info('frame cartoonization thread stopped for {0}.'.format(self.config.auth_key))
+    #     logging.info('frame cartoonization thread stopped for {0}.'.format(self.config.auth_key))
 
-        # end the tr
-        if frame_processing_thread is not None:
-            frame_processing_thread.join()
-        # convert all image to cartoon and save
-        Post_frame_batch = []
-        post_frame_name = []
-        for index,  s_frame in enumerate(self.frame_array):
-            Post_frame_batch.append(s_frame)
-            post_frame_name.append(os.path.join(self.vid_img_dir, "{0}.{1}".format(index+1,'png')))
-            if (len(Post_frame_batch) >= 20):
-                self.running_processes += 1
-                save_frame_thread = threading.Thread(target=self.convert_image, args=(Post_frame_batch,post_frame_name,500,375))
-                save_frame_thread.daemon = True
-                save_frame_thread.start()
-                Post_frame_batch =  [] 
-                post_frame_name = []     
-     
-        # logging.info('i eventually called complete_callback')
-        # self.__complete_callback() 
-        logging.info('frame cartoonization thread stopped for {0}.'.format(self.config.auth_key))
-          
+    #     # Processing after session has ended (post hoc processing)
+    #     if self.config.videocartoonify and self.cf.video_cartoonize():
+    #         if frame_processing_thread is not None:
+    #             frame_processing_thread.join()
+    #         # convert all image to cartoon and save
+    #         Post_frame_batch = []
+    #         post_frame_name = []
+    #         for index,  s_frame in enumerate(self.frame_array):
+    #             Post_frame_batch.append(s_frame)
+    #             post_frame_name.append(os.path.join(self.vid_img_dir, "{0}.{1}".format(index+1,'png')))
+    #             if (len(Post_frame_batch) == self.batch_size):
+    #                 self.running_processes += 1
+    #                 self.convert_image(Post_frame_batch,post_frame_name,500,375)
+    #                 Post_frame_batch =  [] 
+    #                 post_frame_name = []   
+    #     # logging.info('i eventually called complete_callback')
+    #     # self.__complete_callback() 
+    #     # logging.info('frame cartoonization thread stopped for {0}.'.format(self.config.auth_key))
+            
+
+   
+                                
