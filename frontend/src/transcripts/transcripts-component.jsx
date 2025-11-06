@@ -31,56 +31,131 @@ function TranscriptsComponent(){
   const [trigger, setTrigger] = useState(0)
   const [showDoA,setShowDoA] = useState(false);
   const [reload, setReload] = useState(false)
+  const [highlightRange, setHighlightRange] = useState(null);
   const [activeSessionService, setActiveSessionService] = useOutletContext();
   const { sessionDeviceId } = useParams(); 
   const [searchParam, setSearchParam] = useSearchParams();
   const navigate = useNavigate()
   
   const colorTopicDict = ['hsl(0, 100%, 100%)', 'hsl(151, 58%, 87%)', 'hsl(109, 67%, 92%)', 'hsl(49, 94%, 93%)', 'hsl(34, 100%, 89%)', 'hsl(30, 79%, 85%)'];
+
   
-  useEffect(()=>{
-    const index = searchParam.get('index');
-    if(index !== undefined){
-      setTranscriptIndex(parseInt(index, 10))
-    }
-
-    if(sessionDeviceId !== undefined){
-      const sessSub = activeSessionService.getSession();
-      if(sessSub !== undefined) {
-        setSession(sessSub);
-      }
-
-      const deviceSub = activeSessionService.getSessionDevice(sessionDeviceId)
-      if(deviceSub !== undefined){
-        setSessionDevice(deviceSub);
-      }
-
-      if (transcripts.length <= 0) {
-        const transcriptSub = activeSessionService.getTranscripts()
-         //const transcriptSub = activeSessionService.getSessionDeviceTranscripts(sessionDeviceId, setTransripts);
-
-         transcriptSub.subscribe(e => {
-             if (Object.keys(e).length !== 0) {
-                 const data = e.filter(t => t.session_device_id === parseInt(sessionDeviceId, 10))
-                     .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
-                 setTranscripts(data)
-                 setReload(true)
-             }
-         })
-         subscriptions.push(transcriptSub);
-     }
-    }
-      
-    
-
-    return () => {
-      subscriptions.map(sub => {
-          if (sub.closed) {
-              sub.unsubscribe()
-          }
-      });
+  useEffect(() => {
+  const index = searchParam.get('index');
+  if(index !== undefined){
+    setTranscriptIndex(parseInt(index, 10))
   }
-},[])
+
+  const conceptHighlight = sessionStorage.getItem('conceptHighlight');
+  if (conceptHighlight) {
+    const data = JSON.parse(conceptHighlight);
+    sessionStorage.removeItem('conceptHighlight');
+    setHighlightRange({
+      start: Math.max(0, parseFloat(data.timestamp) - 15),
+      end: parseFloat(data.timestamp) + 15
+    });
+  }
+  
+  const highlightTime = searchParam.get('highlight_time') || sessionStorage.getItem('highlightTime');
+  if (highlightTime) {
+    sessionStorage.removeItem('highlightTime'); // Clear after using
+  }
+  if (highlightTime) {
+    setHighlightRange({
+      start: Math.max(0, parseFloat(highlightTime) - 15),
+      end: parseFloat(highlightTime) + 15
+    });
+  }
+
+  if(sessionDeviceId !== undefined){
+    // Check if service exists
+    if (activeSessionService && activeSessionService.getSession) {
+      try {
+        const sessSub = activeSessionService.getSession();
+        if(sessSub !== undefined) {
+          setSession(sessSub);
+        }
+
+        const deviceSub = activeSessionService.getSessionDevice(sessionDeviceId)
+        if(deviceSub !== undefined){
+          setSessionDevice(deviceSub);
+        }
+
+        if (transcripts.length <= 0) {
+          const transcriptSub = activeSessionService.getTranscripts()
+          if (transcriptSub && transcriptSub.subscribe) {
+            transcriptSub.subscribe(e => {
+              if (Object.keys(e).length !== 0) {
+                const data = e.filter(t => t.session_device_id === parseInt(sessionDeviceId, 10))
+                    .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
+                setTranscripts(data)
+                setReload(true)
+              }
+            })
+            subscriptions.push(transcriptSub);
+          }
+        }
+      } catch (err) {
+        console.error('Service access error:', err);
+      }
+    } else {
+      // Direct access - no service
+      const pathParts = window.location.pathname.split('/');
+      const sessionId = pathParts[pathParts.indexOf('sessions') + 1];
+      
+      setSession({id: sessionId});
+      setSessionDevice({id: sessionDeviceId, name: `Device ${sessionDeviceId}`});
+      
+      fetch(`/api/v1/sessions/${sessionId}/devices/${sessionDeviceId}/transcripts`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            const sorted = data.sort((a, b) => a.start_time - b.start_time);
+            setTranscripts(sorted);
+            setReload(true);
+          }
+        })
+        .catch(err => console.error('Failed to load transcripts:', err));
+    }
+  }
+
+  return () => {
+    // Safer cleanup
+    if (subscriptions && subscriptions.length > 0) {
+      subscriptions.forEach(sub => {
+        try {
+          if (sub && sub.unsubscribe) {
+            sub.unsubscribe();
+          }
+        } catch (e) {
+          // Ignore
+        }
+      });
+    }
+  }
+}, [])
+
+useEffect(() => {
+  // Fallback: Load transcripts directly when no activeSessionService
+  if (sessionDeviceId && transcripts.length === 0) {
+    // Extract sessionId from the URL path
+    const pathParts = window.location.pathname.split('/');
+    const sessionIdIndex = pathParts.indexOf('sessions') + 1;
+    const sessionId = pathParts[sessionIdIndex];
+    
+    // Fetch transcripts using your actual endpoint
+    fetch(`http://localhost:5002/api/v1/sessions/${sessionId}/devices/${sessionDeviceId}/transcripts`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.transcripts) {
+          const sorted = data.transcripts.sort((a, b) => a.start_time - b.start_time);
+          setTranscripts(sorted);
+          setReload(true);
+        }
+      })
+      .catch(err => console.error('Failed to load transcripts:', err));
+  }
+}, [sessionDeviceId]);
 
 useEffect(()=>{
   if(reload){
@@ -215,6 +290,7 @@ const createDisplayTranscripts = ()=> {
       legendRef = {legendRef}
       showKeywords = {showKeywords}
       toggleKeywords = {toggleKeywords}
+      highlightRange = {highlightRange} 
     />
   )
 }

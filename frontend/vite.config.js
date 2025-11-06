@@ -7,6 +7,20 @@ import tailwindcss from "@tailwindcss/vite"
 export default defineConfig(() => {
     return {
         plugins: [react(), eslint(), tailwindcss()],
+        server: {
+            proxy: {
+                '/api': 'http://localhost:5002',
+                '/socket.io': {
+                    target: 'http://localhost:5002',
+                    ws: true,
+                },
+                '/audio_socket': {
+                    target: 'http://localhost:9002',
+                    ws: true,
+                }
+            },
+            historyApiFallback: true
+        },
         resolve: {
             alias: {
                 "@": path.resolve(__dirname, "./src"),

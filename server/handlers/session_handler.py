@@ -30,6 +30,7 @@ def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod
     return session
 
 def end_session(session_id):
+    logging.info(f"END_SESSION called for session {session_id}")  # ADD THIS
     session = database.get_sessions(id=session_id)
     if not session:
         return False, 'Session does not exist.'
@@ -41,6 +42,20 @@ def end_session(session_id):
     socketio_helper.update_session(session)
     socketio.emit('session_update', json.dumps(session.json()), room=str(session.id), namespace="/session")
     session_devices = database.get_session_devices(session_id=session_id)
+
+    try:
+        from concept_clustering_semantic import create_semantic_clusters
+        
+        # Create clusters for each session device
+        for session_device in session_devices:
+            logging.info(f"Creating concept clusters for session_device {session_device.id}")
+            cluster_ids = create_semantic_clusters(session_device.id)
+            if cluster_ids:
+                logging.info(f"Created {len(cluster_ids)} clusters for session_device {session_device.id}")
+            else:
+                logging.info(f"No clusters created for session_device {session_device.id} (possibly no concepts)")
+    except Exception as e:
+        logging.error(f"Failed to create concept clusters on session end: {e}")
 
     # Update session_devices
     for session_device in session_devices:

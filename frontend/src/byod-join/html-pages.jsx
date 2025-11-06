@@ -518,6 +518,7 @@ function ByodJoinPage(props) {
                                                     props.spkr2Transcripts
                                                 }
                                                 details={props.details}
+                                                socket={props.socket}
                                             />
                                         </div>
                                         {props.loading() ? (

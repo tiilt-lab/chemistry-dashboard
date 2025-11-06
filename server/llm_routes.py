@@ -396,3 +396,62 @@ def health_check():
         'status': 'healthy',
         'message': 'LLM service is operational'
     }), 200
+
+
+
+@llm_bp.route('/api/v1/llm/create_clusters', methods=['POST'])
+def create_clusters():
+    """Create semantic clusters from concepts using GPT-4o"""
+    try:
+        data = request.get_json()
+        nodes = data.get('nodes', [])
+        edges = data.get('edges', [])
+        
+        if not nodes:
+            return jsonify({'error': 'No nodes provided'}), 400
+        
+        # Build the prompt
+        prompt = f"""Analyze these concepts from a discussion and create 2-5 semantic clusters.
+
+Concepts:
+{json.dumps(nodes, indent=2)}
+
+Relationships:
+{json.dumps(edges, indent=2)}
+
+Group related concepts into clusters based on:
+1. Topic coherence - concepts about the same subject
+2. Logical flow - concepts that form arguments or explanations
+3. Problem-solution relationships
+4. Goal-action relationships
+
+Return a JSON object with a "clusters" array. Each cluster must have:
+- "name": descriptive title (max 50 chars)
+- "summary": 1-2 sentence description
+- "node_ids": array of concept node IDs in this cluster
+- "theme": main theme type
+
+IMPORTANT: Every node ID must appear in exactly one cluster."""
+
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are an expert at analyzing discussion concepts and organizing them into meaningful thematic clusters."},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,
+            max_tokens=2000
+        )
+        
+        result = json.loads(response.choices[0].message.content)
+        
+        # Validate and return
+        if 'clusters' in result:
+            return jsonify({'clusters': result['clusters']}), 200
+        else:
+            return jsonify({'clusters': result}), 200
+            
+    except Exception as e:
+        logger.error(f"Cluster creation failed: {e}")
+        return jsonify({'error': str(e)}), 500

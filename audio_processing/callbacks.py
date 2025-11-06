@@ -113,7 +113,7 @@ def post_concept_update(session_device_id, concept_update, timestamp):
         timestamp: Time of the update
     """
     try:
-        url = "http://server:5000/api/v1/concepts"
+        url = "http://127.0.0.1:5002/api/v1/concepts"
         
         data = {
             'source': session_device_id,
@@ -147,7 +147,7 @@ def post_concept_update(session_device_id, concept_update, timestamp):
             try:
                 # Import here to avoid circular dependencies
                 import requests as req
-                websocket_url = "http://server:5000/api/v1/concepts/broadcast"
+                websocket_url = "http://127.0.0.1:5002/api/v1/concepts/broadcast"
                 broadcast_data = {
                     'session_device_id': session_device_id,
                     'concept_update': concept_update

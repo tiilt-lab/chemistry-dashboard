@@ -21,7 +21,15 @@ function TranscriptComponentPage(props) {
         <div className={style["transcript-list"]}>
           {props.displayTranscripts.map((transcript, index) => (
             <div key={index}>
-              <div id={`${transcript.id}`} className={transcript.id === props.transcriptIndex ? `${style["transcript-container"]} ${style.highlighted}` : style["transcript-container"]} style={{ backgroundColor: `${transcript.doaColor}` }}>
+              <div id={`${transcript.id}`} className={
+                transcript.id === props.transcriptIndex ? 
+                  `${style["transcript-container"]} ${style.highlighted}` :
+                (props.highlightRange && 
+                transcript.start_time >= props.highlightRange.start && 
+                transcript.start_time <= props.highlightRange.end) ?
+                  `${style["transcript-container"]} ${style.conceptHighlight}` :
+                  style["transcript-container"]
+              }>
                 <div className={style.timestamp}>{props.formatSeconds(transcript.start_time)}</div>
                 <div className={style["transcript-text"]}>
                   {transcript.speaker_tag ? <span className={style.bold}>{transcript.speaker_tag}: </span> : <></>}

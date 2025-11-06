@@ -5,6 +5,7 @@ from app import db
 from tables.concept_session import ConceptSession
 from tables.concept_node import ConceptNode  
 from tables.concept_edge import ConceptEdge
+from tables.concept_cluster import ConceptCluster
 import database as db_helper
 
 # Create Blueprint for concept mapping routes
@@ -67,6 +68,7 @@ def receive_concept_update():
         source = data.get('source')
         concept_update = data.get('concept_update')
         timestamp = data.get('timestamp')
+        logging.info(f"Received timestamp: {timestamp}")
         
         # Validate input
         if not all([source, concept_update, timestamp]):
@@ -117,12 +119,21 @@ def receive_concept_update():
                 
                 if not existing:
                     # Map 'type' to 'node_type' to match the schema
+                    speaker_value = node_data.get('speaker') or node_data.get('speaker_id')
+                    if speaker_value == 'Unknown' or speaker_value == '' or not speaker_value:
+                        speaker_id = None  # NULL in database
+                    elif isinstance(speaker_value, str) and speaker_value.isdigit():
+                        speaker_id = int(speaker_value)
+                    elif isinstance(speaker_value, int):
+                        speaker_id = speaker_value
+                    else:
+                        speaker_id = None
                     node = ConceptNode(
                         id=node_id,
                         concept_session_id=concept_session.id,
                         text=node_data.get('text', ''),
                         node_type=node_data.get('type', 'concept'),  # 'type' from extractor -> 'node_type' in DB
-                        speaker_id=node_data.get('speaker_id'),
+                        speaker_id=speaker_id,
                         timestamp=timestamp or node_data.get('timestamp')
                     )
                     db.session.add(node)
@@ -324,4 +335,122 @@ def broadcast_concepts():
         return jsonify({'success': True}), 200
     except Exception as e:
         logging.error(f"Broadcast endpoint error: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+
+@concept_bp.route('/api/v1/concepts/<session_device_id>/cluster', methods=['POST'])
+def create_clusters(session_device_id):
+    """Create clusters for a concept session (typically called after session ends)"""
+    try:
+        # Parse session_device_id
+        db_session_device_id = parse_session_device_id(session_device_id)
+        
+        if db_session_device_id is None:
+            return jsonify({'error': 'Session device not found'}), 404
+        
+        # Check if clusters already exist
+        concept_session = ConceptSession.query.filter_by(
+            session_device_id=db_session_device_id
+        ).first()
+        
+        if not concept_session:
+            return jsonify({'error': 'No concept session found'}), 404
+        
+        # Check for existing clusters
+        existing_clusters = ConceptCluster.query.filter_by(
+            concept_session_id=concept_session.id
+        ).first()
+        
+        if existing_clusters:
+            # Option to force re-clustering
+            data = request.get_json() or {}
+            if not data.get('force', False):
+                return jsonify({
+                    'message': 'Clusters already exist', 
+                    'cluster_count': ConceptCluster.query.filter_by(
+                        concept_session_id=concept_session.id
+                    ).count()
+                }), 200
+            else:
+                # Delete existing clusters
+                ConceptCluster.query.filter_by(
+                    concept_session_id=concept_session.id
+                ).delete()
+                db.session.commit()
+        
+        # Get clustering method from request
+        data = request.get_json() or {}
+        method = data.get('method', 'semantic')  # 'semantic' or 'time'
+        
+        if method == 'semantic':
+            from concept_clustering_semantic import create_semantic_clusters
+            cluster_ids = create_semantic_clusters(db_session_device_id)
+        else:
+            from concept_clustering import create_time_based_clusters
+            time_window = data.get('time_window_minutes', 3)
+            cluster_ids = create_time_based_clusters(db_session_device_id, time_window)
+        
+        return jsonify({
+            'status': 'success',
+            'method': method,
+            'clusters_created': len(cluster_ids),
+            'cluster_ids': cluster_ids
+        }), 200
+        
+    except Exception as e:
+        logging.error(f"Failed to create clusters: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@concept_bp.route('/api/v1/concepts/<session_device_id>/clusters', methods=['GET'])
+def get_clusters(session_device_id):
+    """Get clusters for a concept session"""
+    try:
+        from tables.concept_cluster import ConceptCluster
+        
+        # Parse session_device_id
+        db_session_device_id = parse_session_device_id(session_device_id)
+        
+        if db_session_device_id is None:
+            return jsonify({'clusters': []}), 200
+        
+        concept_session = ConceptSession.query.filter_by(
+            session_device_id=db_session_device_id
+        ).first()
+        
+        if not concept_session:
+            return jsonify({'clusters': []}), 200
+        
+        # Get all clusters for this session
+        clusters = ConceptCluster.query.filter_by(
+            concept_session_id=concept_session.id
+        ).order_by(ConceptCluster.cluster_order).all()
+        
+        # Get all edges for the session
+        all_edges = ConceptEdge.query.filter_by(
+            concept_session_id=concept_session.id
+        ).all()
+        
+        # Build cluster data with edges
+        cluster_data = []
+        for cluster in clusters:
+            cluster_json = cluster.json()
+            
+            # Find edges within this cluster
+            cluster_node_ids = {node.id for node in cluster.nodes}
+            cluster_edges = [
+                edge.json() for edge in all_edges 
+                if edge.source_node_id in cluster_node_ids and edge.target_node_id in cluster_node_ids
+            ]
+            cluster_json['edges'] = cluster_edges
+            
+            cluster_data.append(cluster_json)
+        
+        return jsonify({
+            'clusters': cluster_data,
+            'discourse_type': concept_session.discourse_type
+        }), 200
+        
+    except Exception as e:
+        logging.error(f"Failed to get clusters: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500

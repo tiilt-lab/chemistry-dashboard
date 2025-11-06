@@ -7,6 +7,7 @@ import { SessionDeviceModel } from "../models/session-device"
 import { SpeakerModel } from "../models/speaker"
 import { ApiService } from "../services/api-service"
 import fixWebmDuration from "fix-webm-duration"
+import io from 'socket.io-client';
 
 /*
 BYOD Connection Order
@@ -41,6 +42,7 @@ function JoinPage() {
     const [cartoonImgUrl, setCartoonImgUrl] = useState("");
     const [cartoonImgBatch, setCartoonImgBatch] = useState(1);
     const [renderingStarted, setRenderingStarted] = useState(false)
+    const socketRef = useRef(null);
 
     // Session data
     const [sessionDevice, setSessionDevice] = useState(null)
@@ -93,6 +95,15 @@ function JoinPage() {
     const interval = 10000
 
     let wakeLock = null
+
+    useEffect(() => {
+        socketRef.current = io();
+        return () => {
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+            }
+        };
+    }, []);
 
     useEffect(() => {
         // initialize the options toolbar
@@ -1110,6 +1121,7 @@ function JoinPage() {
             cartoonImgUrl = {cartoonImgUrl}
             invalidName={invalidName}
             prevSessionId={prevSessionId}
+            socket={socketRef.current}
         />
     )
 }

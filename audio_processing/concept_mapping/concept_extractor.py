@@ -7,7 +7,7 @@ import numpy as np
 from .discourse_schemas import DISCOURSE_SCHEMAS, get_all_node_types, get_all_edge_types
 
 class ConceptExtractor:
-    def __init__(self, config, llm_endpoint='http://server:5000/api/v1/llm/extract_concepts'):
+    def __init__(self, config, llm_endpoint='http://127.0.0.1:5002/api/v1/llm/extract_concepts'):
         self.config = config
         self.llm_endpoint = llm_endpoint
         self.concept_graph = {

@@ -370,3 +370,35 @@ def gen(loading_frame,queue_key):
 
 def read_image(filepath):
     return  open(filepath , 'rb').read()
+
+
+
+
+@api_routes.route('/api/v1/concepts/<int:device_id>/transcripts/<float:timestamp>', methods=['GET'])
+def get_transcripts_for_concept(device_id, timestamp):
+    """Get transcripts around a specific timestamp for concept viewing"""
+    try:
+        # Get time range (±15 seconds)
+        start_time = max(0, timestamp - 15)
+        end_time = timestamp + 15
+        
+        # Use your existing database function
+        import database
+        all_transcripts = database.get_transcripts(session_device_id=device_id)
+        
+        # Filter by time
+        filtered = []
+        for t in all_transcripts:
+            if t.start_time >= start_time and t.start_time <= end_time:
+                filtered.append({
+                    'id': t.id,
+                    'start_time': t.start_time,
+                    'transcript': t.transcript,
+                    'speaker_id': getattr(t, 'speaker_id', None),
+                    'speaker_tag': getattr(t, 'speaker_tag', None)
+                })
+        
+        return json_response(filtered)
+    except Exception as e:
+        print(f"Error: {e}")
+        return json_response({'error': str(e)}), 500

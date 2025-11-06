@@ -1,136 +1,257 @@
-.conceptMapContainer {
+/* Add these styles to your existing concept-map.module.css */
+
+/* View Toggle Styles */
+.viewToggle {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  background: white;
-  border-radius: 8px;
-  position: relative;
+  gap: 10px;
+  margin-right: 20px;
 }
 
-.header, .expandedHeader {
+.viewButton {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.viewButton:hover:not(:disabled) {
+  background: #f5f5f5;
+}
+
+.viewButton.active {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+.viewButton:disabled {
+  cursor: default;
+}
+
+/* Clustered View Styles */
+.clustersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
+}
+
+.clusterCard {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: box-shadow 0.2s;
+}
+
+.clusterCard:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.clusterHeader {
+  padding: 15px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+  cursor: pointer;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #e0e0e0;
+  border-radius: 8px 8px 0 0;
+  user-select: none;
 }
 
-.expandedHeader {
-  padding: 16px;
+.clusterHeader:hover {
+  background: #e9ecef;
+}
+
+.clusterHeader h4 {
+  margin: 0;
+  font-size: 16px;
+  color: #2c3e50;
+}
+
+.nodeCount {
+  font-size: 13px;
+  color: #7f8c8d;
+  margin-top: 4px;
+  display: block;
+}
+
+.expandIcon {
+  font-size: 14px;
+  color: #7f8c8d;
+  transition: transform 0.2s;
+}
+
+.clusterSummary {
+  padding: 15px;
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.5;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.clusterGraph {
+  height: 350px;
+  width: 100%;
+  position: relative;
+  background: #fafafa;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* Control buttons for clusters */
+.controlButton {
+  padding: 6px 12px;
+  margin: 0 4px;
+  border: 1px solid #ddd;
   background: white;
-  border-bottom: 2px solid #e0e0e0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.controlButton:hover:not(:disabled) {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+.controlButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .clustersGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .viewToggle {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .viewButton {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .clusterHeader {
+    padding: 12px;
+  }
+  
+  .clusterGraph {
+    height: 250px;
+  }
+}
+
+/* Add these styles to your concept-map.module.css */
+
+.conceptMapWrapper {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+.conceptMapContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* Prevent flex child from overflowing */
+}
+
+/* Update the cytoscapeContainer to fill available space */
+.cytoscapeContainer {
+  flex: 1;
+  position: relative;
+  min-height: 400px;
+}
+
+/* Ensure the header doesn't shrink */
+.header {
+  flex-shrink: 0;
+}
+
+/* Make sure the speaker panel appears properly */
+.conceptMapWrapper > :last-child {
+  flex-shrink: 0;
+}
+
+.spaceButtons {
+  display: flex;
+  gap: 10px;  /* Space between buttons */
+  align-items: center;
+}
+
+.resetButton {
+  padding: 8px 16px;
+  background-color: transparent;
+  color: #6c757d;
+  border: 1px solid #6c757d;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  white-space: nowrap;  /* Prevent text wrapping */
+}
+
+.resetButton:hover {
+  background-color: #6c757d;
+  color: white;
+}
+
+.expandButton {
+  padding: 8px 16px;
+  background-color: transparent;
+  color: #007bff;
+  border: 1px solid #007bff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.expandButton:hover {
+  background-color: #007bff;
+  color: white;
+}
+
+.minimizeButton {
+  padding: 8px 16px;
+  background-color: transparent;
+  color: #dc3545;
+  border: 1px solid #dc3545;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.minimizeButton:hover {
+  background-color: #dc3545;
+  color: white;
 }
 
 .info {
   display: flex;
   gap: 20px;
-  align-items: center;
-}
-
-.discourseType {
   font-size: 14px;
   color: #666;
-}
-
-.lastUpdate {
-  font-size: 12px;
-  color: #999;
-}
-
-.controls {
-  display: flex;
-  gap: 8px;
-}
-
-.resetButton, .expandButton, .minimizeButton {
-  padding: 6px 12px;
-  background: #0173B2;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: background 0.2s;
-}
-
-.resetButton:hover, .expandButton:hover, .minimizeButton:hover {
-  background: #015a8d;
-}
-
-.expandButton, .minimizeButton {
-  background: #27ae60;
-}
-
-.expandButton:hover, .minimizeButton:hover {
-  background: #229954;
-}
-
-.cytoscapeContainer {
-  background: #fafafa;
-  position: relative;
-}
-
-.expandedOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  z-index: 9999;  /* Increased z-index */
-  display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 20px;
 }
 
-.expandedContainer {
-  width: 90vw;
-  height: 90vh;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+.info span {
   display: flex;
-  flex-direction: column;
-}
-
-.expandedCytoscapeContainer {
-  background: #fafafa;
-  flex: 1;
-  border-radius: 0 0 8px 8px;
-}
-
-.loading {
-  display: flex;
-  justify-content: center;
+  gap: 5px;
   align-items: center;
-  padding: 40px;
-  color: #666;
-}
-
-.noData {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 40px;
-  color: #999;
-  font-style: italic;
-}
-
-
-.expandedHeader {
-  padding: 16px;
-  background: white;
-  border-bottom: 2px solid #e0e0e0;
-  position: relative;  /* ADD THIS */
-  z-index: 10;         /* ADD THIS */
-}
-
-.expandedCytoscapeContainer {
-  background: #fafafa;
-  flex: 1;
-  border-radius: 0 0 8px 8px;
-  position: relative;  /* ADD THIS */
-  z-index: 1;          /* ADD THIS */
 }

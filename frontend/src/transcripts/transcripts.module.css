@@ -639,3 +639,8 @@ hr {
   font-weight: bold;
 }
 /*# sourceMappingURL=transcripts.module.css.map */
+
+.conceptHighlight {
+  border-left: 4px solid #3498db !important;
+  background-color: rgba(52, 152, 219, 0.1) !important;
+}
