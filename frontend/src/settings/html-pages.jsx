@@ -20,28 +20,28 @@ function SettingComponentPage(props) {
           <div className={style["section-header"]}>Account Settings</div>
           <div className="option-button small-section" onClick={() => props.openDialog("ChangePassword")}>Change Password</div>
           {(props.user.isAdmin || props.user.isSuper) ?
-          <>
-            <React.Fragment>
-              <div className={style["section-header"]}>Manage Accounts</div>
-              <div className="option-button small-section" onClick={() => props.openDialog("ViewUsers", true)}>View Users</div>
-              <div className="option-button small-section" onClick={() => props.openDialog("AddUser")}>Add User</div>
-              <div className="option-button small-section" onClick={() => props.openDialog("DeleteUser", true)}>Delete User</div>
-              <div className="option-button small-section" onClick={() => props.openDialog("UserRole", true)}>Change User Role</div>
-              <div className="option-button small-section" onClick={() => props.openDialog("LockUser", true)}>Lock User</div>
-              <div className="option-button small-section" onClick={() => props.openDialog("UnlockUser", true)}>Unlock User</div>
-              <div className="option-button small-section" onClick={() => props.openDialog("ResetUser", true)}>Reset User Password</div>
-              <div className="option-button small-section" onClick={() => props.openDialog("DisconnectSessionDevices", true)}>Disconnect Session Devices</div>
-            </React.Fragment>
+            <>
+              <React.Fragment>
+                <div className={style["section-header"]}>Manage Accounts</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("ViewUsers", true)}>View Users</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("AddUser")}>Add User</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("DeleteUser", true)}>Delete User</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("UserRole", true)}>Change User Role</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("LockUser", true)}>Lock User</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("UnlockUser", true)}>Unlock User</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("ResetUser", true)}>Reset User Password</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("DisconnectSessionDevices", true)}>Disconnect Session Devices</div>
+              </React.Fragment>
 
-            <React.Fragment>
-            <div className={style["section-header"]}>Manage Student Profile</div>
-            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("ViewStudentProfile", true)}>View Students</div>
-            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("AddStudentProfile")}>Add Student Profile</div>
-            <div className={style["option-button"]} style ={{width: adjDim(300) + 'px',}} onClick={() => props.openDialog("DeleteStudentProfile", true)}>Delete Student Profile</div>
-          </React.Fragment>
-          </>
+              <React.Fragment>
+                <div className={style["section-header"]}>Manage Student Profile</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("ViewStudentProfile", true)}>View Students</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("AddStudentProfile")}>Add Student Profile</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("DeleteStudentProfile", true)}>Delete Student Profile</div>
+              </React.Fragment>
+            </>
 
-            
+
             :
             <></>
           }
@@ -399,4 +399,4 @@ function SettingComponentPage(props) {
   )
 }
 
-export {SettingComponentPage}
+export { SettingComponentPage }

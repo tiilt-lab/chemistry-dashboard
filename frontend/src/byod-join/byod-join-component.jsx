@@ -212,6 +212,7 @@ function JoinPage() {
             requestStartAudioProcessing()
         }
         if (audioconnected && videoconnected) {
+            requestStartAudioProcessing()
             requestStartVideoProcessing()
         }
     }, [audioconnected, videoconnected])
@@ -342,7 +343,7 @@ function JoinPage() {
         if (joinwith === "Audio") {
             if (audioconnected && authenticated) {
                 if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN) return;
-
+                setCurrentForm("")
                 const send = () => {
                     if (audiows.current.readyState === WebSocket.OPEN) {
                         audiows.current.send(JSON.stringify({ type: "heartbeat", key: key }));
@@ -362,9 +363,14 @@ function JoinPage() {
 
         } else if (joinwith === "Video" || joinwith === "Videocartoonify") {
             if (audioconnected && videoconnected && authenticated && videoAuthenticated) {
-                if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN || videows === null || videows.readyState !== WebSocket.OPEN) return;
+                if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN || videows === null || videows.readyState !== WebSocket.OPEN) {
+                    // console.log("returning from heartbeat setup");
+                    return;
+                }
+                setCurrentForm("")
                 const send = () => {
                     if (audiows.current.readyState === WebSocket.OPEN && videows.readyState === WebSocket.OPEN) {
+                        console.log("returning from heartbeat setup");
                         audiows.current.send(JSON.stringify({ type: "heartbeat", key: key }));
                         videows.send(JSON.stringify({ type: "heartbeat", key: key }));
 
@@ -880,13 +886,14 @@ function JoinPage() {
             setReconnectCounter(0)
             setPageTitle(name)
             setReload(true)
-            setCurrentForm("")
+            
         };
 
         audiows.current.onmessage = (e) => {
             const message = JSON.parse(e.data)
 
             if (message["type"] === "start") {
+                console.log("audio authenticated ...." )
                 setAuthenticated(true)
                 closeDialog()
             } else if (message['type'] === 'registeredfingerprintadded') {
@@ -1386,7 +1393,8 @@ const loadSpeakerMetrics = (speakerId, speakrAlias) => {
 
 return (
     <ByodJoinPage
-        connected={audioconnected}
+        audioconnected={audioconnected}
+        videoconnected={videoconnected}
         authenticated={authenticated}
         videoAuthenticated={videoAuthenticated}
         GLOW_COLOR={GLOW_COLOR}

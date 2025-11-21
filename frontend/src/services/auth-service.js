@@ -54,7 +54,7 @@ class AuthService {
               if (err["message"] === "Username already exists."){
                 const student = StudentModel.fromJson(err["data"] );
                 if (student.biometric_captured === "yes"){
-                  setAlertMessage("The Username has been selected by anothr student, please enter a different one")
+                  setAlertMessage("The Username has been selected by another student, please enter a different one")
                   setShowAlert(true)
                 }else{
                   setStudentObject(student)

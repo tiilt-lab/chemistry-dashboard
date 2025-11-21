@@ -25,7 +25,6 @@ import { AppContextMenu } from "../components/context-menu/context-menu-componen
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
 
 function ByodJoinPage(props) {
-    // console.log(props, 'props')
     return (
         <>
             {(props.currentForm === "gottoselectedtranscript" &&
@@ -62,7 +61,7 @@ function ByodJoinPage(props) {
                             }
                             nav={() => props.navigateToLogin()}
                         />
-                        {!props.connected && (
+                        {(!props.audioconnected) && (
                             <React.Fragment>
                                 <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto text-center">
                                     <div>
@@ -150,7 +149,7 @@ function ByodJoinPage(props) {
                                 </div>
                             </React.Fragment>
                         )}
-                        {props.connected && props.joinwith === "Audio" &&
+                        {props.audioconnected && props.joinwith === "Audio" &&
                             props.authenticated &&
                             !props.speakersValidated && (
                                 <React.Fragment>
@@ -304,7 +303,7 @@ function ByodJoinPage(props) {
                             )
                         }
 
-                        {props.connected && (props.joinwith === "Video" || props.joinwith === "Videocartoonify") &&
+                        {props.audioconnected && props.videoconnected && (props.joinwith === "Video" || props.joinwith === "Videocartoonify") &&
                             props.authenticated && props.videoAuthenticated &&
                             !props.speakersValidated && (
                                 <React.Fragment>
@@ -458,7 +457,7 @@ function ByodJoinPage(props) {
                             )
                         }
 
-                        {props.connected &&
+                        {props.audioconnected &&
                             props.authenticated &&
                             props.speakersValidated && (
                                 <>
