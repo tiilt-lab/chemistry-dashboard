@@ -10,8 +10,9 @@ Restart=always
 RestartSec=1
 LimitRTPRIO=99
 LimitRTTIME=infinity
-WorkingDirectory=/var/lib/chemistry-dashboard/
-ExecStart=/home/ubuntu/.pyenv/versions/video_processor/bin/python video_processing/server.py
-Environment="PATH=/home/ubuntu/.pyenv/versions/video_processor/bin:/home/ubuntu/.pyenv/shims:/home/ubuntu/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+WorkingDirectory=/home/tde3218/chemistry-dashboard/
+Environment="PYTHONPATH=/home/tde3218/chemistry-dashboard/video_processing:/home/tde3218/chemistry-dashboard/video_processing/yolo_head"
+ExecStart=/home/tde3218/.pyenv/versions/video_processor/bin/python video_processing/server.py
+
 [Install]
 WantedBy=multi-user.target

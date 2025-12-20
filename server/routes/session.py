@@ -3,7 +3,7 @@ from utility import sanitize, string_to_bool, json_response
 from tables.session_device import SessionDevice
 from redis_helper import RedisSessions
 from tables.session import Session
-from utility import json_response
+from utility import json_response,batch_video_metrics,batch_transcript_metrics
 from app import socketio
 import logging
 import database
@@ -329,23 +329,124 @@ def remove_device_from_session(session_id, session_device_id, **kwargs):
         socketio_helper.remove_session_device(session_id, session_device_id)
     return json_response()
 
-@api_routes.route('/api/v1/sessions/<int:session_id>/export',methods=['GET'])
+@api_routes.route('/api/v1/sessions/<int:session_id>/exporttranscriptmetrics/<int:windowsize>',methods=['GET'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access
-def export_session(session_id, **kwargs):
+def export_session_transcript_metrics(session_id,windowsize, **kwargs):
     si = io.StringIO()
-    field_names = ['Device ID', 'Device Name', 'Start Time', 'Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty', 'Clout', 'Emotional Tone', 'Direction', 'Word Count', 'Speaker Tag', 'Speaker ID', 'Topic ID']
+    field_names = None
+    fwrite = None 
+    session_devices = database.get_session_devices(session_id=session_id)
+    if windowsize == 0:
+        field_names = ['Device ID', 'Device Name', 'Start Time', 'Transcript Id','Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
+                    'Clout', 'Emotional Tone', 'Direction',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness','communication_density','Word Count', 'Speaker Tag', 'Speaker ID', 'Topic ID']
+        fwrite = csv.DictWriter(si, fieldnames = field_names)
+        fwrite.writeheader()
+        for session_device in session_devices:
+            transcripts = database.get_all_transcript_metrics_by_session(session_device_id=session_device.id)
+            keywords = database.get_keyword_usages(session_device_id=session_device.id)
+            for t, sm in transcripts:
+                transcript_keywords = [keyword for keyword in keywords if keyword.transcript_id == t.id]
+                fwrite.writerow({'Device ID':session_device.id,
+                    'Device Name':session_device.name,
+                    'Start Time': str(timedelta(seconds=int(t.start_time))),
+                    'Transcript Id': int(t.id),
+                    'Transcript':t.transcript,
+                    'Keywords': ', '.join([keyword.keyword for keyword in transcript_keywords]),
+                    'Keywords Detected': ', '.join([keyword.word for keyword in transcript_keywords]),
+                    'Similarity': ', '.join([str(round((1-keyword.similarity)*100,3)) for keyword in transcript_keywords]),
+                    'Analytic Thinking': int(t.analytic_thinking_value),
+                    'Authenticity': int(t.authenticity_value),
+                    'Certainty': int(t.certainty_value),
+                    'Clout': int(t.clout_value),
+                    'Emotional Tone': int(t.emotional_tone_value),
+                    'participation_score': int(float(sm.participation_score)*100),
+                    'internal_cohesion':  int(float(sm.internal_cohesion)*100),
+                    'responsivity':  int(float(sm.responsivity)*100),
+                    'social_impact':  int(float(sm.social_impact)*100),
+                    'newness':  int(float(sm.newness)*100), 
+                    'communication_density':  int(float(sm.communication_density)*100),
+                    'Word Count': int(t.word_count),
+                    'Speaker Tag': t.speaker_tag,
+                    'Speaker ID': int(t.speaker_id),
+                    'Topic ID': int(t.topic_id)
+                    })
+    else:
+        field_names = ['Device ID', 'Device Name', 'Time Range','Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
+                    'Clout', 'Emotional Tone', 'Direction',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness','communication_density','Word Count', 'Speaker Tag', 'Speaker ID', 'Topic ID']
+        fwrite = csv.DictWriter(si, fieldnames = field_names)
+        fwrite.writeheader()     
+        for session_device in session_devices:
+            keywords = database.get_keyword_usages(session_device_id=session_device.id)
+            speakers = database.get_speakers(session_device_id=session_device.id)
+            for speaker in speakers:
+                transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session(session_device_id=session_device.id,speaker_id=speaker.id)
+                batch_transcript_metrics(transcriptSpeakerMetric,windowsize,fwrite,speaker,session_device,keywords)         
+
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = "attachment; filename=export.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/exportvideometrics/<int:windowsize>',methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def export_session_video_metrics(session_id, windowsize,**kwargs):
+    field_names = None
+    fwrite = None  
+    si = io.StringIO()
+    session_devices = database.get_session_devices(session_id=session_id)
+
+    if windowsize == 0:
+        field_names = ['Device ID', 'Device Name', 'Start Time', 'Facial Emotion', 'Object Focus On', 'Attention Level', 'Speaker Tag']
+        fwrite = csv.DictWriter(si, fieldnames = field_names)
+        fwrite.writeheader()  
+        for session_device in session_devices:
+            videoMetrics = database.get_video_metrics_by_session(session_device_id=session_device.id)
+            for v in videoMetrics:
+                fwrite.writerow({'Device ID':session_device.id,
+                    'Device Name':session_device.name,
+                    'Start Time':str(timedelta(seconds=int(v.time_stamp))),
+                    'Facial Emotion': str(v.facial_emotion),
+                    'Object Focus On': str(v.object_on_focus),
+                    'Attention Level': int(v.attention_level),
+                    'Speaker Tag': v.student_username
+                    })
+
+    else:
+        field_names = ['Device ID', 'Device Name', 'Time Range', 'Facial Emotion', 'Object Focus On', 'Attention Level', 'Speaker Tag']
+        fwrite = csv.DictWriter(si, fieldnames = field_names)
+        fwrite.writeheader()
+        for session_device in session_devices:
+            speakers = database.get_speakers(session_device_id=session_device.id)
+            for speaker in speakers:
+                videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device.id,student_username=speaker.alias)
+                batch_video_metrics(videoMetrics,windowsize,fwrite,speaker,session_device)     
+
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = "attachment; filename=export.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/exporttranscriptvideometrics/<int:windowsize>',methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def export_session_transcript_video_metrics(session_id,windowsize, **kwargs):
+    si = io.StringIO()
+    field_names = ['Device ID', 'Device Name', 'Start Time', 'Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
+                    'Clout', 'Emotional Tone', 'Direction',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness','communication_density',
+                    'Word Count', 'Facial Emotion', 'Object Focus On', 'Attention Level', 'Speaker Tag', 'Speaker ID', 'Topic ID']
     fwrite = csv.DictWriter(si, fieldnames = field_names)
     fwrite.writeheader()
     session_devices = database.get_session_devices(session_id=session_id)
     for session_device in session_devices:
-        transcripts = database.get_transcripts(session_device_id=session_device.id)
+        all_metrics = database.get_all_metrics_by_session(session_device_id=session_device.id)
         keywords = database.get_keyword_usages(session_device_id=session_device.id)
-        for t in transcripts:
+        for t,sm,vm in all_metrics:
             transcript_keywords = [keyword for keyword in keywords if keyword.transcript_id == t.id]
             fwrite.writerow({'Device ID':session_device.id,
                 'Device Name':session_device.name,
-                'Start Time':str(timedelta(seconds=int(t.start_time))),
+                'Start Time': str(t.start_time), #str(timedelta(seconds=int(t.start_time))),
                 'Transcript':t.transcript,
                 'Keywords': ', '.join([keyword.keyword for keyword in transcript_keywords]),
                 'Keywords Detected': ', '.join([keyword.word for keyword in transcript_keywords]),
@@ -355,7 +456,16 @@ def export_session(session_id, **kwargs):
                 'Certainty': int(t.certainty_value),
                 'Clout': int(t.clout_value),
                 'Emotional Tone': int(t.emotional_tone_value),
+                'participation_score': int(float(sm.participation_score)*100),
+                'internal_cohesion':  int(float(sm.internal_cohesion)*100),
+                'responsivity':  int(float(sm.responsivity)*100),
+                'social_impact':  int(float(sm.social_impact)*100),
+                'newness':  int(float(sm.newness)*100), 
+                'communication_density':  int(float(sm.communication_density)*100),
                 'Word Count': int(t.word_count),
+                'Facial Emotion': str(vm.facial_emotion),
+                'Object Focus On': str(vm.object_on_focus),
+                'Attention Level': int(vm.attention_level),
                 'Speaker Tag': t.speaker_tag,
                 'Speaker ID': int(t.speaker_id),
                 'Topic ID': int(t.topic_id)

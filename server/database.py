@@ -144,7 +144,7 @@ def delete_speaker_transcript_metrics(id = None, speaker_id = None, transcript_i
 # -------------------------
 
 def get_speaker_video_metrics(id = None, student_username=None, session_id=None, session_device_id=None):
-    query = db.session.query(SpeakerVideoMetrics)
+    query = db.session.query(SpeakerVideoMetrics).order_by(SpeakerVideoMetrics.time_stamp.asc())
     if session_id != None:
         query = query.join(SessionDevice).filter(SessionDevice.session_id == session_id)
     if id != None:
@@ -205,7 +205,69 @@ def delete_speaker_video_metrics(id = None,student_username=None, session_device
     db.session.commit()
     return True
 
+# -------------------------
+# Get Speaker, Video and Transcript Metrics by session  
+#-------------------------
+#  transcript_id=None
+def get_all_transcript_metrics_by_session(id = None, student_username=None, session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
+    query = db.session.query(Transcript,SpeakerTranscriptMetrics)
+    query = query.join(SpeakerTranscriptMetrics).filter((Transcript.id == SpeakerTranscriptMetrics.transcript_id) &
+                                                        (Transcript.speaker_id == SpeakerTranscriptMetrics.speaker_id))
 
+    if session_device_id != None:
+        query = query.filter(Transcript.session_device_id == session_device_id) 
+
+    if speaker_id != -1:
+        query = query.filter(Transcript.speaker_id == speaker_id)
+    else:        
+        query = query.filter(Transcript.speaker_id != -1)
+        query = query.distinct().order_by(Transcript.speaker_tag.asc())
+    query = query.order_by(Transcript.start_time.asc())
+    return query.all()
+
+def get_all_metrics_by_session(id = None, student_username=None, session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
+    query = db.session.query(Transcript,SpeakerTranscriptMetrics,SpeakerVideoMetrics)
+    query = query.join(SpeakerTranscriptMetrics).filter((Transcript.id == SpeakerTranscriptMetrics.transcript_id) &
+                                                        (Transcript.speaker_id == SpeakerTranscriptMetrics.speaker_id))
+    query = query.join(SpeakerVideoMetrics,(Transcript.start_time == SpeakerVideoMetrics.time_stamp)&
+                       (Transcript.speaker_tag == SpeakerVideoMetrics.student_username))
+
+    if session_device_id != None:
+        query = query.filter(Transcript.session_device_id == session_device_id) 
+
+    query = query.distinct().order_by(Transcript.speaker_tag.asc())
+    query = query.order_by(Transcript.start_time.asc())
+    return query.all()
+
+def get_transcript_metrics_by_session(id = None, student_username=None, session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
+    query = db.session.query(Transcript)
+
+    if session_device_id != None:
+        query = query.filter(Transcript.session_device_id == session_device_id) 
+    query = query.filter(Transcript.speaker_id != -1)
+    query = query.distinct().order_by(Transcript.speaker_tag.asc())
+    query = query.order_by(Transcript.start_time.asc())
+    return query.all()
+
+def get_speaker_metrics_by_session(id = None, student_username=None, session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
+    query = db.session.query(SpeakerTranscriptMetrics)
+    query = query.join(SpeakerTranscriptMetrics).filter(Transcript.id == SpeakerTranscriptMetrics.transcript_id)
+
+    if session_device_id != None:
+        query = query.filter(SpeakerTranscriptMetrics.session_device_id == session_device_id) 
+    query = query.filter(SpeakerTranscriptMetrics.speaker_id != -1)
+    query = query.distinct().order_by(SpeakerTranscriptMetrics.speaker_id.asc())
+    query = query.order_by(SpeakerTranscriptMetrics.transcript_id.asc())
+    return query.all()
+
+def get_video_metrics_by_session(id = None, student_username=None, session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
+    query = db.session.query(SpeakerVideoMetrics)
+
+    if session_device_id != None:
+        query = query.filter(SpeakerVideoMetrics.session_device_id == session_device_id) 
+    query = query.distinct().order_by(SpeakerVideoMetrics.student_username.asc())
+    query = query.order_by(SpeakerVideoMetrics.time_stamp.asc())
+    return query.all()
 # -------------------------
 # Topic Models
 # -------------------------
