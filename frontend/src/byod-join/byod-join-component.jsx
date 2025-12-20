@@ -9,9 +9,7 @@ import { StudentModel } from "../models/student"
 import { ApiService } from "../services/api-service"
 import { AuthService } from "../services/auth-service"
 import fixWebmDuration from "fix-webm-duration"
-import * as MP4Box from 'mp4box';
-// import 'mp4box/dist/mp4box.all.js';
-// await import('mp4box/dist/mp4box.all.js');
+
 /*
 BYOD Connection Order
 
@@ -77,6 +75,7 @@ function JoinPage() {
     const [reload, setReload] = useState(false)
     const [pageTitle, setPageTitle] = useState("Join Discussion")
     const [sessionClosing, setSessionClosing] = useState(false)
+    const [prevSessionId, setPrevSessionId] = useState(-1)
 
     const [name, setName] = useState("")
     const [pcode, setPcode] = useState("")
@@ -213,6 +212,7 @@ function JoinPage() {
             requestStartAudioProcessing()
         }
         if (audioconnected && videoconnected) {
+            requestStartAudioProcessing()
             requestStartVideoProcessing()
         }
     }, [audioconnected, videoconnected])
@@ -343,7 +343,7 @@ function JoinPage() {
         if (joinwith === "Audio") {
             if (audioconnected && authenticated) {
                 if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN) return;
-
+                setCurrentForm("")
                 const send = () => {
                     if (audiows.current.readyState === WebSocket.OPEN) {
                         audiows.current.send(JSON.stringify({ type: "heartbeat", key: key }));
@@ -363,9 +363,14 @@ function JoinPage() {
 
         } else if (joinwith === "Video" || joinwith === "Videocartoonify") {
             if (audioconnected && videoconnected && authenticated && videoAuthenticated) {
-                if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN || videows === null || videows.readyState !== WebSocket.OPEN) return;
+                if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN || videows === null || videows.readyState !== WebSocket.OPEN) {
+                    // console.log("returning from heartbeat setup");
+                    return;
+                }
+                setCurrentForm("")
                 const send = () => {
                     if (audiows.current.readyState === WebSocket.OPEN && videows.readyState === WebSocket.OPEN) {
+                        console.log("returning from heartbeat setup");
                         audiows.current.send(JSON.stringify({ type: "heartbeat", key: key }));
                         videows.send(JSON.stringify({ type: "heartbeat", key: key }));
 
@@ -455,6 +460,7 @@ function JoinPage() {
             ending.value = true
             setSpeakersValidated(false)
             setSpeakers(null)
+            setPrevSessionId(session.id)
             setSession(null)
             setSessionDevice(null)
             setKey(null)
@@ -880,13 +886,14 @@ function JoinPage() {
             setReconnectCounter(0)
             setPageTitle(name)
             setReload(true)
-            setCurrentForm("")
+            
         };
 
         audiows.current.onmessage = (e) => {
             const message = JSON.parse(e.data)
 
             if (message["type"] === "start") {
+                console.log("audio authenticated ...." )
                 setAuthenticated(true)
                 closeDialog()
             } else if (message['type'] === 'registeredfingerprintadded') {
@@ -1290,9 +1297,11 @@ const openDialog = (form) => {
     setCurrentForm(form)
 }
 
-const closeDialog = () => {
-    setCurrentForm("")
-}
+    const closeDialog = () => {
+        if(currentForm === "ClosedSession")
+            setPrevSessionId(-1)
+        setCurrentForm("")
+    }
 
 const changeTouppercase = (e) => {
     let val = e.target.value.toUpperCase()
@@ -1384,7 +1393,8 @@ const loadSpeakerMetrics = (speakerId, speakrAlias) => {
 
 return (
     <ByodJoinPage
-        connected={audioconnected}
+        audioconnected={audioconnected}
+        videoconnected={videoconnected}
         authenticated={authenticated}
         videoAuthenticated={videoAuthenticated}
         GLOW_COLOR={GLOW_COLOR}
@@ -1458,6 +1468,7 @@ return (
         startProcessingSavedSpeakerFingerprint={startProcessingSavedSpeakerFingerprint}
         loadSpeakerMetrics={loadSpeakerMetrics}
         selectedSpkralias={selectedSpkralias}
+        prevSessionId={prevSessionId}
     />
 )
 }

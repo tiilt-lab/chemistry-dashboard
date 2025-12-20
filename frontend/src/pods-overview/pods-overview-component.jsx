@@ -32,7 +32,7 @@ function PodsOverviewComponent() {
       console.log("set Interval");
 
       getSessionSpeakers(nextSession.id)
-      
+
       let intervalLoad = setInterval(() => {
         console.log("processing interval");
         const nextSession = activeSessionService.getSession();
@@ -165,42 +165,58 @@ function PodsOverviewComponent() {
     navigator.clipboard.writeText(pwd);
   };
 
-  const exportSession = () => {
-    const fetchData = new SessionService().downloadSessionReport(
-      session.id,
-      session.title
-    );
-    fetchData.then(
-      (response) => {
-        if (response.status === 200) {
-          response.text().then((csvData) => {
-            const anchor = document.createElement("a");
-            anchor.href =
-              "data:attachment/csv;charset=utf-8," + encodeURI(csvData);
-            anchor.download = session.title + ".csv";
-            anchor.click();
-            console.log(csvData);
-            console.log("Download successful.");
-            //return true;
-            /* {const resp = response.json()
-                  resp.then() }*/
-          });
-        } else {
-          alert("Failed to download session report.");
+  const exportSessionMetricsData = (type,windowsize) => {
+    let fetchData = null;
+    if (type == "audiometrics") {
+      fetchData = new SessionService().downloadSessionTranscriptMetrics(session.id, session.title,windowsize);
+    } else if (type == "videometrics") {
+      fetchData = new SessionService().downloadSessionVideoMetrics(session.id, session.title,windowsize);
+    } else if (type == "transcriptvideometrics") {
+      fetchData = new SessionService().downloadSessionTranscriptVideoMetrics(session.id, session.title,windowsize);
+    }
+    if (fetchData != null) {
+      fetchData.then(
+        (response) => {
+          if (response.status === 200) {
+            response.text().then((csvData) => {
+              const anchor = document.createElement("a");
+              anchor.href =
+                "data:attachment/csv;charset=utf-8," + encodeURI(csvData);
+              anchor.download = session.title + ".csv";
+              anchor.click();
+              console.log(csvData);
+              console.log("Transcript Download successful.");
+              //return true;
+              /* {const resp = response.json()
+                    resp.then() }*/
+            });
+          } else {
+            alert("Failed to download transcript metrics.");
+          }
+        },
+        (apierror) => {
+          console.log(
+            "pods-overview-components func: exportSessionTranscriptMetrics 1 ",
+            apierror
+          );
+          alert("Failed to download transcript metrics.");
         }
-      },
-      (apierror) => {
-        console.log(
-          "pods-overview-components func: exportsession 1 ",
-          apierror
-        );
-        alert("Failed to download session report.");
-      }
-    );
+      );
+    }
   };
+
+ 
+
+  const downloadData = (windowsize, datatype) => {
+    exportSessionMetricsData(datatype,windowsize);
+  }
 
   const closeDialog = () => {
     setCurrentForm("");
+  };
+
+  const openDownloadOptionDialog = (dialog) => {
+    setCurrentForm(dialog);
   };
 
   const goToGraph = () => {
@@ -220,32 +236,32 @@ function PodsOverviewComponent() {
   };
 
   const getSessionSpeakers = (sessionID) => {
-      const fetchData = new SessionService().getSessionSpeakers(sessionID);
-      fetchData.then(
-        (response) => {
-          if (response.status === 200)
-            response.json().then((jsonObj) => {
-              const input = SpeakerModel.fromJsonList(jsonObj)
-              const identified_speakers = []
-              const uniqueSpeakers = []
-              if(input && input.length){
-                input.map((spkr, index)=>{
-                  if(identified_speakers.indexOf(spkr.alias) == -1){
-                    uniqueSpeakers.push(spkr)
-                    identified_speakers.push(spkr.alias)
-                  }
-                })
-                 setSessionSpeakers(uniqueSpeakers);
-              }
-            });
-        },
-        (apierror) => {
-          console.log("pod-overview-component func getspeakers 1", apierror);
-        }
-      );
-    };
+    const fetchData = new SessionService().getSessionSpeakers(sessionID);
+    fetchData.then(
+      (response) => {
+        if (response.status === 200)
+          response.json().then((jsonObj) => {
+            const input = SpeakerModel.fromJsonList(jsonObj)
+            const identified_speakers = []
+            const uniqueSpeakers = []
+            if (input && input.length) {
+              input.map((spkr, index) => {
+                if (identified_speakers.indexOf(spkr.alias) == -1) {
+                  uniqueSpeakers.push(spkr)
+                  identified_speakers.push(spkr.alias)
+                }
+              })
+              setSessionSpeakers(uniqueSpeakers);
+            }
+          });
+      },
+      (apierror) => {
+        console.log("pod-overview-component func getspeakers 1", apierror);
+      }
+    );
+  };
 
-    
+
   return (
     <PodsOverviewPages
       righttext={getPasscode()}
@@ -255,7 +271,6 @@ function PodsOverviewComponent() {
       navigateToSessions={navigateToSessions}
       sessionDevices={sessionDevices}
       goToDevice={goToDevice}
-      exportSession={exportSession}
       goToGraph={goToGraph}
       currentForm={currentForm}
       closeDialog={closeDialog}
@@ -266,6 +281,8 @@ function PodsOverviewComponent() {
       sessionSpeaker={sessionSpeaker}
       devices={devices}
       goToSpeakerMetrics={goToSpeakerMetrics}
+      openDownloadOptionDialog={openDownloadOptionDialog}
+      downloadData={downloadData}
     />
   );
 }

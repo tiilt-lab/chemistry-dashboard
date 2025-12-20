@@ -2,6 +2,7 @@ import React from "react"
 import style from "./pods-overview.module.css"
 import style2 from "../dialog/dialog.module.css"
 import style3 from "../session-toolbar/session-toolbar.module.css"
+import style5 from "../sessions/sessions.module.css"
 import { Appheader } from "../header/header-component"
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
@@ -14,7 +15,7 @@ function PodsOverviewPages(props) {
     const POD_ON_COLOR = "#FF6655"
     const POD_OFF_COLOR = "#D0D0D0"
     const GLOW_COLOR = "#ffc3bd"
-    
+
     return (
         <>
             <div className="main-container">
@@ -46,14 +47,14 @@ function PodsOverviewPages(props) {
                             menus={[
                                 {
                                     title: "Download",
-                                    action: () => props.exportSession(),
+                                    action: () => props.openDownloadOptionDialog("selectdownloadoption")
                                 },
                                 {
                                     title: "Graph",
                                     action: () => props.goToGraph(),
                                 },
                             ]}
-                            participants={ props.sessionSpeaker.map((speaker, index) => (
+                            participants={props.sessionSpeaker.map((speaker, index) => (
                                 {
                                     alias: speaker.alias,
                                     action: () => props.goToSpeakerMetrics(speaker.id),
@@ -66,8 +67,8 @@ function PodsOverviewPages(props) {
                     )}
                     <div className="infographics-container mt-2 grow overflow-y-auto">
                         {props.sessionDevices !== null &&
-                        props.initialized &&
-                        Object.keys(props.sessionDevices).length === 0 ? (
+                            props.initialized &&
+                            Object.keys(props.sessionDevices).length === 0 ? (
                             <div className={style["load-text"]}>
                                 {" "}
                                 No pods specified
@@ -143,7 +144,7 @@ function PodsOverviewPages(props) {
             </div>
 
             <GenericDialogBox show={props.currentForm !== ""}>
-                {props.currentForm === "AddDevice" ? (
+                {(props.currentForm === "AddDevice" && (
                     <div>
                         <div className={style2["dialog-heading"]}>
                             Add pod to Session
@@ -192,48 +193,100 @@ function PodsOverviewPages(props) {
                             Close
                         </button>
                     </div>
-                ) : (
-                    <></>
-                )}
-                {props.currentForm === "Passcode" ? (
-                    <div>
-                        <div className={style2["dialog-heading"]}>
-                            Passcode Settings
+                )
+                ) ||
+
+                    (props.currentForm === "selectdownloadoption" && (
+                        <div
+                            className={style5["dialog-window"]}
+                            style={{ "min-width": adjDim(200) + "px" }}
+                        >
+                            <div className={style5["dialog-heading"]}>
+                                Select the Data to Download:
+                            </div>
+                            <select
+                                id="windowsize"
+                                className="dropdown small-section"
+                            >
+                                <option value="">Select window size in secs</option>
+                                <option value="10">10</option>
+                                <option value="20">20</option>
+                                <option value="30">30</option>
+                                <option value="40">40</option>
+                                <option value="50">50</option>
+                                <option value="60">60</option>
+                            </select>
+                            <select
+                                id="datatype"
+                                className="dropdown small-section"
+                            >
+                                <option value="">Select data to download</option>
+                                <option value="audiometrics">Transcript Metrics</option>
+                                <option value="videometrics">Video Metrics</option>
+                                 <option value="transcriptvideometrics">Transcript-Video Metrics</option>
+                            </select>
+
+                            <button
+                                className={style5["basic-button"]}
+                                onClick={() => {
+                                    props.downloadData(
+                                        document.getElementById("windowsize")
+                                            .value,
+                                            document.getElementById("datatype")
+                                            .value
+                                    )
+                                }}
+                            >
+                                {" "}
+                                Confirm
+                            </button>
+                            <button
+                                className={style5["cancel-button"]}
+                                onClick={props.closeDialog}
+                            >
+                                {" "}
+                                Cancel
+                            </button>
                         </div>
-                        <button
-                            className={style["basic-button"]}
-                            onClick={() => props.copyPasscode()}
-                        >
-                            Copy
-                        </button>
-                        <button
-                            className={style["basic-button"]}
-                            onClick={() => props.setPasscodeState("lock")}
-                        >
-                            Lock
-                        </button>
-                        <button
-                            className={style["basic-button"]}
-                            onClick={() => props.setPasscodeState("unlock")}
-                        >
-                            Unlock
-                        </button>
-                        <button
-                            className={style["basic-button"]}
-                            onClick={() => props.setPasscodeState("refresh")}
-                        >
-                            Refresh
-                        </button>
-                        <button
-                            className={style["cancel-button"]}
-                            onClick={props.closeDialog}
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                ) : (
-                    <></>
-                )}
+                    )) ||
+                    (props.currentForm === "Passcode" && (
+                        <div>
+                            <div className={style2["dialog-heading"]}>
+                                Passcode Settings
+                            </div>
+                            <button
+                                className={style["basic-button"]}
+                                onClick={() => props.copyPasscode()}
+                            >
+                                Copy
+                            </button>
+                            <button
+                                className={style["basic-button"]}
+                                onClick={() => props.setPasscodeState("lock")}
+                            >
+                                Lock
+                            </button>
+                            <button
+                                className={style["basic-button"]}
+                                onClick={() => props.setPasscodeState("unlock")}
+                            >
+                                Unlock
+                            </button>
+                            <button
+                                className={style["basic-button"]}
+                                onClick={() => props.setPasscodeState("refresh")}
+                            >
+                                Refresh
+                            </button>
+                            <button
+                                className={style["cancel-button"]}
+                                onClick={props.closeDialog}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    )
+                    )}
             </GenericDialogBox>
         </>
     )

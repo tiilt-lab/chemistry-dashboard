@@ -12,6 +12,7 @@ import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { TranscriptsComponentClient } from "../transcripts/transcripts-component_client"
 import { adjDim, isLargeScreen } from "../myhooks/custom-hooks"
+// import SessionQRCode from "../feedback-form/session-qrcode";
 
 import style from "./byod-join.module.css"
 import style2 from "../pod-details/pod.module.css"
@@ -24,7 +25,6 @@ import { AppContextMenu } from "../components/context-menu/context-menu-componen
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
 
 function ByodJoinPage(props) {
-    // console.log(props, 'props')
     return (
         <>
             {(props.currentForm === "gottoselectedtranscript" &&
@@ -61,7 +61,7 @@ function ByodJoinPage(props) {
                             }
                             nav={() => props.navigateToLogin()}
                         />
-                        {!props.connected && (
+                        {(!props.audioconnected) && (
                             <React.Fragment>
                                 <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto text-center">
                                     <div>
@@ -149,7 +149,7 @@ function ByodJoinPage(props) {
                                 </div>
                             </React.Fragment>
                         )}
-                        {props.connected && props.joinwith === "Audio" &&
+                        {props.audioconnected && props.joinwith === "Audio" &&
                             props.authenticated &&
                             !props.speakersValidated && (
                                 <React.Fragment>
@@ -303,7 +303,7 @@ function ByodJoinPage(props) {
                             )
                         }
 
-                        {props.connected && (props.joinwith === "Video" || props.joinwith === "Videocartoonify") &&
+                        {props.audioconnected && props.videoconnected && (props.joinwith === "Video" || props.joinwith === "Videocartoonify") &&
                             props.authenticated && props.videoAuthenticated &&
                             !props.speakersValidated && (
                                 <React.Fragment>
@@ -457,7 +457,7 @@ function ByodJoinPage(props) {
                             )
                         }
 
-                        {props.connected &&
+                        {props.audioconnected &&
                             props.authenticated &&
                             props.speakersValidated && (
                                 <>
@@ -874,13 +874,16 @@ function ByodJoinPage(props) {
                 closedialog={props.closeDialog}
             />
 
-            <DialogBox
-                itsclass={"add-dialog"}
+            {/* <GenericDialogBox
+                itsclass={"add-dialog small-section"}
                 heading={"Discussion Closed"}
-                message={props.displayText}
                 show={props.currentForm === "ClosedSession"}
-                closedialog={props.closeDialog}
-            />
+            >
+                <div className="text-xl/loose font-sans font-bold m-2">Discussion Closed</div>
+                <div className="text-base font-sans font-normal m-2">{props.displayText}</div>
+                <SessionQRCode sessionId={props.prevSessionId} />
+                <button className="option-button font-sans small-section bg-red-500 hover:bg-red-400 m-2" onClick={props.closeDialog}>Close</button>
+            </GenericDialogBox> */}
 
             <WaitingDialog
                 itsclass={"add-dialog"}

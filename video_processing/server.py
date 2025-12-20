@@ -357,7 +357,7 @@ def _create_detector():
 
 if __name__ == '__main__':
     cf.initialize()
-    
+    logging.info('Starting video Processing Service...22222222222')
     # Initialize Logger
     dir_path = os.path.dirname(os.path.realpath(__file__))
     log_format = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')

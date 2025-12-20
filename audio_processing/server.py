@@ -157,10 +157,6 @@ class ServerProtocol(WebSocketServerProtocol):
                     if cf.record_reduced():
                         filename = os.path.join(cf.recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
                         self.redu_recorder = WaveRecorder(filename, 16000, 2, 1)
-                elif self.stream_data == 'video':
-                    self.video_count = 1
-                    self.filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_orig".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, str(time.ctime())))
-                    self.orig_vid_recorder = VidRecorder(self.filename,16000, 2, 1,self.config.mimeExtension)
                 self.signal_start()
                 self.send_json({'type':'start'})
                 logging.info('Audio process connected')
@@ -184,29 +180,6 @@ class ServerProtocol(WebSocketServerProtocol):
                 # Save audio data.
                 if cf.record_reduced():
                     self.redu_recorder.write(asr_data)
-            elif self.stream_data == 'video':
-                logging.info('I got into video processing')
-                self.orig_vid_recorder.write(data)
-                temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
-                vidclip = mp.VideoFileClip(self.filename+'.'+self.config.mimeExtension)
-                subclips = vidclip.subclip((self.video_count-1)*self.interval,self.video_count*self.interval)
-                subclips.audio.write_audiofile(temp_aud_file+'.wav',
-                                                fps=16000,
-                                                nbytes=2,
-                                                codec="pcm_s16le",
-                                                ffmpeg_params=["-ac", "1", "-af", "aresample=resampler=soxr:precision=33"]) 
-
-                wavObj = wave.open(temp_aud_file+'.wav')
-                self.audio_buffer.append(self.read_bytes_from_wav(wavObj))
-                audiobyte = self.reduce_wav_channel(1,wavObj)
-                logging.info("retrned by size is  none {}. and size is. {} ".format(audiobyte is None , len(audiobyte)))
-                self.asr_audio_queue.put(audiobyte)
-                logging.info('After audio queue in video processing')
-                if os.path.isfile(temp_aud_file+'.wav'):
-                    os.remove(temp_aud_file+'.wav')
-
-                self.video_count = self.video_count + 1
-                logging.info('video binary recieved')
     
         elif self.running and self.awaitingSpeakers:
             if self.currSpeaker:
@@ -246,23 +219,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.send_json({'type': 'error', 'message': err})  
             else:
                 logging.info('Audio biometrics saved')
-                self.send_json({'type': 'saved', 'message': "Biometric data captured successfully"})      
-
-            
-            # vidclip = mp.VideoFileClip(self.video_file+'.'+self.mediaExt)
-            # subclips = vidclip.subclip(0,self.interval)
-            # subclips.audio.write_audiofile(
-            #                             audio_fingerprint_file ,
-            #                             fps=16000,
-            #                             nbytes=2,
-            #                             codec="pcm_s16le",
-            #                             ffmpeg_params=["-ac", "1", "-af", "aresample=resampler=soxr:precision=33"])
-            
-            # if os.path.isfile(self.video_file+'.'+self.mediaExt):
-            #         os.remove(self.video_file+'.'+self.mediaExt)
-
-            # self.send_json({'type': 'saved', 'message': "Biometric data captured successfully"})   
-             
+                self.send_json({'type': 'saved', 'message': "Biometric data captured successfully"})           
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 

@@ -266,9 +266,41 @@ class SessionService {
     );
   }
 
-  downloadSessionReport(sessionId, fileName) {
+  downloadSessionTranscriptMetrics(sessionId, fileName,windowsize) {
+    if(windowsize === ""){
+      windowsize = 0;
+    }else{
+      windowsize = parseInt(windowsize);
+    }
+
     return this.api.httpRequestCall(
-      `api/v1/sessions/${sessionId}/export`,
+      `api/v1/sessions/${sessionId}/exporttranscriptmetrics/${windowsize}`,
+      "GET",
+      {}
+    );
+  }
+
+  downloadSessionVideoMetrics(sessionId, fileName,windowsize) {
+    if(windowsize === ""){
+      windowsize = 0;
+    }else{
+      windowsize = parseInt(windowsize);
+    }
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/exportvideometrics/${windowsize}`,
+      "GET",
+      {}
+    );
+  }
+
+  downloadSessionTranscriptVideoMetrics(sessionId, fileName,windowsize) {
+    if(windowsize === ""){
+      windowsize = 0;
+    }else{
+      windowsize = parseInt(windowsize);
+    }
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/exporttranscriptvideometrics/${windowsize}`,
       "GET",
       {}
     );
