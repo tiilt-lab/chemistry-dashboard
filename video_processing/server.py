@@ -148,7 +148,7 @@ class ServerProtocol(WebSocketServerProtocol):
         if data['type'] == 'start':
             valid, result = ProcessingConfig.from_json(data)
             if not valid:
-                self.send_json({'type': 'error', 'message': result})
+                self.send_json({'type': 'error', 'message': "Initialization failed"})
                 self.signal_end()
             else:
                 self.config = result
@@ -183,7 +183,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.redu_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1,self.config.mimeExtension)
 
                 if (self.config.videocartoonify or self.config.video) and not cf.video_cartoonize() and not cf.process_video_analytics(): 
-                    self.send_json({'type':'start','message':'Video processing not activated to start video processor'})
+                    self.send_json({'type':'error','message':'Video processing not activated to start video processor'})
                     logging.info('Video process connected but video processing not activated')
                     callbacks.post_connect(self.config.auth_key)
                 else:
