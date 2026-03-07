@@ -311,12 +311,15 @@ class VideoProcessor:
     def worker_process(self,frames_batch, time_markers, batch_idx):
         # Do cvtColor here if needed (OpenCV releases GIL, ok in threads)
         frames_batch = [cv2.cvtColor(f, cv2.COLOR_BGR2RGB) for f in frames_batch]
-       
+        if self.config.videocartoonify and self.cf.video_cartoonize():
+            logging.info('cartoonizing frame batch of size  {0}'.format(len(self.frame_batch)))
+            self.convert_image(frames_batch, None, 500, 375)
+
         if self.cf.process_video_analytics():
+            logging.info('processing video analytics for batch of size {0}'.format(len(self.frame_batch)))
             self.process_video_analytics(frames_batch, self.facialEmbeddings, batch_idx, time_markers, self.vid_img_dir,self.config.auth_key)
             
-        if self.config.videocartoonify and self.cf.video_cartoonize():
-            self.convert_image(frames_batch, None, 500, 375)
+       
 
 
     def processing(self):

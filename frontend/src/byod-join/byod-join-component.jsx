@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react"
+import { useReducer, useEffect, useState, useRef, useCallback } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { SessionService } from "../services/session-service"
 import { ByodJoinPage } from "./html-pages"
@@ -22,44 +22,78 @@ BYOD Connection Order
 */
 
 function JoinPage() {
+    const sessionService = new SessionService()
+    const apiService = new ApiService()
     // Audio connection data
     const audiows = useRef(null)
-    const [videows, setVideoWs] = useState(null)
-    const [audioconnected, setAudioConnected] = useState(false)
-    const [videoconnected, setVideoConnected] = useState(false)
-    const [authenticated, setAuthenticated] = useState(false)
-    const [videoAuthenticated, setVideoAuthenticated] = useState(false)
-    const [streamReference, setStreamReference] = useState(null)
-    const [audioContext, setAudioContext] = useState(null)
-    const [mediaRecorder, setMediaRecorder] = useState(null)
-    const [processor, setProcessor] = useState(null)
-    const [audioSenderProcessor, setAudioSenderProcessor] = useState(null)
-    const [source, setSource] = useState(null)
-    const [ending, setEnding] = useState({ value: false })
-    const [reconnectCounter, setReconnectCounter] = useState(0)
-    const [showAlert, setShowAlert] = useState(false)
-    const [alertMessage, setAlertMessage] = useState("")
-    const [frameBuffer, setFrameBuffer] = useState([]); // Buffer for cartoonized frames
+    const videows = useRef(null)
+    const streamReference = useRef(null)
+    const audioContext = useRef(null)
+    const mediaRecorder = useRef(null)
+    const source = useRef(null)
+    const ending = useRef(false)
+    const reconnectCounter = useRef(0)
+    const frameBuffer = useRef([]); // Buffer for cartoonized frames
+    const playbackIntervalRef = useRef(null);
+    const isPlayingBatchRef = useRef(false);
+    const [key, setKey] = useState(null)
+    const [transcripts, setTranscripts] = useState([])
+    const [videoMetrics, setVideoMetrics] = useState([])
+
+    const initialState = {
+        audioSocketOpen: false,
+        videoSocketOpen: false,
+        audioReady: false,
+        videoReady: false,
+        speakersValidated: false,
+        streaming: false,
+    };
+
+    function reducer(state, action) {
+        switch (action.type) {
+            case "AUDIO_SOCKET_OPEN":
+                return { ...state, audioSocketOpen: action.payload };
+            case "VIDEO_SOCKET_OPEN":
+                return { ...state, videoSocketOpen: action.payload };
+            case "AUDIO_READY":
+                return { ...state, audioReady: action.payload };
+            case "VIDEO_READY":
+                return { ...state, videoReady: action.payload };
+            case "SPEAKERS_VALIDATED":
+                return { ...state, speakersValidated: action.payload };
+            case "START_STREAMING":
+                return { ...state, streaming: true };
+            case "STOP_STREAMING":
+                return { ...state, streaming: false };
+            default:
+                return state;
+        }
+    }
+    const [state, dispatch] = useReducer(reducer, initialState);
+
+
+
+
+
+
+
     const [frameBufferLength, setFrameBufferLength] = useState(0);
     const [cartoonImgUrl, setCartoonImgUrl] = useState("");
     const [cartoonImgBatch, setCartoonImgBatch] = useState(1);
-    const [renderingStarted, setRenderingStarted] = useState(false)
 
     // Session data
     const [sessionDevice, setSessionDevice] = useState(null)
     const [session, setSession] = useState(null)
-    const [key, setKey] = useState(null)
-
-    const sessionService = new SessionService()
-    const apiService = new ApiService()
-
-    const [transcripts, setTranscripts] = useState([])
-    const [videoMetrics, setVideoMetrics] = useState([])
     const [startTime, setStartTime] = useState()
     const [endTime, setEndTime] = useState()
     const [displayTranscripts, setDisplayTranscripts] = useState([])
     const [displayVideoMetrics, setDisplayVideoMetrics] = useState([])
     const [currentTranscript, setCurrentTranscript] = useState({})
+
+
+
+    
+    
     const [timeRange, setTimeRange] = useState([0, 1])
     const [selectedSpkrId1, setSelectedSpkrId1] = useState(-1)
     const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1)
@@ -90,7 +124,7 @@ function JoinPage() {
 
     const [numSpeakers, setNumSpeakers] = useState()
     const [speakers, setSpeakers] = useState([])
-    const [speakersValidated, setSpeakersValidated] = useState(false)
+
     const [selectedSpeaker, setSelectedSpeaker] = useState(null)
     const [currBlob, setCurrBlob] = useState(null)
     const [invalidName, setInvalidName] = useState(false)
@@ -101,7 +135,6 @@ function JoinPage() {
     const [registeredUserAliasChanged, setRegisteredUserAliasChanged] = useState(false)
     const [registeredAudioFingerprintAdded, setRegisteredAudioFingerprintAdded] = useState(false)
     const [registeredVideoFingerprintAdded, setRegisteredVideoFingerprintAdded] = useState(false)
-    const [videoProcessingNotActivated, setVideoProcessingNotActivated] = useState(false);
 
 
 
@@ -151,20 +184,17 @@ function JoinPage() {
 
     //Use effect to display processed cartoonized image
     useEffect(() => {
-        console.log('inside renderframe buffer useeffect ', frameBufferLength)
-        renderFrameFromBuffer()
+        if (frameBufferLength > 0) {
+            console.log('inside renderframe buffer useeffect ', frameBufferLength)
+            renderFrameFromBuffer()
+        }
     }, [frameBufferLength])
 
     useEffect(() => {
         if (constraintObj !== null && mimetype !== null && pcode !== "" && joinwith !== "") handleStream()
     }, [constraintObj, pcode, joinwith, mimetype])
-   
-    useEffect(() => {
-        if (videows != null) {
-            console.log("called connect_video_processor_service")
-            connect_video_processor_service()
-        }
-    }, [videows])
+
+
 
     //Use effect to intermetently reload the transcript
     useEffect(() => {
@@ -185,7 +215,7 @@ function JoinPage() {
     }, [session, sessionDevice])
 
     useEffect(() => {
-        if (session !== null && speakersValidated) {
+        if (session !== null && state.speakersValidated) {
             const sessionLen =
                 Object.keys(session).length > 0 ? session.length : 0
             const sTime = Math.round(sessionLen * timeRange[0] * 100) / 100
@@ -195,7 +225,7 @@ function JoinPage() {
             generateDisplayTranscripts(sTime, eTime)
             generateDisplayVideoMetrics(sTime, eTime)
         }
-    }, [transcripts, videoMetrics, startTime, endTime, session, speakersValidated, timeRange])
+    }, [transcripts, videoMetrics, startTime, endTime, session, state.speakersValidated, timeRange])
 
     useEffect(() => {
         if (displayTranscripts) {
@@ -208,47 +238,41 @@ function JoinPage() {
 
     //Use effect to start audio and video processing
     useEffect(() => {
-        if (audioconnected && !videoconnected) {
+        if (joinwith == "Audio" && state.audioSocketOpen) {
             requestStartAudioProcessing()
         }
-        if (audioconnected && videoconnected) {
+        if ((joinwith === "Video" || joinwith === "Videocartoonify") && state.audioSocketOpen && state.videoSocketOpen) {
             requestStartAudioProcessing()
             requestStartVideoProcessing()
         }
-    }, [audioconnected, videoconnected])
+    }, [joinwith, state.audioSocketOpen, state.videoSocketOpen])
 
     //Use effect to start the camera and microphone for video and audio capturing
     useEffect(() => {
-        if (authenticated || videoAuthenticated) {
+        if (state.audioReady || state.videoReady) {
             const loadWorklet = async () => {
-                await audioContext.audioWorklet.addModule(
+                await audioContext.current.audioWorklet.addModule(
                     "audio-sender-processor.js",
                 )
                 const workletProcessor = new AudioWorkletNode(
-                    audioContext,
+                    audioContext.current,
                     "audio-sender-processor",
                 )
                 workletProcessor.port.onmessage = (data) => {
                     audiows.current.send(data.data.buffer)
                 }
-                source
-                    .connect(workletProcessor)
-                    .connect(audioContext.destination)
-                setAudioSenderProcessor(workletProcessor)
+                source.current.connect(workletProcessor).connect(audioContext.current.destination)
             }
 
             const videoPlay = () => {
                 let video = document.querySelector("video")
-                console.log("video tag ", video)
-                console.log("streamReference ", streamReference)
-                video.srcObject = streamReference
-                console.log("video.srcObject ", video.srcObject)
+                video.srcObject = streamReference.current
                 video.onloadedmetadata = function (ev) {
                     video.play()
-                    mediaRecorder.start(interval)
+                    mediaRecorder.current.start(interval)
                 }
 
-                mediaRecorder.ondataavailable = async function (ev) {
+                mediaRecorder.current.ondataavailable = async function (ev) {
 
                     const bufferdata = await ev.data.arrayBuffer()
 
@@ -258,16 +282,13 @@ function JoinPage() {
                                 ev.data,
                                 interval * 6 * 60 * 24,
                                 (fixedblob) => {
-                                    //only send when video processing is activated on the server
-                                    if (!videoProcessingNotActivated) {
-                                        videows.send(fixedblob)
-                                    }
+                                    videows.current.send(fixedblob)
                                 },
                             )
                         } else if (ev.data.type.startsWith('video/mp4')) {
                             console.log("inside mp4 send")
                             const repairedMp4Data = await fixMp4DurationWithMp4Box(ev.data)
-                            videows.send(repairedMp4Data)
+                            videows.current.send(repairedMp4Data)
                         }
 
                     }
@@ -275,16 +296,16 @@ function JoinPage() {
                 }
             }
 
-            if (authenticated && joinwith === "Audio") {
+            if (state.audioReady && joinwith === "Audio") {
                 loadWorklet().catch(console.error)
-            } else if (authenticated && videoAuthenticated && speakersValidated &&
+            } else if (state.audioReady && state.videoReady && state.speakersValidated &&
                 (joinwith === "Video" || joinwith === "Videocartoonify")
             ) {
                 loadWorklet().catch(console.error)
                 videoPlay()
             }
         }
-    }, [authenticated, videoAuthenticated, videoProcessingNotActivated, speakersValidated])
+    }, [state.audioReady, state.videoReady, state.speakersValidated])
 
     //Use effect to toggle video view pane
     useEffect(() => {
@@ -341,7 +362,7 @@ function JoinPage() {
         let Intervalid = 0
 
         if (joinwith === "Audio") {
-            if (audioconnected && authenticated) {
+            if (state.audioSocketOpen && state.audioReady) {
                 if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN) return;
                 setCurrentForm("")
                 const send = () => {
@@ -362,17 +383,17 @@ function JoinPage() {
             }
 
         } else if (joinwith === "Video" || joinwith === "Videocartoonify") {
-            if (audioconnected && videoconnected && authenticated && videoAuthenticated) {
-                if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN || videows === null || videows.readyState !== WebSocket.OPEN) {
+            if (state.audioSocketOpen && state.videoSocketOpen && state.audioReady && state.videoReady) {
+                if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN || videows.current === null || videows.current.readyState !== WebSocket.OPEN) {
                     // console.log("returning from heartbeat setup");
                     return;
                 }
                 setCurrentForm("")
                 const send = () => {
-                    if (audiows.current.readyState === WebSocket.OPEN && videows.readyState === WebSocket.OPEN) {
+                    if (audiows.current.readyState === WebSocket.OPEN && videows.current.readyState === WebSocket.OPEN) {
                         console.log("returning from heartbeat setup");
                         audiows.current.send(JSON.stringify({ type: "heartbeat", key: key }));
-                        videows.send(JSON.stringify({ type: "heartbeat", key: key }));
+                        videows.current.send(JSON.stringify({ type: "heartbeat", key: key }));
 
                     } else {
                         console.log("clearing interval heartbeat inside video");
@@ -391,7 +412,7 @@ function JoinPage() {
             clearInterval(Intervalid);
         };
         // }
-    }, [audiows, videows, audioconnected, videoconnected, authenticated, videoAuthenticated]); //speakersValidated
+    }, [audiows, videows, state.audioSocketOpen, state.videoSocketOpen, state.audioReady, state.videoReady]); //speakersValidated
 
 
 
@@ -451,14 +472,14 @@ function JoinPage() {
     // Disconnects from websocket server and audio stream.
     const disconnect = (permanent = false) => {
         console.log("disconnect called", permanent)
-        if (ending.value)
+        if (ending.current)
             return
         if (permanent) {
             setPageTitle("Join Discussion")
             setName("")
             setPcode("")
-            ending.value = true
-            setSpeakersValidated(false)
+            ending.current = true
+            dispatch({ type: "SPEAKERS_VALIDATED", payload: false })
             setSpeakers(null)
             setPrevSessionId(session.id)
             setSession(null)
@@ -468,35 +489,36 @@ function JoinPage() {
 
         if (wakeLock) releaseWakeLock()
 
-        if (source != null) {
-            source.disconnect()
-            setSource(null)
+        if (source.current != null) {
+            source.current.disconnect()
+            source.current = null
         }
-        if (audioContext != null) {
-            setAudioSenderProcessor(null)
+        if (audioContext.current != null) {
+            audioContext.current.close()
+            audioContext.current = null
         }
-        if (mediaRecorder != null) {
-            mediaRecorder.stop()
-            setMediaRecorder(null)
-        }
-
-        if (streamReference != null) {
-            streamReference.getAudioTracks().forEach((track) => track.stop())
-            setStreamReference(null)
+        if (mediaRecorder.current != null) {
+            mediaRecorder.current.stop()
+            mediaRecorder.current = null
         }
 
-        setAudioConnected(false)
-        setVideoConnected(false)
-        setAuthenticated(false)
-        setVideoAuthenticated(false)
+        if (streamReference.current != null) {
+            streamReference.current.getAudioTracks().forEach((track) => track.stop())
+            streamReference.current = null
+        }
+
+        dispatch({ type: "AUDIO_SOCKET_OPEN", payload: false })
+        dispatch({ type: "VIDEO_SOCKET_OPEN", payload: false })
+        dispatch({ type: "AUDIO_READY", payload: false })
+        dispatch({ type: "VIDEO_READY", payload: false })
 
         if (audiows.current != null) {
             audiows.current.close();
             audiows.current = null;
         }
-        if (videows != null) {
-            videows.close()
-            setVideoWs(null)
+        if (videows.current != null) {
+            videows.current.close()
+            videows.current = null
         }
     }
 
@@ -512,9 +534,9 @@ function JoinPage() {
             audiows.current.send(JSON.stringify(message))
 
             if (joinwith === "Video" || joinwith === "Videocartoonify") {
-                videows.send(JSON.stringify(message))
+                videows.current.send(JSON.stringify(message))
             }
-            setSpeakersValidated(true)
+            dispatch({ type: "SPEAKERS_VALIDATED", payload: true })
         } else {
             setDisplayText(
                 "Not all added speakers have a fingerprint. Please record one for each speaker",
@@ -542,7 +564,7 @@ function JoinPage() {
             blob_type: currBlob.type,
         }
         let data = await currBlob.arrayBuffer()
-        let audiodata = await audioContext.decodeAudioData(data)
+        let audiodata = await audioContext.current.decodeAudioData(data)
         console.log(speakers)
 
         const updatedSpeakers = speakers.map((s) =>
@@ -596,11 +618,11 @@ function JoinPage() {
 
         if (joinwith === "Video" || joinwith === "Videocartoonify") {
 
-            if (videows === null || audiows.current === null) {
+            if (videows.current === null || audiows.current === null) {
                 return
             }
             audiows.current.send(JSON.stringify(message))
-            videows.send(JSON.stringify(message))
+            videows.current.send(JSON.stringify(message))
             setCurrentForm("processing")
         } else {
             if (audiows.current === null) {
@@ -649,9 +671,6 @@ function JoinPage() {
                                 setRegisteredUserAliasChanged(true)
                             }
                         })
-                    } else {
-                        setShowAlert(true)
-                        setAlertMessage(response.json()["message"])
                     }
                 },
                 (apierror) => {
@@ -713,11 +732,11 @@ function JoinPage() {
                 const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
 
                 // media.then(function (stream) {
-                setStreamReference(stream)
+                streamReference.current = stream
                 //keep this here for now to enable to capturing of audio finger printing
                 const context = new AudioContext({ sampleRate: 16000 })
-                setSource(context.createMediaStreamSource(stream))
-                setAudioContext(context)
+                source.current = context.createMediaStreamSource(stream)
+                audioContext.current = context
                 if (joinwith === "Audio") {
                     console.log("connect to websocket");
                     audiows.current = new WebSocket(
@@ -732,7 +751,7 @@ function JoinPage() {
 
                     if (mimetype !== "") {
                         const mediaRec = new MediaRecorder(stream, { mimeType: mimetype })
-                        setMediaRecorder(mediaRec)
+                        mediaRecorder.current = mediaRec
 
                         //Since we are implementing distributed  processing for audio and video,
                         //The audio and  video socket needs to be enabled to receive the  video data
@@ -740,21 +759,13 @@ function JoinPage() {
                         // video data for processing, while the server for video_socket will extract the video
                         // for processing.
 
-                        audiows.current = new WebSocket(
-                            apiService.getAudioWebsocketEndpoint(),
-                        )
-
+                        audiows.current = new WebSocket(apiService.getAudioWebsocketEndpoint(),)
                         connect_audio_processor_service();
 
                         //activate video websocket 
-                        setVideoWs(
-                            new WebSocket(
-                                apiService.getVideoWebsocketEndpoint(),
-                            ),
-                        )
-                    } else {
-                        setShowAlert(true)
-                        setAlertMessage("Failed to get user audio source...........")
+                        videows.current = new WebSocket(apiService.getVideoWebsocketEndpoint(),)
+                        connect_video_processor_service()
+
                     }
 
 
@@ -786,7 +797,7 @@ function JoinPage() {
 
     // Requests session access from the server.
     const requestAccessKey = async (names, passcode, collaborators, joinwith) => {
-        ending.value = false
+        ending.current = false
         setCurrentForm("Connecting")
         const constraint = {}
         if (joinwith === "Video" || joinwith === "Videocartoonify") {
@@ -871,9 +882,6 @@ function JoinPage() {
     }
 
 
-    const closeAlert = () => {
-        setShowAlert(false)
-    }
 
     // Connects to audio processor websocket server.
     const connect_audio_processor_service = () => {
@@ -882,19 +890,19 @@ function JoinPage() {
         audiows.current.onopen = (e) => {
             console.log("[Connected audio processor service]")
             console.log("speakers ", speakers)
-            setAudioConnected(true)
-            setReconnectCounter(0)
+            dispatch({ type: "AUDIO_SOCKET_OPEN", payload: true })
+            reconnectCounter.current = 0
             setPageTitle(name)
             setReload(true)
-            
+
         };
 
         audiows.current.onmessage = (e) => {
             const message = JSON.parse(e.data)
 
             if (message["type"] === "start") {
-                console.log("audio authenticated ...." )
-                setAuthenticated(true)
+                console.log("audio authenticated ....")
+                dispatch({ type: "AUDIO_READY", payload: true })
                 closeDialog()
             } else if (message['type'] === 'registeredfingerprintadded') {
                 console.log("got a response from audio endpoint....")
@@ -915,12 +923,12 @@ function JoinPage() {
         }
 
         audiows.current.onclose = (e) => {
-            console.log("[Disconnected]", ending.value)
-            if (!ending.value) {
+            console.log("[Disconnected]", ending.current)
+            if (!ending.current) {
                 if (reconnectCounter <= 5) {
                     setCurrentForm("Connecting")
                     disconnect()
-                    setReconnectCounter(reconnectCounter + 1)
+                    reconnectCounter.current = reconnectCounter.current + 1
                     console.log("reconnecting ....")
                     setTimeout(handleStream, 2000)
                 }
@@ -935,21 +943,19 @@ function JoinPage() {
 
     // Connects to video processor websocket server.
     const connect_video_processor_service = () => {
-        videows.binaryType = "blob"
+        videows.current.binaryType = "blob"
 
-        videows.onopen = (e) => {
+        videows.current.onopen = (e) => {
             console.log("[Connected to video processor services]")
-            setVideoConnected(true)
+            dispatch({ type: "VIDEO_SOCKET_OPEN", payload: true })
         }
 
-        videows.onmessage = (e) => {
+        videows.current.onmessage = (e) => {
             if (typeof e.data === 'string') {
                 const message = JSON.parse(e.data);
                 if (message['type'] === 'start') {
-                    if (message["message"] === "Video processing not activated to start video processor") {
-                        setVideoProcessingNotActivated(true);
-                    }
-                    setVideoAuthenticated(true);
+                    console.log("video authenticated ....")
+                    dispatch({ type: "VIDEO_READY", payload: true })
                     closeDialog();
                 } else if (message['type'] === 'attention_data') {
 
@@ -958,7 +964,7 @@ function JoinPage() {
                     setRegisteredVideoFingerprintAdded(true)
                 } else if (message['type'] === 'error') {
                     disconnect(true);
-                    setDisplayText('The connection to the session has been closed by the video server.');
+                    setDisplayText(message["message"]);
                     console.log("message from the video server is " + message["message"])
                     setCurrentForm('ClosedSession');
                 } else if (message['type'] === 'end') {
@@ -971,29 +977,21 @@ function JoinPage() {
             } else if (e.data instanceof Blob) {
                 const url = URL.createObjectURL(e.data);
                 // Add the processed frame to the buffer
-
-                setFrameBuffer(prevBuffer => {
-                    const newItems = [...prevBuffer, url]
-                    if (newItems.length % 40 === 0) {
-                        setFrameBufferLength(newItems.length)
-                    }
-
-                    return newItems
+                frameBuffer.current.push(url);
+                if (frameBuffer.current.length % 40 === 0) {
+                    setFrameBufferLength(frameBuffer.current.length)
                 }
-                );
-
-                setRenderingStarted(true)
             }
         };
 
-        videows.onclose = e => {
-            console.log('[Disconnected]', ending.value);
+        videows.current.onclose = e => {
+            console.log('[Disconnected]', ending.current);
         };
     }
 
     // Begin capturing and sending client audio.
     const requestStartAudioProcessing = () => {
-        console.log("Starting Audio")
+        console.log("Starting Audio Processing")
         let message = null
         if (audiows.current === null) {
             return
@@ -1002,7 +1000,7 @@ function JoinPage() {
             type: "start",
             key: key,
             start_time: 0.0,
-            sample_rate: audioContext.sampleRate,
+            sample_rate: audioContext.current.sampleRate,
             encoding: "pcm_f32le",
             channels: 1,
             streamdata: "audio",
@@ -1012,465 +1010,474 @@ function JoinPage() {
             sessionid: session.id,
             numSpeakers: numSpeakers,
         }
-    console.log(joinwith)
-    audiows.current.send(JSON.stringify(message))
-}
-
-// Begin capturing and sending client video.
-const requestStartVideoProcessing = () => {
-    let message = null
-    console.log('starting video processing')
-    if (videows === null) {
-        return
+        audiows.current.send(JSON.stringify(message))
     }
-    if (joinwith === "Video") {
-        message = {
-            type: "start",
-            key: key,
-            start_time: 0.0,
-            sample_rate: 16000,
-            encoding: "pcm_f16le",
-            video_encoding: "video/webm",
-            channels: 2,
-            streamdata: "video",
-            mimeextension: mimeExtension,
-            embeddings_file: sessionDevice.embeddings,
-            deviceid: sessionDevice.id,
-            Video: true,
-            sessionid: session.id,
-            numSpeakers: numSpeakers,
+
+    // Begin capturing and sending client video.
+    const requestStartVideoProcessing = () => {
+        let message = null
+        console.log('starting video processing')
+        if (videows.current === null) {
+            return
         }
-    } else if (joinwith === "Videocartoonify") {
-        message = {
-            type: "start",
-            key: key,
-            start_time: 0.0,
-            sample_rate: 16000,
-            encoding: "pcm_f16le",
-            video_encoding: "video/webm",
-            channels: 2,
-            streamdata: "video",
-            mimeextension: mimeExtension,
-            embeddings_file: sessionDevice.embeddings,
-            deviceid: sessionDevice.id,
-            sessionid: session.id,
-            Video_cartoonify: true,
-            numSpeakers: numSpeakers,
+        if (joinwith === "Video") {
+            message = {
+                type: "start",
+                key: key,
+                start_time: 0.0,
+                sample_rate: 16000,
+                encoding: "pcm_f16le",
+                video_encoding: "video/webm",
+                channels: 2,
+                streamdata: "video",
+                mimeextension: mimeExtension,
+                embeddings_file: sessionDevice.embeddings,
+                deviceid: sessionDevice.id,
+                Video: true,
+                sessionid: session.id,
+                numSpeakers: numSpeakers,
+            }
+        } else if (joinwith === "Videocartoonify") {
+            message = {
+                type: "start",
+                key: key,
+                start_time: 0.0,
+                sample_rate: 16000,
+                encoding: "pcm_f16le",
+                video_encoding: "video/webm",
+                channels: 2,
+                streamdata: "video",
+                mimeextension: mimeExtension,
+                embeddings_file: sessionDevice.embeddings,
+                deviceid: sessionDevice.id,
+                sessionid: session.id,
+                Video_cartoonify: true,
+                numSpeakers: numSpeakers,
+            }
         }
+        videows.current.send(JSON.stringify(message))
     }
-    console.log(joinwith)
-    videows.send(JSON.stringify(message))
-}
 
-const requestHelp = () => {
-    sessionDevice.button_pressed = !sessionDevice.button_pressed
-    sessionService.setDeviceButton(
-        sessionDevice.id,
-        sessionDevice.button_pressed,
-        key,
-    )
-}
-
-const navigateToLogin = (confirmed = false) => {
-    if (!confirmed && (audioconnected || videoconnected)) {
-        setCurrentForm("NavGuard")
-    } else {
-        disconnect(true)
-        setCurrentForm("")
-        return navigate("/")
-    }
-}
-
-const getSpeakerAliasFromID = (selectedSpkrId) => {
-    if (selectedSpkrId !== -1) {
-        const speaker = speakers.filter((s) => s.id === selectedSpkrId)
-        if (speaker.length !== 0) {
-            return speaker[0].alias
-        }
-    } else {
-        return -1
-    }
-}
-
-const fetchSpeakerMetrics = async (transcript) => {
-    try {
-        const response = await sessionService.getTranscriptSpeakerMetrics(
-            transcript.id,
-        )
-        if (response.status === 200) {
-            const jsonObj = await response.json()
-            return { ...transcript, speaker_metrics: jsonObj }
-        } else if (response.status === 400 || response.status === 401) {
-            console.log(response, "no speaker metric for transcript id")
-            return { ...transcript, speaker_metrics: null }
-        }
-    } catch (error) {
-        console.log(
-            "byod-join-component error func : fetch Speaker Metrics",
-            error,
+    const requestHelp = () => {
+        sessionDevice.button_pressed = !sessionDevice.button_pressed
+        sessionService.setDeviceButton(
+            sessionDevice.id,
+            sessionDevice.button_pressed,
+            key,
         )
     }
-}
 
-const fetchTranscript = async (deviceid) => {
-    try {
-        const response =
-            await sessionService.getSessionDeviceTranscriptsForClient(
-                deviceid,
+    const navigateToLogin = (confirmed = false) => {
+        if (!confirmed && (state.audioSocketOpen || state.videoSocketOpen)) {
+            setCurrentForm("NavGuard")
+        } else {
+            disconnect(true)
+            setCurrentForm("")
+            return navigate("/")
+        }
+    }
+
+    const getSpeakerAliasFromID = (selectedSpkrId) => {
+        if (selectedSpkrId !== -1) {
+            const speaker = speakers.filter((s) => s.id === selectedSpkrId)
+            if (speaker.length !== 0) {
+                return speaker[0].alias
+            }
+        } else {
+            return -1
+        }
+    }
+
+    const fetchSpeakerMetrics = async (transcript) => {
+        try {
+            const response = await sessionService.getTranscriptSpeakerMetrics(
+                transcript.id,
             )
-
-        if (response.status === 200) {
-            const jsonObj = await response.json()
-            const fetched_transcripts = jsonObj.sort((a, b) =>
-                a.start_time > b.start_time ? 1 : -1,
+            if (response.status === 200) {
+                const jsonObj = await response.json()
+                return { ...transcript, speaker_metrics: jsonObj }
+            } else if (response.status === 400 || response.status === 401) {
+                console.log(response, "no speaker metric for transcript id")
+                return { ...transcript, speaker_metrics: null }
+            }
+        } catch (error) {
+            console.log(
+                "byod-join-component error func : fetch Speaker Metrics",
+                error,
             )
+        }
+    }
 
-            const fetch_metrics_promises =
-                fetched_transcripts.map(fetchSpeakerMetrics)
-            const fetched_trancript_metrics = await Promise.all(
-                fetch_metrics_promises,
+    const fetchTranscript = async (deviceid) => {
+        try {
+            const response =
+                await sessionService.getSessionDeviceTranscriptsForClient(
+                    deviceid,
+                )
+
+            if (response.status === 200) {
+                const jsonObj = await response.json()
+                const fetched_transcripts = jsonObj.sort((a, b) =>
+                    a.start_time > b.start_time ? 1 : -1,
+                )
+
+                const fetch_metrics_promises =
+                    fetched_transcripts.map(fetchSpeakerMetrics)
+                const fetched_trancript_metrics = await Promise.all(
+                    fetch_metrics_promises,
+                )
+
+                setTranscripts(fetched_trancript_metrics)
+                const sessionLen =
+                    Object.keys(session).length > 0 ? session.length : 0
+                setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100)
+                setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100)
+            } else if (response.status === 400 || response.status === 401) {
+                console.log(response, "no transcript obj")
+            }
+        } catch (error) {
+            console.log(
+                "byod-join-component error func : fetch transcript",
+                error,
             )
+        }
+    }
 
-            setTranscripts(fetched_trancript_metrics)
+    const fetchVideoMetric = async (deviceid) => {
+        try {
+            const response =
+                await sessionService.getSessionDeviceVideoMetricsForClient(
+                    deviceid,
+                )
+
+            if (response.status === 200) {
+                const jsonObj = await response.json()
+                const fetched_video_metrics = jsonObj.sort((a, b) =>
+                    a.time_stamp > b.time_stamp ? 1 : -1,
+                )
+
+                setVideoMetrics(fetched_video_metrics)
+            } else if (response.status === 400 || response.status === 401) {
+                console.log(response, "no videometrics obj")
+            }
+        } catch (error) {
+            console.log(
+                "byod-join-component error func : fetch video metrics",
+                error,
+            )
+        }
+    }
+
+
+    const renderFrameFromBuffer = useCallback(() => {
+        if (isPlayingBatchRef.current) return;
+        if (frameBufferLength - (40 * (cartoonImgBatch - 1)) < 40) return
+
+        const startIndex = (cartoonImgBatch - 1) * 40;
+        const endIndex = cartoonImgBatch * 40;
+
+        if (frameBufferLength < endIndex) return;
+        console.log("I am here 4")
+
+        isPlayingBatchRef.current = true;
+
+        let currentIndex = startIndex;
+
+        playbackIntervalRef.current = setInterval(() => {
+            const frame = frameBuffer.current[currentIndex];
+            if (frame) {
+                setCartoonImgUrl(frame);
+            }
+
+            currentIndex += 1;
+
+            if (currentIndex >= endIndex) {
+                if (playbackIntervalRef.current) {
+                    clearInterval(playbackIntervalRef.current);
+                    playbackIntervalRef.current = null;
+                }
+
+                isPlayingBatchRef.current = false;
+                setCartoonImgBatch((prev) => prev + 1);
+            }
+        }, 33);
+    }, [cartoonImgBatch,frameBufferLength]);
+
+    const ResetTimeRange = (values) => {
+        if (session !== null) {
             const sessionLen =
                 Object.keys(session).length > 0 ? session.length : 0
-            setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100)
-            setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100)
-        } else if (response.status === 400 || response.status === 401) {
-            console.log(response, "no transcript obj")
+            setTimeRange(values)
+            const start = Math.round(sessionLen * values[0] * 100) / 100
+            const end = Math.round(sessionLen * values[1] * 100) / 100
+            setStartTime(start)
+            setEndTime(end)
+            generateDisplayTranscripts(start, end)
         }
-    } catch (error) {
-        console.log(
-            "byod-join-component error func : fetch transcript",
-            error,
+    }
+
+    const generateDisplayTranscripts = (s, e) => {
+        setDisplayTranscripts(
+            transcripts.filter((t) => t.start_time >= s && t.start_time <= e),
         )
     }
-}
 
-const fetchVideoMetric = async (deviceid) => {
-    try {
-        const response =
-            await sessionService.getSessionDeviceVideoMetricsForClient(
-                deviceid,
+    const generateDisplayVideoMetrics = (s, e) => {
+        setDisplayVideoMetrics(
+            videoMetrics.filter((v) => v.time_stamp >= s && v.time_stamp <= e),
+        )
+    }
+
+
+    const setSpeakerTranscripts = () => {
+        if (displayTranscripts.length) {
+            setSpkr1Transcripts(
+                displayTranscripts.reduce((values, transcript) => {
+
+                    if (transcript.speaker_id === selectedSpkrId1
+                    ) {
+                        values.push(transcript);
+                    }
+                    return values;
+                }, [])
+            );
+            setSpkr2Transcripts(
+                displayTranscripts.reduce((values, transcript) => {
+                    if (transcript.speaker_id === selectedSpkrId2
+                    ) {
+                        values.push(transcript);
+                    }
+                    return values;
+                }, [])
+            );
+        } else {
+            setSpkr1Transcripts([]);
+            setSpkr2Transcripts([]);
+        }
+    };
+
+    const setSpeakerVideoMetrics = () => {
+        if (displayVideoMetrics.length) {
+            let speakerAlias1 = getSpeakerAliasFromID(selectedSpkrId1)
+            let speakerAlias2 = getSpeakerAliasFromID(selectedSpkrId2)
+            setSpkr1VideoMetrics(
+                displayVideoMetrics.reduce((values, videometrics) => {
+                    if (videometrics.student_username === speakerAlias1
+                    ) {
+                        values.push(videometrics)
+                    }
+                    return values
+                }, []),
             )
-
-        if (response.status === 200) {
-            const jsonObj = await response.json()
-            const fetched_video_metrics = jsonObj.sort((a, b) =>
-                a.time_stamp > b.time_stamp ? 1 : -1,
+            setSpkr2VideoMetrics(
+                displayVideoMetrics.reduce((values, videometrics) => {
+                    if (videometrics.student_username === speakerAlias2
+                    ) {
+                        values.push(videometrics)
+                    }
+                    return values
+                }, []),
             )
-
-            setVideoMetrics(fetched_video_metrics)
-        } else if (response.status === 400 || response.status === 401) {
-            console.log(response, "no videometrics obj")
+        } else {
+            setSpkr1VideoMetrics([])
+            setSpkr2VideoMetrics([])
         }
-    } catch (error) {
-        console.log(
-            "byod-join-component error func : fetch video metrics",
-            error,
-        )
     }
-}
 
-//function to render the cartoonized image
-const renderFrameFromBuffer = () => {
-    console.log('frameBufferLength = ', frameBufferLength, ' cartoonImgBatch = ', cartoonImgBatch)
-    if (frameBufferLength > (40 * cartoonImgBatch)) {
-        for (var i = (cartoonImgBatch - 1) * 40; i < cartoonImgBatch * 40; i++) {
-
-            setInterval(() => {
-                setCartoonImgUrl(frameBuffer[i]);
-                console.log('i called setcartoonimgurl ', i)
-            }, 500)
-
+    const seeAllTranscripts = () => {
+        if (Object.keys(currentTranscript) > 0 && sessionDevice !== null) {
+            setCurrentForm("gottoselectedtranscript")
+        } else if (sessionDevice !== null) {
+            setCurrentForm("gototranscript")
         }
-        setCartoonImgBatch(prevCount => prevCount + 1)
-
     }
 
-}
-
-const ResetTimeRange = (values) => {
-    if (session !== null) {
-        const sessionLen =
-            Object.keys(session).length > 0 ? session.length : 0
-        setTimeRange(values)
-        const start = Math.round(sessionLen * values[0] * 100) / 100
-        const end = Math.round(sessionLen * values[1] * 100) / 100
-        setStartTime(start)
-        setEndTime(end)
-        generateDisplayTranscripts(start, end)
+    const loading = () => {
+        return session === null || transcripts === null
     }
-}
 
-const generateDisplayTranscripts = (s, e) => {
-    setDisplayTranscripts(
-        transcripts.filter((t) => t.start_time >= s && t.start_time <= e),
-    )
-}
-
-const generateDisplayVideoMetrics = (s, e) => {
-    setDisplayVideoMetrics(
-        videoMetrics.filter((v) => v.time_stamp >= s && v.time_stamp <= e),
-    )
-}
-
-
-const setSpeakerTranscripts = () => {
-    if (displayTranscripts.length) {
-        setSpkr1Transcripts(
-            displayTranscripts.reduce((values, transcript) => {
-
-                if (transcript.speaker_id === selectedSpkrId1
-                ) {
-                    values.push(transcript);
-                }
-                return values;
-            }, [])
-        );
-        setSpkr2Transcripts(
-            displayTranscripts.reduce((values, transcript) => {
-                if (transcript.speaker_id === selectedSpkrId2
-                ) {
-                    values.push(transcript);
-                }
-                return values;
-            }, [])
-        );
-    } else {
-        setSpkr1Transcripts([]);
-        setSpkr2Transcripts([]);
+    const onClickedTimeline = (transcript) => {
+        setCurrentForm("Transcript")
+        setCurrentTranscript(transcript)
     }
-};
 
-const setSpeakerVideoMetrics = () => {
-    if (displayVideoMetrics.length) {
-        let speakerAlias1 = getSpeakerAliasFromID(selectedSpkrId1)
-        let speakerAlias2 = getSpeakerAliasFromID(selectedSpkrId2)
-        setSpkr1VideoMetrics(
-            displayVideoMetrics.reduce((values, videometrics) => {
-                if (videometrics.student_username === speakerAlias1
-                ) {
-                    values.push(videometrics)
-                }
-                return values
-            }, []),
-        )
-        setSpkr2VideoMetrics(
-            displayVideoMetrics.reduce((values, videometrics) => {
-                if (videometrics.student_username === speakerAlias2
-                ) {
-                    values.push(videometrics)
-                }
-                return values
-            }, []),
-        )
-    } else {
-        setSpkr1VideoMetrics([])
-        setSpkr2VideoMetrics([])
-    }
-}
-
-const seeAllTranscripts = () => {
-    if (Object.keys(currentTranscript) > 0 && sessionDevice !== null) {
+    const onClickedKeyword = (transcript) => {
+        setCurrentTranscript(transcript)
         setCurrentForm("gottoselectedtranscript")
-    } else if (sessionDevice !== null) {
-        setCurrentForm("gototranscript")
     }
-}
 
-const loading = () => {
-    return session === null || transcripts === null
-}
-
-const onClickedTimeline = (transcript) => {
-    setCurrentForm("Transcript")
-    setCurrentTranscript(transcript)
-}
-
-const onClickedKeyword = (transcript) => {
-    setCurrentTranscript(transcript)
-    setCurrentForm("gottoselectedtranscript")
-}
-
-const openDialog = (form) => {
-    setCurrentForm(form)
-}
+    const openDialog = (form) => {
+        setCurrentForm(form)
+    }
 
     const closeDialog = () => {
-        if(currentForm === "ClosedSession")
+        if (currentForm === "ClosedSession")
             setPrevSessionId(-1)
         setCurrentForm("")
     }
 
-const changeTouppercase = (e) => {
-    let val = e.target.value.toUpperCase()
-    if (val.length <= 4) {
-        setWrongInput(false)
-    } else {
-        setWrongInput(true)
-    }
-    setPcode(val)
-}
-
-const togglePreview = () => {
-    setCurrentForm("")
-    setPreview(!preview)
-}
-
-const onSessionClosing = (isClosing) => {
-    setSessionClosing(isClosing)
-}
-
-const acquireWakeLock = async () => {
-    if (!("wakeLock" in navigator)) {
-        console.error(
-            "Screen Wake Lock API is not supported by the browser",
-        )
-        return
+    const changeTouppercase = (e) => {
+        let val = e.target.value.toUpperCase()
+        if (val.length <= 4) {
+            setWrongInput(false)
+        } else {
+            setWrongInput(true)
+        }
+        setPcode(val)
     }
 
-    try {
-        wakeLock = await navigator.wakeLock.request("screen")
-        console.log("Wake lock is activated.")
-        wakeLock.addEventListener("release", () => {
-            console.log("Wake Lock has been released")
-        })
-        document.addEventListener("visibilitychange", async () => {
-            if (
-                wakeLock !== null &&
-                document.visibilityState === "visible"
-            ) {
-                wakeLock = await navigator.wakeLock.request("screen")
-            }
-        })
-    } catch (err) {
-        console.log(err)
+    const togglePreview = () => {
+        setCurrentForm("")
+        setPreview(!preview)
     }
-}
 
-const releaseWakeLock = async () => {
-    try {
-        wakeLock.release().then(() => {
-            wakeLock = null
-        })
-    } catch (err) {
-        console.log(`WakeLock release error: ${err}`)
+    const onSessionClosing = (isClosing) => {
+        setSessionClosing(isClosing)
     }
-}
 
-const initChecklistData = (featuresArr, setFn) => {
-    let valueInd = 0
-    let showFeats = []
-    for (const feature of featuresArr) {
-        showFeats.push({ label: feature, value: valueInd, clicked: true })
-        valueInd++
+    const acquireWakeLock = async () => {
+        if (!("wakeLock" in navigator)) {
+            console.error(
+                "Screen Wake Lock API is not supported by the browser",
+            )
+            return
+        }
+
+        try {
+            wakeLock = await navigator.wakeLock.request("screen")
+            console.log("Wake lock is activated.")
+            wakeLock.addEventListener("release", () => {
+                console.log("Wake Lock has been released")
+            })
+            document.addEventListener("visibilitychange", async () => {
+                if (
+                    wakeLock !== null &&
+                    document.visibilityState === "visible"
+                ) {
+                    wakeLock = await navigator.wakeLock.request("screen")
+                }
+            })
+        } catch (err) {
+            console.log(err)
+        }
     }
-    setFn(showFeats)
-}
 
-const viewComparison = () => {
-    setDetails("Comparison")
-}
+    const releaseWakeLock = async () => {
+        try {
+            wakeLock.release().then(() => {
+                wakeLock = null
+            })
+        } catch (err) {
+            console.log(`WakeLock release error: ${err}`)
+        }
+    }
 
-const viewIndividual = () => {
-    setDetails("Individual")
-}
+    const initChecklistData = (featuresArr, setFn) => {
+        let valueInd = 0
+        let showFeats = []
+        for (const feature of featuresArr) {
+            showFeats.push({ label: feature, value: valueInd, clicked: true })
+            valueInd++
+        }
+        setFn(showFeats)
+    }
 
-const viewGroup = () => {
-    setDetails("Group")
-}
+    const viewComparison = () => {
+        setDetails("Comparison")
+    }
 
-const sessionDevBtnPressed =
-    sessionDevice !== null ? sessionDevice.button_pressed : null
+    const viewIndividual = () => {
+        setDetails("Individual")
+    }
 
-const loadSpeakerMetrics = (speakerId, speakrAlias) => {
-    setSelectedSpkrId1(speakerId)
-    setSelectedSpkralias(speakrAlias)
-    setPageTitle(speakrAlias)
-    setDetails("Individual");
-}
+    const viewGroup = () => {
+        setDetails("Group")
+    }
 
-return (
-    <ByodJoinPage
-        audioconnected={audioconnected}
-        videoconnected={videoconnected}
-        authenticated={authenticated}
-        videoAuthenticated={videoAuthenticated}
-        GLOW_COLOR={GLOW_COLOR}
-        POD_COLOR={POD_COLOR}
-        button_pressed={sessionDevBtnPressed}
-        verifyInputAndAudio={verifyInputAndAudio}
-        closeDialog={closeDialog}
-        currentForm={currentForm}
-        displayText={displayText}
-        navigate={navigate}
-        navigateToLogin={navigateToLogin}
-        pageTitle={pageTitle}
-        requestHelp={requestHelp}
-        pcode={pcode}
-        setPcode={setPcode}
-        wrongInput={wrongInput}
-        changeTouppercase={changeTouppercase}
-        joinwith={joinwith}
-        preview={preview}
-        previewLabel={previewLabel}
-        togglePreview={togglePreview}
-        disconnect={disconnect}
-        sessionDevice={sessionDevice}
-        setRange={ResetTimeRange}
-        onClickedTimeline={onClickedTimeline}
-        onClickedKeyword={onClickedKeyword}
-        session={session}
-        displayTranscripts={displayTranscripts}
-        displayVideoMetrics={displayVideoMetrics}
-        startTime={startTime}
-        endTime={endTime}
-        transcripts={transcripts}
-        loading={loading}
-        onSessionClosing={onSessionClosing}
-        currentTranscript={currentTranscript}
-        seeAllTranscripts={seeAllTranscripts}
-        openDialog={openDialog}
-        setCurrentForm={setCurrentForm}
-        showBoxes={showBoxes}
-        showFeatures={showFeatures}
-        videoApiEndpoint={apiService.getVideoServerEndpoint()}
-        setSpeakersValidated={setSpeakersValidated}
-        speakersValidated={speakersValidated}
-        speakers={speakers}
-        authKey={key}
-        openForms={openForms}
-        closeForm={closeForm}
-        selectedSpkrId1={selectedSpkrId1}
-        setSelectedSpkrId1={setSelectedSpkrId1}
-        selectedSpkrId2={selectedSpkrId2}
-        setSelectedSpkrId2={setSelectedSpkrId2}
-        getSpeakerAliasFromID={getSpeakerAliasFromID}
-        spkr1Transcripts={spkr1Transcripts}
-        spkr2Transcripts={spkr2Transcripts}
-        selectedSpeaker={selectedSpeaker}
-        spkr1VideoMetrics={spkr1VideoMetrics}
-        spkr2VideoMetrics={spkr2VideoMetrics}
-        setSelectedSpeaker={setSelectedSpeaker}
-        saveAudioFingerprint={saveAudioFingerprint}
-        addSpeakerFingerprint={addSpeakerFingerprint}
-        confirmSpeakers={confirmSpeakers}
-        closeAlert={closeAlert}
-        changeAliasName={changeAliasName}
-        details={details}
-        setDetails={setDetails}
-        viewIndividual={viewIndividual}
-        viewComparison={viewComparison}
-        viewGroup={viewGroup}
-        cartoonImgUrl={cartoonImgUrl}
-        invalidName={invalidName}
-        startProcessingSavedSpeakerFingerprint={startProcessingSavedSpeakerFingerprint}
-        loadSpeakerMetrics={loadSpeakerMetrics}
-        selectedSpkralias={selectedSpkralias}
-        prevSessionId={prevSessionId}
-    />
-)
+    const sessionDevBtnPressed =
+        sessionDevice !== null ? sessionDevice.button_pressed : null
+
+    const loadSpeakerMetrics = (speakerId, speakrAlias) => {
+        setSelectedSpkrId1(speakerId)
+        setSelectedSpkralias(speakrAlias)
+        setPageTitle(speakrAlias)
+        setDetails("Individual");
+    }
+
+    return (
+        <ByodJoinPage
+            state={state}
+            GLOW_COLOR={GLOW_COLOR}
+            POD_COLOR={POD_COLOR}
+            button_pressed={sessionDevBtnPressed}
+            verifyInputAndAudio={verifyInputAndAudio}
+            closeDialog={closeDialog}
+            currentForm={currentForm}
+            displayText={displayText}
+            navigate={navigate}
+            navigateToLogin={navigateToLogin}
+            pageTitle={pageTitle}
+            requestHelp={requestHelp}
+            pcode={pcode}
+            setPcode={setPcode}
+            wrongInput={wrongInput}
+            changeTouppercase={changeTouppercase}
+            joinwith={joinwith}
+            preview={preview}
+            previewLabel={previewLabel}
+            togglePreview={togglePreview}
+            disconnect={disconnect}
+            sessionDevice={sessionDevice}
+            setRange={ResetTimeRange}
+            onClickedTimeline={onClickedTimeline}
+            onClickedKeyword={onClickedKeyword}
+            session={session}
+            displayTranscripts={displayTranscripts}
+            displayVideoMetrics={displayVideoMetrics}
+            startTime={startTime}
+            endTime={endTime}
+            transcripts={transcripts}
+            loading={loading}
+            onSessionClosing={onSessionClosing}
+            currentTranscript={currentTranscript}
+            seeAllTranscripts={seeAllTranscripts}
+            openDialog={openDialog}
+            setCurrentForm={setCurrentForm}
+            showBoxes={showBoxes}
+            showFeatures={showFeatures}
+            videoApiEndpoint={apiService.getVideoServerEndpoint()}
+            speakers={speakers}
+            authKey={key}
+            openForms={openForms}
+            closeForm={closeForm}
+            selectedSpkrId1={selectedSpkrId1}
+            setSelectedSpkrId1={setSelectedSpkrId1}
+            selectedSpkrId2={selectedSpkrId2}
+            setSelectedSpkrId2={setSelectedSpkrId2}
+            getSpeakerAliasFromID={getSpeakerAliasFromID}
+            spkr1Transcripts={spkr1Transcripts}
+            spkr2Transcripts={spkr2Transcripts}
+            selectedSpeaker={selectedSpeaker}
+            spkr1VideoMetrics={spkr1VideoMetrics}
+            spkr2VideoMetrics={spkr2VideoMetrics}
+            setSelectedSpeaker={setSelectedSpeaker}
+            saveAudioFingerprint={saveAudioFingerprint}
+            addSpeakerFingerprint={addSpeakerFingerprint}
+            confirmSpeakers={confirmSpeakers}
+            changeAliasName={changeAliasName}
+            details={details}
+            setDetails={setDetails}
+            viewIndividual={viewIndividual}
+            viewComparison={viewComparison}
+            viewGroup={viewGroup}
+            cartoonImgUrl={cartoonImgUrl}
+            invalidName={invalidName}
+            startProcessingSavedSpeakerFingerprint={startProcessingSavedSpeakerFingerprint}
+            loadSpeakerMetrics={loadSpeakerMetrics}
+            selectedSpkralias={selectedSpkralias}
+            prevSessionId={prevSessionId}
+        />
+    )
 }
 
 export { JoinPage }
