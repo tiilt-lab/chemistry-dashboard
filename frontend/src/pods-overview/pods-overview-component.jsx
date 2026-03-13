@@ -24,23 +24,19 @@ function PodsOverviewComponent() {
 
   useEffect(() => {
     if (activeSessionService !== null) {
-      console.log("init session data");
       const nextSession = activeSessionService.getSession();
       setSession(nextSession);
       const nextSessionDevices = activeSessionService.getSessionDevices();
       setSessionDevices(nextSessionDevices);
-      console.log("set Interval");
 
       getSessionSpeakers(nextSession.id)
 
       let intervalLoad = setInterval(() => {
-        console.log("processing interval");
         const nextSession = activeSessionService.getSession();
         setSession(nextSession);
         const nextSessionDevices = [
           ...activeSessionService.getSessionDevices(),
         ];
-        console.log(nextSessionDevices);
         setSessionDevices(nextSessionDevices);
       }, interval);
 
@@ -165,27 +161,27 @@ function PodsOverviewComponent() {
     navigator.clipboard.writeText(pwd);
   };
 
-  const exportSessionMetricsData = (type,windowsize) => {
+  const exportSessionMetricsData = (type,windowsize,format) => {
     let fetchData = null;
     if (type == "audiometrics") {
-      fetchData = new SessionService().downloadSessionTranscriptMetrics(session.id, session.title,windowsize);
+      fetchData = new SessionService().downloadSessionTranscriptMetrics(session.id, session.title,windowsize,format);
     } else if (type == "videometrics") {
       fetchData = new SessionService().downloadSessionVideoMetrics(session.id, session.title,windowsize);
     } else if (type == "transcriptvideometrics") {
-      fetchData = new SessionService().downloadSessionTranscriptVideoMetrics(session.id, session.title,windowsize);
+      fetchData = new SessionService().downloadSessionTranscriptVideoMetrics(session.id, session.title,windowsize,format);
     }
     if (fetchData != null) {
       fetchData.then(
         (response) => {
           if (response.status === 200) {
-            response.text().then((csvData) => {
+            response.text().then((Data) => {
               const anchor = document.createElement("a");
               anchor.href =
-                "data:attachment/csv;charset=utf-8," + encodeURI(csvData);
-              anchor.download = session.title + ".csv";
+                "data:attachment/csv;charset=utf-8," + encodeURI(Data);
+              let extension = format === "csv" ? ".csv" : ".json"  
+              anchor.download = session.title + extension;
               anchor.click();
-              console.log(csvData);
-              console.log("Transcript Download successful.");
+             
               //return true;
               /* {const resp = response.json()
                     resp.then() }*/
@@ -207,8 +203,8 @@ function PodsOverviewComponent() {
 
  
 
-  const downloadData = (windowsize, datatype) => {
-    exportSessionMetricsData(datatype,windowsize);
+  const downloadData = (windowsize, datatype,format) => {
+    exportSessionMetricsData(datatype,windowsize,format);
   }
 
   const closeDialog = () => {

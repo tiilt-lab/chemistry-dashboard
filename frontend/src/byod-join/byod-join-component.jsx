@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useState, useRef, useCallback } from "react"
+import { useReducer, useEffect, useState, useRef, useCallback, act } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { SessionService } from "../services/session-service"
 import { ByodJoinPage } from "./html-pages"
@@ -36,17 +36,76 @@ function JoinPage() {
     const frameBuffer = useRef([]); // Buffer for cartoonized frames
     const playbackIntervalRef = useRef(null);
     const isPlayingBatchRef = useRef(false);
-    const [key, setKey] = useState(null)
-    const [transcripts, setTranscripts] = useState([])
-    const [videoMetrics, setVideoMetrics] = useState([])
+    const key = useRef(null)
+    const transcripts = useRef([])
+    const videoMetrics = useRef([])
+    const timeRange = useRef([0, 1])
+    const joinwith = useRef("")
+    const name = useRef("")
+    const speakers = useRef([])
+    const numSpeakers = useRef(0)
+    const currBlob = useRef(null)
+    const heartbeatIntervalRef = useRef(null)
 
+
+
+
+    // Cartoonification buffer and streaming states
+    const [frameBufferLength, setFrameBufferLength] = useState(0);
+    const [cartoonImgUrl, setCartoonImgUrl] = useState("");
+    const [cartoonImgBatch, setCartoonImgBatch] = useState(1);
+
+    // UI states
+    const [sessionDevice, setSessionDevice] = useState(null)
+    const [session, setSession] = useState(null)
+    const [startTime, setStartTime] = useState(0)
+    const [endTime, setEndTime] = useState(0)
+    const [displayTranscripts, setDisplayTranscripts] = useState([])
+    const [displayVideoMetrics, setDisplayVideoMetrics] = useState([])
+    const [currentTranscript, setCurrentTranscript] = useState({})
+    const [selectedSpkrId1, setSelectedSpkrId1] = useState(-1)
+    const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1)
+    const [spkr1Transcripts, setSpkr1Transcripts] = useState([])
+    const [spkr2Transcripts, setSpkr2Transcripts] = useState([])
+    const [spkr1VideoMetrics, setSpkr1VideoMetrics] = useState([])
+    const [spkr2VideoMetrics, setSpkr2VideoMetrics] = useState([])
+    const [selectedSpkralias, setSelectedSpkralias] = useState("");
+    const [details, setDetails] = useState("Group")
+    const [currentForm, setCurrentForm] = useState("")
+    const [displayText, setDisplayText] = useState("")
+    const [pageTitle, setPageTitle] = useState("Join Discussion")
+    const [prevSessionId, setPrevSessionId] = useState(-1)
+    const [pcode, setPcode] = useState("")
+    const [constraintObj, setConstraintObj] = useState(null)
+    const [mimetype, setMimeType] = useState(null)
+    const [mimeExtension, setMimeExtension] = useState(null);
+    const [wrongInput, setWrongInput] = useState(false)
+    const [preview, setPreview] = useState(false)
+    const [previewLabel, setPreviewLabel] = useState("Turn On Preview")
+    const [showFeatures, setShowFeatures] = useState([])
+    const [showBoxes, setShowBoxes] = useState([])
+    const [selectedSpeaker, setSelectedSpeaker] = useState(null)
+    const [invalidName, setInvalidName] = useState(false)
+    const [reload, setReload] = useState(false)
+
+    // const [sessionClosing, setSessionClosing] = useState(false)
+
+    // Audio/video Fingerprint registration states
+    const [registeredStudentData, setRegisteredStudentData] = useState(null)
+    const [registeredUserAliasChanged, setRegisteredUserAliasChanged] = useState(false)
+    const [registeredAudioFingerprintAdded, setRegisteredAudioFingerprintAdded] = useState(false)
+    const [registeredVideoFingerprintAdded, setRegisteredVideoFingerprintAdded] = useState(false)
+
+    const navigate = useNavigate()
+
+    // Reducer and state for managing connection and streaming status
     const initialState = {
         audioSocketOpen: false,
         videoSocketOpen: false,
         audioReady: false,
         videoReady: false,
         speakersValidated: false,
-        streaming: false,
+        startDiscussionStreaming: false,
     };
 
     function reducer(state, action) {
@@ -62,81 +121,14 @@ function JoinPage() {
             case "SPEAKERS_VALIDATED":
                 return { ...state, speakersValidated: action.payload };
             case "START_STREAMING":
-                return { ...state, streaming: true };
+                return { ...state, startDiscussionStreaming: action.payload };
             case "STOP_STREAMING":
-                return { ...state, streaming: false };
+                return { ...state, startDiscussionStreaming: false };
             default:
                 return state;
         }
     }
     const [state, dispatch] = useReducer(reducer, initialState);
-
-
-
-
-
-
-
-    const [frameBufferLength, setFrameBufferLength] = useState(0);
-    const [cartoonImgUrl, setCartoonImgUrl] = useState("");
-    const [cartoonImgBatch, setCartoonImgBatch] = useState(1);
-
-    // Session data
-    const [sessionDevice, setSessionDevice] = useState(null)
-    const [session, setSession] = useState(null)
-    const [startTime, setStartTime] = useState()
-    const [endTime, setEndTime] = useState()
-    const [displayTranscripts, setDisplayTranscripts] = useState([])
-    const [displayVideoMetrics, setDisplayVideoMetrics] = useState([])
-    const [currentTranscript, setCurrentTranscript] = useState({})
-
-
-
-    
-    
-    const [timeRange, setTimeRange] = useState([0, 1])
-    const [selectedSpkrId1, setSelectedSpkrId1] = useState(-1)
-    const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1)
-    const [spkr1Transcripts, setSpkr1Transcripts] = useState([])
-    const [spkr2Transcripts, setSpkr2Transcripts] = useState([])
-    const [spkr1VideoMetrics, setSpkr1VideoMetrics] = useState([])
-    const [spkr2VideoMetrics, setSpkr2VideoMetrics] = useState([])
-    const [selectedSpkralias, setSelectedSpkralias] = useState("");
-    const [details, setDetails] = useState("Group")
-
-    const [currentForm, setCurrentForm] = useState("")
-    const [displayText, setDisplayText] = useState("")
-    const [reload, setReload] = useState(false)
-    const [pageTitle, setPageTitle] = useState("Join Discussion")
-    const [sessionClosing, setSessionClosing] = useState(false)
-    const [prevSessionId, setPrevSessionId] = useState(-1)
-
-    const [name, setName] = useState("")
-    const [pcode, setPcode] = useState("")
-    const [wrongInput, setWrongInput] = useState(false)
-    const [joinwith, setJoinwith] = useState("")
-    const [preview, setPreview] = useState(false)
-    const [previewLabel, setPreviewLabel] = useState("Turn On Preview")
-    const navigate = useNavigate()
-
-    const [showFeatures, setShowFeatures] = useState([])
-    const [showBoxes, setShowBoxes] = useState([])
-
-    const [numSpeakers, setNumSpeakers] = useState()
-    const [speakers, setSpeakers] = useState([])
-
-    const [selectedSpeaker, setSelectedSpeaker] = useState(null)
-    const [currBlob, setCurrBlob] = useState(null)
-    const [invalidName, setInvalidName] = useState(false)
-    const [constraintObj, setConstraintObj] = useState(null)
-    const [mimetype, setMimeType] = useState(null)
-    const [mimeExtension, setMimeExtension] = useState(null);
-    const [registeredStudentData, setRegisteredStudentData] = useState(null)
-    const [registeredUserAliasChanged, setRegisteredUserAliasChanged] = useState(false)
-    const [registeredAudioFingerprintAdded, setRegisteredAudioFingerprintAdded] = useState(false)
-    const [registeredVideoFingerprintAdded, setRegisteredVideoFingerprintAdded] = useState(false)
-
-
 
     const POD_COLOR = "#FF6655"
     const GLOW_COLOR = "#ffc3bd"
@@ -144,6 +136,7 @@ function JoinPage() {
 
     let wakeLock = null
 
+    // FIRST EFFECT THAT RENDERS THE PAGE WITH MERIC OPTIONS INTIALIZATION
     useEffect(() => {
         // initialize the options toolbar
         let featuresArr = [
@@ -182,74 +175,140 @@ function JoinPage() {
 
     }, [])
 
-    //Use effect to display processed cartoonized image
+
+    // SECOND LEVEL: THIS IS TRIGGERED WHEN THE USER CLICKS ON THE JOIN BUTTON AND TRIGGERS THE VALIDATION OF THE INPUTS AND AUDIO DEVICES. THIS THEN TRIGGERS THE REQUEST FOR THE ACCESS KEY FROM THE SERVER
     useEffect(() => {
-        if (frameBufferLength > 0) {
-            console.log('inside renderframe buffer useeffect ', frameBufferLength)
-            renderFrameFromBuffer()
-        }
-    }, [frameBufferLength])
+        if (constraintObj !== null && mimetype !== null && pcode !== "" && joinwith.current !== "") handleStream()
+    }, [constraintObj, pcode, mimetype])
 
+
+   // THIRD LEVEL: THIS EFFECT IS TRIGGERED ONCE THE CONNECTION TO THE AUDIO AND VIDEO WEBSOCKET SERVERS ARE OPENED. THIS THEN TRIGGERS THE START OF THE AUDIO AND VIDEO PROCESSING BY SENDING A MESSAGE TO THE SERVER TO START THE PROCESSING
     useEffect(() => {
-        if (constraintObj !== null && mimetype !== null && pcode !== "" && joinwith !== "") handleStream()
-    }, [constraintObj, pcode, joinwith, mimetype])
-
-
-
-    //Use effect to intermetently reload the transcript
-    useEffect(() => {
-        let intervalLoad
-        // fetch the transcript
-        if (session !== null && sessionDevice !== null) {
-            fetchTranscript(sessionDevice.id)
-            fetchVideoMetric(sessionDevice.id)
-            intervalLoad = setInterval(() => {
-                fetchTranscript(sessionDevice.id)
-                fetchVideoMetric(sessionDevice.id)
-            }, 2000)
-        }
-
-        return () => {
-            clearInterval(intervalLoad)
-        }
-    }, [session, sessionDevice])
-
-    useEffect(() => {
-        if (session !== null && state.speakersValidated) {
-            const sessionLen =
-                Object.keys(session).length > 0 ? session.length : 0
-            const sTime = Math.round(sessionLen * timeRange[0] * 100) / 100
-            const eTime = Math.round(sessionLen * timeRange[1] * 100) / 100
-            setStartTime(sTime)
-            setEndTime(eTime)
-            generateDisplayTranscripts(sTime, eTime)
-            generateDisplayVideoMetrics(sTime, eTime)
-        }
-    }, [transcripts, videoMetrics, startTime, endTime, session, state.speakersValidated, timeRange])
-
-    useEffect(() => {
-        if (displayTranscripts) {
-            setSpeakerTranscripts()
-        }
-        if (displayVideoMetrics) {
-            setSpeakerVideoMetrics()
-        }
-    }, [displayTranscripts, displayVideoMetrics, selectedSpkrId1, selectedSpkrId2, details])
-
-    //Use effect to start audio and video processing
-    useEffect(() => {
-        if (joinwith == "Audio" && state.audioSocketOpen) {
+        if (joinwith.current == "Audio" && state.audioSocketOpen) {
             requestStartAudioProcessing()
         }
-        if ((joinwith === "Video" || joinwith === "Videocartoonify") && state.audioSocketOpen && state.videoSocketOpen) {
+        if ((joinwith.current === "Video" || joinwith.current === "Videocartoonify") && state.audioSocketOpen && state.videoSocketOpen) {
             requestStartAudioProcessing()
             requestStartVideoProcessing()
         }
-    }, [joinwith, state.audioSocketOpen, state.videoSocketOpen])
+    }, [state.audioSocketOpen, state.videoSocketOpen])
 
-    //Use effect to start the camera and microphone for video and audio capturing
+    // FOURTH LEVEL: FOR FINGERPRINT ENROLLMENT/ ALIAS CHANGE: ONCE THE SPEAKER ENTERS USERNAME FOR ENROLLMENT OR ALIAS CHANGE, 
+    // THE REGISTERED STUDENT DATA IS SET, THIS THEN TRIGGERS THE CHANGE OF ALIAS NAME FOR THE SPEAKER FINGERPRINT BEING ENROLLED/CHANGED. 
     useEffect(() => {
-        if (state.audioReady || state.videoReady) {
+        if (registeredStudentData != null) {
+            changeAliasName(registeredStudentData.username)
+        }
+    }, [registeredStudentData])
+
+    //FOURTH LEVEL: ONCE THE ALIAS NAME FOR THE REGISTERED FINGERPRINT IS CHANGED, THIS THEN TRIGGERS THE ADDING OF THE FINGERPRINT TO THE SPEAKER
+    useEffect(() => {
+        if (registeredUserAliasChanged) {
+            addSavedSpeakerFingerprint()
+        }
+    }, [registeredUserAliasChanged])
+
+    //FOURTH LEVEL: THIS IS TRIGGERED ONCE THE AUDIO AND VIDEO FINGERPRINTS ARE ADDED FOR THE SPEAKER BEING ENROLLED, THIS THEN MARKS THE SPEAKER AS FINGERPRINTED AND CLOSES THE FINGERPRINT ENROLLMENT DIALOG
+    useEffect(() => {
+        let proceed = false
+        if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
+            if (registeredAudioFingerprintAdded && registeredVideoFingerprintAdded) {
+                proceed = true
+            }
+        } else {
+            if (registeredAudioFingerprintAdded) {
+                proceed = true
+            }
+        }
+        if (proceed) {
+
+            const updatedSpeakers = speakers.current.map((s) =>
+                s.id === selectedSpeaker.id ? { ...s, fingerprinted: true } : s,)
+            speakers.current = updatedSpeakers
+            setSelectedSpeaker(null)
+            setCurrentForm("")
+            // console.log("register fingerprint for " + registeredStudentData.username + " Added")
+            setRegisteredStudentData(null)
+            setRegisteredUserAliasChanged(false)
+            setRegisteredAudioFingerprintAdded(false)
+            setRegisteredVideoFingerprintAdded(false)
+            closeDialog()
+        }
+    }, [registeredAudioFingerprintAdded, registeredVideoFingerprintAdded])
+
+    //FOURTH LEVEL: THIS IS TRIGGERED ONCE AUDIO AND VIDEO IS OPEN AND READY AND WHEN THE SPEAKERS ARE ENROLLING THEIR FINGERPRINTS, 
+    // THIS THEN STARTS THE HEARTBEAT TO KEEP THE CONNECTION TO THE AUDIO AND VIDEO WEBSOCKET SERVERS ALIVE UNTIL THE SPEAKERS ARE VALIDATED, ONCE VALIDATED, THE HEARTBEAT STOPS AND THE STREAMING STARTS
+    useEffect(() => {
+        const clearHeartbeat = () => {
+            if (heartbeatIntervalRef.current) {
+                console.log("clearing interval heartbeat inside return");
+                clearInterval(heartbeatIntervalRef.current);
+                heartbeatIntervalRef.current = null;
+            }
+        };
+
+        const sendAudioHeartbeat = () => {
+            if (audiows.current?.readyState === WebSocket.OPEN) {
+                audiows.current.send(
+                    JSON.stringify({ type: "heartbeat", key: key.current })
+                );
+            } else {
+                clearHeartbeat();
+            }
+        };
+
+        const sendAudioVideoHeartbeat = () => {
+            if (
+                audiows.current?.readyState === WebSocket.OPEN &&
+                videows.current?.readyState === WebSocket.OPEN
+            ) {
+                audiows.current.send(
+                    JSON.stringify({ type: "heartbeat", key: key.current })
+                );
+                videows.current.send(
+                    JSON.stringify({ type: "heartbeat", key: key.current })
+                );
+            } else {
+                clearHeartbeat();
+            }
+        };
+
+        // Stop heartbeat immediately once validation is complete
+        if (state.speakersValidated) {
+            dispatch({ type: "START_STREAMING", payload: (state.audioReady && state.videoReady && state.audioSocketOpen && state.videoSocketOpen && state.speakersValidated) })
+            clearHeartbeat();
+            return;
+        }
+
+        if (joinwith.current === "Audio") {
+            if (state.audioSocketOpen && state.audioReady) {
+                if (state.audioSocketOpen && state.audioReady) return;
+                setCurrentForm("");
+                sendAudioHeartbeat(); // send immediately
+                heartbeatIntervalRef.current = setInterval(sendAudioHeartbeat, 20000);
+            }
+
+        } else if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
+            if (state.audioSocketOpen && state.videoSocketOpen && state.audioReady && state.videoReady) {
+                setCurrentForm("");
+                sendAudioVideoHeartbeat(); // send immediately
+                heartbeatIntervalRef.current = setInterval(sendAudioVideoHeartbeat, 20000);
+            }
+        }
+
+        return () => {
+            clearHeartbeat();
+        };
+        // }
+    }, [state.audioSocketOpen, state.videoSocketOpen, state.audioReady, state.videoReady, state.speakersValidated]);
+
+
+
+
+    //FIFTH LEVEL: THIS IS TRIGGERED ONCE THE SPEAKERS ARE VALIDATED, THIS THEN STARTS THE STREAMING OF AUDIO AND VIDEO DATA TO THE SERVERS BY CONNECTING 
+    // THE AUDIO NODES TO THE AUDIO WORKLET PROCESSOR AND STARTING THE MEDIA RECORDER FOR VIDEO
+    useEffect(() => {
+        if (state.startDiscussionStreaming) {
             const loadWorklet = async () => {
                 await audioContext.current.audioWorklet.addModule(
                     "audio-sender-processor.js",
@@ -296,18 +355,73 @@ function JoinPage() {
                 }
             }
 
-            if (state.audioReady && joinwith === "Audio") {
+            if (joinwith.current === "Audio") {
                 loadWorklet().catch(console.error)
-            } else if (state.audioReady && state.videoReady && state.speakersValidated &&
-                (joinwith === "Video" || joinwith === "Videocartoonify")
-            ) {
+            } else if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
                 loadWorklet().catch(console.error)
                 videoPlay()
             }
         }
-    }, [state.audioReady, state.videoReady, state.speakersValidated])
+    }, [state.startDiscussionStreaming])
 
-    //Use effect to toggle video view pane
+
+    // SIXTH LEVEL: THIS EFFECT IS TRIGGERED ONCE THE SPEAKERS ARE VALIDATED AND THE STREAMING HAS STARTED, THIS THEN STARTS THE INTERVAL 
+    // TO FETCH THE TRANSCRIPTS AND VIDEO METRICS FROM THE SERVER EVERY 2 SECONDS AND UPDATE THE DISPLAY
+    useEffect(() => {
+        let intervalLoad
+        // fetch the transcript
+        if (session !== null && sessionDevice !== null) {
+            fetchTranscript(sessionDevice.id)
+            fetchVideoMetric(sessionDevice.id)
+            intervalLoad = setInterval(() => {
+                fetchTranscript(sessionDevice.id)
+                fetchVideoMetric(sessionDevice.id)
+            }, 2000)
+        }
+
+        return () => {
+            clearInterval(intervalLoad)
+        }
+    }, [session, sessionDevice])
+
+    //SIXTH LEVEL: THIS EFFECT IS TRIGGERED ONCE THE TRANSCRIPTS AND VIDEO METRICS ARE FETCHED, 
+    // THIS THEN GENERATES THE DISPLAY TRANSCRIPTS AND VIDEO METRICS BASED ON THE SELECTED TIME RANGE AND UPDATES THE DISPLAY
+    useEffect(() => {
+        if (session !== null && state.startDiscussionStreaming) {
+            const sessionLen =
+                Object.keys(session).length > 0 ? session.length : 0
+            const sTime = Math.round(sessionLen * timeRange.current[0] * 100) / 100
+            const eTime = Math.round(sessionLen * timeRange.current[1] * 100) / 100
+            setStartTime(sTime)
+            setEndTime(eTime)
+            generateDisplayTranscripts(sTime, eTime)
+            generateDisplayVideoMetrics(sTime, eTime)
+        }
+    }, [startTime, endTime, session, state.startDiscussionStreaming, timeRange])
+
+
+    // SIXTH LEVEL: THIS EFFECT IS TRIGGERED ONCE THE USER SELECTS A SPEAKER TO VIEW THEIR TRANSCRIPTS AND VIDEO METRICS, 
+    // THIS THEN UPDATES THE DISPLAY TO SHOW THE TRANSCRIPTS AND VIDEO METRICS FOR THE SELECTED SPEAKER
+    useEffect(() => {
+        if (displayTranscripts) {
+            setSpeakerTranscripts()
+        }
+        if (displayVideoMetrics) {
+            setSpeakerVideoMetrics()
+        }
+    }, [displayTranscripts, displayVideoMetrics, selectedSpkrId1, selectedSpkrId2, details])
+
+    // SEVENTH LEVEL: THIS EFFECT IS TRIGGERED ONCE THE LENGTH OF THE CARTOONIFIED FRAME BUFFER IS UPDATED, THIS THEN RENDERS THE FRAMES IN 
+    // THE BUFFER TO THE VIDEO ELEMENT ONE BY ONE WITH A SMALL DELAY TO CREATE A SMOOTH VIDEO STREAMING EXPERIENCE
+    useEffect(() => {
+        if (frameBufferLength > 0) {
+            console.log('inside renderframe buffer useeffect ', frameBufferLength)
+            renderFrameFromBuffer()
+        }
+    }, [frameBufferLength])
+
+
+    //EIGHTH LEVEL: THIS EFFECT IS TRIGGERED ONCE THE PREVIEW MODE IS TOGGLED, THIS THEN UPDATES THE LABEL FOR THE PREVIEW TOGGLE BUTTON
     useEffect(() => {
         if (preview) {
             setPreviewLabel("Turn Off Preview")
@@ -315,106 +429,6 @@ function JoinPage() {
             setPreviewLabel("Turn On Preview")
         }
     }, [preview])
-
-    useEffect(() => {
-        if (registeredStudentData != null) {
-            changeAliasName(registeredStudentData.username)
-        }
-    }, [registeredStudentData])
-
-    useEffect(() => {
-        if (registeredUserAliasChanged) {
-            addSavedSpeakerFingerprint()
-        }
-    }, [registeredUserAliasChanged])
-
-    useEffect(() => {
-        let proceed = false
-        if (joinwith === "Video" || joinwith === "Videocartoonify") {
-            if (registeredAudioFingerprintAdded && registeredVideoFingerprintAdded) {
-                proceed = true
-            }
-        } else {
-            if (registeredAudioFingerprintAdded) {
-                proceed = true
-            }
-        }
-        if (proceed) {
-
-            const updatedSpeakers = speakers.map((s) =>
-                s.id === selectedSpeaker.id ? { ...s, fingerprinted: true } : s,)
-            setSpeakers(updatedSpeakers)
-            setSelectedSpeaker(null)
-            setCurrentForm("")
-            // console.log("register fingerprint for " + registeredStudentData.username + " Added")
-            setRegisteredStudentData(null)
-            setRegisteredUserAliasChanged(false)
-            setRegisteredAudioFingerprintAdded(false)
-            setRegisteredVideoFingerprintAdded(false)
-            closeDialog()
-        }
-    }, [registeredAudioFingerprintAdded, registeredVideoFingerprintAdded])
-
-
-    //The is usefull to keep the connection alive while th users are adding their finger prints.
-    //This will stop sending heartbeats once the fingerprints are added
-    useEffect(() => {
-        let Intervalid = 0
-
-        if (joinwith === "Audio") {
-            if (state.audioSocketOpen && state.audioReady) {
-                if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN) return;
-                setCurrentForm("")
-                const send = () => {
-                    if (audiows.current.readyState === WebSocket.OPEN) {
-                        audiows.current.send(JSON.stringify({ type: "heartbeat", key: key }));
-
-                    } else {
-                        console.log("clearing interval heartbeat inside audio");
-                        clearInterval(Intervalid);
-                    }
-                };
-
-                // fire once immediately, then on interval
-                send();
-                Intervalid = setInterval(send, 20000);
-
-
-            }
-
-        } else if (joinwith === "Video" || joinwith === "Videocartoonify") {
-            if (state.audioSocketOpen && state.videoSocketOpen && state.audioReady && state.videoReady) {
-                if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN || videows.current === null || videows.current.readyState !== WebSocket.OPEN) {
-                    // console.log("returning from heartbeat setup");
-                    return;
-                }
-                setCurrentForm("")
-                const send = () => {
-                    if (audiows.current.readyState === WebSocket.OPEN && videows.current.readyState === WebSocket.OPEN) {
-                        console.log("returning from heartbeat setup");
-                        audiows.current.send(JSON.stringify({ type: "heartbeat", key: key }));
-                        videows.current.send(JSON.stringify({ type: "heartbeat", key: key }));
-
-                    } else {
-                        console.log("clearing interval heartbeat inside video");
-                        clearInterval(Intervalid);
-                    }
-                };
-                // fire once immediately, then on interval
-                send();
-                Intervalid = setInterval(send, 20000);
-
-            }
-        }
-
-        return () => {
-            console.log("clearing interval heartbeat inside return");
-            clearInterval(Intervalid);
-        };
-        // }
-    }, [audiows, videows, state.audioSocketOpen, state.videoSocketOpen, state.audioReady, state.videoReady]); //speakersValidated
-
-
 
     const fixMp4DurationWithMp4Box = async (blob) => {
 
@@ -474,17 +488,17 @@ function JoinPage() {
         console.log("disconnect called", permanent)
         if (ending.current)
             return
-        if (permanent) {
+        if (permanent && session !== null) {
             setPageTitle("Join Discussion")
-            setName("")
+            name.current = ""
             setPcode("")
             ending.current = true
             dispatch({ type: "SPEAKERS_VALIDATED", payload: false })
-            setSpeakers(null)
+            speakers.current = null
             setPrevSessionId(session.id)
             setSession(null)
             setSessionDevice(null)
-            setKey(null)
+            key.current = null
         }
 
         if (wakeLock) releaseWakeLock()
@@ -523,20 +537,21 @@ function JoinPage() {
     }
 
     const confirmSpeakers = () => {
-        console.log(speakers)
-        if (speakers.every((s) => s.fingerprinted)) {
+        console.log(speakers.current)
+        if (speakers.current.every((s) => s.fingerprinted)) {
             let message = null
             message = {
                 type: "speaker",
                 id: "done",
-                speakers: speakers,
+                speakers: speakers.current,
             }
             audiows.current.send(JSON.stringify(message))
 
-            if (joinwith === "Video" || joinwith === "Videocartoonify") {
+            if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
                 videows.current.send(JSON.stringify(message))
             }
             dispatch({ type: "SPEAKERS_VALIDATED", payload: true })
+
         } else {
             setDisplayText(
                 "Not all added speakers have a fingerprint. Please record one for each speaker",
@@ -547,7 +562,7 @@ function JoinPage() {
 
     const saveAudioFingerprint = (audioblob) => {
         //store blob for confirmation
-        setCurrBlob(audioblob)
+        currBlob.current = audioblob
     }
 
     const addSpeakerFingerprint = async () => {
@@ -560,22 +575,22 @@ function JoinPage() {
             type: "speaker",
             id: selectedSpeaker.id,
             alias: selectedSpeaker.alias,
-            size: currBlob.size,
-            blob_type: currBlob.type,
+            size: currBlob.current.size,
+            blob_type: currBlob.current.type,
         }
-        let data = await currBlob.arrayBuffer()
+        let data = await currBlob.current.arrayBuffer()
         let audiodata = await audioContext.current.decodeAudioData(data)
-        console.log(speakers)
+        console.log(speakers.current)
 
-        const updatedSpeakers = speakers.map((s) =>
+        const updatedSpeakers = speakers.current.map((s) =>
             s.id === selectedSpeaker.id ? { ...s, fingerprinted: true } : s,
         )
 
-        setSpeakers(updatedSpeakers)
+        speakers.current = updatedSpeakers
         audiows.current.send(JSON.stringify(message))
         audiows.current.send(audiodata.getChannelData(0))
         console.log("sent speaker fingerprint")
-        setCurrBlob(null)
+        currBlob.current = null
         closeDialog()
     }
 
@@ -614,9 +629,9 @@ function JoinPage() {
             alias: registeredStudentData.username
         }
 
-        console.log(speakers)
+        console.log(speakers.current)
 
-        if (joinwith === "Video" || joinwith === "Videocartoonify") {
+        if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
 
             if (videows.current === null || audiows.current === null) {
                 return
@@ -657,12 +672,12 @@ function JoinPage() {
                             console.log(jsonObj)
                             const speaker = SpeakerModel.fromJson(jsonObj)
                             console.log(speaker)
-                            const updatedSpeakers = speakers.map((s) =>
+                            const updatedSpeakers = speakers.current.map((s) =>
                                 s.id === selectedSpeaker.id
                                     ? { ...s, alias: speaker.alias }
                                     : s,
                             )
-                            setSpeakers(updatedSpeakers)
+                            speakers.current = updatedSpeakers
                             //only set to null when change alias is invoked by cicking the change alias option 
                             if (registeredStudentData === null) {
                                 setSelectedSpeaker(null)
@@ -737,7 +752,7 @@ function JoinPage() {
                 const context = new AudioContext({ sampleRate: 16000 })
                 source.current = context.createMediaStreamSource(stream)
                 audioContext.current = context
-                if (joinwith === "Audio") {
+                if (joinwith.current === "Audio") {
                     console.log("connect to websocket");
                     audiows.current = new WebSocket(
                         apiService.getAudioWebsocketEndpoint(),
@@ -745,8 +760,8 @@ function JoinPage() {
                     connect_audio_processor_service();
 
                 } else if (
-                    joinwith === "Video" ||
-                    joinwith === "Videocartoonify"
+                    joinwith.current === "Video" ||
+                    joinwith.current === "Videocartoonify"
                 ) {
 
                     if (mimetype !== "") {
@@ -789,18 +804,15 @@ function JoinPage() {
         if (names === null) {
             names = "User Device"
         }
-        setName(names)
-        setJoinwith(joinswith)
-        setNumSpeakers(collaborators)
         requestAccessKey(names, passcode, collaborators, joinswith)
     }
 
     // Requests session access from the server.
-    const requestAccessKey = async (names, passcode, collaborators, joinwith) => {
+    const requestAccessKey = async (names, passcode, collaborators, l_joinwith) => {
         ending.current = false
         setCurrentForm("Connecting")
         const constraint = {}
-        if (joinwith === "Video" || joinwith === "Videocartoonify") {
+        if (l_joinwith === "Video" || l_joinwith === "Videocartoonify") {
             constraint.audio = true
             constraint.video = {
                 facingMode: "user",
@@ -823,15 +835,15 @@ function JoinPage() {
                                 jsonObj["session_device"],
                             ),
                         )
-                        setSpeakers(
-                            SpeakerModel.fromJsonList(jsonObj["speakers"]),
-                        )
-                        setKey(jsonObj.key);
+                        speakers.current = SpeakerModel.fromJsonList(jsonObj["speakers"])
+                        name.current = names
+                        key.current = jsonObj.key;
+                        numSpeakers.current = collaborators
                         setConstraintObj(constraint)
                         setMimeType(mediaType)
                         setMimeExtension(mediaExt)
                         setPcode(passcode)
-                        setJoinwith(joinwith)
+                        joinwith.current = l_joinwith
                     })
                 } else if (response.status === 400 || response.status === 401) {
                     response.json().then((jsonObj) => {
@@ -889,10 +901,10 @@ function JoinPage() {
 
         audiows.current.onopen = (e) => {
             console.log("[Connected audio processor service]")
-            console.log("speakers ", speakers)
+            console.log("speakers ", speakers.current)
             dispatch({ type: "AUDIO_SOCKET_OPEN", payload: true })
             reconnectCounter.current = 0
-            setPageTitle(name)
+            setPageTitle(name.current)
             setReload(true)
 
         };
@@ -998,7 +1010,7 @@ function JoinPage() {
         }
         message = {
             type: "start",
-            key: key,
+            key: key.current,
             start_time: 0.0,
             sample_rate: audioContext.current.sampleRate,
             encoding: "pcm_f32le",
@@ -1008,7 +1020,7 @@ function JoinPage() {
             embeddings_file: sessionDevice.embeddings,
             deviceid: sessionDevice.id,
             sessionid: session.id,
-            numSpeakers: numSpeakers,
+            numSpeakers: numSpeakers.current,
         }
         audiows.current.send(JSON.stringify(message))
     }
@@ -1020,10 +1032,10 @@ function JoinPage() {
         if (videows.current === null) {
             return
         }
-        if (joinwith === "Video") {
+        if (joinwith.current === "Video") {
             message = {
                 type: "start",
-                key: key,
+                key: key.current,
                 start_time: 0.0,
                 sample_rate: 16000,
                 encoding: "pcm_f16le",
@@ -1035,12 +1047,12 @@ function JoinPage() {
                 deviceid: sessionDevice.id,
                 Video: true,
                 sessionid: session.id,
-                numSpeakers: numSpeakers,
+                numSpeakers: numSpeakers.current,
             }
-        } else if (joinwith === "Videocartoonify") {
+        } else if (joinwith.current === "Videocartoonify") {
             message = {
                 type: "start",
-                key: key,
+                key: key.current,
                 start_time: 0.0,
                 sample_rate: 16000,
                 encoding: "pcm_f16le",
@@ -1052,7 +1064,7 @@ function JoinPage() {
                 deviceid: sessionDevice.id,
                 sessionid: session.id,
                 Video_cartoonify: true,
-                numSpeakers: numSpeakers,
+                numSpeakers: numSpeakers.current,
             }
         }
         videows.current.send(JSON.stringify(message))
@@ -1063,7 +1075,7 @@ function JoinPage() {
         sessionService.setDeviceButton(
             sessionDevice.id,
             sessionDevice.button_pressed,
-            key,
+            key.current,
         )
     }
 
@@ -1079,7 +1091,7 @@ function JoinPage() {
 
     const getSpeakerAliasFromID = (selectedSpkrId) => {
         if (selectedSpkrId !== -1) {
-            const speaker = speakers.filter((s) => s.id === selectedSpkrId)
+            const speaker = speakers.current.filter((s) => s.id === selectedSpkrId)
             if (speaker.length !== 0) {
                 return speaker[0].alias
             }
@@ -1127,11 +1139,11 @@ function JoinPage() {
                     fetch_metrics_promises,
                 )
 
-                setTranscripts(fetched_trancript_metrics)
+                transcripts.current = fetched_trancript_metrics
                 const sessionLen =
                     Object.keys(session).length > 0 ? session.length : 0
-                setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100)
-                setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100)
+                setStartTime(Math.round(sessionLen * timeRange.current[0] * 100) / 100)
+                setEndTime(Math.round(sessionLen * timeRange.current[1] * 100) / 100)
             } else if (response.status === 400 || response.status === 401) {
                 console.log(response, "no transcript obj")
             }
@@ -1156,7 +1168,7 @@ function JoinPage() {
                     a.time_stamp > b.time_stamp ? 1 : -1,
                 )
 
-                setVideoMetrics(fetched_video_metrics)
+                videoMetrics.current = fetched_video_metrics
             } else if (response.status === 400 || response.status === 401) {
                 console.log(response, "no videometrics obj")
             }
@@ -1201,13 +1213,13 @@ function JoinPage() {
                 setCartoonImgBatch((prev) => prev + 1);
             }
         }, 33);
-    }, [cartoonImgBatch,frameBufferLength]);
+    }, [cartoonImgBatch, frameBufferLength]);
 
     const ResetTimeRange = (values) => {
         if (session !== null) {
             const sessionLen =
                 Object.keys(session).length > 0 ? session.length : 0
-            setTimeRange(values)
+            timeRange.current = values
             const start = Math.round(sessionLen * values[0] * 100) / 100
             const end = Math.round(sessionLen * values[1] * 100) / 100
             setStartTime(start)
@@ -1218,13 +1230,13 @@ function JoinPage() {
 
     const generateDisplayTranscripts = (s, e) => {
         setDisplayTranscripts(
-            transcripts.filter((t) => t.start_time >= s && t.start_time <= e),
+            transcripts.current.filter((t) => t.start_time >= s && t.start_time <= e),
         )
     }
 
     const generateDisplayVideoMetrics = (s, e) => {
         setDisplayVideoMetrics(
-            videoMetrics.filter((v) => v.time_stamp >= s && v.time_stamp <= e),
+            videoMetrics.current.filter((v) => v.time_stamp >= s && v.time_stamp <= e),
         )
     }
 
@@ -1293,7 +1305,7 @@ function JoinPage() {
     }
 
     const loading = () => {
-        return session === null || transcripts === null
+        return session === null || transcripts.current.length === 0
     }
 
     const onClickedTimeline = (transcript) => {
@@ -1332,7 +1344,7 @@ function JoinPage() {
     }
 
     const onSessionClosing = (isClosing) => {
-        setSessionClosing(isClosing)
+        // setSessionClosing(isClosing)
     }
 
     const acquireWakeLock = async () => {
@@ -1422,7 +1434,7 @@ function JoinPage() {
             setPcode={setPcode}
             wrongInput={wrongInput}
             changeTouppercase={changeTouppercase}
-            joinwith={joinwith}
+            joinwith={joinwith.current}
             preview={preview}
             previewLabel={previewLabel}
             togglePreview={togglePreview}
@@ -1436,7 +1448,6 @@ function JoinPage() {
             displayVideoMetrics={displayVideoMetrics}
             startTime={startTime}
             endTime={endTime}
-            transcripts={transcripts}
             loading={loading}
             onSessionClosing={onSessionClosing}
             currentTranscript={currentTranscript}
@@ -1446,8 +1457,7 @@ function JoinPage() {
             showBoxes={showBoxes}
             showFeatures={showFeatures}
             videoApiEndpoint={apiService.getVideoServerEndpoint()}
-            speakers={speakers}
-            authKey={key}
+            speakers={speakers.current}
             openForms={openForms}
             closeForm={closeForm}
             selectedSpkrId1={selectedSpkrId1}

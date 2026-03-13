@@ -94,7 +94,6 @@ useEffect(()=>{
   }
 },[trigger])
 
-//console.log(transcripts, displayTranscripts, 'states ... ')
 const createDisplayTranscripts = ()=> {
     const accdisplaytrans = [];
     for (const transcript of transcripts) {

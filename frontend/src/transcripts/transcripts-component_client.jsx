@@ -100,8 +100,7 @@ const createDisplayTranscripts = ()=> {
       transcript['doaColor'] = showDoA ? angleToColor(transcript.direction) : angleToColor(-1);
       accdisplaytrans.push(transcript);
     }
-    console.log("IN CREATE THING");
-    console.log(accdisplaytrans);
+
     setDisplayTranscripts(accdisplaytrans)
   }
 

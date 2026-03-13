@@ -329,14 +329,15 @@ def remove_device_from_session(session_id, session_device_id, **kwargs):
         socketio_helper.remove_session_device(session_id, session_device_id)
     return json_response()
 
-@api_routes.route('/api/v1/sessions/<int:session_id>/exporttranscriptmetrics/<int:windowsize>',methods=['GET'])
+@api_routes.route('/api/v1/sessions/<int:session_id>/exporttranscriptmetrics/<int:windowsize>/<string:format>',methods=['GET'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access
-def export_session_transcript_metrics(session_id,windowsize, **kwargs):
+def export_session_transcript_metrics(session_id,windowsize, format, **kwargs):
     si = io.StringIO()
-    field_names = None
+    field_names = None  
     fwrite = None 
     session_devices = database.get_session_devices(session_id=session_id)
+    All_particiapants_video_metrics = []
     if windowsize == 0:
         field_names = ['Device ID', 'Device Name', 'Start Time', 'Transcript Id','Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
                     'Clout', 'Emotional Tone', 'Direction',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness','communication_density','Word Count', 'Speaker Tag', 'Speaker ID', 'Topic ID']
@@ -373,7 +374,7 @@ def export_session_transcript_metrics(session_id,windowsize, **kwargs):
                     })
     else:
         field_names = ['Device ID', 'Device Name', 'Time Range (s)','Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
-                    'Clout', 'Emotional Tone', 'Direction',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness','communication_density','Word Count', 'Speaker Tag', 'Speaker ID', 'Topic ID']
+                    'Clout', 'Emotional Tone', 'Direction',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness','Word Count', 'Speaker Tag', 'Speaker ID', 'Topic ID']
         fwrite = csv.DictWriter(si, fieldnames = field_names)
         fwrite.writeheader()     
         for session_device in session_devices:
@@ -381,22 +382,31 @@ def export_session_transcript_metrics(session_id,windowsize, **kwargs):
             speakers = database.get_speakers(session_device_id=session_device.id)
             for speaker in speakers:
                 transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session(session_device_id=session_device.id,speaker_id=speaker.id)
-                batch_transcript_metrics(transcriptSpeakerMetric,windowsize,fwrite,speaker,session_device,keywords,format='csv')         
+                speaker_data = batch_transcript_metrics(transcriptSpeakerMetric,windowsize,fwrite,speaker,session_device,keywords,format)
+                if format == 'json':
+                    All_particiapants_video_metrics.extend(speaker_data)
+                        
 
-    output = make_response(si.getvalue())
-    output.headers["Content-Disposition"] = "attachment; filename=export.csv"
-    output.headers["Content-type"] = "text/csv"
+    if format == 'csv':
+        output = make_response(si.getvalue())
+        output.headers["Content-Disposition"] = "attachment; filename=export.csv"
+        output.headers["Content-type"] = "text/csv"
+    elif format == 'json':
+        json_data = json.dumps([dict(zip(field_names, row)) for row in All_particiapants_video_metrics], indent=2)
+        output = make_response(json_data)
+        output.headers["Content-Disposition"] = "attachment; filename=export.json"
+        output.headers["Content-type"] = "application/json"
     return output
 
-@api_routes.route('/api/v1/sessions/<int:session_id>/exportvideometrics/<int:windowsize>',methods=['GET'])
+@api_routes.route('/api/v1/sessions/<int:session_id>/exportvideometrics/<int:windowsize>/<string:format>',methods=['GET'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access
-def export_session_video_metrics(session_id, windowsize,**kwargs):
+def export_session_video_metrics(session_id, windowsize, format, **kwargs):
     field_names = None
     fwrite = None  
     si = io.StringIO()
     session_devices = database.get_session_devices(session_id=session_id)
-
+    All_particiapants_video_metrics = []
     if windowsize == 0:
         field_names = ['Device ID', 'Device Name', 'Start Time', 'Facial Emotion', 'Object Focus On', 'Attention Level', 'Speaker Tag']
         fwrite = csv.DictWriter(si, fieldnames = field_names)
@@ -414,29 +424,36 @@ def export_session_video_metrics(session_id, windowsize,**kwargs):
                     })
 
     else:
-        field_names = ['Device ID', 'Device Name', 'Time Range (s)', 'Facial Emotion', 'Object Focus On', 'Attention Level', 'Speaker Tag']
+        field_names = ['Device ID', 'Device Name', 'Time Range (s)', 'Facial Emotion', 'Object Focus On', 'Attention Level','Attention Rate',"Attention Class", 'Speaker Tag']
         fwrite = csv.DictWriter(si, fieldnames = field_names)
         fwrite.writeheader()
         for session_device in session_devices:
             speakers = database.get_speakers(session_device_id=session_device.id)
             for speaker in speakers:
                 videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device.id,student_username=speaker.alias)
-                batch_video_metrics(videoMetrics,windowsize,fwrite,speaker,session_device,format='csv')     
-
-    output = make_response(si.getvalue())
-    output.headers["Content-Disposition"] = "attachment; filename=export.csv"
-    output.headers["Content-type"] = "text/csv"
+                speaker_data = batch_video_metrics(videoMetrics,windowsize,fwrite,speaker,session_device,format)
+                if format == 'json':
+                    All_particiapants_video_metrics.extend(speaker_data)  
+    if format == 'csv':
+        output = make_response(si.getvalue())
+        output.headers["Content-Disposition"] = "attachment; filename=export.csv"
+        output.headers["Content-type"] = "text/csv"
+    elif format == 'json':
+        json_data = json.dumps([dict(zip(field_names, row)) for row in All_particiapants_video_metrics], indent=2)
+        output = make_response(json_data)
+        output.headers["Content-Disposition"] = "attachment; filename=export.json"
+        output.headers["Content-type"] = "application/json"
     return output
 
-@api_routes.route('/api/v1/sessions/<int:session_id>/exporttranscriptvideometrics/<int:windowsize>',methods=['GET'])
+@api_routes.route('/api/v1/sessions/<int:session_id>/exporttranscriptvideometrics/<int:windowsize>/<string:format>',methods=['GET'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access
-def export_session_transcript_video_metrics(session_id,windowsize, **kwargs):
+def export_session_transcript_video_metrics(session_id,windowsize, format, **kwargs):
     si = io.StringIO()
     field_names = None
     fwrite = None
     session_devices = database.get_session_devices(session_id=session_id)
-
+    All_particiapants_video_metrics = []
     if windowsize == 0:
         field_names = ['Device ID', 'Device Name', 'Start Time', 'Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
                     'Clout', 'Emotional Tone', 'Direction',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness','communication_density',
@@ -476,8 +493,8 @@ def export_session_transcript_video_metrics(session_id,windowsize, **kwargs):
                     })
     else:
         field_names = ['Device ID', 'Device Name', 'Time Range (s)', 'Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
-                    'Clout', 'Emotional Tone', 'Direction',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness','communication_density',
-                    'Word Count', 'Facial Emotion', 'Object Focus On', 'Attention Level', 'Speaker Tag', 'Speaker ID', 'Topic ID']
+                    'Clout', 'Emotional Tone',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness',
+                    'Word Count', 'Facial Emotion', 'Object Focus On', 'Attention Level','Attention Rate',"Attention Class", 'Speaker Tag', 'Speaker ID', 'Topic ID']
         fwrite = csv.DictWriter(si, fieldnames = field_names)
         fwrite.writeheader()       
         for session_device in session_devices:
@@ -486,12 +503,20 @@ def export_session_transcript_video_metrics(session_id,windowsize, **kwargs):
             for speaker in speakers:
                 videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device.id,student_username=speaker.alias)
                 transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session(session_device_id=session_device.id,speaker_id=speaker.id)
-                batch_transcript_video_metrics(transcriptSpeakerMetric,videoMetrics,windowsize,fwrite,speaker,session_device,keywords,format='csv')
+                speaker_data = batch_transcript_video_metrics(transcriptSpeakerMetric,videoMetrics,windowsize,fwrite,speaker,session_device,keywords,format)
+                if format == 'json':
+                    All_particiapants_video_metrics.extend(speaker_data) 
                    
 
-    output = make_response(si.getvalue())
-    output.headers["Content-Disposition"] = "attachment; filename=export.csv"
-    output.headers["Content-type"] = "text/csv"
+    if format == 'csv':
+        output = make_response(si.getvalue())
+        output.headers["Content-Disposition"] = "attachment; filename=export.csv"
+        output.headers["Content-type"] = "text/csv"
+    elif format == 'json':  
+        json_data = json.dumps([dict(zip(field_names, row)) for row in All_particiapants_video_metrics], indent=2)
+        output = make_response(json_data)
+        output.headers["Content-Disposition"] = "attachment; filename=export.json"
+        output.headers["Content-type"] = "application/json"
     return output
 
 @api_routes.route('/api/v1/sessions/getredissessionkey', methods=['POST'])
