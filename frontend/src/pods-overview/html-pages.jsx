@@ -205,6 +205,14 @@ function PodsOverviewPages(props) {
                                 Select the Data to Download:
                             </div>
                             <select
+                                id="format"
+                                className="dropdown small-section"
+                            >
+                                <option value="">Select format</option>
+                                <option value="csv">CSV</option>
+                                <option value="json">JSON</option>
+                            </select>
+                            <select
                                 id="windowsize"
                                 className="dropdown small-section"
                             >
@@ -233,7 +241,10 @@ function PodsOverviewPages(props) {
                                         document.getElementById("windowsize")
                                             .value,
                                             document.getElementById("datatype")
+                                            .value,
+                                            document.getElementById("format")
                                             .value
+
                                     )
                                 }}
                             >

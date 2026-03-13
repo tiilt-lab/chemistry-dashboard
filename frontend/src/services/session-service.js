@@ -266,7 +266,7 @@ class SessionService {
     );
   }
 
-  downloadSessionTranscriptMetrics(sessionId, fileName,windowsize) {
+  downloadSessionTranscriptMetrics(sessionId, fileName,windowsize,format) {
     if(windowsize === ""){
       windowsize = 0;
     }else{
@@ -274,33 +274,33 @@ class SessionService {
     }
 
     return this.api.httpRequestCall(
-      `api/v1/sessions/${sessionId}/exporttranscriptmetrics/${windowsize}`,
+      `api/v1/sessions/${sessionId}/exporttranscriptmetrics/${windowsize}/${format}`,
       "GET",
       {}
     );
   }
 
-  downloadSessionVideoMetrics(sessionId, fileName,windowsize) {
+  downloadSessionVideoMetrics(sessionId, fileName,windowsize,format) {
     if(windowsize === ""){
       windowsize = 0;
     }else{
       windowsize = parseInt(windowsize);
     }
     return this.api.httpRequestCall(
-      `api/v1/sessions/${sessionId}/exportvideometrics/${windowsize}`,
+      `api/v1/sessions/${sessionId}/exportvideometrics/${windowsize}/${format}`,
       "GET",
       {}
     );
   }
 
-  downloadSessionTranscriptVideoMetrics(sessionId, fileName,windowsize) {
+  downloadSessionTranscriptVideoMetrics(sessionId, fileName,windowsize,format) {
     if(windowsize === ""){
       windowsize = 0;
     }else{
       windowsize = parseInt(windowsize);
     }
     return this.api.httpRequestCall(
-      `api/v1/sessions/${sessionId}/exporttranscriptvideometrics/${windowsize}`,
+      `api/v1/sessions/${sessionId}/exporttranscriptvideometrics/${windowsize}/${format}`,
       "GET",
       {}
     );
