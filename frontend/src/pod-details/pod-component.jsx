@@ -44,6 +44,7 @@ function PodComponent() {
   const [open, setOpen] = useState(true);
   const [selectedSpkralias, setSelectedSpkralias] = useState("");
   const { sessionDeviceId } = useParams();
+  const synthesizedFeedbackMetrics = useRef({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -84,6 +85,8 @@ function PodComponent() {
       });
 
       subscriptions.push(transcriptSub);
+
+      fetchData = new SessionService().getSynthesizedFeedbackMetrics(null, sessionDeviceId);
     }
 
 

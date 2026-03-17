@@ -3,7 +3,7 @@ from utility import sanitize, string_to_bool, json_response
 from tables.session_device import SessionDevice
 from redis_helper import RedisSessions
 from tables.session import Session
-from utility import json_response,batch_video_metrics,batch_transcript_metrics,batch_transcript_video_metrics
+from utility import json_response,batch_video_metrics,batch_transcript_metrics,batch_transcript_video_metrics,synthesized_transcript_video_metrics
 from app import socketio
 import logging
 import database
@@ -373,7 +373,7 @@ def export_session_transcript_metrics(session_id,windowsize, format, **kwargs):
                     'Topic ID': int(t.topic_id)
                     })
     else:
-        field_names = ['Device ID', 'Device Name', 'Time Range (s)','Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
+        field_names = ['Group ID', 'Group Name', 'Time Range (s)','Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
                     'Clout', 'Emotional Tone', 'Direction',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness','Word Count', 'Speaker Tag', 'Speaker ID', 'Topic ID']
         fwrite = csv.DictWriter(si, fieldnames = field_names)
         fwrite.writeheader()     
@@ -384,7 +384,8 @@ def export_session_transcript_metrics(session_id,windowsize, format, **kwargs):
                 transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session(session_device_id=session_device.id,speaker_id=speaker.id)
                 speaker_data = batch_transcript_metrics(transcriptSpeakerMetric,windowsize,fwrite,speaker,session_device,keywords,format)
                 if format == 'json':
-                    All_particiapants_video_metrics.extend(speaker_data)
+                    All_particiapants_video_metrics[speaker.alias] = [dict(zip(field_names, row)) for row in speaker_data]
+                    # All_particiapants_video_metrics.extend(speaker_data)
                         
 
     if format == 'csv':
@@ -392,7 +393,7 @@ def export_session_transcript_metrics(session_id,windowsize, format, **kwargs):
         output.headers["Content-Disposition"] = "attachment; filename=export.csv"
         output.headers["Content-type"] = "text/csv"
     elif format == 'json':
-        json_data = json.dumps([dict(zip(field_names, row)) for row in All_particiapants_video_metrics], indent=2)
+        json_data = json.dumps(All_particiapants_video_metrics, indent=2)
         output = make_response(json_data)
         output.headers["Content-Disposition"] = "attachment; filename=export.json"
         output.headers["Content-type"] = "application/json"
@@ -424,7 +425,7 @@ def export_session_video_metrics(session_id, windowsize, format, **kwargs):
                     })
 
     else:
-        field_names = ['Device ID', 'Device Name', 'Time Range (s)', 'Facial Emotion', 'Object Focus On', 'Attention Level','Attention Rate',"Attention Class", 'Speaker Tag']
+        field_names = ['Group ID', 'Group Name', 'Time Range (s)', 'Facial Emotion', 'Object Focus On', 'Attention Level','Attention Rate',"Attention Class", 'Speaker Tag']
         fwrite = csv.DictWriter(si, fieldnames = field_names)
         fwrite.writeheader()
         for session_device in session_devices:
@@ -433,13 +434,14 @@ def export_session_video_metrics(session_id, windowsize, format, **kwargs):
                 videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device.id,student_username=speaker.alias)
                 speaker_data = batch_video_metrics(videoMetrics,windowsize,fwrite,speaker,session_device,format)
                 if format == 'json':
-                    All_particiapants_video_metrics.extend(speaker_data)  
+                    All_particiapants_video_metrics[speaker.alias] = [dict(zip(field_names, row)) for row in speaker_data]
+                    # All_particiapants_video_metrics.extend(speaker_data)  
     if format == 'csv':
         output = make_response(si.getvalue())
         output.headers["Content-Disposition"] = "attachment; filename=export.csv"
         output.headers["Content-type"] = "text/csv"
     elif format == 'json':
-        json_data = json.dumps([dict(zip(field_names, row)) for row in All_particiapants_video_metrics], indent=2)
+        json_data = json.dumps(All_particiapants_video_metrics, indent=2)
         output = make_response(json_data)
         output.headers["Content-Disposition"] = "attachment; filename=export.json"
         output.headers["Content-type"] = "application/json"
@@ -453,7 +455,7 @@ def export_session_transcript_video_metrics(session_id,windowsize, format, **kwa
     field_names = None
     fwrite = None
     session_devices = database.get_session_devices(session_id=session_id)
-    All_particiapants_video_metrics = []
+    All_particiapants_video_metrics = {}
     if windowsize == 0:
         field_names = ['Device ID', 'Device Name', 'Start Time', 'Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
                     'Clout', 'Emotional Tone', 'Direction',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness','communication_density',
@@ -492,7 +494,7 @@ def export_session_transcript_video_metrics(session_id,windowsize, format, **kwa
                     'Topic ID': int(t.topic_id)
                     })
     else:
-        field_names = ['Device ID', 'Device Name', 'Time Range (s)', 'Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
+        field_names = ['Group ID', 'Group Name', 'Time Range (s)', 'Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
                     'Clout', 'Emotional Tone',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness',
                     'Word Count', 'Facial Emotion', 'Object Focus On', 'Attention Level','Attention Rate',"Attention Class", 'Speaker Tag', 'Speaker ID', 'Topic ID']
         fwrite = csv.DictWriter(si, fieldnames = field_names)
@@ -505,7 +507,8 @@ def export_session_transcript_video_metrics(session_id,windowsize, format, **kwa
                 transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session(session_device_id=session_device.id,speaker_id=speaker.id)
                 speaker_data = batch_transcript_video_metrics(transcriptSpeakerMetric,videoMetrics,windowsize,fwrite,speaker,session_device,keywords,format)
                 if format == 'json':
-                    All_particiapants_video_metrics.extend(speaker_data) 
+                    All_particiapants_video_metrics[speaker.alias] = [dict(zip(field_names, row)) for row in speaker_data]
+                    # All_particiapants_video_metrics.extend(speaker_data) 
                    
 
     if format == 'csv':
@@ -513,11 +516,35 @@ def export_session_transcript_video_metrics(session_id,windowsize, format, **kwa
         output.headers["Content-Disposition"] = "attachment; filename=export.csv"
         output.headers["Content-type"] = "text/csv"
     elif format == 'json':  
-        json_data = json.dumps([dict(zip(field_names, row)) for row in All_particiapants_video_metrics], indent=2)
+        json_data = json.dumps(All_particiapants_video_metrics, indent=2)
         output = make_response(json_data)
         output.headers["Content-Disposition"] = "attachment; filename=export.json"
         output.headers["Content-type"] = "application/json"
     return output
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/synthesized_feedback_metrics',methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
+    All_particiapants_video_metrics = {}
+    session_device = database.get_session_devices(device_id=session_device_id)
+    field_names = ['Group ID', 'Group Name', 'Time Range (s)', 'Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
+                'Clout', 'Emotional Tone',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness',
+                'Word Count', 'Facial Emotion', 'Object Focus On', 'Attention Level','Attention Rate',"Attention Class", 'Speaker Tag', 'Speaker ID', 'Topic ID']
+    
+    keywords = database.get_keyword_usages(session_device_id=session_device_id)
+    speakers = database.get_speakers(session_device_id=session_device_id)
+    for speaker in speakers:
+        videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device_id,student_username=speaker.alias)
+        transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session(session_device_id=session_device.id,speaker_id=speaker.id)
+        speaker_data = synthesized_transcript_video_metrics(transcriptSpeakerMetric,videoMetrics,speaker,session_device,keywords,windowsize=10)
+       
+        All_particiapants_video_metrics[speaker.alias] = [dict(zip(field_names, row)) for row in speaker_data]
+
+
+                   
+    return output
+    
 
 @api_routes.route('/api/v1/sessions/getredissessionkey', methods=['POST'])
 def get_device_key(**kwargs):

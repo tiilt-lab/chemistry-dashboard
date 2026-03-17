@@ -16,7 +16,7 @@ import logging
 class EmotionDetectionModelV1:
     def __init__(self):
         self.FER_2013_EMO_DICT = {
-                                        0: "angry",
+                                        0: "serious",
                                         1: "disgust",
                                         2: "fear",
                                         3: "happy",
