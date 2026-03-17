@@ -306,6 +306,14 @@ class SessionService {
     );
   }
 
+  getSynthesizedFeedbackMetrics(sessionId, sessionDeviceId) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/synthesized_feedback_metrics`,
+      "GET",
+      {}
+    );
+  }
+
   getFolders() {
     return this.api.httpRequestCall(`api/folders`, "GET", {});
   }
