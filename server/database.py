@@ -225,9 +225,21 @@ def get_all_transcript_metrics_by_session(id = None, student_username=None, sess
     query = query.order_by(Transcript.start_time.asc())
     return query.all()
 
+def get_all_transcript_metrics_by_session_by_timeline(id = None, student_username=None, session_id=None, session_device_id=None):
+    query = db.session.query(Transcript,SpeakerTranscriptMetrics)
+    query = query.join(SpeakerTranscriptMetrics).filter((Transcript.id == SpeakerTranscriptMetrics.transcript_id) &
+                                                        (Transcript.speaker_id == SpeakerTranscriptMetrics.speaker_id))
+
+    if session_device_id != None:
+        query = query.filter(Transcript.session_device_id == session_device_id) 
+     
+    query = query.filter(Transcript.speaker_id != -1)
+    query = query.order_by(Transcript.start_time.asc())
+    return query.all()
+
 def get_all_metrics_by_session(id = None, student_username=None, session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
     query = db.session.query(Transcript,SpeakerTranscriptMetrics,SpeakerVideoMetrics)
-    query = query.join(SpeakerTranscriptMetrics).filter((Transcript.id == SpeakerTranscriptMetrics.transcript_id) &
+    query = query.join(SpeakerTranscriptMetrics, (Transcript.id == SpeakerTranscriptMetrics.transcript_id) &
                                                         (Transcript.speaker_id == SpeakerTranscriptMetrics.speaker_id))
     query = query.join(SpeakerVideoMetrics,(Transcript.start_time == SpeakerVideoMetrics.time_stamp)&
                        (Transcript.speaker_tag == SpeakerVideoMetrics.student_username))
@@ -235,8 +247,8 @@ def get_all_metrics_by_session(id = None, student_username=None, session_id=None
     if session_device_id != None:
         query = query.filter(Transcript.session_device_id == session_device_id) 
 
-    query = query.distinct().order_by(Transcript.speaker_tag.asc())
-    query = query.order_by(Transcript.start_time.asc())
+    query = query.distinct()
+    query = query.order_by(Transcript.speaker_tag.asc(),Transcript.start_time.asc())
     return query.all()
 
 def get_transcript_metrics_by_session(id = None, student_username=None, session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):

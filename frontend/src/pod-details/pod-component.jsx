@@ -7,7 +7,7 @@ import { DeviceModel } from "../models/device";
 import { TranscriptModel } from "../models/transcript";
 import { KeywordUsageModel } from "../models/keyword-usage";
 import { SpeakerModel } from "../models/speaker";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { PodComponentPages } from "./html-pages";
 
@@ -43,7 +43,7 @@ function PodComponent() {
   const [spkr2VideoMetrics, setSpkr2VideoMetrics] = useState([])
   const [open, setOpen] = useState(true);
   const [selectedSpkralias, setSelectedSpkralias] = useState("");
-  const { sessionDeviceId } = useParams();
+  const { sessionId,sessionDeviceId } = useParams();
   const synthesizedFeedbackMetrics = useRef({});
   const navigate = useNavigate();
 
@@ -86,7 +86,19 @@ function PodComponent() {
 
       subscriptions.push(transcriptSub);
 
-      fetchData = new SessionService().getSynthesizedFeedbackMetrics(null, sessionDeviceId);
+      const fetchData = new SessionService().getSynthesizedFeedbackMetrics(sessionId, sessionDeviceId);
+      fetchData.then(
+      (response) => {
+        if (response.status === 200)
+          response.json().then((jsonObj) => {
+            synthesizedFeedbackMetrics.current = jsonObj;
+            console.log("synthesized feedback metrics: ", synthesizedFeedbackMetrics.current)
+          });
+      },
+      (apierror) => {
+        console.log("podcomponent useEffect getSynthesizedFeedbackMetrics", apierror);
+      }
+    );
     }
 
 

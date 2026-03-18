@@ -1,4 +1,5 @@
 import logging
+from collections import Counter
 
 class VideoMetricAnalytics:
     def __init__(self, AttentionTracking,EmotionDetection, ImageDection):
@@ -47,4 +48,45 @@ class VideoMetricAnalytics:
                 else:
                     video_metrics[person_id].append([time_stamp,pred_emotion,pred_attention_level,pred_object_focused_on])   
 
+            #aggregate data in same time stamp
+            for person_id, persons_detail in video_metrics.items():
+                data = self.aggregate_all_metrics_in_same_timestamp(persons_detail)
+                video_metrics[person_id] = data
         return video_metrics
+    
+    def aggregate_all_metrics_in_same_timestamp(self,persons_detail):
+        data = []
+        facial_emotion = []
+        object_on_focus = []
+        attention_level = []
+        len_detail = len(persons_detail)
+        if len_detail > 0:
+            old_time_stamp, pred_emotion, pred_attention_level, pred_object_focused_on = persons_detail[0]
+            facial_emotion.append(pred_emotion)
+            object_on_focus.append(pred_object_focused_on)
+            attention_level.append(pred_attention_level)
+            for index in range(1,len_detail):
+                time_stamp, pred_emotion, pred_attention_level, pred_object_focused_on = persons_detail[index]
+                if old_time_stamp == time_stamp:
+                    facial_emotion.append(pred_emotion)
+                    object_on_focus.append(pred_object_focused_on)
+                    attention_level.append(pred_attention_level)
+                else:
+                    most_common_emotion = Counter(facial_emotion).most_common(1)[0][0] if facial_emotion else 'neutral'
+                    most_common_object = Counter(object_on_focus).most_common(1)[0][0] if object_on_focus else 'nothing'
+                    total_attention_level = sum(attention_level)
+                    data.append([old_time_stamp, most_common_emotion, total_attention_level, most_common_object])
+
+                    facial_emotion = []
+                    object_on_focus = []
+                    attention_level = []
+                    old_time_stamp, pred_emotion, pred_attention_level, pred_object_focused_on = persons_detail[index]
+                    facial_emotion.append(pred_emotion)
+                    object_on_focus.append(pred_object_focused_on)
+                    attention_level.append(pred_attention_level)
+                    
+            most_common_emotion = Counter(facial_emotion).most_common(1)[0][0] if facial_emotion else 'neutral'
+            most_common_object = Counter(object_on_focus).most_common(1)[0][0] if object_on_focus else 'nothing'
+            total_attention_level = sum(attention_level)
+            data.append([old_time_stamp, facial_emotion, attention_level, object_on_focus])
+        return data 

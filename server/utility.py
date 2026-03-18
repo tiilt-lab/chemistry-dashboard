@@ -42,6 +42,8 @@ def get_progression(previous, current,type="categorical"):
     if type == "categorical":
         if previous is None:
             return "stable"
+        elif current == previous:
+            return "stable"
         elif current > previous:
             return "increasing"
         elif current < previous:
@@ -49,6 +51,8 @@ def get_progression(previous, current,type="categorical"):
     else:
         if previous is None:
             return 0 
+        elif current == previous:
+            return 0
         elif current > previous:
             return 1
         elif current < previous:
@@ -70,13 +74,22 @@ def convert_attention_to_class_fuse_back_to_accumulator(accumulated_metrics,atte
             accumulated_metrics[0][7] = "low"
             return accumulated_metrics
         elif len_attention_rates > 0:
+            previous_robust_z = None
             median_x,mad = compute_median_and_mad(np.array(attention_rates))
 
-            robust_z = (attention_rates[0] - median_x) / mad
-            accumulated_metrics[0][7] = get_class(robust_z, [-1, 1], ["low", "medium", "high"])+" and "+get_progression(None, robust_z)
-            previous_robust_z = robust_z
+            if attention_rates[0] <= 0:
+                accumulated_metrics[0][7] = "low"
+            else:
+                robust_z = (attention_rates[0] - median_x) / mad
+                accumulated_metrics[0][7] = get_class(robust_z, [-1, 1], ["low", "medium", "high"])+" and "+get_progression(None, robust_z)
+                previous_robust_z = robust_z
             for i in range(1, len(attention_rates)):
                 x = attention_rates[i]
+
+                if x <= 0:
+                    accumulated_metrics[i][7] = "low"
+                    continue    
+
                 robust_z = (x - median_x) / mad
                 accumulated_metrics[i][7] = get_class(robust_z, [-1, 1], ["low", "medium", "high"])+" and "+get_progression(previous_robust_z, robust_z)
                 previous_robust_z = robust_z
@@ -85,13 +98,19 @@ def convert_attention_to_class_fuse_back_to_accumulator(accumulated_metrics,atte
             accumulated_metrics[0][7] = [normalized_value_to_percentage(0), 0]
             return accumulated_metrics
         elif len_attention_rates > 0:
+            previous_robust_z = None
             median_x,mad = compute_median_and_mad(np.array(attention_rates))
-
-            robust_z = (attention_rates[0] - median_x) / mad
-            accumulated_metrics[0][7] = [normalized_value_to_percentage(robust_z), get_progression(None, robust_z,"numerical")]
-            previous_robust_z = robust_z
+            if attention_rates[0] <= 0:
+                accumulated_metrics[0][7] = [0, 0]
+            else:    
+                robust_z = (attention_rates[0] - median_x) / mad
+                accumulated_metrics[0][7] = [normalized_value_to_percentage(robust_z), get_progression(None, robust_z,"numerical")]
+                previous_robust_z = robust_z
             for i in range(1, len(attention_rates)):
                 x = attention_rates[i]
+                if x <= 0:
+                    accumulated_metrics[i][7] = [0, 0]
+                    continue  
                 robust_z = (x - median_x) / mad
                 accumulated_metrics[i][7] = [normalized_value_to_percentage(robust_z), get_progression(previous_robust_z, robust_z,"numerical")]
                 previous_robust_z = robust_z            
@@ -112,6 +131,10 @@ def normalized_value_to_percentage(x):
         # high: [0.5, 2] -> [67, 100]
         return ((x - 0.5) / (2 - 0.5)) * (100 - 67) + 67  
     
+def compute_average(list_of_values):
+    if not list_of_values:
+        return 0
+    return sum(list_of_values) / len(list_of_values)
 
 def batch_video_metrics(videoMetrics, windowsize, fwrite, speaker, session_device,format='csv'):
     """
@@ -174,8 +197,8 @@ def batch_video_metrics(videoMetrics, windowsize, fwrite, speaker, session_devic
         return accumulated_metrics_final
     else:
         for metrics in accumulated_metrics_final:
-            fwrite.writerow({'Device ID':metrics[0],
-                            'Device Name':metrics[1],
+            fwrite.writerow({'Group ID':metrics[0],
+                            'Group Name':metrics[1],
                             'Time Range (s)':str(metrics[2][0])+'-'+str(metrics[2][1]),
                             'Facial Emotion': metrics[3],
                             'Object Focus On': metrics[4],
@@ -199,7 +222,7 @@ def synthesized_video_metrics(videoMetrics, speaker, session_device,windowsize=1
     attention_rate_acc = [] 
     l = 0
     window_count = 0
-    attention_level = 0
+    focus_level = 0
     n=len(videoMetrics)
     while l < n:
         v= videoMetrics[l]
@@ -234,7 +257,7 @@ def synthesized_video_metrics(videoMetrics, speaker, session_device,windowsize=1
             attention_rate_acc.append(attention_rate)
         
             accumulated_metrics.append([session_device.id,session_device.name,[start,end],most_common_emotion,
-                                        most_common_object,avg_attention,attention_rate,attention_level,speaker.alias])
+                                        most_common_object,avg_attention,attention_rate,focus_level,speaker.alias])
             # Reset for next window
             facial_emotion = []
             object_on_focus = []
@@ -305,62 +328,62 @@ def batch_transcript_metrics(transcriptSpeakerMetric, windowsize, fwrite, speake
         else:
             # Accumulate metrics for the window
             if analytic:
-                val = sum(analytic)//len(analytic)
-                analytic_thinking_val = get_class(val, [50, 51], ["Narrative thinking", "Balanced thinking", "Analytical thinking"]) + " and " + get_progression(prev_analytic_value, val)
+                val = round(compute_average(analytic), 2)
+                analytic_thinking_val = get_class(val, [50, 51], ["Narrative thinking", "Balanced thinking", "Analytical thinking"])  + " and " + get_progression(prev_analytic_value, val)
                 prev_analytic_value = val 
             else:
                 analytic_thinking_val = 'None'
             if authenticity:
-                val = sum(authenticity)//len(authenticity)
+                val = round(compute_average(authenticity), 2)
                 authenticity_val = get_class(val, [50, 51], ["Low", "Balanced", "High"]) + " and " + get_progression(prev_authenticity_value, val)
                 prev_authenticity_value = val 
             else:
                 authenticity_val = 'None'   
             if certainty:
-                val = sum(certainty)//len(certainty)
+                val = round(compute_average(certainty), 2)
                 certainty_val = get_class(val, [50, 51], ["Low", "Medium", "High"]) + " and " + get_progression(prev_certainty_value, val)
                 prev_certainty_value = val 
             else:
                 certainty_val = 'None'
             if clout:
-                val = sum(clout)//len(clout)
+                val = round(compute_average(clout), 2)
                 clout_val = get_class(val, [50, 51], ["Low", "Medium", "High"]) + " and " + get_progression(prev_clout_value, val)
                 prev_clout_value = val
             else:
                 clout_val = 'None'
             if emotionaL_tone: 
-                val = sum(emotionaL_tone)//len(emotionaL_tone) 
+                val = round(compute_average(emotionaL_tone), 2)
                 emotional_tone_val = get_class(val, [50, 51], ["Negative", "Neutral", "Positive"]) + " and " + get_progression(prev_emotional_tone_value, val)
                 prev_emotional_tone_value = val
             else:
                 emotional_tone_val = 'None'
             if participation_score:
-                val = sum(participation_score)//len(participation_score)
+                val = round(compute_average(participation_score), 2)
                 participation_score_val = get_class(val, [-0.75, -0.25,0.5,1.5], ["Minimal participation" ,"Low participation" , "Balanced participation", "High participation","Dominant participation"]) + " and " + get_progression(prev_participation_score_value, val)
                 prev_participation_score_value = val
             else:
                 participation_score_val = 'None'
             if internal_cohesion:
-                val = sum(internal_cohesion)//len(internal_cohesion)
+                val = round(compute_average(internal_cohesion), 2)
                 internal_cohesion_val = get_class(val, [0.2, 0.5], ["Low", "Medium", "High"]) + " and " + get_progression(prev_internal_cohesion_value, val)
                 prev_internal_cohesion_value = val
             else:
                 internal_cohesion_val = 'None'
             if responsivity:
-                val = sum(responsivity)//len(responsivity)
+                val = round(compute_average(responsivity), 2)
                 responsivity_val = get_class(val, [0.2, 0.5], ["Low", "Medium", "High"]) + " and " + get_progression(prev_responsivity_value, val)
                 prev_responsivity_value = val
             else:
                 responsivity_val = 'None'
             if social_impact:
-                val = sum(social_impact)//len(social_impact)
+                val = round(compute_average(social_impact), 2)
                 social_impact_val = get_class(val, [0.2, 0.5], ["Low", "Medium", "High"]) + " and " + get_progression(prev_social_impact_value, val)
                 prev_social_impact_value = val
             else:
                 social_impact_val = 'None'
             if newness:
-                val = sum(newness)//len(newness)
-                newness_val = get_class(val, [0.33, 0.67], ["Low", "Medium", "High"]) + " and " + get_progression(prev_newness_value, val)
+                val = round(compute_average(newness), 2)
+                newness_val = get_class(val, [0.2, 0.5], ["Low", "Medium", "High"]) + " and " + get_progression(prev_newness_value, val)
                 prev_newness_value = val
             else:
                 newness_val = 'None'
@@ -392,8 +415,8 @@ def batch_transcript_metrics(transcriptSpeakerMetric, windowsize, fwrite, speake
                 keywords_val = ''
 
             if format=='csv':
-                    fwrite.writerow({'Device ID':session_device.id,
-                            'Device Name':session_device.name,
+                    fwrite.writerow({'Group ID':session_device.id,
+                            'Group Name':session_device.name,
                             'Time Range (s)': str(start)+'-'+str(end),
                             'Transcript':transcript_val,
                             'Keywords': keywords_val,
@@ -501,62 +524,62 @@ def synthesized_transcript_metrics(transcriptSpeakerMetric, speaker, session_dev
         else:
             # Accumulate metrics for the window
             if analytic:
-                val = sum(analytic)//len(analytic)
-                analytic_thinking_val = [normalized_value_to_percentage(val), get_progression(prev_analytic_value, val,"numerical")]
+                val = round(compute_average(analytic), 2)
+                analytic_thinking_val = [val, get_progression(prev_analytic_value, val,"numerical")]
                 prev_analytic_value = val 
             else:
                 analytic_thinking_val = 0
             if authenticity:
-                val = sum(authenticity)//len(authenticity)
-                authenticity_val = [normalized_value_to_percentage(val), get_progression(prev_authenticity_value, val,"numerical")]
+                val = round(compute_average(authenticity), 2)
+                authenticity_val = [val, get_progression(prev_authenticity_value, val,"numerical")]
                 prev_authenticity_value = val 
             else:
                 authenticity_val = 0   
             if certainty:
-                val = sum(certainty)//len(certainty)
-                certainty_val = [normalized_value_to_percentage(val), get_progression(prev_certainty_value, val,"numerical")]
+                val = round(compute_average(certainty), 2)
+                certainty_val = [val, get_progression(prev_certainty_value, val,"numerical")]
                 prev_certainty_value = val 
             else:
                 certainty_val = 0
             if clout:
-                val = sum(clout)//len(clout)
-                clout_val = [normalized_value_to_percentage(val), get_progression(prev_clout_value, val,"numerical")]
+                val = round(compute_average(clout), 2)
+                clout_val = [val, get_progression(prev_clout_value, val,"numerical")]
                 prev_clout_value = val
             else:
                 clout_val = 0
             if emotionaL_tone: 
-                val = sum(emotionaL_tone)//len(emotionaL_tone) 
-                emotional_tone_val = [normalized_value_to_percentage(val), get_progression(prev_emotional_tone_value, val,"numerical")]
+                val = round(compute_average(emotionaL_tone), 2)
+                emotional_tone_val = [val, get_progression(prev_emotional_tone_value, val,"numerical")]
                 prev_emotional_tone_value = val
             else:
                 emotional_tone_val = 0
             if participation_score:
-                val = sum(participation_score)//len(participation_score)
+                val = round(compute_average(participation_score), 2)
                 participation_score_val = [normalized_value_to_percentage(val), get_progression(prev_participation_score_value, val,"numerical")]
                 prev_participation_score_value = val
             else:
                 participation_score_val = 0
             if internal_cohesion:
-                val = sum(internal_cohesion)//len(internal_cohesion)
-                internal_cohesion_val = [normalized_value_to_percentage(val), get_progression(prev_internal_cohesion_value, val,"numerical")]
+                val = round(compute_average(internal_cohesion), 2)
+                internal_cohesion_val = [val*100, get_progression(prev_internal_cohesion_value, val,"numerical")]
                 prev_internal_cohesion_value = val
             else:
                 internal_cohesion_val = 0
             if responsivity:
-                val = sum(responsivity)//len(responsivity)
-                responsivity_val = [normalized_value_to_percentage(val), get_progression(prev_responsivity_value, val,"numerical")]
+                val = round(compute_average(responsivity), 2)
+                responsivity_val = [val*100, get_progression(prev_responsivity_value, val,"numerical")]
                 prev_responsivity_value = val
             else:
                 responsivity_val = 0
             if social_impact:
-                val = sum(social_impact)//len(social_impact)
-                social_impact_val = [normalized_value_to_percentage(val), get_progression(prev_social_impact_value, val,"numerical")]
+                val = round(compute_average(social_impact), 2)
+                social_impact_val = [val*100, get_progression(prev_social_impact_value, val,"numerical")]
                 prev_social_impact_value = val
             else:
                 social_impact_val = 0
             if newness:
-                val = sum(newness)//len(newness)
-                newness_val = [normalized_value_to_percentage(val), get_progression(prev_newness_value, val,"numerical")]
+                val = round(compute_average(newness), 2)
+                newness_val = [val*100, get_progression(prev_newness_value, val,"numerical")]
                 prev_newness_value = val
             else:
                 newness_val = 0
@@ -664,8 +687,8 @@ def write_or_append_metrics(metrics, fwrite,accumulator, format='csv'):
     Write or append metrics to CSV or return as list.
     """
     if format=='csv':
-        fwrite.writerow({'Device ID':metrics[0],
-                            'Device Name': metrics[1],
+        fwrite.writerow({'Group ID':metrics[0],
+                            'Group Name': metrics[1],
                             'Time Range (s)': metrics[2],
                             'Transcript': metrics[3],
                             'Keywords': metrics[4],
@@ -693,7 +716,56 @@ def write_or_append_metrics(metrics, fwrite,accumulator, format='csv'):
                             'Topic ID': metrics[25]
                             })
     else:
-        accumulator.append(metrics)     
+        accumulator.append(metrics)    
+
+def extract_videometrics_within_window(videoMetrics, window_start, window_end, index):
+    metric_len = len(videoMetrics)
+    metrics = []
+    while index < metric_len: 
+        if videoMetrics[index].time_stamp >= window_start and videoMetrics[index].time_stamp < window_end:
+            metrics.append(videoMetrics[index])
+        else:
+            break    
+        index += 1
+    return metrics, index
+
+def extract_transcriptmetrics_within_window(transcriptMetrics, window_start, window_end, index):
+    metric_len = len(transcriptMetrics)
+    metrics = []
+    while index < metric_len: 
+        if transcriptMetrics[index].start_time >= window_start and transcriptMetrics[index].start_time < window_end:
+            metrics.append(transcriptMetrics[index])
+        else:
+            break    
+        index += 1
+    return metrics, index
+
+def synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,speaker,session_device,keywords,windowsize=10):
+    v_index = t_index = 0
+    min_start = min(videoMetrics[0].time_stamp if videoMetrics else 0, transcriptSpeakerMetric[0][0].start_time if transcriptSpeakerMetric else 0)
+    max_end = max(videoMetrics[-1].time_stamp if videoMetrics else 0, transcriptSpeakerMetric[-1][0].start_time if transcriptSpeakerMetric else 0)
+    window_start = min_start
+    window_end = min_start+windowsize
+    while window_end < max_end:
+        window_video_metrics, v_index = extract_videometrics_within_window(videoMetrics, window_start, window_end, v_index)
+        window_transcript_metrics, t_index = extract_transcriptmetrics_within_window(transcriptSpeakerMetric, window_start, window_end, t_index)
+
+        # align transcript and video metrics within the window so that transcript and video metrics with same time ranges are combined
+        aligned_combined_metrics = align_and_combine_metrics(window_video_metrics, window_transcript_metrics)
+
+        window_start = window_end
+        window_end += windowsize
+
+def align_and_combine_metrics(video_metrics, transcript_metrics):
+    # Align video and transcript metrics by time ranges and combine them
+    aligned_metrics = []
+    vidLen = len(video_metrics)
+    transLen = len(transcript_metrics)
+    lv,lt = 0,0
+    while lv < vidLen and lt < transLen:
+        v_metrics = video_metrics[lv]
+        t_metrics = transcript_metrics[lt]
+    return aligned_metrics
 
 def synthesized_transcript_video_metrics(transcriptSpeakerMetric,videoMetrics,speaker,session_device,keywords,windowsize=10):
     """
@@ -701,22 +773,29 @@ def synthesized_transcript_video_metrics(transcriptSpeakerMetric,videoMetrics,sp
     """
     accumulated_metrics = []
     facial_expression = {'serious':0.9,'neutral':0.8,'surprise':0.7,'happy':0.6,'sad':0.4,'fear':0.3,'disgust':0.2}
-    synthesized_transcript_metrics = synthesized_transcript_metrics(transcriptSpeakerMetric,speaker,session_device,keywords,windowsize=windowsize)
-    synthesized_video_metrics = synthesized_video_metrics(videoMetrics,speaker,session_device,windowsize=windowsize)
-    vidLen = len(synthesized_video_metrics)
-    transLen = len(synthesized_transcript_metrics)
+    transcript_metrics = synthesized_transcript_metrics(transcriptSpeakerMetric,speaker,session_device,keywords,windowsize=windowsize)
+    video_metrics = synthesized_video_metrics(videoMetrics,speaker,session_device,windowsize=windowsize)
+    vidLen = len(video_metrics)
+    transLen = len(transcript_metrics)
     lv,lt = 0,0
     window_id = ""
-    focusscore=participationscore=responsivityscore=enagementscore=reasoningscore=leadershipscore=initiativescore=ideacontributionscore=[]
-    heading = ['windowid','deviceid','devicename','starttime','endtime','transcript','keywords','keywordsdetected','analyticthinking','authenticity','certainty','clout',
+    focusscore=[]
+    participationscore=[]
+    responsivityscore=[]
+    enagementscore=[]
+    reasoningscore=[]
+    leadershipscore=[]
+    initiativescore=[]
+    ideacontributionscore=[]
+    heading = ['windowid','groupid','groupname','starttime','endtime','transcript','keywords','keywordsdetected','analyticthinking','authenticity','certainty','clout',
                'emotionaltone','internalcohesion','socialimpact','newness','wordcount','facialemotion','objectfocuson','rawfocusscore',
                'rawfocusrate','speakertag','silence',"focusscore",'participationscore','responsivity','engagementscore','reasoningscore','leadershipscore', 'initiativescore','ideacontributionscore']
     while lv < vidLen and lt < transLen:
-        v_metrics = synthesized_video_metrics[lv]
-        t_metrics = synthesized_transcript_metrics[lt]
+        v_metrics = video_metrics[lv]
+        t_metrics = transcript_metrics[lt]
         # Align by time range
         if v_metrics[2][1] <= t_metrics[2][0]:
-            attention_level = v_metrics[7]
+            attention_level = v_metrics[7][0]
             facial_emotion = v_metrics[3]
             focusscore.append(attention_level)
             participationscore.append(0)
@@ -735,17 +814,17 @@ def synthesized_transcript_video_metrics(transcriptSpeakerMetric,videoMetrics,sp
         elif t_metrics[2][1] <= v_metrics[2][0]:
             attention_level = 0
             facial_emotion = 0
-            participation_level = t_metrics[11]
-            analytic_thinking_level = t_metrics[6]
-            authenticity_level = t_metrics[7]
-            certainty_level = t_metrics[8]
-            clout_level = t_metrics[9]
-            internal_cohesion_level = t_metrics[12]
-            emotional_tone_level = t_metrics[10]
-            newness_level = t_metrics[15]
+            participation_level = t_metrics[11][0]
+            analytic_thinking_level = t_metrics[6][0]
+            authenticity_level = t_metrics[7][0]
+            certainty_level = t_metrics[8][0]
+            clout_level = t_metrics[9][0]
+            internal_cohesion_level = t_metrics[12][0]
+            emotional_tone_level = t_metrics[10][0]
+            newness_level = t_metrics[15][0]
             focusscore.append(attention_level)
             participationscore.append(participation_level)
-            responsivityscore.append(t_metrics[13])
+            responsivityscore.append(t_metrics[13][0])
             enagementscore.append(round((participation_level+emotional_tone_level)/2,2))
             reasoningscore.append(round((analytic_thinking_level+certainty_level+internal_cohesion_level)/3,2))
             ideacontributionscore.append(round((analytic_thinking_level+authenticity_level+newness_level)/3,2))
@@ -755,25 +834,25 @@ def synthesized_transcript_video_metrics(transcriptSpeakerMetric,videoMetrics,sp
             window_id = f"w_{t_metrics[2][0]}_{t_metrics[2][1]}_{t_metrics[-1]}"
 
             value = [window_id,t_metrics[0],t_metrics[1],t_metrics[2][0],t_metrics[2][1],t_metrics[3],t_metrics[4],t_metrics[5],
-                     t_metrics[6],t_metrics[7],t_metrics[8],t_metrics[9],t_metrics[10],t_metrics[12],t_metrics[14],
-                     t_metrics[15],t_metrics[16],"None","None",0,0,t_metrics[17],0,focusscore[-1],participationscore[-1],responsivityscore[-1],enagementscore[-1],
+                     t_metrics[6][0],t_metrics[7][0],t_metrics[8][0],t_metrics[9][0],t_metrics[10][0],t_metrics[12][0],t_metrics[14][0],
+                     t_metrics[15][0],t_metrics[16],"None","None",0,0,t_metrics[17],0,focusscore[-1],participationscore[-1],responsivityscore[-1],enagementscore[-1],
                     reasoningscore[-1],leadershipscore[-1],initiativescore[-1],ideacontributionscore[-1]]
             lt += 1
             
         else:
             attention_level = 0
             facial_emotion = v_metrics[3]
-            participation_level = t_metrics[11]
-            analytic_thinking_level = t_metrics[6]
-            authenticity_level = t_metrics[7]
-            certainty_level = t_metrics[8]
-            clout_level = t_metrics[9]
-            internal_cohesion_level = t_metrics[12]
-            emotional_tone_level = t_metrics[10]
-            newness_level = t_metrics[15]
+            participation_level = t_metrics[11][0]
+            analytic_thinking_level = t_metrics[6][0]
+            authenticity_level = t_metrics[7][0]
+            certainty_level = t_metrics[8][0]
+            clout_level = t_metrics[9][0]
+            internal_cohesion_level = t_metrics[12][0]
+            emotional_tone_level = t_metrics[10][0]
+            newness_level = t_metrics[15][0]
             focusscore.append(attention_level)
             participationscore.append(participation_level)
-            responsivityscore.append(t_metrics[13])
+            responsivityscore.append(t_metrics[13][0])
             enagementscore.append(round((focusscore[-1]+participation_level+emotional_tone_level+facial_expression[facial_emotion])/4,2))
             reasoningscore.append(round((analytic_thinking_level+certainty_level+internal_cohesion_level)/3,2))
             ideacontributionscore.append(round((analytic_thinking_level+authenticity_level+newness_level)/3,2))
@@ -786,8 +865,8 @@ def synthesized_transcript_video_metrics(transcriptSpeakerMetric,videoMetrics,sp
 
             window_id = f"w_{st}_{en}_{t_metrics[-1]}"
             value = [window_id,t_metrics[0],t_metrics[1],st,en,t_metrics[3],t_metrics[4],t_metrics[5],
-                     t_metrics[6],t_metrics[7],t_metrics[8],t_metrics[9],t_metrics[10],t_metrics[12],t_metrics[14],
-                     t_metrics[15],t_metrics[16],v_metrics[3],v_metrics[4],v_metrics[5],v_metrics[6],t_metrics[17],0,focusscore[-1],participationscore[-1],responsivityscore[-1],enagementscore[-1],
+                     t_metrics[6][0],t_metrics[7][0],t_metrics[8][0],t_metrics[9][0],t_metrics[10][0],t_metrics[12][0],t_metrics[14][0],
+                     t_metrics[15][0],t_metrics[16],"None","None",0,0,t_metrics[17],0,focusscore[-1],participationscore[-1],responsivityscore[-1],enagementscore[-1],
                     reasoningscore[-1],leadershipscore[-1],initiativescore[-1],ideacontributionscore[-1]]
             # Overlapping ranges, process both
             lv += 1
@@ -797,9 +876,9 @@ def synthesized_transcript_video_metrics(transcriptSpeakerMetric,videoMetrics,sp
         
     
     while lv < vidLen:
-        v_metrics = synthesized_video_metrics[lv]
+        v_metrics = video_metrics[lv]
 
-        attention_level = v_metrics[7]
+        attention_level = v_metrics[7][0]
         facial_emotion = v_metrics[3]
         focusscore.append(attention_level)
         participationscore.append(0)
@@ -818,21 +897,21 @@ def synthesized_transcript_video_metrics(transcriptSpeakerMetric,videoMetrics,sp
         lv += 1
 
     while lt < transLen:
-        t_metrics = synthesized_transcript_metrics[lt]
+        t_metrics = transcript_metrics[lt]
 
         attention_level = 0
         facial_emotion = 0
-        participation_level = t_metrics[11]
-        analytic_thinking_level = t_metrics[6]
-        authenticity_level = t_metrics[7]
-        certainty_level = t_metrics[8]
-        clout_level = t_metrics[9]
-        internal_cohesion_level = t_metrics[12]
-        emotional_tone_level = t_metrics[10]
-        newness_level = t_metrics[15]
+        participation_level = t_metrics[11][0]
+        analytic_thinking_level = t_metrics[6][0]
+        authenticity_level = t_metrics[7][0]
+        certainty_level = t_metrics[8][0]
+        clout_level = t_metrics[9][0]
+        internal_cohesion_level = t_metrics[12][0]
+        emotional_tone_level = t_metrics[10][0]
+        newness_level = t_metrics[15][0]
         focusscore.append(attention_level)
         participationscore.append(participation_level)
-        responsivityscore.append(t_metrics[13])
+        responsivityscore.append(t_metrics[13][0])
         enagementscore.append(round((participation_level+emotional_tone_level)/2,2))
         reasoningscore.append(round((analytic_thinking_level+certainty_level+internal_cohesion_level)/3,2))
         ideacontributionscore.append(round((analytic_thinking_level+authenticity_level+newness_level)/3,2))
@@ -842,8 +921,8 @@ def synthesized_transcript_video_metrics(transcriptSpeakerMetric,videoMetrics,sp
         window_id = f"w_{t_metrics[2][0]}_{t_metrics[2][1]}_{t_metrics[-1]}"
         
         value = [window_id,t_metrics[0],t_metrics[1],t_metrics[2][0],t_metrics[2][1],t_metrics[3],t_metrics[4],t_metrics[5],
-                     t_metrics[6],t_metrics[7],t_metrics[8],t_metrics[9],t_metrics[10],t_metrics[12],t_metrics[14],
-                     t_metrics[15],t_metrics[16],"None","None",0,0,t_metrics[17],0,focusscore[-1],participationscore[-1],responsivityscore[-1],enagementscore[-1],
+                     t_metrics[6][0],t_metrics[7][0],t_metrics[8][0],t_metrics[9][0],t_metrics[10][0],t_metrics[12][0],t_metrics[14][0],
+                     t_metrics[15][0],t_metrics[16],"None","None",0,0,t_metrics[17],0,focusscore[-1],participationscore[-1],responsivityscore[-1],enagementscore[-1],
                     reasoningscore[-1],leadershipscore[-1],initiativescore[-1],ideacontributionscore[-1]]
         
         accumulated_metrics.append(value)
@@ -853,15 +932,15 @@ def synthesized_transcript_video_metrics(transcriptSpeakerMetric,videoMetrics,sp
     #computer session level metrics
     session_metrics=[]
     session_metrics_label = ['avg_focusscore','avg_participationscore','avg_responsivity','avg_engagementscore','avg_reasoningscore','avg_leadershipscore', 'avg_initiativescore','avg_ideacontributionscore']
-    session_metrics.append(round(sum(focusscore)/len(focusscore),2))
-    session_metrics.append(round(sum(participationscore)/len(participationscore),2))
-    session_metrics.append(round(sum(responsivityscore)/len(responsivityscore),2))
-    session_metrics.append(round(sum(enagementscore)/len(enagementscore),2))           
-    session_metrics.append(round(sum(reasoningscore)/len(reasoningscore),2))
-    session_metrics.append(round(sum(leadershipscore)/len(leadershipscore),2))
-    session_metrics.append(round(sum(initiativescore)/len(initiativescore),2))
-    session_metrics.append(round(sum(ideacontributionscore)/len(ideacontributionscore),2))
+    session_metrics.append(round(compute_average(focusscore),2))
+    session_metrics.append(round(compute_average(participationscore),2))
+    session_metrics.append(round(compute_average(responsivityscore),2))
+    session_metrics.append(round(compute_average(enagementscore),2))           
+    session_metrics.append(round(compute_average(reasoningscore),2))
+    session_metrics.append(round(compute_average(leadershipscore),2))
+    session_metrics.append(round(compute_average(initiativescore),2))
+    session_metrics.append(round(compute_average(ideacontributionscore),2))
 
     window_metrics_dict = [dict(zip(heading, row)) for row in accumulated_metrics] 
     session_metrics_dict = dict(zip(session_metrics_label,session_metrics))
-    return accumulated_metrics
+    return { "window_metrics": window_metrics_dict, "session_metrics": session_metrics_dict}
