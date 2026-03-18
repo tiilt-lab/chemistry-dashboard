@@ -527,7 +527,7 @@ def export_session_transcript_video_metrics(session_id,windowsize, format, **kwa
 @wrappers.verify_session_access
 def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
     All_particiapants_video_metrics = {}
-    session_device = database.get_session_devices(device_id=session_device_id)
+    session_device = database.get_session_devices(id=session_device_id)
     field_names = ['Group ID', 'Group Name', 'Time Range (s)', 'Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
                 'Clout', 'Emotional Tone',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness',
                 'Word Count', 'Facial Emotion', 'Object Focus On', 'Attention Level','Attention Rate',"Attention Class", 'Speaker Tag', 'Speaker ID', 'Topic ID']
@@ -539,13 +539,33 @@ def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
         transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session(session_device_id=session_device.id,speaker_id=speaker.id)
         speaker_data = synthesized_transcript_video_metrics(transcriptSpeakerMetric,videoMetrics,speaker,session_device,keywords,windowsize=10)
        
-        All_particiapants_video_metrics[speaker.alias] = [dict(zip(field_names, row)) for row in speaker_data]
-
+        All_particiapants_video_metrics[speaker.alias] = speaker_data
 
                    
-    return output
-    
+    return json_response(All_particiapants_video_metrics)
 
+@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/synthesized_feedback_metrics_V2',methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def getSynthesizedFeedbackMetrics_V2(session_id,session_device_id, **kwargs):
+    All_particiapants_metrics = {}
+    session_device = database.get_session_devices(id=session_device_id)
+    field_names = ['Group ID', 'Group Name', 'Time Range (s)', 'Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
+                'Clout', 'Emotional Tone',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness',
+                'Word Count', 'Facial Emotion', 'Object Focus On', 'Attention Level','Attention Rate',"Attention Class", 'Speaker Tag', 'Speaker ID', 'Topic ID']
+    
+    keywords = database.get_keyword_usages(session_device_id=session_device_id)
+    speakers = database.get_speakers(session_device_id=session_device_id)
+    # for speaker in speakers:
+    videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device_id)
+    transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session(session_device_id=session_device.id)
+    # speaker_data = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,windowsize=10)
+    
+    # All_particiapants_metrics = speaker_data
+
+                   
+    return json_response(All_particiapants_metrics)
+    
 @api_routes.route('/api/v1/sessions/getredissessionkey', methods=['POST'])
 def get_device_key(**kwargs):
     content = request.get_json()

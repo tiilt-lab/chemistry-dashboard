@@ -166,7 +166,7 @@ function PodsOverviewComponent() {
     if (type == "audiometrics") {
       fetchData = new SessionService().downloadSessionTranscriptMetrics(session.id, session.title,windowsize,format);
     } else if (type == "videometrics") {
-      fetchData = new SessionService().downloadSessionVideoMetrics(session.id, session.title,windowsize);
+      fetchData = new SessionService().downloadSessionVideoMetrics(session.id, session.title,windowsize,format);
     } else if (type == "transcriptvideometrics") {
       fetchData = new SessionService().downloadSessionTranscriptVideoMetrics(session.id, session.title,windowsize,format);
     }
