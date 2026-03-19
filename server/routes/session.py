@@ -522,10 +522,10 @@ def export_session_transcript_video_metrics(session_id,windowsize, format, **kwa
         output.headers["Content-type"] = "application/json"
     return output
 
-@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/synthesized_feedback_metrics',methods=['GET'])
+@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/synthesized_feedback_metrics_V2',methods=['GET'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access
-def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
+def getSynthesizedFeedbackMetrics_V2(session_id,session_device_id, **kwargs):
     All_particiapants_video_metrics = {}
     session_device = database.get_session_devices(id=session_device_id)
     field_names = ['Group ID', 'Group Name', 'Time Range (s)', 'Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
@@ -544,11 +544,10 @@ def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
                    
     return json_response(All_particiapants_video_metrics)
 
-@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/synthesized_feedback_metrics_V2',methods=['GET'])
+@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/synthesized_feedback_metrics',methods=['GET'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access
-def getSynthesizedFeedbackMetrics_V2(session_id,session_device_id, **kwargs):
-    All_particiapants_metrics = {}
+def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
     session_device = database.get_session_devices(id=session_device_id)
     field_names = ['Group ID', 'Group Name', 'Time Range (s)', 'Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
                 'Clout', 'Emotional Tone',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness',
@@ -559,12 +558,10 @@ def getSynthesizedFeedbackMetrics_V2(session_id,session_device_id, **kwargs):
     # for speaker in speakers:
     videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device_id)
     transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session(session_device_id=session_device.id)
-    speaker_data = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,speakers,windowsize=10)
+    combine_metric_level = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,speakers,windowsize=10)
     
-    # All_particiapants_metrics = speaker_data
-
-                   
-    return json_response(All_particiapants_metrics)
+               
+    return json_response(combine_metric_level)
     
 @api_routes.route('/api/v1/sessions/getredissessionkey', methods=['POST'])
 def get_device_key(**kwargs):
