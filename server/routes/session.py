@@ -3,7 +3,7 @@ from utility import sanitize, string_to_bool, json_response
 from tables.session_device import SessionDevice
 from redis_helper import RedisSessions
 from tables.session import Session
-from utility import json_response,batch_video_metrics,batch_transcript_metrics,batch_transcript_video_metrics,synthesized_transcript_video_metrics
+from utility import json_response,batch_video_metrics,batch_transcript_metrics,batch_transcript_video_metrics,synthesized_transcript_video_metrics,synthesized_transcript_video_metrics_by_window
 from app import socketio
 import logging
 import database
@@ -559,7 +559,7 @@ def getSynthesizedFeedbackMetrics_V2(session_id,session_device_id, **kwargs):
     # for speaker in speakers:
     videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device_id)
     transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session(session_device_id=session_device.id)
-    # speaker_data = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,windowsize=10)
+    speaker_data = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,speakers,windowsize=10)
     
     # All_particiapants_metrics = speaker_data
 
