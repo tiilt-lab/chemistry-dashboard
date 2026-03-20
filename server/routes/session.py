@@ -557,7 +557,7 @@ def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
     speakers = database.get_speakers(session_device_id=session_device_id)
     # for speaker in speakers:
     videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device_id)
-    transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session(session_device_id=session_device.id)
+    transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session_by_timeline(session_device_id=session_device.id)
     combine_metric_level = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,speakers,windowsize=10)
     
                
