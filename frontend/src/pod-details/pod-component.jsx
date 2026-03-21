@@ -45,6 +45,7 @@ function PodComponent() {
   const [selectedSpkralias, setSelectedSpkralias] = useState("");
   const { sessionId,sessionDeviceId } = useParams();
   const synthesizedFeedbackMetrics = useRef({});
+  const participants = useRef([])
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -92,7 +93,7 @@ function PodComponent() {
         if (response.status === 200)
           response.json().then((jsonObj) => {
             synthesizedFeedbackMetrics.current = jsonObj;
-            console.log("synthesized feedback metrics: ", synthesizedFeedbackMetrics.current)
+            participants.current = Object.keys(synthesizedFeedbackMetrics.current["participants_level"])
           });
       },
       (apierror) => {
@@ -195,12 +196,10 @@ function PodComponent() {
 
   useEffect(() => {
     if (displayTranscripts) {
-      console.log("reloaded page - display transcripts");
       setSpeakerTranscripts();
     }
 
     if (displayVideoMetrics) {
-      console.log("reloaded page - displayVideoMetrics")
       setSpeakerVideoMetrics()
     }
 
@@ -209,27 +208,15 @@ function PodComponent() {
 
   useEffect(() => {
     if (trigger > 0) {
-      console.log("reloaded page");
     }
   }, [trigger]);
 
   useEffect(() => {
     if (sessionDeviceId && session.id) getSpeakers();
     else setSpeakers([]);
-    console.log("loaded speaker data");
   }, [sessionDeviceId, session]);
 
-  // useEffect(() => {
-  //   if (participantDisplayed.length > 0) {
-  //     setSelectedParticipantData(participantDisplayed[0], participantDisplayed[1])
-  //   }
-  //   console.log("loaded displayed participant data");
-  // }, [participantDisplayed]);
-
-
-
-  //console.log(session, transcripts, '-', sessionDevice, '-', displayTranscripts, '-', startTime, '-', endTime, '-', 'session .......')
-
+ 
   // to initialize the checklist data structures
   const initChecklistData = (featuresArr, setFn) => {
     let valueInd = 0;
@@ -437,17 +424,15 @@ function PodComponent() {
     handleCheck(event, showBoxes, setShowBoxes);
   };
 
-  const viewComparison = () => {
-    setDetails("Comparison");
+  const dashboardView = (view) => {
+    setDetails(view);
   };
 
-  const viewIndividual = () => {
-    setDetails("Individual");
+  const loadReflectiondashboard = (view) => {
+    setDetails(view);
+
   };
 
-  const viewGroup = () => {
-    setDetails("Group");
-  }
 
 
   const loadSpeakerMetrics = (speakerId, speakrAlias) => {
@@ -495,13 +480,13 @@ function PodComponent() {
       getSpeakerAliasFromID={getSpeakerAliasFromID}
       details={details}
       setDetails={setDetails}
-      viewIndividual={viewIndividual}
-      viewComparison={viewComparison}
-      viewGroup={viewGroup}
+      dashboardView={dashboardView}
       open={open}
       setOpen={setOpen}
       loadSpeakerMetrics={loadSpeakerMetrics}
       selectedSpkralias={selectedSpkralias}
+      loadReflectiondashboard = {loadReflectiondashboard}
+      participants = {participants.current}
     />
   );
 }

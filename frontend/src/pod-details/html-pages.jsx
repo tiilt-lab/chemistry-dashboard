@@ -6,6 +6,7 @@ import style from "./pod.module.css"
 import React from "react"
 import Select from "react-select"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
+import { CollaborationFeedbackDashboard } from "../components/reflection-dashboard-view/reflection-interactive-dashboard"
 
 function PodComponentPages(props) {
     return (
@@ -27,16 +28,16 @@ function PodComponentPages(props) {
                             menus={[
                                 {
                                     title: "Group",
-                                    action: () => props.viewGroup(),
+                                    action: () => props.dashboardView("Group"),
                                 },
-                                // {
-                                //     title: "Individual",
-                                //     action: () => props.viewIndividual(),
-                                // },
                                 {
                                     title: "Comparison",
-                                    action: () => props.viewComparison(),
+                                    action: () => props.dashboardView("Comparison"),
                                 },
+                                {
+                                    title: "Reflection Dashboard",
+                                    action: () => props.loadReflectiondashboard("Reflection Dashboard"),
+                                }
                             ]}
                             participants={ props.speakers.map((speaker, index) => (
                                 {
@@ -50,6 +51,13 @@ function PodComponentPages(props) {
                         <></>
                     )}
                     <div className="center-column-container">
+                   
+                        {props.details === 'Reflection Dashboard'?
+                            <CollaborationFeedbackDashboard
+                                participants = {props.participants}
+                            />
+                        :
+                        
                         <AppInfographicsComparison
                             displayTranscripts={props.displayTranscripts}
                             displayVideoMetrics={props.displayVideoMetrics}
@@ -75,6 +83,9 @@ function PodComponentPages(props) {
                             details={props.details}
                             getSpeakerAliasFromID={props.getSpeakerAliasFromID}
                         ></AppInfographicsComparison>
+                
+                        }
+                        
                     </div>
                 </div>
                 {props.loading() ? <AppSpinner></AppSpinner> : <></>}

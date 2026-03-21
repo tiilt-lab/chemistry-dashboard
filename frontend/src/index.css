@@ -1,3 +1,47 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+}
+
 /* #root{
   display: flex;
   height: 100vh;
@@ -9,8 +53,6 @@ html {
     height: 100%;
     width: 100%;
 }
-
-@import "tailwindcss";
 
 #root {
     @apply box-border flex h-screen w-screen overflow-clip;
@@ -24,9 +66,11 @@ html {
     @apply @container relative box-border flex h-full w-full min-w-fit flex-col;
 }
 .toolbar-view-container {
-    @apply relative box-border flex grow flex-col-reverse content-stretch items-stretch overflow-hidden sm:flex-row;
+    @apply relative box-border flex grow flex-col-reverse content-stretch items-stretch overflow-x-auto overflow-y-hidden sm:flex-row;
 }
-
+.side_bar{
+    @apply @container relative flex h-1/6 w-full shrink-0 flex-row flex-nowrap items-center justify-between bg-gray-200 text-center shadow sm:h-full sm:w-64 sm:flex-col
+} /* sm:w-1/6 */
 .center-column-container {
     @apply @container relative box-border flex min-w-[320px] grow flex-col overflow-y-auto;
 }
@@ -51,8 +95,16 @@ html {
     @apply w-xs @sm:w-sm @6xl:w-xl;
 }
 
+.medium-section {
+  @apply w-xs @sm:w-sm @3xl:w-2xl @6xl:w-2xl;
+}
+
 .wide-section {
     @apply w-xs @sm:w-sm @3xl:w-3xl @6xl:w-6xl @7xl:w-7xl;
+}
+
+.large-section {
+  @apply w-xs @sm:w-sm @3xl:w-4xl @6xl:w-7xl @7xl:w-[95rem];
 }
 
 .dropdown {
