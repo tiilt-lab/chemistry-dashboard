@@ -9,7 +9,7 @@ import React from "react"
 function FeaturePage(props) {
     return (
         <>
-            <div className="small-section">
+            <div className="medium-section">
                 <table
                     className={style["features-table"]}
                 >

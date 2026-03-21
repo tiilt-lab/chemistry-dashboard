@@ -9,7 +9,7 @@ function AppKeywordsPage(props) {
     return (
         <>
             <div
-                className="min-h-20 small-section"
+                className="min-h-20 medium-section"
             >
                 {!props.showGraph ? (
                     <React.Fragment>

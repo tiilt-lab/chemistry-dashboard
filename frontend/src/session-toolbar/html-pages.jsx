@@ -8,7 +8,7 @@ import { isLargeScreen } from "../myhooks/custom-hooks"
 function AppSessionPage(props) {
     return (
         <>
-            <div className="relative flex h-1/6 w-full min-w-fit flex-row flex-nowrap items-center justify-between bg-gray-200 text-center shadow sm:h-full sm:w-1/6 sm:flex-col">
+            <div className="side_bar">
                 <span className="m-3 inline-block h-fit w-min px-3 relative">
                     <div className="inline-block w-max font-sans text-xl/normal font-bold sm:text-3xl/loose">
                         {props.timeText}
