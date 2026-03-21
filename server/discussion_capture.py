@@ -18,6 +18,7 @@ from routes.folder import api_routes as folder_api
 from routes.topic_model import api_routes as topicmodel_api
 from routes.speaker import api_routes as speaker_api
 from routes.student import api_routes as student_api
+from routes.llm_query import api_routes as llm_api
 
 app.register_blueprint(admin_api)
 app.register_blueprint(auth_api)
@@ -29,6 +30,7 @@ app.register_blueprint(folder_api)
 app.register_blueprint(topicmodel_api)
 app.register_blueprint(speaker_api)
 app.register_blueprint(student_api)
+app.register_blueprint(llm_api)
 
 
 def main():

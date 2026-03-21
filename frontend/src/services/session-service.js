@@ -314,6 +314,14 @@ class SessionService {
     );
   }
 
+  getLLMFeedbackBasedOnMetrics(metricData) {
+    return this.api.httpRequestCall(
+      `api/v1/llmqueries/generate_llm_feedback_based_on_metrics`,
+      "POST",
+      metricData
+    );
+  }
+
   getFolders() {
     return this.api.httpRequestCall(`api/folders`, "GET", {});
   }
