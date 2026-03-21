@@ -46,6 +46,8 @@ function PodComponent() {
   const { sessionId,sessionDeviceId } = useParams();
   const synthesizedFeedbackMetrics = useRef({});
   const participants = useRef([])
+  const selectedParticipantSynthesizedData = useRef({})
+  const llmSessionAnalysis = useRef({})
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -429,6 +431,25 @@ function PodComponent() {
   };
 
   const loadReflectiondashboard = (view) => {
+    selectedParticipantSynthesizedData.current["participant_name"] = participants.current[0]
+    selectedParticipantSynthesizedData.current["participant-level_metric"] = synthesizedFeedbackMetrics.current["participants_level"][participants.current[0]]
+    selectedParticipantSynthesizedData.current["session-level_metric"] = synthesizedFeedbackMetrics.current["session_level"][participants.current[0]]
+    selectedParticipantSynthesizedData.current["group-level_metric"] = synthesizedFeedbackMetrics.current["group_level"]
+    console.log("input data ", selectedParticipantSynthesizedData.current)
+    const fetchData = new SessionService().getLLMFeedbackBasedOnMetrics(selectedParticipantSynthesizedData.current);
+      fetchData.then(
+      (response) => {
+        if (response.status === 200)
+          response.json().then((jsonObj) => {
+            llmSessionAnalysis.current = jsonObj;
+            console.log(llmSessionAnalysis.current)
+          });
+      },
+      (apierror) => {
+        console.log("podcomponent loadReflectiondashboard", apierror);
+      }
+    );
+
     setDetails(view);
 
   };

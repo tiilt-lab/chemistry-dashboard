@@ -6,6 +6,7 @@ from scipy.stats import median_abs_deviation
 import statistics
 import re
 import logging
+import json
 
 logger = logging.getLogger('utility.funcs')
 def string_to_bool(value):
@@ -33,6 +34,54 @@ def verify_characters(value, chars):
     if re.search(r'^[{0}]+\Z'.format(chars), value):
         return True
     return False
+
+def build_prompt(data):
+    return f"""
+        You are a collaborative learning analytics assistant.
+        Your task is to analyze collaboration quality metrics data and return structured feedback.
+
+        -------------------------------------
+        OUTPUT FORMAT (MANDATORY)
+        -------------------------------------
+        Return ONLY valid JSON in this exact structure:
+
+        {{
+        "summary": "...",
+        "strengths": ["...", "..."],
+        "concerns": ["...", "..."],
+        "actions": ["...", "..."]
+        }}
+
+        -------------------------------------
+        DATA TO ANALYZE
+        -------------------------------------
+        Participant name: 
+        {data.get("participant_name", "")}
+        
+        Participants window by window metric:
+        {json.dumps(data.get("participant-level_metric", {}), indent=2)}
+
+        Session Data:
+        {json.dumps(data.get("session-level_metric", {}), indent=2)}
+
+        Group summary:
+        {json.dumps(data.get("level_metric", []), indent=2)}
+
+
+        User question:
+        {data.get("user_question", "")}
+
+        -------------------------------------
+        INSTRUCTIONS
+        -------------------------------------
+        - Be concise and specific
+        - Use only the provided data
+        - Do NOT hallucinate missing information
+        - Ground all claims in the metrics or moments
+        - Provide actionable and practical suggestions
+        - Do NOT include any explanation outside JSON
+        - Do NOT include markdown or backticks
+        """
 
 def compute_median_and_mad(values):
     median = np.median(values)
@@ -1299,9 +1348,6 @@ def compute_derived_metric_and_update(metric_acc_per_window,speakerDetail,total_
     session_data_heading = ['avg_focusscore','avg_participationscore','avg_responsivity','avg_engagementscore','avg_reasoningscore','avg_leadershipscore', 'avg_initiativescore','avg_ideacontributionscore',
                             'avg_speakingalignmentscore','avg_momentum','avg_verbalshare','avg_turntaking','avg_trenddirection','earlytrenddirection','midtrenddirection','latetrenddirection','sharedtaskfocus'] 
     Combined_object['session_level'][speakeralias] = dict(zip(session_data_heading,session_metrics))
-
-    
-
    
 def synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,speakers,windowsize=10):
     v_index = t_index = 0
