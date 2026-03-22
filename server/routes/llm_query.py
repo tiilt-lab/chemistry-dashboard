@@ -23,14 +23,15 @@ client = genai.Client(api_key=GOOGLE_API_KEY)
 @api_routes.route('/api/v1/llmqueries/generate_llm_feedback_based_on_metrics', methods=['POST'])
 def generate_llm_feedback_based_on_metrics(**kwargs):
     metricObj = request.json
+    
     if not metricObj:
         return json_response({'message': 'Missing data.'}, 400)
     
-    prompt = build_prompt(metricObj)
+    prompt = build_prompt(metricObj,"Session_level analysis for participant")
 
     try:
         response = client.models.generate_content(
-            model="gemini-3-flash-preview",
+            model="gemini-2.5-flash",
             contents=prompt
         )
 
@@ -47,24 +48,14 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
 
         # logging.info("LLm response {0}".format(parsed))
         return json_response({
-            "status": "success",
             "answer": parsed
         })
         
 
     except Exception as e:
-        json_response({{
-            "status": "error",
+        return json_response({{
             "message": str(e)
         }}, 400)
         
-    
-    response = client.models.generate_content(
-    model="gemini-2.5-flash",
-    contents="You are an educational researcher analyzing student collaboration data." \
-    " Explain collaborative learning in one paragraph.")
-
-    logging.info("LLM response {0}".format(response.text))
-    return json_response(speaker.json())
     
 

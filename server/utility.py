@@ -35,7 +35,7 @@ def verify_characters(value, chars):
         return True
     return False
 
-def build_prompt(data):
+def particiapant_only_session_prompt(data):
     return f"""
         You are a collaborative learning analytics assistant.
         Your task is to analyze collaboration quality metrics data and return structured feedback.
@@ -46,10 +46,15 @@ def build_prompt(data):
         Return ONLY valid JSON in this exact structure:
 
         {{
-        "summary": "...",
-        "strengths": ["...", "..."],
-        "concerns": ["...", "..."],
-        "actions": ["...", "..."]
+        "Summary": "...",
+        "Sessionpattern":"....",
+        "Strongzones": ["...", "..."],
+        "Declinezones": ["...", "..."],
+        "Strengths": ["...", "..."],
+        "Concerns": ["...", "..."],
+        "Actions": ["...", "..."],
+        "Evidences": ["..","..."]
+        "Confidence": "..."
         }}
 
         -------------------------------------
@@ -59,13 +64,13 @@ def build_prompt(data):
         {data.get("participant_name", "")}
         
         Participants window by window metric:
-        {json.dumps(data.get("participant-level_metric", {}), indent=2)}
+        {json.dumps(data.get("participant_level_metric", {}), indent=2)}
 
         Session Data:
-        {json.dumps(data.get("session-level_metric", {}), indent=2)}
+        {json.dumps(data.get("session_level_metric", {}), indent=2)}
 
         Group summary:
-        {json.dumps(data.get("level_metric", []), indent=2)}
+        {json.dumps(data.get("group_level_metric", {}), indent=2)}
 
 
         User question:
@@ -80,8 +85,18 @@ def build_prompt(data):
         - Ground all claims in the metrics or moments
         - Provide actionable and practical suggestions
         - Do NOT include any explanation outside JSON
+        - Don't incorporate raw metric values in the summary text response, but placed them in the evidence field of the response
+        - Ensure the responses are not just reporting observations from the metrics, but drawing insights, synthesis and suggestive conclusions
+        - Leverage the window timeline to determine time frame session e.g early, mid or late that are strong or declining zones. Also, you can leverage the trenddirection where 0 means stable, 1 increase and -1 decline
+        - In identifying these zones, communicate the response for Strongzone, Declinezone and Sessionpattern in not more than 12 words. 
+        - Ensure you use formative and suggesting language while communicating the insights
         - Do NOT include markdown or backticks
+        - provide a level of confidence, including an berief explanation of influenced the level of confidence in your analysis. please present it in 'Confidence field' of the structured output
+        - Use second person framing
         """
+def build_prompt(data, type):
+    if type == "Session_level analysis for participant":
+        return particiapant_only_session_prompt(data)
 
 def compute_median_and_mad(values):
     median = np.median(values)
