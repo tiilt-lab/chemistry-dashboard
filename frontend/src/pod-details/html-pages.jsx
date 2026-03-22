@@ -1,4 +1,4 @@
-import { GenericDialogBox } from "../dialog/dialog-component"
+import { GenericDialogBox,WaitingDialog } from "../dialog/dialog-component"
 import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { Appheader } from "../header/header-component"
@@ -36,7 +36,7 @@ function PodComponentPages(props) {
                                 },
                                 {
                                     title: "Reflection Dashboard",
-                                    action: () => props.loadReflectiondashboard("Reflection Dashboard"),
+                                    action:  () =>  props.loadReflectiondashboard("Reflection Dashboard"),
                                 }
                             ]}
                             participants={ props.speakers.map((speaker, index) => (
@@ -55,6 +55,10 @@ function PodComponentPages(props) {
                         {props.details === 'Reflection Dashboard'?
                             <CollaborationFeedbackDashboard
                                 participants = {props.participants}
+                                currentParticipant = {props.currentParticipant}
+                                llmSessionAnalysis = {props.llmSessionAnalysis}
+                                selectedParticipantSynthesizedData = {props.selectedParticipantSynthesizedData}
+                                setParticipantRefectionID = {props.setParticipantRefectionID}
                             />
                         :
                         
@@ -237,6 +241,13 @@ function PodComponentPages(props) {
                     <></>
                 )}
             </GenericDialogBox>
+
+            <WaitingDialog
+                itsclass={"add-dialog"}
+                heading={"Processing..."}
+                message={"Please wait..."}
+                show={props.currentForm === "awaitingllmresponse"}
+            />
         </>
     )
 }

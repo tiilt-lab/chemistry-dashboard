@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { MessageSquare, Brain, Clock3, Sparkles, Users, Eye, Mic, Activity, HelpCircle, Search, ChevronRight, Bot, BarChart3, Target, Lightbulb } from "lucide-react";
+import { MessageSquare, Brain, Clock3, Sparkles, Users, Eye, Mic, Activity, HelpCircle, Search, AlertTriangle, CheckCircle2, ChevronRight, Bot, BarChart3, Target, Lightbulb,TrendingDown, TrendingUp } from "lucide-react";
 
 import { AppSectionBoxComponent } from "../section-box/section-box-component"
 
@@ -155,7 +155,8 @@ const qaExamples = [
   "How did my collaboration pattern change over time?",
 ];
 
-function MetricBar({ label, value, hint }) {
+function MetricBar({ label, value, hint, emphasize }) {
+  const barTone = emphasize === "good" ? "bg-emerald-100" : emphasize === "risk" ? "bg-rose-100" : "bg-muted";
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between text-sm">
@@ -165,7 +166,9 @@ function MetricBar({ label, value, hint }) {
         </div>
         <span className="font-semibold">{value}%</span>
       </div>
-      <Progress value={value} className="h-2" />
+      <div className={`rounded-full p-1 ${barTone}`}>
+        <Progress value={value} className="h-2" />
+      </div>
     </div>
   );
 }
@@ -206,7 +209,9 @@ function TimelinePill({ item, selected, onClick }) {
 }
 
 function CollaborationFeedbackDashboard(props) {
-  const [selectedParticipantId, setSelectedParticipantId] = useState(props.participants[0]);
+  const selectedParticipantId = props.currentParticipant;
+  const llmresponse = props.llmSessionAnalysis
+  const selectedParticipantData = props.selectedParticipantSynthesizedData
   const [selectedMomentId, setSelectedMomentId] = useState(timelineData[1].id);
   const [question, setQuestion] = useState("");
 
@@ -258,7 +263,7 @@ function CollaborationFeedbackDashboard(props) {
                   <div>
                     {/* <CardTitle className="text-3xl">Collaboration Reflection Dashboard</CardTitle> */}
                     <CardDescription className="mt-2 max-w-2xl text-sm leading-6">
-                      A student-facing prototype for session synthesis, moment-by-moment explanation, and reflective Q&amp;A grounded in multimodal collaboration analytics.
+                      A student-facing Dashboard for session synthesis, moment-by-moment explanation, group performance,  and reflective Q&amp;A grounded in multimodal collaboration analytics.
                     </CardDescription>
                   </div>
                   <Badge className="rounded-full px-4 py-1 text-xs"><Sparkles className="mr-1 h-3.5 w-3.5" />AI-Enhanced</Badge>
@@ -268,19 +273,19 @@ function CollaborationFeedbackDashboard(props) {
                 <div className="grid gap-4 md:grid-cols-4">
                   <div className="rounded-2xl bg-sky-50 p-4 ring-1 ring-sky-100">
                     <div className="flex items-center gap-2 text-sm text-sky-700"><Users className="h-4 w-4" />Student</div>
-                    <div className="mt-2 text-lg font-semibold">{selectedParticipant.name}</div>
+                    <div className="mt-2 text-lg font-semibold">{selectedParticipantId}</div>
                   </div>
                   <div className="rounded-2xl bg-muted p-4">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground"><BarChart3 className="h-4 w-4" />Session Pattern</div>
-                    <div className="mt-2 text-lg font-semibold">Mixed but engaged</div>
+                    <div className="mt-2 text-sm ">{llmresponse.Sessionpattern}</div>
                   </div>
-                  <div className="rounded-2xl bg-muted p-4">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground"><Clock3 className="h-4 w-4" />Most Insightful Phase</div>
-                    <div className="mt-2 text-lg font-semibold">Early–Middle</div>
+                  <div className="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
+                    <div className="flex items-center gap-2 text-sm text-emerald-700"><TrendingUp className="h-4 w-4" />Strong zone</div>
+                    <div className="mt-2 text-sm ">{llmresponse.Strongzones[0]}</div>
                   </div>
-                  <div className="rounded-2xl bg-muted p-4">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground"><Bot className="h-4 w-4" />Feedback Mode</div>
-                    <div className="mt-2 text-lg font-semibold">Explain + reflect</div>
+                  <div className="rounded-2xl bg-rose-50 p-4 ring-1 ring-rose-100">
+                    <div className="flex items-center gap-2 text-sm text-rose-700"><TrendingDown className="h-4 w-4" />Decline zone</div>
+                    <div className="mt-2 text-sm">{llmresponse.Declinezones[0]}</div>
                   </div>
                 </div>
               </CardContent>
@@ -294,7 +299,7 @@ function CollaborationFeedbackDashboard(props) {
               <CardContent className="space-y-4">
                 <div className="w-full">
                   <div className="mb-2 text-sm font-medium">Participant</div>
-                  <Select value={selectedParticipantId} onValueChange={setSelectedParticipantId}>
+                  <Select value={selectedParticipantId} onValueChange={props.setParticipantRefectionID}>
                     <SelectTrigger className="w-full rounded-2xl">
                       <SelectValue placeholder="Select participant" />
                     </SelectTrigger>
@@ -306,9 +311,9 @@ function CollaborationFeedbackDashboard(props) {
                   </Select>
                 </div>
                 <div className="rounded-2xl border p-4 text-sm leading-6">
-                  <div className="flex items-center gap-2 font-medium"><Brain className="h-4 w-4" />How the LLM works here</div>
+                  <div className="flex items-center gap-2 font-medium"><Brain className="h-4 w-4" />Your Strength</div>
                   <p className="mt-2 text-muted-foreground">
-                    Numeric metrics are computed first from multimodal traces. The LLM then synthesizes those metrics into student-friendly explanations, reflection prompts, and conversational answers.
+                    {llmresponse.Strengths.join("\n")}
                   </p>
                 </div>
               </CardContent>
@@ -327,47 +332,57 @@ function CollaborationFeedbackDashboard(props) {
                 <Card className="rounded-3xl border-0 shadow-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-xl"><Activity className="h-5 w-5" />Computed collaboration indicators</CardTitle>
-                    <CardDescription>These are deterministic session-level metrics; the LLM explains them rather than inventing them.</CardDescription>
+                    <CardDescription>These are deterministic session-level measure of relevant collaboration quality indicators.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-5">
-                    <MetricBar label="Verbal participation" value={selectedParticipant.overall.verbalParticipation} hint="share of spoken contribution" />
-                    <MetricBar label="Turn share" value={selectedParticipant.overall.turnShare} hint="share of speaking windows" />
-                    <MetricBar label="Idea contribution" value={selectedParticipant.overall.ideaContribution} hint="novel or extending moves" />
-                    <MetricBar label="Responsivity" value={selectedParticipant.overall.responsivity} hint="direct peer uptake" />
-                    <MetricBar label="Task focus" value={selectedParticipant.overall.taskFocus} hint="task-oriented attention windows" />
+                    <MetricBar label="Verbal participation" value={selectedParticipantData["session_level_metric"].avg_verbalshare} hint="share of spoken contribution" emphasize= {selectedParticipantData["session_level_metric"].avg_verbalshare < 50 ? "risk" : "good" }/>
+                    <MetricBar label="Turn share" value={selectedParticipantData["session_level_metric"].avg_turntaking} hint="share of speaking windows" emphasize= {selectedParticipantData["session_level_metric"].avg_turntaking < 50 ? "risk" : "good" } />
+                    <MetricBar label="Idea contribution" value={selectedParticipantData["session_level_metric"].avg_ideacontributionscore} hint="novel or extending moves" emphasize= {selectedParticipantData["session_level_metric"].avg_ideacontributionscore < 50 ? "risk" : "good" } />
+                    <MetricBar label="Responsivity" value={selectedParticipantData["session_level_metric"].avg_responsivity} hint="direct peer uptake" emphasize= {selectedParticipantData["session_level_metric"].avg_responsivity < 50 ? "risk" : "good" } />
+                    <MetricBar label="Task focus" value={selectedParticipantData["session_level_metric"].avg_focusscore} hint="task-oriented attention windows" emphasize= {selectedParticipantData["session_level_metric"].avg_focusscore < 50 ? "risk" : "good" } />
                   </CardContent>
                 </Card>
 
                 <Card className="rounded-3xl border-0 shadow-sm">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-xl"><Sparkles className="h-5 w-5" />LLM session synthesis</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-xl"><Sparkles className="h-5 w-5" />Session Performance Analysis</CardTitle>
                     <CardDescription>Grounded, plain-language feedback generated from computed metrics and selected evidence.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-5">
                     <div className="rounded-2xl bg-muted p-4 text-sm leading-7">
-                      {selectedParticipant.overall.summary}
+                      {llmresponse.Summary}
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div className="rounded-2xl border p-4">
-                        <div className="flex items-center gap-2 font-medium"><Target className="h-4 w-4" />Strengths</div>
-                        <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                          {selectedParticipant.overall.strengths.map((item) => (
+                      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                         <div className="flex items-center gap-2 font-medium text-emerald-800"><CheckCircle2 className="h-4 w-4" />What is going well</div>
+                          <ul className="mt-3 space-y-2 text-sm text-emerald-900/80">
+                          {llmresponse.Strengths.map((item) => (
                             <li key={item} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4" />{item}</li>
                           ))}
                         </ul>
                       </div>
-                      <div className="rounded-2xl border p-4">
-                        <div className="flex items-center gap-2 font-medium"><Lightbulb className="h-4 w-4" />Growth areas</div>
-                        <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                          {selectedParticipant.overall.growth.map((item) => (
+                      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+                        <div className="flex items-center gap-2 font-medium text-rose-800"><AlertTriangle className="h-4 w-4" />What went wrong</div>
+                        <ul className="mt-3 space-y-2 text-sm text-rose-900/80">
+                          {llmresponse.Concerns.map((item) => (
                             <li key={item} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4" />{item}</li>
                           ))}
                         </ul>
                       </div>
                     </div>
-                    <div className="rounded-2xl border border-dashed p-4 text-sm text-muted-foreground">
-                      Confidence note: emotion and attention labels are interpreted cautiously. The synthesis emphasizes patterns and possible interpretations rather than certainty claims.
-                    </div>
+
+                    <div className="rounded-2xl bg-violet-50 p-4 ring-1 ring-violet-100">
+                            <div className="flex items-center gap-2 font-medium text-violet-700"><Lightbulb className="h-4 w-4" />What to work on</div>
+                            <ul className="mt-3 space-y-2 text-sm text-violet-700">
+                          {llmresponse.Actions.map((item) => (
+                            <li key={item} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4" />{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+
+                    {/* <div className="rounded-2xl border border-dashed p-4 text-sm text-muted-foreground">
+                      What to work on: {llmresponse.Confidence}
+                    </div> */}
                   </CardContent>
                 </Card>
               </div>
