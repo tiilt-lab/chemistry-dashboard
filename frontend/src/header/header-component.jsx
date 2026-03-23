@@ -9,12 +9,15 @@ function Appheader(props) {
                     {props.leftText}
                 </div>
             ) : (
-                <img
-                    onClick={props.nav}
-                    alt="back"
-                    className={"w-min p-4"}
-                    src={backicon}
-                />
+                <p  className={"flex w-max text-sans p-4"} onClick={props.nav} >
+                    <img
+                        onClick={props.nav}
+                        alt="back"
+                        className={""}
+                        src={backicon}
+                    />
+                    Back
+                </p>
             )}
             <div className="text-sans w-full overflow-hidden text-center leading-14 whitespace-nowrap select-none">
                 {props.editMode ? (

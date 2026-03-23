@@ -45,11 +45,12 @@ function PodComponent() {
   const [selectedSpkralias, setSelectedSpkralias] = useState("");
   const [participantIDReflectionDashboard, setParticipantRefectionID] = useState("")
   const { sessionId, sessionDeviceId } = useParams();
-  const synthesizedFeedbackMetrics = useRef({});
+  const synthesizedFeedbackMetrics = useRef(null);
   const participants = useRef([])
   const selectedParticipantSynthesizedData = useRef({})
+  const selectedParticipantLLMAnalysis = useRef(null)
   const llmSessionAnalysis = useRef({})
-  const currentParticipant = useRef("")
+  const [currentParticipant,setCurrentParticipant] = useState("")
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -90,7 +91,8 @@ function PodComponent() {
       });
 
       subscriptions.push(transcriptSub);
-
+    }
+    if (synthesizedFeedbackMetrics.current === null) {
       const fetchData = new SessionService().getSynthesizedFeedbackMetrics(sessionId, sessionDeviceId);
       fetchData.then(
         (response) => {
@@ -106,6 +108,7 @@ function PodComponent() {
         }
       );
     }
+
 
 
     if (videoMetrics.length <= 0) {
@@ -221,14 +224,15 @@ function PodComponent() {
     else setSpeakers([]);
   }, [sessionDeviceId, session]);
 
-  useEffect(  () => {
+  useEffect(() => {
     if (participantIDReflectionDashboard !== "") {
-      let actionstatus =  extractParticipantData(participantIDReflectionDashboard)
+      let actionstatus = extractParticipantData(participantIDReflectionDashboard)
       if (actionstatus) {
-        currentParticipant.current = participantIDReflectionDashboard
+        setCurrentParticipant(participantIDReflectionDashboard)
       }
     }
   }, [participantIDReflectionDashboard])
+
   // to initialize the checklist data structures
   const initChecklistData = (featuresArr, setFn) => {
     let valueInd = 0;
@@ -444,6 +448,9 @@ function PodComponent() {
     let retObj = {}
     if (reporttype === "Participant_level_sesssion_analysis") {
       retObj["participant_name"] = participantId
+      retObj["sessionid"] = sessionId
+      retObj["sessiondeviceid"] = sessionDeviceId
+      retObj["retrieve_existing_report"] = "true"
       retObj["participant_level_metric"] = synthesizedFeedbackMetrics.current["participants_level"][participantId]
       retObj["session_level_metric"] = synthesizedFeedbackMetrics.current["session_level"][participantId]
       retObj["group_level_metric"] = synthesizedFeedbackMetrics.current["group_level"]
@@ -461,6 +468,11 @@ function PodComponent() {
 
     selectedParticipantSynthesizedData.current = respObj
     console.log("input data ", selectedParticipantSynthesizedData.current)
+    
+    if (participantId in  llmSessionAnalysis.current){
+      selectedParticipantLLMAnalysis.current = llmSessionAnalysis.current[participantId]
+      return true
+    }
 
     setCurrentForm("awaitingllmresponse");
     try {
@@ -468,12 +480,14 @@ function PodComponent() {
 
       if (response.status === 200) {
         const jsonObj = await response.json()
-        llmSessionAnalysis.current = jsonObj.answer;
-        console.log(llmSessionAnalysis.current)
+        llmSessionAnalysis.current[participantId] = jsonObj.answer;
+        selectedParticipantLLMAnalysis.current = llmSessionAnalysis.current[participantId]
+        console.log(selectedParticipantLLMAnalysis.current)
         setCurrentForm("");
         return true
       } else if (response.status === 400) {
         console.log("LLM api response", response.message)
+        setCurrentForm("")
         return false
       }
     } catch (error) {
@@ -486,12 +500,11 @@ function PodComponent() {
   }
 
   const loadReflectiondashboard = async (view) => {
-    let actionstatus = await extractParticipantData(participants.current[0])
-    if (actionstatus) {
-      currentParticipant.current = participants.current[0]
-      setDetails(view);
-    }
-
+      let actionstatus = await extractParticipantData(participants.current[0])
+      if (actionstatus) {
+        setCurrentParticipant(participants.current[0])
+        setDetails(view);
+      }
   };
 
 
@@ -548,10 +561,10 @@ function PodComponent() {
       selectedSpkralias={selectedSpkralias}
       loadReflectiondashboard={loadReflectiondashboard}
       participants={participants.current}
-      llmSessionAnalysis={llmSessionAnalysis.current}
+      selectedParticipantLLMAnalysis={selectedParticipantLLMAnalysis.current}
       selectedParticipantSynthesizedData={selectedParticipantSynthesizedData.current}
       setParticipantRefectionID={setParticipantRefectionID}
-      currentParticipant = {currentParticipant.current}
+      currentParticipant={currentParticipant}
     />
   );
 }
