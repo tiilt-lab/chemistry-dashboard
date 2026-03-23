@@ -1,4 +1,4 @@
-import { useMemo, useState,useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { MessageSquare, Brain, Clock3, Sparkles, Users, Eye, Mic, Activity, HelpCircle, Search, AlertTriangle, CheckCircle2, ChevronRight, Bot, BarChart3, Target, Lightbulb, TrendingDown, TrendingUp,ArrowRight } from "lucide-react";
+import { MessageSquare, Brain, Clock3, Sparkles, Users, User, Eye, Mic, Activity, HelpCircle, Search, AlertTriangle, CheckCircle2, ChevronRight, Bot, BarChart3, Target, Lightbulb, TrendingDown, TrendingUp, ArrowRight } from "lucide-react";
 
 import { AppSectionBoxComponent } from "../section-box/section-box-component"
 
@@ -148,7 +148,12 @@ const timelineData = [
   },
 ];
 
-
+const groupMetrics = [
+  { label: "Participation balance", value: 64, note: "How evenly talk was distributed" },
+  { label: "Shared focus", value: 71, note: "How often members converged on the task artifact" },
+  { label: "Idea relay", value: 42, note: "How often one idea was picked up by another person" },
+  { label: "Recovery capacity", value: 53, note: "How well the group bounced back after dips" },
+];
 
 function CollaborationFeedbackDashboard(props) {
   const selectedParticipantId = props.currentParticipant;
@@ -157,14 +162,14 @@ function CollaborationFeedbackDashboard(props) {
   const llmresponse_window_summary = props.llmSessionAnalysis.Window_summary
   const selectedParticipantData = props.selectedParticipantSynthesizedData
   const window_length = selectedParticipantData.participant_level_metric.length
-  const [selectedMomentIdAndIndex, setSelectedMomentIdAndIndex] = useState([0,selectedParticipantData.participant_level_metric[0].windowid]);
+  const [selectedMomentIdAndIndex, setSelectedMomentIdAndIndex] = useState([0, selectedParticipantData.participant_level_metric[0].windowid]);
   const [selectedMoment, setSelectedMoment] = useState(selectedParticipantData.participant_level_metric[0])
   const [question, setQuestion] = useState("");
 
-  console.log("selected moment ", selectedMoment.windowid, selectedMomentIdAndIndex[1] )
-  
+  console.log("selected moment ", selectedMoment.windowid, selectedMomentIdAndIndex[1])
+
   useEffect(() => {
-    setSelectedMoment(selectedParticipantData.participant_level_metric.find((m) => m.windowid === selectedMomentIdAndIndex[1])) 
+    setSelectedMoment(selectedParticipantData.participant_level_metric.find((m) => m.windowid === selectedMomentIdAndIndex[1]))
   }, [selectedMomentIdAndIndex]);
 
   const formatSeconds = (s) => {
@@ -226,6 +231,18 @@ function CollaborationFeedbackDashboard(props) {
     return <Badge className="bg-amber-500 hover:bg-amber-500 text-black"><ArrowRight className="h-4 w-4" /></Badge>;
   }
 
+  function toneClass(value) {
+  if (value >= 75) return "bg-emerald-500";
+  if (value >= 45) return "bg-amber-400";
+  return "bg-rose-500";
+}
+
+function toneSurface(value) {
+  if (value >= 75) return "border-emerald-200 bg-emerald-50";
+  if (value >= 45) return "border-amber-200 bg-amber-50";
+  return "border-rose-200 bg-rose-50";
+}
+
   function TimelinePill({ item, item_index, window_length, selected, onClick }) {
     return (
       <button
@@ -235,7 +252,7 @@ function CollaborationFeedbackDashboard(props) {
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="text-sm font-semibold">{formatSeconds(item.starttime)}-{formatSeconds(item.endtime)} </div>
-            <div className="text-xs text-muted-foreground">{item_index <= ((window_length/3) * 1) ? "Early" : item_index <= (( window_length/3) * 2) ? "Middle" : "Late"} phase</div>
+            <div className="text-xs text-muted-foreground">{item_index <= ((window_length / 3) * 1) ? "Early" : item_index <= ((window_length / 3) * 2) ? "Middle" : "Late"} phase</div>
           </div>
           {statusBadge(item.trenddirection)}
         </div>
@@ -260,7 +277,7 @@ function CollaborationFeedbackDashboard(props) {
             <div className="text-muted-foreground">Leader</div>
             <div className="font-semibold">{item.leadershipscore}</div>
           </div>
-          
+
         </div>
       </button>
     );
@@ -352,20 +369,45 @@ function CollaborationFeedbackDashboard(props) {
             </TabsList>
 
             <TabsContent value="session" className="space-y-6">
-              <div className="grid gap-6 lg:grid-cols-[1.05fr_.95fr]">
+              <div className="grid gap-6 lg:grid-cols-[.8fr_.7fr_1fr]">
                 <Card className="rounded-3xl border-0 shadow-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-xl"><Activity className="h-5 w-5" />Computed collaboration indicators</CardTitle>
                     <CardDescription>These are deterministic session-level measure of relevant collaboration quality indicators.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-5">
-                    <MetricBar label="Verbal participation" value={selectedParticipantData["session_level_metric"].avg_verbalshare} hint="share of spoken contribution" emphasize={selectedParticipantData["session_level_metric"].avg_verbalshare < 50 ? "risk" : "good"} />
-                    <MetricBar label="Turn share" value={selectedParticipantData["session_level_metric"].avg_turntaking} hint="share of speaking windows" emphasize={selectedParticipantData["session_level_metric"].avg_turntaking < 50 ? "risk" : "good"} />
-                    <MetricBar label="Idea contribution" value={selectedParticipantData["session_level_metric"].avg_ideacontributionscore} hint="novel or extending moves" emphasize={selectedParticipantData["session_level_metric"].avg_ideacontributionscore < 50 ? "risk" : "good"} />
-                    <MetricBar label="Responsivity" value={selectedParticipantData["session_level_metric"].avg_responsivity} hint="direct peer uptake" emphasize={selectedParticipantData["session_level_metric"].avg_responsivity < 50 ? "risk" : "good"} />
-                    <MetricBar label="Task focus" value={selectedParticipantData["session_level_metric"].avg_focusscore} hint="task-oriented attention windows" emphasize={selectedParticipantData["session_level_metric"].avg_focusscore < 50 ? "risk" : "good"} />
+                        <MetricBar label="Verbal participation" value={selectedParticipantData["session_level_metric"].avg_verbalshare} hint="share of spoken contribution" emphasize={selectedParticipantData["session_level_metric"].avg_verbalshare < 50 ? "risk" : "good"} />
+                        <MetricBar label="Turn share" value={selectedParticipantData["session_level_metric"].avg_turntaking} hint="share of speaking windows" emphasize={selectedParticipantData["session_level_metric"].avg_turntaking < 50 ? "risk" : "good"} />
+                        <MetricBar label="Idea contribution" value={selectedParticipantData["session_level_metric"].avg_ideacontributionscore} hint="novel or extending moves" emphasize={selectedParticipantData["session_level_metric"].avg_ideacontributionscore < 50 ? "risk" : "good"} />
+                        <MetricBar label="Responsivity" value={selectedParticipantData["session_level_metric"].avg_responsivity} hint="direct peer uptake" emphasize={selectedParticipantData["session_level_metric"].avg_responsivity < 50 ? "risk" : "good"} />
+                        <MetricBar label="Task focus" value={selectedParticipantData["session_level_metric"].avg_focusscore} hint="task-oriented attention windows" emphasize={selectedParticipantData["session_level_metric"].avg_focusscore < 50 ? "risk" : "good"} />
                   </CardContent>
                 </Card>
+
+                <Card className="rounded-[28px] border-0 bg-white/90 shadow-sm">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-xl"><Users className="h-5 w-5" />Group pulse board</CardTitle>
+                        <CardDescription>Additional group-level measures derived from the same underlying signals.</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {groupMetrics.map((item) => (
+                          <div key={item.label} className={`rounded-3xl border p-4 ${toneSurface(item.value)}`}>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-semibold">{item.label}</div>
+                                <div className="text-sm text-muted-foreground">{item.note}</div>
+                              </div>
+                              <div className="text-3xl font-bold">{item.value}</div>
+                            </div>
+                            <div className="mt-4 h-2 rounded-full bg-white/70">
+                              <div className={`h-2 rounded-full ${toneClass(item.value)}`} style={{ width: `${item.value}%` }} />
+                            </div>
+                          </div>
+                        ))}
+                      </CardContent>
+
+                    </Card>
+
 
                 <Card className="rounded-3xl border-0 shadow-sm">
                   <CardHeader>
@@ -429,7 +471,7 @@ function CollaborationFeedbackDashboard(props) {
                             item_index={index}
                             window_length={window_length}
                             selected={selectedMoment.windowid === item.windowid}
-                            onClick={() => setSelectedMomentIdAndIndex([index,item.windowid])}
+                            onClick={() => setSelectedMomentIdAndIndex([index, item.windowid])}
                           />
                         ))}
                       </div>
@@ -442,7 +484,7 @@ function CollaborationFeedbackDashboard(props) {
                     <div className="flex items-center justify-between gap-4">
                       <div>
                         <CardTitle className="text-xl">Moment explanation: {formatSeconds(selectedMoment.starttime)}-{formatSeconds(selectedMoment.endtime)}</CardTitle>
-                        <CardDescription>{selectedMomentIdAndIndex[0] <= ((window_length/3) * 1) ? "Early" : selectedMomentIdAndIndex[0] <= (( window_length/3) * 2) ? "Middle" : "Late"} phase • click different moments to compare changes over time</CardDescription>
+                        <CardDescription>{selectedMomentIdAndIndex[0] <= ((window_length / 3) * 1) ? "Early" : selectedMomentIdAndIndex[0] <= ((window_length / 3) * 2) ? "Middle" : "Late"} phase • click different moments to compare changes over time</CardDescription>
                       </div>
                       {statusBadge(selectedMoment.trenddirection)}
                     </div>
@@ -483,7 +525,7 @@ function CollaborationFeedbackDashboard(props) {
                           <div className="mt-3 space-y-2 text-sm text-muted-foreground">
                             <div>Analytic thinking: <span className="font-medium text-foreground">{selectedMoment.analyticthinking < 50 ? "low" : selectedMoment.analyticthinking > 50 ? "high" : "balanced"}</span></div>
                             <div>Object focus: <span className="font-medium text-foreground">{selectedMoment.objectfocuson}</span></div>
-                            <div>Participation score: <span className="font-medium text-foreground">{ selectedMoment.participationscore < 33 ? "low participation": selectedMoment.participationscore < 67 ? "balanced participation": "high participation"}</span></div>
+                            <div>Participation score: <span className="font-medium text-foreground">{selectedMoment.participationscore < 33 ? "low participation" : selectedMoment.participationscore < 67 ? "balanced participation" : "high participation"}</span></div>
                             <div>Newness: <span className="font-medium text-foreground">{selectedMoment.newness < 50 ? "low" : selectedMoment.newness > 50 ? "high" : "balanced"}</span></div>
                             <div>Verbal share: <span className="font-medium text-foreground">{selectedMoment.verbalshare < 50 ? "low" : selectedMoment.verbalshare > 50 ? "high" : "balanced"}</span></div>
                           </div>

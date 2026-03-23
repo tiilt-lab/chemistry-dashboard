@@ -1024,9 +1024,9 @@ def get_speaker_session_device_llm_report(id=None,username=None, sessionId=None,
     if id != None:
         return query.filter(LLMFeedbackReport.id == id).first()
     if sessionId != None:
-        return query.filter(LLMFeedbackReport.session_id == sessionId)
+        query.filter(LLMFeedbackReport.session_id == sessionId)
     if sessionDeviceId != None:
-        return query.filter(LLMFeedbackReport.session_device_id == sessionDeviceId)
+        query.filter(LLMFeedbackReport.session_device_id == sessionDeviceId)
     if username != None:
         return query.filter(LLMFeedbackReport.speaker_username == username).first()
     return query.all()
