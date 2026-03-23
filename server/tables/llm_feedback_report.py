@@ -15,7 +15,7 @@ class LLMFeedbackReport(db.Model):
     session_device_id = db.Column(db.Integer, db.ForeignKey('session_device.id'), nullable=False)
     speaker_username = db.Column(db.String(64),nullable=False)
     feedback_analysis = db.Column(db.Text, nullable=False)
-    creation_date = db.Column(db.DateTime, nullable=False)
+    creation_date = db.Column(db.DateTime, nullable=False) 
 
     session_device = db.relationship("SessionDevice", back_populates="llmfeedbackreports")
 
