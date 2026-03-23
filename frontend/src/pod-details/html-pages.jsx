@@ -13,7 +13,7 @@ function PodComponentPages(props) {
         <>
             <div className="main-container">
                 <Appheader
-                    title={props.details === "Group" ? props.sessionDevice.name : props.selectedSpkralias}
+                    title={props.details === "Group" || props.details === "Reflection Dashboard" ? props.sessionDevice.name : props.selectedSpkralias}
                     leftText={false}
                     rightText={"Option"}
                     rightEnabled={true}
@@ -56,7 +56,7 @@ function PodComponentPages(props) {
                             <CollaborationFeedbackDashboard
                                 participants = {props.participants}
                                 currentParticipant = {props.currentParticipant}
-                                llmSessionAnalysis = {props.llmSessionAnalysis}
+                                llmSessionAnalysis = {props.selectedParticipantLLMAnalysis}
                                 selectedParticipantSynthesizedData = {props.selectedParticipantSynthesizedData}
                                 setParticipantRefectionID = {props.setParticipantRefectionID}
                             />

@@ -27,6 +27,7 @@ from tables.topic_model import TopicModel
 from tables.speaker import Speaker
 from tables.speaker_transcript_metrics import SpeakerTranscriptMetrics
 from tables.speaker_video_metrics import SpeakerVideoMetrics
+from tables.llm_feedback_report import LLMFeedbackReport
 
 # Saves changes made to database (models)
 def save_changes():
@@ -1013,3 +1014,52 @@ def get_dependents(folder_id = None):
         for folder in folders:
             children.insert(0,folder)
     return dependents
+
+# -------------------------
+# LLM Data
+# -------------------------
+
+def get_speaker_session_device_llm_report(id=None,username=None, sessionId=None, sessionDeviceId = None):
+    query = db.session.query(LLMFeedbackReport)
+    if id != None:
+        return query.filter(LLMFeedbackReport.id == id).first()
+    if sessionId != None:
+        return query.filter(LLMFeedbackReport.session_id == sessionId)
+    if sessionDeviceId != None:
+        return query.filter(LLMFeedbackReport.session_device_id == sessionDeviceId)
+    if username != None:
+        return query.filter(LLMFeedbackReport.speaker_username == username).first()
+    return query.all()
+
+def add_speaker_session_device_llm_report(username, sessionId, sessionDeviceId,feedback_analysis):
+    matched_feedback_analysis = get_speaker_session_device_llm_report(username=username, sessionId=sessionId, sessionDeviceId = sessionDeviceId)
+    if matched_feedback_analysis:
+        return False, matched_feedback_analysis
+    feedback = LLMFeedbackReport(sessionId, sessionDeviceId, username,feedback_analysis)
+    db.session.add(feedback)
+    db.session.commit()
+    return True, feedback
+
+def update_speaker_session_device_llm_report(id, username=None, sessionId=None, sessionDeviceId=None,feedback_analysis=None):
+    feedback = get_speaker_session_device_llm_report(id=id)
+    if feedback:
+        db_change = False
+        if sessionId:
+            feedback.session_id = sessionId
+            db_change = True
+        if sessionDeviceId:
+            feedback.session_device_id = sessionDeviceId
+            db_change = True
+        if username:
+            feedback.speaker_username = username 
+            db_change = True  
+        if feedback_analysis:
+            feedback.feedback_analysis = feedback_analysis 
+            db_change = True   
+        
+        if db_change:
+            db.session.commit()
+
+        return True,feedback
+    return False, None
+   
