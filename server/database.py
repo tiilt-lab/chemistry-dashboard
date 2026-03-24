@@ -28,6 +28,7 @@ from tables.speaker import Speaker
 from tables.speaker_transcript_metrics import SpeakerTranscriptMetrics
 from tables.speaker_video_metrics import SpeakerVideoMetrics
 from tables.llm_feedback_report import LLMFeedbackReport
+from tables.llm_question_answer import LLMQuestionAnswer
 
 # Saves changes made to database (models)
 def save_changes():
@@ -1061,5 +1062,57 @@ def update_speaker_session_device_llm_report(id, username=None, sessionId=None, 
             db.session.commit()
 
         return True,feedback
+    return False, None
+
+def get_speaker_session_device_llm_question_answer(id=None,username=None, sessionId=None, sessionDeviceId = None,default_question_id=None):
+    query = db.session.query(LLMQuestionAnswer)
+    if id != None:
+        return query.filter(LLMQuestionAnswer.id == id).first()
+    if sessionId != None:
+        query.filter(LLMQuestionAnswer.session_id == sessionId)
+    if sessionDeviceId != None:
+        query.filter(LLMQuestionAnswer.session_device_id == sessionDeviceId)
+    if username != None:
+        query.filter(LLMQuestionAnswer.speaker_username == username)
+    if default_question_id != None:
+        return query.filter(LLMQuestionAnswer.default_question_id == default_question_id).first()    
+    return query.all()
+
+def add_speaker_session_device_llm_question_answer(username, sessionId, sessionDeviceId,default_question_id,question,answer):
+    matched_response = get_speaker_session_device_llm_question_answer(username=username, sessionId=sessionId, sessionDeviceId = sessionDeviceId)
+    if matched_response:
+        return False, matched_response
+    response = LLMQuestionAnswer(sessionId, sessionDeviceId, username,default_question_id,question,answer)
+    db.session.add(response)
+    db.session.commit()
+    return True, response
+
+def update_speaker_session_device_llm_question_answer(id, username=None, sessionId=None, sessionDeviceId=None,default_question_id=None,question=None,answer=None):
+    response = get_speaker_session_device_llm_question_answer(id=id)
+    if response:
+        db_change = False
+        if sessionId:
+            response.session_id = sessionId
+            db_change = True
+        if sessionDeviceId:
+            response.session_device_id = sessionDeviceId
+            db_change = True
+        if username:
+            response.speaker_username = username 
+            db_change = True  
+        if default_question_id:
+            response.default_question_id = default_question_id 
+            db_change = True 
+        if question:
+            response.question = question 
+            db_change = True 
+        if answer:
+            response.answer = answer 
+            db_change = True           
+        
+        if db_change:
+            db.session.commit()
+
+        return True,response
     return False, None
    

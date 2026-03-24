@@ -13,151 +13,11 @@ import { MessageSquare, Brain, Clock3, Sparkles, Users, User, Eye, Mic, Activity
 
 import { AppSectionBoxComponent } from "../section-box/section-box-component"
 
-const participantsMetric = [
-  {
-    id: "noahh",
-    name: "Noah",
-    overall: {
-      verbalParticipation: 22,
-      turnShare: 19,
-      ideaContribution: 14,
-      responsivity: 18,
-      taskFocus: 67,
-      summary:
-        "You stayed fairly task-focused, but your spoken contributions were less frequent and were more likely to clarify than extend peers' ideas.",
-      strengths: ["Sustained task attention", "Occasional balanced contribution"],
-      growth: ["Build more directly on peer ideas", "Increase verbal contribution in key moments"],
-    },
-  },
-  {
-    id: "hellohelio",
-    name: "Helio",
-    overall: {
-      verbalParticipation: 39,
-      turnShare: 34,
-      ideaContribution: 28,
-      responsivity: 24,
-      taskFocus: 81,
-      summary:
-        "You were one of the more active speakers and remained highly task-focused, though some contributions could connect more explicitly to teammate ideas.",
-      strengths: ["High verbal presence", "Strong task focus"],
-      growth: ["Improve idea linkage", "Balance speaking with collaborative uptake"],
-    },
-  },
-  {
-    id: "mondrian",
-    name: "Mondrian",
-    overall: {
-      verbalParticipation: 11,
-      turnShare: 9,
-      ideaContribution: 8,
-      responsivity: 12,
-      taskFocus: 54,
-      summary:
-        "You contributed selectively and appeared to shift between observing peers and the task, with fewer moments of verbal idea building.",
-      strengths: ["Peer monitoring", "Selective contribution"],
-      growth: ["Speak more often", "Increase idea-building moves"],
-    },
-  },
-];
-
-const timelineData = [
-  {
-    id: 1,
-    range: "18:44–18:57",
-    phase: "Early",
-    focus: 92,
-    participation: 74,
-    idea: 68,
-    responsivity: 45,
-    emotion: "cognitive strain",
-    transcript: "What's the difference between? What's the difference?",
-    metrics: {
-      attentionClass: "high and stable",
-      objectFocus: "shared task artifact",
-      participationScore: "dominant participation",
-      newness: "high",
-      responsivity: "low",
-    },
-    llmExplanation:
-      "This moment suggests active verbal engagement and strong task focus. You appeared to be pressing for clarification, which can help move the group forward, though the contribution seems more question-driven than explicitly connected to a peer's prior idea.",
-    reflectionQuestion: "How might you connect your question to what a teammate just said to deepen shared reasoning?",
-  },
-  {
-    id: 2,
-    range: "18:85–19:03",
-    phase: "Middle",
-    focus: 70,
-    participation: 52,
-    idea: 29,
-    responsivity: 22,
-    emotion: "strain / uncertainty",
-    transcript: "I don't know if that's... I don't know. You're definitely doing something. Yeah.",
-    metrics: {
-      attentionClass: "medium and decreasing",
-      objectFocus: "laptop",
-      participationScore: "balanced participation",
-      newness: "low",
-      responsivity: "low",
-    },
-    llmExplanation:
-      "Here, participation is present, but the contribution looks tentative and may reflect uncertainty or partial agreement. The analytics suggest you were engaged, but not strongly extending or integrating group ideas.",
-    reflectionQuestion: "What evidence could you have added here to move from uncertainty to idea building?",
-  },
-  {
-    id: 3,
-    range: "19:19–19:29",
-    phase: "Late",
-    focus: 8,
-    participation: 18,
-    idea: 10,
-    responsivity: 12,
-    emotion: "low signal",
-    transcript: "Yeah, I don't know what I'm sure. There's some side of that. Yeah.",
-    metrics: {
-      attentionClass: "no attention",
-      objectFocus: "not captured",
-      participationScore: "minimal participation",
-      newness: "low",
-      responsivity: "low",
-    },
-    llmExplanation:
-      "This appears to be a lower-engagement moment. The system detected a drop in visual task focus and only a limited verbal contribution. It may represent fatigue, uncertainty, or a transition point in the discussion rather than disengagement alone.",
-    reflectionQuestion: "What was happening in the group here, and what might have helped you re-enter more actively?",
-  },
-  {
-    id: 4,
-    range: "19:79–19:89",
-    phase: "Late",
-    focus: 12,
-    participation: 34,
-    idea: 14,
-    responsivity: 16,
-    emotion: "low signal",
-    transcript: "...makes it like if it was the example before with...",
-    metrics: {
-      attentionClass: "no attention",
-      objectFocus: "not captured",
-      participationScore: "minimal participation",
-      newness: "low",
-      responsivity: "low",
-    },
-    llmExplanation:
-      "This moment may show an attempt to reference an earlier example, which could be the start of idea linking. However, the overall signal still suggests limited uptake and low visible focus in this segment.",
-    reflectionQuestion: "Could this have been a stronger bridge back to an earlier group idea?",
-  },
-];
-
-const groupMetrics = [
-  { label: "Participation balance", value: 64, note: "How evenly talk was distributed" },
-  { label: "Shared focus", value: 71, note: "How often members converged on the task artifact" },
-  { label: "Idea relay", value: 42, note: "How often one idea was picked up by another person" },
-  { label: "Recovery capacity", value: 53, note: "How well the group bounced back after dips" },
-];
 
 function CollaborationFeedbackDashboard(props) {
   const selectedParticipantId = props.currentParticipant;
   const llmresponse_session_summary = props.llmSessionAnalysis.Session_summary
+  const llmresponse_session_metric_summary = llmresponse_session_summary.Session_metric_summary
   const llmresponse_group_summary = props.llmSessionAnalysis.Group_summary
   const llmresponse_window_summary = props.llmSessionAnalysis.Window_summary
   const selectedParticipantData = props.selectedParticipantSynthesizedData
@@ -166,12 +26,15 @@ function CollaborationFeedbackDashboard(props) {
   const [selectedMoment, setSelectedMoment] = useState(selectedParticipantData.participant_level_metric[0])
   const [question, setQuestion] = useState("");
 
-  console.log("selected moment ", selectedMoment.windowid, selectedMomentIdAndIndex[1])
 
   useEffect(() => {
     setSelectedMoment(selectedParticipantData.participant_level_metric.find((m) => m.windowid === selectedMomentIdAndIndex[1]))
   }, [selectedMomentIdAndIndex]);
 
+  useEffect(()=>{
+    setSelectedMoment(selectedParticipantData.participant_level_metric[0])
+  },[selectedParticipantId])
+  
   const formatSeconds = (s) => {
     const date = new Date(1000 * Math.floor(s));
     return date.toISOString().substr(11, 8);
@@ -233,13 +96,13 @@ function CollaborationFeedbackDashboard(props) {
 
   function toneClass(value) {
   if (value >= 75) return "bg-emerald-500";
-  if (value >= 45) return "bg-amber-400";
+  if (value >= 50) return "bg-amber-400";
   return "bg-rose-500";
 }
 
 function toneSurface(value) {
   if (value >= 75) return "border-emerald-200 bg-emerald-50";
-  if (value >= 45) return "border-amber-200 bg-amber-50";
+  if (value >= 50) return "border-amber-200 bg-amber-50";
   return "border-rose-200 bg-rose-50";
 }
 
@@ -372,38 +235,154 @@ function toneSurface(value) {
               <div className="grid gap-6 lg:grid-cols-[.8fr_.7fr_1fr]">
                 <Card className="rounded-3xl border-0 shadow-sm">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-xl"><Activity className="h-5 w-5" />Computed collaboration indicators</CardTitle>
-                    <CardDescription>These are deterministic session-level measure of relevant collaboration quality indicators.</CardDescription>
+                    <CardTitle className="flex items-center gap-2 text-xl"><Activity className="h-5 w-5" />Individual collaboration indicators</CardTitle>
+                    <CardDescription>These are your session-level measure of relevant collaboration quality indicators.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-5">
-                        <MetricBar label="Verbal participation" value={selectedParticipantData["session_level_metric"].avg_verbalshare} hint="share of spoken contribution" emphasize={selectedParticipantData["session_level_metric"].avg_verbalshare < 50 ? "risk" : "good"} />
+                        <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.session_level_metric.avg_verbalshare)}`}>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-semibold">Verbal participation</div>
+                                <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary.avg_verbalshare}</div>
+                              </div>
+                              <div className="text-lg font-bold">{selectedParticipantData.session_level_metric.avg_verbalshare}%</div>
+                            </div>
+                            <div className="mt-4 h-2 rounded-full bg-white/70">
+                              <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.session_level_metric.avg_verbalshare)}`} style={{ width: `${selectedParticipantData.session_level_metric.avg_verbalshare}%` }} />
+                            </div>
+                        </div>
+
+                         <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.session_level_metric.avg_turntaking)}`}>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-semibold">Turn taking share</div>
+                                <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary.avg_turntaking}</div>
+                              </div>
+                              <div className="text-lg font-bold">{selectedParticipantData.session_level_metric.avg_turntaking}%</div>
+                            </div>
+                            <div className="mt-4 h-2 rounded-full bg-white/70">
+                              <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.session_level_metric.avg_turntaking)}`} style={{ width: `${selectedParticipantData.session_level_metric.avg_turntaking}%` }} />
+                            </div>
+                        </div>
+
+                         <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.session_level_metric.avg_focusscore)}`}>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-semibold">Task focus</div>
+                                <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary.avg_focusscore}</div>
+                              </div>
+                              <div className="text-lg font-bold">{selectedParticipantData.session_level_metric.avg_focusscore}%</div>
+                            </div>
+                            <div className="mt-4 h-2 rounded-full bg-white/70">
+                              <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.session_level_metric.avg_focusscore)}`} style={{ width: `${selectedParticipantData.session_level_metric.avg_focusscore}%` }} />
+                            </div>
+                        </div>
+
+                         <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.session_level_metric.avg_ideacontributionscore)}`}>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-semibold">Idea contribution</div>
+                                <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary.avg_ideacontributionscore}</div>
+                              </div>
+                              <div className="text-lg font-bold">{selectedParticipantData.session_level_metric.avg_ideacontributionscore}%</div>
+                            </div>
+                            <div className="mt-4 h-2 rounded-full bg-white/70">
+                              <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.session_level_metric.avg_ideacontributionscore)}`} style={{ width: `${selectedParticipantData.session_level_metric.avg_ideacontributionscore}%` }} />
+                            </div>
+                        </div>
+
+                         <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.session_level_metric.avg_momentum)}`}>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-semibold">Momentum</div>
+                                <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary.avg_momentum}</div>
+                              </div>
+                              <div className="text-lg font-bold">{selectedParticipantData.session_level_metric.avg_momentum}%</div>
+                            </div>
+                            <div className="mt-4 h-2 rounded-full bg-white/70">
+                              <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.session_level_metric.avg_momentum)}`} style={{ width: `${selectedParticipantData.session_level_metric.avg_momentum}%` }} />
+                            </div>
+                        </div>
+                        {/* <MetricBar label="Verbal participation" value={selectedParticipantData["session_level_metric"].avg_verbalshare} hint="share of spoken contribution" emphasize={selectedParticipantData["session_level_metric"].avg_verbalshare < 50 ? "risk" : "good"} />
                         <MetricBar label="Turn share" value={selectedParticipantData["session_level_metric"].avg_turntaking} hint="share of speaking windows" emphasize={selectedParticipantData["session_level_metric"].avg_turntaking < 50 ? "risk" : "good"} />
-                        <MetricBar label="Idea contribution" value={selectedParticipantData["session_level_metric"].avg_ideacontributionscore} hint="novel or extending moves" emphasize={selectedParticipantData["session_level_metric"].avg_ideacontributionscore < 50 ? "risk" : "good"} />
-                        <MetricBar label="Responsivity" value={selectedParticipantData["session_level_metric"].avg_responsivity} hint="direct peer uptake" emphasize={selectedParticipantData["session_level_metric"].avg_responsivity < 50 ? "risk" : "good"} />
                         <MetricBar label="Task focus" value={selectedParticipantData["session_level_metric"].avg_focusscore} hint="task-oriented attention windows" emphasize={selectedParticipantData["session_level_metric"].avg_focusscore < 50 ? "risk" : "good"} />
+                        <MetricBar label="Idea contribution" value={selectedParticipantData["session_level_metric"].avg_ideacontributionscore} hint="novel or extending moves" emphasize={selectedParticipantData["session_level_metric"].avg_ideacontributionscore < 50 ? "risk" : "good"} />
+                        <MetricBar label="Momentum" value={selectedParticipantData["session_level_metric"].avg_momentum} hint="direct peer uptake" emphasize={selectedParticipantData["session_level_metric"].avg_momentum < 50 ? "risk" : "good"} /> */}
                   </CardContent>
                 </Card>
 
                 <Card className="rounded-[28px] border-0 bg-white/90 shadow-sm">
                       <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-xl"><Users className="h-5 w-5" />Group pulse board</CardTitle>
-                        <CardDescription>Additional group-level measures derived from the same underlying signals.</CardDescription>
+                        <CardTitle className="flex items-center gap-2 text-xl"><Users className="h-5 w-5" />Group collaboration indicators</CardTitle>
+                        <CardDescription>Group-level Performace provided to give you an insight of how your contributions impacted group outcomes.</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        {groupMetrics.map((item) => (
-                          <div key={item.label} className={`rounded-3xl border p-4 ${toneSurface(item.value)}`}>
+                        
+                          <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.group_level_metric.verbalparticipationbalance)}`}>
                             <div className="flex items-center justify-between">
                               <div>
-                                <div className="font-semibold">{item.label}</div>
-                                <div className="text-sm text-muted-foreground">{item.note}</div>
+                                <div className="font-semibold">Verbal participation balance</div>
+                                <div className="text-sm text-muted-foreground">{llmresponse_group_summary.verbalparticipationbalance}</div>
                               </div>
-                              <div className="text-3xl font-bold">{item.value}</div>
+                              <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.verbalparticipationbalance}%</div>
                             </div>
                             <div className="mt-4 h-2 rounded-full bg-white/70">
-                              <div className={`h-2 rounded-full ${toneClass(item.value)}`} style={{ width: `${item.value}%` }} />
+                              <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.group_level_metric.verbalparticipationbalance)}`} style={{ width: `${selectedParticipantData.group_level_metric.verbalparticipationbalance}%` }} />
                             </div>
                           </div>
-                        ))}
+
+                          <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.group_level_metric.turntakingbalance)}`}>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-semibold">Turn taking balance</div>
+                                <div className="text-sm text-muted-foreground">{llmresponse_group_summary.turntakingbalance}</div>
+                              </div>
+                              <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.turntakingbalance}%</div>
+                            </div>
+                            <div className="mt-4 h-2 rounded-full bg-white/70">
+                              <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.group_level_metric.turntakingbalance)}`} style={{ width: `${selectedParticipantData.group_level_metric.turntakingbalance}%` }} />
+                            </div>
+                          </div>
+
+                          <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.group_level_metric.Sharedtaskfocus)}`}>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-semibold">Shared task focus</div>
+                                <div className="text-sm text-muted-foreground">{llmresponse_group_summary.Sharedtaskfocus}</div>
+                              </div>
+                              <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.Sharedtaskfocus}%</div>
+                            </div>
+                            <div className="mt-4 h-2 rounded-full bg-white/70">
+                              <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.group_level_metric.Sharedtaskfocus)}`} style={{ width: `${selectedParticipantData.group_level_metric.Sharedtaskfocus}%` }} />
+                            </div>
+                          </div>
+
+                            <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.group_level_metric.ideacontribution)}`}>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-semibold">Idea contribution balance</div>
+                                <div className="text-sm text-muted-foreground">{llmresponse_group_summary.ideacontribution}</div>
+                              </div>
+                              <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.ideacontribution}%</div>
+                            </div>
+                            <div className="mt-4 h-2 rounded-full bg-white/70">
+                              <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.group_level_metric.ideacontribution)}`} style={{ width: `${selectedParticipantData.group_level_metric.ideacontribution}%` }} />
+                            </div>
+                          </div>
+
+                          <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.group_level_metric.momentum)}`}>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="font-semibold">Momentum</div>
+                                <div className="text-sm text-muted-foreground">{llmresponse_group_summary.momentum}</div>
+                              </div>
+                              <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.momentum}%</div>
+                            </div>
+                            <div className="mt-4 h-2 rounded-full bg-white/70">
+                              <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.group_level_metric.momentum)}`} style={{ width: `${selectedParticipantData.group_level_metric.momentum}%` }} />
+                            </div>
+                          </div>
+                       
                       </CardContent>
 
                     </Card>
@@ -445,10 +424,6 @@ function toneSurface(value) {
                         ))}
                       </ul>
                     </div>
-
-                    {/* <div className="rounded-2xl border border-dashed p-4 text-sm text-muted-foreground">
-                      What to work on: {llmresponse.Confidence}
-                    </div> */}
                   </CardContent>
                 </Card>
               </div>
