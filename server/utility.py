@@ -54,10 +54,11 @@ def particiapant_only_session_prompt(data):
         "Concerns": ["...", "..."],
         "Actions": ["...", "..."],
         "Evidences": ["..","..."],
-        "Confidence": "..."
+        "Confidence": "...",
+        "Session_metric_summary:{{session_metric_key: "...", session_metric_key:"..."}}"
         }},
         "Window_summary":{{ "window_id" : {{"Summary": "...", "Action": "..."}}, "window_id":{{"Summary": "...","Action": "..."}}}},
-        "Group_summary": ["...","..."] 
+        "Group_summary": {{group_metric_key: "...", group_metric_key:"..."}} 
         }}
 
         -------------------------------------
@@ -91,18 +92,77 @@ def particiapant_only_session_prompt(data):
         - Don't incorporate raw metric values in the summary text response, but placed them in the evidence field of the response
         - Ensure the responses are not just reporting observations from the metrics, but drawing insights, synthesis and suggestive conclusions
         - Leverage the window timeline to determine time frame session e.g early, mid or late that are strong or declining zones. Also, you can leverage the trenddirection where 0 means stable, 1 increase and -1 decline
-        - In identifying these zones, communicate the response for Strongzone, Declinezone and Sessionpattern in not more than 12 words. 
+        - In identifying these zones, communicate the response for Strongzone, Declinezone and Sessionpattern in atleast 12 words and not more than 15 words. 
         - Ensure you use formative and suggesting language while communicating the insights
         - Do NOT include markdown or backticks
         - For window_by_window_summary, use the windw by window data in participation_level_metrics to provide summary and action for each window. replace the key window_id with the actual window id
-        - For Group_summary, provide synthesized respose per metrics
+        - For Group_summary, provide synthesized response per metrics in atleast 8 words and not more than 10 word. use same keyname of the group_level_metric object for the key of the response
+        - For Session_metric_summary provide synthesized response per metrics in atleast 8 words and not more than 10 word. use same keyname of the session_level_metric object for the key of the response.
         - provide a level of confidence, including an berief explanation of influenced the level of confidence in your analysis. please present it in 'Confidence field' of the structured output
         - Use second person framing
         - Note that all the values for the metrics are scaled to 100 percent except for trendingdirection,gazeontask,word count. This should be considered during the analysis 
         """
+def particiapant_interactive_prompt(data):
+    return f"""
+        You are a collaborative learning analytics assistant.
+        Your task is to analyze collaboration quality metrics data and return structured feedback.
+
+        -------------------------------------
+        OUTPUT FORMAT (MANDATORY)
+        -------------------------------------
+        Return ONLY valid JSON in this exact structure:
+
+        {"Session_summary": {{
+        "Summary": "...",
+        "Computedmetricsused": ["...", "..."],
+        "Evidence windows": ["windowid","windowid"],
+        "Confidence": "...",
+        }}}
+
+        -------------------------------------
+        DATA TO ANALYZE
+        -------------------------------------
+        Participant name: 
+        {data.get("participant_name", "")}
+        
+        window by window metric:
+        {json.dumps(data.get("window_level_metric", {}), indent=2)}
+
+        Session Data:
+        {json.dumps(data.get("session_level_metric", {}), indent=2)}
+
+        Group summary:
+        {json.dumps(data.get("group_level_metric", {}), indent=2)}
+
+
+        User question:
+        {data.get("user_question", data.get("question", ""))}
+
+        -------------------------------------
+        INSTRUCTIONS
+        -------------------------------------
+        - Be concise and specific and provide response in not more than 50 words
+        - Use only the provided data
+        - Do NOT hallucinate missing information
+        - Ground all claims in the window-by-window containing other participants information, session data and group summary.
+        - Provide actionable and practical suggestions
+        - Do NOT include any explanation outside JSON
+        - Don't incorporate raw metric values in the summary text response, but placed them in the evidence field of the response
+        - Ensure the responses are not just reporting observations from the metrics, but drawing insights, synthesis and suggestive conclusions by analyzing all the data provided, finding pattern between participants,
+        - across windows, session_data and group summary.
+        - Ensure you use formative and suggesting language while communicating the insights. Response should aim to help the student improve and where they did well should also be projected
+        - Do NOT include markdown or backticks
+        - provide a level of confidence, including an berief explanation of influenced the level of confidence in your analysis. please present it in 'Confidence field' of the structured output
+        - Use second person framing
+        - Note that all the values for the metrics are scaled to 100 percent except for trendingdirection,gazeontask,word count. This should be considered during the analysis 
+        """
+
 def build_prompt(data, type):
     if type == "Session_level analysis for participant":
         return particiapant_only_session_prompt(data)
+    
+    if type == "Interactive question answer":
+        return particiapant_interactive_prompt(data)
 
 def compute_median_and_mad(values):
     median = np.median(values)

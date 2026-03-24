@@ -10,6 +10,7 @@ import { SpeakerModel } from "../models/speaker";
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { PodComponentPages } from "./html-pages";
+import { Question } from "@/Icons";
 
 function PodComponent() {
   const [sessionDevice, setSessionDevice] = useState({});
@@ -50,6 +51,7 @@ function PodComponent() {
   const selectedParticipantSynthesizedData = useRef({})
   const selectedParticipantLLMAnalysis = useRef(null)
   const llmSessionAnalysis = useRef({})
+  const promptHistory = useRef([])
   const [currentParticipant,setCurrentParticipant] = useState("")
   const navigate = useNavigate();
 
@@ -444,9 +446,9 @@ function PodComponent() {
     setDetails(view);
   };
 
-  const buildData = (reporttype, participantId) => {
+  const buildData = (reporttype, participantId,defaultQuestionId,question) => {
     let retObj = {}
-    if (reporttype === "Participant_level_sesssion_analysis") {
+    if (reporttype === "Participant level sesssion analysis") {
       retObj["participant_name"] = participantId
       retObj["sessionid"] = sessionId
       retObj["sessiondeviceid"] = sessionDeviceId
@@ -454,13 +456,23 @@ function PodComponent() {
       retObj["participant_level_metric"] = synthesizedFeedbackMetrics.current["participants_level"][participantId]
       retObj["session_level_metric"] = synthesizedFeedbackMetrics.current["session_level"][participantId]
       retObj["group_level_metric"] = synthesizedFeedbackMetrics.current["group_level"]
+    }else if (reporttype === "interactive prompting"){
+      retObj["participant_name"] = participantId
+      retObj["sessionid"] = sessionId
+      retObj["sessiondeviceid"] = sessionDeviceId
+      retObj["retrieve_existing_answer"] = "true"
+      retObj["default_question_id"] = defaultQuestionId
+      retObj["question"] = question
+      retObj["window_level_metric"] = synthesizedFeedbackMetrics.current["window_level"]
+      retObj["session_level_metric"] = synthesizedFeedbackMetrics.current["session_level"]
+      retObj["group_level_metric"] = synthesizedFeedbackMetrics.current["group_level"]
     }
 
     return retObj
   }
 
   const extractParticipantData = async (participantId) => {
-    let respObj = buildData("Participant_level_sesssion_analysis", participantId)
+    let respObj = buildData("Participant level sesssion analysis", participantId,null,null)
 
     if (!respObj || Object.keys(respObj).length === 0) {
       return false;
@@ -482,6 +494,7 @@ function PodComponent() {
         const jsonObj = await response.json()
         llmSessionAnalysis.current[participantId] = jsonObj.answer;
         selectedParticipantLLMAnalysis.current = llmSessionAnalysis.current[participantId]
+        loadprompthistory(participantId)
         console.log(selectedParticipantLLMAnalysis.current)
         setCurrentForm("");
         return true
@@ -499,6 +512,24 @@ function PodComponent() {
     }
   }
 
+  const loadprompthistory = async (participantId)=>{
+    try {
+      const response = await new SessionService().get_llm_question_answer_interactions(sessionId,sessionDeviceId,participantId);
+
+      if (response.status === 200) {
+        const jsonObj = await response.json()
+        promptHistory.current = jsonObj
+      } else if (response.status === 400) {
+        console.log("LLM api response", response.message)
+      }
+    } catch (error) {
+      console.log(
+        "podcomponent loadprompthistory",
+        error,
+      )
+    }
+  }
+
   const loadReflectiondashboard = async (view) => {
       let actionstatus = await extractParticipantData(participants.current[0])
       if (actionstatus) {
@@ -507,6 +538,16 @@ function PodComponent() {
       }
   };
 
+  const interactivePrompt = async(participantId,question,default_question_id) =>{
+    let respObj = buildData("Participant level sesssion analysis", participantId,null,null)
+    const existingPrompt = promptHistory.current.find(p => p?.default_question_id === default_question_id)?? null;
+
+    if(existingPrompt !== null){
+
+    }else{
+      
+    }
+  }
 
 
   const loadSpeakerMetrics = (speakerId, speakrAlias) => {
@@ -563,6 +604,8 @@ function PodComponent() {
       participants={participants.current}
       selectedParticipantLLMAnalysis={selectedParticipantLLMAnalysis.current}
       selectedParticipantSynthesizedData={selectedParticipantSynthesizedData.current}
+      promptHistory = {promptHistory.current}
+      interactivePrompt = {interactivePrompt}
       setParticipantRefectionID={setParticipantRefectionID}
       currentParticipant={currentParticipant}
     />

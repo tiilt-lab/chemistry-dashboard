@@ -322,6 +322,14 @@ class SessionService {
     );
   }
 
+  get_llm_question_answer_interactions(sessionId, sessionDeviceId,username) {
+    return this.api.httpRequestCall(
+      `api/v1/llminteractiveprompting/sessionid/${sessionId}/device/${sessionDeviceId}/username/${username}`,
+      "GET",
+      {}
+    );
+  } 
+
   getFolders() {
     return this.api.httpRequestCall(`api/folders`, "GET", {});
   }

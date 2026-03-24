@@ -17,6 +17,7 @@ class SessionDevice(db.Model):
     
     speakers = db.relationship("Speaker", back_populates="session_device", cascade="all, delete",passive_deletes=True)
     llmfeedbackreports = db.relationship("LLMFeedbackReport", back_populates="session_device", cascade="all, delete",passive_deletes=True)
+    llmquestionanswer = db.relationship("LLMQuestionAnswer", back_populates="session_device", cascade="all, delete",passive_deletes=True)
 
     UniqueConstraint('session_id', 'name', name='unique_session_name')
 
