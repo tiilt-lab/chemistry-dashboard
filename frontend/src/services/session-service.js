@@ -322,6 +322,14 @@ class SessionService {
     );
   }
 
+  getLLMPromptResponse(metricData) {
+    return this.api.httpRequestCall(
+      `api/v1/llmqueries/fetch_response_for_question`,
+      "POST",
+      metricData
+    );
+  }
+
   get_llm_question_answer_interactions(sessionId, sessionDeviceId,username) {
     return this.api.httpRequestCall(
       `api/v1/llminteractiveprompting/sessionid/${sessionId}/device/${sessionDeviceId}/username/${username}`,

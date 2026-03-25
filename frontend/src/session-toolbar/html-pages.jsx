@@ -4,6 +4,7 @@ import { GenericDialogBox } from "../dialog/dialog-component"
 import { AppSpinner } from "../spinner/spinner-component"
 import React from "react"
 import { isLargeScreen } from "../myhooks/custom-hooks"
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 function AppSessionPage(props) {
     return (
@@ -24,39 +25,43 @@ function AppSessionPage(props) {
                     <div className="flex relative max-w-4/6 flex-1 flex-row items-center justify-center sm:w-min sm:flex-col sm:max-w-full 
                                 border-2 border-blue-500 rounded-lg px-2 mt-8 before:content-[attr(data-label)] 
                     before:absolute before:-top-3 before:left-4  before:px-2 before:bg-white before:text-blue-500 before:font-semibold"
-                            data-label="Participants">
-                    {props.speakers.map((part, index) => (
-                        
-                            <button
-                                className="toolbar-button"
-                                onClick={part.action}
-                                key={index}
-                            >{`${part.alias}`}</button>
-                        
-                    ))
-                }
-                </div>) :
+                        data-label="Participants">
+                        <ScrollArea className="h-[180px] pr-3">
+                            {props.speakers.map((part, index) => (
+
+                                <button
+                                    className="toolbar-button"
+                                    onClick={part.action}
+                                    key={index}
+                                >{`${part.alias}`}</button>
+
+                            ))
+                            }
+                        </ScrollArea>
+                    </div>) :
 
                     (
                         <></>
                     )}
 
-                    {props.seesions && props.seesions.length !== 0 ? (
+                {props.seesions && props.seesions.length !== 0 ? (
                     <div className="flex relative max-w-4/6 flex-1 flex-row items-center justify-center sm:w-min sm:flex-col sm:max-w-full 
                                 border-2 border-blue-500 rounded-lg px-2 mt-8 before:content-[attr(data-label)] 
                     before:absolute before:-top-3 before:left-4  before:px-2 before:bg-white before:text-blue-500 before:font-semibold"
-                            data-label="Sessions">
-                    {props.seesions.map((part, index) => (
-                        
-                            <button
-                                className="toolbar-button"
-                                onClick={part.action}
-                                key={index}
-                            >{`${part.title}`}</button>
-                        
-                    ))
-                }
-                </div>) :
+                        data-label="Sessions">
+                        <ScrollArea className="h-[180px] pr-3">
+                            {props.seesions.map((part, index) => (
+
+                                <button
+                                    className="toolbar-button"
+                                    onClick={part.action}
+                                    key={index}
+                                >{`${part.title}`}</button>
+
+                            ))
+                            }
+                        </ScrollArea>
+                    </div>) :
 
                     (
                         <></>

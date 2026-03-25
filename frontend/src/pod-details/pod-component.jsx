@@ -51,8 +51,10 @@ function PodComponent() {
   const selectedParticipantSynthesizedData = useRef({})
   const selectedParticipantLLMAnalysis = useRef(null)
   const llmSessionAnalysis = useRef({})
-  const promptHistory = useRef([])
-  const [currentParticipant,setCurrentParticipant] = useState("")
+  const promptHistory = useRef({})
+  const [currentParticipant, setCurrentParticipant] = useState("")
+  const promptResponses = useRef([])
+  const [isThinking,setIsThinking] = useState(false)
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -102,7 +104,7 @@ function PodComponent() {
             response.json().then((jsonObj) => {
               synthesizedFeedbackMetrics.current = jsonObj;
               participants.current = Object.keys(synthesizedFeedbackMetrics.current["participants_level"])
-              console.log("synthesized metric ", synthesizedFeedbackMetrics.current)
+              // console.log("synthesized metric ", synthesizedFeedbackMetrics.current)
             });
         },
         (apierror) => {
@@ -446,7 +448,7 @@ function PodComponent() {
     setDetails(view);
   };
 
-  const buildData = (reporttype, participantId,defaultQuestionId,question) => {
+  const buildData = (reporttype, participantId, defaultQuestionId, question) => {
     let retObj = {}
     if (reporttype === "Participant level sesssion analysis") {
       retObj["participant_name"] = participantId
@@ -456,7 +458,7 @@ function PodComponent() {
       retObj["participant_level_metric"] = synthesizedFeedbackMetrics.current["participants_level"][participantId]
       retObj["session_level_metric"] = synthesizedFeedbackMetrics.current["session_level"][participantId]
       retObj["group_level_metric"] = synthesizedFeedbackMetrics.current["group_level"]
-    }else if (reporttype === "interactive prompting"){
+    } else if (reporttype === "interactive prompting") {
       retObj["participant_name"] = participantId
       retObj["sessionid"] = sessionId
       retObj["sessiondeviceid"] = sessionDeviceId
@@ -472,16 +474,16 @@ function PodComponent() {
   }
 
   const extractParticipantData = async (participantId) => {
-    let respObj = buildData("Participant level sesssion analysis", participantId,null,null)
+    let respObj = buildData("Participant level sesssion analysis", participantId, null, null)
 
     if (!respObj || Object.keys(respObj).length === 0) {
       return false;
     }
 
     selectedParticipantSynthesizedData.current = respObj
-    console.log("input data ", selectedParticipantSynthesizedData.current)
-    
-    if (participantId in  llmSessionAnalysis.current){
+    // console.log("input data ", selectedParticipantSynthesizedData.current)
+
+    if (participantId in llmSessionAnalysis.current) {
       selectedParticipantLLMAnalysis.current = llmSessionAnalysis.current[participantId]
       return true
     }
@@ -495,7 +497,7 @@ function PodComponent() {
         llmSessionAnalysis.current[participantId] = jsonObj.answer;
         selectedParticipantLLMAnalysis.current = llmSessionAnalysis.current[participantId]
         loadprompthistory(participantId)
-        console.log(selectedParticipantLLMAnalysis.current)
+        // console.log(selectedParticipantLLMAnalysis.current)
         setCurrentForm("");
         return true
       } else if (response.status === 400) {
@@ -512,15 +514,15 @@ function PodComponent() {
     }
   }
 
-  const loadprompthistory = async (participantId)=>{
+  const loadprompthistory = async (participantId) => {
     try {
-      const response = await new SessionService().get_llm_question_answer_interactions(sessionId,sessionDeviceId,participantId);
+      const response = await new SessionService().get_llm_question_answer_interactions(sessionId, sessionDeviceId, participantId);
 
       if (response.status === 200) {
         const jsonObj = await response.json()
-        promptHistory.current = jsonObj
+        promptHistory.current[participantId] = jsonObj
       } else if (response.status === 400) {
-        console.log("LLM api response", response.message)
+        // console.log("LLM api response", response.message)
       }
     } catch (error) {
       console.log(
@@ -531,21 +533,40 @@ function PodComponent() {
   }
 
   const loadReflectiondashboard = async (view) => {
-      let actionstatus = await extractParticipantData(participants.current[0])
-      if (actionstatus) {
-        setCurrentParticipant(participants.current[0])
-        setDetails(view);
-      }
+    let actionstatus = await extractParticipantData(participants.current[0])
+    if (actionstatus) {
+      setCurrentParticipant(participants.current[0])
+      setDetails(view);
+    }
   };
 
-  const interactivePrompt = async(participantId,question,default_question_id) =>{
-    let respObj = buildData("Participant level sesssion analysis", participantId,null,null)
-    const existingPrompt = promptHistory.current.find(p => p?.default_question_id === default_question_id)?? null;
+  const interactivePromptFnc = async (participantId, default_question_id, question) => {
+    let respObj = buildData("interactive prompting", participantId,default_question_id, question)
+    let existingPrompt = null
+    if (participantId in promptHistory.current){
+      existingPrompt = promptHistory.current[participantId].find(p => (default_question_id !== -1 && p?.default_question_id === default_question_id)) ?? null;
+    }
+    
+    if (existingPrompt !== null) {
+      promptResponses.current.push([question,existingPrompt.answer])
+    } else {
+      try {
 
-    if(existingPrompt !== null){
+        const response = await new SessionService().getLLMPromptResponse(respObj);
 
-    }else{
-      
+        if (response.status === 200) {
+          const jsonObj = await response.json()
+          promptResponses.current.push([question,jsonObj.answer])
+          // console.log(jsonObj.answer)
+        } else if (response.status === 400) {
+          console.log("LLM api response", response.message)
+        }
+      } catch (error) {
+        console.log(
+          "podcomponent interactivePromptFnc",
+          error,
+        )
+      }
     }
   }
 
@@ -604,8 +625,10 @@ function PodComponent() {
       participants={participants.current}
       selectedParticipantLLMAnalysis={selectedParticipantLLMAnalysis.current}
       selectedParticipantSynthesizedData={selectedParticipantSynthesizedData.current}
-      promptHistory = {promptHistory.current}
-      interactivePrompt = {interactivePrompt}
+      interactivePromptFnc={interactivePromptFnc}
+      promptResponses={promptResponses.current}
+      isThinking = {isThinking}
+      setIsThinking = {setIsThinking}
       setParticipantRefectionID={setParticipantRefectionID}
       currentParticipant={currentParticipant}
     />

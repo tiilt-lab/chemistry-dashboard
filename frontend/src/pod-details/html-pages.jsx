@@ -58,8 +58,10 @@ function PodComponentPages(props) {
                                 currentParticipant = {props.currentParticipant}
                                 llmSessionAnalysis = {props.selectedParticipantLLMAnalysis}
                                 selectedParticipantSynthesizedData = {props.selectedParticipantSynthesizedData}
-                                promptHistory = {props.promptHistory}
-                                interactivePrompt = {props.interactivePrompt}
+                                interactivePromptFnc = {props.interactivePromptFnc}
+                                promptResponses = {props.promptResponses}
+                                isThinking = {props.isThinking}
+                                setIsThinking = {props.setIsThinking}
                                 setParticipantRefectionID = {props.setParticipantRefectionID}
                             />
                         :
