@@ -102,6 +102,7 @@ def particiapant_only_session_prompt(data):
         - Use second person framing
         - Note that all the values for the metrics are scaled to 100 percent except for trendingdirection,gazeontask,word count. This should be considered during the analysis 
         """
+        
 def particiapant_interactive_prompt(data):
     return f"""
         You are a collaborative learning analytics assistant.
@@ -112,12 +113,13 @@ def particiapant_interactive_prompt(data):
         -------------------------------------
         Return ONLY valid JSON in this exact structure:
 
-        {"Session_summary": {{
+        {{"Prompt_summary": {{
         "Summary": "...",
         "Computedmetricsused": ["...", "..."],
-        "Evidence windows": ["windowid","windowid"],
-        "Confidence": "...",
-        }}}
+        "Evidencewindows": ["...","..."],
+        "Confidence": "..."
+        }}
+        }}
 
         -------------------------------------
         DATA TO ANALYZE
@@ -136,12 +138,12 @@ def particiapant_interactive_prompt(data):
 
 
         User question:
-        {data.get("user_question", data.get("question", ""))}
+        {data.get("question", "")}
 
         -------------------------------------
         INSTRUCTIONS
         -------------------------------------
-        - Be concise and specific and provide response in not more than 50 words
+        - Be concise and specific and provide response in at least 50 words and not more than 100 words
         - Use only the provided data
         - Do NOT hallucinate missing information
         - Ground all claims in the window-by-window containing other participants information, session data and group summary.
@@ -150,6 +152,7 @@ def particiapant_interactive_prompt(data):
         - Don't incorporate raw metric values in the summary text response, but placed them in the evidence field of the response
         - Ensure the responses are not just reporting observations from the metrics, but drawing insights, synthesis and suggestive conclusions by analyzing all the data provided, finding pattern between participants,
         - across windows, session_data and group summary.
+        - For the Evidencewindows, present in it time range formatted in hh:mm:ss - hh:mm:ss using the start time and end time. While for the Computedmetricsused do not list the keys but the actual metric in words
         - Ensure you use formative and suggesting language while communicating the insights. Response should aim to help the student improve and where they did well should also be projected
         - Do NOT include markdown or backticks
         - provide a level of confidence, including an berief explanation of influenced the level of confidence in your analysis. please present it in 'Confidence field' of the structured output

@@ -41,7 +41,7 @@ class LLMQuestionAnswer(db.Model):
             session_device_id=self.session_device_id,
             speaker_username=self.speaker_username,
             default_question_id = self.default_question_id,
-            question = self.question,
+            question = str(self.question),
             answer = self.answer,
             creation_date=str(self.creation_date) + ' UTC'
         )

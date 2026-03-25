@@ -39,7 +39,7 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
             raw = response.text.strip()
 
             if raw.startswith("```"):
-                raw = raw.replace("```json", "").replace("```", "").strip()
+                raw = raw.replace("```json", "").replace("```", "").replace("\n","").strip()
 
             #add to the database
             if metricObj['retrieve_existing_report'] != 'true' and exisiting_feedback:
@@ -71,6 +71,7 @@ def fetch_response_for_question(**kwargs):
     raw = ""
     if not questionObj:
         return json_response({'message': 'Missing data.'}, 400)
+    
     if int(questionObj['default_question_id']) > -1 :
         exisiting_response = database.get_speaker_session_device_llm_question_answer(username=questionObj['participant_name'], sessionId=questionObj['sessionid'], sessionDeviceId = questionObj['sessiondeviceid'],default_question_id=int(questionObj['default_question_id']))
     
@@ -86,10 +87,10 @@ def fetch_response_for_question(**kwargs):
             )
 
             
-            raw = response.text.strip()
+            raw = response.text.replace('\n',"").strip()
 
             if raw.startswith("```"):
-                raw = raw.replace("```json", "").replace("```", "").strip()
+                raw = raw.replace("```json", "").replace("```", "").replace('\n',"").strip()
 
             #add to the database
             if questionObj['retrieve_existing_answer'] != 'true' and exisiting_response:
@@ -117,10 +118,16 @@ def fetch_response_for_question(**kwargs):
 @api_routes.route('/api/v1/llminteractiveprompting/sessionid/<int:session_id>/device/<int:session_device_id>/username/<string:username>', methods=['GET'])
 def get_llm_question_answer_interactions(session_id,session_device_id,username, **kwargs):
     answers = database.get_speaker_session_device_llm_question_answer(username = username, sessionId = session_id, sessionDeviceId = session_device_id)
+    
     if answers:
-        return json_response([ans.json() for ans in answers])
+        retObj = []
+        for ans in answers:
+            ans.answer = json.loads(str(ans.answer))
+            retObj.append(ans.json())
+
+        return json_response(retObj)
     else:
-        return json_response({'message': 'Session  not found.'}, 400)
+        return json_response([])
         
 
     

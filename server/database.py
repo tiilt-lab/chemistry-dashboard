@@ -1079,7 +1079,7 @@ def get_speaker_session_device_llm_question_answer(id=None,username=None, sessio
     return query.all()
 
 def add_speaker_session_device_llm_question_answer(username, sessionId, sessionDeviceId,default_question_id,question,answer):
-    matched_response = get_speaker_session_device_llm_question_answer(username=username, sessionId=sessionId, sessionDeviceId = sessionDeviceId)
+    matched_response = get_speaker_session_device_llm_question_answer(username=username, sessionId=sessionId, sessionDeviceId = sessionDeviceId,default_question_id=default_question_id)
     if matched_response:
         return False, matched_response
     response = LLMQuestionAnswer(sessionId, sessionDeviceId, username,default_question_id,question,answer)
