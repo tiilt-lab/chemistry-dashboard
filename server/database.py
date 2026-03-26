@@ -674,6 +674,18 @@ def get_session_devices(id=None, session_id=None, device_id=None, name=None, pro
         return query.first()
     return query.all()
 
+def get_Session_device_by_alias(session_id=None,alias=None):
+    query = db.session.query(SessionDevice)
+    query = query.join(Speaker).filter(Speaker.session_device_id == SessionDevice.id)
+    if session_id!=None:
+        query = query.filter(SessionDevice.session_id == session_id)
+    if alias != None:
+        query = query.filter(Speaker.alias == alias) 
+    # query = query.filter(SessionDevice.connected == False)
+    query = query.distinct()
+    return query.all()
+
+
 def set_session_device_status(session_device_id, status):
     session_device = get_session_devices(id=session_device_id)
     if session_device and session_device != status:
@@ -1025,9 +1037,9 @@ def get_speaker_session_device_llm_report(id=None,username=None, sessionId=None,
     if id != None:
         return query.filter(LLMFeedbackReport.id == id).first()
     if sessionId != None:
-        query.filter(LLMFeedbackReport.session_id == sessionId)
+        query =query.filter(LLMFeedbackReport.session_id == sessionId)
     if sessionDeviceId != None:
-        query.filter(LLMFeedbackReport.session_device_id == sessionDeviceId)
+        query =query.filter(LLMFeedbackReport.session_device_id == sessionDeviceId)
     if username != None:
         return query.filter(LLMFeedbackReport.speaker_username == username).first()
     return query.all()
@@ -1069,13 +1081,13 @@ def get_speaker_session_device_llm_question_answer(id=None,username=None, sessio
     if id != None:
         return query.filter(LLMQuestionAnswer.id == id).first()
     if sessionId != None:
-        query.filter(LLMQuestionAnswer.session_id == sessionId)
+        query = query.filter(LLMQuestionAnswer.session_id == sessionId)
     if sessionDeviceId != None:
-        query.filter(LLMQuestionAnswer.session_device_id == sessionDeviceId)
+        query = query.filter(LLMQuestionAnswer.session_device_id == sessionDeviceId)
     if username != None:
-        query.filter(LLMQuestionAnswer.speaker_username == username)
+        query = query.filter(LLMQuestionAnswer.speaker_username == username)
     if default_question_id != None:
-        return query.filter(LLMQuestionAnswer.default_question_id == default_question_id).first()    
+        return query.filter(LLMQuestionAnswer.default_question_id == default_question_id).first() 
     return query.all()
 
 def add_speaker_session_device_llm_question_answer(username, sessionId, sessionDeviceId,default_question_id,question,answer):

@@ -27,12 +27,16 @@ class SessionService {
   }
 
   getSessionById(sessionId) {
-    return this.api.httpRequestCall(`/api/v1/sessions/student/sessionid/${sessionId}`, "GET", {});
+    return this.api.httpRequestCall(`api/v1/sessions/student/sessionid/${sessionId}`, "GET", {});
   }
 
  
   getSessionsByAlias(alias) {
-    return this.api.httpRequestCall(`/api/v1/sessions/student/alias/${alias}`, "GET", {});
+    return this.api.httpRequestCall(`api/v1/sessions/student/alias/${alias}`, "GET", {});
+  }
+
+ getSessionsDeviceByAlias(sessionid, alias) {
+    return this.api.httpRequestCall(`api/v1/sessions/sessionid/${sessionid}/student/alias/${alias}`, "GET", {});
   }
 
   deleteSession(sessionId) {

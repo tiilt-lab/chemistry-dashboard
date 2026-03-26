@@ -1085,10 +1085,4 @@ def synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,video
         Combined_object['group_level']['momentum'] = round((sum(group_level_metric_acc['momentum'])/total_speaker_detected)*100,2)
     
     
-    return Combined_object    
-
- 
-    
-    
-
-
+    return Combined_object
