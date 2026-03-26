@@ -6,19 +6,30 @@ import { AuthService } from "../services/auth-service"
 import { SessionService } from "../services/session-service";
 import { StudentModel } from "../models/student"
 import { SessionModel } from "../models/session";
+import { SessionDeviceModel } from "../models/session-device";
 import { SpeakerModel } from "../models/speaker";
 
 function StudentSessionDashboard() {
+  const previousSessions = useRef([])
+  const sessionsObjects = useRef({});
+  const pageTitle = useRef("Dashboard")
+  const session = useRef(null)
+
+  
+  const [sessionDevices, setSessionDevices] = useState([])
+  const [selectedDevice,setSelectedDevice] = useState(-1)
+  const [sessionId,setSessionId] = useState(-1)
+  
+  const [reload,setReload] = useState(0)
 
   const [nextPage, setNextPage] = useState("reportoptionpage")
-  const [pageTitle, setPageTitle] = useState("Dashboard")
+  
   const [currentForm, setCurrentForm] = useState("")
   const [showFeatures, setShowFeatures] = useState([])
   const [showBoxes, setShowBoxes] = useState([])
   const [sessiontype, setSessiontype] = useState("")
-  const [session, setSession] = useState(null)
-  const [sessionId, setSessionId] = useState(-1)
-  const [previousSessions, setPreviousSessions] = useState([])
+  
+  
   const [wrongInput, setWrongInput] = useState(false)
   const [pcode, setPcode] = useState("")
   const [userDetail, setUserDetail] = useState(null)
@@ -54,13 +65,14 @@ function StudentSessionDashboard() {
   const [sessionPart, setSessionPart] = useState("");
 
   const sessionDataObjects = useRef({});
-  const sessionsObjects = useRef({});
+  
 
   const navigate = useNavigate()
 
   const sessionService = new SessionService()
   const authService = new AuthService()
 
+  // USEEFFECTS AND INIT FUNCTIONS
 
   useEffect(() => {
     let featuresArr = [
@@ -99,19 +111,26 @@ function StudentSessionDashboard() {
   }, []);
 
 
+  // ___________________________________________________________ 
+  //  FIRST USEEFFECT TO CALL ONCE STEP 1,2, 2.1, 2.1.1, OR 2.2 HAS COMPLETED            
+  // --------------------------------------------------------
   useEffect(() => {
     let intervalLoad
-    // fetch the transcript
-    if (session !== null && userDetail !== null && sessiontype !== "" && !firstLoad) {
-      fetchTranscript(session.id, setTranscripts)
-      fetchVideoMetric(session.id, setVideoMetrics)
-
-      //only load for current session every 2 seconds
-      if (sessiontype === "currentsession") {
+    
+    if (session.current !== null  && userDetail !== null && sessiontype !== "" && !firstLoad) {
+      
+      if (sessiontype === "previoussessions") {
+        //Load session groups the student joined
+        setNextPage("displaygrouppage")
+      }else if (sessiontype === "currentsession") {
+        // fetch the transcript
+        fetchTranscript(session.current.id, setTranscripts)
+        fetchVideoMetric(session.current.id, setVideoMetrics)
         setCurrentSessionRunning(true);
+        //only load for current session every 2 seconds
         intervalLoad = setInterval(() => {
-          fetchTranscript(session.id, setTranscripts)
-          fetchVideoMetric(session.id, setVideoMetrics)
+          fetchTranscript(session.current.id, setTranscripts)
+          fetchVideoMetric(session.current.id, setVideoMetrics)
         }, 2000)
       }
 
@@ -120,22 +139,45 @@ function StudentSessionDashboard() {
     return () => {
       clearInterval(intervalLoad)
     }
-  }, [session, userDetail, sessiontype])
+  }, [session.current,userDetail,sessionDevices, sessiontype])
+
+  // useEffect(() => {
+  //   let intervalLoad
+  //   // fetch the transcript
+  //   if (session.current !== null && selectedDevice != -1  && userDetail !== null && sessiontype !== "" && !firstLoad) {
+  //     fetchTranscript(session.current.id, setTranscripts)
+  //     fetchVideoMetric(session.current.id, setVideoMetrics)
+
+  //     //only load for current session every 2 seconds
+  //     if (sessiontype === "currentsession") {
+  //       setCurrentSessionRunning(true);
+  //       intervalLoad = setInterval(() => {
+  //         fetchTranscript(session.current.id, setTranscripts)
+  //         fetchVideoMetric(session.current.id, setVideoMetrics)
+  //       }, 2000)
+  //     }
+
+  //   }
+
+  //   return () => {
+  //     clearInterval(intervalLoad)
+  //   }
+  // }, [session.current,selectedDevice, userDetail, sessiontype])
 
 
   useEffect(() => {
-    if (session !== null && !firstLoad) {
+    if (session.current !== null && !firstLoad) {
       const sessionLen =
-        Object.keys(session).length > 0 ? session.length : 0
+        Object.keys(session.current).length > 0 ? session.current.length : 0
       const sTime = Math.round(sessionLen * timeRange[0] * 100) / 100
       const eTime = Math.round(sessionLen * timeRange[1] * 100) / 100
       setStartTime(sTime)
       setEndTime(eTime)
       generateDisplayTranscripts(transcripts, sTime, eTime)
       generateDisplayVideoMetrics(videoMetrics, sTime, eTime)
-    } else if (session !== null && firstLoad && currentSessionRunning) {
+    } else if (session.current !== null && firstLoad && currentSessionRunning) {
       const sessionLen =
-        Object.keys(session).length > 0 ? session.length : 0
+        Object.keys(session.current).length > 0 ? session.current.length : 0
       const sTime = Math.round(sessionLen * timeRange[0] * 100) / 100
       const eTime = Math.round(sessionLen * timeRange[1] * 100) / 100
       setStartTime(sTime)
@@ -144,12 +186,12 @@ function StudentSessionDashboard() {
       generateDisplayVideoMetrics(videoMetrics, sTime, eTime)
     }
 
-  }, [transcripts, videoMetrics, session, timeRange, currentSessionRunning])
+  }, [transcripts, videoMetrics, session.current, timeRange, currentSessionRunning])
 
 
   useEffect(() => {
     if (transcriptDoneLoading && videoMetricDoneLoading && !firstLoad) {
-      setSelectedSessionId1(session.id);
+      setSelectedSessionId1(session.current.id);
 
       if (!sessionDataObjects.current.hasOwnProperty(sessionId)) {
         sessionDataObjects.current[sessionId] = {
@@ -201,40 +243,10 @@ function StudentSessionDashboard() {
     setFn(showFeats)
   }
 
-  const loadSession = (username) => {
-    if (sessiontype === "previoussessions") {
-      const fetchData = sessionService.getSessionsByAlias(username)
-      fetchData
-        .then(
-          (response) => {
-            if (response.status === 200) {
-              response.json().then((jsonArrayObj) => {
-                const session_data = SessionModel.fromJsonList(jsonArrayObj)
-                setPreviousSessions(session_data)
-                if (session_data.length > 0) {
-                  setSession(session_data[0])
-                  setPageTitle(session_data[0].name)
-                  setSessionId(session_data[0].id);
 
-                  session_data.forEach((s) => {
-                    sessionsObjects.current[s.id] = s
-                  })
-                }
-              })
-            } else {
-              setAlertMessage("No Previous Sessions Found for this User");
-              setShowAlert(true);
-            }
-          },
-          (apierror) => {
-            console.log(
-              "Student dashboard func: loadSession 1 ",
-              apierror,
-            )
-          },
-        )
-    }
-  }
+  // ___________________________________________________________ 
+  //  STEP1: Clicking the  continue buttion   call this function to verify the selections and input              
+  // --------------------------------------------------------
 
   const loadDashboard = (preference, username) => {
     if (preference === '') {
@@ -257,6 +269,10 @@ function StudentSessionDashboard() {
 
     }
   }
+
+  // ___________________________________________________________ 
+  //   STEP2: This is called to authenticate the username, fetch user data and call load session           
+  // --------------------------------------------------------
 
   const verifyUsername = async (username) => {
     const fetchData = authService.getStudentProfileByID(username)
@@ -283,7 +299,85 @@ function StudentSessionDashboard() {
       )
   }
 
+  // ___________________________________________________________ 
+  //   STEP 2.1 : This is called inside step 2 to load the sessions the student have joined so far and then initialize the first session and first device/group          
+  // --------------------------------------------------------
 
+  const loadSession = (username) => {
+    if (sessiontype === "previoussessions") {
+      const fetchData = sessionService.getSessionsByAlias(username)
+      fetchData
+        .then(
+          (response) => {
+            if (response.status === 200) {
+              response.json().then((jsonArrayObj) => {
+                const session_data = SessionModel.fromJsonList(jsonArrayObj)
+                
+                if (session_data.length > 0) {
+                  previousSessions.current = session_data
+                  session.current = session_data[0]
+                  pageTitle.current = session_data[0].name + ": " + new Date(session_data[0].creation_date).toDateString()
+                  setSessionId(session_data[0].id);
+                  session_data.forEach((s) => {
+                    sessionsObjects.current[s.id] = s
+                  })
+                  loadSessionDevice(session_data[0].id,username)
+                  setReload(reload+1)
+                }
+              })
+            } else {
+              setAlertMessage("No Previous Sessions Found for this User");
+              setShowAlert(true);
+            }
+          },
+          (apierror) => {
+            console.log(
+              "Student dashboard func: loadSession 1 ",
+              apierror,
+            )
+          },
+        )
+    }
+  }
+
+// ___________________________________________________________ 
+  //   STEP 2.1.1 : This is called inside step 2.1 to load the sessions device/group joined by the student         
+// --------------------------------------------------------
+
+const loadSessionDevice = (sessionid,username) =>{
+  if (sessiontype === "previoussessions") {
+      const fetchData = sessionService.getSessionsDeviceByAlias(sessionid,username)
+      fetchData
+        .then(
+          (response) => {
+            if (response.status === 200) {
+              response.json().then((jsonArrayObj) => {
+                const session_device_data = SessionDeviceModel.fromJsonList(jsonArrayObj)
+                
+                if (session_device_data.length > 0) {
+                  setSessionDevices(session_device_data)
+                }
+              })
+            } else {
+              setSessionDevices([])
+              setAlertMessage("No  Sessions Group Found for this User");
+              setShowAlert(true);
+            }
+          },
+          (apierror) => {
+            console.log(
+              "Student dashboard func: loadSession 1 ",
+              apierror,
+            )
+          },
+        )
+    }
+}
+  
+
+// ___________________________________________________________ 
+  //   STEP 2.2: This is called inside step 2 if this student select to view current session           
+  // --------------------------------------------------------
   const fetchSession = async (pcode) => {
     const fetchData = sessionService.getSessionByPasscode(pcode)
     fetchData
@@ -292,9 +386,10 @@ function StudentSessionDashboard() {
           if (response.status === 200) {
             response.json().then((jsonObj) => {
               const session_data = SessionModel.fromJsonList(jsonObj)
-              setSession(session_data[0])
-              setPageTitle(session_data[0].name)
+              session.current = session_data[0]
+              pageTitle.current = session_data[0].name + ": " + new Date(session_data[0].creation_date).toDateString()
               setSessionId(session_data[0].id);
+              setReload(reload+1)
             })
           } else {
             setAlertMessage("Invalid Passcode or Session Expired");
@@ -323,7 +418,7 @@ function StudentSessionDashboard() {
         })
 
         const sessionLen =
-          Object.keys(session).length > 0 ? session.length : 0
+          Object.keys(session.current).length > 0 ? session.current.length : 0
         setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100)
         setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100)
 
@@ -363,19 +458,20 @@ function StudentSessionDashboard() {
 
 
   const loadSelectedSessionMetrics = (newSession) => {
-    setTranscriptDoneLoading(false);
-    setVideoMetricDoneLoading(false);
-    setSession1Transcripts([]);
-    setSession1VideoMetrics([]);
-    setSession2Transcripts([]);
-    setSession2VideoMetrics([]);
-    setSelectedSessionId1(newSession.id)
-    setSessionId(newSession.id);
-    setSelectedSessionId2(-1)
-    setPageTitle(newSession.name)
-    setSession(newSession)
-    setDetails("Individual");
-    setDisplaySingleSession(true);
+    // setTranscriptDoneLoading(false);
+    // setVideoMetricDoneLoading(false);
+    // setSession1Transcripts([]);
+    // setSession1VideoMetrics([]);
+    // setSession2Transcripts([]);
+    // setSession2VideoMetrics([]);
+    // setSelectedSessionId1(newSession.id)
+    // setSessionId(newSession.id);
+    // setSelectedSessionId2(-1)
+    pageTitle.current = newSession.name+ ": " + new Date(newSession.creation_date).toDateString()
+    session.current = newSession
+    // setDetails("Individual");
+    // setDisplaySingleSession(true);
+    loadSessionDevice(newSession.id,userDetail.username)
   }
 
   const loadComparedSessionMetrics = (selectedSessionId, sessionPart) => {
@@ -392,7 +488,7 @@ function StudentSessionDashboard() {
       setSelectedSessionId2(selectedSessionId)
     }
     setSessionId(selectedSessionId);
-    setPageTitle("Comparing Sessions")
+    pageTitle.current = "Comparing Sessions"
     setDisplayCompareSession(true);
   }
 
@@ -478,9 +574,9 @@ function StudentSessionDashboard() {
   }
 
   const ResetTimeRange = (values) => {
-    if (session !== null) {
+    if (session.current !== null) {
       const sessionLen =
-        Object.keys(session).length > 0 ? session.length : 0
+        Object.keys(session.current).length > 0 ? session.current.length : 0
       setTimeRange(values)
       const start = Math.round(sessionLen * values[0] * 100) / 100
       const end = Math.round(sessionLen * values[1] * 100) / 100
@@ -508,7 +604,7 @@ function StudentSessionDashboard() {
   }
 
   const loading = () => {
-    return session === null || transcripts.length === 0
+    return session.current === null || transcripts.length === 0
   }
 
   const changeTouppercase = (e) => {
@@ -540,7 +636,7 @@ function StudentSessionDashboard() {
       currentForm={currentForm}
       closeDialog={closeDialog}
       nextPage={nextPage}
-      pageTitle={pageTitle}
+      pageTitle={pageTitle.current}
       navigateToLogin={navigateToLogin}
       sessiontype={sessiontype}
       setSessiontype={setSessiontype}
@@ -559,8 +655,8 @@ function StudentSessionDashboard() {
       showFeatures={showFeatures}
       showBoxes={showBoxes}
       userDetail={userDetail}
-      session={session}
-      previousSessions={previousSessions}
+      session={session.current}
+      previousSessions={previousSessions.current}
       startTime={startTime}
       endTime={endTime}
       transcripts={transcripts}
@@ -584,6 +680,8 @@ function StudentSessionDashboard() {
       currentTranscript={currentTranscript}
       transcriptDoneLoading={transcriptDoneLoading}
       videoMetricDoneLoading={videoMetricDoneLoading}
+      sessionDevices = {sessionDevices}
+      setSelectedDevice = {setSelectedDevice}
     />
   );
 }

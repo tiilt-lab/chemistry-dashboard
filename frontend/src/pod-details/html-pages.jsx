@@ -62,7 +62,9 @@ function PodComponentPages(props) {
                                 promptResponses = {props.promptResponses}
                                 isThinking = {props.isThinking}
                                 setIsThinking = {props.setIsThinking}
-                                setParticipantRefectionID = {props.setParticipantRefectionID}
+                                setParticipantIDRefectionDashboard = {props.setParticipantIDRefectionDashboard}
+                                selectedMomentIdAndIndex = {props.selectedMomentIdAndIndex}
+                                setSelectedMomentIdAndIndex = {props.setSelectedMomentIdAndIndex}
                             />
                         :
                         
@@ -96,7 +98,7 @@ function PodComponentPages(props) {
                         
                     </div>
                 </div>
-                {props.loading() ? <AppSpinner></AppSpinner> : <></>}
+                {props.loading(props.details) ? <AppSpinner></AppSpinner> : <></>}
             </div>
             <GenericDialogBox
                 show={props.currentForm !== ""}

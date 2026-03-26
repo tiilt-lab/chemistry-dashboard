@@ -44,7 +44,7 @@ function PodComponent() {
   const [spkr2VideoMetrics, setSpkr2VideoMetrics] = useState([])
   const [open, setOpen] = useState(true);
   const [selectedSpkralias, setSelectedSpkralias] = useState("");
-  const [participantIDReflectionDashboard, setParticipantRefectionID] = useState("")
+  const [participantIDReflectionDashboard, setParticipantIDRefectionDashboard] = useState("")
   const { sessionId, sessionDeviceId } = useParams();
   const synthesizedFeedbackMetrics = useRef(null);
   const participants = useRef([])
@@ -53,8 +53,9 @@ function PodComponent() {
   const llmSessionAnalysis = useRef({})
   const promptHistory = useRef({})
   const [currentParticipant, setCurrentParticipant] = useState("")
-  const promptResponses = useRef([])
-  const [isThinking,setIsThinking] = useState(false)
+  const promptResponses = useRef({})
+  const [isThinking, setIsThinking] = useState(false)
+  const [selectedMomentIdAndIndex, setSelectedMomentIdAndIndex] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -104,7 +105,6 @@ function PodComponent() {
             response.json().then((jsonObj) => {
               synthesizedFeedbackMetrics.current = jsonObj;
               participants.current = Object.keys(synthesizedFeedbackMetrics.current["participants_level"])
-              // console.log("synthesized metric ", synthesizedFeedbackMetrics.current)
             });
         },
         (apierror) => {
@@ -184,7 +184,6 @@ function PodComponent() {
       "Video Metrics"
     ]
     initChecklistData(boxArr, setShowBoxes)
-
 
     return () => {
       subscriptions.map((sub) => {
@@ -355,8 +354,12 @@ function PodComponent() {
     }
   };
 
-  const loading = () => {
+  const loading = (details) => {
+    if(details === "Reflection Dashboard"){
+      return Object.keys(llmSessionAnalysis.current).length <= 0
+    }else{
     return session === null || transcripts === null;
+    }
   };
 
   const getSpeakers = () => {
@@ -480,24 +483,24 @@ function PodComponent() {
       return false;
     }
 
-    selectedParticipantSynthesizedData.current = respObj
-    // console.log("input data ", selectedParticipantSynthesizedData.current)
-
     if (participantId in llmSessionAnalysis.current) {
       selectedParticipantLLMAnalysis.current = llmSessionAnalysis.current[participantId]
+      selectedParticipantSynthesizedData.current = respObj
+      setSelectedMomentIdAndIndex([0, selectedParticipantSynthesizedData.current.participant_level_metric[0].windowid])
       return true
     }
 
-    setCurrentForm("awaitingllmresponse");
     try {
-      const response = await new SessionService().getLLMFeedbackBasedOnMetrics(selectedParticipantSynthesizedData.current);
+      setCurrentForm("awaitingllmresponse");
+      const response = await new SessionService().getLLMFeedbackBasedOnMetrics(respObj);
 
       if (response.status === 200) {
         const jsonObj = await response.json()
         llmSessionAnalysis.current[participantId] = jsonObj.answer;
         selectedParticipantLLMAnalysis.current = llmSessionAnalysis.current[participantId]
+        selectedParticipantSynthesizedData.current = respObj
         loadprompthistory(participantId)
-        // console.log(selectedParticipantLLMAnalysis.current)
+        setSelectedMomentIdAndIndex([0, selectedParticipantSynthesizedData.current.participant_level_metric[0].windowid])
         setCurrentForm("");
         return true
       } else if (response.status === 400) {
@@ -533,22 +536,29 @@ function PodComponent() {
   }
 
   const loadReflectiondashboard = async (view) => {
-    let actionstatus = await extractParticipantData(participants.current[0])
-    if (actionstatus) {
-      setCurrentParticipant(participants.current[0])
-      setDetails(view);
+    if (participants.current.length > 0) {
+      let actionstatus = await extractParticipantData(participants.current[0])
+      if (actionstatus) {
+        setCurrentParticipant(participants.current[0])
+        setDetails(view);
+      }
     }
   };
 
   const interactivePromptFnc = async (participantId, default_question_id, question) => {
-    let respObj = buildData("interactive prompting", participantId,default_question_id, question)
+    let respObj = buildData("interactive prompting", participantId, default_question_id, question)
     let existingPrompt = null
-    if (participantId in promptHistory.current){
+    if (participantId in promptHistory.current) {
       existingPrompt = promptHistory.current[participantId].find(p => (default_question_id !== -1 && p?.default_question_id === default_question_id)) ?? null;
     }
-    
+
     if (existingPrompt !== null) {
-      promptResponses.current.push([question,existingPrompt.answer])
+      if (participantId in promptResponses.current) {
+        promptResponses.current[participantId].push([question, existingPrompt.answer])
+      } else {
+        promptResponses.current[participantId] = [[question, existingPrompt.answer]]
+      }
+
     } else {
       try {
 
@@ -556,7 +566,11 @@ function PodComponent() {
 
         if (response.status === 200) {
           const jsonObj = await response.json()
-          promptResponses.current.push([question,jsonObj.answer])
+          if (participantId in promptResponses.current) {
+            promptResponses.current[participantId].push([question, jsonObj.answer])
+          } else {
+            promptResponses.current[participantId] = [[question, jsonObj.answer]]
+          }
           // console.log(jsonObj.answer)
         } else if (response.status === 400) {
           console.log("LLM api response", response.message)
@@ -627,10 +641,12 @@ function PodComponent() {
       selectedParticipantSynthesizedData={selectedParticipantSynthesizedData.current}
       interactivePromptFnc={interactivePromptFnc}
       promptResponses={promptResponses.current}
-      isThinking = {isThinking}
-      setIsThinking = {setIsThinking}
-      setParticipantRefectionID={setParticipantRefectionID}
+      isThinking={isThinking}
+      setIsThinking={setIsThinking}
+      setParticipantIDRefectionDashboard={setParticipantIDRefectionDashboard}
       currentParticipant={currentParticipant}
+      selectedMomentIdAndIndex={selectedMomentIdAndIndex}
+      setSelectedMomentIdAndIndex={setSelectedMomentIdAndIndex}
     />
   );
 }

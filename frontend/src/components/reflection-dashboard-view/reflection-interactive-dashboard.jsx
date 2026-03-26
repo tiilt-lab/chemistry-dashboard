@@ -22,13 +22,13 @@ function CollaborationFeedbackDashboard(props) {
   const llmresponse_window_summary = props.llmSessionAnalysis.Window_summary
   const selectedParticipantData = props.selectedParticipantSynthesizedData
   const window_length = selectedParticipantData.participant_level_metric.length
-  const [selectedMomentIdAndIndex, setSelectedMomentIdAndIndex] = useState([0, selectedParticipantData.participant_level_metric[0].windowid]);
   const [selectedMoment, setSelectedMoment] = useState(selectedParticipantData.participant_level_metric[0])
   const [question, setQuestion] = useState([0, ""]);
   const scrollRef = useRef(null);
   const lastItemRef = useRef(null)
 
   const viewportRef = useRef(null);
+
 
   useLayoutEffect(() => {
     const viewport = viewportRef.current;
@@ -44,15 +44,15 @@ function CollaborationFeedbackDashboard(props) {
 
       viewport.scrollTop = offset;
     });
-  }, [props.promptResponses.length]);
+  }, [props.promptResponses[selectedParticipantId]?.length]);
 
   useEffect(() => {
-    setSelectedMoment(selectedParticipantData.participant_level_metric.find((m) => m.windowid === selectedMomentIdAndIndex[1]))
-  }, [selectedMomentIdAndIndex]);
+    setSelectedMoment(selectedParticipantData.participant_level_metric.find((m) => m.windowid === props.selectedMomentIdAndIndex[1]))
+  }, [props.selectedMomentIdAndIndex]);
 
-  useEffect(() => {
-    setSelectedMoment(selectedParticipantData.participant_level_metric[0])
-  }, [selectedParticipantId])
+  // useEffect(() => {
+  //   setSelectedMoment(selectedParticipantData.participant_level_metric[0])
+  // }, [selectedParticipantId])
 
 
 
@@ -244,7 +244,7 @@ function CollaborationFeedbackDashboard(props) {
               <CardContent className="space-y-4">
                 <div className="w-full">
                   <div className="mb-2 text-sm font-medium">Participant</div>
-                  <Select value={selectedParticipantId} onValueChange={props.setParticipantRefectionID}>
+                  <Select value={selectedParticipantId} onValueChange={props.setParticipantIDRefectionDashboard}>
                     <SelectTrigger className="w-full rounded-2xl">
                       <SelectValue placeholder="Select participant" />
                     </SelectTrigger>
@@ -487,7 +487,7 @@ function CollaborationFeedbackDashboard(props) {
                             item_index={index}
                             window_length={window_length}
                             selected={selectedMoment.windowid === item.windowid}
-                            onClick={() => setSelectedMomentIdAndIndex([index, item.windowid])}
+                            onClick={() => props.setSelectedMomentIdAndIndex([index, item.windowid])}
                           />
                         ))}
                       </div>
@@ -500,7 +500,7 @@ function CollaborationFeedbackDashboard(props) {
                     <div className="flex items-center justify-between gap-4">
                       <div>
                         <CardTitle className="text-xl">Moment explanation: {formatSeconds(selectedMoment.starttime)}-{formatSeconds(selectedMoment.endtime)}</CardTitle>
-                        <CardDescription>{selectedMomentIdAndIndex[0] <= ((window_length / 3) * 1) ? "Early" : selectedMomentIdAndIndex[0] <= ((window_length / 3) * 2) ? "Middle" : "Late"} phase • click different moments to compare changes over time</CardDescription>
+                        <CardDescription>{props.selectedMomentIdAndIndex[0] <= ((window_length / 3) * 1) ? "Early" : props.selectedMomentIdAndIndex[0] <= ((window_length / 3) * 2) ? "Middle" : "Late"} phase • click different moments to compare changes over time</CardDescription>
                       </div>
                       {statusBadge(selectedMoment.trenddirection)}
                     </div>
@@ -550,10 +550,10 @@ function CollaborationFeedbackDashboard(props) {
 
                       <div className="space-y-4 rounded-2xl border p-4">
                         <div className="flex items-center gap-2 font-medium"><Bot className="h-4 w-4" />Interpretation</div>
-                        <p className="text-sm leading-7 text-muted-foreground">{llmresponse_window_summary[selectedMomentIdAndIndex[1]].Summary}</p>
+                        <p className="text-sm leading-7 text-muted-foreground">{llmresponse_window_summary[props.selectedMomentIdAndIndex[1]].Summary}</p>
                         <div className="rounded-2xl bg-muted p-4">
                           <div className="flex items-center gap-2 text-sm font-medium"><HelpCircle className="h-4 w-4" />Suggestion</div>
-                          <p className="mt-2 text-sm leading-6 text-muted-foreground">{llmresponse_window_summary[selectedMomentIdAndIndex[1]].Action}</p>
+                          <p className="mt-2 text-sm leading-6 text-muted-foreground">{llmresponse_window_summary[props.selectedMomentIdAndIndex[1]].Action}</p>
                         </div>
                       </div>
                     </div>
@@ -647,12 +647,12 @@ function CollaborationFeedbackDashboard(props) {
                   <CardContent>
                     <ScrollArea viewportRef={viewportRef}  className="h-[480px] pr-3">
                       <div className="space-y-3">
-                        {props.promptResponses.map((item, index) => (
-                          <div key={index} ref={index === props.promptResponses.length - 1 ? lastItemRef : null}>
+                        {props.promptResponses[selectedParticipantId]?.map((item, index) => (
+                          <div key={index} ref={index === props.promptResponses[selectedParticipantId]?.length - 1 ? lastItemRef : null}>
                             <ChatTrail
                               question={item[0]}
                               response={item[1]}
-                              selected={index === (props.promptResponses.length - 1)}
+                              selected={index === (props.promptResponses[selectedParticipantId]?.length - 1)}
                             />
                           </div>
                         ))}

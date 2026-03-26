@@ -57,6 +57,14 @@ def get_sessions_by_alias(alias, **kwargs):
          return json_response([session.json() for session in sessions])
     else:
         return json_response({'message': 'Session  not found.'}, 400)
+    
+@api_routes.route('/api/v1/sessions/sessionid/<int:session_id>/student/alias/<string:alias>', methods=['GET'])
+def get_session_device_by_alias(session_id,alias, **kwargs):
+    sessionsDevices = database.get_Session_device_by_alias(session_id=session_id,alias=alias)
+    if sessionsDevices:
+         return json_response([device.json() for device in sessionsDevices])
+    else:
+        return json_response({'message': 'Session  not found.'}, 400)
 
 @api_routes.route('/api/v1/sessions/<int:session_id>', methods=['PUT'])
 @wrappers.verify_login(public=True)
