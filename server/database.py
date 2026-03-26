@@ -157,7 +157,7 @@ def get_speaker_video_metrics(id = None, student_username=None, session_id=None,
         query = query.filter(SpeakerVideoMetrics.session_device_id == session_device_id)
     return query.all()
 
-def get_speaker_video_metrics_by_session_alias(session_id=None, student_username=None):
+def get_speaker_video_metrics_by_session_alias(session_id=None, student_username=None,device_id=None):
     query = db.session.query(SpeakerVideoMetrics).order_by(SpeakerVideoMetrics.time_stamp.asc()) 
     if session_id != None:
         query = query.join(SessionDevice).filter(SpeakerVideoMetrics.session_device_id == SessionDevice.id)
@@ -165,6 +165,9 @@ def get_speaker_video_metrics_by_session_alias(session_id=None, student_username
 
     if student_username != None:
         query = query.join().filter(SpeakerVideoMetrics.student_username == student_username)
+
+    if device_id != None:
+        query = query.join().filter(SpeakerVideoMetrics.session_device_id == device_id)    
 
     return query.all()
 
@@ -803,7 +806,7 @@ def get_transcripts(session_id=None, session_device_id=None, start_time=0, end_t
 
     return query.all()
 
-def get_transcripts_by_session_alias(session_id=None, speaker_tag=None):
+def get_transcripts_by_session_alias(session_id=None, speaker_tag=None,device_id = None):
     query = db.session.query(Transcript).order_by(Transcript.start_time.asc()) 
     if session_id != None:
         query = query.join(SessionDevice).filter(Transcript.session_device_id == SessionDevice.id)
@@ -812,7 +815,11 @@ def get_transcripts_by_session_alias(session_id=None, speaker_tag=None):
     if speaker_tag != None:
         query = query.join().filter(Transcript.speaker_tag == speaker_tag)
 
+    if device_id != None:
+        query = query.join().filter(Transcript.session_device_id == device_id)    
+
     return query.all()    
+
 
 
 def delete_device_transcripts(session_device_id):

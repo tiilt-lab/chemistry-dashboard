@@ -131,7 +131,7 @@ function StudentSessionDashboardPages(props) {
                                     props.sessionDevices.map((device, index) => (
                                         <div
                                             key={index}
-                                            onClick={() => props.setSelectedDevice(device.id)}
+                                            onClick={() => props.setSelectedDeviceID(device.id)}
                                             className={style["pod-overview-button"]}
                                         >
                                             <svg

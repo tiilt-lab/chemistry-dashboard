@@ -141,6 +141,22 @@ class SessionService {
     );
   }
 
+  getSessionDeviceTranscriptsForClient(sessionId, deviceId, alias,startTime = 0) {
+    return this.api.httpRequestCall(
+      `api/v1/session/${sessionId}/sessiondevice/${deviceId}/transcripts/student/${alias}`,
+      "GET",
+      {}
+    );
+  }
+
+  getSessionDeviceVideoMetricsForClient(sessionId,deviceId, alias,startTime = 0) {
+    return this.api.httpRequestCall(
+      `api/v1/session/${sessionId}/sessiondevice/${deviceId}/videometrics/student/${alias}`,
+      "GET",
+      {}
+    );
+  }
+
   getSpeakerIdTranscripts(deviceId, speakerId) {
     return this.api.httpRequestCall(
       `api/v1/sessions/devices/${deviceId}>/speakers/${speakerId}/transcripts`,
