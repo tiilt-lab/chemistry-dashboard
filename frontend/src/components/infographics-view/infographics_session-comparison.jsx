@@ -15,43 +15,84 @@ function AppInfographicsSessionComparison(props) {
         <div className="infographics-container">
 
             {props.details === "Comparison"  && (
-                <div className="flex flex-col @sm:flex-row relative box-border wide-section justify-center my-2 max-h-12">
-                    <select
-                        id="session1"
-                        className="dropdown small-section"
-                        value={props.selectedSessionId1}
-                        onChange={(e) => props.loadComparedSessionMetrics(parseInt(e.target.value, 10),"sessionOne")}
-                    >
-                        <option value="-1">Select Session</option>
-                        {props.previousSessions.map((sess,index) => (
-                            <option
-                                key={sess.id}
-                                value={sess.id}
-                            >
-                                {sess.name}
-                            </option>
-                        ))}
-                    </select>
-
-                    {props.details === "Comparison" && (
+                <>
+                    <div className="flex flex-col @sm:flex-row relative box-border wide-section justify-center my-2 max-h-12">
                         <select
-                            id="speaker2"
+                            id="session1"
                             className="dropdown small-section"
-                            value={props.selectedSessionId2}
-                            onChange={(e) => props.loadComparedSessionMetrics(parseInt(e.target.value, 10),"sessionTwo")}
+                            value={props.selectedSessionId1}
+                            onChange={(e) => props.getSessionDevices(parseInt(e.target.value, 10),"sessionOne")}
                         >
-                            <option value="-1">Select Session</option>
-                           {props.previousSessions.map((sess) => (
-                            <option
-                                key={sess.id}
-                                value={sess.id}
-                            >
-                                {sess.name}
-                            </option>
-                        ))}
+                            <option value="-1">Select Session 1</option>
+                            {props.previousSessions.map((sess,index) => (
+                                <option
+                                    key={sess.id}
+                                    value={sess.id}
+                                >
+                                    {sess.name}
+                                </option>
+                            ))}
                         </select>
-                    )}
-                </div>
+
+                        {props.details === "Comparison" && (
+                            <select
+                                id="speaker2"
+                                className="dropdown small-section"
+                                value={props.selectedSessionId2}
+                                onChange={(e) => props.getSessionDevices(parseInt(e.target.value, 10),"sessionTwo")}
+                            >
+                                <option value="-1">Select Session 2</option>
+                            {props.previousSessions.map((sess) => (
+                                <option
+                                    key={sess.id}
+                                    value={sess.id}
+                                >
+                                    {sess.name}
+                                </option>
+                            ))}
+                            </select>
+                        )}
+                    </div>
+
+                    <div className="flex flex-col @sm:flex-row relative box-border wide-section justify-center my-2 max-h-12">
+                        <select
+                            id="session1"
+                            className="dropdown small-section"
+                            value={props.selectedSessionDeviceId1}
+                            onChange={(e) => props.loadComparedSessionDeviceMetrics(parseInt(e.target.value, 10),"sessionOne")}
+                        >
+                            <option value="-1">Select Group 1</option>
+                            {props.selectFilteredDevice1.map((device,index) => (
+                                <option
+                                    key={device.id}
+                                    value={device.id}
+                                >
+                                    {device.name}
+                                </option>
+                            ))}
+                        </select>
+
+                        {props.details === "Comparison" && (
+                            <select
+                                id="speaker2"
+                                className="dropdown small-section"
+                                value={props.selectedSessionDeviceId2}
+                                onChange={(e) => props.loadComparedSessionDeviceMetrics(parseInt(e.target.value, 10),"sessionTwo")}
+                            >
+                                <option value="-1">Select Group 2</option>
+                            {props.selectFilteredDevice2.map((device) => (
+                                <option
+                                    key={device.id}
+                                    value={device.id}
+                                >
+                                    {device.name}
+                                </option>
+                            ))}
+                            </select>
+                        )}
+                    </div>
+                </>
+
             )}
             {props.showBoxes.length > 0 &&
                 props.showBoxes[0]["clicked"] && (
@@ -69,7 +110,7 @@ function AppInfographicsSessionComparison(props) {
             {props.showBoxes.length > 0 &&
                 props.showBoxes[1]["clicked"] && (
                     <AppSectionBoxComponent
-                        type={"small-section"}
+                        type={"medium-section"}
                         heading={"Discussion timeline"}
                     >
                         <AppTimeline
@@ -86,15 +127,15 @@ function AppInfographicsSessionComparison(props) {
                 props.showBoxes.length > 0 &&
                 props.showBoxes[1]["clicked"] && (
                     <AppSectionBoxComponent
-                        type={"small-section"}
+                        type={"medium-section"}
                         heading={"Discussion timeline"}
                     >
                         <AppTimeline
                             clickedTimeline={props.onClickedTimeline}
                             session={props.session}
                             transcripts={props.session2Transcripts}
-                            start={props.startTime}
-                            end={props.endTime}
+                            start={props.startTime2}
+                            end={props.endTime2}
                         />
                     </AppSectionBoxComponent>
                 )}
@@ -102,7 +143,7 @@ function AppInfographicsSessionComparison(props) {
             {props.showBoxes.length > 0 &&
                 props.showBoxes[2]["clicked"] && (
                     <AppSectionBoxComponent
-                        type={"small-section"}
+                        type={"medium-section"}
                         heading={"Keyword detection"}
                     >
                         <AppKeywordsComponent
@@ -120,7 +161,7 @@ function AppInfographicsSessionComparison(props) {
                 props.showBoxes.length > 0 &&
                 props.showBoxes[2]["clicked"] && (
                     <AppSectionBoxComponent
-                        type={"small-section"}
+                        type={"medium-section"}
                         heading={"Keyword detection"}
                     >
                         <AppKeywordsComponent
@@ -137,7 +178,7 @@ function AppInfographicsSessionComparison(props) {
             {props.showBoxes.length > 0 &&
                 props.showBoxes[11]["clicked"] && (
                     <AppSectionBoxComponent
-                        type={"wide-section"}
+                        type={"medium-section"}
                         heading={`Visual Analytics`}
                     >
                         <AppIndividualVideoFeaturesComponent
@@ -153,7 +194,7 @@ function AppInfographicsSessionComparison(props) {
                 props.showBoxes.length > 0 &&
                 props.showBoxes[11]["clicked"] && (
                     <AppSectionBoxComponent
-                        type={"wide-section"}
+                        type={"medium-section"}
                         heading={`Visual Analytics`}
                     >
                         <AppIndividualVideoFeaturesComponent
@@ -168,7 +209,7 @@ function AppInfographicsSessionComparison(props) {
             {props.showBoxes.length > 0 &&
                 props.showBoxes[5]["clicked"] && (
                     <AppSectionBoxComponent
-                        type={"small-section"}
+                        type={"medium-section"}
                         heading={`Participation and Impact Style`}
                     >
                         <AppIndividualFeaturesComponent
@@ -184,7 +225,7 @@ function AppInfographicsSessionComparison(props) {
                 props.showBoxes.length > 0 &&
                 props.showBoxes[5]["clicked"] && (
                     <AppSectionBoxComponent
-                        type={"small-section"}
+                        type={"medium-section"}
                         heading={`Participation and Impact Style`}
                     >
                         <AppIndividualFeaturesComponent
@@ -199,7 +240,7 @@ function AppInfographicsSessionComparison(props) {
             {props.showBoxes.length > 0 &&
                 props.showBoxes[3]["clicked"] && (
                     <AppSectionBoxComponent
-                        type={"small-section"}
+                        type={"medium-section"}
                         heading={"Expression and Thinking Style"}
                     >
                         <AppFeaturesComponent
@@ -214,7 +255,7 @@ function AppInfographicsSessionComparison(props) {
                 props.showBoxes.length > 0 &&
                 props.showBoxes[3]["clicked"] && (
                     <AppSectionBoxComponent
-                        type={"small-section"}
+                        type={"medium-section"}
                         heading={`Expression and Thinking Style`}
                     >
                         <AppFeaturesComponent
@@ -228,7 +269,7 @@ function AppInfographicsSessionComparison(props) {
             {props.showBoxes.length > 0 &&
                 props.showBoxes[4]["clicked"] && (
                     <AppSectionBoxComponent
-                        type={"small-section"}
+                        type={"medium-section"}
                         heading={"Radar chart"}
                     >
                         <AppRadarComponent
@@ -246,7 +287,7 @@ function AppInfographicsSessionComparison(props) {
                 props.showBoxes.length > 0 &&
                 props.showBoxes[4]["clicked"] && (
                     <AppSectionBoxComponent
-                        type={"small-section"}
+                        type={"medium-section"}
                         heading={"Radar chart"}
                     >
                         <AppRadarComponent

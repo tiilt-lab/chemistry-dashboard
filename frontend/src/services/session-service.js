@@ -141,7 +141,7 @@ class SessionService {
     );
   }
 
-  getSessionDeviceTranscriptsForClient(sessionId, deviceId, alias,startTime = 0) {
+  getSessionDeviceTranscriptsByAlias(sessionId, deviceId, alias,startTime = 0) {
     return this.api.httpRequestCall(
       `api/v1/session/${sessionId}/sessiondevice/${deviceId}/transcripts/student/${alias}`,
       "GET",
@@ -149,7 +149,7 @@ class SessionService {
     );
   }
 
-  getSessionDeviceVideoMetricsForClient(sessionId,deviceId, alias,startTime = 0) {
+  getSessionDeviceVideoMetricsByAlias(sessionId,deviceId, alias,startTime = 0) {
     return this.api.httpRequestCall(
       `api/v1/session/${sessionId}/sessiondevice/${deviceId}/videometrics/student/${alias}`,
       "GET",

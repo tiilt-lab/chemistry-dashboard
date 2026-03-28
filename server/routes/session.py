@@ -547,17 +547,14 @@ def export_session_transcript_video_metrics(session_id,windowsize, format, **kwa
     return output
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/synthesized_feedback_metrics',methods=['GET'])
-@wrappers.verify_login(public=True)
-@wrappers.verify_session_access
+# @wrappers.verify_login(public=True)
+# @wrappers.verify_session_access
 def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
     session_device = database.get_session_devices(id=session_device_id)
-    field_names = ['Group ID', 'Group Name', 'Time Range (s)', 'Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
-                'Clout', 'Emotional Tone',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness',
-                'Word Count', 'Facial Emotion', 'Object Focus On', 'Attention Level','Attention Rate',"Attention Class", 'Speaker Tag', 'Speaker ID', 'Topic ID']
     
     keywords = database.get_keyword_usages(session_device_id=session_device_id)
     speakers = database.get_speakers(session_device_id=session_device_id)
-    # for speaker in speakers:
+
     videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device_id)
     transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session_by_timeline(session_device_id=session_device.id)
     combine_metric_level = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,speakers,windowsize=10)

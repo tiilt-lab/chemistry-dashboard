@@ -15,12 +15,15 @@ import { AppSectionBoxComponent } from "../section-box/section-box-component"
 
 
 function CollaborationFeedbackDashboard(props) {
-  const selectedParticipantId = props.currentParticipant;
+  const selectedSessionId1 = props.selectedSessionId1
+  const selectedSessionDeviceId1 = props.selectedSessionDeviceId1
+  console.log("props.promptResponses ", props.promptResponses)
+  const promptResponses = (props.promptResponses.hasOwnProperty(selectedSessionId1) && props.promptResponses[selectedSessionId1].hasOwnProperty(selectedSessionDeviceId1)) ? props.promptResponses[selectedSessionId1][selectedSessionDeviceId1] : []
   const llmresponse_session_summary = props.llmSessionAnalysis.Session_summary
   const llmresponse_session_metric_summary = llmresponse_session_summary.Session_metric_summary
   const llmresponse_group_summary = props.llmSessionAnalysis.Group_summary
   const llmresponse_window_summary = props.llmSessionAnalysis.Window_summary
-  const selectedParticipantData = props.selectedParticipantSynthesizedData
+  const selectedParticipantData = props.selectedSynthesizedData
   const window_length = selectedParticipantData.participant_level_metric.length
   const [selectedMoment, setSelectedMoment] = useState(selectedParticipantData.participant_level_metric[0])
   const [question, setQuestion] = useState([0, ""]);
@@ -44,15 +47,13 @@ function CollaborationFeedbackDashboard(props) {
 
       viewport.scrollTop = offset;
     });
-  }, [props.promptResponses[selectedParticipantId]?.length]);
+  }, [promptResponses.length]);
 
   useEffect(() => {
     setSelectedMoment(selectedParticipantData.participant_level_metric.find((m) => m.windowid === props.selectedMomentIdAndIndex[1]))
   }, [props.selectedMomentIdAndIndex]);
 
-  // useEffect(() => {
-  //   setSelectedMoment(selectedParticipantData.participant_level_metric[0])
-  // }, [selectedParticipantId])
+
 
 
 
@@ -217,8 +218,9 @@ function CollaborationFeedbackDashboard(props) {
               <CardContent>
                 <div className="grid gap-4 grid-cols-1 lg:grid-cols-4">
                   <div className="rounded-2xl bg-sky-50 p-4 ring-1 ring-sky-100">
-                    <div className="flex items-center gap-2 text-sm text-sky-700"><Users className="h-4 w-4" />Student</div>
-                    <div className="mt-2 text-lg font-semibold">{selectedParticipantId}</div>
+                    <div className="flex items-center gap-2 text-sm text-sky-700"><Users className="h-4 w-4" />Session - Group</div>
+                    <div className="text-sm text-muted-foreground">{props.sessionNameForReflecDashboard}</div>
+                    <div className="mt-2 text-lg font-semibold">{props.groupNameForReflecDashboard}</div>
                   </div>
                   <div className="rounded-2xl bg-muted p-4">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground"><BarChart3 className="h-4 w-4" />Session Pattern</div>
@@ -239,22 +241,37 @@ function CollaborationFeedbackDashboard(props) {
             <Card className="rounded-3xl border-0 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-xl">Controls</CardTitle>
-                <CardDescription>Choose a student, inspect a moment, and ask grounded questions.</CardDescription>
+                <CardDescription>Choose another session and group, inspect a moment, and ask grounded questions.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="w-full">
-                  <div className="mb-2 text-sm font-medium">Participant</div>
-                  <Select value={selectedParticipantId} onValueChange={props.setParticipantIDRefectionDashboard}>
+                  <div className="mb-2 text-sm font-medium">Session</div>
+                  <Select value={selectedSessionId1} onValueChange={props.getSessionDevices}>
                     <SelectTrigger className="w-full rounded-2xl">
-                      <SelectValue placeholder="Select participant" />
+                      <SelectValue placeholder="Select Session" />
                     </SelectTrigger>
                     <SelectContent>
-                      {props.participants.map((p) => (
-                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                      {props.previousSessions.map((sess) => (
+                        <SelectItem key={sess.id} value={sess.id}>{sess.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div className="w-full">
+                  <div className="mb-2 text-sm font-medium">Group</div>
+                  <Select value={selectedSessionDeviceId1} onValueChange={props.loadReflectionDashboardForNewSelection}>
+                    <SelectTrigger className="w-full rounded-2xl">
+                      <SelectValue placeholder="Select Group" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {props.selectFilteredDevice1.map((device) => (
+                        <SelectItem key={device} value={device.id}>{device.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="rounded-2xl border p-4 text-sm leading-6">
                   <div className="flex items-center gap-2 font-medium"><Brain className="h-4 w-4" />Your Strength</div>
                   <p className="mt-2 text-muted-foreground">
@@ -369,7 +386,7 @@ function CollaborationFeedbackDashboard(props) {
                           <div className="font-semibold">Verbal participation balance</div>
                           <div className="text-sm text-muted-foreground">{llmresponse_group_summary.verbalparticipationbalance}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.verbalparticipationbalance}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.hasOwnProperty('verbalparticipationbalance') ? selectedParticipantData.group_level_metric.verbalparticipationbalance : 0}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.group_level_metric.verbalparticipationbalance)}`} style={{ width: `${selectedParticipantData.group_level_metric.verbalparticipationbalance}%` }} />
@@ -382,7 +399,7 @@ function CollaborationFeedbackDashboard(props) {
                           <div className="font-semibold">Turn taking balance</div>
                           <div className="text-sm text-muted-foreground">{llmresponse_group_summary.turntakingbalance}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.turntakingbalance}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.hasOwnProperty('turntakingbalance') ? selectedParticipantData.group_level_metric.turntakingbalance : 0}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.group_level_metric.turntakingbalance)}`} style={{ width: `${selectedParticipantData.group_level_metric.turntakingbalance}%` }} />
@@ -395,7 +412,7 @@ function CollaborationFeedbackDashboard(props) {
                           <div className="font-semibold">Shared task focus</div>
                           <div className="text-sm text-muted-foreground">{llmresponse_group_summary.Sharedtaskfocus}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.Sharedtaskfocus}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.hasOwnProperty('Sharedtaskfocus') ? selectedParticipantData.group_level_metric.Sharedtaskfocus : 0}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.group_level_metric.Sharedtaskfocus)}`} style={{ width: `${selectedParticipantData.group_level_metric.Sharedtaskfocus}%` }} />
@@ -408,7 +425,7 @@ function CollaborationFeedbackDashboard(props) {
                           <div className="font-semibold">Idea contribution balance</div>
                           <div className="text-sm text-muted-foreground">{llmresponse_group_summary.ideacontribution}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.ideacontribution}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.hasOwnProperty('ideacontribution') ? selectedParticipantData.group_level_metric.ideacontribution : 0}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.group_level_metric.ideacontribution)}`} style={{ width: `${selectedParticipantData.group_level_metric.ideacontribution}%` }} />
@@ -421,7 +438,7 @@ function CollaborationFeedbackDashboard(props) {
                           <div className="font-semibold">Momentum</div>
                           <div className="text-sm text-muted-foreground">{llmresponse_group_summary.momentum}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.momentum}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.hasOwnProperty('momentum') ? selectedParticipantData.group_level_metric.momentum : 0}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.group_level_metric.momentum)}`} style={{ width: `${selectedParticipantData.group_level_metric.momentum}%` }} />
@@ -588,7 +605,8 @@ function CollaborationFeedbackDashboard(props) {
                             props.setIsThinking(true);
                             try {
                               await props.interactivePromptFnc(
-                                selectedParticipantId,
+                                selectedSessionId1,
+                                selectedSessionDeviceId1,
                                 question[0],
                                 question[1]
                               );
@@ -622,7 +640,8 @@ function CollaborationFeedbackDashboard(props) {
 
                               try {
                                 await props.interactivePromptFnc(
-                                  selectedParticipantId,
+                                  selectedSessionId1,
+                                  selectedSessionDeviceId1,
                                   q[0],
                                   q[1]
                                 );
@@ -651,12 +670,12 @@ function CollaborationFeedbackDashboard(props) {
                   <CardContent>
                     <ScrollArea viewportRef={viewportRef} className="h-[480px] pr-3">
                       <div className="space-y-3">
-                        {props.promptResponses[selectedParticipantId]?.map((item, index) => (
-                          <div key={index} ref={index === props.promptResponses[selectedParticipantId]?.length - 1 ? lastItemRef : null}>
+                        {promptResponses.map((item, index) => (
+                          <div key={index} ref={index === promptResponses.length - 1 ? lastItemRef : null}>
                             <ChatTrail
                               question={item[0]}
                               response={item[1]}
-                              selected={index === (props.promptResponses[selectedParticipantId]?.length - 1)}
+                              selected={index === (promptResponses.length - 1)}
                             />
                           </div>
                         ))}

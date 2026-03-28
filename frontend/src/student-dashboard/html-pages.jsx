@@ -7,6 +7,7 @@ import style5 from "../sessions/sessions.module.css"
 import React from "react"
 import Select from "react-select"
 import { AppInfographicsSessionComparison } from "../components/infographics-view/infographics_session-comparison"
+import { CollaborationFeedbackDashboard } from "../components/reflection-dashboard-view/reflection-interactive-dashboard-student"
 import { adjDim, isLargeScreen } from "../myhooks/custom-hooks"
 
 import MicIcon from "../Icons/Mic"
@@ -102,6 +103,10 @@ function StudentSessionDashboardPages(props) {
                                         title: "Comparison",
                                         action: () => props.viewComparison(),
                                     },
+                                    {
+                                        title: "Reflection Dashboard",
+                                        action: () => props.loadReflectiondashboard("Reflection Dashboard"),
+                                    }
                                 ]}
                                 participants={[]}
 
@@ -127,11 +132,11 @@ function StudentSessionDashboardPages(props) {
                                 ) : (
                                     <></>
                                 )}
-                                {props.sessionDevices.length > 0  ? (
+                                {props.sessionDevices.length > 0 ? (
                                     props.sessionDevices.map((device, index) => (
                                         <div
                                             key={index}
-                                            onClick={() => props.setSelectedDeviceID(device.id)}
+                                            onClick={() => props.loadSelectedSessionDeviceMetrics(device.id)}
                                             className={style["pod-overview-button"]}
                                         >
                                             <svg
@@ -193,7 +198,47 @@ function StudentSessionDashboardPages(props) {
                             </div>
                         )}
 
+                        {props.nextPage === "Reflection Dashboard" && (
+                            <div className="center-column-container">
+                                {(!props.reflectionDashboardDoneLoading) ? (
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                        <div className={style["load-text"]}>
+                                            Loading Reflection Dashboard...
+                                        </div>
+                                        <AppSpinner />
+                                    </div>
+                                ) : (
+                                    <>
+                                        {props.selectedSessionId1 !== -1 && (props.session1Transcripts.length >= 0 || props.session1VideoMetrics.length >= 0) ? (
 
+                                            <CollaborationFeedbackDashboard
+                                                sessionNameForReflecDashboard = {props.sessionNameForReflecDashboard}
+                                                groupNameForReflecDashboard = {props.groupNameForReflecDashboard}
+                                                llmSessionAnalysis={props.selectedLLMAnalysis}
+                                                selectedSynthesizedData={props.selectedSynthesizedData}
+                                                interactivePromptFnc={props.interactivePromptFnc}
+                                                promptResponses={props.promptResponses}
+                                                isThinking={props.isThinking}
+                                                setIsThinking={props.setIsThinking}
+                                                previousSessions={props.previousSessions}
+                                                getSessionDevices={props.getSessionDevices}
+                                                selectedSessionId1={props.selectedSessionId1}
+                                                selectedSessionDeviceId1 = {props.selectedSessionDeviceId1}
+                                                selectFilteredDevice1={props.selectFilteredDevice1}
+                                                setdeviceIDRefectionDashboard={props.setdeviceIDRefectionDashboard}
+                                                selectedMomentIdAndIndex={props.selectedMomentIdAndIndex}
+                                                setSelectedMomentIdAndIndex={props.setSelectedMomentIdAndIndex} 
+                                                loadReflectionDashboardForNewSelection = {props.loadReflectionDashboardForNewSelection}
+                                            />
+
+                                        ) : (
+                                            <></>
+                                        )}
+                                    </>
+
+                                )}
+                            </div>
+                        )}
 
                         {props.nextPage === "displayreportpage" && (
                             <div className="center-column-container">
@@ -221,6 +266,8 @@ function StudentSessionDashboardPages(props) {
                                                 showFeatures={props.showFeatures}
                                                 startTime={props.startTime}
                                                 endTime={props.endTime}
+                                                startTime2={props.startTime2}
+                                                endTime2={props.endTime2}
                                                 previousSessions={props.previousSessions}
                                                 selectedSessionId1={props.selectedSessionId1}
                                                 setSelectedSessionId1={props.setSelectedSessionId1}
@@ -233,6 +280,12 @@ function StudentSessionDashboardPages(props) {
                                                 details={props.details}
                                                 userDetail={props.userDetail}
                                                 loadComparedSessionMetrics={props.loadComparedSessionMetrics}
+                                                selectFilteredDevice1={props.selectFilteredDevice1}
+                                                selectFilteredDevice2={props.selectFilteredDevice2}
+                                                selectedSessionDeviceId1={props.selectedSessionDeviceId1}
+                                                selectedSessionDeviceId2={props.selectedSessionDeviceId2}
+                                                getSessionDevices={props.getSessionDevices}
+                                                loadComparedSessionDeviceMetrics={props.loadComparedSessionDeviceMetrics}
                                             ></AppInfographicsSessionComparison>
 
                                         ) : (
