@@ -64,7 +64,7 @@ class VideoProcessor:
         self.video_chunk_count = -1
         self.STOP = object()  # sentinel
         # One shared pool instead of creating threads per batch
-        self.pool = ThreadPoolExecutor(max_workers=1)
+        self.pool = ThreadPoolExecutor(max_workers=3) #ProcessPoolExecutor(max_workers=4)
         self.pending_future = None
         
 
@@ -301,11 +301,8 @@ class VideoProcessor:
             with detector_lock():  # serialize CUDA/NMS across all users in this process
                 # det = get_detector(None)  # second call ignores lambda
                 all_frames,face_object_detected = self.image_object_detection.detection_with_facial_regonition(batch_frames,facialEmbeddings,batch_track,time_marker,vid_img_dir,auth_key)
-            
             video_metrics = self.VideoMetricAnalytics.compute_videoMetrics(all_frames,face_object_detected)
-            # print("video_metrics ", video_metrics)
             if video_metrics: 
-                # logging.info('printing video_metrics')
                 # logging.info(video_metrics)
                 success = callbacks.post_video_metrics(self.config.auth_key, video_metrics)
 
@@ -370,6 +367,7 @@ class VideoProcessor:
                         self.time_marker = []
 
                         # submit to the pool
+                        # self.worker_process(frames, markers, b_tracker)
                         self.pending_future = self.pool.submit(self.worker_process, frames, markers, b_tracker)
                         self.batch_track+=1
 

@@ -80,7 +80,7 @@ class EmotionDetectionModelV1:
                 except Exception as e:
                     logging.info('EmotionDetectionModelV1: exception occured while predicting facial emotion for {0} in frame {1} : {2}'.format(alias,frame_index,e))
 
-    def predict_facial_emotion_for_single_participant(self, image, bbox,crop_face_from_fame_with_bbox):
+    def predict_facial_emotion_for_single_participant(self, image, bbox,alias,frame_index,crop_face_from_fame_with_bbox):
         try:
             face = crop_face_from_fame_with_bbox(image,bbox,"xyxy", False, 0.0, False) 
             

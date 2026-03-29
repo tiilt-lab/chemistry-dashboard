@@ -5,6 +5,7 @@ import os
 import sys
 import cv2
 import torch
+import logging
 import torch.backends.cudnn as cudnn
 from numpy import random
 import os
@@ -153,7 +154,7 @@ class ImageObjectDetection:
         
         accumulator = {'head':dict(), 'other_objects':dict()}
         all_frames = {}
-        print("number of facial embeddings is "+str(len(facial_embeddings))+"number of frames "+str(len(images)))
+        # logging.info("number of facial embeddings is "+str(len(facial_embeddings))+" number of frames "+str(len(images)))
         for val_batch, (img_index, img, im0s) in enumerate(dataset): #path, img, im0s, vid_cap in dataset:
             # all_frames.extend(im0s)
             # img = torch.from_numpy(img).to(device)
@@ -198,11 +199,9 @@ class ImageObjectDetection:
                             x1, y1, x2, y2 = xyxy
                             # face_location = (int(y1), int(x2), int(y2), int(x1))
                             face_locations = face_recognition.face_locations(face)
-                            # print(f"face locations is : {face_locations}")
                             if face_locations:
                                 face_embedding  = face_recognition.face_encodings(face, face_locations,num_jitters=1)
                                 match, cos_score,L2_score = self.identify_student(face_embedding[0], facial_embeddings, "face_"+str(detected_faces),cos_threshold=0.95,L2_threshold=0.3)
-                                # print(f"Match: {match}, Confidence: {score:.3f}, Frame:{int(p)}, Bbox:{[int(x1),int(y1),int(x2),int(y2)]}")
                                 if match != "Unknown":
                                     # print(f"Match: {match}, Confidence: {cos_score:.3f}")
                                     self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_face",match,accumulator,time_marker,im0,int(p)) 
