@@ -6,13 +6,6 @@ import torchvision.transforms.functional as TF
 import numpy as np
 from PIL import Image, ImageFilter, ImageDraw
 import pandas as pd
-
-# import matplotlib as mpl
-
-# mpl.use('Agg')
-# from matplotlib import cm
-# import matplotlib.pyplot as plt
-# from scipy.misc import imresize
 import cv2
 import os
 import glob
