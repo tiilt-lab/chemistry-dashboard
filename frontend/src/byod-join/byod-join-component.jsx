@@ -620,7 +620,7 @@ function JoinPage() {
 
     }
 
-    const addSavedSpeakerFingerprint = () => {
+    const addSavedSpeakerFingerprint =  () => {
 
         let message = null
         message = {
@@ -1344,7 +1344,7 @@ function JoinPage() {
     }
 
     const onSessionClosing = (isClosing) => {
-        // setSessionClosing(isClosing)
+        // setSessionClosing(isClosing) 
     }
 
     const acquireWakeLock = async () => {
@@ -1352,7 +1352,7 @@ function JoinPage() {
             console.error(
                 "Screen Wake Lock API is not supported by the browser",
             )
-            return
+            return 
         }
 
         try {

@@ -219,10 +219,11 @@ pretrained_ecapa
 .gitignore
 topicModels
 GazeTracking/
-MCGaze/
+MCGaze/*
+MCGaze/MCGaze_demo/*
 Multiple_object_detection
 ResidualMaskingNetwork
-Shared-Attention
+Shared-Attention/*
 facial-expression-analysis
 gaze_estimation
 
