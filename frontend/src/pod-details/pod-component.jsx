@@ -105,6 +105,8 @@ function PodComponent() {
             response.json().then((jsonObj) => {
               synthesizedFeedbackMetrics.current = jsonObj;
               participants.current = Object.keys(synthesizedFeedbackMetrics.current["participants_level"])
+              console.log("Fetched synthesized feedback metrics onto pod component", jsonObj)
+              console.log("Participants for reflection dashboard", participants.current)
             });
         },
         (apierror) => {
