@@ -615,13 +615,14 @@ def write_or_append_metrics(metrics, fwrite,accumulator, format='csv'):
         accumulator.append(metrics)    
 
 
-def extract_videometrics_within_window(videoMetrics, window_start, window_end, index):
+def extract_videometrics_within_window(videoMetrics,speakers, window_start, window_end, index):
     metric_len = len(videoMetrics)
     metrics = defaultdict(dict)
     while index < metric_len: 
         if videoMetrics[index].time_stamp >= window_start and videoMetrics[index].time_stamp < window_end:
             v = videoMetrics[index]
             if  v.student_username not in metrics:
+                speakers.add(v.student_username)
                 metrics[v.student_username]={'facial_emotion':[str(v.facial_emotion)],'object_on_focus':[str(v.object_on_focus)],'attention_level':[int(v.attention_level)]}
             else:
                 metrics[v.student_username]['facial_emotion'].append(str(v.facial_emotion)) 
@@ -632,7 +633,7 @@ def extract_videometrics_within_window(videoMetrics, window_start, window_end, i
         index += 1
     return metrics, index
 
-def extract_transcriptmetrics_within_window(transcriptSpeakerMetric, keywords,window_start, window_end, index):
+def extract_transcriptmetrics_within_window(transcriptSpeakerMetric,speakers, keywords,window_start, window_end, index):
     metric_len = len(transcriptSpeakerMetric)
     metrics = defaultdict(dict)
 
@@ -642,6 +643,7 @@ def extract_transcriptmetrics_within_window(transcriptSpeakerMetric, keywords,wi
             transcript_keywords = [keyword for keyword in keywords if keyword.transcript_id == t.id]
             keyword_similarity_score = [round((1-keyword.similarity)*100,3) for keyword in transcript_keywords]
             if  t.speaker_tag not in metrics: 
+                speakers.add(t.speaker_tag)
                 metrics[t.speaker_tag]={'analytic':[int(t.analytic_thinking_value)],
                                         'authenticity':[int(t.authenticity_value)],
                                         'certainty':[int(t.certainty_value)],
@@ -1015,13 +1017,14 @@ def compute_derived_metric_and_update(metric_acc_per_window,speakerDetail,total_
                             'avg_speakingalignmentscore','avg_momentum','avg_verbalshare','avg_turntaking','avg_trenddirection','earlytrenddirection','midtrenddirection','latetrenddirection','sharedtaskfocus'] 
     Combined_object['session_level'][speakeralias] = dict(zip(session_data_heading,session_metrics))
    
-def synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,speakers,windowsize=10):
+def synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,windowsize=10): #speakers,
     v_index = t_index = 0
     attention_rate_acc_per_speaker = defaultdict(list)
     metric_acc_per_speaker = defaultdict(list)
     metric_acc_per_window = defaultdict(dict)
     group_level_metric_acc = defaultdict(list)
     total_verbal_turn_acc = []
+    speakers = set()
     Combined_object = {'group_id': session_device.id, 'group_name': session_device.name, 'window_level':{}, 'participants_level':{}, 'session_level':{}, 'group_level':{}}
     min_start = min(videoMetrics[0].time_stamp if videoMetrics else 0, transcriptSpeakerMetric[0][0].start_time if transcriptSpeakerMetric else 0)
     max_end = max(videoMetrics[-1].time_stamp if videoMetrics else 0, transcriptSpeakerMetric[-1][0].start_time if transcriptSpeakerMetric else 0)
@@ -1029,37 +1032,37 @@ def synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,video
     window_end = min_start+windowsize
     window_count = 0
     total_speaker_detected = 0
-    while window_end < max_end:
+    while window_start <= max_end:
         window_id = f"w_{window_start}_{window_end}"
-        window_video_metrics, v_index = extract_videometrics_within_window(videoMetrics, window_start, window_end, v_index)
-        window_transcript_metrics, t_index = extract_transcriptmetrics_within_window(transcriptSpeakerMetric,keywords, window_start, window_end, t_index)
+        window_video_metrics, v_index = extract_videometrics_within_window(videoMetrics,speakers, window_start, window_end, v_index)
+        window_transcript_metrics, t_index = extract_transcriptmetrics_within_window(transcriptSpeakerMetric,speakers,keywords, window_start, window_end, t_index)
 
         #combine transcrit and video metrics for this window
         for speaker in speakers:
-            w_video_meteic = window_video_metrics.get(speaker.alias,[])
-            w_transcript_metric = window_transcript_metrics.get(speaker.alias,[])
-            prev_metric = metric_acc_per_speaker[speaker.alias][-1] if metric_acc_per_speaker.get(speaker.alias,None) else [None]*32
+            w_video_meteic = window_video_metrics.get(speaker,[])
+            w_transcript_metric = window_transcript_metrics.get(speaker,[])
+            prev_metric = metric_acc_per_speaker[speaker][-1] if metric_acc_per_speaker.get(speaker,None) else [None]*32
             aggregated_video_metrics = aggregate_video_metric_per_window(w_video_meteic,windowsize,window_count,prev_metric) if w_video_meteic else []
             aggregated_transcript_metrics = aggregate_transcript_metric_per_window(w_transcript_metric,prev_metric) if w_transcript_metric else []
             
             #accumulate the attention rate for each speaker if there is video metrics. this will be used to compute the robust_z value
             if aggregated_video_metrics:
-                attention_rate_acc_per_speaker[speaker.alias].append(aggregated_video_metrics[3]) 
+                attention_rate_acc_per_speaker[speaker].append(aggregated_video_metrics[3]) 
 
             combine_metrics = combine_transcript_video_metrics(aggregated_video_metrics,aggregated_transcript_metrics,window_id,window_start,window_end)
 
             if combine_metrics:
-                metric_acc_per_speaker[speaker.alias].append(combine_metrics)
-                metric_acc_per_window[window_id][speaker.alias]=combine_metrics
+                metric_acc_per_speaker[speaker].append(combine_metrics)
+                metric_acc_per_window[window_id][speaker]=combine_metrics
 
                 #keep track of all the speaking turns
                 if combine_metrics[4] > 0:
                     total_verbal_turn_acc.append(combine_metrics[4])
 
                 if 'persons' not in metric_acc_per_window[window_id]:
-                    metric_acc_per_window[window_id]['persons'] = [speaker.alias]
+                    metric_acc_per_window[window_id]['persons'] = [speaker]
                 else:
-                    metric_acc_per_window[window_id]['persons'].append(speaker.alias)
+                    metric_acc_per_window[window_id]['persons'].append(speaker)
 
 
         window_start = window_end
