@@ -1033,7 +1033,7 @@ def synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,video
         window_id = f"w_{window_start}_{window_end}"
         window_video_metrics, v_index = extract_videometrics_within_window(videoMetrics, window_start, window_end, v_index)
         window_transcript_metrics, t_index = extract_transcriptmetrics_within_window(transcriptSpeakerMetric,keywords, window_start, window_end, t_index)
-
+        
         #combine transcrit and video metrics for this window
         for speaker in speakers:
             w_video_meteic = window_video_metrics.get(speaker.alias,[])
