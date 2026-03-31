@@ -1,4 +1,4 @@
-import { GenericDialogBox } from "../dialog/dialog-component"
+import { GenericDialogBox,WaitingDialog } from "../dialog/dialog-component"
 import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { Appheader } from "../header/header-component"
@@ -6,13 +6,14 @@ import style from "./pod.module.css"
 import React from "react"
 import Select from "react-select"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
+import { CollaborationFeedbackDashboard } from "../components/reflection-dashboard-view/reflection-interactive-dashboard"
 
 function PodComponentPages(props) {
     return (
         <>
             <div className="main-container">
                 <Appheader
-                    title={props.details === "Group" ? props.sessionDevice.name : props.selectedSpkralias}
+                    title={props.details === "Group" || props.details === "Reflection Dashboard" ? props.sessionDevice.name : props.selectedSpkralias}
                     leftText={false}
                     rightText={"Option"}
                     rightEnabled={true}
@@ -27,16 +28,16 @@ function PodComponentPages(props) {
                             menus={[
                                 {
                                     title: "Group",
-                                    action: () => props.viewGroup(),
+                                    action: () => props.dashboardView("Group"),
                                 },
-                                // {
-                                //     title: "Individual",
-                                //     action: () => props.viewIndividual(),
-                                // },
                                 {
                                     title: "Comparison",
-                                    action: () => props.viewComparison(),
+                                    action: () => props.dashboardView("Comparison"),
                                 },
+                                {
+                                    title: "Reflection Dashboard",
+                                    action:  () =>  props.loadReflectiondashboard("Reflection Dashboard"),
+                                }
                             ]}
                             participants={ props.speakers.map((speaker, index) => (
                                 {
@@ -50,6 +51,23 @@ function PodComponentPages(props) {
                         <></>
                     )}
                     <div className="center-column-container">
+                   
+                        {props.details === 'Reflection Dashboard'?
+                            <CollaborationFeedbackDashboard
+                                participants = {props.participants}
+                                currentParticipant = {props.currentParticipant}
+                                llmSessionAnalysis = {props.selectedParticipantLLMAnalysis}
+                                selectedParticipantSynthesizedData = {props.selectedParticipantSynthesizedData}
+                                interactivePromptFnc = {props.interactivePromptFnc}
+                                promptResponses = {props.promptResponses}
+                                isThinking = {props.isThinking}
+                                setIsThinking = {props.setIsThinking}
+                                setParticipantIDRefectionDashboard = {props.setParticipantIDRefectionDashboard}
+                                selectedMomentIdAndIndex = {props.selectedMomentIdAndIndex}
+                                setSelectedMomentIdAndIndex = {props.setSelectedMomentIdAndIndex}
+                            />
+                        :
+                        
                         <AppInfographicsComparison
                             displayTranscripts={props.displayTranscripts}
                             displayVideoMetrics={props.displayVideoMetrics}
@@ -75,9 +93,12 @@ function PodComponentPages(props) {
                             details={props.details}
                             getSpeakerAliasFromID={props.getSpeakerAliasFromID}
                         ></AppInfographicsComparison>
+                
+                        }
+                        
                     </div>
                 </div>
-                {props.loading() ? <AppSpinner></AppSpinner> : <></>}
+                {props.loading(props.details) ? <AppSpinner></AppSpinner> : <></>}
             </div>
             <GenericDialogBox
                 show={props.currentForm !== ""}
@@ -226,6 +247,13 @@ function PodComponentPages(props) {
                     <></>
                 )}
             </GenericDialogBox>
+
+            <WaitingDialog
+                itsclass={"add-dialog"}
+                heading={"Processing..."}
+                message={"Please wait..."}
+                show={props.currentForm === "awaitingllmresponse"}
+            />
         </>
     )
 }

@@ -27,6 +27,8 @@ from tables.topic_model import TopicModel
 from tables.speaker import Speaker
 from tables.speaker_transcript_metrics import SpeakerTranscriptMetrics
 from tables.speaker_video_metrics import SpeakerVideoMetrics
+from tables.llm_feedback_report import LLMFeedbackReport
+from tables.llm_question_answer import LLMQuestionAnswer
 
 # Saves changes made to database (models)
 def save_changes():
@@ -144,7 +146,7 @@ def delete_speaker_transcript_metrics(id = None, speaker_id = None, transcript_i
 # -------------------------
 
 def get_speaker_video_metrics(id = None, student_username=None, session_id=None, session_device_id=None):
-    query = db.session.query(SpeakerVideoMetrics)
+    query = db.session.query(SpeakerVideoMetrics).order_by(SpeakerVideoMetrics.time_stamp.asc())
     if session_id != None:
         query = query.join(SessionDevice).filter(SessionDevice.session_id == session_id)
     if id != None:
@@ -155,7 +157,7 @@ def get_speaker_video_metrics(id = None, student_username=None, session_id=None,
         query = query.filter(SpeakerVideoMetrics.session_device_id == session_device_id)
     return query.all()
 
-def get_speaker_video_metrics_by_session_alias(session_id=None, student_username=None):
+def get_speaker_video_metrics_by_session_alias(session_id=None, student_username=None,device_id=None):
     query = db.session.query(SpeakerVideoMetrics).order_by(SpeakerVideoMetrics.time_stamp.asc()) 
     if session_id != None:
         query = query.join(SessionDevice).filter(SpeakerVideoMetrics.session_device_id == SessionDevice.id)
@@ -163,6 +165,9 @@ def get_speaker_video_metrics_by_session_alias(session_id=None, student_username
 
     if student_username != None:
         query = query.join().filter(SpeakerVideoMetrics.student_username == student_username)
+
+    if device_id != None:
+        query = query.join().filter(SpeakerVideoMetrics.session_device_id == device_id)    
 
     return query.all()
 
@@ -205,7 +210,81 @@ def delete_speaker_video_metrics(id = None,student_username=None, session_device
     db.session.commit()
     return True
 
+# -------------------------
+# Get Speaker, Video and Transcript Metrics by session  
+#-------------------------
+#  transcript_id=None
+def get_all_transcript_metrics_by_session(id = None, student_username=None, session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
+    query = db.session.query(Transcript,SpeakerTranscriptMetrics)
+    query = query.join(SpeakerTranscriptMetrics).filter((Transcript.id == SpeakerTranscriptMetrics.transcript_id) &
+                                                        (Transcript.speaker_id == SpeakerTranscriptMetrics.speaker_id))
 
+    if session_device_id != None:
+        query = query.filter(Transcript.session_device_id == session_device_id) 
+
+    if speaker_id != -1:
+        query = query.filter(Transcript.speaker_id == speaker_id)
+    else:        
+        query = query.filter(Transcript.speaker_id != -1)
+        query = query.distinct().order_by(Transcript.speaker_tag.asc())
+    query = query.order_by(Transcript.start_time.asc())
+    return query.all()
+
+def get_all_transcript_metrics_by_session_by_timeline(id = None, student_username=None, session_id=None, session_device_id=None):
+    query = db.session.query(Transcript,SpeakerTranscriptMetrics)
+    query = query.join(SpeakerTranscriptMetrics).filter((Transcript.id == SpeakerTranscriptMetrics.transcript_id) &
+                                                        (Transcript.speaker_id == SpeakerTranscriptMetrics.speaker_id))
+
+    if session_device_id != None:
+        query = query.filter(Transcript.session_device_id == session_device_id) 
+     
+    query = query.filter(Transcript.speaker_id != -1)
+    query = query.order_by(Transcript.start_time.asc())
+    return query.all()
+
+def get_all_metrics_by_session(id = None, student_username=None, session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
+    query = db.session.query(Transcript,SpeakerTranscriptMetrics,SpeakerVideoMetrics)
+    query = query.join(SpeakerTranscriptMetrics, (Transcript.id == SpeakerTranscriptMetrics.transcript_id) &
+                                                        (Transcript.speaker_id == SpeakerTranscriptMetrics.speaker_id))
+    query = query.join(SpeakerVideoMetrics,(Transcript.start_time == SpeakerVideoMetrics.time_stamp)&
+                       (Transcript.speaker_tag == SpeakerVideoMetrics.student_username))
+
+    if session_device_id != None:
+        query = query.filter(Transcript.session_device_id == session_device_id) 
+
+    query = query.distinct()
+    query = query.order_by(Transcript.speaker_tag.asc(),Transcript.start_time.asc())
+    return query.all()
+
+def get_transcript_metrics_by_session(id = None, student_username=None, session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
+    query = db.session.query(Transcript)
+
+    if session_device_id != None:
+        query = query.filter(Transcript.session_device_id == session_device_id) 
+    query = query.filter(Transcript.speaker_id != -1)
+    query = query.distinct().order_by(Transcript.speaker_tag.asc())
+    query = query.order_by(Transcript.start_time.asc())
+    return query.all()
+
+def get_speaker_metrics_by_session(id = None, student_username=None, session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
+    query = db.session.query(SpeakerTranscriptMetrics)
+    query = query.join(SpeakerTranscriptMetrics).filter(Transcript.id == SpeakerTranscriptMetrics.transcript_id)
+
+    if session_device_id != None:
+        query = query.filter(SpeakerTranscriptMetrics.session_device_id == session_device_id) 
+    query = query.filter(SpeakerTranscriptMetrics.speaker_id != -1)
+    query = query.distinct().order_by(SpeakerTranscriptMetrics.speaker_id.asc())
+    query = query.order_by(SpeakerTranscriptMetrics.transcript_id.asc())
+    return query.all()
+
+def get_video_metrics_by_session(id = None, student_username=None, session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
+    query = db.session.query(SpeakerVideoMetrics)
+
+    if session_device_id != None:
+        query = query.filter(SpeakerVideoMetrics.session_device_id == session_device_id) 
+    query = query.distinct().order_by(SpeakerVideoMetrics.student_username.asc())
+    query = query.order_by(SpeakerVideoMetrics.time_stamp.asc())
+    return query.all()
 # -------------------------
 # Topic Models
 # -------------------------
@@ -598,6 +677,18 @@ def get_session_devices(id=None, session_id=None, device_id=None, name=None, pro
         return query.first()
     return query.all()
 
+def get_Session_device_by_alias(session_id=None,alias=None):
+    query = db.session.query(SessionDevice)
+    query = query.join(Speaker).filter(Speaker.session_device_id == SessionDevice.id)
+    if session_id!=None:
+        query = query.filter(SessionDevice.session_id == session_id)
+    if alias != None:
+        query = query.filter(Speaker.alias == alias) 
+    # query = query.filter(SessionDevice.connected == False)
+    query = query.distinct()
+    return query.all()
+
+
 def disconnect_all_session_devices():
     query = db.session.query(SessionDevice).filter(SessionDevice.connected == True)
     for session_device in query.all():
@@ -722,7 +813,7 @@ def get_transcripts(session_id=None, session_device_id=None, start_time=0, end_t
 
     return query.all()
 
-def get_transcripts_by_session_alias(session_id=None, speaker_tag=None):
+def get_transcripts_by_session_alias(session_id=None, speaker_tag=None,device_id = None):
     query = db.session.query(Transcript).order_by(Transcript.start_time.asc()) 
     if session_id != None:
         query = query.join(SessionDevice).filter(Transcript.session_device_id == SessionDevice.id)
@@ -731,7 +822,11 @@ def get_transcripts_by_session_alias(session_id=None, speaker_tag=None):
     if speaker_tag != None:
         query = query.join().filter(Transcript.speaker_tag == speaker_tag)
 
+    if device_id != None:
+        query = query.join().filter(Transcript.session_device_id == device_id)    
+
     return query.all()    
+
 
 
 def delete_device_transcripts(session_device_id):
@@ -946,3 +1041,104 @@ def get_dependents(folder_id = None):
         for folder in folders:
             children.insert(0,folder)
     return dependents
+
+# -------------------------
+# LLM Data
+# -------------------------
+
+def get_speaker_session_device_llm_report(id=None,username=None, sessionId=None, sessionDeviceId = None):
+    query = db.session.query(LLMFeedbackReport)
+    if id != None:
+        return query.filter(LLMFeedbackReport.id == id).first()
+    if sessionId != None:
+        query =query.filter(LLMFeedbackReport.session_id == sessionId)
+    if sessionDeviceId != None:
+        query =query.filter(LLMFeedbackReport.session_device_id == sessionDeviceId)
+    if username != None:
+        return query.filter(LLMFeedbackReport.speaker_username == username).first()
+    return query.all()
+
+def add_speaker_session_device_llm_report(username, sessionId, sessionDeviceId,feedback_analysis):
+    matched_feedback_analysis = get_speaker_session_device_llm_report(username=username, sessionId=sessionId, sessionDeviceId = sessionDeviceId)
+    if matched_feedback_analysis:
+        return False, matched_feedback_analysis
+    feedback = LLMFeedbackReport(sessionId, sessionDeviceId, username,feedback_analysis)
+    db.session.add(feedback)
+    db.session.commit()
+    return True, feedback
+
+def update_speaker_session_device_llm_report(id, username=None, sessionId=None, sessionDeviceId=None,feedback_analysis=None):
+    feedback = get_speaker_session_device_llm_report(id=id)
+    if feedback:
+        db_change = False
+        if sessionId:
+            feedback.session_id = sessionId
+            db_change = True
+        if sessionDeviceId:
+            feedback.session_device_id = sessionDeviceId
+            db_change = True
+        if username:
+            feedback.speaker_username = username 
+            db_change = True  
+        if feedback_analysis:
+            feedback.feedback_analysis = feedback_analysis 
+            db_change = True   
+        
+        if db_change:
+            db.session.commit()
+
+        return True,feedback
+    return False, None
+
+def get_speaker_session_device_llm_question_answer(id=None,username=None, sessionId=None, sessionDeviceId = None,default_question_id=None):
+    query = db.session.query(LLMQuestionAnswer)
+    if id != None:
+        return query.filter(LLMQuestionAnswer.id == id).first()
+    if sessionId != None:
+        query = query.filter(LLMQuestionAnswer.session_id == sessionId)
+    if sessionDeviceId != None:
+        query = query.filter(LLMQuestionAnswer.session_device_id == sessionDeviceId)
+    if username != None:
+        query = query.filter(LLMQuestionAnswer.speaker_username == username)
+    if default_question_id != None:
+        return query.filter(LLMQuestionAnswer.default_question_id == default_question_id).first() 
+    return query.all()
+
+def add_speaker_session_device_llm_question_answer(username, sessionId, sessionDeviceId,default_question_id,question,answer):
+    matched_response = get_speaker_session_device_llm_question_answer(username=username, sessionId=sessionId, sessionDeviceId = sessionDeviceId,default_question_id=default_question_id)
+    if matched_response:
+        return False, matched_response
+    response = LLMQuestionAnswer(sessionId, sessionDeviceId, username,default_question_id,question,answer)
+    db.session.add(response)
+    db.session.commit()
+    return True, response
+
+def update_speaker_session_device_llm_question_answer(id, username=None, sessionId=None, sessionDeviceId=None,default_question_id=None,question=None,answer=None):
+    response = get_speaker_session_device_llm_question_answer(id=id)
+    if response:
+        db_change = False
+        if sessionId:
+            response.session_id = sessionId
+            db_change = True
+        if sessionDeviceId:
+            response.session_device_id = sessionDeviceId
+            db_change = True
+        if username:
+            response.speaker_username = username 
+            db_change = True  
+        if default_question_id:
+            response.default_question_id = default_question_id 
+            db_change = True 
+        if question:
+            response.question = question 
+            db_change = True 
+        if answer:
+            response.answer = answer 
+            db_change = True           
+        
+        if db_change:
+            db.session.commit()
+
+        return True,response
+    return False, None
+   

@@ -185,7 +185,6 @@ function SignupPage() {
 
             const send = () => {
                 if (audiows.current.readyState === WebSocket.OPEN && videows.current.readyState === WebSocket.OPEN) {
-                    console.log("i am firering heartbeat")
                     audiows.current.send(JSON.stringify({ type: "heartbeat", key:"no key" }));
                     videows.current.send(JSON.stringify({ type: "heartbeat",key:"no key" }));
 
@@ -199,7 +198,6 @@ function SignupPage() {
             const id = setInterval(send, 20000);
 
             return () => {
-                console.log("i called clear interval...")
                 clearInterval(id);
             };
         }
@@ -216,7 +214,6 @@ function SignupPage() {
         if (videoBlob) {
             if (mimetype.startsWith('video/webm')) {
                 const fixedBlob = await fixWebmDuration(videoBlob, duration*1000);
-                console.log("videoBlob- duration ", videoBlob, duration)
                 videows.current.send(fixedBlob)
                 audiows.current.send(fixedBlob)
                 setCurrentForm("processing")
@@ -452,7 +449,6 @@ function SignupPage() {
         audiows.current.binaryType = "blob"
 
         audiows.current.onopen = (e) => {
-            console.log("[Connected to audio webscoket processor services]")
             setAudioSocketProccesorConnected(true)
         }
 

@@ -87,7 +87,6 @@ class AuthService {
             userobj => {
               const student = StudentModel.fromJson(userobj);
               setStudentUpdated(true)
-              console.log("i successfully updated")
             }
           )
         }else if (response.status === 400) {

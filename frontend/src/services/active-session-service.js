@@ -193,9 +193,6 @@ export class ActiveSessionService {
                 const speaker_video_metrics = SpeakerVideoMetricsModel.fromJson(metric)
                 currentVideoMetrics.push(metric)
             }
-            //  console.log(" speaker_video_metrics from Video metrics ", speaker_video_metrics)
-            
-
             
             this.videoMetricSource.next(currentVideoMetrics)
         })
@@ -237,7 +234,6 @@ export class ActiveSessionService {
                             parseInt(sessionDeviceId, 10),
                     )
                     .sort((a, b) => (a.start_time > b.start_time ? 1 : -1))
-                //console.log(data,'still debugging ...')
                 setState(data)
             }
         })
@@ -259,7 +255,6 @@ export class ActiveSessionService {
                             parseInt(sessionDeviceId, 10),
                     )
                     .sort((a, b) => (a.time_stamp > b.time_stamp ? 1 : -1))
-                //console.log(data,'still debugging ...')
                 setState(data)
             }
         })

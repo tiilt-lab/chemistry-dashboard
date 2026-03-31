@@ -71,11 +71,9 @@ function PodComponentSession() {
           const data = e
             .sort((a, b) => (a.start_time > b.start_time ? 1 : -1));
           setTranscripts(data);
-          // console.log(data,session, 'testing refresh still debugging ...')
 
           const sessionLen =
             Object.keys(session).length > 0 ? session.length : 0;
-          //console.log("Start and end times changed default useeffect");
           setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100);
           setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100);
         }
@@ -92,11 +90,9 @@ function PodComponentSession() {
           const data = e
             .sort((a, b) => (a.time_stamp > b.time_stamp ? 1 : -1));
           setVideoMetrics(data);
-          // console.log(data,session, 'testing refresh still debugging ...')
 
           const sessionLen =
             Object.keys(session).length > 0 ? session.length : 0;
-          //console.log("Start and end times changed default useeffect");
           setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100);
           setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100);
         }
@@ -109,7 +105,6 @@ function PodComponentSession() {
     // Refresh based on timeslider.
     setIntervalId(
       setInterval(() => {
-        // console.log("Fetched onto pod-component");
         //ResetTimeRange(timeRange);
         if (session === undefined || !session.recording) {
           clearInterval(intervalId);
@@ -208,8 +203,6 @@ function PodComponentSession() {
   // }, [participantDisplayed]);
 
 
-
-  //console.log(session, transcripts, '-', sessionDevice, '-', displayTranscripts, '-', startTime, '-', endTime, '-', 'session .......')
 
   // to initialize the checklist data structures
   const initChecklistData = (featuresArr, setFn) => {

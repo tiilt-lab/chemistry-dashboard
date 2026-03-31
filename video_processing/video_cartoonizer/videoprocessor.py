@@ -20,6 +20,9 @@ from concurrent.futures import ThreadPoolExecutor
 from queue import Empty
 from .VideoMetricProcessor import VideoMetricAnalytics
 from global_singleton_lock import get_detector, detector_lock
+from concurrent.futures import TimeoutError
+
+WAIT_TIMEOUT = 0.05   # 50 ms (tune this)
 
 class VideoProcessor:
     def __init__(self,cartoon_model,facial_emotion_detector,image_object_detection,attention_detection, \
@@ -61,7 +64,9 @@ class VideoProcessor:
         self.video_chunk_count = -1
         self.STOP = object()  # sentinel
         # One shared pool instead of creating threads per batch
-        self.pool = ThreadPoolExecutor(max_workers=1)
+        self.pool = ThreadPoolExecutor(max_workers=3) #ProcessPoolExecutor(max_workers=4)
+        self.pending_future = None
+        
 
 
 
@@ -296,11 +301,8 @@ class VideoProcessor:
             with detector_lock():  # serialize CUDA/NMS across all users in this process
                 # det = get_detector(None)  # second call ignores lambda
                 all_frames,face_object_detected = self.image_object_detection.detection_with_facial_regonition(batch_frames,facialEmbeddings,batch_track,time_marker,vid_img_dir,auth_key)
-            
             video_metrics = self.VideoMetricAnalytics.compute_videoMetrics(all_frames,face_object_detected)
-            # print("video_metrics ", video_metrics)
             if video_metrics: 
-                # logging.info('printing video_metrics')
                 # logging.info(video_metrics)
                 success = callbacks.post_video_metrics(self.config.auth_key, video_metrics)
 
@@ -311,12 +313,15 @@ class VideoProcessor:
     def worker_process(self,frames_batch, time_markers, batch_idx):
         # Do cvtColor here if needed (OpenCV releases GIL, ok in threads)
         frames_batch = [cv2.cvtColor(f, cv2.COLOR_BGR2RGB) for f in frames_batch]
-       
+        if self.config.videocartoonify and self.cf.video_cartoonize():
+            logging.info('cartoonizing frame batch of size  {0}'.format(len(frames_batch)))
+            self.convert_image(frames_batch, None, 500, 375)
+
         if self.cf.process_video_analytics():
+            logging.info('processing video analytics for batch {0} of size {1}'.format(batch_idx, len(frames_batch)))
             self.process_video_analytics(frames_batch, self.facialEmbeddings, batch_idx, time_markers, self.vid_img_dir,self.config.auth_key)
             
-        if self.config.videocartoonify and self.cf.video_cartoonize():
-            self.convert_image(frames_batch, None, 500, 375)
+       
 
 
     def processing(self):
@@ -342,6 +347,18 @@ class VideoProcessor:
                     self.time_marker.append(self.adjust_time(ts))
 
                     if len(self.frame_batch) >= self.batch_size:
+                        if self.pending_future is not None and not self.pending_future.done():
+                            try:
+                                # Wait briefly for worker to finish
+                                self.pending_future.result(timeout=WAIT_TIMEOUT)
+                            except TimeoutError:
+                                # Still not done after waiting → drop batch
+                                self.frame_batch = []
+                                self.time_marker = []
+
+                                logging.debug("Dropped batch after waiting %.2f seconds for worker_process for %s",WAIT_TIMEOUT, self.config.auth_key)
+                                continue
+
                         # hand off current lists; start fresh ones for the producer
                         frames = self.frame_batch
                         markers = self.time_marker
@@ -350,7 +367,8 @@ class VideoProcessor:
                         self.time_marker = []
 
                         # submit to the pool
-                        self.pool.submit(self.worker_process, frames, markers, b_tracker)
+                        # self.worker_process(frames, markers, b_tracker)
+                        self.pending_future = self.pool.submit(self.worker_process, frames, markers, b_tracker)
                         self.batch_track+=1
 
                     # we just need 290 frames of the 10 sec chunks, and break if the frames capture  is more than 290    
@@ -362,12 +380,13 @@ class VideoProcessor:
 
         # drain remaining frames
         if self.frame_batch:
-            frames = self.frame_batch
-            markers = self.time_marker
-            b_tracker = self.batch_track
-            self.frame_batch = []
-            self.time_marker = []
-            self.pool.submit(self.worker_process, frames, markers, b_tracker)
+            if self.pending_future is None or self.pending_future.done():
+                frames = self.frame_batch
+                markers = self.time_marker
+                b_tracker = self.batch_track
+                self.frame_batch = []
+                self.time_marker = []
+                self.pending_future  = self.pool.submit(self.worker_process, frames, markers, b_tracker)
 
         self.pool.shutdown(wait=True)
         logging.info('frame cartoonization thread stopped for {0}.'.format(self.config.auth_key))

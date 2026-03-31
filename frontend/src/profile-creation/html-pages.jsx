@@ -25,7 +25,6 @@ import { AppInfographicsComparison } from "../components/infographics-view/infog
 import {RecordingCoach} from "./recording-coach"
 
 function ProfileCreationPage(props) {
-    // console.log(props, 'props')
     return (
         <>
             {(

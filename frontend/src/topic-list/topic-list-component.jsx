@@ -59,7 +59,6 @@ function TopicListComponent(props){
   useEffect(()=> {
     if (props.userdata !== undefined && Object.keys(props.userdata).length !==0) {
       setUser(props.userdata);
-      console.log("Current User: ", props.userdata);
     }
   },[])
 

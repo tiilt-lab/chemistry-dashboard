@@ -34,6 +34,7 @@ torch.set_num_interop_threads(1)
 from twisted.internet import reactor, task
 from autobahn.twisted.websocket import WebSocketServerFactory
 from autobahn.twisted.websocket import WebSocketServerProtocol
+from queue import Full, Empty
 from video_cartoonizer.video_cartoonify_loader import VideoCartoonifyLoader
 from emotion_detector.emotion_detection_model import EmotionDetectionModel, EmotionDetectionModelV1
 from attention_tracking.detect import ImageObjectDetection
@@ -148,7 +149,7 @@ class ServerProtocol(WebSocketServerProtocol):
         if data['type'] == 'start':
             valid, result = ProcessingConfig.from_json(data)
             if not valid:
-                self.send_json({'type': 'error', 'message': result})
+                self.send_json({'type': 'error', 'message': "Initialization failed"})
                 self.signal_end()
             else:
                 self.config = result
@@ -168,7 +169,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.orig_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1,self.config.mimeExtension)
                     
                     if self.config.videocartoonify or cf.process_video_analytics():
-                        self.video_queue = queue.Queue()
+                        self.video_queue = queue.Queue(maxsize=2)
                         self.frame_queue = None
                         self.cartoon_image_queue = None
                          
@@ -183,7 +184,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.redu_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1,self.config.mimeExtension)
 
                 if (self.config.videocartoonify or self.config.video) and not cf.video_cartoonize() and not cf.process_video_analytics(): 
-                    self.send_json({'type':'start','message':'Video processing not activated to start video processor'})
+                    self.send_json({'type':'error','message':'Video processing not activated to start video processor'})
                     logging.info('Video process connected but video processing not activated')
                     callbacks.post_connect(self.config.auth_key)
                 else:
@@ -217,7 +218,9 @@ class ServerProtocol(WebSocketServerProtocol):
                 audiobyte = self.reduce_wav_channel(1,wavObj)
 
                 if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()): 
-                    self.video_queue.put(subclips.iter_frames(fps=10, dtype="uint8", with_times=True))
+                    chunk_iter = subclips.iter_frames(fps=10, dtype="uint8", with_times=True)
+                    self.enqueue_latest_video_chunk(chunk_iter)
+                    # self.video_queue.put(subclips.iter_frames(fps=10, dtype="uint8", with_times=True))
                     logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
 
                 # Save audio data only if video saving is activated is activated.
@@ -299,6 +302,35 @@ class ServerProtocol(WebSocketServerProtocol):
             .overwrite_output()
             .run(quiet=True)
         )
+
+    def enqueue_latest_video_chunk(self, chunk, timeout=0.05):
+        """
+        Keep only the most recent chunk in the queue.
+        If the queue is full, remove the stale queued chunk and replace it.
+        """
+        try:
+            self.video_queue.put(chunk, timeout=timeout)
+            return True
+        except Full:
+            pass
+
+        # Queue is full: drop the old queued item
+        try:
+            old_item = self.video_queue.get_nowait()
+            # optional: if you use task_done semantics elsewhere, call task_done here
+            # self.video_queue.task_done()
+        except Empty:
+            old_item = None
+
+        # Try again to insert the latest chunk
+        try:
+            self.video_queue.put_nowait(chunk)
+            logging.debug("Replaced stale video chunk with latest chunk.")
+            return True
+        except Full:
+            logging.warning("Could not enqueue latest video chunk; dropping it.")
+            return False
+    
     def send_json(self, message):
         payload = json.dumps(message).encode('utf8')
         self.sendMessage(payload, isBinary = False)
@@ -357,7 +389,7 @@ def _create_detector():
 
 if __name__ == '__main__':
     cf.initialize()
-    
+    logging.info('Starting video Processing Service...22222222222')
     # Initialize Logger
     dir_path = os.path.dirname(os.path.realpath(__file__))
     log_format = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')

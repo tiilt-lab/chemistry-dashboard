@@ -27,12 +27,16 @@ class SessionService {
   }
 
   getSessionById(sessionId) {
-    return this.api.httpRequestCall(`/api/v1/sessions/student/sessionid/${sessionId}`, "GET", {});
+    return this.api.httpRequestCall(`api/v1/sessions/student/sessionid/${sessionId}`, "GET", {});
   }
 
  
   getSessionsByAlias(alias) {
-    return this.api.httpRequestCall(`/api/v1/sessions/student/alias/${alias}`, "GET", {});
+    return this.api.httpRequestCall(`api/v1/sessions/student/alias/${alias}`, "GET", {});
+  }
+
+ getSessionsDeviceByAlias(sessionid, alias) {
+    return this.api.httpRequestCall(`api/v1/sessions/sessionid/${sessionid}/student/alias/${alias}`, "GET", {});
   }
 
   deleteSession(sessionId) {
@@ -132,6 +136,22 @@ class SessionService {
   getSessionVideoMetricsForClient(sessionId, alias,startTime = 0) {
     return this.api.httpRequestCall(
       `api/v1/session/${sessionId}/videometrics/student/${alias}`,
+      "GET",
+      {}
+    );
+  }
+
+  getSessionDeviceTranscriptsByAlias(sessionId, deviceId, alias,startTime = 0) {
+    return this.api.httpRequestCall(
+      `api/v1/session/${sessionId}/sessiondevice/${deviceId}/transcripts/student/${alias}`,
+      "GET",
+      {}
+    );
+  }
+
+  getSessionDeviceVideoMetricsByAlias(sessionId,deviceId, alias,startTime = 0) {
+    return this.api.httpRequestCall(
+      `api/v1/session/${sessionId}/sessiondevice/${deviceId}/videometrics/student/${alias}`,
       "GET",
       {}
     );
@@ -279,13 +299,77 @@ class SessionService {
     );
   }
 
-  downloadSessionReport(sessionId, fileName) {
+  downloadSessionTranscriptMetrics(sessionId, fileName,windowsize,format) {
+    if(windowsize === ""){
+      windowsize = 0;
+    }else{
+      windowsize = parseInt(windowsize);
+    }
+
     return this.api.httpRequestCall(
-      `api/v1/sessions/${sessionId}/export`,
+      `api/v1/sessions/${sessionId}/exporttranscriptmetrics/${windowsize}/${format}`,
       "GET",
       {}
     );
   }
+
+  downloadSessionVideoMetrics(sessionId, fileName,windowsize,format) {
+    if(windowsize === ""){
+      windowsize = 0;
+    }else{
+      windowsize = parseInt(windowsize);
+    }
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/exportvideometrics/${windowsize}/${format}`,
+      "GET",
+      {}
+    );
+  }
+
+  downloadSessionTranscriptVideoMetrics(sessionId, fileName,windowsize,format) {
+    if(windowsize === ""){
+      windowsize = 0;
+    }else{
+      windowsize = parseInt(windowsize);
+    }
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/exporttranscriptvideometrics/${windowsize}/${format}`,
+      "GET",
+      {}
+    );
+  }
+
+  getSynthesizedFeedbackMetrics(sessionId, sessionDeviceId) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/synthesized_feedback_metrics`,
+      "GET",
+      {}
+    );
+  }
+
+  getLLMFeedbackBasedOnMetrics(metricData) {
+    return this.api.httpRequestCall(
+      `api/v1/llmqueries/generate_llm_feedback_based_on_metrics`,
+      "POST",
+      metricData
+    );
+  }
+
+  getLLMPromptResponse(metricData) {
+    return this.api.httpRequestCall(
+      `api/v1/llmqueries/fetch_response_for_question`,
+      "POST",
+      metricData
+    );
+  }
+
+  get_llm_question_answer_interactions(sessionId, sessionDeviceId,username) {
+    return this.api.httpRequestCall(
+      `api/v1/llminteractiveprompting/sessionid/${sessionId}/device/${sessionDeviceId}/username/${username}`,
+      "GET",
+      {}
+    );
+  } 
 
   getFolders() {
     return this.api.httpRequestCall(`api/folders`, "GET", {});

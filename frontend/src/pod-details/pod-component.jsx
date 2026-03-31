@@ -7,9 +7,10 @@ import { DeviceModel } from "../models/device";
 import { TranscriptModel } from "../models/transcript";
 import { KeywordUsageModel } from "../models/keyword-usage";
 import { SpeakerModel } from "../models/speaker";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { PodComponentPages } from "./html-pages";
+import { Question } from "@/Icons";
 
 function PodComponent() {
   const [sessionDevice, setSessionDevice] = useState({});
@@ -43,7 +44,18 @@ function PodComponent() {
   const [spkr2VideoMetrics, setSpkr2VideoMetrics] = useState([])
   const [open, setOpen] = useState(true);
   const [selectedSpkralias, setSelectedSpkralias] = useState("");
-  const { sessionDeviceId } = useParams();
+  const [participantIDReflectionDashboard, setParticipantIDRefectionDashboard] = useState("")
+  const { sessionId, sessionDeviceId } = useParams();
+  const synthesizedFeedbackMetrics = useRef(null);
+  const participants = useRef([])
+  const selectedParticipantSynthesizedData = useRef({})
+  const selectedParticipantLLMAnalysis = useRef(null)
+  const llmSessionAnalysis = useRef({})
+  const promptHistory = useRef({})
+  const [currentParticipant, setCurrentParticipant] = useState("")
+  const promptResponses = useRef({})
+  const [isThinking, setIsThinking] = useState(false)
+  const [selectedMomentIdAndIndex, setSelectedMomentIdAndIndex] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -85,6 +97,22 @@ function PodComponent() {
 
       subscriptions.push(transcriptSub);
     }
+    if (synthesizedFeedbackMetrics.current === null) {
+      const fetchData = new SessionService().getSynthesizedFeedbackMetrics(sessionId, sessionDeviceId);
+      fetchData.then(
+        (response) => {
+          if (response.status === 200)
+            response.json().then((jsonObj) => {
+              synthesizedFeedbackMetrics.current = jsonObj;
+              participants.current = Object.keys(synthesizedFeedbackMetrics.current["participants_level"])
+            });
+        },
+        (apierror) => {
+          console.log("podcomponent useEffect getSynthesizedFeedbackMetrics", apierror);
+        }
+      );
+    }
+
 
 
     if (videoMetrics.length <= 0) {
@@ -157,7 +185,6 @@ function PodComponent() {
     ]
     initChecklistData(boxArr, setShowBoxes)
 
-
     return () => {
       subscriptions.map((sub) => {
         if (sub.closed) {
@@ -180,12 +207,10 @@ function PodComponent() {
 
   useEffect(() => {
     if (displayTranscripts) {
-      console.log("reloaded page - display transcripts");
       setSpeakerTranscripts();
     }
 
     if (displayVideoMetrics) {
-      console.log("reloaded page - displayVideoMetrics")
       setSpeakerVideoMetrics()
     }
 
@@ -194,26 +219,22 @@ function PodComponent() {
 
   useEffect(() => {
     if (trigger > 0) {
-      console.log("reloaded page");
     }
   }, [trigger]);
 
   useEffect(() => {
     if (sessionDeviceId && session.id) getSpeakers();
     else setSpeakers([]);
-    console.log("loaded speaker data");
   }, [sessionDeviceId, session]);
 
-  // useEffect(() => {
-  //   if (participantDisplayed.length > 0) {
-  //     setSelectedParticipantData(participantDisplayed[0], participantDisplayed[1])
-  //   }
-  //   console.log("loaded displayed participant data");
-  // }, [participantDisplayed]);
-
-
-
-  //console.log(session, transcripts, '-', sessionDevice, '-', displayTranscripts, '-', startTime, '-', endTime, '-', 'session .......')
+  useEffect(() => {
+    if (participantIDReflectionDashboard !== "") {
+      let actionstatus = extractParticipantData(participantIDReflectionDashboard)
+      if (actionstatus) {
+        setCurrentParticipant(participantIDReflectionDashboard)
+      }
+    }
+  }, [participantIDReflectionDashboard])
 
   // to initialize the checklist data structures
   const initChecklistData = (featuresArr, setFn) => {
@@ -234,9 +255,9 @@ function PodComponent() {
     if (displayTranscripts.length) {
       setSpkr1Transcripts(
         displayTranscripts.reduce((values, transcript) => {
-          
+
           if (transcript.speaker_id === selectedSpkrId1
-          ){
+          ) {
             values.push(transcript);
           }
           return values;
@@ -245,9 +266,9 @@ function PodComponent() {
       setSpkr2Transcripts(
         displayTranscripts.reduce((values, transcript) => {
           if (transcript.speaker_id === selectedSpkrId2
-          ){
+          ) {
             values.push(transcript);
-         }
+          }
           return values;
         }, [])
       );
@@ -258,14 +279,14 @@ function PodComponent() {
   };
 
   const setSpeakerVideoMetrics = () => {
-    
+
     if (displayVideoMetrics.length) {
       let speakerAlias1 = getSpeakerAliasFromID(selectedSpkrId1)
       let speakerAlias2 = getSpeakerAliasFromID(selectedSpkrId2)
       setSpkr1VideoMetrics(
         displayVideoMetrics.reduce((values, videometrics) => {
           if (videometrics.student_username === speakerAlias1
-          ){
+          ) {
             values.push(videometrics)
           }
           return values
@@ -274,8 +295,8 @@ function PodComponent() {
       setSpkr2VideoMetrics(
         displayVideoMetrics.reduce((values, videometrics) => {
           if (videometrics.student_username === speakerAlias2
-          ){
-            values.push(videometrics)  
+          ) {
+            values.push(videometrics)
           }
           return values
         }, []),
@@ -333,8 +354,12 @@ function PodComponent() {
     }
   };
 
-  const loading = () => {
+  const loading = (details) => {
+    if(details === "Reflection Dashboard"){
+      return Object.keys(llmSessionAnalysis.current).length <= 0
+    }else{
     return session === null || transcripts === null;
+    }
   };
 
   const getSpeakers = () => {
@@ -422,16 +447,141 @@ function PodComponent() {
     handleCheck(event, showBoxes, setShowBoxes);
   };
 
-  const viewComparison = () => {
-    setDetails("Comparison");
+  const dashboardView = (view) => {
+    setDetails(view);
   };
 
-  const viewIndividual = () => {
-    setDetails("Individual");
+  const buildData = (reporttype, participantId, defaultQuestionId, question) => {
+    let retObj = {}
+    if (reporttype === "Participant level sesssion analysis") {
+      retObj["participant_name"] = participantId
+      retObj["sessionid"] = sessionId
+      retObj["sessiondeviceid"] = sessionDeviceId
+      retObj["retrieve_existing_report"] = "true"
+      retObj["participant_level_metric"] = synthesizedFeedbackMetrics.current["participants_level"][participantId]
+      retObj["session_level_metric"] = synthesizedFeedbackMetrics.current["session_level"][participantId]
+      retObj["group_level_metric"] = synthesizedFeedbackMetrics.current["group_level"]
+    } else if (reporttype === "interactive prompting") {
+      retObj["participant_name"] = participantId
+      retObj["sessionid"] = sessionId
+      retObj["sessiondeviceid"] = sessionDeviceId
+      retObj["retrieve_existing_answer"] = "true"
+      retObj["default_question_id"] = defaultQuestionId
+      retObj["question"] = question
+      retObj["window_level_metric"] = synthesizedFeedbackMetrics.current["window_level"]
+      retObj["session_level_metric"] = synthesizedFeedbackMetrics.current["session_level"]
+      retObj["group_level_metric"] = synthesizedFeedbackMetrics.current["group_level"]
+    }
+
+    return retObj
+  }
+
+  const extractParticipantData = async (participantId) => {
+    let respObj = buildData("Participant level sesssion analysis", participantId, null, null)
+
+    if (!respObj || Object.keys(respObj).length === 0) {
+      return false;
+    }
+
+    if (participantId in llmSessionAnalysis.current) {
+      selectedParticipantLLMAnalysis.current = llmSessionAnalysis.current[participantId]
+      selectedParticipantSynthesizedData.current = respObj
+      setSelectedMomentIdAndIndex([0, selectedParticipantSynthesizedData.current.participant_level_metric[0].windowid])
+      return true
+    }
+
+    try {
+      setCurrentForm("awaitingllmresponse");
+      const response = await new SessionService().getLLMFeedbackBasedOnMetrics(respObj);
+
+      if (response.status === 200) {
+        const jsonObj = await response.json()
+        llmSessionAnalysis.current[participantId] = jsonObj.answer;
+        selectedParticipantLLMAnalysis.current = llmSessionAnalysis.current[participantId]
+        selectedParticipantSynthesizedData.current = respObj
+        loadprompthistory(participantId)
+        setSelectedMomentIdAndIndex([0, selectedParticipantSynthesizedData.current.participant_level_metric[0].windowid])
+        setCurrentForm("");
+        return true
+      } else if (response.status === 400) {
+        console.log("LLM api response", response.message)
+        setCurrentForm("")
+        return false
+      }
+    } catch (error) {
+      console.log(
+        "podcomponent loadReflectiondashboard",
+        error,
+      )
+      return false
+    }
+  }
+
+  const loadprompthistory = async (participantId) => {
+    try {
+      const response = await new SessionService().get_llm_question_answer_interactions(sessionId, sessionDeviceId, participantId);
+
+      if (response.status === 200) {
+        const jsonObj = await response.json()
+        promptHistory.current[participantId] = jsonObj
+      } else if (response.status === 400) {
+        // console.log("LLM api response", response.message)
+      }
+    } catch (error) {
+      console.log(
+        "podcomponent loadprompthistory",
+        error,
+      )
+    }
+  }
+
+  const loadReflectiondashboard = async (view) => {
+    if (participants.current.length > 0) {
+      let actionstatus = await extractParticipantData(participants.current[0])
+      if (actionstatus) {
+        setCurrentParticipant(participants.current[0])
+        setDetails(view);
+      }
+    }
   };
 
-  const viewGroup = () => {
-    setDetails("Group");
+  const interactivePromptFnc = async (participantId, default_question_id, question) => {
+    let respObj = buildData("interactive prompting", participantId, default_question_id, question)
+    let existingPrompt = null
+    if (participantId in promptHistory.current) {
+      existingPrompt = promptHistory.current[participantId].find(p => (default_question_id !== -1 && p?.default_question_id === default_question_id)) ?? null;
+    }
+
+    if (existingPrompt !== null) {
+      if (participantId in promptResponses.current) {
+        promptResponses.current[participantId].push([question, existingPrompt.answer])
+      } else {
+        promptResponses.current[participantId] = [[question, existingPrompt.answer]]
+      }
+
+    } else {
+      try {
+
+        const response = await new SessionService().getLLMPromptResponse(respObj);
+
+        if (response.status === 200) {
+          const jsonObj = await response.json()
+          if (participantId in promptResponses.current) {
+            promptResponses.current[participantId].push([question, jsonObj.answer])
+          } else {
+            promptResponses.current[participantId] = [[question, jsonObj.answer]]
+          }
+          // console.log(jsonObj.answer)
+        } else if (response.status === 400) {
+          console.log("LLM api response", response.message)
+        }
+      } catch (error) {
+        console.log(
+          "podcomponent interactivePromptFnc",
+          error,
+        )
+      }
+    }
   }
 
 
@@ -480,13 +630,23 @@ function PodComponent() {
       getSpeakerAliasFromID={getSpeakerAliasFromID}
       details={details}
       setDetails={setDetails}
-      viewIndividual={viewIndividual}
-      viewComparison={viewComparison}
-      viewGroup={viewGroup}
+      dashboardView={dashboardView}
       open={open}
       setOpen={setOpen}
       loadSpeakerMetrics={loadSpeakerMetrics}
       selectedSpkralias={selectedSpkralias}
+      loadReflectiondashboard={loadReflectiondashboard}
+      participants={participants.current}
+      selectedParticipantLLMAnalysis={selectedParticipantLLMAnalysis.current}
+      selectedParticipantSynthesizedData={selectedParticipantSynthesizedData.current}
+      interactivePromptFnc={interactivePromptFnc}
+      promptResponses={promptResponses.current}
+      isThinking={isThinking}
+      setIsThinking={setIsThinking}
+      setParticipantIDRefectionDashboard={setParticipantIDRefectionDashboard}
+      currentParticipant={currentParticipant}
+      selectedMomentIdAndIndex={selectedMomentIdAndIndex}
+      setSelectedMomentIdAndIndex={setSelectedMomentIdAndIndex}
     />
   );
 }

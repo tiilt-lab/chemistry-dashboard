@@ -42,12 +42,13 @@ function LandingPageComponent() {
                 Join Discussion
             </button >
 
-            <button className="lanky-button"
-                onClick={() => navigate('/dashboard')}
-            >
-                Dashboard
-            </button >
-        </div >
-    )
+  <button 
+  className={isLargeScreen() ? "basic-button medium-button" : "basic-button small-button"}  
+    onClick = {()=> navigate('/student/dashboard')} 
+  > 
+  Dashboard
+  </button >
+  </div >
+  )
 }
 export default LandingPageComponent

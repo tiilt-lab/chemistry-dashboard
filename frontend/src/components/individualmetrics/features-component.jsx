@@ -2,6 +2,7 @@ import { useEffect, useCallback,useState } from "react";
 import { IndividualFeaturePage } from "./html-pages-individual";
 
 function AppIndividualFeaturesComponent(props) {
+  // console.log("does speaker id change ", props.spkrId, props.transcripts.length)
   // @Input('session') session: SessionModel;
 
   // @Input('transcripts')
@@ -18,7 +19,7 @@ function AppIndividualFeaturesComponent(props) {
   const [showFeatureDialog, setShowFeatureDialog] = useState(false);
 
   //update new metrics (individual)
-  const updateGraphs = useCallback((transcripts) => {
+  const updateGraphs = useCallback((transcripts,spkrId) => {
     const valueArrays = [
       { name: "Participation", values: [],'time':[] },
       { name: "Social Impact", values: [],'time':[] },
@@ -28,7 +29,7 @@ function AppIndividualFeaturesComponent(props) {
       { name: "Communication Density", values: [],'time':[] },
       
     ];
-    if(!transcripts || !transcripts.length===0 || props.spkrId === -1)
+    if(!transcripts || !transcripts.length===0 || spkrId === -1)
     {
       for (const valueArray of valueArrays) {
         valueArray["average"] = 0;
@@ -41,13 +42,14 @@ function AppIndividualFeaturesComponent(props) {
     }
 
     var speaker_metric;
-    // console.log("sent transcript is ", props.transcripts)
     transcripts.forEach((t) => {
-      if(props.spkrId !== "sessiontranscriptcomparison"){
+      if(spkrId !== "sessiontranscriptcomparison"){
         //select speaker metrics from transcripts based on the spkrId
         speaker_metric = t.speaker_metrics.find(
-        (item) => item.speaker_id === props.spkrId
+        (item) => item.speaker_id === spkrId
       );
+
+     
       }else{
        //select speaker metrics from transcripts based on the spkrId
         speaker_metric = t.speaker_metrics.find(
@@ -111,9 +113,10 @@ function AppIndividualFeaturesComponent(props) {
   },[]);
 
    useEffect(() => {
+    // console.log("tracking spker id ", props.spkrId, props.transcripts.length)
     if (props.transcripts.length === 0) return;
-    updateGraphs(props.transcripts);
-  }, [props.transcripts, updateGraphs]);
+    updateGraphs(props.transcripts,props.spkrId);
+  }, [props.spkrId]);
 
   const getInfo = (featureName) => {
     switch (featureName) {

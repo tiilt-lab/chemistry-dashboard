@@ -17,7 +17,6 @@ function AppSessionToolbar(props) {
 
 
     useEffect(() => {
-        console.log(props.session.length,'session length')
         if(props.fromClient)
             setFromClient(props.fromClient)
         const intvalId = setInterval(() => {
@@ -33,7 +32,6 @@ function AppSessionToolbar(props) {
 
 
     const updateTime = () => {
-        //console.log(props.session.length,'session length')
         // doesn't currently support displaying hours
         const m = Math.floor(props.session.length / 60);
         const s = Math.floor(props.session.length - m * 60);

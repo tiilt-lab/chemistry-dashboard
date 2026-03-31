@@ -32,7 +32,8 @@ function PageRouter() {
                 <Route path="/login" element={<LoginPage  />} /> 
                 <Route path="/signup" element={<SignupPage />} />
                 <Route path="/join" element={<JoinPage />} />
-                <Route path="/dashboard" element={<StudentSessionDashboard />} />
+                <Route path="/student/dashboard" element={<StudentSessionDashboard />} />
+                {/* <Route path='/student/dashboard/:sessionId' element={<StudentDeviceComponent/>} /> */}
                 <Route path='/home' element={<ProtectedRoute component={HomeScreen} />}/>
                 <Route path='/keyword-lists' element={<ProtectedRoute  component={ManageKeywordListsComponent} />}/>
                 <Route path='/keyword-lists/new' element={<ProtectedRoute  component={KeywordListItemsComponent}/>}/>

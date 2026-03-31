@@ -77,7 +77,7 @@ function AppInfographicsComparison(props) {
                     {props.showBoxes.length > 0 &&
                         props.showBoxes[1]["clicked"] && (
                             <AppSectionBoxComponent
-                                type={"small-section"}
+                                type={"medium-section"}
                                 heading={"Discussion timeline"}
                             >
                                 <AppTimeline
@@ -94,7 +94,7 @@ function AppInfographicsComparison(props) {
                         props.showBoxes.length > 0 &&
                         props.showBoxes[1]["clicked"] && (
                             <AppSectionBoxComponent
-                                type={"small-section"}
+                                type={"medium-section"}
                                 heading={"Discussion timeline"}
                             >
                                 <AppTimeline
@@ -110,7 +110,7 @@ function AppInfographicsComparison(props) {
                     {props.showBoxes.length > 0 &&
                         props.showBoxes[2]["clicked"] && (
                             <AppSectionBoxComponent
-                                type={"small-section"}
+                                type={"medium-section"}
                                 heading={"Keyword detection"}
                             >
                                 <AppKeywordsComponent
@@ -128,7 +128,7 @@ function AppInfographicsComparison(props) {
                         props.showBoxes.length > 0 &&
                         props.showBoxes[2]["clicked"] && (
                             <AppSectionBoxComponent
-                                type={"small-section"}
+                                type={"medium-section"}
                                 heading={"Keyword detection"}
                             >
                                 <AppKeywordsComponent
@@ -147,7 +147,7 @@ function AppInfographicsComparison(props) {
                         props.showBoxes.length > 0 &&
                         props.showBoxes[11]["clicked"] && ( 
                             <AppSectionBoxComponent
-                                type={"wide-section"}
+                                type={"medium-section"}
                                 heading={`Visual Analytics`}
                             >
                                 <AppIndividualVideoFeaturesComponent
@@ -163,7 +163,7 @@ function AppInfographicsComparison(props) {
                         props.showBoxes.length > 0 &&
                         props.showBoxes[11]["clicked"] && (
                             <AppSectionBoxComponent
-                                type={"small-section"}
+                                type={"medium-section"}
                                 heading={`Visual Analytics`}
                             >
                                 <AppIndividualVideoFeaturesComponent
@@ -179,7 +179,7 @@ function AppInfographicsComparison(props) {
                         props.showBoxes.length > 0 &&
                         props.showBoxes[5]["clicked"] && (
                             <AppSectionBoxComponent
-                                type={"small-section"}
+                                type={"medium-section"}
                                 heading={`Participation and Impact Style`}
                             >
                                 <AppIndividualFeaturesComponent
@@ -195,7 +195,7 @@ function AppInfographicsComparison(props) {
                         props.showBoxes.length > 0 &&
                         props.showBoxes[5]["clicked"] && (
                             <AppSectionBoxComponent
-                                type={"small-section"}
+                                type={"medium-section"}
                                 heading={`Participation and Impact Style`}
                             >
                                 <AppIndividualFeaturesComponent
@@ -210,7 +210,7 @@ function AppInfographicsComparison(props) {
                     {props.showBoxes.length > 0 &&
                         props.showBoxes[3]["clicked"] && (
                             <AppSectionBoxComponent
-                                type={"small-section"}
+                                type={"medium-section"}
                                 heading={"Expression and Thinking Style"}
                             >
                                 <AppFeaturesComponent
@@ -225,7 +225,7 @@ function AppInfographicsComparison(props) {
                         props.showBoxes.length > 0 &&
                         props.showBoxes[3]["clicked"] && (
                             <AppSectionBoxComponent
-                                type={"small-section"}
+                                type={"medium-section"}
                                 heading={`Expression and Thinking Style`}
                             >
                                 <AppFeaturesComponent
@@ -239,7 +239,7 @@ function AppInfographicsComparison(props) {
                     {props.showBoxes.length > 0 &&
                         props.showBoxes[4]["clicked"] && (
                             <AppSectionBoxComponent
-                                type={"small-section"} 
+                                type={"medium-section"} 
                                 heading={"Radar chart"}
                             >
                                 <AppRadarComponent
@@ -257,7 +257,7 @@ function AppInfographicsComparison(props) {
                         props.showBoxes.length > 0 &&
                         props.showBoxes[4]["clicked"] && (
                             <AppSectionBoxComponent
-                                type={"small-section"}
+                                type={"medium-section"}
                                 heading={"Radar chart"}
                             >
                                 <AppRadarComponent

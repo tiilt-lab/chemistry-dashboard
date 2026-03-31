@@ -219,8 +219,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.send_json({'type': 'error', 'message': err})  
             else:
                 logging.info('Audio biometrics saved')
-                self.send_json({'type': 'saved', 'message': "Biometric data captured successfully"})        
-             
+                self.send_json({'type': 'saved', 'message': "Biometric data captured successfully"})           
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 
