@@ -7,6 +7,7 @@
 
 #### The followings are already setup/configured in the glamdring.cs.northwestern.edu server ####
 Update system packages
+
 ```
 sudo apt-get update
 sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev python3 python3-pip python3-dev python3-venv python3-tk python3-openssl git sqlite nginx pkg-config libfreetype6-dev libsndfile1
@@ -243,7 +244,6 @@ pip install gdown
 gdown https://drive.google.com/uc?id=0B7XkCwpI5KDYNlNUTTlSS21pQmM
 ```
 
-```
 After the download is complete, execute the following lines.
 
 ```
@@ -277,5 +277,4 @@ Setup Nginx.
 sudo cp deploy/nginx.conf /etc/nginx/nginx.conf
 sudo cp deploy/nginx-headers.conf /etc/nginx/nginx-headers.conf
 sudo nginx -s reload
-
 ```
