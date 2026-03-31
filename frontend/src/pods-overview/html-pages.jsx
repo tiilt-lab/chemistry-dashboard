@@ -1,7 +1,6 @@
 import React from "react"
 import style from "./pods-overview.module.css"
 import style2 from "../dialog/dialog.module.css"
-import style3 from "../session-toolbar/session-toolbar.module.css"
 import style5 from "../sessions/sessions.module.css"
 import { Appheader } from "../header/header-component"
 import { GenericDialogBox } from "../dialog/dialog-component"
