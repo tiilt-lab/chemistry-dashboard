@@ -22,6 +22,12 @@ def sanitize(value):
     else:
         return str(escape(value))
 
+def sanitize_int_value(value):
+    if not value or not str(value).isdigit():
+        return None
+    else:
+        return int(value)        
+
 def get_client_ip(request):
     return request.remote_addr
 

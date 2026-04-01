@@ -29,6 +29,7 @@ from tables.speaker_transcript_metrics import SpeakerTranscriptMetrics
 from tables.speaker_video_metrics import SpeakerVideoMetrics
 from tables.llm_feedback_report import LLMFeedbackReport
 from tables.llm_question_answer import LLMQuestionAnswer
+from tables.rater import Rater
 
 # Saves changes made to database (models)
 def save_changes():
@@ -896,6 +897,33 @@ def update_user(user_id, data):
 
 
 # -------------------------
+# Rater
+# -------------------------
+
+def get_raters(id=None,raterid=None):
+    query = db.session.query(Rater)
+    if id != None:
+        return query.filter(Rater.id == id).first()
+    if raterid != None:
+        query = query.filter(Rater.raterid == raterid)
+    return query.all()
+
+def add_rater(sessionid, sessiondeviceid, speakerid, speakertag, raterid, type):
+    rater = Rater(sessionid, sessiondeviceid, speakerid, speakertag, raterid, type)
+    db.session.add(rater)
+    db.session.commit()
+    return True, rater  
+
+def delete_rater(id):
+    rater = get_raters(id=id)
+    if rater:
+        db.session.delete(rater)
+        db.session.commit()
+        return rater
+    else:
+        return None
+    
+# -------------------------
 # Student
 # -------------------------
 
@@ -1145,5 +1173,54 @@ def update_speaker_session_device_llm_question_answer(id, username=None, session
             db.session.commit()
 
         return True,response
+    return False, None
+
+
+# -------------------------
+# Session Synthesized Data for Reflective Dashboard
+# -------------------------
+
+def get_synthesized_feedback_metrics(id=None, sessionId=None, sessionDeviceId = None):
+    query = db.session.query(LLMFeedbackReport)
+    if id != None:
+        return query.filter(LLMFeedbackReport.id == id).first()
+    if sessionId != None:
+        query =query.filter(LLMFeedbackReport.session_id == sessionId)
+    if sessionDeviceId != None:
+        query =query.filter(LLMFeedbackReport.session_device_id == sessionDeviceId)
+    if username != None:
+        return query.filter(LLMFeedbackReport.speaker_username == username).first()
+    return query.all()
+
+def add_speaker_session_device_llm_report(username, sessionId, sessionDeviceId,feedback_analysis):
+    matched_feedback_analysis = get_speaker_session_device_llm_report(username=username, sessionId=sessionId, sessionDeviceId = sessionDeviceId)
+    if matched_feedback_analysis:
+        return False, matched_feedback_analysis
+    feedback = LLMFeedbackReport(sessionId, sessionDeviceId, username,feedback_analysis)
+    db.session.add(feedback)
+    db.session.commit()
+    return True, feedback
+
+def update_speaker_session_device_llm_report(id, username=None, sessionId=None, sessionDeviceId=None,feedback_analysis=None):
+    feedback = get_speaker_session_device_llm_report(id=id)
+    if feedback:
+        db_change = False
+        if sessionId:
+            feedback.session_id = sessionId
+            db_change = True
+        if sessionDeviceId:
+            feedback.session_device_id = sessionDeviceId
+            db_change = True
+        if username:
+            feedback.speaker_username = username 
+            db_change = True  
+        if feedback_analysis:
+            feedback.feedback_analysis = feedback_analysis 
+            db_change = True   
+        
+        if db_change:
+            db.session.commit()
+
+        return True,feedback
     return False, None
    

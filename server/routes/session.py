@@ -552,14 +552,31 @@ def export_session_transcript_video_metrics(session_id,windowsize, format, **kwa
 def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
     session_device = database.get_session_devices(id=session_device_id)
     
-    keywords = database.get_keyword_usages(session_device_id=session_device_id)
-    # speakers = database.get_speakers(session_device_id=session_device_id)
-
-    videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device_id)
-    transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session_by_timeline(session_device_id=session_device.id)
-    combine_metric_level = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,windowsize=10)#speakers,
+    combine_metric_level = {'group_id': session_device.id, 'group_name': session_device.name, 'window_level':{}, 'participants_level':{}, 'session_level':{}, 'group_level':{}}
     
-               
+    exisiting_synthesis = database.get_synthesized_feedback_metrics(sessionId=session_id, sessionDeviceId = session_device_id)
+
+    if exisiting_synthesis:
+        raw = str(exisiting_synthesis.synthesized_feedback)
+        combine_metric_level = json.loads(raw.replace("'", "\""))
+    else:
+
+        keywords = database.get_keyword_usages(session_device_id=session_device_id)
+        # speakers = database.get_speakers(session_device_id=session_device_id)
+
+        videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device_id)
+        transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session_by_timeline(session_device_id=session_device.id)
+        combine_metric_level = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,windowsize=10)#speakers,
+
+        #add to the database
+        if exisiting_synthesis:
+            #update the database
+            database.update_speaker_session_device_llm_report(id=exisiting_synthesis.id,synthesized_feedback=json.dumps(combine_metric_level))
+        else:
+            #insert to database
+            database.add_speaker_session_device_llm_report(sessionId=session_id,sessionDeviceId=session_device_id,synthesized_feedback=json.dumps(combine_metric_level))
+    
+
     return json_response(combine_metric_level)
     
 @api_routes.route('/api/v1/sessions/getredissessionkey', methods=['POST'])
