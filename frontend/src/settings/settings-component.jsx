@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserModel } from '../models/user';
 import {StudentModel} from '../models/student';
+import { RaterModel } from '../models/rater';
 import { DeviceModel } from '../models/device'
 import { SettingComponentPage } from './html-pages'
 
@@ -12,8 +13,10 @@ function SettingsComponent(props) {
   const user = props.userdata // The currently logged in user.
   const [users, setUsers] = useState()
   const [students, setStudents] = useState()
+  const [raters, setRaters] = useState()
   const [userToDelete, setUserToDelete] = useState(); 
   const [studentToDelete, setStudentToDelete] = useState(); 
+  const [raterToDelete, setRaterToDelete] = useState(); 
   const [devices, setDevices] = useState();
   const [currentForm, setCurrentForm] = useState("");
   const [statusTitle, setStatusTitle] = useState('');
@@ -58,6 +61,26 @@ function SettingsComponent(props) {
               studentJson => {
                 const stdsObj = StudentModel.fromJsonList(studentJson)
                 setStudents(stdsObj);
+                setCurrentForm(newForm);
+              }
+            )
+          }
+        },
+        apierror => {
+          console.log("settingcomponent func : opendialog ", apierror)
+        }
+      )
+    } else if (loadUsers &&  ["ViewRaters", "DeleteRater"].includes(newForm)) {
+      setCurrentForm("Loading");
+      const fetchData = new AuthService().getRaters()
+      fetchData.then(
+        response => {
+          if (response.status === 200) {
+            const respJson = response.json()
+            respJson.then(
+              raterJson => {
+                const raterObj = RaterModel.fromJsonList(raterJson)
+                setRaters(raterObj);
                 setCurrentForm(newForm);
               }
             )
@@ -147,16 +170,47 @@ function SettingsComponent(props) {
     )
   }
 
+  const createRater = (sessionid,sessiondeviceid,speakerid,speakertag,raterid,type) => {
+    const fetchData = new AuthService().createRater(sessionid,sessiondeviceid,speakerid,speakertag,raterid,type)
+    fetchData.then(
+      response => {
+        if (response.status === 200) {
+          const respJson = response.json()
+          respJson.then(
+            result => {
+              setStatusTitle('Rater Created');
+              setStatus('Rater Created Successfully' );
+            }, error => {
+              setStatusTitle('Failed to Create Rater')
+              setStatus(error.json()['message']);
+            }
+          )
+        }
+      },
+      apierror => {
+        console.log("settingcomponent func : createRater", apierror)
+      }
+    ).finally(
+      () => setCurrentForm("Status")
+    )
+  }
+
   const confirmDeleteUser = (userId) => {
     userId = +userId;
     setUserToDelete(users.find(u => u.id === userId));
     setCurrentForm("ConfirmDeleteUser");
   }
 
-    const confirmDeleteStudent = (studentId) => {
+  const confirmDeleteStudent = (studentId) => {
     studentId = +studentId;
     setStudentToDelete(students.find(s => s.id === studentId));
     setCurrentForm("ConfirmDeleteStudent");
+  }
+
+  const confirmDeleteRater = (id) => {
+    id = +id;
+    setRaterToDelete(raters.find(r => r.id === id));
+    setCurrentForm("ConfirmDeleteRater");
   }
 
   const deleteSelectedUser = () => {
@@ -184,30 +238,55 @@ function SettingsComponent(props) {
     )
   }
 
-   const deleteSelectedStudent = () => {
-    const fetchData = new AuthService().deleteStudent(studentToDelete.id)
-    fetchData.then(
-      response => {
-        if (response.status === 200) {
-          const respJson = response.json()
-          respJson.then(
-            result => {
-              setStatusTitle('Student Deleted');
-              setStatus(studentToDelete.username + ' has been deleted.');
-            }, error => {
-              setStatusTitle('Failed to Delete Student')
-              setStatus(studentToDelete.username + ' could not be deleted.');
-            }
-          )
-        }
-      },
-      apierror => {
-        console.log("settingcomponent func : confirmDeleteUser", apierror)
+  const deleteSelectedStudent = () => {
+  const fetchData = new AuthService().deleteStudent(studentToDelete.id)
+  fetchData.then(
+    response => {
+      if (response.status === 200) {
+        const respJson = response.json()
+        respJson.then(
+          result => {
+            setStatusTitle('Student Deleted');
+            setStatus(studentToDelete.username + ' has been deleted.');
+          }, error => {
+            setStatusTitle('Failed to Delete Student')
+            setStatus(studentToDelete.username + ' could not be deleted.');
+          }
+        )
       }
-    ).finally(
-      () => setCurrentForm("Status")
-    )
-  }
+    },
+    apierror => {
+      console.log("settingcomponent func : confirmDeleteUser", apierror)
+    }
+  ).finally(
+    () => setCurrentForm("Status")
+  )
+}
+
+const deleteSelectedRater = () => {
+  const fetchData = new AuthService().deleteRater(raterToDelete.id)
+  fetchData.then(
+    response => {
+      if (response.status === 200) {
+        const respJson = response.json()
+        respJson.then(
+          result => {
+            setStatusTitle('Rater Deleted');
+            setStatus(raterToDelete.raterid + ' has been deleted.');
+          }, error => {
+            setStatusTitle('Failed to Delete Rater')
+            setStatus(raterToDelete.raterid + ' could not be deleted.');
+          }
+        )
+      }
+    },
+    apierror => {
+      console.log("settingcomponent func : confirmDeleteUser", apierror)
+    }
+  ).finally(
+    () => setCurrentForm("Status")
+  )
+}
   const lockUser = (userId) => {
     userId = +userId;
     const fetchData = new AuthService().lockUser(userId)
@@ -496,13 +575,17 @@ function SettingsComponent(props) {
       changePassword={changePassword}
       users={users}
       students={students}
+      raters = {raters}
       devices = {devices}
       confirmDeleteUser={confirmDeleteUser}
       confirmDeleteStudent={confirmDeleteStudent}
+      confirmDeleteRater={confirmDeleteRater}
       userToDelete={userToDelete}
       studentToDelete={studentToDelete}
+      raterToDelete={raterToDelete}
       deleteSelectedUser={deleteSelectedUser}
       deleteSelectedStudent={deleteSelectedStudent}
+      deleteSelectedRater={deleteSelectedRater}
       revokeAPIAccess={revokeAPIAccess}
       allowAPIAccess={allowAPIAccess}
       deleteDeviceLogs={deleteDeviceLogs}
@@ -514,6 +597,7 @@ function SettingsComponent(props) {
       unlockUser={unlockUser}
       lockUser={lockUser}
       createUser={createUser}
+      createRater={createRater}
       closeDialog={closeDialog}
     />
 

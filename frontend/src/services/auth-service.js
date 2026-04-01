@@ -119,6 +119,10 @@ class AuthService {
     return new ApiService().httpRequestCall("api/v1/admin/students", 'GET', {});
   }
 
+  getRaters() {
+    return new ApiService().httpRequestCall("api/v1/admin/raters", 'GET', {});
+  }
+
   me(stateSetter) {
     const fetchRes = new ApiService().httpRequestCall("api/v1/me", 'GET', {});
     fetchRes.then(
@@ -157,12 +161,29 @@ class AuthService {
     return new ApiService().httpRequestCall("api/v1/admin/users", 'POST', body);
   }
 
+  async createRater(sessionid,sessiondeviceid,speakerid,speakertag,raterid,type) {
+    const body = {
+      sessionid: sessionid,
+      sessiondeviceid: sessiondeviceid,
+      speakerid: speakerid,
+      speakertag: speakertag,
+      raterid: raterid,
+      type: type
+    };
+    return new ApiService().httpRequestCall("api/v1/admin/raters", 'POST', body);
+  }
+  
+
   deleteUser(userId) {
     return new ApiService().httpRequestCall("api/v1/admin/users/" + userId, 'DELETE', {});
   }
 
   deleteStudent(studentId) {
     return new ApiService().httpRequestCall("api/v1/admin/students/" + studentId, 'DELETE', {});
+  }
+
+  deleteRater(id) {
+    return new ApiService().httpRequestCall("api/v1/admin/raters/" + id, 'DELETE', {});
   }
 
   getUsers() {
