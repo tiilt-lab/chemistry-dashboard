@@ -1,3 +1,5 @@
+import email
+
 from flask import Blueprint, Response, request, abort, session, send_file
 from tables.user import User
 from app import base_dir
@@ -11,7 +13,7 @@ import base64
 import os
 import config as cf
 from redis_helper import RedisLogin
-from utility import json_response, sanitize
+from utility import json_response, sanitize, sanitize_int_value
 
 api_routes = Blueprint('admin', __name__)
 
@@ -31,6 +33,15 @@ def get_students(**kwargs):
         return json_response([student.json() for student in students])
     else:
         return json_response({'message': 'No Records found.'}, 400)
+
+@api_routes.route('/api/v1/admin/raters', methods=['GET'])
+@wrappers.verify_login(roles=['admin', 'super'])
+def get_raters(**kwargs):
+    raters = database.get_raters()
+    if raters:
+        return json_response([rater.json() for rater in raters])
+    else:
+        return json_response({'message': 'No Records found.'}, 400)        
     
 @api_routes.route('/api/v1/admin/users', methods=['POST'])
 @wrappers.verify_login(roles=['admin', 'super'])
@@ -53,6 +64,34 @@ def add_user(**kwargs):
         return json_response({'user': user.json(), 'password': new_password})
     else:
         return json_response({'message': user}, 400)
+    
+@api_routes.route('/api/v1/admin/raters', methods=['POST'])
+@wrappers.verify_login(roles=['admin', 'super'])
+def add_rater(**kwargs):
+    content = request.json
+    sessionid = sanitize_int_value(content.get('sessionid', None))
+    sessiondeviceid = sanitize(content.get('sessiondeviceid', None))
+    speakerid = sanitize(content.get('speakerid', None))
+    speakertag = sanitize(content.get('speakertag', None))
+    raterid = sanitize(content.get('raterid', None))
+    type = sanitize(content.get('type', None))
+    if not sessionid:
+        return json_response({'message': 'Must provide session ID as an integer.'}, 400)
+    if not sessiondeviceid:
+        return json_response({'message': 'Must provide session device ID as an integer.'}, 400)
+    if not speakerid:
+        return json_response({'message': 'Must provide speaker ID as an integer.'}, 400)
+    if not speakertag:
+        return json_response({'message': 'Must provide speaker tag as a string.'}, 400)
+    if not raterid:
+        return json_response({'message': 'Must provide rater ID as a string.'}, 400)
+    if not type:
+        return json_response({'message': 'Must provide type as a string.'}, 400)
+    success, rater = database.add_rater(sessionid,sessiondeviceid,speakerid,speakertag,raterid,type)
+    if success:
+        return json_response({'rater': rater.json()})
+    else:
+        return json_response({'message': rater}, 400)    
 
 @api_routes.route('/api/v1/admin/users/<int:user_id>', methods=['DELETE'])
 @wrappers.verify_login(roles=['admin', 'super'])
@@ -79,6 +118,15 @@ def delete_student(student_id, **kwargs):
         return json_response()
     else:
         return json_response({'User not found.'}, 400)
+    
+@api_routes.route('/api/v1/admin/raters/<int:id>', methods=['DELETE'])
+@wrappers.verify_login(roles=['admin', 'super'])
+def delete_rater(id, **kwargs):
+    rater = database.delete_rater(id)
+    if rater is not None:
+        return json_response()
+    else:
+        return json_response({'Rater not found.'}, 400)
 
 @api_routes.route('/api/v1/admin/users/<int:user_id>/lock', methods=['POST'])
 @wrappers.verify_login(roles=['admin', 'super'])

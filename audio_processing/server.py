@@ -13,6 +13,7 @@ import scipy.signal
 import config as cf
 import numpy as np
 import moviepy.editor as mp
+from queue import Full, Empty
 from recorder import WaveRecorder
 from recorder import VidRecorder
 from processing_config import ProcessingConfig
@@ -176,7 +177,8 @@ class ServerProtocol(WebSocketServerProtocol):
                 data = self.resample_data(data)
                 self.audio_buffer.append(data)
                 asr_data = self.reduce_channels(1, data)
-                self.asr_audio_queue.put(asr_data)
+                # self.asr_audio_queue.put(asr_data)
+                self.enqueue_latest_audio_chunk(asr_data)
                 # Save audio data.
                 if cf.record_reduced():
                     self.redu_recorder.write(asr_data)
@@ -270,7 +272,33 @@ class ServerProtocol(WebSocketServerProtocol):
         else:
             return self.read_bytes_from_wav(wav)
 
+    def enqueue_latest_audio_chunk(self, asr_data, timeout=0.05):
+        """
+        Keep only the most recent chunk in the queue.
+        If the queue is full, remove the stale queued chunk and replace it.
+        """
+        try:
+            self.asr_audio_queue.put(asr_data, timeout=timeout)
+            return True
+        except Full:
+            pass
 
+        # Queue is full: drop the old queued item
+        try:
+            old_item = self.asr_audio_queue.get_nowait()
+            # optional: if you use task_done semantics elsewhere, call task_done here
+            # self.asr_audio_queue.task_done()
+        except Empty:
+            old_item = None
+
+        # Try again to insert the latest chunk
+        try:
+            self.asr_audio_queue.put_nowait(asr_data)
+            logging.debug("Replaced stale ASR audio chunk with latest chunk.")
+            return True
+        except Full:
+            logging.warning("Could not enqueue latest ASR audio chunk; dropping it.")
+            return False
 
     def signal_start(self):
         self.audio_buffer = AudioBuffer(self.config)
