@@ -298,6 +298,7 @@ class VideoProcessor:
         # with self.lock:
             processing_timer = time.monotonic()
             video_metrics=None
+            success = False
             with object_detector_lock():  # serialize CUDA/NMS across all users in this process
                 # det = get_detector(None)  # second call ignores lambda
                 all_frames,face_object_detected = self.image_object_detection.detection_with_facial_regonition(batch_frames,facialEmbeddings,batch_track,time_marker,vid_img_dir,auth_key)
