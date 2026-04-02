@@ -188,12 +188,13 @@ def normalized_score(head_center, gaze_point, object_center,
     return (w1 * dist) + (w2 * angle)
 
 def find_best_gaze_target_V1(head_box, gaze_point, objects, frame_width, frame_height, expand_margin=None):
-    
+
+    head_box = [int(x) for x in head_box]
     head_center = box_center([head_box[0],head_box[1], head_box[2], head_box[3]])
 
     gaze_point = get_gaze_edge_point(head_center, gaze_point, radius=20)
 
-    max_dist = math.sqrt(frame_width**2 + frame_height**2)
+    max_dist = math.sqrt(int(frame_width)**2 + int(frame_height)**2)
 
     best_obj = None
     best_score = float('inf')
@@ -201,9 +202,9 @@ def find_best_gaze_target_V1(head_box, gaze_point, objects, frame_width, frame_h
     for index,obj in enumerate(objects):
         _,_,object_id,obj_bbox, _ = obj
         x1, y1, x2, y2 = obj_bbox
-        if gaze_hits_object(head_box, gaze_point, (x1, y1, x2, y2),expand_margin):
+        if gaze_hits_object(head_box, gaze_point, (int(x1), int(y1), int(x2), int(y2)), expand_margin):
             if expand_margin is not None:
-                x1, y1, x2, y2 = expand_box(x1, y1, x2, y2, expand_margin)
+                x1, y1, x2, y2 = expand_box(int(x1), int(y1), int(x2), int(y2), expand_margin)
 
             obj_center = box_center((x1,y1,x2,y2))
 
@@ -226,12 +227,13 @@ def find_best_gaze_target_V2(head_box, gaze_point, objects,expand_margin=None):
     g_x, g_y = gaze_point
     min_dist = float('inf')
     candidate = None
+    head_box = [int(x) for x in head_box]
 
     for index,obj in enumerate(objects):
         _,_,object_id,obj_bbox, _ = obj
         x1, y1, x2, y2 = obj_bbox
-        if gaze_hits_object(head_box, gaze_point, (x1, y1, x2, y2),expand_margin):
-            cx, cy = box_center((x1, y1, x2, y2))
+        if gaze_hits_object(head_box, gaze_point, (int(x1), int(y1), int(x2), int(y2)), expand_margin):
+            cx, cy = box_center((int(x1), int(y1), int(x2), int(y2)))
             dist = euclidean_distance(g_x, g_y, cx, cy)
             if dist < min_dist:
                 min_dist = dist 

@@ -1,3 +1,4 @@
+import logging
 import os
 import torch
 import numpy as np
@@ -44,8 +45,12 @@ class AttentionDetection:
     
 
     def find_closest_object_of_focus(self,head_bbox,gaze_point,person_id, other_objects_on_frame, frame_width, frame_height, expand_margin=None):
-        object_of_index = find_best_gaze_target_V1(head_bbox, gaze_point, other_objects_on_frame, frame_width, frame_height, expand_margin)
-        
+        object_of_index = None
+        try:
+            object_of_index = find_best_gaze_target_V1(head_bbox, gaze_point, other_objects_on_frame, frame_width, frame_height, expand_margin)
+        except Exception as e:
+            logging.error("Error occurred while finding closest object of focus: {0}".format(e))
+
         #if the other object is same same as the person, return None
         if object_of_index is not None and person_id == other_objects_on_frame[object_of_index][2] :
             return None
