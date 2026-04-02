@@ -19,7 +19,7 @@ import callbacks
 from concurrent.futures import ThreadPoolExecutor
 from queue import Empty
 from .VideoMetricProcessor import VideoMetricAnalytics
-from global_singleton_lock import get_detector, detector_lock
+from global_singleton_lock import attention_emotion_predictor_lock, object_detector_lock
 from concurrent.futures import TimeoutError
 
 WAIT_TIMEOUT = 0.05   # 50 ms (tune this)
@@ -64,7 +64,7 @@ class VideoProcessor:
         self.video_chunk_count = -1
         self.STOP = object()  # sentinel
         # One shared pool instead of creating threads per batch
-        self.pool = ThreadPoolExecutor(max_workers=1) #ProcessPoolExecutor(max_workers=4)
+        # self.pool = ThreadPoolExecutor(max_workers=3) #ProcessPoolExecutor(max_workers=4)
         self.pending_future = None
         
 
@@ -299,10 +299,13 @@ class VideoProcessor:
             processing_timer = time.monotonic()
             video_metrics=None
             success = False
-            with detector_lock():  # serialize CUDA/NMS across all users in this process
+            with object_detector_lock():  # serialize CUDA/NMS across all users in this process
                 # det = get_detector(None)  # second call ignores lambda
                 all_frames,face_object_detected = self.image_object_detection.detection_with_facial_regonition(batch_frames,facialEmbeddings,batch_track,time_marker,vid_img_dir,auth_key)
-            video_metrics = self.VideoMetricAnalytics.compute_videoMetrics(all_frames,face_object_detected)
+
+            with attention_emotion_predictor_lock():  # serialize attention/emotion prediction across all users in this process    
+                video_metrics = self.VideoMetricAnalytics.compute_videoMetrics(all_frames,face_object_detected)
+            
             if video_metrics: 
                 # logging.info(video_metrics)
                 success = callbacks.post_video_metrics(self.config.auth_key, video_metrics)
@@ -368,8 +371,8 @@ class VideoProcessor:
                         self.time_marker = []
 
                         # submit to the pool
-                        # self.worker_process(frames, markers, b_tracker)
-                        self.pending_future = self.pool.submit(self.worker_process, frames, markers, b_tracker)
+                        self.worker_process(frames, markers, b_tracker)
+                        # self.pending_future = self.pool.submit(self.worker_process, frames, markers, b_tracker)
                         self.batch_track+=1
 
                     # we just need 290 frames of the 10 sec chunks, and break if the frames capture  is more than 290    
@@ -387,9 +390,10 @@ class VideoProcessor:
                 b_tracker = self.batch_track
                 self.frame_batch = []
                 self.time_marker = []
-                self.pending_future  = self.pool.submit(self.worker_process, frames, markers, b_tracker)
+                self.worker_process(frames, markers, b_tracker)
+                # self.pending_future  = self.pool.submit(self.worker_process, frames, markers, b_tracker)
 
-        self.pool.shutdown(wait=True)
+        # self.pool.shutdown(wait=True)
         logging.info('frame cartoonization thread stopped for {0}.'.format(self.config.auth_key))
 
     # def processing(self):

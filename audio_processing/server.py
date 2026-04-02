@@ -302,7 +302,7 @@ class ServerProtocol(WebSocketServerProtocol):
 
     def signal_start(self):
         self.audio_buffer = AudioBuffer(self.config)
-        self.asr_audio_queue = queue.Queue()
+        self.asr_audio_queue = queue.Queue(maxsize=3)
         self.asr_transcript_queue = queue.Queue()
         self.asr = GoogleASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data,self.interval)
         self.asr.start()
