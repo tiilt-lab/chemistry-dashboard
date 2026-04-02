@@ -95,8 +95,11 @@ def get_speaker_transcript_metrics(id = None, speaker_id=None, transcript_id=Non
 
 def add_speaker_transcript_metrics(speaker_id, transcript_id, participation_score, internal_cohesion, responsivity, social_impact, newness, communication_density):
     metrics = SpeakerTranscriptMetrics(speaker_id, transcript_id, participation_score, internal_cohesion, responsivity, social_impact, newness, communication_density)
+    # try:
     db.session.add(metrics)
     db.session.commit()
+    # finally:
+    #     close_session()
     return metrics
 
 def update_speaker_transcript_metrics(id, speaker_id=None, transcript_id=None, participation_score=None, internal_cohesion=None, responsivity=None, social_impact=None, newness=None, communication_density=None):
@@ -174,8 +177,11 @@ def get_speaker_video_metrics_by_session_alias(session_id=None, student_username
 
 def add_speaker_video_metrics(session_device_id,student_username, time_stamp, facial_emotion,attention_level,object_on_focus):
     metrics = SpeakerVideoMetrics(session_device_id,student_username, time_stamp, facial_emotion,attention_level,object_on_focus)
+    # try:
     db.session.add(metrics)
     db.session.commit()
+    # finally:
+    #     close_session()
     return metrics
 
 def update_speaker_video_metrics(id, session_device_id=None,student_username=None, time_stamp=None, facial_emotion=None,attention_level=None,object_on_focus=None):
@@ -351,8 +357,11 @@ def get_session_keywords(session_id):
 
 def add_keyword_usage(transcript_id, word, keyword, similarity):
     keyword = KeywordUsage(transcript_id, word, keyword, similarity)
+    # try:
     db.session.add(keyword)
     db.session.commit()
+    # finally:
+    #     close_session()   
     return keyword
 
 def get_keyword_usages(session_id=None, session_device_id=None, start_time=0, end_time=-1):
@@ -783,8 +792,11 @@ def setEmbeddingsFile(processing_key, embeddings):
 
 def add_transcript(session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id ,tag, speaker_id):
     transcript = Transcript(session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id, tag, speaker_id)
+    # try:
     db.session.add(transcript)
     db.session.commit()
+    # finally:
+    #     close_session()
     return transcript
 
 def set_speaker_tag(transcript, tag):
