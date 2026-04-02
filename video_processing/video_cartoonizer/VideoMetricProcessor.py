@@ -1,20 +1,67 @@
 import logging
+from queue import Empty
+import threading
+import time
 import cv2
 import os;
 import traceback
+import callbacks
 from collections import Counter
+from yolo_head.utils.datasets import LoadImageDataset
+from yolo_head.utils.general import scale_coords
+from ultralytics.engine.results import Results
 
 class VideoMetricAnalytics:
-    def __init__(self, AttentionTracking,EmotionDetection, ImageDection):
+    def __init__(self, AttentionTracking,EmotionDetection, ImageDetection):
         self.AttentionTracking = AttentionTracking
         self.EmotionDetection = EmotionDetection
-        self.ImageDection = ImageDection
+        self.Imagedetection = ImageDetection
         self.base_path = os.path.dirname(os.path.abspath(__file__))
+        self.STOP = object()  # sentinel
+
+
+    def start(self):
+        self.running = True
+        self.attention_emotion_detection_thread = threading.Thread(target=self.worker, name="attention_emotion_detection-thread")
+        self.attention_emotion_detection_thread.daemon = True
+        self.attention_emotion_detection_thread.start()
+
+    def stop(self):
+        self.running = False
+        logging.info("Stopping video metric analytics thread...")
+
+
+    def worker(self):
+        while self.running:
+            try:
+                # block briefly to avoid CPU spin; adjust timeout for latency needs
+                payload = self.Imagedetection.accumulator_queue.get(timeout=0.25)
+            except Empty:
+                logging.debug("Video metric analytics thread waiting for data...")
+                continue
+
+            if payload is self.STOP:
+                logging.info("Received stop signal for video metric analytics thread.")
+                break    
+            
+            auth_key,all_frames,accumulator = payload
+            processing_timer = time.monotonic()
+            video_metrics = self.compute_videoMetrics(all_frames,accumulator)
+            if video_metrics: 
+                # logging.info(video_metrics)
+                success = callbacks.post_video_metrics(auth_key, video_metrics)
+
+                processing_time = time.monotonic() - processing_timer
+                if success:
+                    logging.info( f"Video processing results posted successfully for client {auth_key} (Processing time: {processing_time})")
+
+
 
     def compute_videoMetrics(self,frames,face_object_detected):
         video_metrics = {}
         try:
             for person_id, persons_detail in face_object_detected['head'].items():
+                # with attention_emotion_det_lock:
                 val_imgs, val_faces, val_head_channels, headboxes, imsizes, frame_ids, _ = self.AttentionTracking.get_batched_facial_data(persons_detail,frames)
                 val_gaze_heatmap_preds, val_attmaps, val_inout_preds = self.AttentionTracking.compute_gaze_direction(val_imgs, val_faces, val_head_channels)
                 for index in range(len(val_gaze_heatmap_preds)): 
@@ -28,8 +75,11 @@ class VideoMetricAnalytics:
                         logging.Info("in File VideoMetricAnalytics: Persons data from face detection and gaze detections messed up, please review...")
                         return None
                     frame_raw = frames[frame_index]
-                    pred_emotion = self.EmotionDetection.predict_facial_emotion_for_single_participant(frames[frame_index], h_bbox,person_alias,frame_index,self.ImageDection.crop_face_from_fame_with_bbox)
+
+                    # with attention_emotion_det_lock:
+                    pred_emotion = self.EmotionDetection.predict_facial_emotion_for_single_participant(frames[frame_index], h_bbox,person_alias,frame_index,self.Imagedetection.crop_face_from_fame_with_bbox)
                     gaze_x, gaze_y = self.AttentionTracking.get_gaze_direction_point(val_gaze_heatmap_preds[index], val_inout_preds[index], imsizes[index])
+                    
                     if gaze_x is not  None or gaze_y is not None:
                         other_objects_in_frame = face_object_detected['other_objects'][frame_index]
                         frame_width, frame_height = imsizes[index]
