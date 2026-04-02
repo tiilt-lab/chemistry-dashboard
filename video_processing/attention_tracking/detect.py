@@ -1,8 +1,11 @@
 import argparse
+import queue
+import threading
 import time
 from pathlib import Path
 import os
 import sys
+from queue import Empty, Full
 import cv2
 import torch
 import logging
@@ -24,6 +27,8 @@ from yolo_head.utils.plots import plot_one_box
 
 class ImageObjectDetection:
     def __init__(self):
+        self.frame_queue = queue.Queue()
+        self.accumulator_queue = queue.Queue()  # limit to last 5 processed batches for attention/emotion analysis
         self.imgsz =  640
         self.head_width_threshold = 50
         self.model_1 = None
@@ -41,6 +46,7 @@ class ImageObjectDetection:
         self.object_names_V_K = {}
         self.object_names_K_V = {}
         self.tracker = sv.ByteTrack()
+        self.STOP = object()  # sentinel
     
 
     def init_model(self,batch_size):
@@ -90,6 +96,64 @@ class ImageObjectDetection:
             self.object_names_K_V = names_model_2
             self.object_names_V_K = {v: k for k, v in names_model_2.items()}
 
+    def start(self):
+        self.running = True
+        self.object_detection_thread = threading.Thread(target=self.worker, name="object-detection-thread")
+        self.object_detection_thread.daemon = True
+        self.object_detection_thread.start()
+
+    def stop(self):
+        self.running = False
+        logging.info("Stopping object detection thread...")
+
+
+    def worker(self):
+        while self.running:
+            try:
+                # block briefly to avoid CPU spin; adjust timeout for latency needs
+                payload = self.frame_queue.get(timeout=0.25)
+            except Empty:
+                continue
+
+            if payload is self.STOP:
+                break    
+            
+            images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key = payload
+            all_frames,accumulator = self.detection_with_facial_regonition(images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key)
+            accumulator_load = [auth_key,all_frames,accumulator]
+            #enque for gaze detection and attention flow processing, 
+            self.enqueue_latest_accumulator_payload(accumulator_load)
+
+
+    def enqueue_latest_accumulator_payload(self, payload, timeout=0.05):
+        """
+        Keep only the most recent chunk in the queue.
+        If the queue is full, remove the stale queued chunk and replace it.
+        """
+        try:
+            self.accumulator_queue.put(payload, timeout=timeout)
+            return True
+        except Full:
+            logging.warning("Accumulator queue is full; attempting to replace stale payload with latest payload.")
+            pass
+
+        # Queue is full: drop the old queued item
+        try:
+            old_item = self.accumulator_queue.get_nowait()
+            # optional: if you use task_done semantics elsewhere, call task_done here
+            # self.frame_queue.task_done()
+        except Empty:
+            logging.warning("Accumulator queue was full but is now empty; failed to replace payload.")
+            old_item = None
+
+        # Try again to insert the latest chunk
+        try:
+            self.accumulator_queue.put_nowait(payload)
+            return True
+        except Full:
+            logging.warning("Could not enqueue latest frame payload; dropping it.")
+            return False   
+        
     def detection(self,images,batch_track):
         val_dataset = LoadImageDataset(images, batch_track, self.batch_size,img_size=self.imgsz, stride=self.stride)
         dataset = torch.utils.data.DataLoader(dataset=val_dataset,

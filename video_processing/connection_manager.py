@@ -53,6 +53,9 @@ class ConnectionManager:
             else:
                 return self.connections_by_session[session_key]
 
+    def get_number_of_connections(self):
+        with self.lock:
+            return len(self.connections)
     def remove(self, connection, session_key, auth_key):
         with self.lock:
             if connection in self.connections:
