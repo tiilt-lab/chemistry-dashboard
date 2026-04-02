@@ -246,6 +246,9 @@ function StudentSessionDashboard() {
         setEndTime2(Math.round(sessionLen * timeRange[1] * 100) / 100)
       }
 
+      // console.log("i got here")
+      // console.log("session1Transcripts ", session1Transcripts)
+      // console.log("session2Transcripts ", session2Transcripts)
       setNextPage("displayreportpage")
     }
 

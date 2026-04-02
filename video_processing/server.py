@@ -39,14 +39,14 @@ from video_cartoonizer.video_cartoonify_loader import VideoCartoonifyLoader
 from emotion_detector.emotion_detection_model import EmotionDetectionModel, EmotionDetectionModelV1
 from attention_tracking.detect import ImageObjectDetection
 from attention_tracking.attention_tracking import AttentionDetection
-from global_singleton_lock import get_detector
+from global_singleton_lock import get_attention_emotion_predictor, get_object_detector
 
 cm = ConnectionManager()
 cartoon_model = VideoCartoonifyLoader()
 facial_emotion_detector = EmotionDetectionModel()
-facial_emotion_detector_V1 = EmotionDetectionModelV1()
+facial_emotion_detector_V1 = None
 image_object_detection = None #ImageObjectDetection()
-attention_detection = AttentionDetection()
+attention_detection = None
 
 class ServerProtocol(WebSocketServerProtocol):
 
@@ -387,6 +387,16 @@ def _create_detector():
     det.init_model(cartoon_model.batch_size)  # load weights, allocate GPU
     return det
 
+def _create_gaze_predictor():
+    attention_detection = AttentionDetection()
+    attention_detection.init_model(cartoon_model.batch_size)  
+    return attention_detection
+
+def _create_emotion_predictor():
+    emotion = EmotionDetectionModelV1()
+    emotion.load_model()  
+    return emotion
+
 if __name__ == '__main__':
     cf.initialize()
     logging.info('Starting video Processing Service...22222222222')
@@ -409,11 +419,8 @@ if __name__ == '__main__':
     # Initialize attention  and emotion tracking
     if cf.process_video_analytics():
         
-        image_object_detection = get_detector(_create_detector)
-        # image_object_detection.init_model(cartoon_model.batch_size)
-        attention_detection.init_model(cartoon_model.batch_size)
-        # facial_emotion_detector.load_model(cartoon_model.batch_size, cartoon_model.landmarkpredictor)  
-        facial_emotion_detector_V1.load_model()  
+        image_object_detection = get_object_detector(_create_detector)
+        attention_detection, facial_emotion_detector_V1 = get_attention_emotion_predictor(_create_gaze_predictor, _create_emotion_predictor)
 
     # Run Server
     logging.info('Starting video Processing Service...')

@@ -29,6 +29,7 @@ from tables.speaker_transcript_metrics import SpeakerTranscriptMetrics
 from tables.speaker_video_metrics import SpeakerVideoMetrics
 from tables.llm_feedback_report import LLMFeedbackReport
 from tables.llm_question_answer import LLMQuestionAnswer
+from tables.rater import Rater
 
 # Saves changes made to database (models)
 def save_changes():
@@ -94,8 +95,11 @@ def get_speaker_transcript_metrics(id = None, speaker_id=None, transcript_id=Non
 
 def add_speaker_transcript_metrics(speaker_id, transcript_id, participation_score, internal_cohesion, responsivity, social_impact, newness, communication_density):
     metrics = SpeakerTranscriptMetrics(speaker_id, transcript_id, participation_score, internal_cohesion, responsivity, social_impact, newness, communication_density)
+    # try:
     db.session.add(metrics)
     db.session.commit()
+    # finally:
+    #     close_session()
     return metrics
 
 def update_speaker_transcript_metrics(id, speaker_id=None, transcript_id=None, participation_score=None, internal_cohesion=None, responsivity=None, social_impact=None, newness=None, communication_density=None):
@@ -173,8 +177,11 @@ def get_speaker_video_metrics_by_session_alias(session_id=None, student_username
 
 def add_speaker_video_metrics(session_device_id,student_username, time_stamp, facial_emotion,attention_level,object_on_focus):
     metrics = SpeakerVideoMetrics(session_device_id,student_username, time_stamp, facial_emotion,attention_level,object_on_focus)
+    # try:
     db.session.add(metrics)
     db.session.commit()
+    # finally:
+    #     close_session()
     return metrics
 
 def update_speaker_video_metrics(id, session_device_id=None,student_username=None, time_stamp=None, facial_emotion=None,attention_level=None,object_on_focus=None):
@@ -350,8 +357,11 @@ def get_session_keywords(session_id):
 
 def add_keyword_usage(transcript_id, word, keyword, similarity):
     keyword = KeywordUsage(transcript_id, word, keyword, similarity)
+    # try:
     db.session.add(keyword)
     db.session.commit()
+    # finally:
+    #     close_session()   
     return keyword
 
 def get_keyword_usages(session_id=None, session_device_id=None, start_time=0, end_time=-1):
@@ -789,8 +799,11 @@ def setEmbeddingsFile(processing_key, embeddings):
 
 def add_transcript(session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id ,tag, speaker_id):
     transcript = Transcript(session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id, tag, speaker_id)
+    # try:
     db.session.add(transcript)
     db.session.commit()
+    # finally:
+    #     close_session()
     return transcript
 
 def set_speaker_tag(transcript, tag):
@@ -890,6 +903,33 @@ def update_user(user_id, data):
     return user
 
 
+# -------------------------
+# Rater
+# -------------------------
+
+def get_raters(id=None,raterid=None):
+    query = db.session.query(Rater)
+    if id != None:
+        return query.filter(Rater.id == id).first()
+    if raterid != None:
+        query = query.filter(Rater.raterid == raterid)
+    return query.all()
+
+def add_rater(sessionid, sessiondeviceid, speakerid, speakertag, raterid, type):
+    rater = Rater(sessionid, sessiondeviceid, speakerid, speakertag, raterid, type)
+    db.session.add(rater)
+    db.session.commit()
+    return True, rater  
+
+def delete_rater(id):
+    rater = get_raters(id=id)
+    if rater:
+        db.session.delete(rater)
+        db.session.commit()
+        return rater
+    else:
+        return None
+    
 # -------------------------
 # Student
 # -------------------------
@@ -1140,5 +1180,54 @@ def update_speaker_session_device_llm_question_answer(id, username=None, session
             db.session.commit()
 
         return True,response
+    return False, None
+
+
+# -------------------------
+# Session Synthesized Data for Reflective Dashboard
+# -------------------------
+
+def get_synthesized_feedback_metrics(id=None, sessionId=None, sessionDeviceId = None):
+    query = db.session.query(LLMFeedbackReport)
+    if id != None:
+        return query.filter(LLMFeedbackReport.id == id).first()
+    if sessionId != None:
+        query =query.filter(LLMFeedbackReport.session_id == sessionId)
+    if sessionDeviceId != None:
+        query =query.filter(LLMFeedbackReport.session_device_id == sessionDeviceId)
+    if username != None:
+        return query.filter(LLMFeedbackReport.speaker_username == username).first()
+    return query.all()
+
+def add_speaker_session_device_llm_report(username, sessionId, sessionDeviceId,feedback_analysis):
+    matched_feedback_analysis = get_speaker_session_device_llm_report(username=username, sessionId=sessionId, sessionDeviceId = sessionDeviceId)
+    if matched_feedback_analysis:
+        return False, matched_feedback_analysis
+    feedback = LLMFeedbackReport(sessionId, sessionDeviceId, username,feedback_analysis)
+    db.session.add(feedback)
+    db.session.commit()
+    return True, feedback
+
+def update_speaker_session_device_llm_report(id, username=None, sessionId=None, sessionDeviceId=None,feedback_analysis=None):
+    feedback = get_speaker_session_device_llm_report(id=id)
+    if feedback:
+        db_change = False
+        if sessionId:
+            feedback.session_id = sessionId
+            db_change = True
+        if sessionDeviceId:
+            feedback.session_device_id = sessionDeviceId
+            db_change = True
+        if username:
+            feedback.speaker_username = username 
+            db_change = True  
+        if feedback_analysis:
+            feedback.feedback_analysis = feedback_analysis 
+            db_change = True   
+        
+        if db_change:
+            db.session.commit()
+
+        return True,feedback
     return False, None
    

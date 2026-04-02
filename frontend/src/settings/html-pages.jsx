@@ -35,13 +35,18 @@ function SettingComponentPage(props) {
 
               <React.Fragment>
                 <div className={style["section-header"]}>Manage Student Profile</div>
-                <div className="option-button small-section" onClick={() => props.openDialog("ViewStudentProfile", true)}>View Students</div>
-                <div className="option-button small-section" onClick={() => props.openDialog("AddStudentProfile")}>Add Student Profile</div>
-                <div className="option-button small-section" onClick={() => props.openDialog("DeleteStudentProfile", true)}>Delete Student Profile</div>
+                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("ViewStudentProfile", true)}>View Students</div>
+                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("AddStudentProfile")}>Add Student Profile</div>
+                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeleteStudentProfile", true)}>Delete Student Profile</div>
+              </React.Fragment>
+
+              <React.Fragment>
+                <div className={style["section-header"]}>Manage Raters</div>
+                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("ViewRaters", true)}>View Raters</div>
+                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("AddRater")}>Add Rater</div>
+                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeleteRater", true)}>Delete Rater</div>
               </React.Fragment>
             </>
-
-
             :
             <></>
           }
@@ -49,12 +54,12 @@ function SettingComponentPage(props) {
           {(props.user.isSuper) ?
             <React.Fragment>
               <div className={style["section-header"]}>Manage Server</div>
-              <div className="option-button small-section" onClick={() => props.openDialog("ServerLogs")}>Download Server Logs</div>
-              <div className="option-button small-section" onClick={() => props.openDialog("DeviceLogs", false, true)}>Download Device Logs</div>
-              <div className="option-button small-section" onClick={() => props.openDialog("DeleteServerLogs")}>Clear Server Logs</div>
-              <div className="option-button small-section" onClick={() => props.openDialog("DeleteDeviceLogs", false, true)}>Clear Device Logs</div>
-              <div className="option-button small-section" onClick={() => props.openDialog("AllowAPI", true)}>Allow API Access</div>
-              <div className="option-button small-section" onClick={() => props.openDialog("RevokeAPI", true)}>Revoke API Access</div>
+              <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("ServerLogs")}>Download Server Logs</div>
+              <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeviceLogs", false, true)}>Download Device Logs</div>
+              <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeleteServerLogs")}>Clear Server Logs</div>
+              <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeleteDeviceLogs", false, true)}>Clear Device Logs</div>
+              <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("AllowAPI", true)}>Allow API Access</div>
+              <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("RevokeAPI", true)}>Revoke API Access</div>
             </React.Fragment>
             :
             <></>
@@ -128,6 +133,35 @@ function SettingComponentPage(props) {
           <></>
         }
 
+        {props.currentForm === "ViewRaters" ?
+          <div className={style["add-dialog"]}>
+            <div className={style["dialog-heading"]}>View Raters</div>
+            <div className={style["user-table"]}>
+              <div className={style["user-row"]}>
+                <span className={style["user-name bold"]}>rater_id</span>
+                <span className={style["user-role bold"]}>sess_id</span>
+                <span className={style["user-locked bold"]}>dev_id</span>
+                <span className={style["user-locked bold"]}>spkr_id</span>
+                <span className={style["user-locked bold"]}>spkr_Tag</span>
+                <span className={style["user-locked bold"]}>type</span>
+              </div>
+              {props.raters.map((r, index) => (
+                <div key={index} className={style["user-row"]}>
+                  <span className={style["user-name"]}>{r.raterid}</span>
+                  <span className={style["user-role"]}>{r.sessionid}</span>
+                  <span className={style["user-locked"]}>{r.sessiondeviceid}</span>
+                  <span className={style["user-locked"]}>{r.speakerid}</span>
+                  <span className={style["user-locked"]}>{r.speakertag}</span>
+                  <span className={style["user-locked"]}>{r.dashboardtype}</span>
+                </div>
+              ))}
+            </div>
+            <button className={style["cancel-button"]} onClick={props.closeDialog}>Close</button>
+          </div>
+          :
+          <></>
+        }
+
         {props.currentForm === "AddUser" ?
           <div className={style["add-dialog"]}>
             <div className={style["dialog-heading"]}>Add User</div>
@@ -145,6 +179,33 @@ function SettingComponentPage(props) {
           :
           <></>
         }
+
+        {props.currentForm === "AddRater" ?
+          <div className={style["add-dialog"]}>
+            <div className={style["dialog-heading"]}>Add Rater</div>
+            <div className={style["input-header"]}>Session ID</div>
+            <input id='sessionId' className={style["field-input"]} type="text" />
+            <div className={style["input-header"]}>Session Device ID</div>
+            <input id='sessionDeviceId' className={style["field-input"]} type="text" />
+            <div className={style["input-header"]}>Speaker ID</div>
+            <input id='speakerId' className={style["field-input"]} type="text" />
+            <div className={style["input-header"]}>Speaker Tag</div>
+            <input id='speakertag' className={style["field-input"]} type="text" />
+            <div className={style["input-header"]}>Rater ID</div>
+            <input id='raterId' className={style["field-input"]} type="text" />
+            <div className={style["input-header"]}>Dashboard Type</div>
+            <select id='type' className={style["dropdown-input"]}>
+              <option value="quantitative">Quantitative Dashboard</option>
+              <option value="reflection">Reflection Dashboard</option>
+            </select>
+            {props.status ? <div className={style["error-status"]}>{props.status}</div> : <></>}
+            <button className={style["basic-button"]} onClick={() => props.createRater(document.getElementById('sessionId').value, document.getElementById('sessionDeviceId').value, document.getElementById('speakerId').value, document.getElementById('speakertag').value, document.getElementById('raterId').value, document.getElementById('type').value)}>Create Rater</button>
+            <button className={style["cancel-button"]} onClick={props.closeDialog}>Cancel</button>
+          </div>
+          :
+          <></>
+        }
+
         {props.currentForm === "DeleteUser" ?
           <div className={style["add-dialog"]}>
             <div className={style["dialog-heading"]}>Delete User</div>
@@ -179,6 +240,25 @@ function SettingComponentPage(props) {
           :
           <></>
         }
+
+        {props.currentForm === "DeleteRater" ?
+          <div className={style["add-dialog"]}>
+            <div className={style["dialog-heading"]}>Delete Rater</div>
+            <div className={style["input-header"]}>Select Rater</div>
+            <select id='ddRater' className={style["dropdown-input"]}>
+              {props.raters.map((s, index) => (
+                <option key={index} value={s.id}>{s.raterid+" "+s.sessionid+" "+s.sessiondeviceid+" "+s.speakertag+" "+s.dashboardtype}</option>
+              ))}
+            </select>
+
+            {props.status ? <div className={style["error-status"]}>{props.status}</div> : <></>}
+            <button className={style["basic-button"]} onClick={() => props.confirmDeleteRater(document.getElementById('ddRater').value)}>Delete Rater</button>
+            <button className={style["cancel-button"]} onClick={props.closeDialog}>Cancel</button>
+          </div>
+          :
+          <></>
+        }
+        
         {props.currentForm === "ConfirmDeleteUser" ?
           <div className={style["add-dialog"]}>
             <div className={style["dialog-heading"]}>Are you sure you want to delete {props.userToDelete.email}?</div>
@@ -193,6 +273,15 @@ function SettingComponentPage(props) {
           <div className={style["add-dialog"]}>
             <div className={style["dialog-heading"]}>Are you sure you want to delete {props.studentToDelete.username}?</div>
             <button className={style["basic-button"]} onClick={props.deleteSelectedStudent}>Delete Student</button>
+            <button className={style["cancel-button"]} onClick={props.closeDialog}>Cancel</button>
+          </div>
+          :
+          <></>
+        }
+        {props.currentForm === "ConfirmDeleteRater" ?
+          <div className={style["add-dialog"]}>
+            <div className={style["dialog-heading"]}>Are you sure you want to delete {props.raterToDelete.raterid+" for "+props.raterToDelete.sessionid+" "+props.raterToDelete.sessiondeviceid+" "+props.raterToDelete.speakertag+" "+props.raterToDelete.dashboardtype}?</div>
+            <button className={style["basic-button"]} onClick={props.deleteSelectedRater}>Delete Rater</button>
             <button className={style["cancel-button"]} onClick={props.closeDialog}>Cancel</button>
           </div>
           :

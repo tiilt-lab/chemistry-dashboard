@@ -36,6 +36,7 @@ class GoogleASR():
         self.audio_interval = interval
         self.audio_file_duration = 0
         self.media_type = mediatype
+        self.STOP = object()  # sentinel
 
     def start(self):
         self.running = True
@@ -52,14 +53,33 @@ class GoogleASR():
     def generator(self):
         generator_time = 0
         while self.running and generator_time < GoogleASR.STREAM_LIMIT:
-            chunk = self.audio_queue.get()
-            data = [chunk]
-            if chunk is None:
+            first_chunk = None
+            try:
+                # block briefly to avoid CPU spin; adjust timeout for latency needs
+                first_chunk = self.audio_queue.get(timeout=0.25)
+                
+            except Empty:
+                continue
+
+            if first_chunk is self.STOP:
                 return
+
+            if first_chunk is None:
+                break
+            
+            data = [first_chunk]  
             while not self.audio_queue.empty():
-                chunk = self.audio_queue.get(block=False)
+                try:
+                    chunk = self.audio_queue.get(block=False)
+                except Empty:
+                    return
+
+                if chunk is self.STOP:
+                    return
+
                 if chunk is None:
                     return
+             
                 data.append(chunk)
             for chunk in data:
                 generator_time += (len(chunk) / GoogleASR.DEPTH) / GoogleASR.SAMPLE_RATE

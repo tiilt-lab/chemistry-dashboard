@@ -27,16 +27,16 @@ def embedSignal(x, verification):
 
 def checkFingerprints(x, fingerprints, verification):
   np_signal = torch.tensor(np.frombuffer(x, dtype=np.dtype('int16')))
-#  logging.info("Checking Fingerprint equality")
+  # logging.info("Checking Fingerprint equality")
   max_score = 0
   speaker_alias = None
   speaker_id = -1
   for speaker in fingerprints:
-#    logging.info("Checking speaker {}".format(speaker))
+    # logging.info("Checking speaker {}".format(speaker))
     speaker_signal = torch.tensor(np.frombuffer(fingerprints[speaker]["data"], dtype=np.dtype('int16')))
     try:
       score, prediction = verification.verify_batch(np_signal, speaker_signal)
-      logging.info("Current prediction is {} with score of {}".format(prediction.item(), score.item()))
+      # logging.info("Current prediction is {} with score of {}".format(prediction.item(), score.item()))
     except Exception as e:
       logging.info("Error occured. while checking fingerprint: {0}".format(e))  
     if prediction.item():
