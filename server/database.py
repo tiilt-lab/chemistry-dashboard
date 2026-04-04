@@ -30,6 +30,7 @@ from tables.speaker_video_metrics import SpeakerVideoMetrics
 from tables.llm_feedback_report import LLMFeedbackReport
 from tables.llm_question_answer import LLMQuestionAnswer
 from tables.rater import Rater
+from tables.session_synthesized_report import SessionSynthesizedReport
 
 # Saves changes made to database (models)
 def save_changes():
@@ -1180,29 +1181,27 @@ def update_speaker_session_device_llm_question_answer(id, username=None, session
 # Session Synthesized Data for Reflective Dashboard
 # -------------------------
 
-def get_synthesized_feedback_metrics(id=None, sessionId=None, sessionDeviceId = None):
-    query = db.session.query(LLMFeedbackReport)
+def get_synthesized_feedback_report(id=None, sessionId=None, sessionDeviceId = None):
+    query = db.session.query(SessionSynthesizedReport)
     if id != None:
-        return query.filter(LLMFeedbackReport.id == id).first()
+        return query.filter(SessionSynthesizedReport.id == id).first()
     if sessionId != None:
-        query =query.filter(LLMFeedbackReport.session_id == sessionId)
+        query =query.filter(SessionSynthesizedReport.session_id == sessionId)
     if sessionDeviceId != None:
-        query =query.filter(LLMFeedbackReport.session_device_id == sessionDeviceId)
-    if username != None:
-        return query.filter(LLMFeedbackReport.speaker_username == username).first()
+        query =query.filter(SessionSynthesizedReport.session_device_id == sessionDeviceId)
     return query.all()
 
-def add_speaker_session_device_llm_report(username, sessionId, sessionDeviceId,feedback_analysis):
-    matched_feedback_analysis = get_speaker_session_device_llm_report(username=username, sessionId=sessionId, sessionDeviceId = sessionDeviceId)
-    if matched_feedback_analysis:
-        return False, matched_feedback_analysis
-    feedback = LLMFeedbackReport(sessionId, sessionDeviceId, username,feedback_analysis)
+def add_synthesized_feedback_report(sessionId, sessionDeviceId,synthesized_feedback):
+    matched_synthesized_feedback = get_synthesized_feedback_report(sessionId=sessionId, sessionDeviceId = sessionDeviceId)
+    if matched_synthesized_feedback:
+        return False, matched_synthesized_feedback
+    feedback = SessionSynthesizedReport(sessionId, sessionDeviceId, synthesized_feedback)
     db.session.add(feedback)
     db.session.commit()
     return True, feedback
 
-def update_speaker_session_device_llm_report(id, username=None, sessionId=None, sessionDeviceId=None,feedback_analysis=None):
-    feedback = get_speaker_session_device_llm_report(id=id)
+def update_synthesized_feedback_report(id, sessionId=None, sessionDeviceId=None,synthesized_feedback=None):
+    feedback = get_synthesized_feedback_report(id=id)
     if feedback:
         db_change = False
         if sessionId:
@@ -1211,11 +1210,8 @@ def update_speaker_session_device_llm_report(id, username=None, sessionId=None, 
         if sessionDeviceId:
             feedback.session_device_id = sessionDeviceId
             db_change = True
-        if username:
-            feedback.speaker_username = username 
-            db_change = True  
-        if feedback_analysis:
-            feedback.feedback_analysis = feedback_analysis 
+        if synthesized_feedback:
+            feedback.synthesized_feedback = synthesized_feedback 
             db_change = True   
         
         if db_change:

@@ -53,6 +53,13 @@ const navigate = useNavigate();
   > 
   Dashboard
   </button >
+
+  <button 
+  className={isLargeScreen() ? "basic-button medium-button" : "basic-button small-button"}  
+    onClick = {()=> navigate('/expert/rating')} 
+  > 
+  Expert Rating
+  </button >
   </div >
   )
 }

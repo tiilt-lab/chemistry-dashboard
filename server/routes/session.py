@@ -554,11 +554,11 @@ def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
     
     combine_metric_level = {'group_id': session_device.id, 'group_name': session_device.name, 'window_level':{}, 'participants_level':{}, 'session_level':{}, 'group_level':{}}
     
-    exisiting_synthesis = database.get_synthesized_feedback_metrics(sessionId=session_id, sessionDeviceId = session_device_id)
+    exisiting_synthesis = database.get_synthesized_feedback_report(sessionId=session_id, sessionDeviceId = session_device_id)
 
     if exisiting_synthesis:
-        raw = str(exisiting_synthesis.synthesized_feedback)
-        combine_metric_level = json.loads(raw.replace("'", "\""))
+        raw = str(exisiting_synthesis[0].synthesized_feedback)
+        combine_metric_level = json.loads(raw)
     else:
 
         keywords = database.get_keyword_usages(session_device_id=session_device_id)
@@ -568,14 +568,15 @@ def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
         transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session_by_timeline(session_device_id=session_device.id)
         combine_metric_level = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,windowsize=10)#speakers,
 
-        #add to the database
+        combine_metric_dump = json.dumps(combine_metric_level)
+        # add to the database
         if exisiting_synthesis:
             #update the database
-            database.update_speaker_session_device_llm_report(id=exisiting_synthesis.id,synthesized_feedback=json.dumps(combine_metric_level))
+            database.update_synthesized_feedback_report(id=exisiting_synthesis.id,synthesized_feedback=combine_metric_dump)
         else:
             #insert to database
-            database.add_speaker_session_device_llm_report(sessionId=session_id,sessionDeviceId=session_device_id,synthesized_feedback=json.dumps(combine_metric_level))
-    
+            database.add_synthesized_feedback_report(sessionId=session_id,sessionDeviceId=session_device_id,synthesized_feedback=json.dumps(combine_metric_level))
+
 
     return json_response(combine_metric_level)
     
