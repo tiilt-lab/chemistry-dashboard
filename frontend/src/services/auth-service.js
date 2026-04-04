@@ -123,6 +123,10 @@ class AuthService {
     return new ApiService().httpRequestCall("api/v1/admin/raters", 'GET', {});
   }
 
+  getRaterDetailByExpertId(expertId) {
+    return new ApiService().httpRequestCall("api/v1/admin/raters/" + expertId, 'GET', {});
+  }
+
   me(stateSetter) {
     const fetchRes = new ApiService().httpRequestCall("api/v1/me", 'GET', {});
     fetchRes.then(

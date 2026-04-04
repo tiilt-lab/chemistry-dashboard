@@ -2,17 +2,17 @@ import { GenericDialogBox, DialogBox } from "../dialog/dialog-component"
 import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { Appheader } from "../header/header-component"
-import style from "./student-dashboard.module.css"
-import style5 from "../sessions/sessions.module.css"
+import style from "./expert-rating.module.css"
 import React from "react"
 import Select from "react-select"
+import {LikertRatingInterface} from "./left-pane"
 import { AppInfographicsSessionComparison } from "../components/infographics-view/infographics_session-comparison"
 import { CollaborationFeedbackDashboard } from "../components/reflection-dashboard-view/reflection-interactive-dashboard-student"
 import { adjDim, isLargeScreen } from "../myhooks/custom-hooks"
 
 import MicIcon from "../Icons/Mic"
 
-function StudentSessionDashboardPages(props) {
+function ExpertRatingPage(props) {
     const POD_ON_COLOR = "#FF6655"
     const POD_OFF_COLOR = "#D0D0D0"
     const GLOW_COLOR = "#ffc3bd"
@@ -32,52 +32,33 @@ function StudentSessionDashboardPages(props) {
                     <React.Fragment>
                         <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto text-center">
                             <div>
-
-                                <div>Session Preference:</div>
+                                 <div>Evaluting As:</div>
                                 <select
-                                    id="preference"
+                                    id="evaluatortype"
                                     className="dropdown small-section"
-                                    value={props.sessiontype}
+                                    value={props.evaluatorType}
                                     onChange={(e) =>
-                                        props.setSessiontype(e.target.value)
+                                        props.setEvaluatorType(e.target.value)
                                     }
                                 >
-                                    <option value="">Select Preference</option>
-                                    <option value="currentsession">Current Session</option>
-                                    <option value="previoussessions">Previous Sessions</option>
+                                    <option value="">Select</option>
+                                    <option value="student">Student</option>
+                                    <option value="expert">Expert</option>
                                 </select>
 
-                                <div>User Name:</div>
+                                <div>Expert ID:</div>
                                 <input
                                     className="text-box small-section"
-                                    id="username"
-                                    placeholder=""
+                                    id="expertid-alias"
+                                    placeholder="Alias/Expert Id"
                                 />
-                                {props.sessiontype === "currentsession" ? (
-                                    <>
-                                        <div>Passcode:</div>
-                                        <input
-                                            className="text-box small-section"
-                                            id="passcode"
-                                            value={props.pcode}
-                                            placeholder="Passcode (4 characters)"
-                                            onInput={(event) => props.changeTouppercase(event)}
-                                        />
-                                        {props.wrongInput
-                                            ? "Your password must be 4 characters long."
-                                            : ""}
-                                    </>
-                                ) : (
-                                    <></>
-                                )}
-
                             </div>
                             <button
                                 className="wide-button"
                                 onClick={() =>
                                     props.loadDashboard(
-                                        document.getElementById("preference").value.trim(),
-                                        document.getElementById("username").value.trim()
+                                        document.getElementById("evaluatortype").value,
+                                        document.getElementById("expertid-alias").value.trim()
                                     )
                                 }
                             >
@@ -90,38 +71,24 @@ function StudentSessionDashboardPages(props) {
                 {props.nextPage !== "reportoptionpage" && (
 
                     <div className="toolbar-view-container">
-                        {props.sessiontype === "previoussessions" && (
-                            <AppSessionToolbar
-                                session={props.session}
-                                closingSession={props.onSessionClosing}
-                                menus={[
-                                    // {
-                                    //     title: "Individual",
-                                    //     action: () => props.viewIndividual(),
-                                    // },
-                                    {
-                                        title: "Comparison",
-                                        action: () => props.viewComparison(),
-                                    },
-                                    {
-                                        title: "Reflection Dashboard",
-                                        action: () => props.loadReflectiondashboard("Reflection Dashboard"),
-                                    }
-                                ]}
-                                participants={[]}
-
-                                seesions={props.previousSessions.map((session, index) => (
-                                    {
-                                        title: session.name + ": " + new Date(session.creation_date).toDateString(),
-                                        action: () => props.loadSelectedSessionMetrics(session),
-                                    }
-                                ))}
-
+                            <LikertRatingInterface
+                                expertDetail={props.expertDetail}
+                                selectedItemForRating={props.selectedItemForRating}
+                                setSelectedItemForRating = {props.setSelectedItemForRating}
+                                completedCount = {props.completedCount}
+                                itemsForRating = {props.itemsForRating}
+                                evaluationOption = {props.evaluationOption}
+                                evaluatorType = {props.evaluatorType}
+                                likertOptions={props.likertOptions}
+                                ratings={props.ratings}
+                                handleRate={props.handleRate}
+                                setNotes={props.setNotes}
+                                notes = {props.notes}
+                                submitted = {props.submitted}
                             />
-                        )}
 
 
-                        {props.nextPage === "displaygrouppage" && (
+                        {/* {props.nextPage === "displaygrouppage" && (
                             <div className="infographics-container mt-2 grow overflow-y-auto">
                                 {props.sessionDevices !== null &&
                                     props.sessionDevices.length === 0 ? (
@@ -196,9 +163,44 @@ function StudentSessionDashboardPages(props) {
                                     <></>
                                 )}
                             </div>
-                        )}
+                        )} */}
+                        <div className="center-column-container">
+                            <div>
+                                 <div>Evaluting As:</div>
+                                    <select
+                                        id="evaluatortype"
+                                        className="dropdown small-section"
+                                        value={props.evaluatorType}
+                                        onChange={(e) =>
+                                            props.setEvaluatorType(e.target.value)
+                                        }
+                                    >
+                                        <option value="">Select</option>
+                                        <option value="student">Student</option>
+                                        <option value="expert">Expert</option>
+                                    </select>
 
-                        {props.nextPage === "Reflection Dashboard" && (
+                                <div>Expert ID:</div>
+                                    <input
+                                        className="text-box small-section"
+                                        id="expertid-alias"
+                                        placeholder="Alias/Expert Id"
+                                    />
+                            </div>
+                                    <button
+                                        className="wide-button"
+                                        onClick={() =>
+                                            props.loadDashboard(
+                                                document.getElementById("evaluatortype").value,
+                                                document.getElementById("expertid-alias").value.trim()
+                                            )
+                                        }
+                                    >
+                                        Continue
+                                    </button>
+                            
+                        </div>
+                        {/* {props.nextPage === "Reflection Dashboard" && (
                             <div className="center-column-container">
                                 {(!props.reflectionDashboardDoneLoading) ? (
                                     <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -238,9 +240,9 @@ function StudentSessionDashboardPages(props) {
 
                                 )}
                             </div>
-                        )}
+                        )} */}
 
-                        {props.nextPage === "displayreportpage" && (
+                        {/* {props.nextPage === "displayreportpage" && (
                             <div className="center-column-container">
                                 {(!props.transcriptDoneLoading && !props.videoMetricDoneLoading) ? (
                                     <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -295,7 +297,7 @@ function StudentSessionDashboardPages(props) {
 
                                 )}
                             </div>
-                        )}
+                        )} */}
                     </div>
                 )}
 
@@ -344,6 +346,6 @@ function StudentSessionDashboardPages(props) {
     )
 }
 
-export { StudentSessionDashboardPages }
+export { ExpertRatingPage }
 
 

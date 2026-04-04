@@ -173,7 +173,9 @@ function StudentSessionDashboard() {
   // --------------------------------------------------------
   useEffect(() => {
     // fetch the transcript based on group selected
+    console.log("selected device id changed ", selectedDeviceID)
     if (selectedDeviceID > -1) {
+      console.log("tracking session and device ids inside useeffect  ", selectedSessionId1, selectedSessionDeviceId1,selectedDeviceID)
       //this is necessary if the first session and device were loaded from the entry page
       // and the user has not clicked on any session
       if (!firstLoadCompleted) {
@@ -549,6 +551,7 @@ function StudentSessionDashboard() {
     setSelectedSessionId1(newSession.id)
     setSessionId(newSession.id);
     setSelectedSessionId2(-1)
+    setSelectedDeviceID(-1)
     pageTitle.current = newSession.name + ": " + new Date(newSession.creation_date).toDateString()
     session.current = newSession
     loadSessionDevice(newSession.id, userDetail.username)
@@ -556,6 +559,7 @@ function StudentSessionDashboard() {
   }
 
   const loadSelectedSessionDeviceMetrics = (deviceId) => {
+    console.log("tracking session and device ids inside group click  ", selectedSessionId1, selectedSessionDeviceId1,deviceId,selectedDeviceID)
     setSelectedSessionDeviceId1(deviceId)
     setSelectedSessionDeviceId2(-1)
     setSelectedDeviceID(deviceId)
