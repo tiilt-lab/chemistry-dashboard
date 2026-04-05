@@ -1100,46 +1100,17 @@ function JoinPage() {
         }
     }
 
-    const fetchSpeakerMetrics = async (transcript) => {
-        try {
-            const response = await sessionService.getTranscriptSpeakerMetrics(
-                transcript.id,
-            )
-            if (response.status === 200) {
-                const jsonObj = await response.json()
-                return { ...transcript, speaker_metrics: jsonObj }
-            } else if (response.status === 400 || response.status === 401) {
-                console.log(response, "no speaker metric for transcript id")
-                return { ...transcript, speaker_metrics: null }
-            }
-        } catch (error) {
-            console.log(
-                "byod-join-component error func : fetch Speaker Metrics",
-                error,
-            )
-        }
-    }
-
     const fetchTranscript = async (deviceid) => {
         try {
             const response =
-                await sessionService.getSessionDeviceTranscriptsForClient(
-                    deviceid,
-                )
+                await sessionService.getSessionDeviceTranscriptSpeakerMetricsForClient(deviceid)
 
             if (response.status === 200) {
                 const jsonObj = await response.json()
-                const fetched_transcripts = jsonObj.sort((a, b) =>
-                    a.start_time > b.start_time ? 1 : -1,
-                )
-
-                const fetch_metrics_promises =
-                    fetched_transcripts.map(fetchSpeakerMetrics)
-                const fetched_trancript_metrics = await Promise.all(
-                    fetch_metrics_promises,
-                )
+                const fetched_trancript_metrics = jsonObj.map((item, index) => {return { ...item['transcript'], speaker_metrics: item['speaker_metrics'] }});
 
                 transcripts.current = fetched_trancript_metrics
+                
                 const sessionLen =
                     Object.keys(session).length > 0 ? session.length : 0
                 setStartTime(Math.round(sessionLen * timeRange.current[0] * 100) / 100)
@@ -1164,11 +1135,8 @@ function JoinPage() {
 
             if (response.status === 200) {
                 const jsonObj = await response.json()
-                const fetched_video_metrics = jsonObj.sort((a, b) =>
-                    a.time_stamp > b.time_stamp ? 1 : -1,
-                )
 
-                videoMetrics.current = fetched_video_metrics
+                videoMetrics.current = jsonObj //fetched_video_metrics
             } else if (response.status === 400 || response.status === 401) {
                 console.log(response, "no videometrics obj")
             }

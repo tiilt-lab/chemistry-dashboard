@@ -58,7 +58,7 @@ const fetchTranscript = async (deviceid) => {
       if (response.status === 200) {
           setReload(false);
           const jsonObj = await response.json()
-          const data = jsonObj.sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
+          const data = jsonObj
           setTransripts(data);
           setReload(true);
       } else if (response.status === 400 || response.status === 401) {

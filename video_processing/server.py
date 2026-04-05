@@ -172,7 +172,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.orig_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1,self.config.mimeExtension)
                     
                     if self.config.videocartoonify or cf.process_video_analytics():
-                        self.video_queue = queue.Queue(maxsize=2)
+                        self.video_queue = queue.Queue(maxsize=5)#maxsize=2
                         self.frame_queue = None
                         self.cartoon_image_queue = None
                          
@@ -224,7 +224,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     chunk_iter = subclips.iter_frames(fps=10, dtype="uint8", with_times=True)
                     self.enqueue_latest_video_chunk(chunk_iter)
                     # self.video_queue.put(subclips.iter_frames(fps=10, dtype="uint8", with_times=True))
-                    logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
+                    # logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
 
                 # Save audio data only if video saving is activated is activated.
                 # as we need to merge the audio data with the carttonized video
@@ -407,7 +407,6 @@ def _create_emotion_predictor():
 
 if __name__ == '__main__':
     cf.initialize()
-    logging.info('Starting video Processing Service...22222222222')
     # Initialize Logger
     dir_path = os.path.dirname(os.path.realpath(__file__))
     log_format = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')

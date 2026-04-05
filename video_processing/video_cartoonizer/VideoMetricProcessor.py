@@ -22,7 +22,7 @@ class VideoMetricAnalytics:
 
     def start(self):
         self.running = True
-        self.attention_emotion_detection_thread = threading.Thread(target=self.worker, name="attention_emotion_detection-thread")
+        self.attention_emotion_detection_thread = threading.Thread(target=self.scheduler, name="attention_emotion_detection-thread")
         self.attention_emotion_detection_thread.daemon = True
         self.attention_emotion_detection_thread.start()
 
@@ -30,30 +30,55 @@ class VideoMetricAnalytics:
         self.running = False
         logging.info("Stopping video metric analytics thread...")
 
-
-    def worker(self):
+    # this schedule will go through each candiate's queue added to frame_queue_manager
+    # and get the added job. This goes tune by turn to ensure each candiate job is process round robbingly
+    # regardless of when they join. This solve the issue of using one queue for all candiadate, which result to
+    # candidates that join later having to wait longer till it gets to their turn
+    def scheduler(self):
         while self.running:
-            try:
-                # block briefly to avoid CPU spin; adjust timeout for latency needs
-                payload = self.Imagedetection.accumulator_queue.get(timeout=0.25)
-            except Empty:
-                logging.debug("Video metric analytics thread waiting for data...")
+            candidate_turn = 0
+            candidate_unique_ids = list(self.Imagedetection.accumulator_queue_manager.keys())
+            len_candidate_unique_ids = len(candidate_unique_ids)
+
+            if len_candidate_unique_ids == 0:
+                time.sleep(0.05)
                 continue
 
-            if payload is self.STOP:
-                logging.info("Received stop signal for video metric analytics thread.")
-                break    
-            
-            auth_key,all_frames,accumulator = payload
-            processing_timer = time.monotonic()
-            video_metrics = self.compute_videoMetrics(all_frames,accumulator)
-            if video_metrics: 
-                # logging.info(video_metrics)
-                success = callbacks.post_video_metrics(auth_key, video_metrics)
+            while candidate_turn < len_candidate_unique_ids:
+                # logging.info("about to start processing  emotion and attention  work for client {0} of {1} with key {2} ".format(candidate_turn,len_candidate_unique_ids,candidate_unique_ids[candidate_turn]))
+                self.worker(self.Imagedetection.accumulator_queue_manager[candidate_unique_ids[candidate_turn]],candidate_unique_ids[candidate_turn])
+                logging.info("proceesed emotion and attention work for client {0} of {1} with key {2} ".format(candidate_turn+1,len_candidate_unique_ids,candidate_unique_ids[candidate_turn]))
+                candidate_turn += 1
 
-                processing_time = time.monotonic() - processing_timer
-                if success:
-                    logging.info( f"Video processing results posted successfully for client {auth_key} (Processing time: {processing_time})")
+                # if the last candiate have been scheduled, then break so that a fresh candiadates_id is fetched
+                # possible a new candiate may have added its queue to the elf.frame_queue_manager
+                if candidate_turn == len_candidate_unique_ids:
+                    break
+
+    def worker(self,candidate_queue,candidate_queue_id):
+        try:
+            # block briefly to avoid CPU spin; adjust timeout for latency needs
+            payload = candidate_queue.get_nowait() #get(timeout=0.25)
+        except Empty:
+            logging.debug("Video metric analytics thread waiting for data...")
+            return
+
+        if payload is self.STOP:
+            logging.info("Received stop signal for video metric analytics thread.")
+            return  
+          
+        logging.info("i just read from queue accumulator for client {0}".format(candidate_queue_id))
+        auth_key,all_frames,accumulator,batch_track = payload
+        processing_timer = time.monotonic()
+        video_metrics = self.compute_videoMetrics(all_frames,accumulator)
+        logging.info("insert {0} into DB for batch {1}".format(video_metrics,batch_track))
+        if video_metrics: 
+            
+            success = callbacks.post_video_metrics(auth_key, video_metrics)
+
+            processing_time = time.monotonic() - processing_timer
+            if success:
+                logging.info( f"Video processing results posted successfully for client {auth_key} (Processing time: {processing_time})")
 
 
 

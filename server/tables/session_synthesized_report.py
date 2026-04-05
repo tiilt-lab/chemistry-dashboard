@@ -13,7 +13,7 @@ class SessionSynthesizedReport(db.Model):
     __tablename__ = 'session_synthesized_report'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     session_id = db.Column(db.Integer, db.ForeignKey('session.id'), nullable=False)
-    session_device_id = db.Column(db.Integer, db.ForeignKey('session_device.id'), nullable=False)
+    session_device_id = db.Column(db.Integer, db.ForeignKey('session_device.id',ondelete="CASCADE"), nullable=False)
     synthesized_feedback = db.Column(LONGTEXT, nullable=False)
     creation_date = db.Column(db.DateTime, nullable=False) 
 
