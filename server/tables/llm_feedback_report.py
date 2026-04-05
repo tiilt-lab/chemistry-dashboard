@@ -12,7 +12,7 @@ class LLMFeedbackReport(db.Model):
     __tablename__ = 'llm_feedback_report'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     session_id = db.Column(db.Integer, db.ForeignKey('session.id'), nullable=False)
-    session_device_id = db.Column(db.Integer, db.ForeignKey('session_device.id'), nullable=False)
+    session_device_id = db.Column(db.Integer, db.ForeignKey('session_device.id',ondelete="CASCADE"), nullable=False)
     speaker_username = db.Column(db.String(64),nullable=False)
     feedback_analysis = db.Column(db.Text, nullable=False)
     creation_date = db.Column(db.DateTime, nullable=False) 

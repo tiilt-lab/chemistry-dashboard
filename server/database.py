@@ -238,6 +238,18 @@ def get_all_transcript_metrics_by_session(id = None, student_username=None, sess
     query = query.order_by(Transcript.start_time.asc())
     return query.all()
 
+def get_all_transcript_metrics_by_session_deviceId(id = None, session_id=None, session_device_id=None, speaker_id = -1):
+    query = db.session.query(Transcript,SpeakerTranscriptMetrics)
+    query = query.join(SpeakerTranscriptMetrics).filter(Transcript.id == SpeakerTranscriptMetrics.transcript_id)
+
+    if session_device_id != None:
+        query = query.filter(Transcript.session_device_id == session_device_id) 
+
+    if speaker_id != -1:
+        query = query.filter(Transcript.speaker_id == speaker_id)
+    query = query.order_by(Transcript.start_time.asc())
+    return query.all()
+
 def get_all_transcript_metrics_by_session_by_timeline(id = None, student_username=None, session_id=None, session_device_id=None):
     query = db.session.query(Transcript,SpeakerTranscriptMetrics)
     query = query.join(SpeakerTranscriptMetrics).filter((Transcript.id == SpeakerTranscriptMetrics.transcript_id) &

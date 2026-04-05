@@ -85,6 +85,7 @@ function ExpertRatingPage(props) {
                                 setNotes={props.setNotes}
                                 notes = {props.notes}
                                 submitted = {props.submitted}
+                                handleSubmit = {props.handleSubmit}
                             />
 
 

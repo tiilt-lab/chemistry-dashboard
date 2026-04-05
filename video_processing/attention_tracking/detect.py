@@ -27,6 +27,8 @@ from yolo_head.utils.plots import plot_one_box
 
 class ImageObjectDetection:
     def __init__(self):
+        self.frame_queue_manager = {}
+        self.accumulator_queue_manager = {}
         self.frame_queue = queue.Queue()
         self.accumulator_queue = queue.Queue()  # limit to last 5 processed batches for attention/emotion analysis
         self.imgsz =  640
@@ -98,7 +100,7 @@ class ImageObjectDetection:
 
     def start(self):
         self.running = True
-        self.object_detection_thread = threading.Thread(target=self.worker, name="object-detection-thread")
+        self.object_detection_thread = threading.Thread(target=self.scheduler, name="object-detection-thread")
         self.object_detection_thread.daemon = True
         self.object_detection_thread.start()
 
@@ -106,52 +108,85 @@ class ImageObjectDetection:
         self.running = False
         logging.info("Stopping object detection thread...")
 
-
-    def worker(self):
+    # this schedule will go through each candiate's queue added to frame_queue_manager
+    # and get the added job. This goes tune by turn to ensure each candiate job is process round robbingly
+    # regardless of when they join. This solve the issue of using one queue for all candiadate, which result to
+    # candidates that join later having to wait longer till it gets to their turn
+    def scheduler(self):
         while self.running:
-            try:
-                # block briefly to avoid CPU spin; adjust timeout for latency needs
-                payload = self.frame_queue.get(timeout=0.25)
-            except Empty:
+            candidate_turn = 0
+            candidate_unique_ids = list(self.frame_queue_manager.keys())
+            len_candidate_unique_ids = len(candidate_unique_ids)
+            
+            if len_candidate_unique_ids == 0:
+                time.sleep(0.05)
                 continue
 
-            if payload is self.STOP:
-                break    
-            
-            images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key = payload
-            all_frames,accumulator = self.detection_with_facial_regonition(images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key)
-            accumulator_load = [auth_key,all_frames,accumulator]
-            #enque for gaze detection and attention flow processing, 
-            self.enqueue_latest_accumulator_payload(accumulator_load)
+            while candidate_turn < len_candidate_unique_ids:
+                # logging.info("about to start processing  imagedection work for client {0} of {1} with key {2} ".format(candidate_turn,len_candidate_unique_ids,candidate_unique_ids[candidate_turn]))
+                self.worker(self.frame_queue_manager[candidate_unique_ids[candidate_turn]],candidate_unique_ids[candidate_turn])
+                logging.info("proceesed imagedection work for client {0} of {1} with key {2} ".format(candidate_turn+1,len_candidate_unique_ids,candidate_unique_ids[candidate_turn]))
+                candidate_turn += 1
+
+                # if the last candiate have been scheduled, then break so that a fresh candiadates_id is fetched
+                # possible a new candiate may have added its queue to the elf.frame_queue_manager
+                if candidate_turn == len_candidate_unique_ids:
+                    break
+
+    def worker(self,candidate_queue, candidate_queue_id):
+        # while self.running:
+        try:
+            # block briefly to avoid CPU spin; adjust timeout for latency needs
+            payload = candidate_queue.get_nowait() #get(timeout=0.25)
+        except Empty:
+            return
+
+        if payload is self.STOP:
+            return  
+          
+        # logging.info("i just read from frame queue for client {0}".format(candidate_queue_id))
+        images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key = payload
+        all_frames,accumulator = self.detection_with_facial_regonition(images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key)
+        accumulator_load = [auth_key,all_frames,accumulator,batch_track]
+        #enque for gaze detection and attention flow processing, 
+        self.enqueue_latest_accumulator_payload(accumulator_load,candidate_queue_id)
 
 
-    def enqueue_latest_accumulator_payload(self, payload, timeout=0.05):
+    def enqueue_latest_accumulator_payload(self, payload,candidate_queue_id, timeout=0.05):
         """
         Keep only the most recent chunk in the queue.
         If the queue is full, remove the stale queued chunk and replace it.
         """
+        candidate_acc_queue = None
+        if candidate_queue_id in self.accumulator_queue_manager:
+            candidate_acc_queue = self.accumulator_queue_manager[candidate_queue_id]
+        else:
+            self.accumulator_queue_manager[candidate_queue_id] = queue.Queue(maxsize=4)  
+            candidate_acc_queue = self.accumulator_queue_manager[candidate_queue_id]
+        
         try:
-            self.accumulator_queue.put(payload, timeout=timeout)
+            candidate_acc_queue.put(payload, timeout=timeout)
+            logging.info("i just inserted acc into the queue for candidate  {0}".format(candidate_queue_id))
             return True
         except Full:
-            logging.warning("Accumulator queue is full; attempting to replace stale payload with latest payload.")
+            logging.warning("Accumulator queue for {0} is full; attempting to replace stale payload with latest payload.".format(candidate_queue_id))
             pass
 
         # Queue is full: drop the old queued item
         try:
-            old_item = self.accumulator_queue.get_nowait()
+            old_item = candidate_acc_queue.get_nowait()
             # optional: if you use task_done semantics elsewhere, call task_done here
             # self.frame_queue.task_done()
         except Empty:
-            logging.warning("Accumulator queue was full but is now empty; failed to replace payload.")
+            logging.warning("Accumulator queue for {0} was full but is now empty; failed to replace payload.".format(candidate_queue_id))
             old_item = None
 
         # Try again to insert the latest chunk
         try:
-            self.accumulator_queue.put_nowait(payload)
+            candidate_acc_queue.put_nowait(payload)
             return True
         except Full:
-            logging.warning("Could not enqueue latest frame payload; dropping it.")
+            logging.warning("Could not enqueue latest frame payload for {0}; dropping it.".format(candidate_queue_id))
             return False   
         
     def detection(self,images,batch_track):
