@@ -173,7 +173,6 @@ function StudentSessionDashboard() {
   // --------------------------------------------------------
   useEffect(() => {
     // fetch the transcript based on group selected
-    console.log("selected device id changed ", selectedDeviceID)
     if (selectedDeviceID > -1) {
       console.log("tracking session and device ids inside useeffect  ", selectedSessionId1, selectedSessionDeviceId1,selectedDeviceID)
       //this is necessary if the first session and device were loaded from the entry page

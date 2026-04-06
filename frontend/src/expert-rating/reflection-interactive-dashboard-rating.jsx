@@ -11,13 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { MessageSquare, Brain, Clock3, Sparkles, Users, User, Eye, Mic, Activity, HelpCircle, Search, AlertTriangle, CheckCircle2, ChevronRight, Bot, BarChart3, Target, Lightbulb, TrendingDown, TrendingUp, ArrowRight } from "lucide-react";
 
-import { AppSectionBoxComponent } from "../section-box/section-box-component"
+import { AppSectionBoxComponent } from "../components/section-box/section-box-component"
 
 
 function CollaborationFeedbackDashboard(props) {
-  const selectedSessionId1 = props.selectedSessionId1
-  const selectedSessionDeviceId1 = props.selectedSessionDeviceId1
-  const promptResponses = (props.promptResponses.hasOwnProperty(selectedSessionId1) && props.promptResponses[selectedSessionId1].hasOwnProperty(selectedSessionDeviceId1)) ? props.promptResponses[selectedSessionId1][selectedSessionDeviceId1] : []
+  const selectedSessionId = props.selectedSessionId
+  const selectedSessionDeviceId = props.selectedSessionDeviceId
+  console.log("props.promptResponses ", props.promptResponses)
+  const promptResponses = (props.promptResponses.hasOwnProperty(selectedSessionId) && props.promptResponses[selectedSessionId].hasOwnProperty(selectedSessionDeviceId)) ? props.promptResponses[selectedSessionId][selectedSessionDeviceId] : []
   const llmresponse_session_summary = props.llmSessionAnalysis.Session_summary
   const llmresponse_session_metric_summary = llmresponse_session_summary.Session_metric_summary
   const llmresponse_group_summary = props.llmSessionAnalysis.Group_summary
@@ -194,7 +195,7 @@ function CollaborationFeedbackDashboard(props) {
         type={"large-section"}
         heading={"Collaboration Reflection Dashboard"}
       >
-        <div className="large-section text-left">
+        <div className="medium-sectionX2 text-left">
 
           <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -243,34 +244,7 @@ function CollaborationFeedbackDashboard(props) {
                 <CardDescription>Choose another session and group, inspect a moment, and ask grounded questions.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="w-full">
-                  <div className="mb-2 text-sm font-medium">Session</div>
-                  <Select value={selectedSessionId1} onValueChange={props.getSessionDevices}>
-                    <SelectTrigger className="w-full rounded-2xl">
-                      <SelectValue placeholder="Select Session" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {props.previousSessions.map((sess) => (
-                        <SelectItem key={sess.id} value={sess.id}>{sess.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="w-full">
-                  <div className="mb-2 text-sm font-medium">Group</div>
-                  <Select value={selectedSessionDeviceId1} onValueChange={props.loadReflectionDashboardForNewSelection}>
-                    <SelectTrigger className="w-full rounded-2xl">
-                      <SelectValue placeholder="Select Group" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {props.selectFilteredDevice1.map((device) => (
-                        <SelectItem key={device} value={device.id}>{device.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
+                
                 <div className="rounded-2xl border p-4 text-sm leading-6">
                   <div className="flex items-center gap-2 font-medium"><Brain className="h-4 w-4" />Your Strength</div>
                   <p className="mt-2 text-muted-foreground">
@@ -604,8 +578,8 @@ function CollaborationFeedbackDashboard(props) {
                             props.setIsThinking(true);
                             try {
                               await props.interactivePromptFnc(
-                                selectedSessionId1,
-                                selectedSessionDeviceId1,
+                                selectedSessionId,
+                                selectedSessionDeviceId,
                                 question[0],
                                 question[1]
                               );
@@ -639,8 +613,8 @@ function CollaborationFeedbackDashboard(props) {
 
                               try {
                                 await props.interactivePromptFnc(
-                                  selectedSessionId1,
-                                  selectedSessionDeviceId1,
+                                  selectedSessionId,
+                                  selectedSessionDeviceId,
                                   q[0],
                                   q[1]
                                 );

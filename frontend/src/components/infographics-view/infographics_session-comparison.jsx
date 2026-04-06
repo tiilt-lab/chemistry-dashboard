@@ -184,7 +184,6 @@ function AppInfographicsSessionComparison(props) {
                         <AppIndividualVideoFeaturesComponent
                             session={props.session}
                             videometrics={props.session1VideoMetrics}
-                            spkrId={props.selectedSessionId1}
                             showFeatures={props.showFeatures}
                         />
                     </AppSectionBoxComponent>

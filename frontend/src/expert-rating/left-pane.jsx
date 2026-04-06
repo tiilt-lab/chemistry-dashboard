@@ -43,7 +43,7 @@ function LikertRatingInterface(props) {
 
             <div className="space-y-2">
               <Label htmlFor="output-select">Select item to evaluate</Label>
-              <Select value={props.selectedItemForRating} onValueChange={props.setSelectedItemForRating}>
+              <Select value={props.selectedItemForRating} onValueChange={props.loadDashboard}>
                 <SelectTrigger id="output-select" className="w-full rounded-xl bg-white">
                   <SelectValue placeholder="Choose an dashboard" />
                 </SelectTrigger>
