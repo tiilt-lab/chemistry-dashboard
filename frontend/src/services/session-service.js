@@ -77,6 +77,13 @@ class SessionService {
     );
   }
 
+  getSessionDeviceForClient(session_device_id){
+    return this.api.httpRequestCall(
+      `/api/v1/devices/${session_device_id}/session_device`,
+      "GET",
+      {}
+    );
+  }
   getSessionDevices(sessionId) {
     return this.api.httpRequestCall(
       `api/v1/sessions/${sessionId}/devices`,

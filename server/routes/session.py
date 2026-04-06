@@ -320,6 +320,11 @@ def session_devices(session_id, **kwargs):
         devices = database.get_session_devices(session_id=session_id)
         return json_response([device.json() for device in devices])
 
+@api_routes.route('/api/v1/devices/<int:session_device_id>/session_device', methods=['GET'])
+def session_device_by_id(session_device_id, **kwargs):
+    device = database.get_session_devices(id=session_device_id)
+    return json_response(device.json())
+
 @api_routes.route('/api/v1/help_button', methods=['POST'])
 @wrappers.verify_login(allow_key=True)
 def set_help_button(**kwargs):
