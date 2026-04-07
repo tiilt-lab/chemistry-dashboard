@@ -172,6 +172,19 @@ class SessionService {
     );
   }
 
+  getRaterDetailByExpertId(expertId) {
+    return this.api.httpRequestCall("api/v1/student/raters/" + expertId, 'GET', {});
+  }
+
+  postRating(payload){
+    const body =  payload;
+    return this.api.httpRequestCall(
+      `api/v1/student/postrating`,
+      "POST",
+      body
+    );
+  }
+
   getSpeakerIdTranscripts(deviceId, speakerId) {
     return this.api.httpRequestCall(
       `api/v1/sessions/devices/${deviceId}>/speakers/${speakerId}/transcripts`,

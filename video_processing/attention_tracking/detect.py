@@ -118,9 +118,9 @@ class ImageObjectDetection:
             candidate_unique_ids = list(self.frame_queue_manager.keys())
             len_candidate_unique_ids = len(candidate_unique_ids)
             
-            if len_candidate_unique_ids == 0:
-                time.sleep(0.05)
-                continue
+            # if len_candidate_unique_ids == 0:
+            #     time.sleep(0.05)
+            #     continue
 
             while candidate_turn < len_candidate_unique_ids:
                 # logging.info("about to start processing  imagedection work for client {0} of {1} with key {2} ".format(candidate_turn,len_candidate_unique_ids,candidate_unique_ids[candidate_turn]))

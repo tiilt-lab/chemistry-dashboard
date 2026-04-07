@@ -89,11 +89,11 @@ function ExpertRatingPage(props) {
 
                             <div className="toolbar-view-container">
                                 <LikertRatingInterface
-                                    expertDetail={props.expertDetail}
                                     selectedItemForRating={props.selectedItemForRating}
                                     setSelectedItemForRating={props.setSelectedItemForRating}
                                     completedCount={props.completedCount}
                                     itemsForRating={props.itemsForRating}
+                                    currentIndex = {props.currentIndex}
                                     evaluationOption={props.evaluationOption}
                                     evaluatorType={props.evaluatorType}
                                     likertOptions={props.likertOptions}
@@ -104,9 +104,13 @@ function ExpertRatingPage(props) {
                                     submitted={props.submitted}
                                     handleSubmit={props.handleSubmit}
                                     loadDashboard={props.loadDashboard}
+                                    evaluationOptionInstruction = {props.evaluationOptionInstruction}
+                                    handleNavigationChange = {props.handleNavigationChange}
+                                    handlePrev = {props.handlePrev}
+                                    handleNext = {props.handleNext}
                                 />
 
-                                {props.dashboardPage === "option two dashboard" && (
+                                {props.dashboardPage === "reflection" && (
                                     <div className="center-column-container">
                                         {(!props.reflectionDashboardDoneLoading) ? (
                                             <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -144,7 +148,7 @@ function ExpertRatingPage(props) {
                                     </div>
                                 )}
 
-                                {props.dashboardPage === "option one dashboard" && (
+                                {props.dashboardPage === "quantitative" && (
                                     <div className="center-column-container">
                                         {(!props.transcriptDoneLoading && !props.videoMetricDoneLoading) ? (
                                             <div className="absolute inset-0 flex flex-col items-center justify-center">

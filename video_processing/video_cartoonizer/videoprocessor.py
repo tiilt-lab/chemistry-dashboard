@@ -337,7 +337,7 @@ class VideoProcessor:
         if candidate_queue_id in self.image_object_detection.frame_queue_manager:
             candidate_frame_queue = self.image_object_detection.frame_queue_manager[candidate_queue_id]
         else:
-            self.image_object_detection.frame_queue_manager[candidate_queue_id] = Queue(maxsize=10)
+            self.image_object_detection.frame_queue_manager[candidate_queue_id] = Queue(maxsize=30)
             candidate_frame_queue = self.image_object_detection.frame_queue_manager[candidate_queue_id]
 
         try:

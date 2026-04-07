@@ -1,16 +1,15 @@
 
 import { useEffect, useRef, useState, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { ExpertRatingPage } from "./html-pages";
 import { AuthService } from "../services/auth-service"
 import { SessionService } from "../services/session-service";
 import { RaterModel } from "../models/rater"
 import { SessionModel } from "../models/session";
 import { SessionDeviceModel } from "../models/session-device";
-import { SpeakerModel } from "../models/speaker";
 
 const likertOptions = [1, 2, 3, 4, 5];
-const evaluaion_one = [
+const evaluation_one = [
   ["Interpretability", "This dashboard makes the collaboration patterns easy to understand."],
   ["Usefulness for feedback", "This Feedbacks would help a learner reflect on and improve their collaboration."],
   ["Clarity", "The information presented in the dashboard is clear and easy to follow."],
@@ -18,27 +17,41 @@ const evaluaion_one = [
   ["Confidence in interpretation", "I can confidently rely on the  information provided in this dashboard to judge the learner’s/my collaboration pattern."]
 ]
 
-const evaluaion_two = [
-  ["Data modality", "The integration of different modal metric of impact on the quality of interpretation/synthesis."],
+const evaluation_two = [
+  ["Data modality", "The integration of different modalities of metric  impact the richness of interpretation/synthesis."],
   ["Complementarity of Signals", "The feedback draws on classes of metrics that reinforce or support the same interpretation."],
   ["Contextual Interpretation", "The feedback is contextualized by interpreting a collaboration indicator in relation to one or more other collaboration indicators, rather than in isolation."],
   ["Relational Reasoning", "The feedback reflects how one collaboration indicator/behavior may influence or be associated with another."],
   ["Coverage ", "The feedback captures a broad range of behaviors rather than focusing narrowly on one aspect of collaboration."]
 ]
 
-const evaluaion_three = [
+const evaluation_three = [
   ["Claims Accuracy", "The feedback includes claims that are not clearly supported by the data."],
   ["Evidence Traceability", "The feedback clearly links its conclusions to specific elements of the data."],
   ["Consistency", "The feedback is internally consistent and does not contain contradictions."],
   ["Sepcifity", "The feedback provides specific, data-grounded insights rather than vague statements."],
   ["Trustworthiness", "I would trust this feedback as a reliable interpretation of the data."]
 ]
+
+const evaluation_one_instruction = [
+  "Interact with each dashboard as needed (click, navigate, expand) to understand the feedback.",
+  "Focus on how interaction helps you explore or understand the feedback"
+]
+
+const evaluation_two_instruction = [
+  "Interact with each dashboard as needed (click, navigate, expand) to understand the feedback.",
+  "Focus on how either single or multi data sources impact better understanding of the feedback "
+]
+
+const evaluation_three_instruction = [
+  "Interact with each dashboard as needed (click, navigate, expand) to understand the feedback.",
+  "Focus on the consistency, accuracy and level of halucination observed during your interaction"
+]
 function ExpertRatingComponent() {
 
-  const [expertDetail, setExpertDetail] = useState(null)
   const [nextPage, setNextPage] = useState("reportoptionpage")
   const [selectedItemForRating, setSelectedItemForRating] = useState(-1)
-  const [itemsForRating, setItemsForRating] = useState(["Dashboard Option One", "Dashboard Option Two"])
+  const [itemsForRating, setItemsForRating] = useState([])
 
   const pageTitle = useRef("Expert Rating")
   const session = useRef(null)
@@ -46,7 +59,7 @@ function ExpertRatingComponent() {
   const [evaluatorType, setEvaluatorType] = useState("")
   const [aliasExpertId, setAliasExpertId] = useState("")
   const [evaluationOption, setEvaluationOption] = useState([])
-  const [feedbackParameters, setFeedbackParameters] = useState([])
+  const [evaluationOptionInstruction, setEvaluationOptionInstruction] = useState([])
   const [showAlert, setShowAlert] = useState(false)
   const [alertMessage, setAlertMessage] = useState("")
   const [notes, setNotes] = useState("");
@@ -67,7 +80,7 @@ function ExpertRatingComponent() {
   const [dashboardPage, setDashboardPage] = useState("")
   const [startTime, setStartTime] = useState()
   const [endTime, setEndTime] = useState()
-  const [details, setDetails] = useState("Individual")
+  const details = useRef("Individual")
   const [currentTranscript, setCurrentTranscript] = useState(null)
   const [showFeatures, setShowFeatures] = useState([])
   const [showBoxes, setShowBoxes] = useState([])
@@ -77,14 +90,16 @@ function ExpertRatingComponent() {
   const promptHistory = useRef({})
   const promptResponses = useRef({})
   const synthesizedData = useRef({})
-   const [selectedMomentIdAndIndex, setSelectedMomentIdAndIndex] = useState(null);
+  const [selectedMomentIdAndIndex, setSelectedMomentIdAndIndex] = useState(null);
   const [sessionNameForReflecDashboard, setSessionNameForReflecDashboard] = useState("")
   const [groupNameForReflecDashboard, setGroupNameForReflecDashboard] = useState("")
   const [isThinking, setIsThinking] = useState(false)
-
+  const [currentIndex, setCurrentIndex] = useState(0)
   const navigate = useNavigate()
   const sessionService = new SessionService()
   const authService = new AuthService()
+
+
 
   useEffect(() => {
     let featuresArr = [
@@ -125,10 +140,8 @@ function ExpertRatingComponent() {
   // first useEffect to be called one the evalutor class is selected
   useEffect(() => {
     if (evaluatorType === "student" && aliasExpertId !== "") {
-      setEvaluationOption(evaluaion_one)
-      setFeedbackParameters([158, 443, "dklee1004"])
-      setRatings(Object.fromEntries(evaluaion_one.map((item) => [item[0], 0])))
-      setNextPage("dashboardratingpage")
+      setItemsForRating([{ rating_item_id: -1, sessId: 158, sessDevId: 443, speaker: "dklee1004", raterId: aliasExpertId, dashboardType: "quantitative", evalCat: "visualization" },
+      { rating_item_id: -1, sessId: 158, sessDevId: 443, speaker: "dklee1004", raterId: aliasExpertId, dashboardType: "reflection", evalCat: "reflection" }])
 
     } else if (evaluatorType === "expert" && aliasExpertId !== "") {
       verifyExpertId(aliasExpertId)
@@ -137,17 +150,28 @@ function ExpertRatingComponent() {
   }, [evaluatorType, aliasExpertId])
 
   useEffect(() => {
-    if (selectedItemForRating !== -1 && sessionId !== -1) {
-      if (selectedItemForRating === "Dashboard Option One") {
-        fetchTranscript(sessionId, feedbackParameters[1], feedbackParameters[2], setTranscripts)
-        fetchVideoMetric(sessionId, feedbackParameters[1], feedbackParameters[2], setVideoMetrics)
-      } else if (selectedItemForRating === "Dashboard Option Two") {
-        loadReflectiondashboard(feedbackParameters[0],feedbackParameters[1],feedbackParameters[2])
-         setDashboardPage("option two dashboard")
+    if (itemsForRating.length > 0) {
+      loadDashboard(itemsForRating[0])
+    }
 
+  }, [itemsForRating])
+
+
+  useEffect(() => {
+    if (selectedItemForRating !== -1 && sessionId !== -1 && sessionDeviceId !== -1) {
+      if (selectedItemForRating.dashboardType === "quantitative") {
+        fetchTranscript(sessionId, sessionDeviceId, selectedItemForRating.speaker, setTranscripts)
+        fetchVideoMetric(sessionId, sessionDeviceId, selectedItemForRating.speaker, setVideoMetrics)
+        setRatings(Object.fromEntries(evaluationOption.map((item) => [item[0], 0])))
+        setNextPage("dashboardratingpage")
+      } else if (selectedItemForRating.dashboardType === "reflection") {
+        loadReflectiondashboard(sessionId, sessionDeviceId, selectedItemForRating.speaker)
+        setDashboardPage(selectedItemForRating.dashboardType)
+        setRatings(Object.fromEntries(evaluationOption.map((item) => [item[0], 0])))
+        setNextPage("dashboardratingpage")
       }
     }
-  }, [selectedItemForRating, sessionId])
+  }, [selectedItemForRating, sessionId, sessionDeviceId])
 
   useEffect(() => {
     if (transcripts !== null && videoMetrics !== null) {
@@ -165,7 +189,7 @@ function ExpertRatingComponent() {
 
   useEffect(() => {
     if (transcriptDoneLoading && videoMetricDoneLoading) {
-      setDashboardPage("option one dashboard")
+      setDashboardPage(selectedItemForRating.dashboardType)
     }
   }, [transcriptDoneLoading, videoMetricDoneLoading])
 
@@ -198,14 +222,15 @@ function ExpertRatingComponent() {
   // --------------------------------------------------------
 
   const verifyExpertId = async (expertid) => {
-    const fetchData = authService.getRaterDetailByExpertId(expertid)
+    const fetchData =  new SessionService().getRaterDetailByExpertId(expertid)
     fetchData
       .then(
         (response) => {
           if (response.status === 200) {
-            response.json().then((jsonObj) => {
-              const expert_data = RaterModel.fromJson(jsonObj)
-              setExpertDetail(expert_data)
+            response.json().then((jsonArrayObj) => {
+              const expert_data = RaterModel.fromJsonList(jsonArrayObj)
+              const items = expert_data.map((detail, index) => { return { rating_item_id: detail.id, sessId: detail.sessionid, sessDevId: detail.sessiondeviceid, speaker: detail.speakertag, raterId: detail.raterid, dashboardType: detail.dashboardtype, evalCat: detail.evaluationCategory } })
+              setItemsForRating(items)
             })
           } else {
             setAlertMessage("Invalid Expert ID");
@@ -222,8 +247,18 @@ function ExpertRatingComponent() {
   }
 
   const loadDashboard = (selecteditem) => {
-    loadSession(feedbackParameters[0])
-    loadSessionDevice(feedbackParameters[1])
+    setSession1Transcripts([])
+    setTranscripts(null)
+    setVideoMetrics(null)
+    setTranscriptDoneLoading(false)
+    setVideoMetricDoneLoading(false)
+
+    loadSession(selecteditem.sessId)
+    loadSessionDevice(selecteditem.sessDevId)
+    const evalopt = selecteditem.evalCat == "visualization" || selecteditem.evalCat == "reflection" ? evaluation_one : selecteditem.evalCat == "multimodal" || selecteditem.evalCat == "unimodal" ? evaluation_two : evaluation_three
+    const evaloptInt = evalopt == evaluation_one ? evaluation_one_instruction : evalopt == evaluation_two ? evaluation_two_instruction : evaluation_three_instruction
+    setEvaluationOption(evalopt)
+    setEvaluationOptionInstruction(evaloptInt)
     setSelectedItemForRating(selecteditem)
   }
 
@@ -267,7 +302,7 @@ function ExpertRatingComponent() {
               setSessionDeviceId(session_device.id);
             })
           } else {
-            setAlertMessage("No Previous Sessions Found for this User");
+            setAlertMessage("No Previous Sessions device Found for this User");
             setShowAlert(true);
           }
         },
@@ -341,9 +376,9 @@ function ExpertRatingComponent() {
   //Dashboard option two implementation
   //-----------------------------------------------------------------------//
 
-  const loadReflectiondashboard = async (sessionid,deviceid,username) => {
+  const loadReflectiondashboard = async (sessionid, deviceid, username) => {
     setReflectionDashboardDoneLoading(false)
-    let actionstatus = await extractParticipantData(sessionid,deviceid,username)
+    let actionstatus = await extractParticipantData(sessionid, deviceid, username)
     if (actionstatus) {
       setSessionNameForReflecDashboard(session.current?.name)
       setGroupNameForReflecDashboard(sessionDevice?.name)
@@ -353,10 +388,10 @@ function ExpertRatingComponent() {
   };
 
 
-  const extractParticipantData = async (sessionid,deviceId,username) => {
-    const resp = await loadSynthesizedMetric(sessionid,deviceId)
+  const extractParticipantData = async (sessionid, deviceId, username) => {
+    const resp = await loadSynthesizedMetric(sessionid, deviceId)
 
-    let respObj = buildData("Participant level sesssion analysis", sessionid, deviceId,username, null, null)
+    let respObj = buildData("Participant level sesssion analysis", sessionid, deviceId, username, null, null)
     if (Object.keys(respObj).length === 0 || resp === false) {
       return false;
     }
@@ -365,16 +400,16 @@ function ExpertRatingComponent() {
 
     if (ret) {
       synthesizedData.current = respObj
-      await loadprompthistory(sessionid,deviceId,username)
+      await loadprompthistory(sessionid, deviceId, username)
       setSelectedMomentIdAndIndex([0, synthesizedData.current.participant_level_metric[0].windowid])
-    } 
-    
+    }
+
     return ret
-    
+
   }
 
   const interactivePromptFnc = async (selSessionId, selSessionDeviceId, default_question_id, question) => {
-    let respObj = buildData("interactive prompting", selSessionId, selSessionDeviceId, feedbackParameters[2],default_question_id, question)
+    let respObj = buildData("interactive prompting", selSessionId, selSessionDeviceId, selectedItemForRating.speaker, default_question_id, question)
     let existingPrompt = null
     if (promptHistory.current.hasOwnProperty(selSessionId) && promptHistory.current[selSessionId].hasOwnProperty(selSessionDeviceId)) {
       existingPrompt = promptHistory.current[selSessionId][selSessionDeviceId].find(p => (default_question_id !== -1 && p?.default_question_id === default_question_id)) ?? null;
@@ -422,9 +457,9 @@ function ExpertRatingComponent() {
     }
   }
 
-  const buildData = (reporttype, sessionId, deviceId,username, defaultQuestionId, question) => {
+  const buildData = (reporttype, sessionId, deviceId, username, defaultQuestionId, question) => {
     let retObj = {}
-    if (synthesizedFeedbackMetrics.current ) {
+    if (synthesizedFeedbackMetrics.current) {
       if (reporttype === "Participant level sesssion analysis") {
         retObj["participant_name"] = username
         retObj["sessionid"] = sessionId
@@ -448,14 +483,14 @@ function ExpertRatingComponent() {
     return retObj
   }
 
-  const loadSynthesizedMetric = async (sessionid,deviceId) => {
-    const data = await getSynthesizedMetric(sessionid,deviceId)
+  const loadSynthesizedMetric = async (sessionid, deviceId) => {
+    const data = await getSynthesizedMetric(sessionid, deviceId)
     if (data === null) {
       return false
     }
 
     synthesizedFeedbackMetrics.current = data
-      
+
     return true
   }
 
@@ -472,9 +507,9 @@ function ExpertRatingComponent() {
   }
 
 
-  const loadprompthistory = async (sessionid,deviceid,username) => {
+  const loadprompthistory = async (sessionid, deviceid, username) => {
     if (!promptHistory.current.hasOwnProperty(sessionid)) {
-      const prompt = await getPrompthistory(sessionid,deviceid,username)
+      const prompt = await getPrompthistory(sessionid, deviceid, username)
 
       if (prompt === null) {
         return false
@@ -486,7 +521,7 @@ function ExpertRatingComponent() {
     } else {
       if (!promptHistory.current[sessionid].hasOwnProperty(deviceid)) {
 
-        const prompt = await getPrompthistory(sessionid,deviceid,username)
+        const prompt = await getPrompthistory(sessionid, deviceid, username)
         if (prompt === null) {
           return false
         }
@@ -500,7 +535,7 @@ function ExpertRatingComponent() {
   }
 
 
-  const getSynthesizedMetric = async (sessionid,deviceId) => {
+  const getSynthesizedMetric = async (sessionid, deviceId) => {
     try {
       const response = await new SessionService().getSynthesizedFeedbackMetrics(sessionid, deviceId);
       if (response.status === 200) {
@@ -511,7 +546,7 @@ function ExpertRatingComponent() {
       }
     } catch (error) {
       console.log(
-        "student dashboard getSynthesizedMetric",
+        "Expert rating getSynthesizedMetric",
         error,
       )
       return null
@@ -531,14 +566,14 @@ function ExpertRatingComponent() {
       }
     } catch (error) {
       console.log(
-        "student dashboard loadReflectiondashboard",
+        "Expert ratingloadReflectiondashboard",
         error,
       )
       return null
     }
   }
 
-  const getPrompthistory = async (sessionid, deviceId,username) => {
+  const getPrompthistory = async (sessionid, deviceId, username) => {
     try {
       const response = await new SessionService().get_llm_question_answer_interactions(sessionid, deviceId, username);
 
@@ -550,7 +585,7 @@ function ExpertRatingComponent() {
       }
     } catch (error) {
       console.log(
-        "student dashboard loadprompthistory",
+        "Expert rating loadprompthistory",
         error,
       )
       return null
@@ -581,18 +616,58 @@ function ExpertRatingComponent() {
     }
   }
 
-  const handleSubmit = (allComplete) => {
+  const handlePrev = () => {
+    if (currentIndex <= 0) return;
+    handleNavigationChange(currentIndex - 1, itemsForRating[currentIndex - 1]);
+  };
+
+  const handleNext = () => {
+    if (currentIndex >= itemsForRating.length - 1 || itemsForRating.length === 0) return;
+    handleNavigationChange(currentIndex + 1, itemsForRating[currentIndex + 1]);
+  };
+
+  const handleNavigationChange = (index, itemsForRating) => {
+    setCurrentIndex(index);
+    setRatings(Object.fromEntries(evaluationOption.map((item) => [item[0], 0])))
+    setSubmitted(false);
+    loadDashboard(itemsForRating)
+  };
+
+
+  const handleSubmit = async (allComplete) => {
     // e.preventDefault();
     if (!allComplete) return;
 
+    ratings.notes = notes
     const payload = {
-      selectedItemForRating,
-      ratings,
-      notes,
+      id: selectedItemForRating.rating_item_id,
+      sessionid: selectedItemForRating.sessId,
+      sessionDeviceId: selectedItemForRating.sessDevId,
+      speakerTag: selectedItemForRating.speaker,
+      raterid: selectedItemForRating.raterId,
+      evaluationCategory: selectedItemForRating.evalCat,
+      response: ratings,
     };
 
-    console.log("Submitted rating form:", payload);
-    setSubmitted(true);
+    // console.log("payload ",payload)
+    try {
+      const response = await new SessionService().postRating(payload);
+
+      if (response.status === 200) {
+        console.log("Submitted rating form:", payload);
+        setSubmitted(true);
+      } else if (response.status === 400) {
+        setAlertMessage("Rating Submission Unsuccessful, Please contact Admin");
+        setShowAlert(true);
+      }
+    } catch (error) {
+      console.log(
+        "Expert rating loadprompthistory",
+        error,
+      )
+      return null
+    }
+
   };
 
   const seeAllTranscripts = () => {
@@ -651,7 +726,6 @@ function ExpertRatingComponent() {
       alertMessage={alertMessage}
       getUserParameters={getUserParameters}
       // loading={loading}
-      expertDetail={expertDetail}
       itemsForRating={itemsForRating}
       evaluatorType={evaluatorType}
       setEvaluatorType={setEvaluatorType}
@@ -663,7 +737,7 @@ function ExpertRatingComponent() {
       videoMetricDoneLoading={videoMetricDoneLoading}
       startTime={startTime}
       endTime={endTime}
-      details={details}
+      details={details.current}
       session={session.current}
       sessionDevice={sessionDevice}
       setRange={ResetTimeRange}
@@ -676,18 +750,18 @@ function ExpertRatingComponent() {
       setCurrentForm={setCurrentForm}
       reflectionDashboardDoneLoading={reflectionDashboardDoneLoading}
 
-      llmSessionAnalysis = {llmSessionAnalysis.current}
-      synthesizedData = {synthesizedData.current}
-      promptResponses = {promptResponses.current}
-      setSelectedMomentIdAndIndex = {setSelectedMomentIdAndIndex}
-      selectedMomentIdAndIndex = {selectedMomentIdAndIndex}
-      sessionNameForReflecDashboard = {sessionNameForReflecDashboard}
-      groupNameForReflecDashboard = {groupNameForReflecDashboard}
-      interactivePromptFnc = {interactivePromptFnc}
+      llmSessionAnalysis={llmSessionAnalysis.current}
+      synthesizedData={synthesizedData.current}
+      promptResponses={promptResponses.current}
+      setSelectedMomentIdAndIndex={setSelectedMomentIdAndIndex}
+      selectedMomentIdAndIndex={selectedMomentIdAndIndex}
+      sessionNameForReflecDashboard={sessionNameForReflecDashboard}
+      groupNameForReflecDashboard={groupNameForReflecDashboard}
+      interactivePromptFnc={interactivePromptFnc}
       isThinking={isThinking}
       setIsThinking={setIsThinking}
-      sessionId = {sessionId}
-      sessionDeviceId = {sessionDeviceId}
+      sessionId={sessionId}
+      sessionDeviceId={sessionDeviceId}
 
       //left pane props
       selectedItemForRating={selectedItemForRating}
@@ -702,6 +776,11 @@ function ExpertRatingComponent() {
       completedCount={completedCount}
       submitted={submitted}
       handleSubmit={handleSubmit}
+      evaluationOptionInstruction={evaluationOptionInstruction}
+      currentIndex={currentIndex}
+      handleNavigationChange={handleNavigationChange}
+      handlePrev={handlePrev}
+      handleNext={handleNext}
 
     />
   );

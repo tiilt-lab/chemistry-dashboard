@@ -107,10 +107,6 @@ html {
   @apply w-xs @sm:w-sm @3xl:w-4xl @6xl:w-7xl @7xl:w-[95rem];
 }
 
-.medium-sectionX2 {
-  @apply w-xs @sm:w-sm @3xl:w-4xl @6xl:w-6xl @7xl:w-[70rem];
-}
-
 .dropdown {
     @apply relative mx-3 flex rounded-md border-2 border-solid border-[#a7a7a7] py-2.5 text-center text-base/relaxed outline-0 transition-colors;
 }
