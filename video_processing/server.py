@@ -172,7 +172,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.orig_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1,self.config.mimeExtension)
                     
                     if self.config.videocartoonify or cf.process_video_analytics():
-                        self.video_queue = queue.Queue(maxsize=5)#maxsize=2
+                        self.video_queue = queue.Queue(maxsize=4)#maxsize=2
                         self.frame_queue = None
                         self.cartoon_image_queue = None
                          

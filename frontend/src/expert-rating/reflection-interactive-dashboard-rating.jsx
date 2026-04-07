@@ -17,7 +17,6 @@ import { AppSectionBoxComponent } from "../components/section-box/section-box-co
 function CollaborationFeedbackDashboard(props) {
   const selectedSessionId = props.selectedSessionId
   const selectedSessionDeviceId = props.selectedSessionDeviceId
-  console.log("props.promptResponses ", props.promptResponses)
   const promptResponses = (props.promptResponses.hasOwnProperty(selectedSessionId) && props.promptResponses[selectedSessionId].hasOwnProperty(selectedSessionDeviceId)) ? props.promptResponses[selectedSessionId][selectedSessionDeviceId] : []
   const llmresponse_session_summary = props.llmSessionAnalysis.Session_summary
   const llmresponse_session_metric_summary = llmresponse_session_summary.Session_metric_summary
@@ -190,13 +189,12 @@ function CollaborationFeedbackDashboard(props) {
 
   return (
 
-    <div className="infographics-container">
+    <div className="infographics-container text-left mx-6">
       <AppSectionBoxComponent
         type={"large-section"}
         heading={"Collaboration Reflection Dashboard"}
       >
-        <div className="medium-sectionX2 text-left">
-
+      
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -659,7 +657,6 @@ function CollaborationFeedbackDashboard(props) {
               </div>
             </TabsContent>
           </Tabs>
-        </div>
       </AppSectionBoxComponent>
     </div>
   );

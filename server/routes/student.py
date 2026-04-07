@@ -53,3 +53,35 @@ def update_students(**kwargs):
         return json_response(student.json())
     else:
         return json_response({'message': "Update unsuccessful"}, 400)
+    
+@api_routes.route('/api/v1/student/raters/<string:rater_id>', methods=['GET'])
+def get_rater_by_id(rater_id, **kwargs):
+    raters = database.get_raters(raterid=rater_id,completed=0)
+    if raters:
+        return json_response([rater.json() for rater in raters])
+    else:
+        return json_response({'message': 'No Records found.'}, 400)
+
+@api_routes.route('/api/v1/student/postrating', methods=['POST'])
+def post_rating(**kwargs):
+    content = request.json
+    id = content.get('id',None)
+    sessionid = content.get('sessionid',None)
+    sessionDeviceId = content.get('sessionDeviceId',None)
+    speakerTag = content.get('speakerTag',None)
+    raterid = content.get('raterid',None)
+    evaluationCategory = content.get('evaluationCategory',None)
+    response = content.get('response',None)
+    rating = database.get_ratings(sessionid=sessionid,sessiondeviceid=sessionDeviceId,speakertag=speakerTag,raterid=None,evaluationcategory=evaluationCategory)
+    if rating and response:
+        resp = json.dumps(response)
+        success, _ = database.update_rating(rating[0].id,response=resp)
+    elif sessionid and sessionDeviceId and speakerTag and raterid and evaluationCategory and response:
+        resp = json.dumps(response)
+        success, _ = database.add_rating(sessionid,sessionDeviceId, speakerTag,raterid,evaluationCategory,resp) 
+        database.update_rater(id,completed=1)
+
+    if success:
+        return json_response({'message': "success"})
+    else:
+        return json_response({'message': "Posting unsuccessful"}, 400)

@@ -123,10 +123,6 @@ class AuthService {
     return new ApiService().httpRequestCall("api/v1/admin/raters", 'GET', {});
   }
 
-  getRaterDetailByExpertId(expertId) {
-    return new ApiService().httpRequestCall("api/v1/admin/raters/" + expertId, 'GET', {});
-  }
-
   me(stateSetter) {
     const fetchRes = new ApiService().httpRequestCall("api/v1/me", 'GET', {});
     fetchRes.then(
@@ -165,14 +161,15 @@ class AuthService {
     return new ApiService().httpRequestCall("api/v1/admin/users", 'POST', body);
   }
 
-  async createRater(sessionid,sessiondeviceid,speakerid,speakertag,raterid,type) {
+  async createRater(sessionid,sessiondeviceid,speakerid,speakertag,raterid,type,evaluationcategory) {
     const body = {
       sessionid: sessionid,
       sessiondeviceid: sessiondeviceid,
       speakerid: speakerid,
       speakertag: speakertag,
       raterid: raterid,
-      type: type
+      type: type,
+      evaluationcategory: evaluationcategory
     };
     return new ApiService().httpRequestCall("api/v1/admin/raters", 'POST', body);
   }

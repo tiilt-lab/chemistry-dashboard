@@ -43,11 +43,11 @@ def get_raters(**kwargs):
     else:
         return json_response({'message': 'No Records found.'}, 400)        
 
-@api_routes.route('/api/v1/admin/raters/<int:rater_id>', methods=['GET'])
+@api_routes.route('/api/v1/admin/raters/<string:rater_id>', methods=['GET'])
 def get_rater_by_id(rater_id, **kwargs):
-    rater = database.get_raters(raterid=rater_id)
-    if rater:
-        return json_response(rater.json())
+    raters = database.get_raters(raterid=rater_id,completed=0)
+    if raters:
+        return json_response([rater.json() for rater in raters])
     else:
         return json_response({'message': 'No Records found.'}, 400)
     
@@ -84,6 +84,7 @@ def add_rater(**kwargs):
     speakertag = sanitize(content.get('speakertag', None))
     raterid = sanitize(content.get('raterid', None))
     type = sanitize(content.get('type', None))
+    evaluationcategory = sanitize(content.get('evaluationcategory',None))
     if not sessionid:
         return json_response({'message': 'Must provide session ID as an integer.'}, 400)
     if not sessiondeviceid:
@@ -96,7 +97,9 @@ def add_rater(**kwargs):
         return json_response({'message': 'Must provide rater ID as a string.'}, 400)
     if not type:
         return json_response({'message': 'Must provide type as a string.'}, 400)
-    success, rater = database.add_rater(sessionid,sessiondeviceid,speakerid,speakertag,raterid,type)
+    if not evaluationcategory:
+        return json_response({'message': 'Must provide evaluation category as a string.'}, 400)
+    success, rater = database.add_rater(sessionid,sessiondeviceid,speakerid,speakertag,raterid,type,evaluationcategory)
     if success:
         return json_response({'rater': rater.json()})
     else:

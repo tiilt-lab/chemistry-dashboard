@@ -31,6 +31,7 @@ from tables.llm_feedback_report import LLMFeedbackReport
 from tables.llm_question_answer import LLMQuestionAnswer
 from tables.rater import Rater
 from tables.session_synthesized_report import SessionSynthesizedReport
+from tables.rating import Rating
 
 # Saves changes made to database (models)
 def save_changes():
@@ -913,19 +914,67 @@ def update_user(user_id, data):
 # Rater
 # -------------------------
 
-def get_raters(id=None,raterid=None):
+def get_raters(id=None,sessionid=None,sessiondeviceid=None,speakerid=None,speakertag=None,raterid=None,type=None,evaluationcategory=None,completed=None):
     query = db.session.query(Rater)
     if id != None:
         return query.filter(Rater.id == id).first()
+    if sessionid != None:
+        query = query.filter(Rater.sessionid == sessionid)
+    if sessiondeviceid != None:
+        query = query.filter(Rater.sessiondeviceid == sessiondeviceid)
+    if speakerid != None:
+        query = query.filter(Rater.speakerid == speakerid)
+    if speakertag != None:
+        query = query.filter(Rater.speakertag == speakertag)  
     if raterid != None:
         query = query.filter(Rater.raterid == raterid)
+    if type != None:
+        query = query.filter(Rater.type == type)        
+    if evaluationcategory != None:
+        query = query.filter(Rater.evaluation_category == evaluationcategory)
+    if completed != None:
+        query = query.filter(Rater.completed == completed)    
     return query.all()
 
-def add_rater(sessionid, sessiondeviceid, speakerid, speakertag, raterid, type):
-    rater = Rater(sessionid, sessiondeviceid, speakerid, speakertag, raterid, type)
+def add_rater(sessionid, sessiondeviceid, speakerid, speakertag, raterid, type,evaluationcategory):
+    rater = Rater(sessionid, sessiondeviceid, speakerid, speakertag, raterid, type,evaluationcategory,0)
     db.session.add(rater)
     db.session.commit()
     return True, rater  
+
+def update_rater(id,sessionid=None,sessiondeviceid=None,speakerid=None,speakertag=None,raterid=None,type=None,evaluationcategory=None,completed=None):
+    rater = get_raters(id=id)
+    if rater:
+        db_change = False
+        if sessionid:
+            rater.sessionid = sessionid
+            db_change = True
+        if sessiondeviceid:
+            rater.sessiondeviceid = sessiondeviceid
+            db_change = True  
+        if speakerid:
+            rater.speakerid = speakerid
+            db_change = True
+        if speakertag:
+            rater.speakertag = speakertag
+            db_change = True
+        if raterid:
+            rater.raterid = raterid
+            db_change = True
+        if type:
+            rater.type = type
+            db_change = True  
+        if evaluationcategory:
+            rater.evaluation_category = evaluationcategory
+            db_change = True  
+        if completed:
+            rater.completed = completed
+            db_change = True      
+        
+        if db_change:
+            db.session.commit()
+        return True, rater
+    return False, None
 
 def delete_rater(id):
     rater = get_raters(id=id)
@@ -935,6 +984,69 @@ def delete_rater(id):
         return rater
     else:
         return None
+
+# -------------------------
+# Rating
+# -------------------------
+
+def get_ratings(id=None,sessionid=None,sessiondeviceid=None,speakertag=None,raterid=None,evaluationcategory=None):
+    query = db.session.query(Rating)
+    if id != None:
+        return query.filter(Rating.id == id).first()
+    if sessionid != None:
+        query = query.filter(Rating.sessionid == sessionid)
+    if sessiondeviceid != None:
+        query = query.filter(Rating.sessiondeviceid == sessiondeviceid)
+    if speakertag != None:
+        query = query.filter(Rating.speakertag == speakertag)  
+    if raterid != None:
+        query = query.filter(Rating.raterid == raterid)      
+    if evaluationcategory != None:
+        query = query.filter(Rating.evaluation_category == evaluationcategory)
+    return query.all()
+
+def add_rating(sessionid, sessiondeviceid, speakertag, raterid,evaluationcategory,response):
+    rating = Rating(sessionid, sessiondeviceid, speakertag, raterid,evaluationcategory,response)
+    db.session.add(rating)
+    db.session.commit()
+    return True, rating  
+
+def update_rating(id,sessionid=None,sessiondeviceid=None,speakertag=None,raterid=None,evaluationcategory=None,response=None):
+    rating = get_ratings(id=id)
+    if rating:
+        db_change = False
+        if sessionid:
+            rating.sessionid = sessionid
+            db_change = True
+        if sessiondeviceid:
+            rating.sessiondeviceid = sessiondeviceid
+            db_change = True  
+        if speakertag:
+            rating.speakertag = speakertag
+            db_change = True
+        if raterid:
+            rating.raterid = raterid
+            db_change = True 
+        if evaluationcategory:
+            rating.evaluation_category = evaluationcategory
+            db_change = True  
+        if response:
+            rating.response = response
+            db_change = True      
+        
+        if db_change:
+            db.session.commit()
+        return True, rating
+    return False, None
+
+def delete_rating(id):
+    rating = get_ratings(id=id)
+    if rating:
+        db.session.delete(rating)
+        db.session.commit()
+        return rating
+    else:
+        return None    
     
 # -------------------------
 # Student
