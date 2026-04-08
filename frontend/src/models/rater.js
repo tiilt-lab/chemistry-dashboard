@@ -10,6 +10,8 @@ export class RaterModel {
   speakertag;
   raterid;
   dashboardtype;
+  evaluationCategory;
+  completed;
   creation_date;
 
   
@@ -22,6 +24,8 @@ export class RaterModel {
     model.speakertag = json['speakertag'];
     model.raterid = json['raterid'];
     model.dashboardtype = json['type'];
+    model.evaluationCategory = json['evaluation_category'];
+    model.completed = json['completed'];
     model.creation_date = stringToDate(json['creation_date']);
     return model;
   }

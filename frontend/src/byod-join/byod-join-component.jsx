@@ -243,7 +243,6 @@ function JoinPage() {
     useEffect(() => {
         const clearHeartbeat = () => {
             if (heartbeatIntervalRef.current) {
-                console.log("clearing interval heartbeat inside return");
                 clearInterval(heartbeatIntervalRef.current);
                 heartbeatIntervalRef.current = null;
             }
@@ -254,6 +253,7 @@ function JoinPage() {
                 audiows.current.send(
                     JSON.stringify({ type: "heartbeat", key: key.current })
                 );
+                console.log("sent audio heart beat")
             } else {
                 clearHeartbeat();
             }
@@ -277,17 +277,22 @@ function JoinPage() {
 
         // Stop heartbeat immediately once validation is complete
         if (state.speakersValidated) {
-            dispatch({ type: "START_STREAMING", payload: (state.audioReady && state.videoReady && state.audioSocketOpen && state.videoSocketOpen && state.speakersValidated) })
+             if (joinwith.current === "Audio") {
+                dispatch({ type: "START_STREAMING", payload: (state.audioReady && state.audioSocketOpen  && state.speakersValidated) })
+             }else if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
+                dispatch({ type: "START_STREAMING", payload: (state.audioReady && state.videoReady && state.audioSocketOpen && state.videoSocketOpen && state.speakersValidated) })
+             } 
+            
             clearHeartbeat();
             return;
         }
 
         if (joinwith.current === "Audio") {
             if (state.audioSocketOpen && state.audioReady) {
-                if (state.audioSocketOpen && state.audioReady) return;
                 setCurrentForm("");
                 sendAudioHeartbeat(); // send immediately
                 heartbeatIntervalRef.current = setInterval(sendAudioHeartbeat, 20000);
+
             }
 
         } else if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
@@ -311,6 +316,7 @@ function JoinPage() {
     // THE AUDIO NODES TO THE AUDIO WORKLET PROCESSOR AND STARTING THE MEDIA RECORDER FOR VIDEO
     useEffect(() => {
         if (state.startDiscussionStreaming) {
+            console.log("starting audio streaming ...")
             const loadWorklet = async () => {
                 await audioContext.current.audioWorklet.addModule(
                     "audio-sender-processor.js",
@@ -359,6 +365,7 @@ function JoinPage() {
 
             if (joinwith.current === "Audio") {
                 loadWorklet().catch(console.error)
+                console.log("sending audio streaming ...")
             } else if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
                 loadWorklet().catch(console.error)
                 videoPlay()
@@ -756,9 +763,7 @@ function JoinPage() {
                 audioContext.current = context
                 if (joinwith.current === "Audio") {
                     console.log("connect to websocket");
-                    audiows.current = new WebSocket(
-                        apiService.getAudioWebsocketEndpoint(),
-                    )
+                    audiows.current = new WebSocket(apiService.getAudioWebsocketEndpoint(),)
                     connect_audio_processor_service();
 
                 } else if (
@@ -1102,46 +1107,17 @@ function JoinPage() {
         }
     }
 
-    const fetchSpeakerMetrics = async (transcript) => {
-        try {
-            const response = await sessionService.getTranscriptSpeakerMetrics(
-                transcript.id,
-            )
-            if (response.status === 200) {
-                const jsonObj = await response.json()
-                return { ...transcript, speaker_metrics: jsonObj }
-            } else if (response.status === 400 || response.status === 401) {
-                console.log(response, "no speaker metric for transcript id")
-                return { ...transcript, speaker_metrics: null }
-            }
-        } catch (error) {
-            console.log(
-                "byod-join-component error func : fetch Speaker Metrics",
-                error,
-            )
-        }
-    }
-
     const fetchTranscript = async (deviceid) => {
         try {
             const response =
-                await sessionService.getSessionDeviceTranscriptsForClient(
-                    deviceid,
-                )
+                await sessionService.getSessionDeviceTranscriptSpeakerMetricsForClient(deviceid)
 
             if (response.status === 200) {
                 const jsonObj = await response.json()
-                const fetched_transcripts = jsonObj.sort((a, b) =>
-                    a.start_time > b.start_time ? 1 : -1,
-                )
-
-                const fetch_metrics_promises =
-                    fetched_transcripts.map(fetchSpeakerMetrics)
-                const fetched_trancript_metrics = await Promise.all(
-                    fetch_metrics_promises,
-                )
+                const fetched_trancript_metrics = jsonObj.map((item, index) => {return { ...item['transcript'], speaker_metrics: item['speaker_metrics'] }});
 
                 transcripts.current = fetched_trancript_metrics
+                
                 const sessionLen =
                     Object.keys(session).length > 0 ? session.length : 0
                 setStartTime(Math.round(sessionLen * timeRange.current[0] * 100) / 100)
@@ -1166,11 +1142,8 @@ function JoinPage() {
 
             if (response.status === 200) {
                 const jsonObj = await response.json()
-                const fetched_video_metrics = jsonObj.sort((a, b) =>
-                    a.time_stamp > b.time_stamp ? 1 : -1,
-                )
 
-                videoMetrics.current = fetched_video_metrics
+                videoMetrics.current = jsonObj //fetched_video_metrics
             } else if (response.status === 400 || response.status === 401) {
                 console.log(response, "no videometrics obj")
             }

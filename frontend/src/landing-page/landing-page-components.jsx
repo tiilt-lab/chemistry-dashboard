@@ -45,7 +45,19 @@ function LandingPageComponent() {
             <button  className= "lanky-button" onClick={() => navigate('/student/dashboard')}>
                 Dashboard
             </button >
-        </div >
+      
+            <button 
+            className="lanky-button"  onClick = {()=> navigate('/student/survey')} > 
+            Submit Survey
+            </button >
+
+            <button 
+            className="lanky-button"  
+                onClick = {()=> navigate('/expert/rating')} 
+            > 
+            Expert Rating
+            </button >
+  </div >
     )
 }
 export default LandingPageComponent

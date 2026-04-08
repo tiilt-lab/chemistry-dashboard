@@ -198,8 +198,18 @@ function SettingComponentPage(props) {
               <option value="quantitative">Quantitative Dashboard</option>
               <option value="reflection">Reflection Dashboard</option>
             </select>
+            <select id='evaluationcategory' className={style["dropdown-input"]}>
+              <option value="visualization">Visualization</option>
+              <option value="reflection">Reflection</option>
+              <option value="multimodal">Multimodal</option>
+              <option value="unimodal">Unimodal </option>
+              <option value="structured">Structured</option>
+              <option value="unstructured">Unstructured </option>
+            </select>
             {props.status ? <div className={style["error-status"]}>{props.status}</div> : <></>}
-            <button className={style["basic-button"]} onClick={() => props.createRater(document.getElementById('sessionId').value, document.getElementById('sessionDeviceId').value, document.getElementById('speakerId').value, document.getElementById('speakertag').value, document.getElementById('raterId').value, document.getElementById('type').value)}>Create Rater</button>
+            <button className={style["basic-button"]} onClick={() => props.createRater(document.getElementById('sessionId').value, document.getElementById('sessionDeviceId').value,
+               document.getElementById('speakerId').value, document.getElementById('speakertag').value, document.getElementById('raterId').value, 
+               document.getElementById('type').value,document.getElementById('evaluationcategory').value)}>Create Rater</button>
             <button className={style["cancel-button"]} onClick={props.closeDialog}>Cancel</button>
           </div>
           :

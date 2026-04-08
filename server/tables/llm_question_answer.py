@@ -12,7 +12,7 @@ class LLMQuestionAnswer(db.Model):
     __tablename__ = 'llm_question_answer'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     session_id = db.Column(db.Integer, db.ForeignKey('session.id'), nullable=False)
-    session_device_id = db.Column(db.Integer, db.ForeignKey('session_device.id'), nullable=False)
+    session_device_id = db.Column(db.Integer, db.ForeignKey('session_device.id',ondelete="CASCADE"), nullable=False)
     speaker_username = db.Column(db.String(64),nullable=False)
     default_question_id = db.Column(db.Integer,nullable=False)
     question = db.Column(db.Text, nullable=False)

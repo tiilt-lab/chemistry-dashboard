@@ -39,14 +39,17 @@ from video_cartoonizer.video_cartoonify_loader import VideoCartoonifyLoader
 from emotion_detector.emotion_detection_model import EmotionDetectionModel, EmotionDetectionModelV1
 from attention_tracking.detect import ImageObjectDetection
 from attention_tracking.attention_tracking import AttentionDetection
+from video_cartoonizer.VideoMetricProcessor import VideoMetricAnalytics
 from global_singleton_lock import get_attention_emotion_predictor, get_object_detector
 
 cm = ConnectionManager()
 cartoon_model = VideoCartoonifyLoader()
 facial_emotion_detector = EmotionDetectionModel()
-facial_emotion_detector_V1 = None
-image_object_detection = None #ImageObjectDetection()
-attention_detection = None
+attention_detection = AttentionDetection()
+facial_emotion_detector_V1 = EmotionDetectionModelV1()
+image_object_detection = ImageObjectDetection()
+video_metric_analytics = VideoMetricAnalytics(attention_detection, facial_emotion_detector_V1, image_object_detection)
+
 
 class ServerProtocol(WebSocketServerProtocol):
 
@@ -169,7 +172,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.orig_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1,self.config.mimeExtension)
                     
                     if self.config.videocartoonify or cf.process_video_analytics():
-                        self.video_queue = queue.Queue(maxsize=2)
+                        self.video_queue = queue.Queue(maxsize=4)#maxsize=2
                         self.frame_queue = None
                         self.cartoon_image_queue = None
                          
@@ -221,7 +224,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     chunk_iter = subclips.iter_frames(fps=10, dtype="uint8", with_times=True)
                     self.enqueue_latest_video_chunk(chunk_iter)
                     # self.video_queue.put(subclips.iter_frames(fps=10, dtype="uint8", with_times=True))
-                    logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
+                    # logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
 
                 # Save audio data only if video saving is activated is activated.
                 # as we need to merge the audio data with the carttonized video
@@ -368,13 +371,18 @@ class ServerProtocol(WebSocketServerProtocol):
 
         if  self.video_processor:
             self.video_processor.stop()
-            logging.info(" accumulated video chunks files {0}".format(self.video_files_accum))
+            logging.info("Video processor stopped for client {0}".format(self.config.auth_key))
 
         if self.config:
             callbacks.post_disconnect(self.config.auth_key)
             cm.remove(self, self.config.session_key, self.config.auth_key)
         else:
             cm.remove(self, None, None)
+
+        if cm.get_number_of_connections() == 0:
+            image_object_detection.stop()
+            video_metric_analytics.stop() 
+            logging.info("No more connected clients, stopping image detection and video metric analytics thread,  service.")  
         logging.info('Closing client connection...')
         self.transport.loseConnection()
 
@@ -399,7 +407,6 @@ def _create_emotion_predictor():
 
 if __name__ == '__main__':
     cf.initialize()
-    logging.info('Starting video Processing Service...22222222222')
     # Initialize Logger
     dir_path = os.path.dirname(os.path.realpath(__file__))
     log_format = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')
@@ -418,9 +425,12 @@ if __name__ == '__main__':
 
     # Initialize attention  and emotion tracking
     if cf.process_video_analytics():
-        
-        image_object_detection = get_object_detector(_create_detector)
-        attention_detection, facial_emotion_detector_V1 = get_attention_emotion_predictor(_create_gaze_predictor, _create_emotion_predictor)
+        image_object_detection.init_model(cartoon_model.batch_size) #get_object_detector(_create_detector)
+        attention_detection.init_model(cartoon_model.batch_size) #get_attention_emotion_predictor(_create_gaze_predictor, _create_emotion_predictor)[0]
+        facial_emotion_detector_V1.load_model() 
+        image_object_detection.start()
+        video_metric_analytics.start() 
+    
 
     # Run Server
     logging.info('Starting video Processing Service...')

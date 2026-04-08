@@ -77,6 +77,13 @@ class SessionService {
     );
   }
 
+  getSessionDeviceForClient(session_device_id){
+    return this.api.httpRequestCall(
+      `/api/v1/devices/${session_device_id}/session_device`,
+      "GET",
+      {}
+    );
+  }
   getSessionDevices(sessionId) {
     return this.api.httpRequestCall(
       `api/v1/sessions/${sessionId}/devices`,
@@ -104,6 +111,14 @@ class SessionService {
   getSessionSpeakers(sessionId) {
     return this.api.httpRequestCall(
       `api/v1/sessions/${sessionId}/speakers`,
+      "GET",
+      {}
+    );
+  }
+
+  getSessionDeviceTranscriptSpeakerMetricsForClient(sessionDeviceId, startTime = 0) {
+    return this.api.httpRequestCall(
+      `api/v1/devices/${sessionDeviceId}/transcriptspeakermetrics/client`,
       "GET",
       {}
     );
@@ -154,6 +169,28 @@ class SessionService {
       `api/v1/session/${sessionId}/sessiondevice/${deviceId}/videometrics/student/${alias}`,
       "GET",
       {}
+    );
+  }
+
+  getRaterDetailByExpertId(expertId) {
+    return this.api.httpRequestCall("api/v1/student/raters/" + expertId, 'GET', {});
+  }
+
+  postRating(payload){
+    const body =  payload;
+    return this.api.httpRequestCall(
+      `api/v1/student/postrating`,
+      "POST",
+      body
+    );
+  }
+
+  postSurveyResponse(payload){
+    const body =  payload;
+    return this.api.httpRequestCall(
+      `api/v1/student/postsurveyresponse`,
+      "POST",
+      body
     );
   }
 

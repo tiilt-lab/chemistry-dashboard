@@ -170,8 +170,8 @@ function SettingsComponent(props) {
     )
   }
 
-  const createRater = (sessionid,sessiondeviceid,speakerid,speakertag,raterid,type) => {
-    const fetchData = new AuthService().createRater(sessionid,sessiondeviceid,speakerid,speakertag,raterid,type)
+  const createRater = (sessionid,sessiondeviceid,speakerid,speakertag,raterid,type,evaluationcategory) => {
+    const fetchData = new AuthService().createRater(sessionid,sessiondeviceid,speakerid,speakertag,raterid,type,evaluationcategory)
     fetchData.then(
       response => {
         if (response.status === 200) {
