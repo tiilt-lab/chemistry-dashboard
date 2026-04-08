@@ -1124,6 +1124,15 @@ def add_student(lastname, firstname, username):
     db.session.commit()
     return True, student
 
+def sync_student(lastname, firstname, username,biometric_captured):
+    matched_student = get_students(username=username)
+    if matched_student:
+        return False, matched_student
+    student = Student(lastname, firstname, username,biometric_captured)
+    db.session.add(student)
+    db.session.commit()
+    return True, student
+
 def delete_student(id):
     student = get_students(id=id)
     if student:
