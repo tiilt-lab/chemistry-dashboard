@@ -30,7 +30,7 @@ function SettingsComponent(props) {
   }
 
   const openDialog = (newForm, loadUsers = false, loadDevices = false) => {
-    if (loadUsers &&  ["ViewUsers", "DeleteUser","UserRole","LockUser","UnlockUser","ResetUser"].includes(newForm)) {
+    if (loadUsers && ["ViewUsers", "DeleteUser", "UserRole", "LockUser", "UnlockUser", "ResetUser"].includes(newForm)) {
       setCurrentForm("Loading");
       const fetchData = new AuthService().getUsers()
       fetchData.then(
@@ -50,7 +50,7 @@ function SettingsComponent(props) {
           console.log("settingcomponent func : opendialog ", apierror)
         }
       )
-    }else if (loadUsers &&  ["ViewStudentProfile", "DeleteStudentProfile"].includes(newForm)) {
+    } else if (loadUsers && ["ViewStudentProfile", "DeleteStudentProfile"].includes(newForm)) {
       setCurrentForm("Loading");
       const fetchData = new AuthService().getStudentProfiles()
       fetchData.then(
@@ -70,7 +70,7 @@ function SettingsComponent(props) {
           console.log("settingcomponent func : opendialog ", apierror)
         }
       )
-    } else if (loadUsers &&  ["ViewRaters", "DeleteRater"].includes(newForm)) {
+    } else if (loadUsers && ["ViewRaters", "DeleteRater"].includes(newForm)) {
       setCurrentForm("Loading");
       const fetchData = new AuthService().getRaters()
       fetchData.then(
@@ -110,11 +110,27 @@ function SettingsComponent(props) {
           console.log("settingcomponent func : opendialog 2", apierror)
         }
       )
+    } else if (!loadDevices && newForm === "SyncStudentProfile") {
+      setCurrentForm("Loading")
+      syncStudentProfile()
     } else {
       setCurrentForm(newForm);
     }
   }
 
+  const syncStudentProfile = async () => {
+    const response = await new AuthService().syncStudentProfile()
+    if (response.status === 200) {
+      setStatusTitle('Success');
+      setStatus('Student Profile Syncing Completed.');
+      setCurrentForm("Status")
+    } else if (response.status === 400) {
+      setStatusTitle('Error');
+      setStatus('Student Profile Syncing Failed.');
+      setCurrentForm("Status")
+    }
+  }
+  
   const closeDialog = () => {
     setStatus("");
     setCurrentForm("");
