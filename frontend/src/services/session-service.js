@@ -185,6 +185,15 @@ class SessionService {
     );
   }
 
+  postSurveyResponse(payload){
+    const body =  payload;
+    return this.api.httpRequestCall(
+      `api/v1/student/postsurveyresponse`,
+      "POST",
+      body
+    );
+  }
+
   getSpeakerIdTranscripts(deviceId, speakerId) {
     return this.api.httpRequestCall(
       `api/v1/sessions/devices/${deviceId}>/speakers/${speakerId}/transcripts`,

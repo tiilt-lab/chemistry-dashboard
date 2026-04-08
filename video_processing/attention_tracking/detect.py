@@ -125,7 +125,7 @@ class ImageObjectDetection:
             while candidate_turn < len_candidate_unique_ids:
                 # logging.info("about to start processing  imagedection work for client {0} of {1} with key {2} ".format(candidate_turn,len_candidate_unique_ids,candidate_unique_ids[candidate_turn]))
                 self.worker(self.frame_queue_manager[candidate_unique_ids[candidate_turn]],candidate_unique_ids[candidate_turn])
-                logging.info("proceesed imagedection work for client {0} of {1} with key {2} ".format(candidate_turn+1,len_candidate_unique_ids,candidate_unique_ids[candidate_turn]))
+                # logging.info("proceesed imagedection work for client {0} of {1} with key {2} ".format(candidate_turn+1,len_candidate_unique_ids,candidate_unique_ids[candidate_turn]))
                 candidate_turn += 1
 
                 # if the last candiate have been scheduled, then break so that a fresh candiadates_id is fetched

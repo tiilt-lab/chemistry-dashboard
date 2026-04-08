@@ -32,6 +32,7 @@ from tables.llm_question_answer import LLMQuestionAnswer
 from tables.rater import Rater
 from tables.session_synthesized_report import SessionSynthesizedReport
 from tables.rating import Rating
+from tables.survey_response import SurveyResponse
 
 # Saves changes made to database (models)
 def save_changes():
@@ -1047,7 +1048,60 @@ def delete_rating(id):
         return rating
     else:
         return None    
-    
+
+
+# -------------------------
+# Survey Response
+# -------------------------
+
+def get_survey_reponse(id=None,sessionid=None,sessiondeviceid=None,username=None):
+    query = db.session.query(SurveyResponse)
+    if id != None:
+        return query.filter(SurveyResponse.id == id).first()
+    if sessionid != None:
+        query = query.filter(SurveyResponse.sessionid == sessionid)
+    if sessiondeviceid != None:
+        query = query.filter(SurveyResponse.sessiondeviceid == sessiondeviceid)
+    if username != None:
+        query = query.filter(SurveyResponse.username == username)  
+    return query.all()
+
+def add_survey_reponse(sessionid, sessiondeviceid, username,response):
+    survey = SurveyResponse(sessionid, sessiondeviceid, username,response)
+    db.session.add(survey)
+    db.session.commit()
+    return True, survey  
+
+def update_survey_reponse(id,sessionid=None,sessiondeviceid=None,username=None,response=None):
+    survey = get_survey_reponse(id=id)
+    if survey:
+        db_change = False
+        if sessionid:
+            survey.sessionid = sessionid
+            db_change = True
+        if sessiondeviceid:
+            survey.sessiondeviceid = sessiondeviceid
+            db_change = True  
+        if username:
+            survey.username = username
+            db_change = True
+        if response:
+            survey.response = response
+            db_change = True      
+        
+        if db_change:
+            db.session.commit()
+        return True, survey
+    return False, None
+
+def delete_survey_reponse(id):
+    survey = get_survey_reponse(id=id)
+    if survey:
+        db.session.delete(survey)
+        db.session.commit()
+        return survey
+    else:
+        return None  
 # -------------------------
 # Student
 # -------------------------

@@ -1,6 +1,6 @@
 
-import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom"
+import { useEffect, useRef, useState,useMemo } from "react";
+import { useNavigate, useLocation } from "react-router-dom"
 import { StudentSessionDashboardPages } from "./html-pages";
 import { AuthService } from "../services/auth-service"
 import { SessionService } from "../services/session-service";
@@ -8,6 +8,26 @@ import { StudentModel } from "../models/student"
 import { SessionModel } from "../models/session";
 import { SessionDeviceModel } from "../models/session-device";
 import { SpeakerModel } from "../models/speaker";
+
+const surveyquestion = [
+  ["communication rate","How would you rate the level of communication?"],
+  ["climate rate","How would  you rate the climate (group dynamics) during the collaboration session?"],
+  ["conflict frequency","How frequently did disagreements/conflict occur during the collaboration?"],
+  ["Particpation balance","How balanced was participation among group members (verbal contribution, turn taking) of group members?"],
+  ["reflection usefullness","How useful was the reflection feedback in helping you understand your collaboration?","(If you did not receive feedback, please answer based on how useful you think it would have been.)"],
+  ["collaboration goal","What aspect of your collaboration would you want to improve on in future collaboration session (Objective) ?"],
+  ["collaboration quality","How would you rate the overall quality of your team's collaboration this session?"],
+  ["assessment accuracy","How would you rate the accuracy of the assessment scores?","(If you did not receive assessment, please select 'Did not receive')"]
+]
+const likertOptions = [["Very low","Low","Normal","High","Very high"],
+                      ["Very poor","Poor","Neutral","Good","Excellent"],
+                      ["Never","Rarely","Sometimes","Often","Very Often"],
+                      ["Very unbalanced","Somewhat unbalanced",'Moderately balanced',"Mostly balanced","Very balanced"],
+                      ["Not useful","Slightly useful","Moderately useful","Very useful","Extremely useful"],
+                      ["Communication","Participation","Focused attention","Idea contribution","Momemtum"],
+                      ["Very low","Low","Normal","High","Very high"],
+                      ["Did not receive","low","Just right","High","Too high"]]
+// const likertOptions = [1, 2, 3, 4, 5];
 
 function StudentSessionDashboard() {
   const previousSessions = useRef([])
@@ -90,10 +110,24 @@ function StudentSessionDashboard() {
   const [deviceIDReflectionDashboard, setdeviceIDRefectionDashboard] = useState(-1)
   const [sessionNameForReflecDashboard, setSessionNameForReflecDashboard] = useState("")
   const [groupNameForReflecDashboard, setGroupNameForReflecDashboard] = useState("")
+  const [ratings, setRatings] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [dialogHeading, setDialogHeading] = useState("Error");
 
 
   const navigate = useNavigate()
 
+  //I want to use the same JSX to handle participants who joined the collaboration
+  // but will not be exposed to either real-time or post-hoc feedback. However, the component is 
+  // designed to display feedback, so in other to re-use it, i define a separate url in the route
+  // but points it to this jSX, so this url has 'survey' at the end while the other url to the page
+  //does 'dashboard'. So i use the useLocation hooks to get the path and detect the last path element
+  // such that if is it 'survey', it will render only the survey page, else it will render the dashboard
+  // including the survey page.
+  const location = useLocation();
+  const pathToSurveyOptions = location.pathname.split("/").at(-1)
+  
   const sessionService = new SessionService()
   const authService = new AuthService()
 
@@ -272,9 +306,15 @@ function StudentSessionDashboard() {
   useEffect(() => {
     if (deviceIDReflectionDashboard !== -1) {
       setSelectedSessionDeviceId1(deviceIDReflectionDashboard)
+      setRatings(Object.fromEntries(surveyquestion.map((item) => [item[0], ""])))
     }
   }, [deviceIDReflectionDashboard])
 
+
+  const completedCount = useMemo(
+      () => Object.values(ratings).filter((value) => value !== "").length,
+      [ratings]
+    );
 
   const updateTranscriptVideoMetricStore = (loaded, sessiontype, selectedSessionId, selectedSessionDeviceId, Transcripts, VideoMetrics) => {
     //if loaded afresh then update the store
@@ -692,7 +732,7 @@ function StudentSessionDashboard() {
   //-----------------------------------------------------------------------//
 
   const loadReflectiondashboard = async (view) => {
-    if (selectedSessionId1 === -1 || selectedSessionDeviceId1 == -1) {
+    if (selectedSessionId1 === -1 || selectedSessionDeviceId1 === -1) {
       setAlertMessage("Please select a session and a group to load the reflection dashboard ");
       setShowAlert(true);
     } else {
@@ -702,7 +742,6 @@ function StudentSessionDashboard() {
       if (actionstatus) {
         const sess = previousSessions.current.find((ses) => ses.id === selectedSessionId1);
         const group = sessionDevices.find((dev) => dev.id === selectedSessionDeviceId1);
-        console.log("sess group ", sess?.name + ": " + new Date(sess?.creation_date).toDateString(), group?.name)
         setSessionNameForReflecDashboard(sess?.name + ": " + new Date(sess?.creation_date).toDateString())
         setGroupNameForReflecDashboard(group?.name)
         setReflectionDashboardDoneLoading(true)
@@ -738,7 +777,6 @@ function StudentSessionDashboard() {
 
     if (ret) {
       selectedLLMAnalysis.current = llmSessionAnalysis.current[selectedSessionId1][deviceId]
-      console.log("selectedLLMAnalysis.current ", selectedLLMAnalysis.current)
       selectedSynthesizedData.current = respObj
       await loadprompthistory(deviceId)
       setSelectedMomentIdAndIndex([0, selectedSynthesizedData.current.participant_level_metric[0].windowid])
@@ -801,7 +839,6 @@ function StudentSessionDashboard() {
   const buildData = (reporttype, sessionId, deviceId, defaultQuestionId, question) => {
     let retObj = {}
     if (synthesizedFeedbackMetrics.current.hasOwnProperty(sessionId) && synthesizedFeedbackMetrics.current[sessionId].hasOwnProperty(deviceId)) {
-      console.log("data ", synthesizedFeedbackMetrics.current[sessionId][deviceId])
       if (reporttype === "Participant level sesssion analysis") {
         retObj["participant_name"] = userDetail.username
         retObj["sessionid"] = sessionId
@@ -930,7 +967,6 @@ function StudentSessionDashboard() {
 
       if (response.status === 200) {
         const jsonObj = await response.json()
-        console.log("jsonObj.answer ", jsonObj.answer)
         return jsonObj.answer
       } else if (response.status === 400) {
         console.log("LLM api response", response.message)
@@ -1026,6 +1062,48 @@ function StudentSessionDashboard() {
     setShowAlert(false)
   }
 
+  const handleRate = (criterion, value) => {
+    setRatings((prev) => ({ ...prev, [criterion]: value }));
+    setSubmitted(false);
+  };
+
+  const handleSubmit = async (allComplete) => {
+    // e.preventDefault();
+    if (!allComplete) return;
+
+    ratings.notes = notes
+    const payload = {
+      sessionid: selectedSessionId1,
+      sessionDeviceId: selectedSessionDeviceId1,
+      username: userDetail.username,
+      response: ratings,
+    };
+
+    // console.log("payload ",payload)
+    try {
+      const response = await new SessionService().postSurveyResponse(payload);
+
+      if (response.status === 200) {
+        // console.log("Submitted rating form:", payload);
+        setDialogHeading("Success")
+        setSubmitted(true);
+        setAlertMessage("Survey Submission Successful");
+        setShowAlert(true);
+      } else if (response.status === 400) {
+        setDialogHeading("Error")
+        setAlertMessage("Survey Submission Unsuccessful, Please contact Admin");
+        setShowAlert(true);
+      }
+    } catch (error) {
+      console.log(
+        "Student dashboard handle submit",
+        error,
+      )
+      return null
+    }
+
+  };
+
   const onClickedTimeline = (transcript) => {
     setCurrentForm("Transcript")
     setCurrentTranscript(transcript)
@@ -1094,6 +1172,7 @@ function StudentSessionDashboard() {
       getSessionDevices={getSessionDevices}
       selectFilteredDevice1={selectFilteredDevice1}
       selectFilteredDevice2={selectFilteredDevice2}
+      dialogHeading = {dialogHeading}
 
       loadReflectiondashboard={loadReflectiondashboard}
       reflectionDashboardDoneLoading={reflectionDashboardDoneLoading}
@@ -1109,6 +1188,19 @@ function StudentSessionDashboard() {
       groupNameForReflecDashboard={groupNameForReflecDashboard}
       interactivePromptFnc={interactivePromptFnc}
       loadReflectionDashboardForNewSelection={loadReflectionDashboardForNewSelection}
+
+
+      //Survey props
+      surveyquestion = {surveyquestion}
+      likertOptions={likertOptions}
+      completedCount = {completedCount}
+      ratings = {ratings}
+      handleRate = {handleRate}
+      handleSubmit ={handleSubmit}
+      submitted ={submitted}
+      setNotes ={setNotes}
+      notes = {notes}
+      pathToSurveyOptions = {pathToSurveyOptions}
 
     />
   );

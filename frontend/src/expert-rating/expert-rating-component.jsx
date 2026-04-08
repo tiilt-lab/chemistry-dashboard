@@ -654,7 +654,7 @@ function ExpertRatingComponent() {
       const response = await new SessionService().postRating(payload);
 
       if (response.status === 200) {
-        console.log("Submitted rating form:", payload);
+        // console.log("Submitted rating form:", payload);
         setSubmitted(true);
       } else if (response.status === 400) {
         setAlertMessage("Rating Submission Unsuccessful, Please contact Admin");

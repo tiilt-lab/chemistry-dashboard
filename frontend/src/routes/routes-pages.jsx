@@ -33,7 +33,8 @@ function PageRouter() {
                 <Route path="/signup" element={<SignupPage />} />
                 <Route path="/join" element={<JoinPage />} />
                 <Route path="/student/dashboard" element={<StudentSessionDashboard />} />
-                 <Route path="/expert/rating" element={<ExpertRatingComponent />} />
+                <Route path="/student/survey" element={<StudentSessionDashboard />} />
+                <Route path="/expert/rating" element={<ExpertRatingComponent />} />
                 <Route path='/home' element={<ProtectedRoute component={HomeScreen} />}/>
                 <Route path='/keyword-lists' element={<ProtectedRoute  component={ManageKeywordListsComponent} />}/>
                 <Route path='/keyword-lists/new' element={<ProtectedRoute  component={KeywordListItemsComponent}/>}/>
