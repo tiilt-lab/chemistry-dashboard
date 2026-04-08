@@ -328,7 +328,7 @@ class VideoProcessor:
             # self.process_video_analytics(frames_batch, self.facialEmbeddings, batch_idx, time_markers, self.vid_img_dir,self.config.auth_key)
             
 
-    def enqueue_latest_frame_payload(self, payload,candidate_queue_id, timeout=0.2):
+    def enqueue_latest_frame_payload(self, payload,candidate_queue_id, timeout=0.5):
         """
         Keep only the most recent chunk in the queue.
         If the queue is full, remove the stale queued chunk and replace it.
@@ -337,7 +337,7 @@ class VideoProcessor:
         if candidate_queue_id in self.image_object_detection.frame_queue_manager:
             candidate_frame_queue = self.image_object_detection.frame_queue_manager[candidate_queue_id]
         else:
-            self.image_object_detection.frame_queue_manager[candidate_queue_id] = Queue(maxsize=30)
+            self.image_object_detection.frame_queue_manager[candidate_queue_id] = Queue(maxsize=50)
             candidate_frame_queue = self.image_object_detection.frame_queue_manager[candidate_queue_id]
 
         try:

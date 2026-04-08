@@ -8,6 +8,7 @@ import logging
 import database
 import json
 import wrappers
+import requests
 from handlers import callback_handlers
 
 api_routes = Blueprint('callback', __name__)
@@ -247,3 +248,32 @@ def add_tagging(**kwargs):
     callback_handlers.process_tagging_data(session_device.id, tagging_data)
     session_device.embeddings = embeddingsFile
   return json_response()
+
+@api_routes.route('/api/v1/processsyncstudentdata', methods=['POST'])
+def process_sync_student_data(**kwargs):
+  contents = request.get_json()
+  students_data = contents.get("Students_data",[])
+  logging.info("dumping the student data {0}".format(students_data))
+  try:
+      for content in contents:
+        database.sync_student(content.get("lastname"),content.get("firstname"),content.get("username"),content.get("biometric_captured"))
+  except Exception as e:
+      logging.warning('video metric callback failed: {0}'.format(e))
+      return False
+  return True 
+     
+
+@api_routes.route('/api/v1/syncstudenttable', methods=['POST'])
+def sync_student_table(**kwargs):
+    url = "https://nublinc.org/api/v1/callback/processsyncstudentdata"
+    try:
+        students = database.get_students()
+        result = {"Students_data": [student.json() for student in students]}
+        response = requests.post(url, json=result)
+        if response:
+          return json_response()
+        else:
+          return json_response({"message":"syncing failed"},400)
+    except Exception as e:
+        logging.warning("Student data sync callback failed: {0}".format(e))
+        return json_response({"message":"syncing failed"},400)
