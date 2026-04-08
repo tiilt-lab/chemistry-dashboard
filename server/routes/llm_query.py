@@ -7,6 +7,8 @@ from google import genai
 from dotenv import load_dotenv
 from utility import json_response, build_prompt
 import os
+import time
+import numpy as np
 
 api_routes = Blueprint('llmquery', __name__)
 
@@ -30,12 +32,13 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
         prompt = build_prompt(metricObj,"Session_level analysis for participant")
 
         try:
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt
-            )
-
+            response = call_gemini_with_retry(prompt)
             
+            # client.models.generate_content(
+            #     model="gemini-2.5-flash",
+            #     contents=prompt
+            # )
+
             raw = response.text.strip()
 
             if raw.startswith("```"):
@@ -63,7 +66,6 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
         "answer": parsed
     })
 
-
 @api_routes.route('/api/v1/llmqueries/fetch_response_for_question', methods=['POST'])
 def fetch_response_for_question(**kwargs):
     questionObj = request.json
@@ -81,12 +83,8 @@ def fetch_response_for_question(**kwargs):
         prompt = build_prompt(questionObj,"Interactive question answer")
 
         try:
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt
-            )
+            response = call_gemini_with_retry(prompt)
 
-            
             raw = response.text.replace('\n',"").strip()
 
             if raw.startswith("```"):
@@ -128,6 +126,32 @@ def get_llm_question_answer_interactions(session_id,session_device_id,username, 
         return json_response(retObj)
     else:
         return json_response([])
+
+
+def call_gemini_with_retry(prompt, max_retries=5):
+    models = [
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-3-flash-preview",
+    "gemini-flash-latest",
+    ]
+    iter = 0
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model=models[iter],
+                contents=prompt
+            )
+            return response
+        except Exception as e:
+            if "503" in str(e):
+                wait = (2 ** attempt) + np.random.uniform(0, 1)
+                logging.error(f"Retrying in llm prompting for session analysis {wait:.2f}s...")
+                time.sleep(wait)
+                iter = (iter+1)%len(models)
+            else:
+                raise
+    raise Exception("Max retries exceeded")
         
 
     
