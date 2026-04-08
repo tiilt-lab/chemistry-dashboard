@@ -1,103 +1,105 @@
 
-import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom"
-import { StudentSessionDashboardPages } from "./html-pages";
+import { useEffect, useRef, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom"
+import { ExpertRatingPage } from "./html-pages";
 import { AuthService } from "../services/auth-service"
 import { SessionService } from "../services/session-service";
-import { StudentModel } from "../models/student"
+import { RaterModel } from "../models/rater"
 import { SessionModel } from "../models/session";
 import { SessionDeviceModel } from "../models/session-device";
-import { SpeakerModel } from "../models/speaker";
 
-function StudentSessionDashboard() {
-  const previousSessions = useRef([])
-  const sessionsObjects = useRef({});
-  const pageTitle = useRef("Dashboard")
-  const session = useRef(null)
+const likertOptions = [1, 2, 3, 4, 5];
+const evaluation_one = [
+  ["Interpretability", "This dashboard makes the collaboration patterns easy to understand."],
+  ["Usefulness for feedback", "This Feedbacks would help a learner reflect on and improve their collaboration."],
+  ["Clarity", "The information presented in the dashboard is clear and easy to follow."],
+  ["Actionability", "Interacting with this dashboard help learners determine actionable next steps."],
+  ["Confidence in interpretation", "I can confidently rely on the  information provided in this dashboard to judge the learner’s/my collaboration pattern."]
+]
 
+const evaluation_two = [
+  ["Data modality", "The integration of different modalities of metric  impact the richness of interpretation/synthesis."],
+  ["Complementarity of Signals", "The feedback draws on classes of metrics that reinforce or support the same interpretation."],
+  ["Contextual Interpretation", "The feedback is contextualized by interpreting a collaboration indicator in relation to one or more other collaboration indicators, rather than in isolation."],
+  ["Relational Reasoning", "The feedback reflects how one collaboration indicator/behavior may influence or be associated with another."],
+  ["Coverage ", "The feedback captures a broad range of behaviors rather than focusing narrowly on one aspect of collaboration."]
+]
 
-  const [sessionDevices, setSessionDevices] = useState([])
-  const [selectedDeviceID, setSelectedDeviceID] = useState(-1)
-  const [sessionId, setSessionId] = useState(-1)
+const evaluation_three = [
+  ["Claims Accuracy", "The feedback includes claims that are not clearly supported by the data."],
+  ["Evidence Traceability", "The feedback clearly links its conclusions to specific elements of the data."],
+  ["Consistency", "The feedback is internally consistent and does not contain contradictions."],
+  ["Sepcifity", "The feedback provides specific, data-grounded insights rather than vague statements."],
+  ["Trustworthiness", "I would trust this feedback as a reliable interpretation of the data."]
+]
 
-  const [selectFilteredDevice1, setSelectFilteredDevice1] = useState([])
-  const [selectFilteredDevice2, setSelectFilteredDevice2] = useState([])
-  const [reload, setReload] = useState(0)
+const evaluation_one_instruction = [
+  "Interact with each dashboard as needed (click, navigate, expand) to understand the feedback.",
+  "Focus on how interaction helps you explore or understand the feedback"
+]
+
+const evaluation_two_instruction = [
+  "Interact with each dashboard as needed (click, navigate, expand) to understand the feedback.",
+  "Focus on how either single or multi data sources impact better understanding of the feedback "
+]
+
+const evaluation_three_instruction = [
+  "Interact with each dashboard as needed (click, navigate, expand) to understand the feedback.",
+  "Focus on the consistency, accuracy and level of halucination observed during your interaction"
+]
+function ExpertRatingComponent() {
 
   const [nextPage, setNextPage] = useState("reportoptionpage")
+  const [selectedItemForRating, setSelectedItemForRating] = useState(-1)
+  const [itemsForRating, setItemsForRating] = useState([])
 
+  const pageTitle = useRef("Expert Rating")
+  const session = useRef(null)
   const [currentForm, setCurrentForm] = useState("")
-  const [showFeatures, setShowFeatures] = useState([])
-  const [showBoxes, setShowBoxes] = useState([])
-  const [sessiontype, setSessiontype] = useState("")
-
-
-  const [wrongInput, setWrongInput] = useState(false)
-  const [pcode, setPcode] = useState("")
-  const [userDetail, setUserDetail] = useState(null)
-
-  const [transcripts, setTranscripts] = useState([])
-  const [videoMetrics, setVideoMetrics] = useState([])
-  const [startTime, setStartTime] = useState()
-  const [endTime, setEndTime] = useState()
-  const [startTime2, setStartTime2] = useState()
-  const [endTime2, setEndTime2] = useState()
-  const [radarTrigger, setRadarTrigger] = useState(0);
-  const [displayTranscripts, setDisplayTranscripts] = useState([])
-  const [displayVideoMetrics, setDisplayVideoMetrics] = useState([])
-  const [currentTranscript, setCurrentTranscript] = useState(null)
-  const [details, setDetails] = useState("Individual")
-
-
-  const [timeRange, setTimeRange] = useState([0, 1])
+  const [evaluatorType, setEvaluatorType] = useState("")
+  const [aliasExpertId, setAliasExpertId] = useState("")
+  const [evaluationOption, setEvaluationOption] = useState([])
+  const [evaluationOptionInstruction, setEvaluationOptionInstruction] = useState([])
   const [showAlert, setShowAlert] = useState(false)
   const [alertMessage, setAlertMessage] = useState("")
+  const [notes, setNotes] = useState("");
+  const [ratings, setRatings] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+  const [sessionId, setSessionId] = useState(-1)
+  const [sessionDeviceId, setSessionDeviceId] = useState(-1)
+  const [sessionDevice, setSessionDevice] = useState(null)
+  const [timeRange, setTimeRange] = useState([0, 1])
 
-
-  const [selectedSessionId1, setSelectedSessionId1] = useState(-1);
-  const [selectedSessionId2, setSelectedSessionId2] = useState(-1);
-  const [selectedSessionDeviceId1, setSelectedSessionDeviceId1] = useState(-1);
-  const [selectedSessionDeviceId2, setSelectedSessionDeviceId2] = useState(-1);
+  const [transcripts, setTranscripts] = useState(null)
+  const [videoMetrics, setVideoMetrics] = useState(null)
   const [session1Transcripts, setSession1Transcripts] = useState([]);
-  const [session2Transcripts, setSession2Transcripts] = useState([]);
   const [session1VideoMetrics, setSession1VideoMetrics] = useState([])
-  const [session2VideoMetrics, setSession2VideoMetrics] = useState([])
-
-  const [displaySingleSession, setDisplaySingleSession] = useState(false);
-  const [displayCompareSession, setDisplayCompareSession] = useState(false);
-
-  const [firstLoadCompleted, setFirstLoadCompleted] = useState(false);
   const [transcriptDoneLoading, setTranscriptDoneLoading] = useState(false);
   const [videoMetricDoneLoading, setVideoMetricDoneLoading] = useState(false);
-  const [currentSessionRunning, setCurrentSessionRunning] = useState(false);
-
-  const [sessionPart, setSessionPart] = useState("");
-  const [loadedAfresh, setLoadedAfresh] = useState(true)
-
   const [reflectionDashboardDoneLoading, setReflectionDashboardDoneLoading] = useState(false);
+  const [dashboardPage, setDashboardPage] = useState("")
+  const [startTime, setStartTime] = useState()
+  const [endTime, setEndTime] = useState()
+  const details = useRef("Individual")
+  const [currentTranscript, setCurrentTranscript] = useState(null)
+  const [showFeatures, setShowFeatures] = useState([])
+  const [showBoxes, setShowBoxes] = useState([])
 
-  const sessionDataObjects = useRef({});
-
-  const synthesizedFeedbackMetrics = useRef({});
-  const llmSessionAnalysis = useRef({})
-  const selectedSynthesizedData = useRef({})
-  const selectedLLMAnalysis = useRef({})
+  const synthesizedFeedbackMetrics = useRef(null);
+  const llmSessionAnalysis = useRef(null)
   const promptHistory = useRef({})
   const promptResponses = useRef({})
-  const [isThinking, setIsThinking] = useState(false)
-
+  const synthesizedData = useRef({})
   const [selectedMomentIdAndIndex, setSelectedMomentIdAndIndex] = useState(null);
-  const [deviceIDReflectionDashboard, setdeviceIDRefectionDashboard] = useState(-1)
   const [sessionNameForReflecDashboard, setSessionNameForReflecDashboard] = useState("")
   const [groupNameForReflecDashboard, setGroupNameForReflecDashboard] = useState("")
-
-
+  const [isThinking, setIsThinking] = useState(false)
+  const [currentIndex, setCurrentIndex] = useState(0)
   const navigate = useNavigate()
-
   const sessionService = new SessionService()
   const authService = new AuthService()
 
-  // USEEFFECTS AND INIT FUNCTIONS
+
 
   useEffect(() => {
     let featuresArr = [
@@ -135,205 +137,83 @@ function StudentSessionDashboard() {
     initChecklistData(boxArr, setShowBoxes)
   }, []);
 
-
-  // ___________________________________________________________ 
-  //  FIRST USEEFFECT:  CALL ONCE STEP 1,2, 2.1, 2.1.1, OR 2.2 HAS COMPLETED            
-  // --------------------------------------------------------
+  // first useEffect to be called one the evalutor class is selected
   useEffect(() => {
-    let intervalLoad
+    if (evaluatorType === "student" && aliasExpertId !== "") {
+      setItemsForRating([{ rating_item_id: -1, sessId: 158, sessDevId: 443, speaker: "dklee1004", raterId: aliasExpertId, dashboardType: "quantitative", evalCat: "visualization" },
+      { rating_item_id: -1, sessId: 158, sessDevId: 443, speaker: "dklee1004", raterId: aliasExpertId, dashboardType: "reflection", evalCat: "reflection" }])
 
-    if (session.current !== null && userDetail !== null && sessiontype !== "") {
+    } else if (evaluatorType === "expert" && aliasExpertId !== "") {
+      verifyExpertId(aliasExpertId)
 
-      if (sessiontype === "previoussessions") {
-        //Load session groups the student joined
-        setSelectedSessionDeviceId1(-1)
-        setSelectFilteredDevice1(sessionDevices)
-        setNextPage("displaygrouppage")
-      } else if (sessiontype === "currentsession" && !firstLoadCompleted) { //LOOK INTO THIS LOGIC, AND ENSURE SMOOTH OPERATION WITH LOADEDAFRESH
-        // fetch the transcript
-        fetchTranscript(session.current.id, setTranscripts)
-        fetchVideoMetric(session.current.id, setVideoMetrics)
-        setCurrentSessionRunning(true);
-        //only load for current session every 2 seconds
-        intervalLoad = setInterval(() => {
-          fetchTranscript(session.current.id, setTranscripts)
-          fetchVideoMetric(session.current.id, setVideoMetrics)
-        }, 2000)
+    }
+  }, [evaluatorType, aliasExpertId])
+
+  useEffect(() => {
+    if (itemsForRating.length > 0) {
+      loadDashboard(itemsForRating[0])
+    }
+
+  }, [itemsForRating])
+
+
+  useEffect(() => {
+    if (selectedItemForRating !== -1 && sessionId !== -1 && sessionDeviceId !== -1) {
+      if (selectedItemForRating.dashboardType === "quantitative") {
+        fetchTranscript(sessionId, sessionDeviceId, selectedItemForRating.speaker, setTranscripts)
+        fetchVideoMetric(sessionId, sessionDeviceId, selectedItemForRating.speaker, setVideoMetrics)
+        setRatings(Object.fromEntries(evaluationOption.map((item) => [item[0], 0])))
+        setNextPage("dashboardratingpage")
+      } else if (selectedItemForRating.dashboardType === "reflection") {
+        loadReflectiondashboard(sessionId, sessionDeviceId, selectedItemForRating.speaker)
+        setDashboardPage(selectedItemForRating.dashboardType)
+        setRatings(Object.fromEntries(evaluationOption.map((item) => [item[0], 0])))
+        setNextPage("dashboardratingpage")
       }
-
     }
+  }, [selectedItemForRating, sessionId, sessionDeviceId])
 
-    return () => {
-      clearInterval(intervalLoad)
-    }
-  }, [session.current, userDetail, sessionDevices, sessiontype])
-
-  // ___________________________________________________________ 
-  //  SECOND USEEFFECT:  CALL TO LOAD TRANSCRIPT FOR SELECTED DEVICE            
-  // --------------------------------------------------------
   useEffect(() => {
-    // fetch the transcript based on group selected
-    if (selectedDeviceID > -1) {
-      //this is necessary if the first session and device were loaded from the entry page
-      // and the user has not clicked on any session
-      if (!firstLoadCompleted) {
-        setSelectedSessionId1(sessionId)
-      }
-      setDetails("Individual");
-      setDisplaySingleSession(true);
-    }
-
-  }, [selectedDeviceID])
-
-
-  // ___________________________________________________________ 
-  //  THIRD USEEFFECT:  THIS IS TRIGGERED ONCE THE TRANSCRIPT AND VIDEO METRIC IS PULLED FROM THE DB            
-  // --------------------------------------------------------
-  useEffect(() => {
-    if (session.current !== null && !firstLoadCompleted) {
-      const sessionLen =
-        Object.keys(session.current).length > 0 ? session.current.length : 0
+    if (transcripts !== null && videoMetrics !== null) {
+      const sessionLen = Object.keys(session.current).length > 0 ? session.current.length : 0
       const sTime = Math.round(sessionLen * timeRange[0] * 100) / 100
       const eTime = Math.round(sessionLen * timeRange[1] * 100) / 100
       setStartTime(sTime)
       setEndTime(eTime)
-      generateDisplayTranscripts(transcripts, sTime, eTime)
-      generateDisplayVideoMetrics(videoMetrics, sTime, eTime)
-    } else if (session.current !== null && firstLoadCompleted && currentSessionRunning) {
-      const sessionLen =
-        Object.keys(session.current).length > 0 ? session.current.length : 0
-      const sTime = Math.round(sessionLen * timeRange[0] * 100) / 100
-      const eTime = Math.round(sessionLen * timeRange[1] * 100) / 100
-      setStartTime(sTime)
-      setEndTime(eTime)
+
       generateDisplayTranscripts(transcripts, sTime, eTime)
       generateDisplayVideoMetrics(videoMetrics, sTime, eTime)
     }
 
-  }, [transcripts, videoMetrics, session.current, timeRange, currentSessionRunning])
-
-
-  useEffect(() => {
-    if (transcriptDoneLoading && videoMetricDoneLoading && !firstLoadCompleted) {
-      setSelectedSessionId1(session.current.id);
-
-      // ///we maintain a store that keeps already fetched transcript base session and device id
-      // updateTranscriptVideoMetricStore(loadedAfresh, sessiontype,selectedSessionId1, selectedSessionDeviceId1,session1Transcripts,session1VideoMetrics)
-
-      setNextPage("displayreportpage")
-      setFirstLoadCompleted(true);
-    }
-
-  }, [transcriptDoneLoading, videoMetricDoneLoading, loadedAfresh]);
-
+  }, [transcripts, videoMetrics]);
 
   useEffect(() => {
-    if (transcriptDoneLoading && videoMetricDoneLoading && firstLoadCompleted) {
-
-      ///we maintain a store that keeps already fetched transcript base session and device id
-      updateTranscriptVideoMetricStore(loadedAfresh, sessiontype, selectedSessionId1, selectedSessionDeviceId1, session1Transcripts, session1VideoMetrics)
-
-      console.log(loadedAfresh, session2Transcripts.length, session2VideoMetrics.length, selectedSessionId2)
-      // if (loadedAfresh && (session2Transcripts.length > 0 || session2VideoMetrics.length > 0) && (selectedSessionId2 > -1)) {
-      if (selectedSessionId2 > -1) {
-        updateTranscriptVideoMetricStore(loadedAfresh, sessiontype, selectedSessionId2, selectedSessionDeviceId2, session2Transcripts, session2VideoMetrics)
-
-
-        const sessionData = sessionsObjects.current[selectedSessionId2];
-        const sessionLen =
-          Object.keys(sessionData).length > 0 ? sessionData.length : 0
-        setStartTime2(Math.round(sessionLen * timeRange[0] * 100) / 100)
-        setEndTime2(Math.round(sessionLen * timeRange[1] * 100) / 100)
-      }
-
-      // console.log("i got here")
-      // console.log("session1Transcripts ", session1Transcripts)
-      // console.log("session2Transcripts ", session2Transcripts)
-      setNextPage("displayreportpage")
+    if (transcriptDoneLoading && videoMetricDoneLoading) {
+      setDashboardPage(selectedItemForRating.dashboardType)
     }
+  }, [transcriptDoneLoading, videoMetricDoneLoading])
 
-  }, [transcriptDoneLoading, videoMetricDoneLoading, loadedAfresh, firstLoadCompleted]);
-
-
-  useEffect(() => {
-
-    if (displayCompareSession || displaySingleSession) {
-      setSessionTranscripts()
-      setSessionVideoMetrics()
-
-    }
-    if (details === "Individual" && displaySingleSession) {
-      setDisplaySingleSession(false);
-    } else if (details === "Comparison" && displayCompareSession) {
-      setDisplayCompareSession(false);
-    }
-
-  }, [details, displaySingleSession, displayCompareSession]);
-
-  // THIS IS MEANT FOR REFLECTION DASHBOARD
-  useEffect(() => {
-    if (deviceIDReflectionDashboard !== -1) {
-      setSelectedSessionDeviceId1(deviceIDReflectionDashboard)
-    }
-  }, [deviceIDReflectionDashboard])
-
-
-  const updateTranscriptVideoMetricStore = (loaded, sessiontype, selectedSessionId, selectedSessionDeviceId, Transcripts, VideoMetrics) => {
-    //if loaded afresh then update the store
-    if (loaded && sessiontype === "previoussessions") {
-      if (!sessionDataObjects.current.hasOwnProperty(selectedSessionId)) {
-        sessionDataObjects.current[selectedSessionId] = {
-          [selectedSessionDeviceId]: {
-            transcripts: Transcripts,
-            videoMetrics: VideoMetrics
-          }
-        }
-      } else {
-        if (!sessionDataObjects.current[selectedSessionId].hasOwnProperty(selectedSessionDeviceId)) {
-          sessionDataObjects.current[selectedSessionId][selectedSessionDeviceId] = {
-            transcripts: Transcripts,
-            videoMetrics: VideoMetrics
-          }
-        }
-      }
-      console.log("store ", sessionDataObjects.current)
-    }
-  }
-
-  const initChecklistData = (featuresArr, setFn) => {
-    let valueInd = 0
-    let showFeats = []
-    for (const feature of featuresArr) {
-      showFeats.push({ label: feature, value: valueInd, clicked: true })
-      valueInd++
-    }
-    setFn(showFeats)
-  }
+  const completedCount = useMemo(
+    () => Object.values(ratings).filter((value) => value > 0).length,
+    [ratings]
+  );
 
 
   // ___________________________________________________________ 
   //  STEP1: Clicking the  continue buttion   call this function to verify the selections and input              
   // --------------------------------------------------------
 
-  const loadDashboard = (preference, username) => {
-    if (preference === '') {
-      setAlertMessage("Please Select a Preffered Session");
+  const getUserParameters = (evaluatorType, alias_expertid) => {
+    if (evaluatorType === '') {
+      setAlertMessage("Please Select Your Role");
       setShowAlert(true);
-      document.getElementById("preference").focus();
-    } else if (username === '') {
-      setAlertMessage("Please Enter Your User Name");
+      document.getElementById("evaluaortype").focus();
+    } else if (alias_expertid === '') {
+      setAlertMessage("Please Enter Your Expert ID");
       setShowAlert(true);
-      document.getElementById("username").focus();
-    } else if (sessiontype === "currentsession" && pcode === "") {
-      setAlertMessage("Please Enter the Pass Code");
-      setShowAlert(true);
-      document.getElementById("passcode").focus();
+      document.getElementById("expertid").focus();
     } else {
-      verifyUsername(username)
-      if (sessiontype === "currentsession") {
-        fetchSession(pcode)
-      }
-
+      setAliasExpertId(alias_expertid)
     }
   }
 
@@ -341,99 +221,63 @@ function StudentSessionDashboard() {
   //   STEP2: This is called to authenticate the username, fetch user data and call load session           
   // --------------------------------------------------------
 
-  const verifyUsername = async (username) => {
-    const fetchData = authService.getStudentProfileByID(username)
+  const verifyExpertId = async (expertid) => {
+    const fetchData =  new SessionService().getRaterDetailByExpertId(expertid)
     fetchData
       .then(
         (response) => {
           if (response.status === 200) {
-            response.json().then((jsonObj) => {
-              const student_data = StudentModel.fromJson(jsonObj)
-              setUserDetail(student_data)
-              loadSession(username)
+            response.json().then((jsonArrayObj) => {
+              const expert_data = RaterModel.fromJsonList(jsonArrayObj)
+              const items = expert_data.map((detail, index) => { return { rating_item_id: detail.id, sessId: detail.sessionid, sessDevId: detail.sessiondeviceid, speaker: detail.speakertag, raterId: detail.raterid, dashboardType: detail.dashboardtype, evalCat: detail.evaluationCategory } })
+              setItemsForRating(items)
             })
           } else {
-            setAlertMessage("Invalid Username");
+            setAlertMessage("Invalid Expert ID");
             setShowAlert(true);
           }
         },
         (apierror) => {
           console.log(
-            "Student dashboard func: verifyUsername 1 ",
+            "Expert Rating: verifyExpertId 1 ",
             apierror,
           )
         },
       )
   }
 
-  // ___________________________________________________________ 
-  //   STEP 2.1 : This is called inside step 2 to load the sessions the student have joined so far and then initialize the first session and first device/group          
-  // --------------------------------------------------------
+  const loadDashboard = (selecteditem) => {
+    setSession1Transcripts([])
+    setTranscripts(null)
+    setVideoMetrics(null)
+    setTranscriptDoneLoading(false)
+    setVideoMetricDoneLoading(false)
 
-  const loadSession = (username) => {
-    if (sessiontype === "previoussessions") {
-      const fetchData = sessionService.getSessionsByAlias(username)
-      fetchData
-        .then(
-          (response) => {
-            if (response.status === 200) {
-              response.json().then((jsonArrayObj) => {
-                const session_data = SessionModel.fromJsonList(jsonArrayObj)
-
-                if (session_data.length > 0) {
-                  previousSessions.current = session_data
-                  session.current = session_data[0]
-                  pageTitle.current = session_data[0].name + ": " + new Date(session_data[0].creation_date).toDateString()
-                  setSessionId(session_data[0].id);
-                  session_data.forEach((s) => {
-                    sessionsObjects.current[s.id] = s
-                  })
-                  loadSessionDevice(session_data[0].id, username)
-                  setReload(reload + 1)
-                }
-              })
-            } else {
-              setAlertMessage("No Previous Sessions Found for this User");
-              setShowAlert(true);
-            }
-          },
-          (apierror) => {
-            console.log(
-              "Student dashboard func: loadSession 1 ",
-              apierror,
-            )
-          },
-        )
-    }
+    loadSession(selecteditem.sessId)
+    loadSessionDevice(selecteditem.sessDevId)
+    const evalopt = selecteditem.evalCat == "visualization" || selecteditem.evalCat == "reflection" ? evaluation_one : selecteditem.evalCat == "multimodal" || selecteditem.evalCat == "unimodal" ? evaluation_two : evaluation_three
+    const evaloptInt = evalopt == evaluation_one ? evaluation_one_instruction : evalopt == evaluation_two ? evaluation_two_instruction : evaluation_three_instruction
+    setEvaluationOption(evalopt)
+    setEvaluationOptionInstruction(evaloptInt)
+    setSelectedItemForRating(selecteditem)
   }
 
-  // ___________________________________________________________ 
-  //   STEP 2.1.1 : This is called inside step 2.1 to load the sessions device/group joined by the student         
-  // --------------------------------------------------------
-
-  const loadSessionDevice = (sessionid, username) => {
-    if (sessiontype === "previoussessions") {
-      getSessionDevicesBySessionAndAlias(sessionid, username, setSessionDevices)
-    }
-  }
-
-
-  const getSessionDevicesBySessionAndAlias = (sessionid, username, setFnc) => {
-    const fetchData = sessionService.getSessionsDeviceByAlias(sessionid, username)
+  const loadSession = (sessionid) => {
+    const fetchData = sessionService.getSessionById(sessionid)
     fetchData
       .then(
         (response) => {
           if (response.status === 200) {
             response.json().then((jsonArrayObj) => {
-              const session_device_data = SessionDeviceModel.fromJsonList(jsonArrayObj)
+              const session_data = SessionModel.fromJson(jsonArrayObj)
 
-              if (session_device_data.length > 0) {
-                setFnc(session_device_data)
-              }
+              session.current = session_data
+              pageTitle.current = session_data.name
+              setSessionId(session_data.id);
+              // setReload(reload + 1)
             })
           } else {
-            setFnc([])
-            setAlertMessage("No  Sessions Group Found for this User");
+            setAlertMessage("No Previous Sessions Found for this User");
             setShowAlert(true);
           }
         },
@@ -446,48 +290,35 @@ function StudentSessionDashboard() {
       )
   }
 
-
-
-  // ___________________________________________________________ 
-  //   STEP 2.2: This is called inside step 2 if this student select to view current session           
-  // --------------------------------------------------------
-  const fetchSession = async (pcode) => {
-    const fetchData = sessionService.getSessionByPasscode(pcode)
+  const loadSessionDevice = (session_device_id) => {
+    const fetchData = sessionService.getSessionDeviceForClient(session_device_id)
     fetchData
       .then(
         (response) => {
           if (response.status === 200) {
             response.json().then((jsonObj) => {
-              const session_data = SessionModel.fromJsonList(jsonObj)
-              session.current = session_data[0]
-              pageTitle.current = session_data[0].name + ": " + new Date(session_data[0].creation_date).toDateString()
-              setSessionId(session_data[0].id);
-              setReload(reload + 1)
+              const session_device = SessionDeviceModel.fromJson(jsonObj)
+              setSessionDevice(session_device)
+              setSessionDeviceId(session_device.id);
             })
           } else {
-            setAlertMessage("Invalid Passcode or Session Expired");
+            setAlertMessage("No Previous Sessions device Found for this User");
             setShowAlert(true);
           }
         },
         (apierror) => {
           console.log(
-            "Student dashboard func: fetchSession 1 ",
+            "Student dashboard func: loadSession 1 ",
             apierror,
           )
         },
       )
   }
 
-
-  const fetchTranscript = async (sessionId, setMetric, deviceId = null) => {
+  const fetchTranscript = async (sessionId, deviceId, username, setMetric) => {
     try {
       let response = null
-      if (deviceId === null) {
-        response = await sessionService.getSessionTranscriptsForClient(sessionId, userDetail.username)
-      } else {
-        response = await sessionService.getSessionDeviceTranscriptsByAlias(sessionId, deviceId, userDetail.username)
-      }
-
+      response = await sessionService.getSessionDeviceTranscriptsByAlias(sessionId, deviceId, username)
 
       if (response !== null && response.status === 200) {
         const jsonObj = await response.json()
@@ -495,14 +326,7 @@ function StudentSessionDashboard() {
           return { ...trancript_metrics['transcript'], speaker_metrics: trancript_metrics['speaker_metrics'] }
         })
 
-        const sessionLen =
-          Object.keys(session.current).length > 0 ? session.current.length : 0
-        setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100)
-        setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100)
-
         setMetric(fetched_trancript_metrics)
-        setLoadedAfresh(true)
-        setTranscriptDoneLoading(true);
       } else if (response !== null && (response.status === 400 || response.status === 401)) {
         console.log(response, "no transcript obj")
       }
@@ -514,22 +338,15 @@ function StudentSessionDashboard() {
     }
   }
 
-  const fetchVideoMetric = async (sessionId, setMetric, deviceId = null) => {
+  const fetchVideoMetric = async (sessionId, deviceId, username, setMetric) => {
     try {
       let response = null
-      if (deviceId === null) {
-        response = await sessionService.getSessionVideoMetricsForClient(sessionId, userDetail.username)
-      } else {
-        response = await sessionService.getSessionDeviceVideoMetricsByAlias(sessionId, deviceId, userDetail.username)
-      }
-
+      response = await sessionService.getSessionDeviceVideoMetricsByAlias(sessionId, deviceId, username)
 
       if (response !== null && response.status === 200) {
         const fetched_video_metrics = await response.json()
 
         setMetric(fetched_video_metrics)
-        setLoadedAfresh(true)
-        setVideoMetricDoneLoading(true);
       } else if (response.status === 400 || response.status === 401) {
         console.log(response, "no videometrics obj")
       }
@@ -541,216 +358,58 @@ function StudentSessionDashboard() {
     }
   }
 
-
-  const loadSelectedSessionMetrics = (newSession) => {
-    setTranscriptDoneLoading(false);
-    setVideoMetricDoneLoading(false);
-    setSession1Transcripts([]);
-    setSession1VideoMetrics([]);
-    setSession2Transcripts([]);
-    setSession2VideoMetrics([]);
-    setSelectedSessionId1(newSession.id)
-    setSessionId(newSession.id);
-    setSelectedSessionId2(-1)
-    pageTitle.current = newSession.name + ": " + new Date(newSession.creation_date).toDateString()
-    session.current = newSession
-    loadSessionDevice(newSession.id, userDetail.username)
-    console.log("tracking session and device ids  ", selectedSessionId1, selectedSessionDeviceId1)
-  }
-
-  const loadSelectedSessionDeviceMetrics = (deviceId) => {
-    setSelectedSessionDeviceId1(deviceId)
-    setSelectedSessionDeviceId2(-1)
-    setSelectedDeviceID(deviceId)
-  }
-
-  const getSessionDevices = (selectedSessionId, sessionPart = "sessionOne") => {
-    if (sessionPart === "sessionOne") {
-      getSessionDevicesBySessionAndAlias(selectedSessionId, userDetail.username, setSelectFilteredDevice1)
-      setSelectedSessionId1(selectedSessionId)
-    } else if (sessionPart === "sessionTwo") {
-      getSessionDevicesBySessionAndAlias(selectedSessionId, userDetail.username, setSelectFilteredDevice2)
-      setSelectedSessionId2(selectedSessionId)
-    }
-    setSessionId(selectedSessionId);
-  }
-
-  const loadComparedSessionDeviceMetrics = (selectedSessionDeviceId, sessionPart) => {
-    setTranscriptDoneLoading(false);
-    setVideoMetricDoneLoading(false);
-    setSessionPart(sessionPart);
-    if (sessionPart === "sessionOne") {
-      setSession1Transcripts([]);
-      setSession1VideoMetrics([]);
-      setSelectedSessionDeviceId1(selectedSessionDeviceId)
-    } else if (sessionPart === "sessionTwo") {
-      setSession2Transcripts([]);
-      setSession2VideoMetrics([]);
-      setSelectedSessionDeviceId2(selectedSessionDeviceId)
-    }
-    pageTitle.current = "Comparing Sessions"
-    setDisplayCompareSession(true);
-  }
-
-
   const generateDisplayTranscripts = (transcripts, s, e) => {
     setSession1Transcripts(
       transcripts.filter((t) => t.start_time >= s && t.start_time <= e),
     )
+    setTranscriptDoneLoading(true);
   }
 
   const generateDisplayVideoMetrics = (videoMetrics, s, e) => {
     setSession1VideoMetrics(
       videoMetrics.filter((v) => v.time_stamp >= s && v.time_stamp <= e),
     )
-  }
-
-  const setSessionTranscripts = () => {
-    if (selectedSessionId1 !== -1) {
-      console.log(selectedSessionId1, selectedSessionDeviceId1)
-      console.log(selectedSessionId2, selectedSessionDeviceId2)
-      if (sessionDataObjects.current.hasOwnProperty(selectedSessionId1)) {
-        if (sessionDataObjects.current[selectedSessionId1].hasOwnProperty(selectedSessionDeviceId1)) {
-          console.log("loading saved session transcript metrics for session 1")
-          loadSavedSessionTranscriptMetrics(selectedSessionId1, sessionDataObjects.current[selectedSessionId1][selectedSessionDeviceId1].transcripts, setSession1Transcripts)
-        } else {
-          fetchTranscript(selectedSessionId1, setSession1Transcripts, selectedSessionDeviceId1)
-        }
-      } else {
-        fetchTranscript(selectedSessionId1, setSession1Transcripts, selectedSessionDeviceId1)
-      }
-    }
-
-    if (selectedSessionId2 !== -1) {
-      if (sessionDataObjects.current.hasOwnProperty(selectedSessionId2)) {
-        if (sessionDataObjects.current[selectedSessionId2].hasOwnProperty(selectedSessionDeviceId2)) {
-          console.log("loading saved session transcript metrics for session 2")
-          loadSavedSessionTranscriptMetrics(selectedSessionId2, sessionDataObjects.current[selectedSessionId2][selectedSessionDeviceId2].transcripts, setSession1Transcripts)
-        } else {
-          console.log("fetching transcript 2 level 1")
-          fetchTranscript(selectedSessionId2, setSession2Transcripts, selectedSessionDeviceId2)
-        }
-      } else {
-        console.log("fetching transcript 2 level 2")
-        fetchTranscript(selectedSessionId2, setSession2Transcripts, selectedSessionDeviceId2)
-      }
-    }
-  }
-
-  const setSessionVideoMetrics = () => {
-    if (selectedSessionId1 !== -1) {
-      if (sessionDataObjects.current.hasOwnProperty(selectedSessionId1)) {
-        if (sessionDataObjects.current[selectedSessionId1].hasOwnProperty(selectedSessionDeviceId1)) {
-          console.log("loading saved session video metrics for session 1")
-          loadSavedSessionVideoMetrics(sessionDataObjects.current[selectedSessionId1][selectedSessionDeviceId1].videoMetrics, setSession1VideoMetrics)
-        } else {
-          fetchVideoMetric(selectedSessionId1, setSession1VideoMetrics, selectedSessionDeviceId1)
-        }
-      } else {
-        fetchVideoMetric(selectedSessionId1, setSession1VideoMetrics, selectedSessionDeviceId1)
-      }
-
-    }
-
-    if (selectedSessionId2 !== -1) {
-      if (sessionDataObjects.current.hasOwnProperty(selectedSessionId2)) {
-        if (sessionDataObjects.current[selectedSessionId2].hasOwnProperty(selectedSessionDeviceId2)) {
-          console.log("loading saved session video metrics for session 2")
-          loadSavedSessionVideoMetrics(sessionDataObjects.current[selectedSessionId2][selectedSessionDeviceId2].videoMetrics, setSession2VideoMetrics)
-        } else {
-          console.log("fetching video metric 2 level 1")
-          fetchVideoMetric(selectedSessionId2, setSession2VideoMetrics, selectedSessionDeviceId2)
-        }
-      } else {
-        console.log("fetching video metric 2 level 2")
-        fetchVideoMetric(selectedSessionId2, setSession2VideoMetrics, selectedSessionDeviceId2)
-      }
-    }
-  }
-
-
-  const loadSavedSessionTranscriptMetrics = (sessionId, transcript, setSessionTranscript) => {
-    const sessionData = sessionsObjects.current[sessionId];
-    const sessionLen =
-      Object.keys(sessionData).length > 0 ? sessionData.length : 0
-    setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100)
-    setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100)
-
-    setSessionTranscript(transcript)
-    setLoadedAfresh(false)
-    setTranscriptDoneLoading(true);
-  }
-
-  const loadSavedSessionVideoMetrics = (videoMetric, setSessionVideoMetric) => {
-    setSessionVideoMetric(videoMetric)
-    setLoadedAfresh(false)
     setVideoMetricDoneLoading(true);
   }
 
   ///------------------------------------------------------------------------//
-  // IMPLEMENTATION FOR THE REFLECTION DASHBOARD 
+  //Dashboard option two implementation
   //-----------------------------------------------------------------------//
 
-  const loadReflectiondashboard = async (view) => {
-    if (selectedSessionId1 === -1 || selectedSessionDeviceId1 == -1) {
-      setAlertMessage("Please select a session and a group to load the reflection dashboard ");
-      setShowAlert(true);
-    } else {
-      setNextPage(view);
-      setReflectionDashboardDoneLoading(false)
-      let actionstatus = await extractParticipantData(selectedSessionDeviceId1)
-      if (actionstatus) {
-        const sess = previousSessions.current.find((ses) => ses.id === selectedSessionId1);
-        const group = sessionDevices.find((dev) => dev.id === selectedSessionDeviceId1);
-        console.log("sess group ", sess?.name + ": " + new Date(sess?.creation_date).toDateString(), group?.name)
-        setSessionNameForReflecDashboard(sess?.name + ": " + new Date(sess?.creation_date).toDateString())
-        setGroupNameForReflecDashboard(group?.name)
-        setReflectionDashboardDoneLoading(true)
-      }
+  const loadReflectiondashboard = async (sessionid, deviceid, username) => {
+    setReflectionDashboardDoneLoading(false)
+    let actionstatus = await extractParticipantData(sessionid, deviceid, username)
+    if (actionstatus) {
+      setSessionNameForReflecDashboard(session.current?.name)
+      setGroupNameForReflecDashboard(sessionDevice?.name)
+      setReflectionDashboardDoneLoading(true)
     }
 
   };
 
-  const loadReflectionDashboardForNewSelection = async (newSessionDeviceID) => {
-    setdeviceIDRefectionDashboard(newSessionDeviceID)
-    setReflectionDashboardDoneLoading(false)
-    let actionstatus = await extractParticipantData(newSessionDeviceID)
-    if (actionstatus) {
 
-      const sess = previousSessions.current.find((ses) => ses.id === selectedSessionId1);
-      const group = selectFilteredDevice1.find((dev) => dev.id === newSessionDeviceID);
-      setSessionNameForReflecDashboard(sess.name + ": " + new Date(sess.creation_date).toDateString())
-      setGroupNameForReflecDashboard(group.name)
-      setReflectionDashboardDoneLoading(true)
-    }
-  }
+  const extractParticipantData = async (sessionid, deviceId, username) => {
+    const resp = await loadSynthesizedMetric(sessionid, deviceId)
 
-
-  const extractParticipantData = async (deviceId) => {
-    const resp = await loadSynthesizedMetric(deviceId)
-
-    let respObj = buildData("Participant level sesssion analysis", selectedSessionId1, deviceId, null, null)
+    let respObj = buildData("Participant level sesssion analysis", sessionid, deviceId, username, null, null)
     if (Object.keys(respObj).length === 0 || resp === false) {
       return false;
     }
 
-    const ret = await loadLLMAnalytics(respObj, deviceId)
+    const ret = await loadLLMAnalytics(respObj)
 
     if (ret) {
-      selectedLLMAnalysis.current = llmSessionAnalysis.current[selectedSessionId1][deviceId]
-      console.log("selectedLLMAnalysis.current ", selectedLLMAnalysis.current)
-      selectedSynthesizedData.current = respObj
-      await loadprompthistory(deviceId)
-      setSelectedMomentIdAndIndex([0, selectedSynthesizedData.current.participant_level_metric[0].windowid])
-
-      return ret
-    } else {
-      return ret
+      synthesizedData.current = respObj
+      await loadprompthistory(sessionid, deviceId, username)
+      setSelectedMomentIdAndIndex([0, synthesizedData.current.participant_level_metric[0].windowid])
     }
+
+    return ret
+
   }
 
   const interactivePromptFnc = async (selSessionId, selSessionDeviceId, default_question_id, question) => {
-    let respObj = buildData("interactive prompting", selSessionId, selSessionDeviceId, default_question_id, question)
+    let respObj = buildData("interactive prompting", selSessionId, selSessionDeviceId, selectedItemForRating.speaker, default_question_id, question)
     let existingPrompt = null
     if (promptHistory.current.hasOwnProperty(selSessionId) && promptHistory.current[selSessionId].hasOwnProperty(selSessionDeviceId)) {
       existingPrompt = promptHistory.current[selSessionId][selSessionDeviceId].find(p => (default_question_id !== -1 && p?.default_question_id === default_question_id)) ?? null;
@@ -798,106 +457,76 @@ function StudentSessionDashboard() {
     }
   }
 
-  const buildData = (reporttype, sessionId, deviceId, defaultQuestionId, question) => {
+  const buildData = (reporttype, sessionId, deviceId, username, defaultQuestionId, question) => {
     let retObj = {}
-    if (synthesizedFeedbackMetrics.current.hasOwnProperty(sessionId) && synthesizedFeedbackMetrics.current[sessionId].hasOwnProperty(deviceId)) {
-      console.log("data ", synthesizedFeedbackMetrics.current[sessionId][deviceId])
+    if (synthesizedFeedbackMetrics.current) {
       if (reporttype === "Participant level sesssion analysis") {
-        retObj["participant_name"] = userDetail.username
+        retObj["participant_name"] = username
         retObj["sessionid"] = sessionId
         retObj["sessiondeviceid"] = deviceId
         retObj["retrieve_existing_report"] = "true"
-        retObj["participant_level_metric"] = synthesizedFeedbackMetrics.current[sessionId][deviceId]["participants_level"][userDetail.username]
-        retObj["session_level_metric"] = synthesizedFeedbackMetrics.current[sessionId][deviceId]["session_level"][userDetail.username]
-        retObj["group_level_metric"] = synthesizedFeedbackMetrics.current[sessionId][deviceId]["group_level"]
+        retObj["participant_level_metric"] = synthesizedFeedbackMetrics.current["participants_level"][username]
+        retObj["session_level_metric"] = synthesizedFeedbackMetrics.current["session_level"][username]
+        retObj["group_level_metric"] = synthesizedFeedbackMetrics.current["group_level"]
       } else if (reporttype === "interactive prompting") {
-        retObj["participant_name"] = userDetail.username
+        retObj["participant_name"] = username
         retObj["sessionid"] = sessionId
         retObj["sessiondeviceid"] = deviceId
         retObj["retrieve_existing_answer"] = "true"
         retObj["default_question_id"] = defaultQuestionId
         retObj["question"] = question
-        retObj["window_level_metric"] = synthesizedFeedbackMetrics.current[sessionId][deviceId]["window_level"]
-        retObj["session_level_metric"] = synthesizedFeedbackMetrics.current[sessionId][deviceId]["session_level"]
-        retObj["group_level_metric"] = synthesizedFeedbackMetrics.current[sessionId][deviceId]["group_level"]
+        retObj["window_level_metric"] = synthesizedFeedbackMetrics.current["window_level"]
+        retObj["session_level_metric"] = synthesizedFeedbackMetrics.current["session_level"]
+        retObj["group_level_metric"] = synthesizedFeedbackMetrics.current["group_level"]
       }
     }
     return retObj
   }
 
-  const loadSynthesizedMetric = async (deviceId) => {
-    // This is needed to load the synthesized feedback for the Reflection dashboard
-    if (!synthesizedFeedbackMetrics.current.hasOwnProperty(selectedSessionId1)) {
-      const data = await getSynthesizedMetric(deviceId)
-
-      if (data === null) {
-        return false
-      }
-      synthesizedFeedbackMetrics.current[selectedSessionId1] = {
-        [deviceId]: data
-      }
-    } else {
-      if (!synthesizedFeedbackMetrics.current[selectedSessionId1].hasOwnProperty(deviceId)) {
-        const data = await getSynthesizedMetric(deviceId)
-
-        if (data === null) {
-          return false
-        }
-        synthesizedFeedbackMetrics.current[selectedSessionId1][deviceId] = data
-      }
-
+  const loadSynthesizedMetric = async (sessionid, deviceId) => {
+    const data = await getSynthesizedMetric(sessionid, deviceId)
+    if (data === null) {
+      return false
     }
+
+    synthesizedFeedbackMetrics.current = data
+
     return true
   }
 
-  const loadLLMAnalytics = async (respObj, deviceId) => {
+  const loadLLMAnalytics = async (respObj) => {
 
-    if (!llmSessionAnalysis.current.hasOwnProperty(selectedSessionId1)) {
-      const analysis = await getLLMAnalytics(respObj)
-
-      if (analysis === null) {
-        return false
-      }
-
-      llmSessionAnalysis.current[selectedSessionId1] = {
-        [deviceId]: analysis
-      }
-    } else {
-      if (!llmSessionAnalysis.current[selectedSessionId1].hasOwnProperty(deviceId)) {
-
-        const analysis = await getLLMAnalytics(respObj)
-        if (analysis === null) {
-          return false
-        }
-
-        llmSessionAnalysis.current[selectedSessionId1][deviceId] = analysis
-
-      }
-
+    const analysis = await getLLMAnalytics(respObj)
+    if (analysis === null) {
+      return false
     }
+
+    llmSessionAnalysis.current = analysis
+
     return true
   }
 
-  const loadprompthistory = async (deviceId) => {
-    if (!promptHistory.current.hasOwnProperty(selectedSessionId1)) {
-      const prompt = await getPrompthistory(deviceId)
+
+  const loadprompthistory = async (sessionid, deviceid, username) => {
+    if (!promptHistory.current.hasOwnProperty(sessionid)) {
+      const prompt = await getPrompthistory(sessionid, deviceid, username)
 
       if (prompt === null) {
         return false
       }
 
-      promptHistory.current[selectedSessionId1] = {
-        [deviceId]: prompt
+      promptHistory.current[sessionid] = {
+        [deviceid]: prompt
       }
     } else {
-      if (!promptHistory.current[selectedSessionId1].hasOwnProperty(deviceId)) {
+      if (!promptHistory.current[sessionid].hasOwnProperty(deviceid)) {
 
-        const prompt = await getPrompthistory(deviceId)
+        const prompt = await getPrompthistory(sessionid, deviceid, username)
         if (prompt === null) {
           return false
         }
 
-        promptHistory.current[selectedSessionId1][deviceId] = prompt
+        promptHistory.current[sessionid][deviceid] = prompt
 
       }
 
@@ -906,9 +535,9 @@ function StudentSessionDashboard() {
   }
 
 
-  const getSynthesizedMetric = async (deviceId) => {
+  const getSynthesizedMetric = async (sessionid, deviceId) => {
     try {
-      const response = await new SessionService().getSynthesizedFeedbackMetrics(selectedSessionId1, deviceId);
+      const response = await new SessionService().getSynthesizedFeedbackMetrics(sessionid, deviceId);
       if (response.status === 200) {
         const jsonObj = response.json()
         return jsonObj;
@@ -917,7 +546,7 @@ function StudentSessionDashboard() {
       }
     } catch (error) {
       console.log(
-        "student dashboard getSynthesizedMetric",
+        "Expert rating getSynthesizedMetric",
         error,
       )
       return null
@@ -930,7 +559,6 @@ function StudentSessionDashboard() {
 
       if (response.status === 200) {
         const jsonObj = await response.json()
-        console.log("jsonObj.answer ", jsonObj.answer)
         return jsonObj.answer
       } else if (response.status === 400) {
         console.log("LLM api response", response.message)
@@ -938,16 +566,16 @@ function StudentSessionDashboard() {
       }
     } catch (error) {
       console.log(
-        "student dashboard loadReflectiondashboard",
+        "Expert ratingloadReflectiondashboard",
         error,
       )
       return null
     }
   }
 
-  const getPrompthistory = async (deviceId) => {
+  const getPrompthistory = async (sessionid, deviceId, username) => {
     try {
-      const response = await new SessionService().get_llm_question_answer_interactions(selectedSessionId1, deviceId, userDetail.username);
+      const response = await new SessionService().get_llm_question_answer_interactions(sessionid, deviceId, username);
 
       if (response.status === 200) {
         const jsonObj = await response.json()
@@ -957,7 +585,7 @@ function StudentSessionDashboard() {
       }
     } catch (error) {
       console.log(
-        "student dashboard loadprompthistory",
+        "Expert rating loadprompthistory",
         error,
       )
       return null
@@ -969,14 +597,10 @@ function StudentSessionDashboard() {
   // END OF IMPLEMENTATION FOR THE REFLECTION DASHBOARD 
   //-----------------------------------------------------------------------//
 
-  const viewComparison = () => {
-    setDetails("Comparison")
-    setDisplaySingleSession(false);
-  }
-
-  const viewIndividual = () => {
-    setDetails("Individual")
-  }
+  const handleRate = (criterion, value) => {
+    setRatings((prev) => ({ ...prev, [criterion]: value }));
+    setSubmitted(false);
+  };
 
   const ResetTimeRange = (values) => {
     if (session.current !== null) {
@@ -992,13 +616,66 @@ function StudentSessionDashboard() {
     }
   }
 
-  const seeAllTranscripts = () => {
-    if (Object.keys(currentTranscript) > 0) { //&& sessionDevice !== null
-      setCurrentForm("gottoselectedtranscript")
+  const handlePrev = () => {
+    if (currentIndex <= 0) return;
+    handleNavigationChange(currentIndex - 1, itemsForRating[currentIndex - 1]);
+  };
+
+  const handleNext = () => {
+    if (currentIndex >= itemsForRating.length - 1 || itemsForRating.length === 0) return;
+    handleNavigationChange(currentIndex + 1, itemsForRating[currentIndex + 1]);
+  };
+
+  const handleNavigationChange = (index, itemsForRating) => {
+    setCurrentIndex(index);
+    setRatings(Object.fromEntries(evaluationOption.map((item) => [item[0], 0])))
+    setSubmitted(false);
+    loadDashboard(itemsForRating)
+  };
+
+
+  const handleSubmit = async (allComplete) => {
+    // e.preventDefault();
+    if (!allComplete) return;
+
+    ratings.notes = notes
+    const payload = {
+      id: selectedItemForRating.rating_item_id,
+      sessionid: selectedItemForRating.sessId,
+      sessionDeviceId: selectedItemForRating.sessDevId,
+      speakerTag: selectedItemForRating.speaker,
+      raterid: selectedItemForRating.raterId,
+      evaluationCategory: selectedItemForRating.evalCat,
+      response: ratings,
+    };
+
+    // console.log("payload ",payload)
+    try {
+      const response = await new SessionService().postRating(payload);
+
+      if (response.status === 200) {
+        // console.log("Submitted rating form:", payload);
+        setSubmitted(true);
+      } else if (response.status === 400) {
+        setAlertMessage("Rating Submission Unsuccessful, Please contact Admin");
+        setShowAlert(true);
+      }
+    } catch (error) {
+      console.log(
+        "Expert rating loadprompthistory",
+        error,
+      )
+      return null
     }
-    // else if (sessionDevice !== null) {
-    //     setCurrentForm("gototranscript")
-    // }
+
+  };
+
+  const seeAllTranscripts = () => {
+    if (Object.keys(currentTranscript) > 0 && sessionDevice !== null) {
+      setCurrentForm("gottoselectedtranscript")
+    } else if (sessionDevice !== null) {
+      setCurrentForm("gototranscript")
+    }
   }
 
   const closeDialog = () => {
@@ -1008,18 +685,18 @@ function StudentSessionDashboard() {
     return navigate("/")
   }
 
-  const loading = () => {
-    return session.current === null || transcripts.length === 0
-  }
+  // const loading = () => {
+  //   return session.current === null || transcripts.length === 0
+  // }
 
-  const changeTouppercase = (e) => {
-    let val = e.target.value.toUpperCase()
-    if (val.length <= 4) {
-      setWrongInput(false)
-    } else {
-      setWrongInput(true)
+  const initChecklistData = (featuresArr, setFn) => {
+    let valueInd = 0
+    let showFeats = []
+    for (const feature of featuresArr) {
+      showFeats.push({ label: feature, value: valueInd, clicked: true })
+      valueInd++
     }
-    setPcode(val)
+    setFn(showFeats)
   }
 
   const closeAlert = () => {
@@ -1037,81 +714,76 @@ function StudentSessionDashboard() {
   }
 
   return (
-    <StudentSessionDashboardPages
+    <ExpertRatingPage
       currentForm={currentForm}
       closeDialog={closeDialog}
       nextPage={nextPage}
       pageTitle={pageTitle.current}
       navigateToLogin={navigateToLogin}
-      sessiontype={sessiontype}
-      setSessiontype={setSessiontype}
-      changeTouppercase={changeTouppercase}
       setShowAlert={setShowAlert}
       showAlert={showAlert}
       closeAlert={closeAlert}
       alertMessage={alertMessage}
-      pcode={pcode}
+      getUserParameters={getUserParameters}
+      // loading={loading}
+      itemsForRating={itemsForRating}
+      evaluatorType={evaluatorType}
+      setEvaluatorType={setEvaluatorType}
       loadDashboard={loadDashboard}
-      wrongInput={wrongInput}
-      setRange={ResetTimeRange}
-      loading={loading}
-      displayTranscripts={displayTranscripts}
-      displayVideoMetrics={displayVideoMetrics}
-      showFeatures={showFeatures}
-      showBoxes={showBoxes}
-      userDetail={userDetail}
-      session={session.current}
-      previousSessions={previousSessions.current}
-      startTime={startTime}
-      endTime={endTime}
-      startTime2={startTime2}
-      endTime2={endTime2}
-      transcripts={transcripts}
-      videoMetrics={videoMetrics}
-      onClickedTimeline={onClickedTimeline}
-      onClickedKeyword={onClickedKeyword}
-      details={details}
-      viewComparison={viewComparison}
-      viewIndividual={viewIndividual}
-      loadSelectedSessionMetrics={loadSelectedSessionMetrics}
-      loadComparedSessionDeviceMetrics={loadComparedSessionDeviceMetrics}
-      selectedSessionId1={selectedSessionId1}
-      setSelectedSessionId1={setSelectedSessionId1}
-      selectedSessionDeviceId1={selectedSessionDeviceId1}
-      selectedSessionDeviceId2={selectedSessionDeviceId2}
-      selectedSessionId2={selectedSessionId2}
-      setSelectedSessionId2={setSelectedSessionId2}
+      dashboardPage={dashboardPage}
       session1Transcripts={session1Transcripts}
-      session2Transcripts={session2Transcripts}
       session1VideoMetrics={session1VideoMetrics}
-      session2VideoMetrics={session2VideoMetrics}
-      seeAllTranscripts={seeAllTranscripts}
-      currentTranscript={currentTranscript}
       transcriptDoneLoading={transcriptDoneLoading}
       videoMetricDoneLoading={videoMetricDoneLoading}
-      sessionDevices={sessionDevices}
-      loadSelectedSessionDeviceMetrics={loadSelectedSessionDeviceMetrics}
-      getSessionDevices={getSessionDevices}
-      selectFilteredDevice1={selectFilteredDevice1}
-      selectFilteredDevice2={selectFilteredDevice2}
-
-      loadReflectiondashboard={loadReflectiondashboard}
+      startTime={startTime}
+      endTime={endTime}
+      details={details.current}
+      session={session.current}
+      sessionDevice={sessionDevice}
+      setRange={ResetTimeRange}
+      onClickedTimeline={onClickedTimeline}
+      onClickedKeyword={onClickedKeyword}
+      showFeatures={showFeatures}
+      showBoxes={showBoxes}
+      seeAllTranscripts={seeAllTranscripts}
+      currentTranscript={currentTranscript}
+      setCurrentForm={setCurrentForm}
       reflectionDashboardDoneLoading={reflectionDashboardDoneLoading}
-      selectedLLMAnalysis={selectedLLMAnalysis.current}
-      selectedSynthesizedData={selectedSynthesizedData.current}
+
+      llmSessionAnalysis={llmSessionAnalysis.current}
+      synthesizedData={synthesizedData.current}
       promptResponses={promptResponses.current}
-      isThinking={isThinking}
-      setIsThinking={setIsThinking}
-      selectedMomentIdAndIndex={selectedMomentIdAndIndex}
       setSelectedMomentIdAndIndex={setSelectedMomentIdAndIndex}
-      setdeviceIDRefectionDashboard={setdeviceIDRefectionDashboard}
+      selectedMomentIdAndIndex={selectedMomentIdAndIndex}
       sessionNameForReflecDashboard={sessionNameForReflecDashboard}
       groupNameForReflecDashboard={groupNameForReflecDashboard}
       interactivePromptFnc={interactivePromptFnc}
-      loadReflectionDashboardForNewSelection={loadReflectionDashboardForNewSelection}
+      isThinking={isThinking}
+      setIsThinking={setIsThinking}
+      sessionId={sessionId}
+      sessionDeviceId={sessionDeviceId}
+
+      //left pane props
+      selectedItemForRating={selectedItemForRating}
+      setSelectedItemForRating={setSelectedItemForRating}
+      evaluationOption={evaluationOption}
+      likertOptions={likertOptions}
+      ratings={ratings}
+      setRatings={setRatings}
+      notes={notes}
+      setNotes={setNotes}
+      handleRate={handleRate}
+      completedCount={completedCount}
+      submitted={submitted}
+      handleSubmit={handleSubmit}
+      evaluationOptionInstruction={evaluationOptionInstruction}
+      currentIndex={currentIndex}
+      handleNavigationChange={handleNavigationChange}
+      handlePrev={handlePrev}
+      handleNext={handleNext}
 
     />
   );
 }
 
-export { StudentSessionDashboard };
+export { ExpertRatingComponent };
