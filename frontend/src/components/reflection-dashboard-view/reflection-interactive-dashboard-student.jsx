@@ -67,10 +67,11 @@ function CollaborationFeedbackDashboard(props) {
   }
 
   const defaultQuestion = [
-    [0, "When did I contribute ideas most strongly?"],
-    [1, "Did I respond to peers often?"],
-    [2, "Where did my engagement drop?"],
-    [3, "How did my collaboration pattern change over time?"],
+    [0, "How was my collaboration activity overall?"],
+    [1, "When did I contribute ideas most strongly?"],
+    [2, "Did I respond to peers often?"],
+    [3, "Where did my engagement drop?"],
+    [4, "How did my collaboration pattern change over time?"],
   ];
 
   function MetricBar({ label, value, hint, emphasize }) {
@@ -104,14 +105,14 @@ function CollaborationFeedbackDashboard(props) {
   }
 
   function toneClass(value) {
-    if (value >= 75) return "bg-emerald-500";
-    if (value >= 50) return "bg-amber-400";
+    if (value >= 50) return "bg-emerald-500";
+    if (value >= 30) return "bg-amber-400";
     return "bg-rose-500";
   }
 
   function toneSurface(value) {
-    if (value >= 75) return "border-emerald-200 bg-emerald-50";
-    if (value >= 50) return "border-amber-200 bg-amber-50";
+    if (value >= 50) return "border-emerald-200 bg-emerald-50";
+    if (value >= 30) return "border-amber-200 bg-amber-50";
     return "border-rose-200 bg-rose-50";
   }
 
@@ -230,14 +231,21 @@ function CollaborationFeedbackDashboard(props) {
                     <div className="flex items-center gap-2 text-sm text-muted-foreground"><BarChart3 className="h-4 w-4" />Session Pattern</div>
                     <div className="mt-2 text-sm ">{llmresponse_session_summary.Sessionpattern}</div>
                   </div>
-                  <div className="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
-                    <div className="flex items-center gap-2 text-sm text-emerald-700"><TrendingUp className="h-4 w-4" />Strong zone</div>
-                    <div className="mt-2 text-sm ">{llmresponse_session_summary.Strongzones[0]}</div>
+                  <div className="rounded-2xl bg-violet-50 p-4 ring-1 ring-violet-100"> 
+                    <div className="flex items-center gap-2 text-sm text-violet-700"><TrendingUp className="h-4 w-4" />Strong zone</div>
+                    <div className="mt-2 text-sm ">{Array.isArray(llmresponse_session_summary.Strongzones)? llmresponse_session_summary.Strongzones[0] : llmresponse_session_summary.Strongzones}</div>
                   </div>
-                  <div className="rounded-2xl bg-rose-50 p-4 ring-1 ring-rose-100">
-                    <div className="flex items-center gap-2 text-sm text-rose-700"><TrendingDown className="h-4 w-4" />Decline zone</div>
-                    <div className="mt-2 text-sm">{llmresponse_session_summary.Declinezones[0]}</div>
+                  <div className="rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-50">
+                    <div className="flex items-center gap-2 text-sm text-amber-700"><TrendingDown className="h-4 w-4" />Caution zone</div>
+                    <div className="mt-2 text-sm">{Array.isArray(llmresponse_session_summary.Declinezones)? llmresponse_session_summary.Declinezones[0] :llmresponse_session_summary.Declinezones}</div>
                   </div>
+                </div>
+
+                <div className="rounded-2xl border bg-emerald-50 p-4 mt-4 text-lg leading-6">
+                  <div className="flex items-center gap-2 font-medium text-emerald-700"><Brain className="h-4 w-4" />Your Strength</div>
+                  <p className="mt-2 text-sm">
+                    {llmresponse_session_summary.Strengths.join("\n")}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -276,12 +284,12 @@ function CollaborationFeedbackDashboard(props) {
                   </Select>
                 </div>
 
-                <div className="rounded-2xl border p-4 text-sm leading-6">
+                {/* <div className="rounded-2xl border p-4 text-sm leading-6">
                   <div className="flex items-center gap-2 font-medium"><Brain className="h-4 w-4" />Your Strength</div>
                   <p className="mt-2 text-muted-foreground">
                     {llmresponse_session_summary.Strengths.join("\n")}
                   </p>
-                </div>
+                </div> */}
               </CardContent>
             </Card>
           </motion.div>
@@ -473,9 +481,9 @@ function CollaborationFeedbackDashboard(props) {
                           ))}
                         </ul>
                       </div>
-                      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
-                        <div className="flex items-center gap-2 font-medium text-rose-800"><AlertTriangle className="h-4 w-4" />What went wrong</div>
-                        <ul className="mt-3 space-y-2 text-sm text-rose-900/80">
+                      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                        <div className="flex items-center gap-2 font-medium text-amber-800"><AlertTriangle className="h-4 w-4" />What to pay attention to</div>
+                        <ul className="mt-3 space-y-2 text-sm text-amber-900/80">
                           {llmresponse_session_summary.Concerns.map((item) => (
                             <li key={item} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4" />{item}</li>
                           ))}
@@ -576,10 +584,10 @@ function CollaborationFeedbackDashboard(props) {
 
                       <div className="space-y-4 rounded-2xl border p-4">
                         <div className="flex items-center gap-2 font-medium"><Bot className="h-4 w-4" />Interpretation</div>
-                        <p className="text-sm leading-7 text-muted-foreground">{llmresponse_window_summary[props.selectedMomentIdAndIndex[1]].Summary}</p>
+                        <p className="text-sm leading-7 text-muted-foreground">{llmresponse_window_summary[props.selectedMomentIdAndIndex[1]]?.Summary}</p>
                         <div className="rounded-2xl bg-muted p-4">
                           <div className="flex items-center gap-2 text-sm font-medium"><HelpCircle className="h-4 w-4" />Suggestion</div>
-                          <p className="mt-2 text-sm leading-6 text-muted-foreground">{llmresponse_window_summary[props.selectedMomentIdAndIndex[1]].Action}</p>
+                          <p className="mt-2 text-sm leading-6 text-muted-foreground">{llmresponse_window_summary[props.selectedMomentIdAndIndex[1]]?.Action}</p>
                         </div>
                       </div>
                     </div>

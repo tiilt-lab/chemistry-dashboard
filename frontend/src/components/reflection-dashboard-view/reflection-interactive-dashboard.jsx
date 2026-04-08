@@ -226,11 +226,11 @@ function CollaborationFeedbackDashboard(props) {
                   </div>
                   <div className="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
                     <div className="flex items-center gap-2 text-sm text-emerald-700"><TrendingUp className="h-4 w-4" />Strong zone</div>
-                    <div className="mt-2 text-sm ">{llmresponse_session_summary.Strongzones[0]}</div>
+                    <div className="mt-2 text-sm ">{Array.isArray(llmresponse_session_summary.Strongzones)? llmresponse_session_summary.Strongzones[0] : llmresponse_session_summary.Strongzones}</div>
                   </div>
                   <div className="rounded-2xl bg-rose-50 p-4 ring-1 ring-rose-100">
                     <div className="flex items-center gap-2 text-sm text-rose-700"><TrendingDown className="h-4 w-4" />Decline zone</div>
-                    <div className="mt-2 text-sm">{llmresponse_session_summary.Declinezones[0]}</div>
+                    <div className="mt-2 text-sm">{Array.isArray(llmresponse_session_summary.Declinezones)? llmresponse_session_summary.Declinezones[0] :llmresponse_session_summary.Declinezones}</div>
                   </div>
                 </div>
               </CardContent>
@@ -549,10 +549,10 @@ function CollaborationFeedbackDashboard(props) {
 
                       <div className="space-y-4 rounded-2xl border p-4">
                         <div className="flex items-center gap-2 font-medium"><Bot className="h-4 w-4" />Interpretation</div>
-                        <p className="text-sm leading-7 text-muted-foreground">{llmresponse_window_summary[props.selectedMomentIdAndIndex[1]].Summary}</p>
+                        <p className="text-sm leading-7 text-muted-foreground">{llmresponse_window_summary[props.selectedMomentIdAndIndex[1]]?.Summary}</p>
                         <div className="rounded-2xl bg-muted p-4">
                           <div className="flex items-center gap-2 text-sm font-medium"><HelpCircle className="h-4 w-4" />Suggestion</div>
-                          <p className="mt-2 text-sm leading-6 text-muted-foreground">{llmresponse_window_summary[props.selectedMomentIdAndIndex[1]].Action}</p>
+                          <p className="mt-2 text-sm leading-6 text-muted-foreground">{llmresponse_window_summary[props.selectedMomentIdAndIndex[1]]?.Action}</p>
                         </div>
                       </div>
                     </div>
