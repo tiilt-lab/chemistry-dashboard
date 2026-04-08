@@ -115,7 +115,7 @@ class AuthService {
     const body = {};
     return new ApiService().httpRequestCall("api/v1/syncstudenttable", 'POST', body);
   }
-
+ 
   getStudentProfileByID(username) {
     return new ApiService().httpRequestCall("api/v1/student/getstudentbyid/"+ username, 'GET', {});
   }
