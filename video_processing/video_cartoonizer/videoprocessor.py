@@ -17,8 +17,8 @@ import json
 import traceback
 import callbacks
 from concurrent.futures import ThreadPoolExecutor
-from queue import Empty
-from .VideoMetricProcessor import VideoMetricAnalytics
+from queue import Queue,Empty, Full
+# from .VideoMetricProcessor import VideoMetricAnalytics
 from global_singleton_lock import attention_emotion_predictor_lock, object_detector_lock
 from concurrent.futures import TimeoutError
 
@@ -74,7 +74,7 @@ class VideoProcessor:
         if self.cartoon_model.video and self.cartoon_model.parsing_map_path is not None:
             self.x_p_hat = torch.tensor(np.load(self.cartoon_model.parsing_map_path))
 
-        self.VideoMetricAnalytics = VideoMetricAnalytics(self.attention_detection,self.facial_emotion_detector,self.image_object_detection)     
+        # self.VideoMetricAnalytics = VideoMetricAnalytics(self.attention_detection,self.facial_emotion_detector,self.image_object_detection)     
 
       
         self.non_cartoon_emotions = {"Extremely afraid":0,"Extremely alarmed":0,"Extremely annoyed":0,"Extremely aroused":0,"Extremely astonished":0,
@@ -299,12 +299,12 @@ class VideoProcessor:
             processing_timer = time.monotonic()
             video_metrics=None
             success = False
+           
             with object_detector_lock():  # serialize CUDA/NMS across all users in this process
-                # det = get_detector(None)  # second call ignores lambda
                 all_frames,face_object_detected = self.image_object_detection.detection_with_facial_regonition(batch_frames,facialEmbeddings,batch_track,time_marker,vid_img_dir,auth_key)
 
-            with attention_emotion_predictor_lock():  # serialize attention/emotion prediction across all users in this process    
-                video_metrics = self.VideoMetricAnalytics.compute_videoMetrics(all_frames,face_object_detected)
+            attention_emotion_det_lock =  attention_emotion_predictor_lock()  # serialize attention/emotion prediction across all users in this process    
+            video_metrics = self.VideoMetricAnalytics.compute_videoMetrics(all_frames,face_object_detected,attention_emotion_det_lock)
             
             if video_metrics: 
                 # logging.info(video_metrics)
@@ -322,10 +322,49 @@ class VideoProcessor:
             self.convert_image(frames_batch, None, 500, 375)
 
         if self.cf.process_video_analytics():
-            logging.info('processing video analytics for batch {0} of size {1}'.format(batch_idx, len(frames_batch)))
-            self.process_video_analytics(frames_batch, self.facialEmbeddings, batch_idx, time_markers, self.vid_img_dir,self.config.auth_key)
+            # logging.info('processing video analytics for batch {0} of size {1}'.format(batch_idx, len(frames_batch)))
+            payload = [frames_batch, self.facialEmbeddings, batch_idx, time_markers, self.vid_img_dir, self.config.auth_key]
+            self.enqueue_latest_frame_payload(payload,self.config.auth_key)
+            # self.process_video_analytics(frames_batch, self.facialEmbeddings, batch_idx, time_markers, self.vid_img_dir,self.config.auth_key)
             
-       
+
+    def enqueue_latest_frame_payload(self, payload,candidate_queue_id, timeout=0.2):
+        """
+        Keep only the most recent chunk in the queue.
+        If the queue is full, remove the stale queued chunk and replace it.
+        """
+        candidate_frame_queue = None
+        if candidate_queue_id in self.image_object_detection.frame_queue_manager:
+            candidate_frame_queue = self.image_object_detection.frame_queue_manager[candidate_queue_id]
+        else:
+            self.image_object_detection.frame_queue_manager[candidate_queue_id] = Queue(maxsize=30)
+            candidate_frame_queue = self.image_object_detection.frame_queue_manager[candidate_queue_id]
+
+        try:
+            candidate_frame_queue.put(payload, timeout=timeout)
+            # logging.info("i just inserted frames into the queue for candidate  {0}".format(candidate_queue_id))
+            return True
+        except Full:
+            logging.warning("Frame queue for {0} is full; attempting to replace stale payload with latest payload.".format(candidate_queue_id))
+            pass
+
+        # Queue is full: drop the old queued item
+        try:
+            old_item = candidate_frame_queue.get_nowait()
+            # optional: if you use task_done semantics elsewhere, call task_done here
+            # self.frame_queue.task_done()
+        except Empty:
+            logging.warning("Frame queue for {0} was full but is now empty; failed to replace payload.".format(candidate_queue_id))
+            old_item = None
+
+        # Try again to insert the latest chunk
+        try:
+            candidate_frame_queue.put_nowait(payload)
+            logging.debug("Replaced stale frame payload with latest payload.")
+            return True
+        except Full:
+            logging.warning("Could not enqueue latest frame payload for {0}; dropping it.".format(candidate_queue_id))
+            return False   
 
 
     def processing(self):
@@ -339,6 +378,7 @@ class VideoProcessor:
             if subclip_frames is self.STOP:
                 break
             
+            # logging.info("i just read from video queue for client {0}".format(self.config.auth_key))
             try:
                 self.video_chunk_count+=1
                 subclib_frame_count = 0
@@ -351,17 +391,17 @@ class VideoProcessor:
                     self.time_marker.append(self.adjust_time(ts))
 
                     if len(self.frame_batch) >= self.batch_size:
-                        if self.pending_future is not None and not self.pending_future.done():
-                            try:
-                                # Wait briefly for worker to finish
-                                self.pending_future.result(timeout=WAIT_TIMEOUT)
-                            except TimeoutError:
-                                # Still not done after waiting → drop batch
-                                self.frame_batch = []
-                                self.time_marker = []
+                        # if self.pending_future is not None and not self.pending_future.done():
+                        #     try:
+                        #         # Wait briefly for worker to finish
+                        #         self.pending_future.result(timeout=WAIT_TIMEOUT)
+                        #     except TimeoutError:
+                        #         # Still not done after waiting → drop batch
+                        #         self.frame_batch = []
+                        #         self.time_marker = []
 
-                                logging.debug("Dropped batch after waiting %.2f seconds for worker_process for %s",WAIT_TIMEOUT, self.config.auth_key)
-                                continue
+                        #         logging.debug("Dropped batch after waiting %.2f seconds for worker_process for %s",WAIT_TIMEOUT, self.config.auth_key)
+                        #         continue
 
                         # hand off current lists; start fresh ones for the producer
                         frames = self.frame_batch

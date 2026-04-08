@@ -30,6 +30,9 @@ from tables.speaker_video_metrics import SpeakerVideoMetrics
 from tables.llm_feedback_report import LLMFeedbackReport
 from tables.llm_question_answer import LLMQuestionAnswer
 from tables.rater import Rater
+from tables.session_synthesized_report import SessionSynthesizedReport
+from tables.rating import Rating
+from tables.survey_response import SurveyResponse
 
 # Saves changes made to database (models)
 def save_changes():
@@ -234,6 +237,18 @@ def get_all_transcript_metrics_by_session(id = None, student_username=None, sess
     else:        
         query = query.filter(Transcript.speaker_id != -1)
         query = query.distinct().order_by(Transcript.speaker_tag.asc())
+    query = query.order_by(Transcript.start_time.asc())
+    return query.all()
+
+def get_all_transcript_metrics_by_session_deviceId(id = None, session_id=None, session_device_id=None, speaker_id = -1):
+    query = db.session.query(Transcript,SpeakerTranscriptMetrics)
+    query = query.join(SpeakerTranscriptMetrics).filter(Transcript.id == SpeakerTranscriptMetrics.transcript_id)
+
+    if session_device_id != None:
+        query = query.filter(Transcript.session_device_id == session_device_id) 
+
+    if speaker_id != -1:
+        query = query.filter(Transcript.speaker_id == speaker_id)
     query = query.order_by(Transcript.start_time.asc())
     return query.all()
 
@@ -900,19 +915,67 @@ def update_user(user_id, data):
 # Rater
 # -------------------------
 
-def get_raters(id=None,raterid=None):
+def get_raters(id=None,sessionid=None,sessiondeviceid=None,speakerid=None,speakertag=None,raterid=None,type=None,evaluationcategory=None,completed=None):
     query = db.session.query(Rater)
     if id != None:
         return query.filter(Rater.id == id).first()
+    if sessionid != None:
+        query = query.filter(Rater.sessionid == sessionid)
+    if sessiondeviceid != None:
+        query = query.filter(Rater.sessiondeviceid == sessiondeviceid)
+    if speakerid != None:
+        query = query.filter(Rater.speakerid == speakerid)
+    if speakertag != None:
+        query = query.filter(Rater.speakertag == speakertag)  
     if raterid != None:
         query = query.filter(Rater.raterid == raterid)
+    if type != None:
+        query = query.filter(Rater.type == type)        
+    if evaluationcategory != None:
+        query = query.filter(Rater.evaluation_category == evaluationcategory)
+    if completed != None:
+        query = query.filter(Rater.completed == completed)    
     return query.all()
 
-def add_rater(sessionid, sessiondeviceid, speakerid, speakertag, raterid, type):
-    rater = Rater(sessionid, sessiondeviceid, speakerid, speakertag, raterid, type)
+def add_rater(sessionid, sessiondeviceid, speakerid, speakertag, raterid, type,evaluationcategory):
+    rater = Rater(sessionid, sessiondeviceid, speakerid, speakertag, raterid, type,evaluationcategory,0)
     db.session.add(rater)
     db.session.commit()
     return True, rater  
+
+def update_rater(id,sessionid=None,sessiondeviceid=None,speakerid=None,speakertag=None,raterid=None,type=None,evaluationcategory=None,completed=None):
+    rater = get_raters(id=id)
+    if rater:
+        db_change = False
+        if sessionid:
+            rater.sessionid = sessionid
+            db_change = True
+        if sessiondeviceid:
+            rater.sessiondeviceid = sessiondeviceid
+            db_change = True  
+        if speakerid:
+            rater.speakerid = speakerid
+            db_change = True
+        if speakertag:
+            rater.speakertag = speakertag
+            db_change = True
+        if raterid:
+            rater.raterid = raterid
+            db_change = True
+        if type:
+            rater.type = type
+            db_change = True  
+        if evaluationcategory:
+            rater.evaluation_category = evaluationcategory
+            db_change = True  
+        if completed:
+            rater.completed = completed
+            db_change = True      
+        
+        if db_change:
+            db.session.commit()
+        return True, rater
+    return False, None
 
 def delete_rater(id):
     rater = get_raters(id=id)
@@ -922,7 +985,123 @@ def delete_rater(id):
         return rater
     else:
         return None
-    
+
+# -------------------------
+# Rating
+# -------------------------
+
+def get_ratings(id=None,sessionid=None,sessiondeviceid=None,speakertag=None,raterid=None,evaluationcategory=None):
+    query = db.session.query(Rating)
+    if id != None:
+        return query.filter(Rating.id == id).first()
+    if sessionid != None:
+        query = query.filter(Rating.sessionid == sessionid)
+    if sessiondeviceid != None:
+        query = query.filter(Rating.sessiondeviceid == sessiondeviceid)
+    if speakertag != None:
+        query = query.filter(Rating.speakertag == speakertag)  
+    if raterid != None:
+        query = query.filter(Rating.raterid == raterid)      
+    if evaluationcategory != None:
+        query = query.filter(Rating.evaluation_category == evaluationcategory)
+    return query.all()
+
+def add_rating(sessionid, sessiondeviceid, speakertag, raterid,evaluationcategory,response):
+    rating = Rating(sessionid, sessiondeviceid, speakertag, raterid,evaluationcategory,response)
+    db.session.add(rating)
+    db.session.commit()
+    return True, rating  
+
+def update_rating(id,sessionid=None,sessiondeviceid=None,speakertag=None,raterid=None,evaluationcategory=None,response=None):
+    rating = get_ratings(id=id)
+    if rating:
+        db_change = False
+        if sessionid:
+            rating.sessionid = sessionid
+            db_change = True
+        if sessiondeviceid:
+            rating.sessiondeviceid = sessiondeviceid
+            db_change = True  
+        if speakertag:
+            rating.speakertag = speakertag
+            db_change = True
+        if raterid:
+            rating.raterid = raterid
+            db_change = True 
+        if evaluationcategory:
+            rating.evaluation_category = evaluationcategory
+            db_change = True  
+        if response:
+            rating.response = response
+            db_change = True      
+        
+        if db_change:
+            db.session.commit()
+        return True, rating
+    return False, None
+
+def delete_rating(id):
+    rating = get_ratings(id=id)
+    if rating:
+        db.session.delete(rating)
+        db.session.commit()
+        return rating
+    else:
+        return None    
+
+
+# -------------------------
+# Survey Response
+# -------------------------
+
+def get_survey_reponse(id=None,sessionid=None,sessiondeviceid=None,username=None):
+    query = db.session.query(SurveyResponse)
+    if id != None:
+        return query.filter(SurveyResponse.id == id).first()
+    if sessionid != None:
+        query = query.filter(SurveyResponse.sessionid == sessionid)
+    if sessiondeviceid != None:
+        query = query.filter(SurveyResponse.sessiondeviceid == sessiondeviceid)
+    if username != None:
+        query = query.filter(SurveyResponse.username == username)  
+    return query.all()
+
+def add_survey_reponse(sessionid, sessiondeviceid, username,response):
+    survey = SurveyResponse(sessionid, sessiondeviceid, username,response)
+    db.session.add(survey)
+    db.session.commit()
+    return True, survey  
+
+def update_survey_reponse(id,sessionid=None,sessiondeviceid=None,username=None,response=None):
+    survey = get_survey_reponse(id=id)
+    if survey:
+        db_change = False
+        if sessionid:
+            survey.sessionid = sessionid
+            db_change = True
+        if sessiondeviceid:
+            survey.sessiondeviceid = sessiondeviceid
+            db_change = True  
+        if username:
+            survey.username = username
+            db_change = True
+        if response:
+            survey.response = response
+            db_change = True      
+        
+        if db_change:
+            db.session.commit()
+        return True, survey
+    return False, None
+
+def delete_survey_reponse(id):
+    survey = get_survey_reponse(id=id)
+    if survey:
+        db.session.delete(survey)
+        db.session.commit()
+        return survey
+    else:
+        return None  
 # -------------------------
 # Student
 # -------------------------
@@ -1180,29 +1359,27 @@ def update_speaker_session_device_llm_question_answer(id, username=None, session
 # Session Synthesized Data for Reflective Dashboard
 # -------------------------
 
-def get_synthesized_feedback_metrics(id=None, sessionId=None, sessionDeviceId = None):
-    query = db.session.query(LLMFeedbackReport)
+def get_synthesized_feedback_report(id=None, sessionId=None, sessionDeviceId = None):
+    query = db.session.query(SessionSynthesizedReport)
     if id != None:
-        return query.filter(LLMFeedbackReport.id == id).first()
+        return query.filter(SessionSynthesizedReport.id == id).first()
     if sessionId != None:
-        query =query.filter(LLMFeedbackReport.session_id == sessionId)
+        query =query.filter(SessionSynthesizedReport.session_id == sessionId)
     if sessionDeviceId != None:
-        query =query.filter(LLMFeedbackReport.session_device_id == sessionDeviceId)
-    if username != None:
-        return query.filter(LLMFeedbackReport.speaker_username == username).first()
+        query =query.filter(SessionSynthesizedReport.session_device_id == sessionDeviceId)
     return query.all()
 
-def add_speaker_session_device_llm_report(username, sessionId, sessionDeviceId,feedback_analysis):
-    matched_feedback_analysis = get_speaker_session_device_llm_report(username=username, sessionId=sessionId, sessionDeviceId = sessionDeviceId)
-    if matched_feedback_analysis:
-        return False, matched_feedback_analysis
-    feedback = LLMFeedbackReport(sessionId, sessionDeviceId, username,feedback_analysis)
+def add_synthesized_feedback_report(sessionId, sessionDeviceId,synthesized_feedback):
+    matched_synthesized_feedback = get_synthesized_feedback_report(sessionId=sessionId, sessionDeviceId = sessionDeviceId)
+    if matched_synthesized_feedback:
+        return False, matched_synthesized_feedback
+    feedback = SessionSynthesizedReport(sessionId, sessionDeviceId, synthesized_feedback)
     db.session.add(feedback)
     db.session.commit()
     return True, feedback
 
-def update_speaker_session_device_llm_report(id, username=None, sessionId=None, sessionDeviceId=None,feedback_analysis=None):
-    feedback = get_speaker_session_device_llm_report(id=id)
+def update_synthesized_feedback_report(id, sessionId=None, sessionDeviceId=None,synthesized_feedback=None):
+    feedback = get_synthesized_feedback_report(id=id)
     if feedback:
         db_change = False
         if sessionId:
@@ -1211,11 +1388,8 @@ def update_speaker_session_device_llm_report(id, username=None, sessionId=None, 
         if sessionDeviceId:
             feedback.session_device_id = sessionDeviceId
             db_change = True
-        if username:
-            feedback.speaker_username = username 
-            db_change = True  
-        if feedback_analysis:
-            feedback.feedback_analysis = feedback_analysis 
+        if synthesized_feedback:
+            feedback.synthesized_feedback = synthesized_feedback 
             db_change = True   
         
         if db_change:

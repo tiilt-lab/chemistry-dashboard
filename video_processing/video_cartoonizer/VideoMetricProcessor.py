@@ -1,20 +1,92 @@
 import logging
+from queue import Empty
+import threading
+import time
 import cv2
 import os;
 import traceback
+import callbacks
 from collections import Counter
+from yolo_head.utils.datasets import LoadImageDataset
+from yolo_head.utils.general import scale_coords
+from ultralytics.engine.results import Results
 
 class VideoMetricAnalytics:
-    def __init__(self, AttentionTracking,EmotionDetection, ImageDection):
+    def __init__(self, AttentionTracking,EmotionDetection, ImageDetection):
         self.AttentionTracking = AttentionTracking
         self.EmotionDetection = EmotionDetection
-        self.ImageDection = ImageDection
+        self.Imagedetection = ImageDetection
         self.base_path = os.path.dirname(os.path.abspath(__file__))
+        self.STOP = object()  # sentinel
+
+
+    def start(self):
+        self.running = True
+        self.attention_emotion_detection_thread = threading.Thread(target=self.scheduler, name="attention_emotion_detection-thread")
+        self.attention_emotion_detection_thread.daemon = True
+        self.attention_emotion_detection_thread.start()
+
+    def stop(self):
+        self.running = False
+        logging.info("Stopping video metric analytics thread...")
+
+    # this schedule will go through each candiate's queue added to frame_queue_manager
+    # and get the added job. This goes tune by turn to ensure each candiate job is process round robbingly
+    # regardless of when they join. This solve the issue of using one queue for all candiadate, which result to
+    # candidates that join later having to wait longer till it gets to their turn
+    def scheduler(self):
+        while self.running:
+            candidate_turn = 0
+            candidate_unique_ids = list(self.Imagedetection.accumulator_queue_manager.keys())
+            len_candidate_unique_ids = len(candidate_unique_ids)
+
+            # if len_candidate_unique_ids == 0:
+            #     time.sleep(0.05)
+            #     continue
+
+            while candidate_turn < len_candidate_unique_ids:
+                # logging.info("about to start processing  emotion and attention  work for client {0} of {1} with key {2} ".format(candidate_turn,len_candidate_unique_ids,candidate_unique_ids[candidate_turn]))
+                self.worker(self.Imagedetection.accumulator_queue_manager[candidate_unique_ids[candidate_turn]],candidate_unique_ids[candidate_turn])
+                # logging.info("proceesed emotion and attention work for client {0} of {1} with key {2} ".format(candidate_turn+1,len_candidate_unique_ids,candidate_unique_ids[candidate_turn]))
+                candidate_turn += 1
+
+                # if the last candiate have been scheduled, then break so that a fresh candiadates_id is fetched
+                # possible a new candiate may have added its queue to the elf.frame_queue_manager
+                if candidate_turn == len_candidate_unique_ids:
+                    break
+
+    def worker(self,candidate_queue,candidate_queue_id):
+        try:
+            # block briefly to avoid CPU spin; adjust timeout for latency needs
+            payload = candidate_queue.get_nowait() #get(timeout=0.25)
+        except Empty:
+            logging.debug("Video metric analytics thread waiting for data...")
+            return
+
+        if payload is self.STOP:
+            logging.info("Received stop signal for video metric analytics thread.")
+            return  
+          
+        logging.info("i just read from queue accumulator for client {0}".format(candidate_queue_id))
+        auth_key,all_frames,accumulator,batch_track = payload
+        processing_timer = time.monotonic()
+        video_metrics = self.compute_videoMetrics(all_frames,accumulator)
+        # logging.info("insert {0} into DB for batch {1}".format(video_metrics,batch_track))
+        if video_metrics: 
+            
+            success = callbacks.post_video_metrics(auth_key, video_metrics)
+
+            processing_time = time.monotonic() - processing_timer
+            if success:
+                logging.info( f"Video processing results posted successfully for client {auth_key} (Processing time: {processing_time})")
+
+
 
     def compute_videoMetrics(self,frames,face_object_detected):
         video_metrics = {}
         try:
             for person_id, persons_detail in face_object_detected['head'].items():
+                # with attention_emotion_det_lock:
                 val_imgs, val_faces, val_head_channels, headboxes, imsizes, frame_ids, _ = self.AttentionTracking.get_batched_facial_data(persons_detail,frames)
                 val_gaze_heatmap_preds, val_attmaps, val_inout_preds = self.AttentionTracking.compute_gaze_direction(val_imgs, val_faces, val_head_channels)
                 for index in range(len(val_gaze_heatmap_preds)): 
@@ -28,8 +100,11 @@ class VideoMetricAnalytics:
                         logging.Info("in File VideoMetricAnalytics: Persons data from face detection and gaze detections messed up, please review...")
                         return None
                     frame_raw = frames[frame_index]
-                    pred_emotion = self.EmotionDetection.predict_facial_emotion_for_single_participant(frames[frame_index], h_bbox,person_alias,frame_index,self.ImageDection.crop_face_from_fame_with_bbox)
+
+                    # with attention_emotion_det_lock:
+                    pred_emotion = self.EmotionDetection.predict_facial_emotion_for_single_participant(frames[frame_index], h_bbox,person_alias,frame_index,self.Imagedetection.crop_face_from_fame_with_bbox)
                     gaze_x, gaze_y = self.AttentionTracking.get_gaze_direction_point(val_gaze_heatmap_preds[index], val_inout_preds[index], imsizes[index])
+                    
                     if gaze_x is not  None or gaze_y is not None:
                         other_objects_in_frame = face_object_detected['other_objects'][frame_index]
                         frame_width, frame_height = imsizes[index]
