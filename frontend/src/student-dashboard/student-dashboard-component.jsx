@@ -755,7 +755,6 @@ function StudentSessionDashboard() {
     setReflectionDashboardDoneLoading(false)
     let actionstatus = await extractParticipantData(newSessionDeviceID)
     if (actionstatus) {
-
       const sess = previousSessions.current.find((ses) => ses.id === selectedSessionId1);
       const group = selectFilteredDevice1.find((dev) => dev.id === newSessionDeviceID);
       setSessionNameForReflecDashboard(sess.name + ": " + new Date(sess.creation_date).toDateString())
@@ -772,10 +771,11 @@ function StudentSessionDashboard() {
     if (Object.keys(respObj).length === 0 || resp === false) {
       return false;
     }
+    console.log("Synthesized feedback: ",respObj)
 
     const ret = await loadLLMAnalytics(respObj, deviceId)
-
     if (ret) {
+      console.log("llm response: ",llmSessionAnalysis.current[selectedSessionId1][deviceId])
       selectedLLMAnalysis.current = llmSessionAnalysis.current[selectedSessionId1][deviceId]
       selectedSynthesizedData.current = respObj
       await loadprompthistory(deviceId)
