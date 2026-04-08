@@ -575,26 +575,26 @@ def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
     
     exisiting_synthesis = database.get_synthesized_feedback_report(sessionId=session_id, sessionDeviceId = session_device_id)
 
+    # if exisiting_synthesis:
+    #     raw = str(exisiting_synthesis[0].synthesized_feedback)
+    #     combine_metric_level = json.loads(raw)
+    # else:
+
+    keywords = database.get_keyword_usages(session_device_id=session_device_id)
+    # speakers = database.get_speakers(session_device_id=session_device_id)
+
+    videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device_id)
+    transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session_by_timeline(session_device_id=session_device.id)
+    combine_metric_level = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,windowsize=10)#speakers,
+
+    combine_metric_dump = json.dumps(combine_metric_level)
+    # add to the database
     if exisiting_synthesis:
-        raw = str(exisiting_synthesis[0].synthesized_feedback)
-        combine_metric_level = json.loads(raw)
+        #update the database
+        database.update_synthesized_feedback_report(id=exisiting_synthesis[0].id,synthesized_feedback=combine_metric_dump)
     else:
-
-        keywords = database.get_keyword_usages(session_device_id=session_device_id)
-        # speakers = database.get_speakers(session_device_id=session_device_id)
-
-        videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device_id)
-        transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session_by_timeline(session_device_id=session_device.id)
-        combine_metric_level = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,windowsize=10)#speakers,
-
-        combine_metric_dump = json.dumps(combine_metric_level)
-        # add to the database
-        if exisiting_synthesis:
-            #update the database
-            database.update_synthesized_feedback_report(id=exisiting_synthesis.id,synthesized_feedback=combine_metric_dump)
-        else:
-            #insert to database
-            database.add_synthesized_feedback_report(sessionId=session_id,sessionDeviceId=session_device_id,synthesized_feedback=json.dumps(combine_metric_level))
+        #insert to database
+        database.add_synthesized_feedback_report(sessionId=session_id,sessionDeviceId=session_device_id,synthesized_feedback=json.dumps(combine_metric_level))
 
 
     return json_response(combine_metric_level)
