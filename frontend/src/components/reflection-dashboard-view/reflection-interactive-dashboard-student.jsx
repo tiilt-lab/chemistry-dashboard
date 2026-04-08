@@ -5,16 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { MessageSquare, Brain, Clock3, Sparkles, Users, User, Eye, Mic, Activity, HelpCircle, Search, AlertTriangle, CheckCircle2, ChevronRight, Bot, BarChart3, Target, Lightbulb, TrendingDown, TrendingUp, ArrowRight } from "lucide-react";
 
 import { AppSectionBoxComponent } from "../section-box/section-box-component"
+import {SurveyCompletion} from "../../student-dashboard/survey-question"
 
 
 function CollaborationFeedbackDashboard(props) {
+  const allComplete = props.completedCount === props.surveyquestion?.length && props.notes !== "";
+
   const selectedSessionId1 = props.selectedSessionId1
   const selectedSessionDeviceId1 = props.selectedSessionDeviceId1
   const promptResponses = (props.promptResponses.hasOwnProperty(selectedSessionId1) && props.promptResponses[selectedSessionId1].hasOwnProperty(selectedSessionDeviceId1)) ? props.promptResponses[selectedSessionId1][selectedSessionDeviceId1] : []
@@ -284,10 +289,11 @@ function CollaborationFeedbackDashboard(props) {
           <Tabs defaultValue="session" className="space-y-6 mt-8">
             <Card className="rounded-3xl border-0 shadow-sm">
               <CardContent className="h-30 lg:h-10">
-                <TabsList className="grid w-full grid-cols-1 gap-2 rounded-2xl lg:grid-cols-3">
+                <TabsList className="grid w-full grid-cols-1 gap-2 rounded-2xl lg:grid-cols-4">
                   <TabsTrigger className="h-10 text-base lg:h-8 lg:text-2xl" value="session">1. Session synthesis</TabsTrigger>
                   <TabsTrigger className="h-10 text-base lg:h-8 lg:text-2xl" value="moment">2. Moment explanation</TabsTrigger>
                   <TabsTrigger className="h-10 text-base lg:h-8 lg:text-2xl" value="qa">3. Reflective Q&amp;A</TabsTrigger>
+                  <TabsTrigger className="h-10 text-base lg:h-8 lg:text-2xl" value="survey">4. Survey</TabsTrigger>
                 </TabsList>
               </CardContent>
             </Card>
@@ -684,10 +690,25 @@ function CollaborationFeedbackDashboard(props) {
                 </Card>
               </div>
             </TabsContent>
+
+            <TabsContent value="survey" className="space-y-6">
+
+              <SurveyCompletion
+                surveyquestion={props.surveyquestion}
+                likertOptions={props.likertOptions}
+                completedCount={props.completedCount}
+                ratings={props.ratings}
+                handleRate={props.handleRate}
+                handleSubmit={props.handleSubmit}
+                submitted={props.submitted}
+                setNotes={props.setNotes}
+                notes={props.notes}
+              />
+            </TabsContent>
           </Tabs>
         </div>
-      </AppSectionBoxComponent>
-    </div>
+      </AppSectionBoxComponent >
+    </div >
   );
 }
 

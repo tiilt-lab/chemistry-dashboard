@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef, useLayoutEffect } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { MessageSquare, Brain, Clock3, Sparkles, Users, User, Eye, Mic, Activity, HelpCircle, Search, AlertTriangle, CheckCircle2, ChevronRight, Bot, BarChart3, Target, Lightbulb, TrendingDown, TrendingUp, ArrowRight } from "lucide-react";
+import { MessageSquare, Brain, Clock3, Sparkles, Users, Eye, Mic, Activity, HelpCircle, Search, AlertTriangle, CheckCircle2, ChevronRight, Bot, BarChart3, Target, Lightbulb, TrendingDown, TrendingUp, ArrowRight } from "lucide-react";
 
 import { AppSectionBoxComponent } from "../section-box/section-box-component"
 
@@ -348,12 +348,7 @@ function CollaborationFeedbackDashboard(props) {
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.session_level_metric.avg_momentum)}`} style={{ width: `${selectedParticipantData.session_level_metric.avg_momentum}%` }} />
                       </div>
                     </div>
-                    {/* <MetricBar label="Verbal participation" value={selectedParticipantData["session_level_metric"].avg_verbalshare} hint="share of spoken contribution" emphasize={selectedParticipantData["session_level_metric"].avg_verbalshare < 50 ? "risk" : "good"} />
-                        <MetricBar label="Turn share" value={selectedParticipantData["session_level_metric"].avg_turntaking} hint="share of speaking windows" emphasize={selectedParticipantData["session_level_metric"].avg_turntaking < 50 ? "risk" : "good"} />
-                        <MetricBar label="Task focus" value={selectedParticipantData["session_level_metric"].avg_focusscore} hint="task-oriented attention windows" emphasize={selectedParticipantData["session_level_metric"].avg_focusscore < 50 ? "risk" : "good"} />
-                        <MetricBar label="Idea contribution" value={selectedParticipantData["session_level_metric"].avg_ideacontributionscore} hint="novel or extending moves" emphasize={selectedParticipantData["session_level_metric"].avg_ideacontributionscore < 50 ? "risk" : "good"} />
-                        <MetricBar label="Momentum" value={selectedParticipantData["session_level_metric"].avg_momentum} hint="direct peer uptake" emphasize={selectedParticipantData["session_level_metric"].avg_momentum < 50 ? "risk" : "good"} /> */}
-                  </CardContent>
+                    </CardContent>
                 </Card>
 
                 <Card className="rounded-[28px] border-0 bg-white/90 shadow-sm">
@@ -646,7 +641,7 @@ function CollaborationFeedbackDashboard(props) {
                 <Card className="rounded-3xl border-0 shadow-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-xl"><Sparkles className="h-5 w-5" />Agent Response</CardTitle>
-                    <CardDescription>The response is derive from a synhesis metrics tracked during your activity.</CardDescription>
+                    <CardDescription>The response is derived from a synhesis metrics tracked during your activity.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ScrollArea viewportRef={viewportRef} className="h-[480px] pr-3">

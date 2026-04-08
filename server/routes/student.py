@@ -85,3 +85,23 @@ def post_rating(**kwargs):
         return json_response({'message': "success"})
     else:
         return json_response({'message': "Posting unsuccessful"}, 400)
+    
+@api_routes.route('/api/v1/student/postsurveyresponse', methods=['POST'])
+def post_survey_response(**kwargs):
+    content = request.json
+    id = content.get('id',None)
+    sessionid = content.get('sessionid',None)
+    sessionDeviceId = content.get('sessionDeviceId',None)
+    username = content.get('username',None)
+    response = content.get('response',None)
+    survey = database.get_survey_reponse(sessionid=sessionid,sessiondeviceid=sessionDeviceId,username=username)
+    if survey and response:
+        resp = json.dumps(response)
+        success, _ = database.update_survey_reponse(survey[0].id,response=resp)
+    elif sessionid and sessionDeviceId and username and response:
+        resp = json.dumps(response)
+        success, _ = database.add_survey_reponse(sessionid,sessionDeviceId, username,resp) 
+    if success:
+        return json_response({'message': "success"})
+    else:
+        return json_response({'message': "Survey submission unsuccessful"}, 400)

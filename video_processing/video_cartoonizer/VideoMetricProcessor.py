@@ -47,7 +47,7 @@ class VideoMetricAnalytics:
             while candidate_turn < len_candidate_unique_ids:
                 # logging.info("about to start processing  emotion and attention  work for client {0} of {1} with key {2} ".format(candidate_turn,len_candidate_unique_ids,candidate_unique_ids[candidate_turn]))
                 self.worker(self.Imagedetection.accumulator_queue_manager[candidate_unique_ids[candidate_turn]],candidate_unique_ids[candidate_turn])
-                logging.info("proceesed emotion and attention work for client {0} of {1} with key {2} ".format(candidate_turn+1,len_candidate_unique_ids,candidate_unique_ids[candidate_turn]))
+                # logging.info("proceesed emotion and attention work for client {0} of {1} with key {2} ".format(candidate_turn+1,len_candidate_unique_ids,candidate_unique_ids[candidate_turn]))
                 candidate_turn += 1
 
                 # if the last candiate have been scheduled, then break so that a fresh candiadates_id is fetched
@@ -71,7 +71,7 @@ class VideoMetricAnalytics:
         auth_key,all_frames,accumulator,batch_track = payload
         processing_timer = time.monotonic()
         video_metrics = self.compute_videoMetrics(all_frames,accumulator)
-        logging.info("insert {0} into DB for batch {1}".format(video_metrics,batch_track))
+        # logging.info("insert {0} into DB for batch {1}".format(video_metrics,batch_track))
         if video_metrics: 
             
             success = callbacks.post_video_metrics(auth_key, video_metrics)

@@ -10,7 +10,7 @@ import Select from "react-select"
 import { AppInfographicsSessionComparison } from "../components/infographics-view/infographics_session-comparison"
 import { TranscriptsComponentClient } from "../transcripts/transcripts-component_client"
 import { CollaborationFeedbackDashboard } from "../components/reflection-dashboard-view/reflection-interactive-dashboard-student"
-import { adjDim, isLargeScreen } from "../myhooks/custom-hooks"
+import {SurveyCompletion} from "./survey-question"
 
 import MicIcon from "../Icons/Mic"
 
@@ -111,11 +111,8 @@ function StudentSessionDashboardPages(props) {
                                     <AppSessionToolbar
                                         session={props.session}
                                         closingSession={props.onSessionClosing}
-                                        menus={[
-                                            // {
-                                            //     title: "Individual",
-                                            //     action: () => props.viewIndividual(),
-                                            // },
+
+                                        menus={props.pathToSurveyOptions !== "survey" ? [
                                             {
                                                 title: "Comparison",
                                                 action: () => props.viewComparison(),
@@ -124,7 +121,7 @@ function StudentSessionDashboardPages(props) {
                                                 title: "Reflection Dashboard",
                                                 action: () => props.loadReflectiondashboard("Reflection Dashboard"),
                                             }
-                                        ]}
+                                        ]: []}
                                         participants={[]}
 
                                         seesions={props.previousSessions.map((session, index) => (
@@ -136,7 +133,7 @@ function StudentSessionDashboardPages(props) {
 
                                     />
                                 )}
-
+                                
 
                                 {props.nextPage === "displaygrouppage" && (
                                     <div className="infographics-container mt-2 grow overflow-y-auto">
@@ -215,7 +212,7 @@ function StudentSessionDashboardPages(props) {
                                     </div>
                                 )}
 
-                                {props.nextPage === "Reflection Dashboard" && (
+                                {props.nextPage === "Reflection Dashboard" && props.pathToSurveyOptions !== "survey" && (
                                     <div className="center-column-container">
                                         {(!props.reflectionDashboardDoneLoading) ? (
                                             <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -246,6 +243,15 @@ function StudentSessionDashboardPages(props) {
                                                         selectedMomentIdAndIndex={props.selectedMomentIdAndIndex}
                                                         setSelectedMomentIdAndIndex={props.setSelectedMomentIdAndIndex}
                                                         loadReflectionDashboardForNewSelection={props.loadReflectionDashboardForNewSelection}
+                                                        surveyquestion = {props.surveyquestion}
+                                                        likertOptions = {props.likertOptions}
+                                                        completedCount = {props.completedCount}
+                                                        ratings = {props.ratings}
+                                                        handleRate = {props.handleRate}
+                                                        handleSubmit ={props.handleSubmit}
+                                                        submitted ={props.submitted}
+                                                        setNotes ={props.setNotes}
+                                                        notes = {props.notes}
                                                     />
 
                                                 ) : (
@@ -257,7 +263,23 @@ function StudentSessionDashboardPages(props) {
                                     </div>
                                 )}
 
-                                {props.nextPage === "displayreportpage" && (
+                                {props.nextPage === "displayreportpage" && props.pathToSurveyOptions === "survey" && (
+                                    <div className="center-column-container">
+                                    <SurveyCompletion
+                                        surveyquestion = {props.surveyquestion}
+                                        likertOptions = {props.likertOptions}
+                                        completedCount = {props.completedCount}
+                                        ratings = {props.ratings}
+                                        handleRate = {props.handleRate}
+                                        handleSubmit ={props.handleSubmit}
+                                        submitted ={props.submitted}
+                                        setNotes ={props.setNotes}
+                                        notes = {props.notes}
+                                    />
+                                    </div>
+                                )}
+
+                                {props.nextPage === "displayreportpage" && props.pathToSurveyOptions !== "survey" && (
                                     <div className="center-column-container">
                                         {(!props.transcriptDoneLoading && !props.videoMetricDoneLoading) ? (
                                             <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -378,7 +400,7 @@ function StudentSessionDashboardPages(props) {
             </GenericDialogBox>
             <DialogBox
                 itsclass={"add-dialog"}
-                heading={"Error"}
+                heading={props.dialogHeading}
                 message={props.alertMessage}
                 show={props.showAlert}
                 closedialog={props.closeAlert}
