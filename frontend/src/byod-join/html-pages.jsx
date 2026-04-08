@@ -786,7 +786,7 @@ function ByodJoinPage(props) {
                             <button
                                 className={style5["basic-button"]}
                                 onClick={() => {
-                                    props.addSpeakerFingerprint(
+                                    props.changeAliasName(
                                         document.getElementById("txtAlias")
                                             .value,
                                     )
