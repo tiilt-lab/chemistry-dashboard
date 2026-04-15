@@ -28,10 +28,28 @@ export class ApiService {
     );
   }
   
+  getAudioPosthocWebsocketEndpoint() {
+    return (
+      this.getWSSProtocol() +
+      "//" +
+      // window.location.host.split(":")[0] +
+      window.location.host +
+      "/audio_posthoc_socket"
+    );
+  }
+
     getVideoWebsocketEndpoint() {
     return (
          this.getWSSProtocol() +
       "//" + this.getVideoServerEndpoint() +"/video_socket"
+    );
+      
+  }
+
+   getVideoPosthocWebsocketEndpoint() {
+    return (
+         this.getWSSProtocol() +
+      "//" + window.location.host +"/video_posthoc_socket"
     );
       
   }

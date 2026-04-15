@@ -3,7 +3,7 @@ import { DeviceService } from '../services/device-service';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserModel } from '../models/user';
-import {StudentModel} from '../models/student';
+import { StudentModel } from '../models/student';
 import { RaterModel } from '../models/rater';
 import { DeviceModel } from '../models/device'
 import { SettingComponentPage } from './html-pages'
@@ -14,9 +14,9 @@ function SettingsComponent(props) {
   const [users, setUsers] = useState()
   const [students, setStudents] = useState()
   const [raters, setRaters] = useState()
-  const [userToDelete, setUserToDelete] = useState(); 
-  const [studentToDelete, setStudentToDelete] = useState(); 
-  const [raterToDelete, setRaterToDelete] = useState(); 
+  const [userToDelete, setUserToDelete] = useState();
+  const [studentToDelete, setStudentToDelete] = useState();
+  const [raterToDelete, setRaterToDelete] = useState();
   const [devices, setDevices] = useState();
   const [currentForm, setCurrentForm] = useState("");
   const [statusTitle, setStatusTitle] = useState('');
@@ -121,16 +121,21 @@ function SettingsComponent(props) {
   const syncStudentProfile = async () => {
     const response = await new AuthService().syncStudentProfile()
     if (response.status === 200) {
-      setStatusTitle('Success');
-      setStatus('Student Profile Syncing Completed.');
-      setCurrentForm("Status")
+      response.json().then(
+        obj => {
+          setStatusTitle('Success');
+          setStatus('Student Profile Syncing Completed and ' + obj.new_data_inserted + " new profile inserted");
+          setCurrentForm("Status")
+        }
+      )
+
     } else if (response.status === 400) {
       setStatusTitle('Error');
       setStatus('Student Profile Syncing Failed.');
       setCurrentForm("Status")
     }
   }
-  
+
   const closeDialog = () => {
     setStatus("");
     setCurrentForm("");
@@ -186,8 +191,8 @@ function SettingsComponent(props) {
     )
   }
 
-  const createRater = (sessionid,sessiondeviceid,speakerid,speakertag,raterid,type,evaluationcategory) => {
-    const fetchData = new AuthService().createRater(sessionid,sessiondeviceid,speakerid,speakertag,raterid,type,evaluationcategory)
+  const createRater = (sessionid, sessiondeviceid, speakerid, speakertag, raterid, type, evaluationcategory) => {
+    const fetchData = new AuthService().createRater(sessionid, sessiondeviceid, speakerid, speakertag, raterid, type, evaluationcategory)
     fetchData.then(
       response => {
         if (response.status === 200) {
@@ -195,7 +200,7 @@ function SettingsComponent(props) {
           respJson.then(
             result => {
               setStatusTitle('Rater Created');
-              setStatus('Rater Created Successfully' );
+              setStatus('Rater Created Successfully');
             }, error => {
               setStatusTitle('Failed to Create Rater')
               setStatus(error.json()['message']);
@@ -255,54 +260,54 @@ function SettingsComponent(props) {
   }
 
   const deleteSelectedStudent = () => {
-  const fetchData = new AuthService().deleteStudent(studentToDelete.id)
-  fetchData.then(
-    response => {
-      if (response.status === 200) {
-        const respJson = response.json()
-        respJson.then(
-          result => {
-            setStatusTitle('Student Deleted');
-            setStatus(studentToDelete.username + ' has been deleted.');
-          }, error => {
-            setStatusTitle('Failed to Delete Student')
-            setStatus(studentToDelete.username + ' could not be deleted.');
-          }
-        )
+    const fetchData = new AuthService().deleteStudent(studentToDelete.id)
+    fetchData.then(
+      response => {
+        if (response.status === 200) {
+          const respJson = response.json()
+          respJson.then(
+            result => {
+              setStatusTitle('Student Deleted');
+              setStatus(studentToDelete.username + ' has been deleted.');
+            }, error => {
+              setStatusTitle('Failed to Delete Student')
+              setStatus(studentToDelete.username + ' could not be deleted.');
+            }
+          )
+        }
+      },
+      apierror => {
+        console.log("settingcomponent func : confirmDeleteUser", apierror)
       }
-    },
-    apierror => {
-      console.log("settingcomponent func : confirmDeleteUser", apierror)
-    }
-  ).finally(
-    () => setCurrentForm("Status")
-  )
-}
+    ).finally(
+      () => setCurrentForm("Status")
+    )
+  }
 
-const deleteSelectedRater = () => {
-  const fetchData = new AuthService().deleteRater(raterToDelete.id)
-  fetchData.then(
-    response => {
-      if (response.status === 200) {
-        const respJson = response.json()
-        respJson.then(
-          result => {
-            setStatusTitle('Rater Deleted');
-            setStatus(raterToDelete.raterid + ' has been deleted.');
-          }, error => {
-            setStatusTitle('Failed to Delete Rater')
-            setStatus(raterToDelete.raterid + ' could not be deleted.');
-          }
-        )
+  const deleteSelectedRater = () => {
+    const fetchData = new AuthService().deleteRater(raterToDelete.id)
+    fetchData.then(
+      response => {
+        if (response.status === 200) {
+          const respJson = response.json()
+          respJson.then(
+            result => {
+              setStatusTitle('Rater Deleted');
+              setStatus(raterToDelete.raterid + ' has been deleted.');
+            }, error => {
+              setStatusTitle('Failed to Delete Rater')
+              setStatus(raterToDelete.raterid + ' could not be deleted.');
+            }
+          )
+        }
+      },
+      apierror => {
+        console.log("settingcomponent func : confirmDeleteUser", apierror)
       }
-    },
-    apierror => {
-      console.log("settingcomponent func : confirmDeleteUser", apierror)
-    }
-  ).finally(
-    () => setCurrentForm("Status")
-  )
-}
+    ).finally(
+      () => setCurrentForm("Status")
+    )
+  }
   const lockUser = (userId) => {
     userId = +userId;
     const fetchData = new AuthService().lockUser(userId)
@@ -417,11 +422,11 @@ const deleteSelectedRater = () => {
 
   const downloadServerLogs = async (type) => {
     setCurrentForm("Loading");
-    try{
-    const fetchData = await new AuthService().getServerLogs(type)
-      if(fetchData !== null && fetchData.status === 200){
+    try {
+      const fetchData = await new AuthService().getServerLogs(type)
+      if (fetchData !== null && fetchData.status === 200) {
         const respJson = await fetchData.json()
-        if(respJson !== null){
+        if (respJson !== null) {
           const dataUrl = respJson["data"];
           const res = await fetch(dataUrl)
           const blob = await res.blob()
@@ -433,68 +438,68 @@ const deleteSelectedRater = () => {
           setStatusTitle('Logs Downloaded');
           setStatus('The logs have been downloaded successfully.');
           setCurrentForm("Status")
-        }else{
+        } else {
           setStatusTitle('Logs Download Failed')
           setStatus('The logs failed to download.  Please try again later.');
           setCurrentForm("Status")
         }
-      }else{
+      } else {
         setCurrentForm("Status")
         console.log("settingcomponent func : downloadServerLogs")
       }
-    }catch(e){
+    } catch (e) {
       setCurrentForm("Status")
-      console.log(e,'downloadserverlogs')
+      console.log(e, 'downloadserverlogs')
     }
-    
+
   }
 
   const downloadDeviceLogs = async (deviceId) => {
     deviceId = +deviceId;
     setCurrentForm('Loading');
-    try{
-    const fetchData = await new AuthService().getDeviceLogs(deviceId)
-    if(fetchData !== null && fetchData.status === 200){
-      const respJson = await fetchData.json()
-      if(respJson !== null){
-        const dataUrl = respJson["data"];
-        const res = await fetch(dataUrl)
-        const blob = await res.blob()
-        const blobUrl = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = blobUrl;
-        link.download = "pod_" + deviceId + "_logs.txt";
-        link.click();
-        setStatusTitle('Logs Downloaded');
-        setStatus('The logs have been downloaded successfully.');
-        setCurrentForm("Status")
-      }else{
+    try {
+      const fetchData = await new AuthService().getDeviceLogs(deviceId)
+      if (fetchData !== null && fetchData.status === 200) {
+        const respJson = await fetchData.json()
+        if (respJson !== null) {
+          const dataUrl = respJson["data"];
+          const res = await fetch(dataUrl)
+          const blob = await res.blob()
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = blobUrl;
+          link.download = "pod_" + deviceId + "_logs.txt";
+          link.click();
+          setStatusTitle('Logs Downloaded');
+          setStatus('The logs have been downloaded successfully.');
+          setCurrentForm("Status")
+        } else {
+          setStatusTitle('Logs Download Failed')
+          setStatus('The logs failed to download.  Please try again later.');
+          setCurrentForm("Status")
+        }
+      } else {
+        const respJson = await fetchData.json()
+        setStatus(respJson['message']);
         setStatusTitle('Logs Download Failed')
-        setStatus('The logs failed to download.  Please try again later.');
         setCurrentForm("Status")
+        console.log("settingcomponent func : downloadDeviceLogs")
       }
-    }else{
-      const respJson = await fetchData.json()
-      setStatus(respJson['message']);
-      setStatusTitle('Logs Download Failed')
+    } catch (e) {
       setCurrentForm("Status")
-      console.log("settingcomponent func : downloadDeviceLogs")
+      console.log(e, 'downloadserverlogs')
     }
-  }catch(e){
-    setCurrentForm("Status")
-    console.log(e,'downloadserverlogs')
-  }
 
   }
 
   const deleteServerLogs = async (type) => {
     setCurrentForm('Loading');
     const fetchData = await new AuthService().deleteServerLogs(type)
-    if (fetchData!= null && fetchData.status === 200) {
+    if (fetchData != null && fetchData.status === 200) {
       setStatusTitle('Logs Deleted');
       setStatus('The logs have been deleted successfully.');
       setCurrentForm("Status")
-    }else{
+    } else {
       const respJson = await fetchData.json()
       setStatus(respJson['message']);
       setStatusTitle('Logs Deleted');
@@ -507,11 +512,11 @@ const deleteSelectedRater = () => {
     deviceId = +deviceId;
     setCurrentForm('Loading');
     const fetchData = await new AuthService().deleteDeviceLogs(deviceId)
-    if (fetchData!= null && fetchData.status === 200) {
+    if (fetchData != null && fetchData.status === 200) {
       setStatusTitle('Logs Deleted');
       setStatus('The logs have been deleted successfully.');
       setCurrentForm("Status")
-    }else{
+    } else {
       const respJson = await fetchData.json()
       setStatus(respJson['message']);
       setStatusTitle('Logs Deleted');
@@ -591,8 +596,8 @@ const deleteSelectedRater = () => {
       changePassword={changePassword}
       users={users}
       students={students}
-      raters = {raters}
-      devices = {devices}
+      raters={raters}
+      devices={devices}
       confirmDeleteUser={confirmDeleteUser}
       confirmDeleteStudent={confirmDeleteStudent}
       confirmDeleteRater={confirmDeleteRater}

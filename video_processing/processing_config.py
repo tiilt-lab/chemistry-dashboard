@@ -23,7 +23,7 @@ class ProcessingConfig:
         self.mimeExtension = mimeExtension
 
     @staticmethod
-    def from_json(data):
+    def from_json(data,source=None):
         auth_key = data.get('key', None)
         encoding = data.get('encoding', None)
         try:
@@ -75,6 +75,10 @@ class ProcessingConfig:
                 session_config = json.loads(callbacks.get_redis_session_config(session_key))
                 server_start = datetime.strptime(session_config.get('server_start', None), "%Y-%m-%d %H:%M:%S")
                 start_offset = max((datetime.utcnow() - server_start).total_seconds() - offset, 0.0)
+            elif not session_key and source == "posthoc processing":
+                server_start = datetime.strptime(data.get('server_start', None), "%Y-%m-%dT%H:%M:%S.%fZ")
+                convert_off_set = datetime.strptime(data.get('off_set_date', None), "%a %b %d %H:%M:%S %Y")
+                start_offset = max((convert_off_set - server_start).total_seconds() - offset, 0.0)
             else:
                 logging.warning('Invalid key sent by device.')
                 return False, "Invalid key."

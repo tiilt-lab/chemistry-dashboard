@@ -1,0 +1,17 @@
+[Unit]
+Description=Audio Posthoc Processor Service
+After=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Group=www-data
+Type=simple
+Restart=always
+RestartSec=1
+LimitRTPRIO=99
+LimitRTTIME=infinity
+WorkingDirectory=/home/tde3218/chemistry-dashboard/
+ExecStart=/home/tde3218/.pyenv/versions/audio_processor/bin/python audio_processing/server_posthoc.py
+
+[Install]
+WantedBy=multi-user.target

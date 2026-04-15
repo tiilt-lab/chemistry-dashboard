@@ -18,3 +18,4 @@ hmmlearn
 sentence-transformers
 speechbrain
 scikit-learn
+soundfile

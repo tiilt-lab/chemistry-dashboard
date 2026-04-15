@@ -5,6 +5,7 @@ import logging
 import re
 import nltk
 import os
+import traceback
 
 # Setting limit lower will increase load times but will weaken results.
 # In total, this model has about 3,000,000 words.
@@ -17,26 +18,32 @@ def initialize(limit=100000):
     print('Model unpacked.')
 
 def detect_keywords(transcript, keywords, threshold=0.6):
-    # Split transcript by word and remove special characters.
-    words = re.sub("[.,!?]", '', transcript).split()
+    try:
+        # Split transcript by word and remove special characters.
+        words = re.sub("[.,!?]", '', transcript).split()
 
-    # Reduce transcript words and keywords down to words in model.
-    words = [word for word in words if word in KEYWORD_MODEL.vocab]
-    keywords = [keyword for keyword in keywords if keyword in KEYWORD_MODEL.vocab]
+        # Reduce transcript words and keywords down to words in model.
+        words = [word for word in words if word in KEYWORD_MODEL.vocab]
+        keywords = [keyword for keyword in keywords if keyword in KEYWORD_MODEL.vocab]
 
-    results = []
-    for word in words:
-        for keyword in keywords:
-            distance = KEYWORD_MODEL.distance(keyword, word)
-            if (distance < threshold):
-                results.append({
-                    'word': word,
-                    'keyword': keyword,
-                    'similarity': distance
-                })
-    return results
+        results = []
+        for word in words:
+            for keyword in keywords:
+                distance = KEYWORD_MODEL.distance(keyword, word)
+                if (distance < threshold):
+                    results.append({
+                        'word': word,
+                        'keyword': keyword,
+                        'similarity': distance
+                    })
+        return results
+    except Exception as e:
+        error_str = traceback.format_exc()
+        logging.info('exception occured while detecting keyword : {0}'.format(error_str))
+
 
 if __name__ == '__main__':
     initialize(100000)
     results = detect_keywords('apple banana fruit', ['fruit'])
+    logging.info("inside init keyword {0}".format(results))
     print(results)
