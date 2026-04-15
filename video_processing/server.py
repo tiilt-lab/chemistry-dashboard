@@ -171,7 +171,8 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.redu_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1,self.config.mimeExtension)
 
                 if (self.config.videocartoonify or self.config.video) and not cf.video_cartoonize() and not cf.process_video_analytics(): 
-                    self.send_json({'type':'error','message':'Video processing not activated to start video processor'})
+                    self.running = True
+                    self.send_json({'type':'start','message':'Video processing not activated to start video processor'})
                     logging.info('Video process connected but video processing not activated')
                     callbacks.post_connect(self.config.auth_key)
                 else:
@@ -214,11 +215,11 @@ class ServerProtocol(WebSocketServerProtocol):
 
                 # Save audio data only if video saving is activated is activated.
                 # as we need to merge the audio data with the carttonized video
-                if cf.video_record_original or cf.video_record_reduced and (cf.video_cartoonize() or cf.process_video_analytics()):
+                if (cf.video_record_original or cf.video_record_reduced) and (cf.video_cartoonize() or cf.process_video_analytics()):
                     self.orig_vid_recorder.write_audio(audiobyte)
 
-                if os.path.isfile(temp_aud_file+'.wav'):
-                    os.remove(temp_aud_file+'.wav')
+                    if os.path.isfile(temp_aud_file+'.wav'):
+                        os.remove(temp_aud_file+'.wav')
 
                 self.video_count = self.video_count + 1    
             

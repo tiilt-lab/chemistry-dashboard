@@ -1586,23 +1586,12 @@ function JoinPage() {
 
         // countdown
         // await runCountdown(3);
+        stopMeters();
+        stopVisionLoop();
         setIsRecording(true)
     };
 
-    // const runCountdown = (n) =>
-    //     new Promise((resolve) => {
-    //         let val = n;
-    //         setCountdown(val);
-    //         const id = setInterval(() => {
-    //             val -= 1;
-    //             if (val <= 0) {
-    //                 clearInterval(id);
-    //                 setCountdown(null);
-    //                 resolve();
-    //             } else setCountdown(val);
-    //         }, 1000);
-    //     });
-
+  
     return (
         <ByodJoinPage
             state={state}
