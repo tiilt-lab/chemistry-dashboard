@@ -135,7 +135,7 @@ function SettingsComponent(props) {
       setCurrentForm("Status")
     }
   }
-  
+
   const closeDialog = () => {
     setStatus("");
     setCurrentForm("");

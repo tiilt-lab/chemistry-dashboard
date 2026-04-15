@@ -153,10 +153,10 @@ class ServerProtocol(WebSocketServerProtocol):
 
                 if self.stream_data == 'audio':
                     if cf.record_original():
-                        filename = os.path.join(cf.recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
+                        filename = os.path.join(cf.recordings_folder(), "{0}({1})_orig".format(self.config.auth_key, str(time.ctime())))
                         self.orig_recorder = WaveRecorder(filename, self.config.sample_rate, self.config.depth, self.config.channels)
                     if cf.record_reduced():
-                        filename = os.path.join(cf.recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
+                        filename = os.path.join(cf.recordings_folder(), "{0}({1})_redu".format(self.config.auth_key, str(time.ctime())))
                         self.redu_recorder = WaveRecorder(filename, 16000, 2, 1)
                 self.signal_start()
                 self.send_json({'type':'start'})

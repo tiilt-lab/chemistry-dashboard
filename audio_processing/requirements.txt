@@ -18,4 +18,5 @@ hmmlearn
 sentence-transformers
 speechbrain
 scikit-learn
+soundfile
 hf_xet

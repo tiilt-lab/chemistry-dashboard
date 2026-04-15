@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from redis_helper import RedisSessions
 import json
 import logging
@@ -29,7 +29,7 @@ class ProcessingConfig:
         self.mimeExtension = mimeExtension
 
     @staticmethod
-    def from_json(data):
+    def from_json(data,source=None):
         auth_key = data.get('key', None)
         encoding = data.get('encoding', None)
         try:
@@ -88,6 +88,16 @@ class ProcessingConfig:
             topic_model = session_config.get('topic_model', None)
             owner = session_config.get('owner', None)
 
+        elif not session_key and source == "posthoc processing":
+            server_start = datetime.strptime(data.get('server_start', None), "%Y-%m-%dT%H:%M:%S.%fZ")
+            convert_off_set = datetime.strptime(data.get('off_set_date', None), "%a %b %d %H:%M:%S %Y")
+            start_offset = max((convert_off_set - server_start).total_seconds() - offset, 0.0)
+            transcribe = data.get('transcribe', True)
+            features = data.get('features', False)
+            keywords = data.get('keywords', [])
+            doa = data.get('doa', False)
+            topic_model = data.get('topic_model', None)
+            owner = data.get('owner', None)
         else:
             logging.warning('Invalid key sent by device.')
             return False, "Invalid key."

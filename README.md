@@ -278,3 +278,80 @@ sudo cp deploy/nginx.conf /etc/nginx/nginx.conf
 sudo cp deploy/nginx-headers.conf /etc/nginx/nginx-headers.conf
 sudo nginx -s reload
 ```
+
+## Setup with Vagrant VM (Alternative)
+
+If you prefer to use Vagrant instead of manual installation:
+
+### Software Requirements
+- Git, Node.js, Python 3, pip3
+- [VirtualBox](https://www.virtualbox.org/wiki/Downloads)
+- [Vagrant](https://www.vagrantup.com/downloads.html)
+- Ansible: `pip3 install ansible`
+
+### Setup Instructions
+
+Navigate to the project directory containing `Vagrantfile` and run:
+```
+vagrant up --provider virtualbox
+```
+
+For your first deployment, it will ask which network interface to use for the VM's bridged network.
+
+Once deployed, Vagrant will display the local IP address of your VM. The Discussion Capture web application will be available at that IP.
+
+You will need to create your first web application user:
+```
+vagrant ssh
+source /var/lib/chemistry-dashboard/server/venv/bin/activate
+python3 /var/lib/chemistry-dashboard/server/create_user.py
+deactivate
+```
+
+## Developer Guide
+
+### Manually Running Services
+
+The services run automatically on boot via systemd. For development, you can stop the systemd service and run manually:
+
+**Discussion Capture Server:**
+```
+sudo systemctl stop discussion_capture
+cd /var/lib/chemistry-dashboard
+pyenv local discussion_capture
+python server/discussion_capture.py
+```
+
+**Audio Processing Service:**
+```
+sudo systemctl stop audio_processor
+cd /var/lib/chemistry-dashboard
+pyenv local audio_processor
+python audio_processing/server.py
+```
+
+**Video Processing Service:**
+```
+sudo systemctl stop video_processor
+cd /var/lib/chemistry-dashboard
+pyenv local video_processor
+python video_processing/server.py
+```
+
+### Chrome HTTPS Workaround for Local Development
+
+Accessing a device's microphone is often restricted to HTTPS traffic (the local server runs on HTTP). To test BYOD functionality in Chrome, navigate to:
+
+```
+chrome://flags/#unsafely-treat-insecure-origin-as-secure
+```
+
+Add your local server's IP (e.g. `http://192.168.1.101`) to the "Insecure origins treated as secure" list, then relaunch.
+
+### Accessing the UI
+
+After installation and reboot, access the dashboard at `http://<server_ip>` where `server_ip` is the IP of the server on the network.
+
+## TODO
+- [ ] Audit and update outdated dependencies across all components (frontend npm packages, server/audio/video Python packages). Stale Dependabot PRs were closed — dependency updates will be handled as a coordinated batch effort.
+- [ ] Set up CI/CD pipeline (testing, linting, automated checks).

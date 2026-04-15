@@ -26,7 +26,7 @@ import config as cf
 NANO = 1000000000
 
 
-class AudioProcessor:
+class AudioProcessorPosthoc:
     def __init__(self, audio_buffer, transcript_queue, diarization_model,
                  semantic_model, config):
         self.audio_buffer = audio_buffer
@@ -165,12 +165,10 @@ class AudioProcessor:
             if self.config.transcribe:
                 transcript_text = transcript_data.alternatives[0].transcript
                 questions = features_detector.detect_questions(transcript_text)
-
             # Get Keywords.
             keywords = None
             if self.config.keywords:
-                keywords = keyword_detector.detect_keywords(
-                    transcript_text, self.config.keywords)
+                keywords = keyword_detector.detect_keywords(transcript_text, self.config.keywords)
 
             # Get Topics
             topics = None
@@ -204,7 +202,6 @@ class AudioProcessor:
                                  word.end_time.seconds + (word.end_time.nanos / NANO)) for word in words]
                 doa = calculateDOA(start_time, audio_data, word_timings,
                                    16000, self.config.channels, self.config.depth)
-
             features = None
             if self.config.features:
                 features = features_detector.detect_features(transcript_text)
@@ -215,10 +212,11 @@ class AudioProcessor:
             # Perform Speaker Diarization
             speaker_tag = None
             speaker_id = -1
-        
             if self.config.diarization and self.fingerprints and len(self.fingerprints):
                 speaker_tag, speaker_id = checkFingerprints(
                         audio_data, self.fingerprints, self.diarization_model)
+                
+                logging.info("processed for {0} : {1}".format(self.config.auth_key,[str(int(start_time//60))+':'+str(int(start_time%60)), str(int(end_time//60))+':'+str(int(end_time%60)),transcript_text,  speaker_tag, speaker_id]))
                 self.speaker_metrics_process.process_transcript(
                     {
                         'source': self.config.auth_key,
@@ -232,7 +230,7 @@ class AudioProcessor:
                         'topic_id': topic_id,
                         'speaker_tag': speaker_tag,
                         'speaker_id': speaker_id
-                    })
+                    },source="posthoc_processing")
             else:
                 if self.config.diarization:
                     if len(self.embeddings) == 0 and self.embeddings_file is not None:
@@ -254,6 +252,7 @@ class AudioProcessor:
                     })
                     
                     np.save(self.embeddings_file, np.array(self.embeddings))
+                
                 success, transcript_id = callbacks.post_transcripts(
                     self.config.auth_key, start_time, end_time,
                     transcript_text, doa, questions, keywords,

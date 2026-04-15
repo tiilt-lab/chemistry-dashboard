@@ -901,8 +901,8 @@ def compute_derived_metric_and_update(metric_acc_per_window,speakerDetail,total_
         speaking_slience_focus = gazeontask*50+ speaking*50
         facial_emotion = most_common_emotion
         
-       
-        shared_task_focus.append(gazeontask/total_speaker_detected)
+        stf = gazeontask/total_speaker_detected if total_speaker_detected > 0 else 0
+        shared_task_focus.append(stf)
         focusscore.append(round((focus_level+speaking_slience_focus)/2,2))
         speakingalignmentscore.append(keyword_similarity_score_val)
         participationscore.append(participation_score_val)
@@ -982,23 +982,44 @@ def compute_derived_metric_and_update(metric_acc_per_window,speakerDetail,total_
     mid_trend = Counter(session_trend[len_session_trend//3 : (len_session_trend//3)*2]).most_common(1)[0][0] if session_trend and len_session_trend >= 3 else -1
     late_trend = Counter(session_trend[(len_session_trend//3)*2 : len_session_trend ]).most_common(1)[0][0] if session_trend and len_session_trend >= 3 else -1
     session_metrics=[]
-    session_metrics.append(round(sum(focusscore)/total_windows,2))
-    session_metrics.append(round(sum(participationscore)/total_windows,2))
-    session_metrics.append(round(sum(responsivityscore)/total_windows,2))
-    session_metrics.append(round(sum(enagementscore)/total_windows,2))           
-    session_metrics.append(round(sum(reasoningscore)/total_windows,2))
-    session_metrics.append(round(sum(leadershipscore)/total_windows,2))
-    session_metrics.append(round(sum(initiativescore)/total_windows,2))
-    session_metrics.append(round(sum(ideacontributionscore)/total_windows,2))
-    session_metrics.append(round(sum(speakingalignmentscore)/total_windows,2))
-    session_metrics.append(round(sum(momentum)/total_windows,2))
-    session_metrics.append(round((sum(speaking_word_count)/sum(total_verbal_turn_acc))*100,2))
-    session_metrics.append(round((len(speaking_word_count)/len(total_verbal_turn_acc))*100,2))
+    if total_windows > 0:
+        session_metrics.append(round(sum(focusscore)/total_windows,2))
+        session_metrics.append(round(sum(participationscore)/total_windows,2))
+        session_metrics.append(round(sum(responsivityscore)/total_windows,2))
+        session_metrics.append(round(sum(enagementscore)/total_windows,2))           
+        session_metrics.append(round(sum(reasoningscore)/total_windows,2))
+        session_metrics.append(round(sum(leadershipscore)/total_windows,2))
+        session_metrics.append(round(sum(initiativescore)/total_windows,2))
+        session_metrics.append(round(sum(ideacontributionscore)/total_windows,2))
+        session_metrics.append(round(sum(speakingalignmentscore)/total_windows,2))
+        session_metrics.append(round(sum(momentum)/total_windows,2))
+        session_metrics.append(round((sum(shared_task_focus)/total_windows)*100,2))
+    else:
+        session_metrics.append(0)
+        session_metrics.append(0)
+        session_metrics.append(0)
+        session_metrics.append(0)           
+        session_metrics.append(0)
+        session_metrics.append(0)
+        session_metrics.append(0)
+        session_metrics.append(0)
+        session_metrics.append(0)
+        session_metrics.append(0) 
+        session_metrics.append(0) 
+
+    if len(total_verbal_turn_acc) > 0:      
+        session_metrics.append(round((sum(speaking_word_count)/sum(total_verbal_turn_acc))*100,2))
+        session_metrics.append(round((len(speaking_word_count)/len(total_verbal_turn_acc))*100,2))
+    else:
+        session_metrics.append(0)
+        session_metrics.append(0)  
+
     session_metrics.append(session_most_common_trend)
     session_metrics.append(early_trend)
     session_metrics.append(mid_trend)
     session_metrics.append(late_trend)
-    session_metrics.append(round((sum(shared_task_focus)/total_windows)*100,2))
+    
+
     group_level_metric_acc['focusscore'].append(session_metrics[0]/100)
     group_level_metric_acc['participationscore'].append(session_metrics[1]/100)
     group_level_metric_acc['responsivity'].append(session_metrics[2]/100)
@@ -1009,18 +1030,19 @@ def compute_derived_metric_and_update(metric_acc_per_window,speakerDetail,total_
     group_level_metric_acc['ideacontributionscore'].append(session_metrics[7]/100)
     group_level_metric_acc['speakingalignmentscore'].append(session_metrics[8]/100)
     group_level_metric_acc['momentum'].append(session_metrics[9]/100)
-    group_level_metric_acc['verbalshare'].append(session_metrics[10]/100)
-    group_level_metric_acc['turntaking'].append(session_metrics[11]/100)
-    group_level_metric_acc['trenddirection'].append(session_metrics[12])
-    group_level_metric_acc['earlytrenddirection'].append(session_metrics[13])
-    group_level_metric_acc['midtrenddirection'].append(session_metrics[14])
-    group_level_metric_acc['latetrenddirection'].append(session_metrics[15])
-    group_level_metric_acc['sharedtaskfocus'].append(session_metrics[16])
+    group_level_metric_acc['sharedtaskfocus'].append(session_metrics[10])
+    group_level_metric_acc['verbalshare'].append(session_metrics[11]/100)
+    group_level_metric_acc['turntaking'].append(session_metrics[12]/100)
+    group_level_metric_acc['trenddirection'].append(session_metrics[13])
+    group_level_metric_acc['earlytrenddirection'].append(session_metrics[14])
+    group_level_metric_acc['midtrenddirection'].append(session_metrics[15])
+    group_level_metric_acc['latetrenddirection'].append(session_metrics[16])
+    
 
 
     
     session_data_heading = ['avg_focusscore','avg_participationscore','avg_responsivity','avg_engagementscore','avg_reasoningscore','avg_leadershipscore', 'avg_initiativescore','avg_ideacontributionscore',
-                            'avg_speakingalignmentscore','avg_momentum','avg_verbalshare','avg_turntaking','avg_trenddirection','earlytrenddirection','midtrenddirection','latetrenddirection','sharedtaskfocus'] 
+                            'avg_speakingalignmentscore','avg_momentum','sharedtaskfocus','avg_verbalshare','avg_turntaking','avg_trenddirection','earlytrenddirection','midtrenddirection','latetrenddirection'] 
     Combined_object['session_level'][speakeralias] = dict(zip(session_data_heading,session_metrics))
    
 def synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,windowsize=10): #speakers,

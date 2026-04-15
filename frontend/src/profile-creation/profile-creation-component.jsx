@@ -72,7 +72,7 @@ function SignupPage() {
             if (mimeExtension !== "" && (mimetype.endsWith("opus") || mimetype.endsWith("aac") || mimetype.endsWith("mp4a.40.2"))) {
                 //activate video websocket 
                 audiows.current = new WebSocket(apiService.getAudioWebsocketEndpoint())
-                videows.current = new WebSocket(apiService.getVideoWebsocketEndpoint())
+                videows.current = new WebSocket(apiService.getVideoPosthocWebsocketEndpoint())
                 connect_audio_websocket_processor_service();
                 connect_video_websocket_processor_service();
             } else {

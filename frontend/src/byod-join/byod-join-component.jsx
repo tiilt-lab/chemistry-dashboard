@@ -78,7 +78,23 @@ function JoinPage() {
     const [sessionClosing, setSessionClosing] = useState(false)
     const [prevSessionId, setPrevSessionId] = useState(-1)
     const [pcode, setPcode] = useState("")
+
+    //media stream states
     const [constraintObj, setConstraintObj] = useState(null)
+    const [micId, setMicId] = useState();
+    const [camId, setCamId] = useState();
+    const [rmsDb, setRmsDb] = useState(-Infinity);
+    const [peakDb, setPeakDb] = useState(-Infinity);
+    const [clipping, setClipping] = useState(false);
+    const [avgLuma, setAvgLuma] = useState(0);
+    const [devices, setDevices] = useState([]);
+    const [noiseFloorDb, setNoiseFloorDb] = useState(null);
+    const [isPreviewing, setIsPreviewing] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
+    const analyserRef = useRef(null);
+
     const [mimetype, setMimeType] = useState(null)
     const [mimeExtension, setMimeExtension] = useState(null);
     const [wrongInput, setWrongInput] = useState(false)
@@ -175,16 +191,22 @@ function JoinPage() {
         ]
         initChecklistData(boxArr, setShowBoxes)
 
+        //get all media devices on page load
+        // navigator.mediaDevices?.enumerateDevices().then(setDevices).catch(() => { });
     }, [])
+
+    // useEffect(() => {
+
+    // }, []);
 
 
     // SECOND LEVEL: THIS IS TRIGGERED WHEN THE USER CLICKS ON THE JOIN BUTTON AND TRIGGERS THE VALIDATION OF THE INPUTS AND AUDIO DEVICES. THIS THEN TRIGGERS THE REQUEST FOR THE ACCESS KEY FROM THE SERVER
     useEffect(() => {
-        if (constraintObj !== null && mimetype !== null && pcode !== "" && joinwith.current !== "") handleStream()
-    }, [constraintObj, pcode, mimetype])
+        if (constraintObj !== null && pcode !== "" && joinwith.current !== "") handleStream() // && mimetype !== null
+    }, [constraintObj, pcode])//, mimetype
 
 
-   // THIRD LEVEL: THIS EFFECT IS TRIGGERED ONCE THE CONNECTION TO THE AUDIO AND VIDEO WEBSOCKET SERVERS ARE OPENED. THIS THEN TRIGGERS THE START OF THE AUDIO AND VIDEO PROCESSING BY SENDING A MESSAGE TO THE SERVER TO START THE PROCESSING
+    // THIRD LEVEL: THIS EFFECT IS TRIGGERED ONCE THE CONNECTION TO THE AUDIO AND VIDEO WEBSOCKET SERVERS ARE OPENED. THIS THEN TRIGGERS THE START OF THE AUDIO AND VIDEO PROCESSING BY SENDING A MESSAGE TO THE SERVER TO START THE PROCESSING
     useEffect(() => {
         if (joinwith.current == "Audio" && state.audioSocketOpen) {
             requestStartAudioProcessing()
@@ -275,14 +297,14 @@ function JoinPage() {
             }
         };
 
-        // Stop heartbeat immediately once validation is complete
-        if (state.speakersValidated) {
-             if (joinwith.current === "Audio") {
-                dispatch({ type: "START_STREAMING", payload: (state.audioReady && state.audioSocketOpen  && state.speakersValidated) })
-             }else if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
+        // Stop heartbeat immediately once validation is complete and recording have started
+        if (isRecording) {
+            if (joinwith.current === "Audio") {
+                dispatch({ type: "START_STREAMING", payload: (state.audioReady && state.audioSocketOpen && state.speakersValidated) })
+            } else if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
                 dispatch({ type: "START_STREAMING", payload: (state.audioReady && state.videoReady && state.audioSocketOpen && state.videoSocketOpen && state.speakersValidated) })
-             } 
-            
+            }
+
             clearHeartbeat();
             return;
         }
@@ -307,7 +329,7 @@ function JoinPage() {
             clearHeartbeat();
         };
         // }
-    }, [state.audioSocketOpen, state.videoSocketOpen, state.audioReady, state.videoReady, state.speakersValidated]);
+    }, [state.audioSocketOpen, state.videoSocketOpen, state.audioReady, state.videoReady, state.speakersValidated, isRecording]);
 
 
 
@@ -629,7 +651,7 @@ function JoinPage() {
 
     }
 
-    const addSavedSpeakerFingerprint =  () => {
+    const addSavedSpeakerFingerprint = () => {
 
         let message = null
         message = {
@@ -738,18 +760,19 @@ function JoinPage() {
                     })
                 }
             } else {
-                navigator.mediaDevices
-                    .enumerateDevices()
-                    .then((devices) => {
-                        devices.forEach((device) => {
+                navigator.mediaDevices.enumerateDevices().then(setDevices).catch(() => { });
+                // navigator.mediaDevices
+                //     .enumerateDevices()
+                //     .then((devices) => {
+                //         devices.forEach((device) => {
 
-                            // console.log(device.kind.toUpperCase(), device.label);
-                            //, device.deviceId
-                        })
-                    })
-                    .catch((err) => {
-                        console.log(err.name, err.message)
-                    })
+                //             // console.log(device.kind.toUpperCase(), device.label);
+                //             //, device.deviceId
+                //         })
+                //     })
+                //     .catch((err) => {
+                //         console.log(err.name, err.message)
+                //     })
             }
 
             if (navigator.mediaDevices != null) {
@@ -1114,10 +1137,10 @@ function JoinPage() {
 
             if (response.status === 200) {
                 const jsonObj = await response.json()
-                const fetched_trancript_metrics = jsonObj.map((item, index) => {return { ...item['transcript'], speaker_metrics: item['speaker_metrics'] }});
+                const fetched_trancript_metrics = jsonObj.map((item, index) => { return { ...item['transcript'], speaker_metrics: item['speaker_metrics'] } });
 
                 transcripts.current = fetched_trancript_metrics
-                
+
                 const sessionLen =
                     Object.keys(session).length > 0 ? session.length : 0
                 setStartTime(Math.round(sessionLen * timeRange.current[0] * 100) / 100)
@@ -1327,7 +1350,7 @@ function JoinPage() {
             console.error(
                 "Screen Wake Lock API is not supported by the browser",
             )
-            return 
+            return
         }
 
         try {
@@ -1391,6 +1414,186 @@ function JoinPage() {
         setDetails("Individual");
     }
 
+    // Start preview with selected devices
+    const startPreview = async () => {
+        stopEverything();
+        const constraints = (joinwith.current === "Video" || joinwith.current === "Videocartoonify") ? {
+            video: {
+                deviceId: camId ? { exact: camId } : undefined,
+                width: 640, // { ideal: 1280 },
+                height: 480, //{ ideal: 720 },
+                frameRate: { ideal: 30, max: 30 },
+                facingMode: 'user',
+            },
+            audio: {
+                deviceId: micId ? { exact: micId } : undefined,
+                //channelCount: 1,
+                sampleRate: 16000,
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: false,
+            },
+        } :
+            {
+                video: false,
+                audio: {
+                    deviceId: micId ? { exact: micId } : undefined,
+                    //channelCount: 1,
+                    sampleRate: 16000,
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: false,
+                },
+            }
+
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        streamReference.current = stream;
+        const mediaType = await pickMimeType(constraints)
+        const mediaExt = (mediaType !== "" && mediaType.indexOf("webm") !== -1) ? "webm" : (mediaType !== "" && mediaType.indexOf("mp4") !== -1) ? "mp4" : ""
+        setMimeType(mediaType)
+        setMimeExtension(mediaExt)
+
+        if ((joinwith.current === "Video" || joinwith.current === "Videocartoonify") && videoRef.current) {
+            videoRef.current.srcObject = stream;
+            await videoRef.current.play();
+        }
+
+        // audio chain
+        const ctx = new AudioContext({ sampleRate: 16000 });
+        audioContext.current = ctx;
+        const src = ctx.createMediaStreamSource(stream);
+        source.current = src;
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 2048;
+        analyserRef.current = analyser;
+        src.connect(analyser);
+
+        if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
+            // warm up noise floor during 2s silence window
+            setNoiseFloorDb(null);
+            const noiseWindowMs = 1500;
+            const start = performance.now();
+            const data = new Float32Array(analyser.fftSize);
+
+            const sampleNoise = () => {
+                if (!analyserRef.current) return;
+                analyserRef.current.getFloatTimeDomainData(data);
+                const rms = Math.sqrt(data.reduce((s, v) => s + v * v, 0) / data.length) || 1e-8;
+                const db = 20 * Math.log10(rms);
+                if (performance.now() - start > noiseWindowMs) {
+                    setNoiseFloorDb(db);
+                } else {
+                    requestAnimationFrame(sampleNoise);
+                }
+            };
+            requestAnimationFrame(sampleNoise);
+            startVisionLoop();
+        }
+
+        startMeters();
+        setIsPreviewing(true);
+
+    };
+
+    const stopEverything = () => {
+        stopMeters();
+        stopVisionLoop();
+
+        mediaRecorder.current?.stop();
+        mediaRecorder.current = null;
+
+        streamReference.current?.getTracks().forEach(t => t.stop());
+        streamReference.current = null;
+
+        audioContext.current?.close();
+        audioContext.current = null;
+
+        setIsPreviewing(false);
+        setIsRecording(false);
+    };
+
+    // Audio meters
+    let meterRAF = 0;
+    const startMeters = () => {
+        const analyser = analyserRef.current;
+        if (!analyser) return;
+        const buf = new Float32Array(analyser.fftSize);
+        const loop = () => {
+            analyser.getFloatTimeDomainData(buf);
+            // RMS
+            const rms = Math.sqrt(buf.reduce((s, v) => s + v * v, 0) / buf.length) || 1e-8;
+            const peak = buf.reduce((p, v) => Math.max(p, Math.abs(v)), 0) || 1e-8;
+            const rmsDbNew = 20 * Math.log10(rms);
+            const peakDbNew = 20 * Math.log10(peak);
+            setRmsDb(rmsDbNew);
+            setPeakDb(peakDbNew);
+            setClipping(peak > 0.98); // near full‑scale
+            meterRAF = requestAnimationFrame(loop);
+        };
+        meterRAF = requestAnimationFrame(loop);
+    };
+    const stopMeters = () => cancelAnimationFrame(meterRAF);
+
+    // Vision loop (brightness + face guidance)
+    let visionRAF = 0;
+    const startVisionLoop = () => {
+        const v = videoRef.current;
+        const c = canvasRef.current;
+        if (!v || !c) return;
+        const ctx = c.getContext('2d');
+        if (!ctx) return;
+
+        const loop = async () => {
+            if (!v.videoWidth || !v.videoHeight) {
+                visionRAF = requestAnimationFrame(loop);
+                return;
+            }
+            c.width = v.videoWidth;
+            c.height = v.videoHeight;
+            ctx.drawImage(v, 0, 0, c.width, c.height);
+
+            // average luma (very cheap): convert to 1px via drawImage scaling
+            const thumbW = 32, thumbH = 18;
+            const tmp = document.createElement('canvas');
+            tmp.width = thumbW; tmp.height = thumbH;
+            const tctx = tmp.getContext('2d');
+            tctx.drawImage(c, 0, 0, thumbW, thumbH);
+            const img = tctx.getImageData(0, 0, thumbW, thumbH).data;
+            let sum = 0;
+            for (let i = 0; i < img.length; i += 4) {
+                const r = img[i], g = img[i + 1], b = img[i + 2];
+                // Rec. 601 luma approximation
+                sum += 0.299 * r + 0.587 * g + 0.114 * b;
+            }
+            const luma = sum / (img.length / 4);
+            setAvgLuma(luma);
+
+            visionRAF = requestAnimationFrame(loop);
+        };
+        visionRAF = requestAnimationFrame(loop);
+    };
+    const stopVisionLoop = () => cancelAnimationFrame(visionRAF);
+
+    // Start a recording (test or full)
+    const beginRecording = async () => {
+        if (!streamReference.current) return;
+
+        const mediaRec = new MediaRecorder(streamReference.current, {
+            mimeType: mimetype,
+            // videoBitsPerSecond: 2_000_000,
+            // audioBitsPerSecond: 96_000,
+        })
+
+        mediaRecorder.current = mediaRec
+
+        // countdown
+        // await runCountdown(3);
+        stopMeters();
+        stopVisionLoop();
+        setIsRecording(true)
+    };
+
+  
     return (
         <ByodJoinPage
             state={state}
@@ -1461,6 +1664,25 @@ function JoinPage() {
             loadSpeakerMetrics={loadSpeakerMetrics}
             selectedSpkralias={selectedSpkralias}
             prevSessionId={prevSessionId}
+
+            //media streams
+            devices={devices}
+            camId={camId}
+            micId={micId}
+            setMicId={setMicId}
+            setCamId={setCamId}
+            rmsDb={rmsDb}
+            peakDb={peakDb}
+            clipping={clipping}
+            noiseFloorDb={noiseFloorDb}
+            isPreviewing={isPreviewing}
+            startPreview={startPreview}
+            stopEverything={stopEverything}
+            isRecording={isRecording}
+            beginRecording={beginRecording}
+            videoRef={videoRef}
+            canvasRef={canvasRef}
+            avgLuma={avgLuma}
         />
     )
 }

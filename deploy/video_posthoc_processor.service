@@ -1,5 +1,5 @@
 [Unit]
-Description=Video posthoc Processing Service
+Description=Video Processing Service
 After=network-online.target
 StartLimitIntervalSec=0
 
@@ -12,7 +12,7 @@ LimitRTPRIO=99
 LimitRTTIME=infinity
 WorkingDirectory=/home/tde3218/chemistry-dashboard/
 Environment="PYTHONPATH=/home/tde3218/chemistry-dashboard/video_processing:/home/tde3218/chemistry-dashboard/video_processing/yolo_head"
-ExecStart=/home/tde3218/.pyenv/versions/video_processor/bin/python video_processing/server.py
+ExecStart=/home/tde3218/.pyenv/versions/video_processor/bin/python video_processing/server_posthoc.py
 
 [Install]
 WantedBy=multi-user.target

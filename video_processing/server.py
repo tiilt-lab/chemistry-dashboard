@@ -1,8 +1,4 @@
 import os
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
 import json
 import time
 import glob
@@ -11,6 +7,7 @@ import shutil
 import logging
 import callbacks
 import threading
+import traceback
 import weakref
 import wave
 import scipy.signal
@@ -28,9 +25,6 @@ from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager
 from video_cartoonizer.videoprocessor import VideoProcessor
 from datetime import datetime
-cv2.setNumThreads(1)
-torch.set_num_threads(1)
-torch.set_num_interop_threads(1)
 from twisted.internet import reactor, task
 from autobahn.twisted.websocket import WebSocketServerFactory
 from autobahn.twisted.websocket import WebSocketServerProtocol
@@ -42,13 +36,14 @@ from attention_tracking.attention_tracking import AttentionDetection
 from video_cartoonizer.VideoMetricProcessor import VideoMetricAnalytics
 from global_singleton_lock import get_attention_emotion_predictor, get_object_detector
 
+STOP_SIGNAL = object()
 cm = ConnectionManager()
 cartoon_model = VideoCartoonifyLoader()
 facial_emotion_detector = EmotionDetectionModel()
 attention_detection = AttentionDetection()
 facial_emotion_detector_V1 = EmotionDetectionModelV1()
-image_object_detection = ImageObjectDetection()
-video_metric_analytics = VideoMetricAnalytics(attention_detection, facial_emotion_detector_V1, image_object_detection)
+image_object_detection = ImageObjectDetection(STOP_SIGNAL)
+video_metric_analytics = VideoMetricAnalytics(attention_detection, facial_emotion_detector_V1, image_object_detection,STOP_SIGNAL)
 
 
 class ServerProtocol(WebSocketServerProtocol):
@@ -93,7 +88,8 @@ class ServerProtocol(WebSocketServerProtocol):
                 try:
                     self.process_json(data)
                 except Exception as e:
-                    logging.warning('Error processing json: {0}'.format(e))
+                    error_str = traceback.format_exc()
+                    logging.warning('Error processing json: {0}'.format(error_str))
 
     def onClose(self, wasClean, code, reason):
         logging.info("close was trigered externally..... wasclean {0}, code {1}, reason {2}".format( wasClean, code, reason))
@@ -116,18 +112,6 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.currSpeaker = data['id']
                 self.currAlias = data['alias']
                 logging.info("preparing for speaker {}'s fingerprint".format(self.currSpeaker))
-        
-        if data['type'] == 'save-audio-video-fingerprinting':
-            self.currStudent = data['id']
-            self.stream_data = data['streamdata']
-            self.mediaExt = data['mimeextension']
-            self.currAlias = data['alias']
-            if self.stream_data == 'audio-video-fingerprint':
-                    self.video_file = os.path.join(cf.video_recordings_folder(), "{0}".format(self.currAlias))
-                    self.vid_recorder = VidRecorder(self.video_file,"none","none",cf.video_record_original(),16000, 2, 1,self.mediaExt)
-                    
-            logging.info('save-audio-video-fingerprinting: Audio process connected')
-            self.send_json({'type':'saveaudiovideo'})
 
         if data['type'] == 'add-saved-fingerprint':
             currSpeaker = data['id']
@@ -177,7 +161,7 @@ class ServerProtocol(WebSocketServerProtocol):
                         self.cartoon_image_queue = None
                          
                         self.video_processor = VideoProcessor(self.cartoon_model,self.facial_emotion_detector,self.image_object_detection,self.attention_detection, \
-                                                                self.video_queue,self.frame_queue,self.cartoon_image_queue,self.config,cf,self.frame_dir,self.filename,aud_filename,16000, 2,1,self.interval)
+                                                                self.video_queue,self.frame_queue,self.cartoon_image_queue,self.config,cf,self.frame_dir,self.filename,aud_filename,16000, 2,1,self.interval,STOP_SIGNAL)
                         self.video_processor.add_websocket_connection(self)
                         
                 if cf.video_record_reduced():
@@ -187,7 +171,8 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.redu_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1,self.config.mimeExtension)
 
                 if (self.config.videocartoonify or self.config.video) and not cf.video_cartoonize() and not cf.process_video_analytics(): 
-                    self.send_json({'type':'error','message':'Video processing not activated to start video processor'})
+                    self.running = True
+                    self.send_json({'type':'start','message':'Video processing not activated to start video processor'})
                     logging.info('Video process connected but video processing not activated')
                     callbacks.post_connect(self.config.auth_key)
                 else:
@@ -201,6 +186,7 @@ class ServerProtocol(WebSocketServerProtocol):
             if cf.video_record_original():
                 if self.config.mimeExtension == "webm":
                     self.orig_vid_recorder.write(data,self.filename+'.'+self.config.mimeExtension)
+                    logging.info('i just appended video data  for {0} to file'.format(self.config.auth_key))
 
                 elif self.config.mimeExtension == "mp4":
                     # temp_file_name = self.filename_remux+"_"+str(self.video_count)+"."+self.config.mimeExtension
@@ -211,79 +197,34 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.video_files_accum.append(fixed)
             
             if self.config.mimeExtension == "webm":
-                temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
-                #accumulate. the file names to be used to combine the video chunks as one file
-                vidclip = mp.VideoFileClip(self.filename+'.'+self.config.mimeExtension)
-                subclips = vidclip.subclip((self.video_count-1)*self.interval,self.video_count*self.interval)
-                subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=16000,bitrate='50k') #nbytes=2,codec='pcm_s16le',
+                if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()): 
+                    temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
+                    #accumulate. the file names to be used to combine the video chunks as one file
+                    vidclip = mp.VideoFileClip(self.filename+'.'+self.config.mimeExtension)
+                    subclips = vidclip.subclip((self.video_count-1)*self.interval,self.video_count*self.interval)
+                    subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=16000,bitrate='50k') #nbytes=2,codec='pcm_s16le',
 
-                wavObj = wave.open(temp_aud_file+'.wav')
-                audiobyte = self.reduce_wav_channel(1,wavObj)
+                    wavObj = wave.open(temp_aud_file+'.wav')
+                    audiobyte = self.reduce_wav_channel(1,wavObj)
 
                 if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()): 
                     chunk_iter = subclips.iter_frames(fps=10, dtype="uint8", with_times=True)
                     self.enqueue_latest_video_chunk(chunk_iter)
                     # self.video_queue.put(subclips.iter_frames(fps=10, dtype="uint8", with_times=True))
-                    # logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
+                    logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
 
                 # Save audio data only if video saving is activated is activated.
                 # as we need to merge the audio data with the carttonized video
-                if cf.video_record_original or cf.video_record_reduced:
+                if (cf.video_record_original or cf.video_record_reduced) and (cf.video_cartoonize() or cf.process_video_analytics()):
                     self.orig_vid_recorder.write_audio(audiobyte)
 
-                if os.path.isfile(temp_aud_file+'.wav'):
-                    os.remove(temp_aud_file+'.wav')
+                    if os.path.isfile(temp_aud_file+'.wav'):
+                        os.remove(temp_aud_file+'.wav')
 
                 self.video_count = self.video_count + 1    
-
-            # if os.path.isfile(temp_file_name):
-            #     os.remove(temp_file_name)    
-
-            
-            
-        elif self.stream_data == 'audio-video-fingerprint':
-            self.vid_recorder.write(data,self.video_file+"."+self.mediaExt)
-            
-            savedEmbedding = self.savefacialembedding()
-            
-            if os.path.isfile(self.video_file+'.'+self.mediaExt):
-                    os.remove(self.video_file+'.'+self.mediaExt)
-
-            if savedEmbedding:
-                logging.info('video biometrics saved')
-                self.send_json({'type': 'saved', 'message': "Biometric data captured successfully"})
-            else:
-                self.send_json({'type': 'error', 'message': "Facial capuring failed, please record yourself again with better lighting"})
             
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
-
-    
-    def savefacialembedding(self):
-        embeddings = []
-        student_embedding = {}
-        facial_embedding_file = os.path.join(cf.facial_embedding_folder(), "{0}".format(self.currAlias))
-
-        vidclip = mp.VideoFileClip(self.video_file+'.'+self.mediaExt)
-        for frame in vidclip.iter_frames(fps=5, dtype="uint8"):
-            # Detect face locations in the frame
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            face_locations = face_recognition.face_locations(frame)
-
-            # Get 128-D face embeddings for each detected face
-            encodings = face_recognition.face_encodings(frame, face_locations,num_jitters=2)
-        
-            if len(encodings) > 0:
-                embeddings.append(encodings[0])  # Take first detected face
-
-        if len(embeddings) == 0:
-            return False
-
-        # Compute average embedding
-        avg_embedding = np.mean(embeddings, axis=0)
-        student_embedding[self.currAlias] = avg_embedding
-        np.save(facial_embedding_file+".npy", student_embedding)
-        return True
 
     
     def remux_mp4(self,src, dst):

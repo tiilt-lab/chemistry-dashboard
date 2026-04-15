@@ -26,7 +26,7 @@ WAIT_TIMEOUT = 0.05   # 50 ms (tune this)
 
 class VideoProcessor:
     def __init__(self,cartoon_model,facial_emotion_detector,image_object_detection,attention_detection, \
-                video_queue,frame_queue,cartoon_image_queue,config,cf,vid_img_dir,video_filename,aud_filename,sample_rate,depth,channels,video_interval):
+                video_queue,frame_queue,cartoon_image_queue,config,cf,vid_img_dir,video_filename,aud_filename,sample_rate,depth,channels,video_interval,stop_signal,save_gaze_annotation=False):
         
         self.config = config
         self.cf = cf
@@ -62,7 +62,7 @@ class VideoProcessor:
         self.facialEmbeddings = None
         self.video_interval = video_interval
         self.video_chunk_count = -1
-        self.STOP = object()  # sentinel
+        self.STOP = stop_signal  # sentinel
         # One shared pool instead of creating threads per batch
         # self.pool = ThreadPoolExecutor(max_workers=3) #ProcessPoolExecutor(max_workers=4)
         self.pending_future = None
@@ -110,8 +110,8 @@ class VideoProcessor:
                         "Very depressed":0,"Very distressed":0,"Very droopy":0,"Very excited":0,"Very frustrated":0,"Very gloomy":0,"Very happy":0,"Very miserable":0,
                         "Very pleased":0,"Very sad":0,"Very satisfied":0,"Very serene":0,"Very sleepy":0,"Very tensed":0,"Very tired":0}
         
-        logging.info('vid directory is {0}'.format(self.vid_img_dir))
-        if not os.path.exists(self.vid_img_dir):
+       
+        if save_gaze_annotation and not os.path.exists(self.vid_img_dir):
             os.mkdir(self.vid_img_dir)
         
         
@@ -328,7 +328,7 @@ class VideoProcessor:
             # self.process_video_analytics(frames_batch, self.facialEmbeddings, batch_idx, time_markers, self.vid_img_dir,self.config.auth_key)
             
 
-    def enqueue_latest_frame_payload(self, payload,candidate_queue_id, timeout=0.5):
+    def enqueue_latest_frame_payload(self, payload,candidate_queue_id, timeout=0.8):
         """
         Keep only the most recent chunk in the queue.
         If the queue is full, remove the stale queued chunk and replace it.
@@ -337,11 +337,14 @@ class VideoProcessor:
         if candidate_queue_id in self.image_object_detection.frame_queue_manager:
             candidate_frame_queue = self.image_object_detection.frame_queue_manager[candidate_queue_id]
         else:
-            self.image_object_detection.frame_queue_manager[candidate_queue_id] = Queue(maxsize=50)
+            self.image_object_detection.frame_queue_manager[candidate_queue_id] = Queue()#maxsize=30
             candidate_frame_queue = self.image_object_detection.frame_queue_manager[candidate_queue_id]
 
         try:
+            t1 = time.time()
             candidate_frame_queue.put(payload, timeout=timeout)
+            t2 = time.time()
+            logging.info(f"Inside video processing:  adding to frame queue took {t2 - t1:.6f}s")
             # logging.info("i just inserted frames into the queue for candidate  {0}".format(candidate_queue_id))
             return True
         except Full:
