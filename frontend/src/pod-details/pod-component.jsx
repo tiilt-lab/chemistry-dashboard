@@ -1,16 +1,10 @@
-import { Observable } from "rxjs";
-import { DeviceService } from "../services/device-service";
 import { SessionService } from "../services/session-service";
-import { ActiveSessionService } from "../services/active-session-service";
-import { SessionModel } from "../models/session";
-import { DeviceModel } from "../models/device";
-import { TranscriptModel } from "../models/transcript";
-import { KeywordUsageModel } from "../models/keyword-usage";
+import { ApiService } from '../services/api-service';
 import { SpeakerModel } from "../models/speaker";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useReducer } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { PodComponentPages } from "./html-pages";
-import { Question } from "@/Icons";
+import { Satellite } from "lucide-react";
 
 function PodComponent() {
   const [sessionDevice, setSessionDevice] = useState({});
@@ -56,7 +50,55 @@ function PodComponent() {
   const promptResponses = useRef({})
   const [isThinking, setIsThinking] = useState(false)
   const [selectedMomentIdAndIndex, setSelectedMomentIdAndIndex] = useState(null);
+  const [displayText, setDisplayText] = useState("")
+  const heartbeatIntervalRef = useRef(null)
+
+  const audiowebsocket = useRef(null)
+  const videowebsocket = useRef(null)
   const navigate = useNavigate();
+  const apiService = new ApiService()
+
+  //Reducer and state for managing connection and streaming status
+  const initialState = {
+    audioSocketOpen: false,
+    videoSocketOpen: false,
+    audioSocketReady: false,
+    videoSocketReady: false,
+    audioProcessStarted: false,
+    videoProcessStarted: false,
+    audioProcessCompleted: false,
+    videoProcessCompleted: false,
+    audioSocketClosed: false,
+    videoSocketClosed: false
+  };
+
+  function reducer(state, action) {
+    switch (action.type) {
+      case "AUDIO_SOCKET_OPEN":
+        return { ...state, audioSocketOpen: action.payload };
+      case "VIDEO_SOCKET_OPEN":
+        return { ...state, videoSocketOpen: action.payload };
+      case "AUDIO_SOCKET_READY":
+        return { ...state, audioSocketReady: action.payload };  
+      case "VIDEO_SOCKET_READY":
+        return { ...state, videoSocketReady: action.payload };    
+      case "AUDIO_PROCESSING_STARTED":
+        return { ...state, audioProcessStarted: action.payload };
+      case "VIDEO_PROCESSING_STARTED":
+        return { ...state, videoProcessStarted: action.payload };  
+      case "AUDIO_PROCESS_COMPLETED":
+        return { ...state, audioProcessCompleted: action.payload };
+      case "VIDEO_PROCESS_COMPLETED":
+        return { ...state, videoProcessCompleted: action.payload };  
+      case "AUDIO_SOCKET_CLOSED":
+        return { ...state, audioSocketClosed: action.payload };
+      case "VIDEO_SOCKET_CLOSED":
+        return { ...state, videoSocketClosed: action.payload };  
+      default:
+        return state;
+    }
+  }
+  const [state, dispatch] = useReducer(reducer, initialState);
 
   useEffect(() => {
     // if (endTime === undefined) {
@@ -238,6 +280,116 @@ function PodComponent() {
     }
   }, [participantIDReflectionDashboard])
 
+  useEffect(() => {
+    let message = null
+    if (state.audioSocketOpen) {
+      message = {
+        type: "Initialize_audio_processing_analytics",
+        sessionid: sessionId,
+        server_start:session.creation_date,
+        keywords: session.keywords,
+        sessiondeviceid: sessionDeviceId,
+        speakers: speakers.map((sp) => { return {id:sp.id, alias:sp.alias} })
+      }
+      console.log("sending message")
+      audiowebsocket.current.send(JSON.stringify(message))
+    } else if (state.videoSocketOpen ) {
+      message = {
+        type: "Initialize_video_processing_analytics",
+        sessionid: sessionId,
+        server_start:session.creation_date,
+        sessiondeviceid: sessionDeviceId,
+        speakers: speakers.map((sp) => { return {id:sp.id, alias:sp.alias} })
+      }
+      videowebsocket.current.send(JSON.stringify(message))
+    }
+
+
+  }, [state.audioSocketOpen, state.videoSocketOpen])
+
+  useEffect(() => {
+    if (state.audioSocketReady) {
+      audiowebsocket.current.send( JSON.stringify({ type: "start_posthoc_audio_processing"}));
+    }else if(state.videoSocketReady){
+      videowebsocket.current.send( JSON.stringify({ type: "start_posthoc_video_processing"}));
+    }
+
+  }, [state.audioSocketReady,state.videoSocketReady])
+
+  useEffect(() => {
+    if (state.audioProcessStarted || state.videoProcessStarted) {
+      setCurrentForm("posthocanalytics");
+      
+      // start sending heartbeat till
+      const clearHeartbeat = () => {
+            if (heartbeatIntervalRef.current) {
+                clearInterval(heartbeatIntervalRef.current);
+                heartbeatIntervalRef.current = null;
+            }
+        };
+
+        const sendHeartbeat = () => {
+            if (audiowebsocket.current?.readyState === WebSocket.OPEN) {
+                audiowebsocket.current.send(
+                    JSON.stringify({ type: "heartbeat_from_posthoc_processing", key: "no key (posthoc processing)" })
+                )
+                console.log("sent heart beat")
+            }else if(videowebsocket.current?.readyState === WebSocket.OPEN){
+              videowebsocket.current.send(JSON.stringify({ type: "heartbeat_from_posthoc_processing", key: "no key (posthoc processing)" }))
+            } else {
+                clearHeartbeat();
+            }
+        };
+
+        // Stop heartbeat immediately once processing is complete
+        if (state.audioProcessCompleted || state.videoProcessCompleted) {
+            clearHeartbeat();
+            return;
+        }
+
+        sendHeartbeat(); // send immediately
+        heartbeatIntervalRef.current = setInterval(sendHeartbeat, 20000);
+
+        return () => {
+            clearHeartbeat();
+        };
+
+    }
+
+  }, [state.audioProcessStarted,state.videoProcessStarted,state.audioProcessCompleted,state.videoProcessCompleted])
+
+  useEffect(() => {
+    if (state.audioProcessCompleted) {
+      setDisplayText("PostHoc Audio Analytics Processing Completed")
+      setCurrentForm("success")
+      audiowebsocket.current.close()
+    }else if (state.videoProcessCompleted) {
+      setDisplayText("PostHoc Video Analytics Processing Completed")
+      setCurrentForm("success")
+      videowebsocket.current.close()
+    }
+  }, [state.audioProcessCompleted, state.videoProcessCompleted])
+
+  useEffect(() => {
+    if (state.audioSocketClosed) {
+      setCurrentForm("")
+      if (audiowebsocket.current != null) {
+        audiowebsocket.current.close()
+        audiowebsocket.current = null
+        console.log("Closed audio post hoc analytics processing ")
+      }
+    }else  if (state.videoSocketClosed) {
+      setCurrentForm("")
+      if (videowebsocket.current != null) {
+        videowebsocket.current.close()
+        videowebsocket.current = null
+        console.log("Closed video post hoc analytics processing ")
+      }
+    }
+
+  }, [state.audioSocketClosed,state.videoSocketClosed])
+
+
   // to initialize the checklist data structures
   const initChecklistData = (featuresArr, setFn) => {
     let valueInd = 0;
@@ -357,10 +509,10 @@ function PodComponent() {
   };
 
   const loading = (details) => {
-    if(details === "Reflection Dashboard"){
+    if (details === "Reflection Dashboard") {
       return Object.keys(llmSessionAnalysis.current).length <= 0
-    }else{
-    return session === null || transcripts === null;
+    } else {
+      return session === null || transcripts === null;
     }
   };
 
@@ -493,6 +645,7 @@ function PodComponent() {
     }
 
     try {
+      setDisplayText("Please wait ...")
       setCurrentForm("awaitingllmresponse");
       const response = await new SessionService().getLLMFeedbackBasedOnMetrics(respObj);
 
@@ -593,6 +746,89 @@ function PodComponent() {
     setDetails("Individual");
   }
 
+  const connecttoaudioservice = () => {
+    if (!state.audioSocketOpen) {
+      audiowebsocket.current = new WebSocket(apiService.getAudioPosthocWebsocketEndpoint())
+      connect_audio_posthoc_processor_service()
+    } 
+
+  }
+
+  const connecttovideoservice = (speakerId, speakrAlias) => {
+    if (!state.videoSocketOpen) {
+      videowebsocket.current = new WebSocket(apiService.getVideoPosthocWebsocketEndpoint())
+      connect_video_processor_service()
+    } 
+  }
+
+  // Connects to processor websocket server.
+  const connect_audio_posthoc_processor_service = () => {
+    audiowebsocket.current.binaryType = "arraybuffer"
+
+    audiowebsocket.current.onopen = (e) => {
+      dispatch({ type: "AUDIO_SOCKET_OPEN", payload: true })
+    };
+
+    audiowebsocket.current.onmessage = (e) => {
+      if (typeof e.data === 'string') {
+        const message = JSON.parse(e.data);
+        if (message['type'] === 'init posthoc analytics completed') {
+          dispatch({ type: "AUDIO_SOCKET_READY", payload: true })
+        }else if (message['type'] === 'audio posthoc analytics started') {
+          setDisplayText(message['message'])
+          dispatch({ type: "AUDIO_PROCESSING_STARTED", payload: true })
+        }else if (message['type'] === 'process_completed') {
+          dispatch({ type: "AUDIO_PROCESS_COMPLETED", payload: true })
+        }
+        else if (message['type'] === 'error') {
+          setDisplayText(message['message'])
+          console.log("message from the audio server is " + message["message"])
+          setCurrentForm("audiowebsocketerror")
+        }
+      }
+    };
+
+    audiowebsocket.current.onclose = e => {
+      dispatch({ type: "AUDIO_SOCKET_CLOSED", payload: true })
+      console.log('Disconnected]');
+    };
+
+  }
+
+  // Connects to processor websocket server.
+  const connect_video_processor_service = () => {
+    videowebsocket.current.binaryType = "arraybuffer"
+
+    videowebsocket.current.onopen = (e) => {
+      dispatch({ type: "VIDEO_SOCKET_OPEN", payload: true })
+    };
+
+    videowebsocket.current.onmessage = (e) => {
+      if (typeof e.data === 'string') {
+        const message = JSON.parse(e.data);
+        if (message['type'] === 'init posthoc analytics completed') {
+          dispatch({ type: "VIDEO_SOCKET_READY", payload: true })
+        }else if (message['type'] === 'video posthoc analytics started') {
+          setDisplayText(message['message'])
+          dispatch({ type: "VIDEO_PROCESSING_STARTED", payload: true })
+        }else if (message['type'] === 'process_completed') {
+          dispatch({ type: "VIDEO_PROCESS_COMPLETED", payload: true })
+        }
+        else if (message['type'] === 'error') {
+          setDisplayText(message['message'])
+          console.log("message from the video server is " + message["message"])
+          setCurrentForm("videowebsocketerror")
+        }
+      }
+    };
+
+    videowebsocket.current.onclose = e => {
+      dispatch({ type: "VIDEO_SOCKET_CLOSED", payload: true })
+      console.log('Disconnected]');
+    };
+
+  }
+
   return (
     <PodComponentPages
       sessionDevice={sessionDevice}
@@ -649,6 +885,12 @@ function PodComponent() {
       currentParticipant={currentParticipant}
       selectedMomentIdAndIndex={selectedMomentIdAndIndex}
       setSelectedMomentIdAndIndex={setSelectedMomentIdAndIndex}
+
+      //Process audio analytics 
+      connecttoaudioservice={connecttoaudioservice}
+      connecttovideoservice={connecttovideoservice}
+      displayText = {displayText}
+
     />
   );
 }

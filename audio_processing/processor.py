@@ -215,6 +215,7 @@ class AudioProcessor:
             # Perform Speaker Diarization
             speaker_tag = None
             speaker_id = -1
+        
             if self.config.diarization and self.fingerprints and len(self.fingerprints):
                 speaker_tag, speaker_id = checkFingerprints(
                         audio_data, self.fingerprints, self.diarization_model)

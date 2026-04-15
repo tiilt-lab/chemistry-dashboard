@@ -113,7 +113,7 @@ class AuthService {
 
   syncStudentProfile() {
     const body = {};
-    return new ApiService().httpRequestCall("api/v1/syncstudenttable", 'POST', body);
+    return new ApiService().httpRequestCall("api/v1/callback/syncstudenttable", 'POST', body);
   }
  
   getStudentProfileByID(username) {

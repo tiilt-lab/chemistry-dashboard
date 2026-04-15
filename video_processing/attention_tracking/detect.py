@@ -2,6 +2,7 @@ import argparse
 import queue
 import threading
 import time
+import traceback
 from pathlib import Path
 import os
 import sys
@@ -19,18 +20,20 @@ from ultralytics.engine.results import Results
 from .utils.dataset import AttentionFlow
 sys.path.insert(0,'./yolo_head')
 from yolo_head.models.experimental import attempt_load
-from yolo_head.utils.datasets import LoadStreams, LoadImages, LoadImageDataset
+from yolo_head.utils.datasets import LoadStreams, LoadImages, LoadImageDataset,letterbox2
 from yolo_head.utils.general import check_img_size, non_max_suppression, scale_coords
 from yolo_head.utils.torch_utils import select_device
 from yolo_head.utils.plots import plot_one_box
 
 
 class ImageObjectDetection:
-    def __init__(self):
+    def __init__(self,stop_signal,num_workers=1,source="real_time"):
         self.frame_queue_manager = {}
         self.accumulator_queue_manager = {}
-        self.frame_queue = queue.Queue()
-        self.accumulator_queue = queue.Queue()  # limit to last 5 processed batches for attention/emotion analysis
+        self.work_queue = queue.Queue(maxsize=10)
+        self.workers = []
+        self.num_workers = num_workers
+        self.source = source
         self.imgsz =  640
         self.head_width_threshold = 50
         self.model_1 = None
@@ -48,7 +51,9 @@ class ImageObjectDetection:
         self.object_names_V_K = {}
         self.object_names_K_V = {}
         self.tracker = sv.ByteTrack()
-        self.STOP = object()  # sentinel
+        self.lock = threading.Lock()
+        self.STOP = stop_signal  # sentinel
+        self.user_completed = set()
     
 
     def init_model(self,batch_size):
@@ -97,9 +102,15 @@ class ImageObjectDetection:
         elif isinstance(names_model_2,dict):
             self.object_names_K_V = names_model_2
             self.object_names_V_K = {v: k for k, v in names_model_2.items()}
-
+    
     def start(self):
         self.running = True
+
+        for _ in range(self.num_workers):
+            t = threading.Thread(target=self.worker_loop, daemon=True)
+            t.start()
+            self.workers.append(t)
+
         self.object_detection_thread = threading.Thread(target=self.scheduler, name="object-detection-thread")
         self.object_detection_thread.daemon = True
         self.object_detection_thread.start()
@@ -123,8 +134,16 @@ class ImageObjectDetection:
             #     continue
 
             while candidate_turn < len_candidate_unique_ids:
-                # logging.info("about to start processing  imagedection work for client {0} of {1} with key {2} ".format(candidate_turn,len_candidate_unique_ids,candidate_unique_ids[candidate_turn]))
-                self.worker(self.frame_queue_manager[candidate_unique_ids[candidate_turn]],candidate_unique_ids[candidate_turn])
+                try:
+                    # block briefly to avoid CPU spin; adjust timeout for latency needs
+                    payload = self.frame_queue_manager[candidate_unique_ids[candidate_turn]].get_nowait() #get(timeout=0.25)
+                except Empty:
+                    continue
+                
+                self.work_queue.put(payload) 
+                # self.worker(self.frame_queue_manager[candidate_unique_ids[candidate_turn]],candidate_unique_ids[candidate_turn])
+
+
                 # logging.info("proceesed imagedection work for client {0} of {1} with key {2} ".format(candidate_turn+1,len_candidate_unique_ids,candidate_unique_ids[candidate_turn]))
                 candidate_turn += 1
 
@@ -133,40 +152,63 @@ class ImageObjectDetection:
                 if candidate_turn == len_candidate_unique_ids:
                     break
 
-    def worker(self,candidate_queue, candidate_queue_id):
+            # for posthoc processing use this to exit the thread
+            if  self.source != "real_time" and  self.user_completed and len(self.user_completed) == len_candidate_unique_ids:
+                self.stop()
+                logging.info("Stopping image detection thread scheduler")
+    
+    def worker_loop(self):
+        while self.running:
+            # logging.info(f"Inside Image-dection: about to read from worker queue {t0:.6f}s")
+            try:
+                t0 = time.time()  
+                payload = self.work_queue.get(timeout=0.1)
+            except Empty:
+                continue
+            t1 = time.time()  
+            logging.info(f"Inside Image-dection: reading from worker queue took {t1 - t0:.6f}s")    
+            t2 = time.time()  
+            self.worker(payload)
+            t3 = time.time()
+            logging.info(f"Inside Image-dection:  procesing image dectection took {t3 - t2:.6f}s")
+
+    def worker(self,payload):
         # while self.running:
+        # t0 = time.time()
+        # try:
+        #     # block briefly to avoid CPU spin; adjust timeout for latency needs
+        #     payload = candidate_queue.get_nowait() #get(timeout=0.25)
+        #     t1 = time.time()
+        #     logging.info(f"Inside Image-dection: read from frame queue for {candidate_queue_id} in {t1 - t0:.6f}s")
+        # except Empty:
+        #     return
+
+        # if payload is self.STOP:
+        #     return 
+
+       
         try:
-            # block briefly to avoid CPU spin; adjust timeout for latency needs
-            payload = candidate_queue.get_nowait() #get(timeout=0.25)
-        except Empty:
-            return
+            images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key = payload
+            all_frames,accumulator = self.detection_with_facial_regonition(images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key)
 
-        if payload is self.STOP:
-            return  
-          
-        # logging.info("i just read from frame queue for client {0}".format(candidate_queue_id))
-        images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key = payload
-        all_frames,accumulator = self.detection_with_facial_regonition(images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key)
-        accumulator_load = [auth_key,all_frames,accumulator,batch_track]
-        #enque for gaze detection and attention flow processing, 
-        self.enqueue_latest_accumulator_payload(accumulator_load,candidate_queue_id)
+            accumulator_load = [auth_key,all_frames,accumulator,batch_track]
+            #enque for gaze detection and attention flow processing, 
+            self.enqueue_latest_accumulator_payload(accumulator_load,auth_key)
+        except Exception as e:
+            error_str = traceback.format_exc()
+            logging.warning('Exception thrown while image detedction worker is running {0} {1}'.format(error_str, auth_key))
 
 
-    def enqueue_latest_accumulator_payload(self, payload,candidate_queue_id, timeout=0.05):
+    def enqueue_latest_accumulator_payload(self, payload,candidate_queue_id, timeout=0.1):
         """
         Keep only the most recent chunk in the queue.
         If the queue is full, remove the stale queued chunk and replace it.
         """
-        candidate_acc_queue = None
-        if candidate_queue_id in self.accumulator_queue_manager:
-            candidate_acc_queue = self.accumulator_queue_manager[candidate_queue_id]
-        else:
-            self.accumulator_queue_manager[candidate_queue_id] = queue.Queue(maxsize=4)  
-            candidate_acc_queue = self.accumulator_queue_manager[candidate_queue_id]
+        if candidate_queue_id not in self.accumulator_queue_manager:
+            self.accumulator_queue_manager[candidate_queue_id] = queue.Queue(maxsize=3)
         
         try:
-            candidate_acc_queue.put(payload, timeout=timeout)
-            logging.info("i just inserted acc into the queue for candidate  {0}".format(candidate_queue_id))
+            self.accumulator_queue_manager[candidate_queue_id].put(payload, timeout=timeout)
             return True
         except Full:
             logging.warning("Accumulator queue for {0} is full; attempting to replace stale payload with latest payload.".format(candidate_queue_id))
@@ -174,7 +216,7 @@ class ImageObjectDetection:
 
         # Queue is full: drop the old queued item
         try:
-            old_item = candidate_acc_queue.get_nowait()
+            old_item = self.accumulator_queue_manager[candidate_queue_id].get_nowait()
             # optional: if you use task_done semantics elsewhere, call task_done here
             # self.frame_queue.task_done()
         except Empty:
@@ -183,7 +225,7 @@ class ImageObjectDetection:
 
         # Try again to insert the latest chunk
         try:
-            candidate_acc_queue.put_nowait(payload)
+            self.accumulator_queue_manager[candidate_queue_id].put_nowait(payload)
             return True
         except Full:
             logging.warning("Could not enqueue latest frame payload for {0}; dropping it.".format(candidate_queue_id))
@@ -245,18 +287,23 @@ class ImageObjectDetection:
         return all_frames,accumulator
 
     def detection_with_facial_regonition(self,images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key):
+        t1 = time.time()
         val_dataset = LoadImageDataset(images, batch_track, self.batch_size,img_size=self.imgsz, stride=self.stride)
         dataset = torch.utils.data.DataLoader(dataset=val_dataset,
                                                batch_size=self.batch_size,
                                                shuffle=False,
                                                num_workers=0)
-        
+        t2 = time.time()
+        logging.info(f"Inside Imagedetection: batching  took {t2 - t1:.6f}s for {len(images)} frames")
         accumulator = {'head':dict(), 'other_objects':dict()}
         all_frames = {}
+
         # logging.info("number of facial embeddings is "+str(len(facial_embeddings))+" number of frames "+str(len(images)))
+        t1 = time.time()
         for val_batch, (img_index, img, im0s) in enumerate(dataset): #path, img, im0s, vid_cap in dataset:
             # all_frames.extend(im0s)
             # img = torch.from_numpy(img).to(device)
+            t3 = time.time()
             img = img.to(self.device)
             img = img.half() if self.half else img.float()  # uint8 to fp16/32
             img /= 255.0  # 0 - 255 to 0.0 - 1.0
@@ -274,6 +321,8 @@ class ImageObjectDetection:
             #combine pred and pred 2, filter out all cls 0 (person) detection for pred. keep only head (cls 1) detection 
             # and filter out all cls 1 (bicycle)  detection  pred 2
             combined_pred = [torch.cat((pred[i][pred[i][:,5] >= 1],pred2[i][pred2[i][:,5] != 1])) for i in range(len(pred2))]
+            t4 = time.time()
+            logging.info(f"Inside Imagedetection: prediction only  took {t4 - t3:.6f}s for {len(img)} frames")
             for i, det in enumerate(combined_pred):  # detections per image
                 p, im0 = img_index[i], im0s[i].numpy()
 
@@ -302,7 +351,10 @@ class ImageObjectDetection:
                                 face_embedding  = face_recognition.face_encodings(face, face_locations,num_jitters=1)
                                 match, cos_score,L2_score = self.identify_student(face_embedding[0], facial_embeddings, "face_"+str(detected_faces),cos_threshold=0.95,L2_threshold=0.3)
                                 if match != "Unknown":
-                                    # print(f"Match: {match}, Confidence: {cos_score:.3f}")
+                                    # plot_one_box(xyxy, im0, label=self.object_names_K_V.get(int_cls, None), color=[random.randint(0, 255) for _ in range(3)], line_thickness=3)
+                                    save_to = os.path.join(vid_img_dir, "face_{0}_{1}_{2}_{3}.{4}".format(int(p),match,self.object_names_K_V.get(int_cls, None),detected_faces,'png'))
+                                    cv2.imwrite(save_to,face)
+                                    logging.info(f"Match: {match}, Confidence: {cos_score:.3f}")
                                     self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_face",match,accumulator,time_marker,im0,int(p)) 
                         else:
                           pass #print("Other object dtected is: ",self.object_names_K_V.get(int_cls, None))
@@ -327,9 +379,11 @@ class ImageObjectDetection:
                             # print("Other object detected is: ",self.object_names_K_V.get(int(clss), None))
                             #accumulate all other objects except person  
                             self.accumulate_head_and_otherobject_track_V2(bbox,int(clss),"detected_other_objects",str(object_id),accumulator,time_marker,im0,int(p))  
-                               
+        t2 = time.time()
+        logging.info(f"Inside Imagedetection: prediction and facial matching  took {t2 - t1:.6f}s for {len(images)} frames")                       
                     
         return all_frames,accumulator
+    
     
     
     def normalize(self,v):
@@ -340,7 +394,7 @@ class ImageObjectDetection:
         return float(np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2)))
 
     def debug_embed(self,name, v):
-        print(f"{name}: shape={v.shape}, dtype={v.dtype}, "
+        logging.info(f"{name}: shape={v.shape}, dtype={v.dtype}, "
             f"min={np.min(v):.6f}, max={np.max(v):.6f}, "
             f"norm={np.linalg.norm(v):.6f}, "
             f"nan?={np.isnan(v).any()}, inf?={np.isinf(v).any()}")
@@ -359,24 +413,24 @@ class ImageObjectDetection:
         for person in store_facial_embeddings:
             stored_embedding = store_facial_embeddings[person]["data"]
             student = store_facial_embeddings[person]["alias"]
-            # print("student is ......"+student)
+            # logging.info(f"student is ......{student}")
             # self.debug_embed(detect_img_name,face_embedding)
             # self.debug_embed(student,stored_embedding)
             u = self.normalize(face_embedding)
             v = self.normalize(stored_embedding)
             score = float(np.dot(u, v)) #self.cosine_similarity(face_embedding, stored_embedding)
             Euc_dist = float(np.linalg.norm(u - v))
-            # print("score are Euclidean and cos simillarity:", Euc_dist,score)
+            # logging.info(f"score are Euclidean: {Euc_dist} and cos simillarity: {score}")
             if score > best_cos_score and Euc_dist < best_L2_score:
                 best_cos_score = score
                 best_L2_score = Euc_dist
                 best_match = student
 
-        if best_cos_score >= cos_threshold and best_L2_score <= L2_threshold:
-            # print("student is ......"+student+" and score are cos_simmilarity: "+str(best_cos_score)+" Euclidean Dist: "+str(best_L2_score))
-            return best_match, best_cos_score, best_L2_score
-        else:
-            return "Unknown", best_cos_score,best_L2_score
+        # if best_cos_score >= cos_threshold and best_L2_score <= L2_threshold:
+        logging.info(f"student is ...... {best_match} and score are cos_simmilarity: {best_cos_score} Euclidean Dist: {best_L2_score}")
+        return best_match, best_cos_score, best_L2_score
+        # else:
+        #     return "Unknown", best_cos_score,best_L2_score
     
     def accumulate_head_and_otherobject_track_V2(self,bbox,object_class_id,object_detected_type,object_track_id,accumulator,time_marker,frame_image,frame_index):
 

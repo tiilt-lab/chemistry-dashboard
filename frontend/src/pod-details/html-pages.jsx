@@ -1,4 +1,4 @@
-import { GenericDialogBox,WaitingDialog } from "../dialog/dialog-component"
+import { GenericDialogBox,DialogBox,WaitingDialog } from "../dialog/dialog-component"
 import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { Appheader } from "../header/header-component"
@@ -37,6 +37,14 @@ function PodComponentPages(props) {
                                 {
                                     title: "Reflection Dashboard",
                                     action:  () =>  props.loadReflectiondashboard("Reflection Dashboard"),
+                                },
+                                {
+                                    title: "Post-Hoc Audio Analytics",
+                                    action:  () =>  props.connecttoaudioservice(),
+                                },
+                                {
+                                    title: "Post-Hoc Video Analytics",
+                                    action:  () =>  props.connecttovideoservice(),
                                 }
                             ]}
                             participants={ props.speakers.map((speaker, index) => (
@@ -251,8 +259,23 @@ function PodComponentPages(props) {
             <WaitingDialog
                 itsclass={"add-dialog"}
                 heading={"Processing..."}
-                message={"Please wait..."}
-                show={props.currentForm === "awaitingllmresponse"}
+                message={props.displayText}
+                show={["awaitingllmresponse","posthocanalytics"].includes(props.currentForm) }
+            />
+            
+            <DialogBox
+                itsclass={"add-dialog"}
+                heading={"Success"}
+                message={props.displayText}
+                show={props.currentForm === "success"}
+                closedialog={props.closeDialog}
+            />
+            <DialogBox
+                itsclass={"add-dialog"}
+                heading={"Error"}
+                message={props.displayText}
+                show={props.currentForm === "websocketerror"}
+                closedialog={props.closeDialog}
             />
         </>
     )

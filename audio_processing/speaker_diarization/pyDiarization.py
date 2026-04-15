@@ -32,9 +32,12 @@ def checkFingerprints(x, fingerprints, verification):
   speaker_alias = None
   speaker_id = -1
   for speaker in fingerprints:
-    # logging.info("Checking speaker {}".format(speaker))
+    # logging.info("Checking speaker {}".format(fingerprints[speaker]["alias"]))
     speaker_signal = torch.tensor(np.frombuffer(fingerprints[speaker]["data"], dtype=np.dtype('int16')))
+  
     try:
+      # logging.info("np_signal shape: {0}".format(np_signal.shape))
+      # logging.info("speaker_signal shape: {0}".format(speaker_signal.shape))
       score, prediction = verification.verify_batch(np_signal, speaker_signal)
       # logging.info("Current prediction is {} with score of {}".format(prediction.item(), score.item()))
     except Exception as e:

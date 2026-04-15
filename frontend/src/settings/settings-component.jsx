@@ -121,16 +121,21 @@ function SettingsComponent(props) {
   const syncStudentProfile = async () => {
     const response = await new AuthService().syncStudentProfile()
     if (response.status === 200) {
-      setStatusTitle('Success');
-      setStatus('Student Profile Syncing Completed.');
-      setCurrentForm("Status")
+      response.json().then(
+        obj => {
+          setStatusTitle('Success');
+          setStatus('Student Profile Syncing Completed and ' + obj.new_data_inserted + " new profile inserted");
+          setCurrentForm("Status")
+        }
+      )
+
     } else if (response.status === 400) {
       setStatusTitle('Error');
       setStatus('Student Profile Syncing Failed.');
       setCurrentForm("Status")
     }
   }
-  
+
   const closeDialog = () => {
     setStatus("");
     setCurrentForm("");
