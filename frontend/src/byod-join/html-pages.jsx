@@ -297,7 +297,6 @@ function ByodJoinPage(props) {
                                         <div className="infographics-container">
                                             {props.joinwith === "Audio" && (
                                                 <AppSectionBoxComponent type={"medium-section"} heading={"Audio control:"}>
-                                                    {!props.isRecording ? (
                                                         <section className="gap-4">
                                                             <div className="rounded-2xl border p-4 shadow-sm">
                                                                 <h2 className="mb-2 font-medium">Devices</h2>
@@ -315,6 +314,7 @@ function ByodJoinPage(props) {
                                                                     <LevelMeter rmsDb={props.rmsDb} peakDb={props.peakDb} clipping={props.clipping} />
                                                                     <div className="mt-1 text-xs text-gray-500">Target RMS: −35 to −18 dBFS (green zone)</div>
                                                                 </div>
+                                                                {!props.isRecording && (
                                                                 <div className="mt-3 flex gap-2">
                                                                     <button className="rounded-xl bg-black px-4 py-2 text-white shadow" onClick={props.startPreview} disabled={props.isPreviewing}>Start Preview</button>
                                                                     <button className="rounded-xl border px-4 py-2" onClick={props.stopEverything}>Stop</button>
@@ -322,9 +322,11 @@ function ByodJoinPage(props) {
                                                                         {props.isRecording ? 'In Progress…' : 'Start Discussion'}
                                                                     </button>
                                                                 </div>
+                                                                )}
                                                             </div>
                                                         </section>
-                                                    ) : (
+                                                    {/* ) 
+                                                    : (
                                                         <div className={style["pod-overview-button"]} style={{ margin: "0 auto", }} onClick={props.requestHelp} >
                                                             <svg width="80px" height="80px" style={{ marginTop: "22px", }} viewBox="-40 -40 80 80">
                                                                 <svg x="-8.5" y="-13.5" width="17" height="27" viewBox="0 0 17 27">
@@ -340,7 +342,8 @@ function ByodJoinPage(props) {
                                                             </svg>
                                                             <div style={{ marginTop: "13px", }}> Help </div>
                                                         </div>
-                                                    )}
+                                                    )
+                                                    } */}
 
                                                 </AppSectionBoxComponent>
                                             )}
