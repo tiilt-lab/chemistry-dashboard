@@ -10,6 +10,7 @@ import soundfile as sf
 import traceback
 from queue import Queue
 from pathlib import Path
+from scipy.io import wavfile
 from recorder import VidRecorder
 from processor_posthoc import AudioProcessorPosthoc
 from processing_config import ProcessingConfig
@@ -102,14 +103,25 @@ class ServerProtocol(WebSocketServerProtocol):
 
                 running_audio_processes[key] = "running"
 
-                conf_val = {'key':key,'encoding': "pcm_f16le", 'sample_rate': self.sample_rate,'channels': 1,'sessionid': self.sessionid,'deviceid': self.session_device_id,
+                conf_val = {'key':key,'encoding': "pcm_f32le", 'sample_rate': self.sample_rate,'channels': 1,'sessionid': self.sessionid,'deviceid': self.session_device_id,
                             'tag': True, 'server_start':self.server_start,'keywords':self.keywords,'transcribe':True,'features':True,'doa':True,'topic_model':None,'owner':1,'off_set_date':off_set_date}
                 valid, result = ProcessingConfig.from_json(conf_val,source="posthoc processing")
                 if not valid:
                     logging.info("Confgiration setting failed for audio posthoc processing")
                 else:    
                     self.config = result
-                    # cm.associate_keys(self, self.config.session_key, self.config.auth_key)
+                    
+                    if os.path.splitext(self.audio_file)[1] == ".dat":
+                        wavfilename =  os.path.splitext(self.audio_file)[0]+".wav"
+                        with open(self.audio_file, "rb") as f:
+                            all_data = f.read()
+                            all_data = np.frombuffer(all_data, np.float32 if self.config.depth == 4 else np.int16, -1)
+                            chunk_length = int(len(all_data) / self.config.channels)
+                            all_data = np.reshape(all_data, (chunk_length, self.config.channels))
+                        wavfile.write(wavfilename, self.config.sample_rate, all_data)
+                        os.remove(self.audio_file)
+                        self.audio_file = wavfilename
+
                     #start processing
                     for speaker in data['speakers']:
                         audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}".format(speaker["alias"]))

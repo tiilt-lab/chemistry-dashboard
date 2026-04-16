@@ -10,8 +10,8 @@ Restart=always
 RestartSec=1
 LimitRTPRIO=99
 LimitRTTIME=infinity
-WorkingDirectory=/home/tde3218/chemistry-dashboard/
-ExecStart=/home/tde3218/.pyenv/versions/audio_processor/bin/python audio_processing/server_posthoc.py
+WorkingDirectory=/var/lib/chemistry-dashboard/
+ExecStart=/home/ubuntu/.pyenv/versions/audio_processor/bin/python audio_processing/server_posthoc.py
 
 [Install]
 WantedBy=multi-user.target
