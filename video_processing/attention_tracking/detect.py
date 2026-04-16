@@ -155,7 +155,9 @@ class ImageObjectDetection:
             # for posthoc processing use this to exit the thread
             if  self.source != "real_time" and  self.user_completed and len(self.user_completed) == len_candidate_unique_ids:
                 self.stop()
-                logging.info("Stopping image detection thread scheduler")
+                logging.info("Finished image detection thread scheduler")
+                # break dont break
+                
     
     def worker_loop(self):
         while self.running:

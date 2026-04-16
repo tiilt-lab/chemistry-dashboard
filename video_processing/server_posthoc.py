@@ -9,6 +9,7 @@ import callbacks
 import threading
 import weakref
 import wave
+import traceback
 import scipy.signal
 import config as cf
 import cv2
@@ -144,8 +145,16 @@ class ServerProtocol(WebSocketServerProtocol):
                         try:
                             facials = np.load(facial_embedding_file+".npy", allow_pickle=True).item()
                             self.facial_embeddings[speaker["id"]] = {"alias": speaker["alias"], "data": facials[speaker["alias"]]}
+                        # except Exception as e:
+                        #     try:
+                        #         data_d = facials.pop("ro.kludy")
+                        #         facials[speaker["alias"]] = data_d
+                        #         self.facial_embeddings[speaker["id"]] = {"alias": speaker["alias"], "data": data_d}
+                        #         # save back
+                        #         np.save(facial_embedding_file+".npy", facials)
                         except Exception as e:
-                            logging.info("error loading facial embedding for {} : {}".format(speaker["alias"],e))
+                            error_str = traceback.format_exc()
+                            logging.info("error loading facial embedding for {} : {}".format(speaker["alias"],error_str))
 
                     self.signal_start()
                     self.video_processor.setParticpantFacialEmbeddings(self.facial_embeddings)

@@ -73,6 +73,7 @@ class VideoProcessorPosthoc:
     
     def processing(self):
         try:
+            warming_error_count  = 0 
             vidclip = mp.VideoFileClip(self.video_file)
             for start in range(0, int(vidclip.duration), self.video_interval):
                 end = min(start + self.video_interval, vidclip.duration)
@@ -104,8 +105,11 @@ class VideoProcessorPosthoc:
                             if subclib_frame_count == 300:
                                 break
                 except UserWarning as e:
+                    warming_error_count += 1
                     logging.info(f"Frame read warning turned error: {e}")
-                    self.stop()
+                    if warming_error_count > 20:
+                        # break
+                        self.stop()
 
                 
                 # push the rest of the batched frames adjtime to queue

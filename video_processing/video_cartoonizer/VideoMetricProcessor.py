@@ -109,9 +109,10 @@ class VideoMetricAnalytics:
         t2 = time.time()
         logging.info(f"Inside VideoMetricProcessor: procesing attention and emotion dectection took {t2 - t1:.6f}s for {auth_key}")
         
-        logging.info("insert {0} into DB for batch {1}".format(video_metrics,batch_track))
+        can_post = video_metrics and (self.source == "real_time" or self.source == "post_hoc")
+        logging.info("insert {0} into DB for batch {1} and {2}".format(video_metrics,batch_track,can_post))
         
-        if video_metrics and self.source == "real_time": 
+        if video_metrics and (self.source == "real_time" or self.source == "post_hoc"): 
             
             success = callbacks.post_video_metrics(auth_key, video_metrics)
 
