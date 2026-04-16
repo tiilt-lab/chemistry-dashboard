@@ -47,6 +47,11 @@ function SettingComponentPage(props) {
                 <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("AddRater")}>Add Rater</div>
                 <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeleteRater", true)}>Delete Rater</div>
               </React.Fragment>
+
+              <React.Fragment>
+                <div className={style["section-header"]}>Manage Session Device Metrics </div>
+                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeleteDeviceData")}>Delete Session Device Data</div>
+              </React.Fragment>
             </>
             :
             <></>
@@ -217,6 +222,27 @@ function SettingComponentPage(props) {
           <></>
         }
 
+         {props.currentForm === "DeleteDeviceData" ?
+          <div className={style["add-dialog"]}>
+            <div className={style["dialog-heading"]}>Delete Session Device Data</div>
+            <div className={style["input-header"]}>Session Device ID</div>
+            <input id='sessionDeviceId' className={style["field-input"]} type="text" />
+           
+            <div className={style["input-header"]}>Data Type</div>
+            <select id='datatype' className={style["dropdown-input"]}>
+              <option value="transcriptmetric">Transcript metric data</option>
+              <option value="videometric">Video metric data</option>
+            </select>
+            {props.status ? <div className={style["error-status"]}>{props.status}</div> : <></>}
+            <button className={style["basic-button"]} onClick={() => props.confirmDeleteSessionDeviceData(document.getElementById('sessionDeviceId').value, document.getElementById('datatype').value)}>Delete Data</button>
+            <button className={style["cancel-button"]} onClick={props.closeDialog}>Cancel</button>
+          </div>
+          :
+          <></>
+        }
+
+        
+
         {props.currentForm === "DeleteUser" ?
           <div className={style["add-dialog"]}>
             <div className={style["dialog-heading"]}>Delete User</div>
@@ -293,6 +319,15 @@ function SettingComponentPage(props) {
           <div className={style["add-dialog"]}>
             <div className={style["dialog-heading"]}>Are you sure you want to delete {props.raterToDelete.raterid+" for "+props.raterToDelete.sessionid+" "+props.raterToDelete.sessiondeviceid+" "+props.raterToDelete.speakertag+" "+props.raterToDelete.dashboardtype}?</div>
             <button className={style["basic-button"]} onClick={props.deleteSelectedRater}>Delete Rater</button>
+            <button className={style["cancel-button"]} onClick={props.closeDialog}>Cancel</button>
+          </div>
+          :
+          <></>
+        }
+        {props.currentForm === "ConfirmDeleteSessionDeviceData" ?
+          <div className={style["add-dialog"]}>
+            <div className={style["dialog-heading"]}>Are you sure you want to delete {props.sessionDeviceDataToDelete[1] + " data for session device id: " + props.sessionDeviceDataToDelete[0]}?</div>
+            <button className={style["basic-button"]} onClick={props.deleteSessionDeviceData}>Delete Data</button>
             <button className={style["cancel-button"]} onClick={props.closeDialog}>Cancel</button>
           </div>
           :

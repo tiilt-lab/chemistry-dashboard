@@ -11,6 +11,7 @@ import traceback
 from queue import Queue
 from pathlib import Path
 from scipy.io import wavfile
+from scipy.io import wavfile
 from recorder import VidRecorder
 from processor_posthoc import AudioProcessorPosthoc
 from processing_config import ProcessingConfig
@@ -96,7 +97,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 file_path_split = self.audio_file.split("(")
                 key = file_path_split[0].split("/")[-1]
                 off_set_date = file_path_split[1].split(")")[0]
-                
+ 
                  #keep track of currently running posthoc video analytics
                 if key in running_audio_processes:
                     self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
@@ -121,6 +122,7 @@ class ServerProtocol(WebSocketServerProtocol):
                         wavfile.write(wavfilename, self.config.sample_rate, all_data)
                         os.remove(self.audio_file)
                         self.audio_file = wavfilename
+                        
 
                     #start processing
                     for speaker in data['speakers']:

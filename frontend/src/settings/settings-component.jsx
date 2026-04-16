@@ -17,6 +17,7 @@ function SettingsComponent(props) {
   const [userToDelete, setUserToDelete] = useState();
   const [studentToDelete, setStudentToDelete] = useState();
   const [raterToDelete, setRaterToDelete] = useState();
+  const [sessionDeviceDataToDelete, setSessionDeviceDataToDelete] = useState([]);
   const [devices, setDevices] = useState();
   const [currentForm, setCurrentForm] = useState("");
   const [statusTitle, setStatusTitle] = useState('');
@@ -234,6 +235,11 @@ function SettingsComponent(props) {
     setCurrentForm("ConfirmDeleteRater");
   }
 
+  const confirmDeleteSessionDeviceData = (session_device_id,datatype) => {
+    setSessionDeviceDataToDelete([session_device_id,datatype]);
+    setCurrentForm("ConfirmDeleteSessionDeviceData");
+  }
+
   const deleteSelectedUser = () => {
     const fetchData = new AuthService().deleteUser(userToDelete.id)
     fetchData.then(
@@ -297,6 +303,31 @@ function SettingsComponent(props) {
             }, error => {
               setStatusTitle('Failed to Delete Rater')
               setStatus(raterToDelete.raterid + ' could not be deleted.');
+            }
+          )
+        }
+      },
+      apierror => {
+        console.log("settingcomponent func : confirmDeleteUser", apierror)
+      }
+    ).finally(
+      () => setCurrentForm("Status")
+    )
+  }
+
+  const deleteSessionDeviceData = () => {
+    const fetchData = new AuthService().deleteSessionDeviceData(sessionDeviceDataToDelete[0],sessionDeviceDataToDelete[1])
+    fetchData.then(
+      response => {
+        if (response.status === 200) {
+          const respJson = response.json()
+          respJson.then(
+            result => {
+              setStatusTitle('Session Device Data Deleted');
+              setStatus(sessionDeviceDataToDelete[1] +' for '+ sessionDeviceDataToDelete[0]+ ' has been deleted.');
+            }, error => {
+              setStatusTitle('Failed to Delete Data')
+              setStatus(sessionDeviceDataToDelete[1] +' for '+ sessionDeviceDataToDelete[0]+ ' could not be deleted.');
             }
           )
         }
@@ -618,12 +649,15 @@ function SettingsComponent(props) {
       confirmDeleteUser={confirmDeleteUser}
       confirmDeleteStudent={confirmDeleteStudent}
       confirmDeleteRater={confirmDeleteRater}
+      confirmDeleteSessionDeviceData = {confirmDeleteSessionDeviceData}
       userToDelete={userToDelete}
       studentToDelete={studentToDelete}
       raterToDelete={raterToDelete}
+      sessionDeviceDataToDelete = {sessionDeviceDataToDelete}
       deleteSelectedUser={deleteSelectedUser}
       deleteSelectedStudent={deleteSelectedStudent}
       deleteSelectedRater={deleteSelectedRater}
+      deleteSessionDeviceData={deleteSessionDeviceData}
       revokeAPIAccess={revokeAPIAccess}
       allowAPIAccess={allowAPIAccess}
       deleteDeviceLogs={deleteDeviceLogs}

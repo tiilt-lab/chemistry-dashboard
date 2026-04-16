@@ -143,7 +143,7 @@ class SpeakerProcessor:
         self.prev_window_speakers.append(speaker)
         self.participation_scores = np.subtract(np.multiply(np.divide(self.contributions, self.length), self.participants), 1)
 
-        if source == "realtime_processing":
+        if source == "realtime_processing" or source=="posthoc_processing":
           processing_time =  time.time() - processing_timer
 
           success = callbacks.post_speaker_transcript_metrics(speaker_transcript_data,
