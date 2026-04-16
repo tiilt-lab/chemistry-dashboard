@@ -216,7 +216,7 @@ class AudioProcessorPosthoc:
                 speaker_tag, speaker_id = checkFingerprints(
                         audio_data, self.fingerprints, self.diarization_model)
                 
-                logging.info("processed for {0} : {1}".format(self.config.auth_key,[str(int(start_time//60))+':'+str(int(start_time%60)), str(int(end_time//60))+':'+str(int(end_time%60)),transcript_text,  speaker_tag, speaker_id]))
+                # logging.info("processed for {0} : {1}".format(self.config.auth_key,[str(int(start_time//60))+':'+str(int(start_time%60)), str(int(end_time//60))+':'+str(int(end_time%60)),transcript_text,  speaker_tag, speaker_id]))
                 self.speaker_metrics_process.process_transcript(
                     {
                         'source': self.config.auth_key,

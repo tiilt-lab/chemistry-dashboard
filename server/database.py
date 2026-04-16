@@ -220,6 +220,16 @@ def delete_speaker_video_metrics(id = None,student_username=None, session_device
     db.session.commit()
     return True
 
+def delete_speaker_video_metrics_by_sessionDeviceID(session_device_id=None):
+    vidMetric = get_speaker_video_metrics(session_device_id=session_device_id)
+    if vidMetric:
+        db.session.query(SpeakerVideoMetrics).filter(SpeakerVideoMetrics.session_device_id == session_device_id)\
+          .delete(synchronize_session='fetch')
+        db.session.commit()
+        return True
+    else:
+        return False
+
 # -------------------------
 # Get Speaker, Video and Transcript Metrics by session  
 #-------------------------
@@ -852,8 +862,20 @@ def get_transcripts_by_session_alias(session_id=None, speaker_tag=None,device_id
 
 def delete_device_transcripts(session_device_id):
     db.session.query(KeywordUsage).filter(KeywordUsage.transcript_id == Transcript.id).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')
+    db.session.query(SpeakerTranscriptMetrics).filter(SpeakerTranscriptMetrics.transcript_id == Transcript.id).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')
     db.session.query(Transcript).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')
     db.session.commit()
+
+def delete_device_transcriptsV2(session_device_id):
+    trscrpt = get_transcripts(session_device_id=session_device_id)
+    if trscrpt:
+        db.session.query(KeywordUsage).filter(KeywordUsage.transcript_id == Transcript.id).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')
+        db.session.query(SpeakerTranscriptMetrics).filter(SpeakerTranscriptMetrics.transcript_id == Transcript.id).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')
+        db.session.query(Transcript).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')
+        db.session.commit()
+        return True
+    else:
+        False
 
 # -------------------------
 # User

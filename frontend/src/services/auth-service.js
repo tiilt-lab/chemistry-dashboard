@@ -192,6 +192,11 @@ class AuthService {
     return new ApiService().httpRequestCall("api/v1/admin/raters/" + id, 'DELETE', {});
   }
 
+  deleteSessionDeviceData(session_device_id, data_type) {
+    return new ApiService().httpRequestCall("api/v1/admin/devicedata/sessiondeviceid/" + session_device_id+ "/data_type/"+data_type, 'DELETE', {});
+  }
+
+
   getUsers() {
     return new ApiService().httpRequestCall("api/v1/admin/users", 'GET', {});
   }
