@@ -343,6 +343,23 @@ def set_help_button(**kwargs):
         return json_response()
     return json_response({'message': 'Session device not found.'}, 400)
 
+@api_routes.route('/api/v1/updatetranscriptspeaker', methods=['POST'])
+@wrappers.verify_login(allow_key=True)
+def update_transcript_speaker(**kwargs):
+    sessiondeviceId  = request.json.get('sessiondeviceId', None)
+    transcriptId = request.json.get('transcriptId', None)
+    speakerId = request.json.get('speakerId', None) 
+    speakerAlias = request.json.get('speakerAlias', None) 
+    
+    if not sessiondeviceId or not transcriptId or not speakerId or not speakerAlias:
+        return json_response({'message': 'All parameters must be provided.'}, 400)
+
+    success, transcript = database.update_transcript_speaker(transcript_id=transcriptId,sessiondeviceid=sessiondeviceId,speakerid=speakerId,speakertag=speakerAlias)
+    success2 = database.update_speaker_transcript_metricsBy_transcript_id(transcriptId,speakerId)
+    if success and success2:
+        return json_response()
+    return json_response({'message': 'Transcript not found.'}, 400)
+
 @api_routes.route('/api/v1/sessions/<int:session_id>/passcode', methods=['POST'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access

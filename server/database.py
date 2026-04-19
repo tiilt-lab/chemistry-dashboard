@@ -130,6 +130,18 @@ def update_speaker_transcript_metrics(id, speaker_id=None, transcript_id=None, p
 
     return None
 
+def update_speaker_transcript_metricsBy_transcript_id(transcript_id=None,speaker_id=None):
+    metrics = get_speaker_transcript_metrics(transcript_id=transcript_id)
+
+    if metrics:
+        for met in metrics:
+            if speaker_id:
+                met.speaker_id = speaker_id
+                db.session.commit()
+        return(metrics)
+
+    return None
+
 def delete_speaker_transcript_metrics(id = None, speaker_id = None, transcript_id = None):
     if id:
         db.session.query(SpeakerTranscriptMetrics).filter(SpeakerTranscriptMetrics.id == id).delete(synchronize_session='fetch')
@@ -740,12 +752,23 @@ def set_session_device_status(session_device_id, status):
     return False
 
 def delete_session_device(session_device_id):
-    db.session.query(KeywordUsage).filter(KeywordUsage.transcript_id == Transcript.id).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')
-    db.session.query(Transcript).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')
-    db.session.query(SpeakerVideoMetrics).filter(SpeakerVideoMetrics.session_device_id == session_device_id).delete(synchronize_session='fetch')
-    db.session.query(SessionDevice).filter(SessionDevice.id == session_device_id).delete()
-    db.session.commit()
-    return True
+    sessDevice = get_session_devices(id=session_device_id)
+    if sessDevice:
+        db.session.query(KeywordUsage).filter(KeywordUsage.transcript_id == Transcript.id).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')
+        db.session.query(SpeakerTranscriptMetrics).filter(SpeakerTranscriptMetrics.transcript_id == Transcript.id).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')
+        db.session.query(Transcript).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')
+        db.session.query(SpeakerVideoMetrics).filter(SpeakerVideoMetrics.session_device_id == session_device_id).delete(synchronize_session='fetch')
+        db.session.query(Speaker).filter(Speaker.session_device_id == session_device_id).delete(synchronize_session='fetch')
+        db.session.query(LLMFeedbackReport).filter(LLMFeedbackReport.session_device_id == session_device_id).delete(synchronize_session='fetch')
+        db.session.query(LLMQuestionAnswer).filter(LLMQuestionAnswer.session_device_id == session_device_id).delete(synchronize_session='fetch')
+        db.session.query(SessionSynthesizedReport).filter(SessionSynthesizedReport.session_device_id == session_device_id).delete(synchronize_session='fetch')
+        db.session.query(SurveyResponse).filter(SurveyResponse.sessiondeviceid == session_device_id).delete(synchronize_session='fetch')
+        db.session.query(Rating).filter(Rating.sessiondeviceid == session_device_id).delete(synchronize_session='fetch')
+        db.session.query(Rater).filter(Rater.sessiondeviceid == session_device_id).delete(synchronize_session='fetch')
+        db.session.query(SessionDevice).filter(SessionDevice.id == session_device_id).delete()
+        db.session.commit()
+        return True
+    return False
 
 def create_byod_session_device(passcode, name, collaborators):
     session = get_sessions(active=True, passcode=passcode, first=True)
@@ -836,12 +859,14 @@ def set_speaker_tag(transcript, tag):
     db.session.commit()
     return True
 
-def get_transcripts(session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
+def get_transcripts(session_id=None, session_device_id=None,transcript_id=None, start_time=0, end_time=-1, speaker_id = -1):
     query = db.session.query(Transcript).order_by(Transcript.start_time.asc())  
     if session_id != None:
         query = query.filter(SessionDevice.session_id == session_id)
     if session_device_id != None:
         query = query.filter(Transcript.session_device_id == session_device_id)
+    if transcript_id != None:
+        return query.filter(Transcript.id == transcript_id).first()    
     if start_time > 0:
         query = query.filter(Transcript.start_time >= start_time)
     if end_time != -1 and end_time > start_time:
@@ -883,6 +908,21 @@ def delete_device_transcriptsV2(session_device_id):
         return True
     else:
         False
+
+def update_transcript_speaker(transcript_id=None,sessiondeviceid=None,speakerid=None,speakertag=None):
+    transcript = get_transcripts(transcript_id=transcript_id, session_device_id = sessiondeviceid)
+    if transcript:
+        db_change = False
+        if speakertag:
+            transcript.speaker_tag = speakertag
+            db_change = True
+        if speakerid:
+            transcript.speaker_id = speakerid
+            db_change = True  
+        if db_change:
+            db.session.commit()
+        return True, transcript
+    return False, None
 
 # -------------------------
 # User

@@ -34,6 +34,7 @@ function StudentSessionDashboard() {
   const sessionsObjects = useRef({});
   const pageTitle = useRef("Dashboard")
   const session = useRef(null)
+  const prevPages = useRef(["/"])
 
 
   const [sessionDevices, setSessionDevices] = useState([])
@@ -45,7 +46,7 @@ function StudentSessionDashboard() {
   const [reload, setReload] = useState(0)
 
   const [nextPage, setNextPage] = useState("reportoptionpage")
-
+  
   const [currentForm, setCurrentForm] = useState("")
   const [showFeatures, setShowFeatures] = useState([])
   const [showBoxes, setShowBoxes] = useState([])
@@ -208,7 +209,7 @@ function StudentSessionDashboard() {
   useEffect(() => {
     // fetch the transcript based on group selected
     if (selectedDeviceID > -1) {
-      console.log("tracking session and device ids inside useeffect  ", selectedSessionId1, selectedSessionDeviceId1,selectedDeviceID)
+      // console.log("tracking session and device ids inside useeffect  ", selectedSessionId1, selectedSessionDeviceId1,selectedDeviceID)
       //this is necessary if the first session and device were loaded from the entry page
       // and the user has not clicked on any session
       if (!firstLoadCompleted) {
@@ -220,9 +221,26 @@ function StudentSessionDashboard() {
 
   }, [selectedDeviceID])
 
+  // ___________________________________________________________ 
+  //  THIRD USEEFFECT:          
+  // --------------------------------------------------------
+  useEffect(() => {
+
+    if (displayCompareSession || displaySingleSession) {
+      setSessionTranscripts()
+      setSessionVideoMetrics()
+
+    }
+    if (details === "Individual" && displaySingleSession) {
+      setDisplaySingleSession(false);
+    } else if (details === "Comparison" && displayCompareSession) {
+      setDisplayCompareSession(false);
+    }
+
+  }, [details, displaySingleSession, displayCompareSession]);
 
   // ___________________________________________________________ 
-  //  THIRD USEEFFECT:  THIS IS TRIGGERED ONCE THE TRANSCRIPT AND VIDEO METRIC IS PULLED FROM THE DB            
+  //  FOURTH USEEFFECT:  THIS IS TRIGGERED ONCE THE TRANSCRIPT AND VIDEO METRIC IS PULLED FROM THE DB            
   // --------------------------------------------------------
   useEffect(() => {
     if (session.current !== null && !firstLoadCompleted) {
@@ -254,7 +272,7 @@ function StudentSessionDashboard() {
 
       // ///we maintain a store that keeps already fetched transcript base session and device id
       // updateTranscriptVideoMetricStore(loadedAfresh, sessiontype,selectedSessionId1, selectedSessionDeviceId1,session1Transcripts,session1VideoMetrics)
-
+      
       setNextPage("displayreportpage")
       setFirstLoadCompleted(true);
     }
@@ -268,7 +286,6 @@ function StudentSessionDashboard() {
       ///we maintain a store that keeps already fetched transcript base session and device id
       updateTranscriptVideoMetricStore(loadedAfresh, sessiontype, selectedSessionId1, selectedSessionDeviceId1, session1Transcripts, session1VideoMetrics)
 
-      console.log(loadedAfresh, session2Transcripts.length, session2VideoMetrics.length, selectedSessionId2)
       // if (loadedAfresh && (session2Transcripts.length > 0 || session2VideoMetrics.length > 0) && (selectedSessionId2 > -1)) {
       if (selectedSessionId2 > -1) {
         updateTranscriptVideoMetricStore(loadedAfresh, sessiontype, selectedSessionId2, selectedSessionDeviceId2, session2Transcripts, session2VideoMetrics)
@@ -280,27 +297,12 @@ function StudentSessionDashboard() {
         setStartTime2(Math.round(sessionLen * timeRange[0] * 100) / 100)
         setEndTime2(Math.round(sessionLen * timeRange[1] * 100) / 100)
       }
-
+      prevPages.current.push("displaygrouppage")
       setNextPage("displayreportpage")
     }
 
   }, [transcriptDoneLoading, videoMetricDoneLoading, loadedAfresh, firstLoadCompleted]);
 
-
-  useEffect(() => {
-
-    if (displayCompareSession || displaySingleSession) {
-      setSessionTranscripts()
-      setSessionVideoMetrics()
-
-    }
-    if (details === "Individual" && displaySingleSession) {
-      setDisplaySingleSession(false);
-    } else if (details === "Comparison" && displayCompareSession) {
-      setDisplayCompareSession(false);
-    }
-
-  }, [details, displaySingleSession, displayCompareSession]);
 
   // THIS IS MEANT FOR REFLECTION DASHBOARD
   useEffect(() => {
@@ -334,7 +336,7 @@ function StudentSessionDashboard() {
           }
         }
       }
-      console.log("store ", sessionDataObjects.current)
+      // console.log("store ", sessionDataObjects.current)
     }
   }
 
@@ -389,6 +391,7 @@ function StudentSessionDashboard() {
               const student_data = StudentModel.fromJson(jsonObj)
               setUserDetail(student_data)
               loadSession(username)
+              prevPages.current.push("reportoptionpage")
             })
           } else {
             setAlertMessage("Invalid Username");
@@ -594,13 +597,21 @@ function StudentSessionDashboard() {
     pageTitle.current = newSession.name + ": " + new Date(newSession.creation_date).toDateString()
     session.current = newSession
     loadSessionDevice(newSession.id, userDetail.username)
-    console.log("tracking session and device ids  ", selectedSessionId1, selectedSessionDeviceId1)
+    // console.log("tracking session and device ids  ", selectedSessionId1, selectedSessionDeviceId1)
   }
 
   const loadSelectedSessionDeviceMetrics = (deviceId) => {
-    console.log("tracking session and device ids inside group click  ", selectedSessionId1, selectedSessionDeviceId1,deviceId,selectedDeviceID)
-    setSelectedSessionDeviceId1(deviceId)
+    // console.log("tracking session and device ids inside group click  ", selectedSessionId1, selectedSessionDeviceId1,deviceId,selectedDeviceID)
+    setTranscriptDoneLoading(false);
+    setVideoMetricDoneLoading(false);
+    setSession1Transcripts([]);
+    setSession1VideoMetrics([]);
+    setSession2Transcripts([]);
+    setSession2VideoMetrics([]);
+    setSelectedSessionDeviceId1(-1)
+    setSelectedDeviceID(-1)
     setSelectedSessionDeviceId2(-1)
+    setSelectedSessionDeviceId1(deviceId)
     setSelectedDeviceID(deviceId)
   }
 
@@ -647,16 +658,16 @@ function StudentSessionDashboard() {
 
   const setSessionTranscripts = () => {
     if (selectedSessionId1 !== -1) {
-      console.log(selectedSessionId1, selectedSessionDeviceId1)
-      console.log(selectedSessionId2, selectedSessionDeviceId2)
       if (sessionDataObjects.current.hasOwnProperty(selectedSessionId1)) {
         if (sessionDataObjects.current[selectedSessionId1].hasOwnProperty(selectedSessionDeviceId1)) {
-          console.log("loading saved session transcript metrics for session 1")
+          // console.log("loading saved session transcript metrics for session 1")
           loadSavedSessionTranscriptMetrics(selectedSessionId1, sessionDataObjects.current[selectedSessionId1][selectedSessionDeviceId1].transcripts, setSession1Transcripts)
         } else {
+          // console.log("fetching session transcript metrics for session 1")
           fetchTranscript(selectedSessionId1, setSession1Transcripts, selectedSessionDeviceId1)
         }
       } else {
+        // console.log("fetching session transcript metrics for session 2")
         fetchTranscript(selectedSessionId1, setSession1Transcripts, selectedSessionDeviceId1)
       }
     }
@@ -664,14 +675,14 @@ function StudentSessionDashboard() {
     if (selectedSessionId2 !== -1) {
       if (sessionDataObjects.current.hasOwnProperty(selectedSessionId2)) {
         if (sessionDataObjects.current[selectedSessionId2].hasOwnProperty(selectedSessionDeviceId2)) {
-          console.log("loading saved session transcript metrics for session 2")
+          // console.log("loading saved session transcript metrics for session 2")
           loadSavedSessionTranscriptMetrics(selectedSessionId2, sessionDataObjects.current[selectedSessionId2][selectedSessionDeviceId2].transcripts, setSession1Transcripts)
         } else {
-          console.log("fetching transcript 2 level 1")
+          // console.log("fetching transcript 2 level 1")
           fetchTranscript(selectedSessionId2, setSession2Transcripts, selectedSessionDeviceId2)
         }
       } else {
-        console.log("fetching transcript 2 level 2")
+        // console.log("fetching transcript 2 level 2")
         fetchTranscript(selectedSessionId2, setSession2Transcripts, selectedSessionDeviceId2)
       }
     }
@@ -681,12 +692,14 @@ function StudentSessionDashboard() {
     if (selectedSessionId1 !== -1) {
       if (sessionDataObjects.current.hasOwnProperty(selectedSessionId1)) {
         if (sessionDataObjects.current[selectedSessionId1].hasOwnProperty(selectedSessionDeviceId1)) {
-          console.log("loading saved session video metrics for session 1")
+          // console.log("loading saved session video metrics for session 1")
           loadSavedSessionVideoMetrics(sessionDataObjects.current[selectedSessionId1][selectedSessionDeviceId1].videoMetrics, setSession1VideoMetrics)
         } else {
+          //  console.log("fetching session video metrics for session 1")
           fetchVideoMetric(selectedSessionId1, setSession1VideoMetrics, selectedSessionDeviceId1)
         }
       } else {
+        //  console.log("fetching session video metrics for session 2")
         fetchVideoMetric(selectedSessionId1, setSession1VideoMetrics, selectedSessionDeviceId1)
       }
 
@@ -695,14 +708,14 @@ function StudentSessionDashboard() {
     if (selectedSessionId2 !== -1) {
       if (sessionDataObjects.current.hasOwnProperty(selectedSessionId2)) {
         if (sessionDataObjects.current[selectedSessionId2].hasOwnProperty(selectedSessionDeviceId2)) {
-          console.log("loading saved session video metrics for session 2")
+          // console.log("loading saved session video metrics for session 2")
           loadSavedSessionVideoMetrics(sessionDataObjects.current[selectedSessionId2][selectedSessionDeviceId2].videoMetrics, setSession2VideoMetrics)
         } else {
-          console.log("fetching video metric 2 level 1")
+          // console.log("fetching video metric 2 level 1")
           fetchVideoMetric(selectedSessionId2, setSession2VideoMetrics, selectedSessionDeviceId2)
         }
       } else {
-        console.log("fetching video metric 2 level 2")
+        // console.log("fetching video metric 2 level 2")
         fetchVideoMetric(selectedSessionId2, setSession2VideoMetrics, selectedSessionDeviceId2)
       }
     }
@@ -736,7 +749,6 @@ function StudentSessionDashboard() {
       setAlertMessage("Please select a session and a group to load the reflection dashboard ");
       setShowAlert(true);
     } else {
-      setNextPage(view);
       setReflectionDashboardDoneLoading(false)
       let actionstatus = await extractParticipantData(selectedSessionDeviceId1)
       if (actionstatus) {
@@ -744,7 +756,15 @@ function StudentSessionDashboard() {
         const group = sessionDevices.find((dev) => dev.id === selectedSessionDeviceId1);
         setSessionNameForReflecDashboard(sess?.name + ": " + new Date(sess?.creation_date).toDateString())
         setGroupNameForReflecDashboard(group?.name)
+        prevPages.current.push("displaygrouppage")
+        setNextPage(view);
         setReflectionDashboardDoneLoading(true)
+      }else{
+        setReflectionDashboardDoneLoading(false)
+        setDialogHeading("Error")
+        setAlertMessage("No Data available for this session, please notify the Professor/Instructor");
+        setShowAlert(true);
+
       }
     }
 
@@ -760,6 +780,10 @@ function StudentSessionDashboard() {
       setSessionNameForReflecDashboard(sess.name + ": " + new Date(sess.creation_date).toDateString())
       setGroupNameForReflecDashboard(group.name)
       setReflectionDashboardDoneLoading(true)
+    }else{
+      setDialogHeading("Error")
+      setAlertMessage("No Data available for this session, please notify the Professor/Instructor");
+      setShowAlert(true);
     }
   }
 
@@ -768,18 +792,24 @@ function StudentSessionDashboard() {
     const resp = await loadSynthesizedMetric(deviceId)
 
     let respObj = buildData("Participant level sesssion analysis", selectedSessionId1, deviceId, null, null)
-    if (Object.keys(respObj).length === 0 || resp === false) {
+  
+    if (resp === false  || Object.keys(respObj).length === 0) {
       return false;
     }
-    console.log("Synthesized feedback: ",respObj)
+
+    if(respObj["participant_level_metric"] === undefined){
+      return false;
+    }
+
+    // console.log("Synthesized feedback: ",respObj)
 
     const ret = await loadLLMAnalytics(respObj, deviceId)
     if (ret) {
-      console.log("llm response: ",llmSessionAnalysis.current[selectedSessionId1][deviceId])
+      // console.log("llm response: ",llmSessionAnalysis.current[selectedSessionId1][deviceId])
       selectedLLMAnalysis.current = llmSessionAnalysis.current[selectedSessionId1][deviceId]
       selectedSynthesizedData.current = respObj
       await loadprompthistory(deviceId)
-      setSelectedMomentIdAndIndex([0, selectedSynthesizedData.current.participant_level_metric[0].windowid])
+      setSelectedMomentIdAndIndex([0, selectedSynthesizedData.current.participant_level_metric[0]?.windowid])
 
       return ret
     } else {
@@ -844,6 +874,8 @@ function StudentSessionDashboard() {
         retObj["sessionid"] = sessionId
         retObj["sessiondeviceid"] = deviceId
         retObj["retrieve_existing_report"] = "true"
+        retObj["promptcontext"] = ""
+        retObj["promptrefinement"] = ""
         retObj["participant_level_metric"] = synthesizedFeedbackMetrics.current[sessionId][deviceId]["participants_level"][userDetail.username]
         retObj["session_level_metric"] = synthesizedFeedbackMetrics.current[sessionId][deviceId]["session_level"][userDetail.username]
         retObj["group_level_metric"] = synthesizedFeedbackMetrics.current[sessionId][deviceId]["group_level"]
@@ -1029,12 +1061,11 @@ function StudentSessionDashboard() {
   }
 
   const seeAllTranscripts = () => {
-    if (Object.keys(currentTranscript) > 0) { //&& sessionDevice !== null
+    if (Object.keys(currentTranscript) > 0 && sessionDevices.length > 0 && selectedSessionDeviceId1 !== -1 && sessiontype === "previoussessions") { 
       setCurrentForm("gottoselectedtranscript")
+    }else if (sessionDevices.length > 0 && selectedSessionDeviceId1 !== -1 && sessiontype === "previoussessions") {
+        setCurrentForm("gototranscript")
     }
-    // else if (sessionDevice !== null) {
-    //     setCurrentForm("gototranscript")
-    // }
   }
 
   const closeDialog = () => {
@@ -1114,6 +1145,17 @@ function StudentSessionDashboard() {
     setCurrentForm("gottoselectedtranscript")
   }
 
+  const navBackTo = ()=>{
+    if(prevPages.current.length === 1 && prevPages.current[0]  === "/"){
+      navigateToLogin()
+    }else{
+      let last = prevPages.current.pop(-1)
+      while (prevPages.current.at(-1) === last){
+        last = prevPages.current.pop(-1)
+      }
+      setNextPage(last)
+    }
+  }
   return (
     <StudentSessionDashboardPages
       currentForm={currentForm}
@@ -1173,6 +1215,8 @@ function StudentSessionDashboard() {
       selectFilteredDevice1={selectFilteredDevice1}
       selectFilteredDevice2={selectFilteredDevice2}
       dialogHeading = {dialogHeading}
+      setCurrentForm = {setCurrentForm}
+      navBackTo = {navBackTo}
 
       loadReflectiondashboard={loadReflectiondashboard}
       reflectionDashboardDoneLoading={reflectionDashboardDoneLoading}

@@ -52,19 +52,34 @@ def particiapant_only_session_prompt(data):
         Return ONLY valid JSON in this exact structure:
 
         {{"Session_summary": {{
-        "Summary": "...",
-        "Sessionpattern":"....",
-        "Strongzones": ["...", "..."],
-        "Declinezones": ["...", "..."],
-        "Strengths": ["...", "..."],
-        "Concerns": ["...", "..."],
-        "Actions": ["...", "..."],
-        "Evidences": ["..","..."],
-        "Confidence": "...",
-        "Session_metric_summary:{{session_metric_key: "...", session_metric_key:"..."}}"
+            "Summary": "...",
+            "Sessionpattern": "...",
+            "Strongzones": ["...", "..."],
+            "Declinezones": ["...", "..."],
+            "Strengths": ["...", "..."],
+            "Concerns": ["...", "..."],
+            "Actions": ["...", "..."],
+            "Evidences": ["...", "..."],
+            "Confidence": "...",
+            "Session_metric_summary": {{
+            "metric_1": "...",
+            "metric_2": "..."
+            }}
         }},
-        "Window_summary":{{ "window_id" : {{"Summary": "...", "Action": "..."}}, "window_id":{{"Summary": "...","Action": "..."}}}},
-        "Group_summary": {{group_metric_key: "...", group_metric_key:"..."}} 
+        "Window_summary": {{
+            "window_1": {{
+            "Summary": "...",
+            "Action": "..."
+            }},
+            "window_2": {{
+            "Summary": "...",
+            "Action": "..."
+            }}
+        }},
+        "Group_summary": {{
+            "metric_1": "...",
+            "metric_2": "..."
+        }}
         }}
 
         -------------------------------------
@@ -72,7 +87,15 @@ def particiapant_only_session_prompt(data):
         -------------------------------------
         Participant name: 
         {data.get("participant_name", "")}
-        
+
+        Metric definition:
+        {{"Participation": "How much you participate","Internal Cohesion":"How much your speech is realted to itself","Responsivity":"How much your response is related to the other's speech",
+         "Newness":"How much new info you present throughout the discussion","Emotional tone":"Scores above 50 indicate a positive emotional tone. Scores below 50 indicate a negative emotional tone",
+         "Analytic thinking":"Scores above 50 indicate analytic thinking. Scores below 50 indicate narrative thinking","Clout":"Scores above 50 indicate higher levels of confidence or leadership.",
+         "Authenticity": "Scores above 50 indicate higher levels of honesty or authentic communication.","certainty": "Scores above 50 indicate higher levels of confusion in a speaker’s communication",
+         "objectfocuson": "Things the participant's gaze is directed, to track focus attention, good object of focus include laptop, book, tablets, fellow partiipant (represent as username or alias)",
+         "gazeontask":"Tracks when gaze is on objects useful for the task or fellow participants","facialemotion":"facial expression captured" }}
+
         Participants window by window metric:
         {json.dumps(data.get("participant_level_metric", {}), indent=2)}
 
@@ -89,24 +112,256 @@ def particiapant_only_session_prompt(data):
         -------------------------------------
         INSTRUCTIONS
         -------------------------------------
-        - Be concise and specific
-        - Use only the provided data
-        - Do NOT hallucinate missing information
-        - Ground all claims in the metrics or moments
-        - Provide actionable and practical suggestions
-        - Do NOT include any explanation outside JSON
-        - Don't incorporate raw metric values in the summary text response, but placed them in the evidence field of the response
-        - Ensure the responses are not just reporting observations from the metrics, but drawing insights, synthesis and suggestive conclusions
-        - Leverage the window timeline to determine time frame session e.g early, mid or late that are strong or declining zones. Also, you can leverage the trenddirection where 0 means stable, 1 increase and -1 decline
-        - In identifying these zones, communicate the response for Strongzone, Declinezone and Sessionpattern in atleast 12 words and not more than 15 words. 
-        - Ensure you use formative and suggesting language while communicating the insights
-        - Do NOT include markdown or backticks
-        - For window_by_window_summary, use the windw by window data in participation_level_metrics to provide summary and action for each window. replace the key window_id with the actual window id
-        - For Group_summary, provide synthesized response per metrics in atleast 8 words and not more than 10 word. use same keyname of the group_level_metric object for the key of the response
-        - For Session_metric_summary provide synthesized response per metrics in atleast 8 words and not more than 10 word. use same keyname of the session_level_metric object for the key of the response.
-        - provide a level of confidence, including an berief explanation of influenced the level of confidence in your analysis. please present it in 'Confidence field' of the structured output
-        - Use second person framing
-        - Note that all the values for the metrics are scaled to 100 percent except for trendingdirection,gazeontask,word count. This should be considered during the analysis 
+        1. Core objective
+        - Provide actionable, improvement-oriented feedback.
+        - Focus on how the participant’s behavior affects collaboration, shared understanding, and learning progress.
+        - Use second-person framing (“you…”).
+        - Use supportive, formative language, not evaluative or judgmental language.
+        - Do not hallucinate missing information.
+        - Ground all claims in the provided multimodal data.
+
+        2. Context awareness
+        - First, infer the nature of the activity by analyzing the entire transcript across the session.
+        - {data.get("promptcontext", "")}
+        - Examples of activity context include interview, discussion, brainstorming, collaborative problem-solving, planning, or peer explanation.
+        - Use the inferred activity context to frame the participant’s role and the collaboration expectations.
+        - Tailor the feedback to what effective collaboration looks like in that activity.
+        - For example:
+        - in an interview, emphasize questioning, probing, listening, follow-up, and conversational flow
+        - in a discussion, emphasize idea-building, responsiveness, and co-construction
+        - in problem-solving, emphasize reasoning, explanation, coordination, and shared progress
+
+        3. Multimodal reasoning
+        The data includes:
+        - Audio/text-derived metrics
+        - Video-derived metrics
+        - Derived metrics that combine signals across modalities
+
+        You must reason across modalities, not in isolation.
+
+        A. Cross-modality reinforcement
+        - When multiple modalities are present, explain how they reinforce or complement each other for a collaboration-related construct.
+        - Examples:
+        - focused gaze + active verbal contribution -> stronger visible engagement
+        - reasoning in speech + sustained visual attention -> more coherent and task-oriented contribution
+        - responsive verbal uptake + attention to teammate/task -> stronger collaborative listening
+        - positive verbal tone + supportive facial expression -> clearer encouragement or engagement
+
+        B. Cross-modality divergence
+        - When modalities do not align, explain the mismatch and its collaboration impact.
+        - Examples:
+        - strong visual focus but no speech -> attentive but less visible contribution
+        - high verbal contribution but weak task focus -> contribution may feel less grounded or harder to coordinate
+        - positive facial expression but flat or low emotional tone -> supportive presence may not fully carry into speech
+        - strong speaking volume/share but weak responsiveness -> active participation without enough uptake of others’ ideas
+
+        C. Modality fallback
+        - When one modality is missing, use the available modality to infer the construct.
+        - Do this naturally in the feedback without saying “the data is missing.”
+        - Examples:
+        - if gaze/focus data is weak or unavailable, use verbal participation, responsiveness, reasoning, and tone to infer engagement
+        - if speech is absent, use gaze, object focus, facial expression, and focus-related metrics to infer attentiveness or task orientation
+        - if facial emotion is absent or weak, use emotional tone in speech/text to infer affective stance
+        - if emotional tone is weak, use facial expression and interaction behavior cautiously to infer affective support or tension
+
+        D. General cross-modal alignment rule
+        - Do NOT restrict cross-modality to emotional tone and facial expression only.
+        - You may relate any relevant constructs across modalities, including:
+        - attention (video) <-> participation (audio/text)
+        - gaze/object focus (video) <-> responsiveness (audio/text)
+        - facial expression (video) <-> emotional tone (audio/text)
+        - reasoning (audio/text) <-> focus/task attention (video)
+        - initiative (audio/text) <-> engagement (video or multimodal)
+        - silence (audio) <-> sustained visual attention (video)
+        - turn-taking/verbal share (audio/text) <-> gaze or object orientation (video)
+        - Always frame the relationship in terms of collaboration and learning impact.
+
+        4. Collaboration-centered framing
+        - Interpret all behaviors in terms of how they support or limit collaboration and learning.
+        - Translate metric-based observations into student-usable meaning.
+        - Avoid simply reporting metric patterns.
+        - Always answer:
+        - What are you doing across speech and behavior?
+        - How does that affect your group’s understanding, interaction, or progress?
+        - What could you do differently next time to improve collaboration and learning?
+
+        5. Actionable guidance
+        - Every important insight should lead to a practical suggestion.
+        - Suggestions must be specific, realistic, and immediately usable in a future collaboration.
+        - Suggestions should connect behavior to improvement.
+        - Examples:
+        - “Add short verbal acknowledgments so teammates can see that you are following.”
+        - “Link your next question to what your teammate just said.”
+        - “Break longer prompts into one question at a time.”
+        - “Turn attentive silence into brief summaries or confirmations.”
+
+        6. Temporal awareness
+        - Use window-level data to identify patterns across time.
+        - Leverage the timeline and trenddirection to identify:
+        - Strongzone
+        - Declinezone
+        - Sessionpattern
+        - Interpret trenddirection as:
+        - 1 = increase
+        - 0 = stable
+        - -1 = decline
+        - When possible, describe whether strengths or declines occur early, mid, or late in the session.
+        - Consider how the participant’s collaboration shifts over time rather than treating the session as static.
+
+        7. Metric grounding
+        Use the provided metric definitions when reasoning.
+        Base metrics computed from audio/text transcript may include:
+        - analyticthinking
+        - authenticity
+        - certainty
+        - clout
+        - emotionaltone
+        - internalcohesion
+        - socialimpact
+        - responsivityscore
+        - newness
+        - participationscore
+        - transcript
+        - wordcount
+        - keywords
+
+        Base metrics computed from video may include:
+        - rawfocusscore
+        - objectfocuson
+        - gazeontask
+        - facialemotion
+
+        Derived metrics from transcript/audio may include:
+        - verbalshare
+        - turntaking
+        - reasoningscore
+        - ideacontributionscore
+        - initiativescore
+        - leadershipscore
+        - momentum
+
+        Derived multimodal metrics may include:
+        - engagementscore
+
+        Interpret metrics holistically and relationally.
+        Do not interpret a single metric in isolation when a stronger synthesis can be made from related metrics across modalities.
+
+        8. Output writing constraints
+        - Be concise, clear, specific, and student-facing.
+        - Do not include markdown or backticks.
+        - Do not include any explanation outside JSON.
+        - Do not include raw metric values in narrative summary text.
+        - Raw metric values should appear only in the evidence field.
+        - Do not hallucinate context, motives, or unobserved behavior.
+        - Ensure the feedback is formative, suggestive, and oriented toward improvement rather than summative judgment.
+
+        9. Output structure requirements
+
+        Return ONLY valid JSON.
+
+        Include the following top-level fields:
+
+        A. Participant
+        - The participant name.
+
+        B. Strongzone
+        - 12 to 15 words.
+        - Describe where the participant is strongest.
+        - Frame it in terms of collaboration and learning impact.
+
+        C. Declinezone
+        - 12 to 15 words.
+        - Describe where the participant’s collaboration weakens or becomes less visible/productive.
+
+        D. Sessionpattern
+        - 12 to 15 words.
+        - Summarize the overall collaboration pattern across the session.
+
+        E. window_by_window_summary
+        - Use the actual window IDs as keys.
+        - For each relevant window, provide:
+        - summary: what happened, integrating modalities where relevant, and what it meant for collaboration
+        - action: one concrete suggestion for improvement or consolidation
+        - Use the window-level data to determine each summary.
+
+        F. Group_summary
+        - Provide a synthesized response for each key in the group_level_metric object.
+        - Use the exact same key names as in the group_level_metric object.
+        - Each response must be at least 8 words and not more than 10 words.
+        - Frame each response in terms of group collaboration.
+
+        G. Session_metric_summary
+        - Provide a synthesized response for each key in the session_level_metric object for the participant.
+        - Use the exact same key names as in the session_level_metric object.
+        - put into consideration the percentage value (good: >= 50, normal: >=30, not too good: below 30) of the metric, but ensure your cross-validate it by analyzing the transcript inter and intra participant and the visual cues 
+        - Each response must be at least 8 words and not more than 10 words.
+        - Frame each response in terms of the participant’s collaboration pattern.
+
+        H. Synthesized_feedback
+        - Include a “summary” field.
+        - This is the most important narrative.
+        - It must synthesize the participant’s collaboration pattern holistically.
+        - It must:
+        - reflect the inferred activity context
+        - integrate cross-modality interplay
+        - explain how the participant’s behavior affects collaboration and learning
+        - show when modalities reinforce each other
+        - show when one modality is carrying the interpretation
+        - help the student understand where to adjust or consolidate behavior across modalities
+
+        I. evidence
+        - Include raw metric values and transcript snippets that support the claims.
+        - Put raw metrics here, not in the narrative summary text.
+
+        J. Confidence
+        - Include:
+        - level: low, medium, or high
+        - explanation: a brief explanation of what influenced the confidence level
+
+        10. Uncertainty-aware interpretation (CRITICAL)
+        - Collaboration behaviors are dynamic and context-dependent.
+        - Do NOT make definitive claims about internal states such as attention, disengagement, or motivation.
+        - Avoid assumptions such as:
+        - low gaze means disengagement
+        - silence means lack of participation
+        - looking away means distraction
+        - These behaviors may reflect thinking, listening, or processing.
+
+        - Use evidence-based, tentative language focused on what is visible in interaction.
+        - Examples:
+        - “your engagement may be less visible to teammates”
+        - “this could make it harder for others to follow your thinking”
+        - “your contribution is less expressed in this moment”
+
+        - When interpreting decline or ambiguity:
+        - acknowledge that multiple explanations are possible
+        - focus on interactional impact rather than intent
+
+        - Example:
+        - “During this moment, you remain visually attentive but do not speak, which may reflect listening or thinking. However, because this is not expressed verbally, your teammates may not fully see your engagement.”
+
+        - Always anchor interpretations to collaboration impact and shared understanding.
+        - Even with uncertainty, still provide actionable suggestions.
+
+        11. Final anchor rule
+        Your feedback should help the student understand:
+        - what you are doing across speech and visible behavior,
+        - how that affects your group’s collaboration and learning,
+        - and what you can do next time to improve or build on it.
+        
+        12. Prompt refinement (use this to refine your prompt and keep it in memory for subsequent prompt)
+        - {data.get("promptrefinement", "")}
+
+        13. Return only JSON.
+        Return exactly one valid JSON object.
+        Do not include markdown fences.
+        Do not include explanations or commentary.
+        Use double quotes for all keys and string values.
+        Escape all internal quotes inside string values.
+        Do not include trailing commas.
+        Do not omit required fields.
+        If a value is unknown, use null.
+        Your response must be parseable by Python json.loads without modification.
         """
         
 def particiapant_interactive_prompt(data):
@@ -120,10 +375,10 @@ def particiapant_interactive_prompt(data):
         Return ONLY valid JSON in this exact structure:
 
         {{"Prompt_summary": {{
-        "Summary": "...",
-        "Computedmetricsused": ["...", "..."],
-        "Evidencewindows": ["...","..."],
-        "Confidence": "..."
+            "Summary": "...",
+            "Computedmetricsused": ["...", "..."],
+            "Evidencewindows": ["...", "..."],
+            "Confidence": "..."
         }}
         }}
 
@@ -149,21 +404,128 @@ def particiapant_interactive_prompt(data):
         -------------------------------------
         INSTRUCTIONS
         -------------------------------------
-        - Be concise and specific and provide response in at least 50 words and not more than 100 words
-        - Use only the provided data
-        - Do NOT hallucinate missing information
-        - Ground all claims in the window-by-window containing other participants information, session data and group summary.
-        - Provide actionable and practical suggestions
-        - Do NOT include any explanation outside JSON
-        - Don't incorporate raw metric values in the summary text response, but placed them in the evidence field of the response
-        - Ensure the responses are not just reporting observations from the metrics, but drawing insights, synthesis and suggestive conclusions by analyzing all the data provided, finding pattern between participants,
-        - across windows, session_data and group summary.
-        - For the Evidencewindows, present in it time range formatted in hh:mm:ss - hh:mm:ss using the start time and end time. While for the Computedmetricsused do not list the keys but the actual metric in words
-        - Ensure you use formative and suggesting language while communicating the insights. Response should aim to help the student improve and where they did well should also be projected
-        - Do NOT include markdown or backticks
-        - provide a level of confidence, including an berief explanation of influenced the level of confidence in your analysis. please present it in 'Confidence field' of the structured output
-        - Use second person framing
-        - Note that all the values for the metrics are scaled to 100 percent except for trendingdirection,gazeontask,word count. This should be considered during the analysis 
+        1. Core objective
+        - Provide a concise, specific, and student-centered response that helps improve collaboration and learning outcomes.
+        - Response must be at least 50 words and not more than 100 words.
+        - Use second-person framing (“you…”).
+        - Use supportive, formative, and improvement-oriented language.
+
+        2. Data grounding
+        - Use only the provided data:
+        - window-by-window metrics (including other participants where relevant)
+        - session-level metrics
+        - group summary
+        - Do NOT hallucinate or infer information not supported by the data.
+        - Ground all claims in observable patterns across:
+        - multiple windows
+        - session trends
+        - group-level dynamics
+
+        3. Multimodal reasoning
+        - Interpret behavior across modalities, not in isolation.
+        - Leverage relationships such as:
+        - attention (video) ↔ participation (audio/text)
+        - gaze/object focus ↔ responsiveness
+        - facial expression ↔ emotional tone
+        - reasoning ↔ focus
+        - silence ↔ visual attention
+        - When modalities reinforce each other, explain how this strengthens collaboration.
+        - When modalities diverge, explain how this affects visibility of contribution or coordination.
+        - When one modality is limited or absent, rely on the available modality without stating data is missing.
+
+        4. Collaboration and learning framing
+        - Focus on how the student’s behavior affects:
+        - shared understanding
+        - interaction quality
+        - group progress
+        - Avoid simply describing metrics.
+        - Translate observations into collaboration meaning:
+        - what your behavior looks like to others
+        - how it influences the group
+        - what you can do to improve
+
+        5. Cross-participant and group awareness
+        - Where relevant, relate the student’s behavior to:
+        - other participants’ patterns
+        - group-level trends
+        - Highlight alignment or mismatch with group interaction (e.g., speaking less when others are active, or guiding when others are uncertain).
+
+        6. Uncertainty-aware interpretation (CRITICAL)
+        - Do NOT make definitive claims about internal states (e.g., disengagement, distraction, motivation).
+        - Avoid assumptions such as:
+        - low gaze = disengagement
+        - silence = lack of participation
+        - These may reflect thinking, listening, or processing.
+
+        - Use tentative, evidence-based language:
+        - “this may make your thinking less visible to teammates”
+        - “this could affect how others respond to you”
+        - Focus on interactional impact rather than intent.
+        - When appropriate, acknowledge plausible alternatives but keep the response concise.
+
+        7. Insight and synthesis
+        - Go beyond reporting observations.
+        - Identify patterns across:
+        - windows (early, mid, late trends)
+        - session-level behavior
+        - group interaction
+        - Provide a synthesized insight that connects behavior to collaboration outcomes.
+
+        8. Actionable guidance
+        - Provide at least one clear, practical suggestion.
+        - Suggestions must:
+        - be specific
+        - be easy to apply in future collaboration
+        - connect directly to observed behavior
+
+        9. Output constraints
+        - Do NOT include markdown or backticks.
+        - Do NOT include any explanation outside JSON.
+        - Do NOT include raw metric values in the response text.
+
+        10. Output structure
+
+        Return ONLY valid JSON with the following fields:
+
+        A. response
+        - A 50–100 word synthesized answer to the student’s question.
+        - Must include:
+        - multimodal insight
+        - collaboration impact
+        - actionable suggestion
+
+        B. Evidencewindows
+        - List relevant time windows used to support the response.
+        - Format each as: hh:mm:ss - hh:mm:ss
+
+        C. Computedmetricsused
+        - List the metrics used, written in natural language (not variable names).
+        - Example: “participation level, responsiveness, visual attention to task, emotional tone”
+
+        D. Confidence
+        - Include:
+        - level: low, medium, or high
+        - explanation: brief justification based on:
+            - consistency across windows
+            - multimodal coverage
+            - strength of observable patterns
+
+        11. Final anchor rule
+        Your response should help the student understand:
+        - what you are doing across speech and visible behavior,
+        - how that affects your group’s collaboration,
+        - and what you can do next time to improve.
+
+        12. Return only JSON.
+        Return exactly one valid JSON object.
+        Do not include markdown fences.
+        Do not include explanations or commentary.
+        Use double quotes for all keys and string values.
+        Escape all internal quotes inside string values.
+        Do not include trailing commas.
+        Do not omit required fields.
+        If a value is unknown, use null.
+        Your response must be parseable by Python json.loads without modification.
         """
 
 def build_prompt(data, type):
@@ -1114,6 +1476,5 @@ def synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,video
         Combined_object['group_level']['responsivity'] = round((sum(group_level_metric_acc['responsivity'])/total_speaker_detected)*100,2)
         Combined_object['group_level']['ideacontribution'] = round((sum(group_level_metric_acc['ideacontributionscore'])/total_speaker_detected)*100,2)
         Combined_object['group_level']['momentum'] = round((sum(group_level_metric_acc['momentum'])/total_speaker_detected)*100,2)
-    
     
     return Combined_object

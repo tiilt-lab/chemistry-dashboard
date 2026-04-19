@@ -3,6 +3,7 @@ from queue import Queue,Empty
 import threading
 import time
 import cv2
+import torch
 import os;
 import traceback
 import callbacks
@@ -21,17 +22,23 @@ class VideoMetricAnalytics:
         self.source = source
         self.work_queue = Queue(maxsize=10)
         self.workers = []
+        self.worker_loop_t = None
+        self.running = False
+        self.hasreceivedjob = False
         self.STOP = stop_signal  # sentinel
         
 
 
     def start(self):
         self.running = True
+        self.hasreceivedjob = False
 
-        for _ in range(self.num_workers):
-            t = threading.Thread(target=self.worker_loop, daemon=True)
-            t.start()
-            self.workers.append(t)
+        # for _ in range(self.num_workers):
+        #     t = threading.Thread(target=self.worker_loop, daemon=True)
+        #     t.start()
+        #     self.workers.append(t)
+        self.worker_loop_t = threading.Thread(target=self.worker_loop, daemon=True)
+        self.worker_loop_t.start()
 
         self.attention_emotion_detection_thread = threading.Thread(target=self.scheduler, name="attention_emotion_detection-thread")
         self.attention_emotion_detection_thread.daemon = True
@@ -51,9 +58,8 @@ class VideoMetricAnalytics:
             candidate_unique_ids = list(self.Imagedetection.accumulator_queue_manager.keys())
             len_candidate_unique_ids = len(candidate_unique_ids)
 
-            # if len_candidate_unique_ids == 0:
-            #     time.sleep(0.05)
-            #     continue
+            if len_candidate_unique_ids != 0:
+                self.hasreceivedjob = True
 
             while candidate_turn < len_candidate_unique_ids:
                 try:
@@ -65,6 +71,12 @@ class VideoMetricAnalytics:
                 
                 self.work_queue.put(payload) 
 
+                auth_key,_,_,_,last_batch = payload
+
+                if last_batch:
+                    self.Imagedetection.accumulator_queue_manager.pop(auth_key,None)
+                    break
+
                 # self.worker(self.Imagedetection.accumulator_queue_manager[candidate_unique_ids[candidate_turn]],candidate_unique_ids[candidate_turn])
                 # logging.info("proceesed emotion and attention work for client {0} of {1} with key {2} ".format(candidate_turn+1,len_candidate_unique_ids,candidate_unique_ids[candidate_turn]))
                 candidate_turn += 1
@@ -74,45 +86,45 @@ class VideoMetricAnalytics:
                 if candidate_turn == len_candidate_unique_ids:
                     break
 
-            if  self.source != "real_time" and  self.Imagedetection.user_completed and len(self.Imagedetection.user_completed) == len_candidate_unique_ids:
-                self.stop() 
-                logging.info("Stopping video metric procesaor thread scheduler")   
+            if  self.source != "real_time" and self.hasreceivedjob and  len(self.Imagedetection.accumulator_queue_manager) == 0:
+                logging.info("finished video metric procesaor thread scheduler") 
+                break #self.stop() 
+                  
 
     def worker_loop(self):
         while self.running:
             try:
                 payload = self.work_queue.get(timeout=0.05)
             except Empty:
+                # for posthoc processing use this to exit the thread
+                if  self.source != "real_time" and self.hasreceivedjob and  len(self.Imagedetection.accumulator_queue_manager) == 0:
+                    self.stop()
+                    break
                 continue
-
+            
+            logging.info("Inside Videometricprocesor: just read from worker queue") 
+            # worker_thread = threading.Thread(target=self.worker,args=(payload), daemon=True)
+            # worker_thread.start()      
             self.worker(payload)
 
     def worker(self,payload):
-        # t0 = time.time()
-        # try:
-        #     # block briefly to avoid CPU spin; adjust timeout for latency needs
-        #     payload = candidate_queue.get_nowait() #get(timeout=0.25)
-        #     t1 = time.time()
-        #     logging.info(f"Inside VideoMetricProcessor: read from frame queue for {candidate_queue_id} in {t1 - t0:.6f}s")
-        # except Empty:
-        #     logging.debug("Video metric analytics thread waiting for data...")
-        #     return
-
-        # if payload is self.STOP:
-        #     logging.info("Received stop signal for video metric analytics thread.")
-        #     return  
-
-        t1 = time.time()  
-        auth_key,all_frames,accumulator,batch_track = payload
+        auth_key,all_frames,accumulator,batch_track,last_batch = payload
         processing_timer = time.monotonic()
+        torch.cuda.synchronize()
+        t1 = time.time()
         video_metrics = self.compute_videoMetrics(all_frames,accumulator,batch_track)
+        torch.cuda.synchronize()
         t2 = time.time()
         logging.info(f"Inside VideoMetricProcessor: procesing attention and emotion dectection took {t2 - t1:.6f}s for {auth_key}")
         
-        can_post = video_metrics and (self.source == "real_time" or self.source == "post_hoc")
+        logging.info("Alloc {0}: after Attention and emotion detection for batch {1}".format((torch.cuda.memory_allocated() / 1024**2), batch_track))
+        logging.info("reserved {0}: after Attention and emotion detection for batch {1}".format((torch.cuda.memory_reserved() / 1024**2), batch_track))
+        
+        # first_val = next(iter(video_metrics.values()), None) 
+        can_post =  video_metrics and (self.source == "real_time" or self.source == "post_hoc") 
         logging.info("insert {0} into DB for batch {1} and {2}".format(video_metrics,batch_track,can_post))
         
-        if video_metrics and (self.source == "real_time" or self.source == "post_hoc"): 
+        if video_metrics and can_post: 
             
             success = callbacks.post_video_metrics(auth_key, video_metrics)
 
@@ -120,18 +132,40 @@ class VideoMetricAnalytics:
             if success:
                 logging.info( f"Video processing results posted successfully for client {auth_key} (Processing time: {processing_time})")
 
+    def worker_posthoc(self,payload):
+        auth_key,all_frames,accumulator,batch_track,last_batch = payload
+        processing_timer = time.monotonic()
+        torch.cuda.synchronize()
+        t1 = time.time()
+        video_metrics = self.compute_videoMetrics(all_frames,accumulator,batch_track)
+        torch.cuda.synchronize()
+        t2 = time.time()
+        logging.info(f"Inside VideoMetricProcessor: procesing attention and emotion dectection took {t2 - t1:.6f}s for {auth_key}")
+        
+        # first_val = next(iter(video_metrics.values()), None) 
+        can_post =  True
+        logging.info("insert {0} into DB for batch {1} and {2}".format(video_metrics,batch_track,can_post))
+        
+        if video_metrics and can_post: 
+            
+            success = callbacks.post_video_metrics(auth_key, video_metrics)
 
+            processing_time = time.monotonic() - processing_timer
+            if success:
+                logging.info( f"Video processing results posted successfully for client {auth_key} (Processing time: {processing_time})")
 
     def compute_videoMetrics(self,frames,face_object_detected,batch_track=None):
         video_metrics = {}
         try:
             for person_id, persons_detail in face_object_detected['head'].items():
                 # with attention_emotion_det_lock:
+                torch.cuda.synchronize()
                 t1 = time.time()
                 val_imgs, val_faces, val_head_channels, headboxes, imsizes, frame_ids, _ = self.AttentionTracking.get_batched_facial_data(persons_detail,frames)
                 val_gaze_heatmap_preds, val_attmaps, val_inout_preds = self.AttentionTracking.compute_gaze_direction(val_imgs, val_faces, val_head_channels)
-                t2 = time.time()
-                logging.info(f"Inside VideoMetricProcessor: batching and gaze detection took {t2 - t1:.6f}s for {len(val_gaze_heatmap_preds)} heads")
+                # torch.cuda.synchronize()
+                # t2 = time.time()
+                # logging.info(f"Inside VideoMetricProcessor: batching and gaze detection took {t2 - t1:.6f}s for {len(val_gaze_heatmap_preds)} heads")
                 for index in range(len(val_gaze_heatmap_preds)): 
                     pred_attention_level = 0
                     pred_object_focused_on = "Nothing"
@@ -145,20 +179,22 @@ class VideoMetricAnalytics:
                     frame_raw = frames[frame_index]
 
                     # with attention_emotion_det_lock:
+                    torch.cuda.synchronize()
                     t1 = time.time()
                     pred_emotion = self.EmotionDetection.predict_facial_emotion_for_single_participant(frames[frame_index], h_bbox,person_alias,frame_index,self.Imagedetection.crop_face_from_fame_with_bbox)
                     gaze_x, gaze_y = self.AttentionTracking.get_gaze_direction_point(val_gaze_heatmap_preds[index], val_inout_preds[index], imsizes[index])
-                    t2 = time.time()
-                    logging.info(f"Inside VideoMetricProcessor: emotion and gaze point estimation  took {t2 - t1:.6f}s")
+                    # torch.cuda.synchronize()
+                    # t2 = time.time()
+                    # logging.info(f"Inside VideoMetricProcessor: emotion and gaze point estimation  took {t2 - t1:.6f}s")
                 
                     if gaze_x is not  None or gaze_y is not None:
                         other_objects_in_frame = face_object_detected['other_objects'][frame_index]
                         frame_width, frame_height = imsizes[index]
                         # logging.info("For person_id: {0}, frame_index: {1}, predicted emotion is {2}, gaze point is ({3},{4}), other objects in frame length {5} frame_width: {6}, frame_height: {7}, head bbox: {8}".format(person_id, frame_index, pred_emotion, gaze_x, gaze_y, len(other_objects_in_frame), frame_width, frame_height, h_bbox))
-                        t1 = time.time()
+                        # t1 = time.time()
                         closest_object_index = self.AttentionTracking.find_closest_object_of_focus(h_bbox,(gaze_x, gaze_y), person_id,other_objects_in_frame,frame_width, frame_height,expand_margin=10)
-                        t2 = time.time()
-                        logging.info(f"Inside VideoMetricProcessor: object of focus took {t2 - t1:.6f}s")
+                        # t2 = time.time()
+                        # logging.info(f"Inside VideoMetricProcessor: object of focus took {t2 - t1:.6f}s")
                         if closest_object_index is not None:
                             object_class_id,object_class_name,object_id,oo_bbox, t_stamp = other_objects_in_frame[closest_object_index]
                             #if head gaze is focused on other object
@@ -180,7 +216,7 @@ class VideoMetricAnalytics:
                     else:
                         video_metrics[person_id].append([time_stamp,pred_emotion,pred_attention_level,pred_object_focused_on])   
                 
-                logging.info("Bfeore Aggregate {0} into DB for batch {1}".format(video_metrics,batch_track))
+                # logging.info("Bfeore Aggregate {0} into DB for batch {1}".format(video_metrics,batch_track))
                 #aggregate data in same time stamp
                 for person_id, persons_detail in video_metrics.items():
                     data = self.aggregate_all_metrics_in_same_timestamp(persons_detail)
@@ -211,7 +247,7 @@ class VideoMetricAnalytics:
                 else:
                     most_common_emotion = Counter(facial_emotion).most_common(1)[0][0] if facial_emotion else 'neutral'
                     most_common_object = Counter(object_on_focus).most_common(1)[0][0] if object_on_focus else 'nothing'
-                    total_attention_level = sum(attention_level)
+                    total_attention_level = int(sum(attention_level)/len(attention_level)) if len(attention_level) > 0 else 0
                     data.append([old_time_stamp, most_common_emotion, total_attention_level, most_common_object])
 
                     facial_emotion = []
@@ -224,6 +260,6 @@ class VideoMetricAnalytics:
                     
             most_common_emotion = Counter(facial_emotion).most_common(1)[0][0] if facial_emotion else 'neutral'
             most_common_object = Counter(object_on_focus).most_common(1)[0][0] if object_on_focus else 'nothing'
-            total_attention_level = sum(attention_level)
+            total_attention_level = int(sum(attention_level)/len(attention_level)) if len(attention_level) > 0 else 0
             data.append([old_time_stamp, most_common_emotion, total_attention_level, most_common_object])
         return data 

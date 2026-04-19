@@ -32,6 +32,7 @@ class ImageObjectDetection:
         self.accumulator_queue_manager = {}
         self.work_queue = queue.Queue(maxsize=10)
         self.workers = []
+        self.worker_loop_t = None
         self.num_workers = num_workers
         self.source = source
         self.imgsz =  640
@@ -54,6 +55,8 @@ class ImageObjectDetection:
         self.lock = threading.Lock()
         self.STOP = stop_signal  # sentinel
         self.user_completed = set()
+        self.running = False
+        self.hasreceivedjob = False
     
 
     def init_model(self,batch_size):
@@ -105,11 +108,11 @@ class ImageObjectDetection:
     
     def start(self):
         self.running = True
+        self.hasreceivedjob = False
 
-        for _ in range(self.num_workers):
-            t = threading.Thread(target=self.worker_loop, daemon=True)
-            t.start()
-            self.workers.append(t)
+        
+        self.worker_loop_t = threading.Thread(target=self.worker_loop, daemon=True)
+        self.worker_loop_t.start()
 
         self.object_detection_thread = threading.Thread(target=self.scheduler, name="object-detection-thread")
         self.object_detection_thread.daemon = True
@@ -129,9 +132,8 @@ class ImageObjectDetection:
             candidate_unique_ids = list(self.frame_queue_manager.keys())
             len_candidate_unique_ids = len(candidate_unique_ids)
             
-            # if len_candidate_unique_ids == 0:
-            #     time.sleep(0.05)
-            #     continue
+            if len_candidate_unique_ids != 0:
+                self.hasreceivedjob = True
 
             while candidate_turn < len_candidate_unique_ids:
                 try:
@@ -141,6 +143,12 @@ class ImageObjectDetection:
                     continue
                 
                 self.work_queue.put(payload) 
+                _,_,_,_,_,auth_key,last_batch = payload
+
+                if last_batch:
+                    self.frame_queue_manager.pop(auth_key,None)
+                    break
+                
                 # self.worker(self.frame_queue_manager[candidate_unique_ids[candidate_turn]],candidate_unique_ids[candidate_turn])
 
 
@@ -153,53 +161,61 @@ class ImageObjectDetection:
                     break
 
             # for posthoc processing use this to exit the thread
-            if  self.source != "real_time" and  self.user_completed and len(self.user_completed) == len_candidate_unique_ids:
-                self.stop()
+            if  self.source != "real_time" and self.hasreceivedjob and len(self.frame_queue_manager) == 0: #self.user_completed and len(self.user_completed) == len_candidate_unique_ids:
                 logging.info("Finished image detection thread scheduler")
-                # break dont break
+                break # self.stop()
+                
+                
                 
     
     def worker_loop(self):
         while self.running:
-            # logging.info(f"Inside Image-dection: about to read from worker queue {t0:.6f}s")
             try:
                 t0 = time.time()  
                 payload = self.work_queue.get(timeout=0.1)
             except Empty:
+                # for posthoc processing use this to exit the thread
+                if  self.source != "real_time" and self.hasreceivedjob and  len(self.frame_queue_manager) == 0:
+                    self.stop()
+                    break
                 continue
             t1 = time.time()  
             logging.info(f"Inside Image-dection: reading from worker queue took {t1 - t0:.6f}s")    
-            t2 = time.time()  
+            # t2 = time.time()  
             self.worker(payload)
             t3 = time.time()
-            logging.info(f"Inside Image-dection:  procesing image dectection took {t3 - t2:.6f}s")
+            # logging.info(f"Inside Image-dection:  procesing image dectection took {t3 - t2:.6f}s")
 
     def worker(self,payload):
-        # while self.running:
-        # t0 = time.time()
-        # try:
-        #     # block briefly to avoid CPU spin; adjust timeout for latency needs
-        #     payload = candidate_queue.get_nowait() #get(timeout=0.25)
-        #     t1 = time.time()
-        #     logging.info(f"Inside Image-dection: read from frame queue for {candidate_queue_id} in {t1 - t0:.6f}s")
-        # except Empty:
-        #     return
-
-        # if payload is self.STOP:
-        #     return 
-
-       
+        
         try:
-            images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key = payload
+            images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key,last_batch = payload
             all_frames,accumulator = self.detection_with_facial_regonition(images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key)
-
-            accumulator_load = [auth_key,all_frames,accumulator,batch_track]
+            logging.info("Alloc {0}: after image-detection for batch {1}".format((torch.cuda.memory_allocated() / 1024**2), batch_track))
+            logging.info("reserved {0}: after image-detection for batch {1}".format((torch.cuda.memory_reserved() / 1024**2), batch_track))
+            
+            accumulator_load = [auth_key,all_frames,accumulator,batch_track,last_batch]
             #enque for gaze detection and attention flow processing, 
-            self.enqueue_latest_accumulator_payload(accumulator_load,auth_key)
+
+            return accumulator_load #remove later
+            #uncomment later
+            # self.enqueue_latest_accumulator_payload(accumulator_load,auth_key)
         except Exception as e:
             error_str = traceback.format_exc()
             logging.warning('Exception thrown while image detedction worker is running {0} {1}'.format(error_str, auth_key))
 
+    def worker_posthoc(self,payload):
+        
+        try:
+            images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key,last_batch = payload
+            all_frames,accumulator = self.detection_with_facial_regonition(images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key)
+            
+            accumulator_load = [auth_key,all_frames,accumulator,batch_track,last_batch]
+
+            return accumulator_load 
+        except Exception as e:
+            error_str = traceback.format_exc()
+            logging.warning('Exception thrown while image detedction worker is running {0} {1}'.format(error_str, auth_key))
 
     def enqueue_latest_accumulator_payload(self, payload,candidate_queue_id, timeout=0.1):
         """
@@ -289,42 +305,50 @@ class ImageObjectDetection:
         return all_frames,accumulator
 
     def detection_with_facial_regonition(self,images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key):
-        t1 = time.time()
+        # t1 = time.time()
         val_dataset = LoadImageDataset(images, batch_track, self.batch_size,img_size=self.imgsz, stride=self.stride)
         dataset = torch.utils.data.DataLoader(dataset=val_dataset,
                                                batch_size=self.batch_size,
                                                shuffle=False,
                                                num_workers=0)
-        t2 = time.time()
-        logging.info(f"Inside Imagedetection: batching  took {t2 - t1:.6f}s for {len(images)} frames")
+        # t2 = time.time()
+        # logging.info(f"Inside Imagedetection: batching  took {t2 - t1:.6f}s for {len(images)} frames")
         accumulator = {'head':dict(), 'other_objects':dict()}
         all_frames = {}
 
         # logging.info("number of facial embeddings is "+str(len(facial_embeddings))+" number of frames "+str(len(images)))
+        torch.cuda.synchronize()
         t1 = time.time()
         for val_batch, (img_index, img, im0s) in enumerate(dataset): #path, img, im0s, vid_cap in dataset:
             # all_frames.extend(im0s)
             # img = torch.from_numpy(img).to(device)
-            t3 = time.time()
-            img = img.to(self.device)
-            img = img.half() if self.half else img.float()  # uint8 to fp16/32
-            img /= 255.0  # 0 - 255 to 0.0 - 1.0
-            if img.ndimension() == 3:
-                img = img.unsqueeze(0)
+            # t3 = time.time()
+            with torch.inference_mode():
+                img = img.to(self.device)
+                img = img.half() if self.half else img.float()  # uint8 to fp16/32
+                img /= 255.0  # 0 - 255 to 0.0 - 1.0
+                if img.ndimension() == 3:
+                    img = img.unsqueeze(0)
 
-            # Inference
-            pred = self.model_1(img, augment=self.augment)[0]
-            pred2 = self.model_2(img, augment=self.augment)[0]
-            
-            # Apply NMS
-            pred = non_max_suppression(pred, self.model1_conf_thres, self.model1_iou_thres, classes=self.classes, agnostic=self.agnostic_nms)
-            pred2 = non_max_suppression(pred2, self.model2_conf_thres, self.model2_iou_thres, classes=self.classes, agnostic=self.agnostic_nms)
-            
-            #combine pred and pred 2, filter out all cls 0 (person) detection for pred. keep only head (cls 1) detection 
-            # and filter out all cls 1 (bicycle)  detection  pred 2
-            combined_pred = [torch.cat((pred[i][pred[i][:,5] >= 1],pred2[i][pred2[i][:,5] != 1])) for i in range(len(pred2))]
-            t4 = time.time()
-            logging.info(f"Inside Imagedetection: prediction only  took {t4 - t3:.6f}s for {len(img)} frames")
+                # Inference
+                pred = self.model_1(img, augment=self.augment)[0]
+                pred2 = self.model_2(img, augment=self.augment)[0]
+                
+                # Apply NMS
+                pred = non_max_suppression(pred, self.model1_conf_thres, self.model1_iou_thres, classes=self.classes, agnostic=self.agnostic_nms)
+                pred2 = non_max_suppression(pred2, self.model2_conf_thres, self.model2_iou_thres, classes=self.classes, agnostic=self.agnostic_nms)
+                
+                #combine pred and pred 2, filter out all cls 0 (person) detection for pred. keep only head (cls 1) detection 
+                # and filter out all cls 1 (bicycle)  detection  pred 2
+                combined_pred = [
+                                    torch.cat(
+                                        (pred[i][pred[i][:, 5] >= 1],
+                                        pred2[i][pred2[i][:, 5] != 1])
+                                    )
+                                    for i in range(len(pred2))
+                                ]
+            # t4 = time.time()
+            # logging.info(f"Inside Imagedetection: prediction only  took {t4 - t3:.6f}s for {len(img)} frames")
             for i, det in enumerate(combined_pred):  # detections per image
                 p, im0 = img_index[i], im0s[i].numpy()
 
@@ -333,6 +357,7 @@ class ImageObjectDetection:
                 
                 if len(det):
                     # Rescale boxes from img_size to im0 size
+                    det = det.clone()
                     det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
                     detected_faces = 0
                     #use this for face tracking across frames
@@ -354,33 +379,40 @@ class ImageObjectDetection:
                                 match, cos_score,L2_score = self.identify_student(face_embedding[0], facial_embeddings, "face_"+str(detected_faces),cos_threshold=0.95,L2_threshold=0.3)
                                 if match != "Unknown":
                                     # plot_one_box(xyxy, im0, label=self.object_names_K_V.get(int_cls, None), color=[random.randint(0, 255) for _ in range(3)], line_thickness=3)
-                                    save_to = os.path.join(vid_img_dir, "face_{0}_{1}_{2}_{3}.{4}".format(int(p),match,self.object_names_K_V.get(int_cls, None),detected_faces,'png'))
-                                    cv2.imwrite(save_to,face)
-                                    logging.info(f"Match: {match}, Confidence: {cos_score:.3f}")
+                                    # save_to = os.path.join(vid_img_dir, "face_{0}_{1}_{2}_{3}.{4}".format(int(p),match,self.object_names_K_V.get(int_cls, None),detected_faces,'png'))
+                                    # cv2.imwrite(save_to,face)
+                                    # logging.info(f"Match: {match}, Confidence: {cos_score:.3f}")
                                     self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_face",match,accumulator,time_marker,im0,int(p)) 
+                                else:
+                                    pass
+                                    # logging.info(f"Match: {match}, Confidence: {cos_score:.3f}")    
                         else:
-                          pass #print("Other object dtected is: ",self.object_names_K_V.get(int_cls, None))
+                          #print("Other object dtected is: ",self.object_names_K_V.get(int_cls, None))
+                          self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_other_objects","None",accumulator,time_marker,im0,int(p)) 
+                         
                     # print("number of detected faces for frame ",str(i)+" is "+str(detected_faces))
                     # save_to = os.path.join(vid_img_dir, "frame_{0}.{1}".format(int(p),'png'))
                     # cv2.imwrite(save_to,im0)
+
                     #use this for tracking other objects asides face
-                    result = Results(orig_img=im0, path=str(int(p)), names=self.object_names_K_V, boxes=det)
-                    # Tracking Mechanism
-                    detection_supervision = sv.Detections.from_ultralytics(result)
-                    detection_with_tracks = self.tracker.update_with_detections(detection_supervision)
-                    # tracks["head"].append({})
+                    # result = Results(orig_img=im0, path=str(int(p)), names=self.object_names_K_V, boxes=det)
+                    # # Tracking Mechanism
+                    # detection_supervision = sv.Detections.from_ultralytics(result)
+                    # detection_with_tracks = self.tracker.update_with_detections(detection_supervision)
+                    # # tracks["head"].append({})
                 
-                    # Write results
-                    for frame_detection in detection_with_tracks:
-                        bbox = frame_detection[0].tolist()
-                        confs = frame_detection[2]
-                        clss = frame_detection[3]
-                        object_id = frame_detection[4]
+                    # # Write results
+                    # for frame_detection in detection_with_tracks:
+                    #     bbox = frame_detection[0].tolist()
+                    #     confs = frame_detection[2]
+                    #     clss = frame_detection[3]
+                    #     object_id = frame_detection[4]
                         
-                        if int(clss) != self.object_names_V_K.get('person', None) and int(clss) != self.object_names_V_K.get('head', None):
-                            # print("Other object detected is: ",self.object_names_K_V.get(int(clss), None))
-                            #accumulate all other objects except person  
-                            self.accumulate_head_and_otherobject_track_V2(bbox,int(clss),"detected_other_objects",str(object_id),accumulator,time_marker,im0,int(p))  
+                    #     if int(clss) != self.object_names_V_K.get('person', None) and int(clss) != self.object_names_V_K.get('head', None):
+                    #         # print("Other object detected is: ",self.object_names_K_V.get(int(clss), None))
+                    #         #accumulate all other objects except person  
+                    #         self.accumulate_head_and_otherobject_track_V2(bbox,int(clss),"detected_other_objects",str(object_id),accumulator,time_marker,im0,int(p))  
+        # torch.cuda.synchronize()
         t2 = time.time()
         logging.info(f"Inside Imagedetection: prediction and facial matching  took {t2 - t1:.6f}s for {len(images)} frames")                       
                     
@@ -423,13 +455,13 @@ class ImageObjectDetection:
             score = float(np.dot(u, v)) #self.cosine_similarity(face_embedding, stored_embedding)
             Euc_dist = float(np.linalg.norm(u - v))
             # logging.info(f"score are Euclidean: {Euc_dist} and cos simillarity: {score}")
-            if score > best_cos_score and Euc_dist < best_L2_score:
+            if score > 0.85 and score > best_cos_score and Euc_dist < best_L2_score:
                 best_cos_score = score
                 best_L2_score = Euc_dist
                 best_match = student
 
         # if best_cos_score >= cos_threshold and best_L2_score <= L2_threshold:
-        logging.info(f"student is ...... {best_match} and score are cos_simmilarity: {best_cos_score} Euclidean Dist: {best_L2_score}")
+        # logging.info(f"student is ...... {best_match} and score are cos_simmilarity: {best_cos_score} Euclidean Dist: {best_L2_score}")
         return best_match, best_cos_score, best_L2_score
         # else:
         #     return "Unknown", best_cos_score,best_L2_score

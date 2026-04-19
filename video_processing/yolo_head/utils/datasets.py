@@ -213,14 +213,15 @@ class LoadImageDataset(Dataset2):
         self.batch_size = batch_size
         
     def __getitem__(self, index):
-        img0 = self.images[index]
-        
+        # img0 = self.images[index]
+        img0 = np.array(self.images[index], copy=True)
         # Padded resize
         img = letterbox2(img0, self.img_size)[0] #, stride=self.stride
 
         # Convert
-        img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
-        img = np.ascontiguousarray(img)
+        # img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
+        # img = np.ascontiguousarray(img)
+        img = torch.from_numpy(np.ascontiguousarray(img[:, :, ::-1].transpose(2, 0, 1)).copy())
         return index+(self.batch_size * (self.batch-1)), img, img0
         
 

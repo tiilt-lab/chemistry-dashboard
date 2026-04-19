@@ -183,18 +183,18 @@ class ServerProtocol(WebSocketServerProtocol):
 
     def process_binary(self, data):
         if self.running and not self.awaitingSpeakers:
-            if cf.video_record_original():
-                if self.config.mimeExtension == "webm":
-                    self.orig_vid_recorder.write(data,self.filename+'.'+self.config.mimeExtension)
-                    logging.info('i just appended video data  for {0} to file'.format(self.config.auth_key))
+            # if cf.video_record_original():
+            if self.config.mimeExtension == "webm":
+                self.orig_vid_recorder.write(data,self.filename+'.'+self.config.mimeExtension)
+                logging.info('i just appended video data  for {0} to file'.format(self.config.auth_key))
 
-                elif self.config.mimeExtension == "mp4":
-                    # temp_file_name = self.filename_remux+"_"+str(self.video_count)+"."+self.config.mimeExtension
-                    # self.orig_vid_recorder.write(data,temp_file_name)
-                    fixed = self.filename+"_"+str(self.video_count)+"."+self.config.mimeExtension
-                    self.orig_vid_recorder.write(data,fixed)
-                    # self.remux_mp4(temp_file_name, fixed)       
-                    self.video_files_accum.append(fixed)
+            elif self.config.mimeExtension == "mp4":
+                # temp_file_name = self.filename_remux+"_"+str(self.video_count)+"."+self.config.mimeExtension
+                # self.orig_vid_recorder.write(data,temp_file_name)
+                fixed = self.filename+"_"+str(self.video_count)+"."+self.config.mimeExtension
+                self.orig_vid_recorder.write(data,fixed)
+                # self.remux_mp4(temp_file_name, fixed)       
+                self.video_files_accum.append(fixed)
             
             if self.config.mimeExtension == "webm":
                 if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()): 

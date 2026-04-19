@@ -43,7 +43,7 @@ attention_detection = AttentionDetection()
 facial_emotion_detector = EmotionDetectionModelV1()
 image_object_detection = ImageObjectDetection(STOP_SIGNAL,source="post_hoc")
 video_metric_analytics = VideoMetricAnalytics(attention_detection, facial_emotion_detector, image_object_detection,STOP_SIGNAL,source="post_hoc")
-batch_size = 20
+batch_size = 40
 running_video_processes = {}
 
 class ServerProtocol(WebSocketServerProtocol):
@@ -191,7 +191,7 @@ class ServerProtocol(WebSocketServerProtocol):
         target_dir = parent_dir / "video_processing" / "videorecordings"
         # Find file starting with prefix
         prefix = str(sessionDeviceId)
-        files = list(target_dir.glob(f"{prefix}*"))
+        files = list(target_dir.glob(f"{prefix}*.webm"))
 
         if files:
             file_path = files[-1]
@@ -235,8 +235,8 @@ if __name__ == '__main__':
     image_object_detection.init_model(batch_size) 
     attention_detection.init_model(batch_size) 
     facial_emotion_detector.load_model() 
-    image_object_detection.start()
-    video_metric_analytics.start() 
+    # image_object_detection.start()
+    # video_metric_analytics.start() 
 
     # Run Server
     logging.info('Starting Video Posthoc Processing Service...')

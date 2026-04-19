@@ -1,8 +1,9 @@
-import { GenericDialogBox,DialogBox,WaitingDialog } from "../dialog/dialog-component"
+import { GenericDialogBox, DialogBox, WaitingDialog } from "../dialog/dialog-component"
 import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { Appheader } from "../header/header-component"
 import style from "./pod.module.css"
+import style2 from "../settings/settings.module.css"
 import React from "react"
 import Select from "react-select"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
@@ -36,21 +37,21 @@ function PodComponentPages(props) {
                                 },
                                 {
                                     title: "Reflection Dashboard",
-                                    action:  () =>  props.loadReflectiondashboard("Reflection Dashboard"),
+                                    action: () => props.loadReflectiondashboard(),
                                 },
                                 {
                                     title: "Post-Hoc Audio Analytics",
-                                    action:  () =>  props.connecttoaudioservice(),
+                                    action: () => props.connecttoaudioservice(),
                                 },
                                 {
                                     title: "Post-Hoc Video Analytics",
-                                    action:  () =>  props.connecttovideoservice(),
+                                    action: () => props.connecttovideoservice(),
                                 }
                             ]}
-                            participants={ props.speakers.map((speaker, index) => (
+                            participants={props.speakers.map((speaker, index) => (
                                 {
                                     alias: speaker.alias,
-                                    action: () => props.loadSpeakerMetrics(speaker.id,speaker.alias),
+                                    action: () => props.loadSpeakerMetrics(speaker.id, speaker.alias),
                                 }
                             ))}
 
@@ -59,51 +60,52 @@ function PodComponentPages(props) {
                         <></>
                     )}
                     <div className="center-column-container">
-                   
-                        {props.details === 'Reflection Dashboard'?
+
+                        {props.details === 'Reflection Dashboard' ?
                             <CollaborationFeedbackDashboard
-                                participants = {props.participants}
-                                currentParticipant = {props.currentParticipant}
-                                llmSessionAnalysis = {props.selectedParticipantLLMAnalysis}
-                                selectedParticipantSynthesizedData = {props.selectedParticipantSynthesizedData}
-                                interactivePromptFnc = {props.interactivePromptFnc}
-                                promptResponses = {props.promptResponses}
-                                isThinking = {props.isThinking}
-                                setIsThinking = {props.setIsThinking}
-                                setParticipantIDRefectionDashboard = {props.setParticipantIDRefectionDashboard}
-                                selectedMomentIdAndIndex = {props.selectedMomentIdAndIndex}
-                                setSelectedMomentIdAndIndex = {props.setSelectedMomentIdAndIndex}
+                                participants={props.participants}
+                                currentParticipant={props.currentParticipant}
+                                llmSessionAnalysis={props.selectedParticipantLLMAnalysis}
+                                selectedParticipantSynthesizedData={props.selectedParticipantSynthesizedData}
+                                interactivePromptFnc={props.interactivePromptFnc}
+                                promptResponses={props.promptResponses}
+                                isThinking={props.isThinking}
+                                setIsThinking={props.setIsThinking}
+                                setParticipantIDRefectionDashboard={props.setParticipantIDRefectionDashboard}
+                                selectedMomentIdAndIndex={props.selectedMomentIdAndIndex}
+                                setSelectedMomentIdAndIndex={props.setSelectedMomentIdAndIndex}
+                                loadReflectiondashboard={props.loadReflectiondashboard}
                             />
-                        :
-                        
-                        <AppInfographicsComparison
-                            displayTranscripts={props.displayTranscripts}
-                            displayVideoMetrics={props.displayVideoMetrics}
-                            fromclient={false}
-                            onClickedTimeline={props.onClickedTimeline}
-                            radarTrigger={props.radarTrigger}
-                            session={props.session}
-                            sessionDevice={props.sessionDevice}
-                            setRange={props.setRange}
-                            showBoxes={props.showBoxes}
-                            showFeatures={props.showFeatures}
-                            startTime={props.startTime}
-                            endTime={props.endTime}
-                            speakers={props.speakers}
-                            selectedSpkrId1={props.selectedSpkrId1}
-                            setSelectedSpkrId1={props.setSelectedSpkrId1}
-                            selectedSpkrId2={props.selectedSpkrId2}
-                            setSelectedSpkrId2={props.setSelectedSpkrId2}
-                            spkr1Transcripts={props.spkr1Transcripts}
-                            spkr2Transcripts={props.spkr2Transcripts}
-                            spkr1VideoMetrics={props.spkr1VideoMetrics}
-                            spkr2VideoMetrics={props.spkr2VideoMetrics}
-                            details={props.details}
-                            getSpeakerAliasFromID={props.getSpeakerAliasFromID}
-                        ></AppInfographicsComparison>
-                
+                            :
+
+                            <AppInfographicsComparison
+                                displayTranscripts={props.displayTranscripts}
+                                displayVideoMetrics={props.displayVideoMetrics}
+                                fromclient={false}
+                                onClickedTimeline={props.onClickedTimeline}
+                                radarTrigger={props.radarTrigger}
+                                session={props.session}
+                                sessionDevice={props.sessionDevice}
+                                setRange={props.setRange}
+                                showBoxes={props.showBoxes}
+                                showFeatures={props.showFeatures}
+                                startTime={props.startTime}
+                                endTime={props.endTime}
+                                speakers={props.speakers}
+                                selectedSpkrId1={props.selectedSpkrId1}
+                                setSelectedSpkrId1={props.setSelectedSpkrId1}
+                                selectedSpkrId2={props.selectedSpkrId2}
+                                setSelectedSpkrId2={props.setSelectedSpkrId2}
+                                spkr1Transcripts={props.spkr1Transcripts}
+                                spkr2Transcripts={props.spkr2Transcripts}
+                                spkr1VideoMetrics={props.spkr1VideoMetrics}
+                                spkr2VideoMetrics={props.spkr2VideoMetrics}
+                                details={props.details}
+                                getSpeakerAliasFromID={props.getSpeakerAliasFromID}
+                            ></AppInfographicsComparison>
+
                         }
-                        
+
                     </div>
                 </div>
                 {props.loading(props.details) ? <AppSpinner></AppSpinner> : <></>}
@@ -132,6 +134,40 @@ function PodComponentPages(props) {
                                 onClick={props.seeAllTranscripts}
                             >
                                 View All
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <></>
+                )}
+
+                {props.currentForm === "llmpromptextrainformation" ? (
+                    <div className={style2["add-dialog"]}>
+                        <div className={style2["dialog-heading"]}>
+                            LLM Prompt Fine-tuning
+                        </div>
+                        <div className={style["input-header"]}>Retrieve report?</div>
+                        <select id='retrieveexisting'>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                        <div className={style["input-header"]}>Provide Context</div>
+                        <textarea id="context" type="text" />
+                        <div className={style["input-header"]}>Refine Prompt</div>
+                        <textarea id="refinement" type="text" />
+
+                        <div className={style["dialog-button-container"]}>
+                            <button
+                                className={style["basic-button"]}
+                                onClick={() => props.setLLMAnalyticParameter(document.getElementById('retrieveexisting').value, document.getElementById('context').value, document.getElementById('refinement').value)}
+                            >
+                                Ok
+                            </button>
+                            <button
+                                className={style["cancel-button"]}
+                                onClick={props.closeDialog}
+                            >
+                                Close
                             </button>
                         </div>
                     </div>
@@ -260,9 +296,9 @@ function PodComponentPages(props) {
                 itsclass={"add-dialog"}
                 heading={"Processing..."}
                 message={props.displayText}
-                show={["awaitingllmresponse","posthocanalytics"].includes(props.currentForm) }
+                show={["awaitingllmresponse", "posthocanalytics"].includes(props.currentForm)}
             />
-            
+
             <DialogBox
                 itsclass={"add-dialog"}
                 heading={"Success"}
@@ -275,6 +311,13 @@ function PodComponentPages(props) {
                 heading={"Error"}
                 message={props.displayText}
                 show={props.currentForm === "websocketerror"}
+                closedialog={props.closeDialog}
+            />
+            <DialogBox
+                itsclass={"add-dialog"}
+                heading={"Error"}
+                message={props.displayText}
+                show={props.currentForm === "reflectiondashboad"}
                 closedialog={props.closeDialog}
             />
         </>

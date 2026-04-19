@@ -73,6 +73,14 @@ class VideoProcessorPosthoc:
     
     def processing(self):
         try:
+            #uncomment later
+            # if self.image_object_detection.running == False:
+            #     self.image_object_detection.start()
+
+            # if self.video_metric_analytics.running == False:
+            #     self.video_metric_analytics.start()
+
+
             warming_error_count  = 0 
             vidclip = mp.VideoFileClip(self.video_file)
             for start in range(0, int(vidclip.duration), self.video_interval):
@@ -93,10 +101,11 @@ class VideoProcessorPosthoc:
                             self.frame_batch.append(frame)
                             self.time_marker.append(self.adjust_time(ts))
                             if len(self.frame_batch) == self.batch_size:
-                                #pass to consumer frame
-                                payload = [self.frame_batch, self.facialEmbeddings, self.batch_track, self.time_marker, self.vid_img_dir, self.config.auth_key]
-                                self.enqueue_latest_frame_payload(payload,self.config.auth_key)
-
+                                logging.info(f"batch being inserted is {self.batch_track}")
+                                payload = [self.frame_batch, self.facialEmbeddings, self.batch_track, self.time_marker, self.vid_img_dir, self.config.auth_key,False]
+                                accumulator_load = self.image_object_detection.worker_posthoc(payload)  
+                                self.video_metric_analytics.worker_posthoc(accumulator_load)
+                               
                                 self.frame_batch = []
                                 self.time_marker = []
                             
@@ -107,14 +116,15 @@ class VideoProcessorPosthoc:
                 except UserWarning as e:
                     warming_error_count += 1
                     logging.info(f"Frame read warning turned error: {e}")
-                    if warming_error_count > 20:
-                        # break
-                        self.stop()
+                    if warming_error_count > 6:
+                        break
+                        # self.stop()
 
-                
                 # push the rest of the batched frames adjtime to queue
-                payload = [self.frame_batch, self.facialEmbeddings, self.batch_track, self.time_marker, self.vid_img_dir, self.config.auth_key]
-                self.enqueue_latest_frame_payload(payload,self.config.auth_key)
+                payload = [self.frame_batch, self.facialEmbeddings, self.batch_track, self.time_marker, self.vid_img_dir, self.config.auth_key,False]
+                
+                accumulator_load = self.image_object_detection.worker_posthoc(payload)  
+                self.video_metric_analytics.worker_posthoc(accumulator_load)
 
         except Exception as e:
             error_str = traceback.format_exc()
@@ -122,44 +132,14 @@ class VideoProcessorPosthoc:
         finally:
                 try:
                     logging.info("called finally after thread stop initiated")
-                    self.image_object_detection.user_completed.add(self.config.auth_key)
                     self.running_video_processes.pop(self.config.auth_key,None)
+                    payload = [self.frame_batch, self.facialEmbeddings, self.batch_track, self.time_marker, self.vid_img_dir, self.config.auth_key,True]
+                    
+                    accumulator_load = self.image_object_detection.worker_posthoc(payload) 
+                    self.video_metric_analytics.worker_posthoc(accumulator_load)
+                    
                     logging.info('Video Processor Posthoc  stopped for {0}.'.format(self.config.auth_key))
                     self.send_json({'type': 'process_completed', 'message': "Video posthoc analytics completed"})  
                 except Full:
                     pass    
-
-
-    def enqueue_latest_frame_payload(self, payload,candidate_queue_id, timeout=0.6):
-        """
-        Keep only the most recent chunk in the queue.
-        If the queue is full, remove the stale queued chunk and replace it.
-        """
-        if candidate_queue_id not in self.image_object_detection.frame_queue_manager:
-            self.image_object_detection.frame_queue_manager[candidate_queue_id] = Queue()#maxsize=3
-        try:
-            self.image_object_detection.frame_queue_manager[candidate_queue_id].put(payload, timeout=timeout)
-            # logging.info("i just inserted frames into the queue for candidate  {0}".format(candidate_queue_id))
-            return True
-        except Full:
-            logging.warning("Frame queue for {0} is full; attempting to replace stale payload with latest payload.".format(candidate_queue_id))
-            pass
-
-        # Queue is full: drop the old queued item
-        try:
-            old_item =  self.image_object_detection.frame_queue_manager[candidate_queue_id].get_nowait()
-            # optional: if you use task_done semantics elsewhere, call task_done here
-            # self.frame_queue.task_done()
-        except Empty:
-            logging.warning("Frame queue for {0} was full but is now empty; failed to replace payload.".format(candidate_queue_id))
-            old_item = None
-
-        # Try again to insert the latest chunk
-        try:
-            self.image_object_detection.frame_queue_manager[candidate_queue_id].put_nowait(payload)
-            logging.debug("Replaced stale frame payload with latest payload.")
-            return True
-        except Full:
-            logging.warning("Could not enqueue latest frame payload for {0}; dropping it.".format(candidate_queue_id))
-            return False   
         

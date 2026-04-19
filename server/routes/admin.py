@@ -144,11 +144,14 @@ def delete_rater(id, **kwargs):
 @api_routes.route('/api/v1/admin/devicedata/sessiondeviceid/<int:session_device_id>/data_type/<string:data_type>', methods=['DELETE'])
 @wrappers.verify_login(roles=['admin', 'super'])
 def delete_session_device_data(session_device_id,data_type, **kwargs):
+    trscript = vidmetric = None
     if data_type == 'transcriptmetric':
         trscript = database.delete_device_transcriptsV2(session_device_id)
     elif data_type == 'videometric':
         vidmetric = database.delete_speaker_video_metrics_by_sessionDeviceID(session_device_id)
-    if trscript is not None or vidmetric is not None:
+    elif data_type == "sessiondevice":
+        sessDevice = database.delete_session_device(session_device_id)    
+    if trscript  or vidmetric or sessDevice:
         return json_response()
     else:
         return json_response({'Data not found.'}, 400)

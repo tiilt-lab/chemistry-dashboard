@@ -51,6 +51,10 @@ function PodComponent() {
   const [isThinking, setIsThinking] = useState(false)
   const [selectedMomentIdAndIndex, setSelectedMomentIdAndIndex] = useState(null);
   const [displayText, setDisplayText] = useState("")
+  const [retrieveExisting, setRetrieveExisting] = useState("false")
+  const [contextForPrompt, setContextForPrompt] = useState("")
+  const [refinementForPrompt, setRefinementForPrompt] = useState("")
+  const [startPrompting, setStartPrompting] = useState(false)
   const heartbeatIntervalRef = useRef(null)
 
   const audiowebsocket = useRef(null)
@@ -79,21 +83,21 @@ function PodComponent() {
       case "VIDEO_SOCKET_OPEN":
         return { ...state, videoSocketOpen: action.payload };
       case "AUDIO_SOCKET_READY":
-        return { ...state, audioSocketReady: action.payload };  
+        return { ...state, audioSocketReady: action.payload };
       case "VIDEO_SOCKET_READY":
-        return { ...state, videoSocketReady: action.payload };    
+        return { ...state, videoSocketReady: action.payload };
       case "AUDIO_PROCESSING_STARTED":
         return { ...state, audioProcessStarted: action.payload };
       case "VIDEO_PROCESSING_STARTED":
-        return { ...state, videoProcessStarted: action.payload };  
+        return { ...state, videoProcessStarted: action.payload };
       case "AUDIO_PROCESS_COMPLETED":
         return { ...state, audioProcessCompleted: action.payload };
       case "VIDEO_PROCESS_COMPLETED":
-        return { ...state, videoProcessCompleted: action.payload };  
+        return { ...state, videoProcessCompleted: action.payload };
       case "AUDIO_SOCKET_CLOSED":
         return { ...state, audioSocketClosed: action.payload };
       case "VIDEO_SOCKET_CLOSED":
-        return { ...state, videoSocketClosed: action.payload };  
+        return { ...state, videoSocketClosed: action.payload };
       default:
         return state;
     }
@@ -148,7 +152,7 @@ function PodComponent() {
               synthesizedFeedbackMetrics.current = jsonObj;
               participants.current = Object.keys(synthesizedFeedbackMetrics.current["participants_level"])
               console.log("Fetched synthesized feedback metrics onto pod component", jsonObj)
-              console.log("Participants for reflection dashboard", participants.current)
+              // console.log("Participants for reflection dashboard", participants.current)
             });
         },
         (apierror) => {
@@ -271,14 +275,6 @@ function PodComponent() {
     else setSpeakers([]);
   }, [sessionDeviceId, session]);
 
-  useEffect(() => {
-    if (participantIDReflectionDashboard !== "") {
-      let actionstatus = extractParticipantData(participantIDReflectionDashboard)
-      if (actionstatus) {
-        setCurrentParticipant(participantIDReflectionDashboard)
-      }
-    }
-  }, [participantIDReflectionDashboard])
 
   useEffect(() => {
     let message = null
@@ -286,20 +282,20 @@ function PodComponent() {
       message = {
         type: "Initialize_audio_processing_analytics",
         sessionid: sessionId,
-        server_start:session.creation_date,
+        server_start: session.creation_date,
         keywords: session.keywords,
         sessiondeviceid: sessionDeviceId,
-        speakers: speakers.map((sp) => { return {id:sp.id, alias:sp.alias} })
+        speakers: speakers.map((sp) => { return { id: sp.id, alias: sp.alias } })
       }
       console.log("sending message")
       audiowebsocket.current.send(JSON.stringify(message))
-    } else if (state.videoSocketOpen ) {
+    } else if (state.videoSocketOpen) {
       message = {
         type: "Initialize_video_processing_analytics",
         sessionid: sessionId,
-        server_start:session.creation_date,
+        server_start: session.creation_date,
         sessiondeviceid: sessionDeviceId,
-        speakers: speakers.map((sp) => { return {id:sp.id, alias:sp.alias} })
+        speakers: speakers.map((sp) => { return { id: sp.id, alias: sp.alias } })
       }
       videowebsocket.current.send(JSON.stringify(message))
     }
@@ -309,61 +305,61 @@ function PodComponent() {
 
   useEffect(() => {
     if (state.audioSocketReady) {
-      audiowebsocket.current.send( JSON.stringify({ type: "start_posthoc_audio_processing"}));
-    }else if(state.videoSocketReady){
-      videowebsocket.current.send( JSON.stringify({ type: "start_posthoc_video_processing"}));
+      audiowebsocket.current.send(JSON.stringify({ type: "start_posthoc_audio_processing" }));
+    } else if (state.videoSocketReady) {
+      videowebsocket.current.send(JSON.stringify({ type: "start_posthoc_video_processing" }));
     }
 
-  }, [state.audioSocketReady,state.videoSocketReady])
+  }, [state.audioSocketReady, state.videoSocketReady])
 
   useEffect(() => {
     if (state.audioProcessStarted || state.videoProcessStarted) {
       setCurrentForm("posthocanalytics");
-      
+
       // start sending heartbeat till
       const clearHeartbeat = () => {
-            if (heartbeatIntervalRef.current) {
-                clearInterval(heartbeatIntervalRef.current);
-                heartbeatIntervalRef.current = null;
-            }
-        };
-
-        const sendHeartbeat = () => {
-            if (audiowebsocket.current?.readyState === WebSocket.OPEN) {
-                audiowebsocket.current.send(
-                    JSON.stringify({ type: "heartbeat_from_posthoc_processing", key: "no key (posthoc processing)" })
-                )
-                console.log("sent heart beat")
-            }else if(videowebsocket.current?.readyState === WebSocket.OPEN){
-              videowebsocket.current.send(JSON.stringify({ type: "heartbeat_from_posthoc_processing", key: "no key (posthoc processing)" }))
-            } else {
-                clearHeartbeat();
-            }
-        };
-
-        // Stop heartbeat immediately once processing is complete
-        if (state.audioProcessCompleted || state.videoProcessCompleted) {
-            clearHeartbeat();
-            return;
+        if (heartbeatIntervalRef.current) {
+          clearInterval(heartbeatIntervalRef.current);
+          heartbeatIntervalRef.current = null;
         }
+      };
 
-        sendHeartbeat(); // send immediately
-        heartbeatIntervalRef.current = setInterval(sendHeartbeat, 20000);
+      const sendHeartbeat = () => {
+        if (audiowebsocket.current?.readyState === WebSocket.OPEN) {
+          audiowebsocket.current.send(
+            JSON.stringify({ type: "heartbeat_from_posthoc_processing", key: "no key (posthoc processing)" })
+          )
+          console.log("sent heart beat")
+        } else if (videowebsocket.current?.readyState === WebSocket.OPEN) {
+          videowebsocket.current.send(JSON.stringify({ type: "heartbeat_from_posthoc_processing", key: "no key (posthoc processing)" }))
+        } else {
+          clearHeartbeat();
+        }
+      };
 
-        return () => {
-            clearHeartbeat();
-        };
+      // Stop heartbeat immediately once processing is complete
+      if (state.audioProcessCompleted || state.videoProcessCompleted) {
+        clearHeartbeat();
+        return;
+      }
+
+      sendHeartbeat(); // send immediately
+      heartbeatIntervalRef.current = setInterval(sendHeartbeat, 20000);
+
+      return () => {
+        clearHeartbeat();
+      };
 
     }
 
-  }, [state.audioProcessStarted,state.videoProcessStarted,state.audioProcessCompleted,state.videoProcessCompleted])
+  }, [state.audioProcessStarted, state.videoProcessStarted, state.audioProcessCompleted, state.videoProcessCompleted])
 
   useEffect(() => {
     if (state.audioProcessCompleted) {
       setDisplayText("PostHoc Audio Analytics Processing Completed")
       setCurrentForm("success")
       audiowebsocket.current.close()
-    }else if (state.videoProcessCompleted) {
+    } else if (state.videoProcessCompleted) {
       setDisplayText("PostHoc Video Analytics Processing Completed")
       setCurrentForm("success")
       videowebsocket.current.close()
@@ -378,7 +374,7 @@ function PodComponent() {
         audiowebsocket.current = null
         console.log("Closed audio post hoc analytics processing ")
       }
-    }else  if (state.videoSocketClosed) {
+    } else if (state.videoSocketClosed) {
       setCurrentForm("")
       if (videowebsocket.current != null) {
         videowebsocket.current.close()
@@ -387,7 +383,15 @@ function PodComponent() {
       }
     }
 
-  }, [state.audioSocketClosed,state.videoSocketClosed])
+  }, [state.audioSocketClosed, state.videoSocketClosed])
+
+
+  // useeffect for LLM prompt analytics
+  useEffect(() => {
+    if (startPrompting && participantIDReflectionDashboard !== "") {
+      loadLLmReflectionAnalytics(participantIDReflectionDashboard)
+    }
+  }, [startPrompting, participantIDReflectionDashboard])
 
 
   // to initialize the checklist data structures
@@ -607,15 +611,17 @@ function PodComponent() {
 
   const buildData = (reporttype, participantId, defaultQuestionId, question) => {
     let retObj = {}
-    if (reporttype === "Participant level sesssion analysis") {
+    if (reporttype === "Participant level sesssion analysis" && synthesizedFeedbackMetrics.current !== null) {
       retObj["participant_name"] = participantId
       retObj["sessionid"] = sessionId
       retObj["sessiondeviceid"] = sessionDeviceId
-      retObj["retrieve_existing_report"] = "true"
+      retObj["retrieve_existing_report"] = retrieveExisting
+      retObj["promptcontext"] = contextForPrompt
+      retObj["promptrefinement"] = refinementForPrompt
       retObj["participant_level_metric"] = synthesizedFeedbackMetrics.current["participants_level"][participantId]
       retObj["session_level_metric"] = synthesizedFeedbackMetrics.current["session_level"][participantId]
       retObj["group_level_metric"] = synthesizedFeedbackMetrics.current["group_level"]
-    } else if (reporttype === "interactive prompting") {
+    } else if (reporttype === "interactive prompting" && synthesizedFeedbackMetrics.current !== null) {
       retObj["participant_name"] = participantId
       retObj["sessionid"] = sessionId
       retObj["sessiondeviceid"] = sessionDeviceId
@@ -633,14 +639,15 @@ function PodComponent() {
   const extractParticipantData = async (participantId) => {
     let respObj = buildData("Participant level sesssion analysis", participantId, null, null)
 
-    if (!respObj || Object.keys(respObj).length === 0) {
+    if (!respObj || Object.keys(respObj).length === 0 || respObj["participant_level_metric"].length === 0) {
       return false;
     }
 
-    if (participantId in llmSessionAnalysis.current) {
+    if (participantId in llmSessionAnalysis.current && retrieveExisting === "true") {
       selectedParticipantLLMAnalysis.current = llmSessionAnalysis.current[participantId]
       selectedParticipantSynthesizedData.current = respObj
       setSelectedMomentIdAndIndex([0, selectedParticipantSynthesizedData.current.participant_level_metric[0].windowid])
+      setCurrentForm("")
       return true
     }
 
@@ -652,6 +659,7 @@ function PodComponent() {
       if (response.status === 200) {
         const jsonObj = await response.json()
         llmSessionAnalysis.current[participantId] = jsonObj.answer;
+        // console.log("llm response: ",llmSessionAnalysis.current[participantId])
         selectedParticipantLLMAnalysis.current = llmSessionAnalysis.current[participantId]
         selectedParticipantSynthesizedData.current = respObj
         loadprompthistory(participantId)
@@ -690,14 +698,35 @@ function PodComponent() {
     }
   }
 
-  const loadReflectiondashboard = async (view) => {
-    if (participants.current.length > 0) {
-      let actionstatus = await extractParticipantData(participants.current[0])
-      if (actionstatus) {
+  const setLLMAnalyticParameter = (retrieveexisting, context, refinement) => {
+    setRetrieveExisting(retrieveexisting)
+    setContextForPrompt(context)
+    setRefinementForPrompt(refinement)
+    setStartPrompting(true)
+  }
+  const loadReflectiondashboard = async (selectedParticipantID = null) => {
+    setStartPrompting(false)
+    if (selectedParticipantID !== null) {
+      setCurrentParticipant(selectedParticipantID)
+      setParticipantIDRefectionDashboard(selectedParticipantID)
+      setCurrentForm("llmpromptextrainformation")
+    } else {
+      if (participants.current.length > 0) {
         setCurrentParticipant(participants.current[0])
-        setDetails(view);
+        setParticipantIDRefectionDashboard(participants.current[0])
+        setCurrentForm("llmpromptextrainformation")
       }
     }
+  };
+
+  const loadLLmReflectionAnalytics = async (participantId) => {
+      let actionstatus = await extractParticipantData(participantId)
+      if (actionstatus) {
+        setDetails("Reflection Dashboard");
+      } else {
+        setDisplayText("An erro occured from backend")
+        setCurrentForm("reflectiondashboad")
+      }
   };
 
   const interactivePromptFnc = async (participantId, default_question_id, question) => {
@@ -750,7 +779,7 @@ function PodComponent() {
     if (!state.audioSocketOpen) {
       audiowebsocket.current = new WebSocket(apiService.getAudioPosthocWebsocketEndpoint())
       connect_audio_posthoc_processor_service()
-    } 
+    }
 
   }
 
@@ -758,7 +787,7 @@ function PodComponent() {
     if (!state.videoSocketOpen) {
       videowebsocket.current = new WebSocket(apiService.getVideoPosthocWebsocketEndpoint())
       connect_video_processor_service()
-    } 
+    }
   }
 
   // Connects to processor websocket server.
@@ -774,10 +803,10 @@ function PodComponent() {
         const message = JSON.parse(e.data);
         if (message['type'] === 'init posthoc analytics completed') {
           dispatch({ type: "AUDIO_SOCKET_READY", payload: true })
-        }else if (message['type'] === 'audio posthoc analytics started') {
+        } else if (message['type'] === 'audio posthoc analytics started') {
           setDisplayText(message['message'])
           dispatch({ type: "AUDIO_PROCESSING_STARTED", payload: true })
-        }else if (message['type'] === 'process_completed') {
+        } else if (message['type'] === 'process_completed') {
           dispatch({ type: "AUDIO_PROCESS_COMPLETED", payload: true })
         }
         else if (message['type'] === 'error') {
@@ -808,10 +837,10 @@ function PodComponent() {
         const message = JSON.parse(e.data);
         if (message['type'] === 'init posthoc analytics completed') {
           dispatch({ type: "VIDEO_SOCKET_READY", payload: true })
-        }else if (message['type'] === 'video posthoc analytics started') {
+        } else if (message['type'] === 'video posthoc analytics started') {
           setDisplayText(message['message'])
           dispatch({ type: "VIDEO_PROCESSING_STARTED", payload: true })
-        }else if (message['type'] === 'process_completed') {
+        } else if (message['type'] === 'process_completed') {
           dispatch({ type: "VIDEO_PROCESS_COMPLETED", payload: true })
         }
         else if (message['type'] === 'error') {
@@ -881,7 +910,6 @@ function PodComponent() {
       promptResponses={promptResponses.current}
       isThinking={isThinking}
       setIsThinking={setIsThinking}
-      setParticipantIDRefectionDashboard={setParticipantIDRefectionDashboard}
       currentParticipant={currentParticipant}
       selectedMomentIdAndIndex={selectedMomentIdAndIndex}
       setSelectedMomentIdAndIndex={setSelectedMomentIdAndIndex}
@@ -889,7 +917,8 @@ function PodComponent() {
       //Process audio analytics 
       connecttoaudioservice={connecttoaudioservice}
       connecttovideoservice={connecttovideoservice}
-      displayText = {displayText}
+      displayText={displayText}
+      setLLMAnalyticParameter={setLLMAnalyticParameter}
 
     />
   );

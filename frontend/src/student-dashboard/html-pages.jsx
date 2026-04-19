@@ -24,14 +24,14 @@ function StudentSessionDashboardPages(props) {
             {(props.currentForm === "gottoselectedtranscript" &&
                 Object.keys(props.currentTranscript) && (
                     <TranscriptsComponentClient
-                        sessionDevice={props.sessionDevice}
+                        sessionDevice={props.sessionDevices.find((dev) => dev.id === props.selectedSessionDeviceId1)}
                         transcriptIndex={props.currentTranscript.id}
                         setParentCurrentForm={props.setCurrentForm}
                     />
                 )) ||
                 (props.currentForm === "gototranscript" && (
                     <TranscriptsComponentClient
-                        sessionDevice={props.sessionDevice}
+                        sessionDevice={props.sessionDevices.find((dev) => dev.id === props.selectedSessionDeviceId1)}
                         transcriptIndex={undefined}
                         setParentCurrentForm={props.setCurrentForm}
                     />
@@ -42,7 +42,7 @@ function StudentSessionDashboardPages(props) {
                             leftText={false}
                             rightText={""}
                             ightEnabled={false}
-                            nav={() => props.navigateToLogin()}
+                            nav={props.sessiontype === "previoussessions"? () => props.navBackTo() : () => props.navigateToLogin()}
                         />
 
                         {props.nextPage === "reportoptionpage" && (
