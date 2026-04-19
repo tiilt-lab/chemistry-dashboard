@@ -231,6 +231,7 @@ function SettingComponentPage(props) {
             <select id='datatype' className={style["dropdown-input"]}>
               <option value="transcriptmetric">Transcript metric data</option>
               <option value="videometric">Video metric data</option>
+              <option value="sessiondevice">This Session Device</option>
             </select>
             {props.status ? <div className={style["error-status"]}>{props.status}</div> : <></>}
             <button className={style["basic-button"]} onClick={() => props.confirmDeleteSessionDeviceData(document.getElementById('sessionDeviceId').value, document.getElementById('datatype').value)}>Delete Data</button>

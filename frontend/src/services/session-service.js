@@ -418,6 +418,17 @@ class SessionService {
   deleteFolder(folderId) {
     return this.api.httpRequestCall(`api/folders/${folderId}`, "DELETE", {});
   }
+
+  updateranscriptSpeaker(sessiondeviceId,transcriptId, speakerId, speakerAlias) {
+    const body = {
+      sessiondeviceId : sessiondeviceId,
+      transcriptId: transcriptId,
+      speakerId: speakerId,
+      speakerAlias: speakerAlias
+    };
+    
+    return this.api.httpRequestCall(`api/v1/updatetranscriptspeaker`, "POST", body);
+  }
 }
 
 export { SessionService };

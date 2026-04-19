@@ -2,7 +2,6 @@ import { useEffect, useCallback,useState } from "react";
 import { IndividualFeaturePage } from "./html-pages-individual";
 
 function AppIndividualFeaturesComponent(props) {
-  // console.log("does speaker id change ", props.spkrId, props.transcripts.length)
   // @Input('session') session: SessionModel;
 
   // @Input('transcripts')
@@ -42,6 +41,7 @@ function AppIndividualFeaturesComponent(props) {
 
     var speaker_metric;
     transcripts.forEach((t) => {
+      // console.log("before find speaker metric is ", t.speaker_metrics,spkrId)
       if(spkrId !== "sessiontranscriptcomparison"){
         //select speaker metrics from transcripts based on the spkrId
         speaker_metric = t.speaker_metrics.find(
@@ -56,9 +56,9 @@ function AppIndividualFeaturesComponent(props) {
       );
       }
       
-      // console.log("speaker metric is ", speaker_metric)
-
-      //accumulate each score into their value array
+      // console.log("speaker metric is ", speaker_metric,spkrId)
+      if (speaker_metric){
+        //accumulate each score into their value array
       valueArrays[0].values.push(speaker_metric.participation_score * 100);
       valueArrays[1].values.push(speaker_metric.social_impact * 100);
       valueArrays[2].values.push(speaker_metric.responsivity * 100);
@@ -71,6 +71,8 @@ function AppIndividualFeaturesComponent(props) {
       valueArrays[2].time.push(t.start_time);
       valueArrays[3].time.push(t.start_time);
       valueArrays[4].time.push(t.start_time);
+      }
+      
     });
 
     // console.log("transcript data: ", valueArrays)
@@ -115,7 +117,7 @@ function AppIndividualFeaturesComponent(props) {
     // console.log("tracking spker id ", props.spkrId, props.transcripts.length)
     if (props.transcripts.length === 0) return;
     updateGraphs(props.transcripts,props.spkrId);
-  }, [props.spkrId]);
+  }, [props.transcripts,props.spkrId]);
 
   const getInfo = (featureName) => {
     switch (featureName) {

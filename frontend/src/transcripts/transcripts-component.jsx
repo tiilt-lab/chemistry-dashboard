@@ -1,3 +1,6 @@
+import { SessionService } from "../services/session-service";
+import { SpeakerModel } from "../models/speaker";
+
 import { useEffect, useState } from 'react';
 import { useNavigate, useOutletContext,useParams, useSearchParams } from 'react-router-dom';
 import { similarityToRGB } from '../globals';
@@ -31,8 +34,11 @@ function TranscriptsComponent(){
   const [trigger, setTrigger] = useState(0)
   const [showDoA,setShowDoA] = useState(false);
   const [reload, setReload] = useState(false)
+  const [speakers, setSpeakers] = useState([]);
+  const [transcriptIdToUpdate, settranscriptIdToUpdate] = useState(-1)
+  const [transcriptUdated, setTranscriptUpdated] = useState(false)
   const [activeSessionService, setActiveSessionService] = useOutletContext();
-  const { sessionDeviceId } = useParams(); 
+  const { sessionId,sessionDeviceId } = useParams(); 
   const [searchParam, setSearchParam] = useSearchParams();
   const navigate = useNavigate()
   
@@ -55,7 +61,7 @@ function TranscriptsComponent(){
         setSessionDevice(deviceSub);
       }
 
-      if (transcripts.length <= 0) {
+      if (transcripts.length <= 0 || transcriptUdated) {
         const transcriptSub = activeSessionService.getTranscripts()
          //const transcriptSub = activeSessionService.getSessionDeviceTranscripts(sessionDeviceId, setTransripts);
 
@@ -71,6 +77,8 @@ function TranscriptsComponent(){
      }
     }
       
+    //get speaker
+    getSpeakers()
     
 
     return () => {
@@ -93,6 +101,25 @@ useEffect(()=>{
     createDisplayTranscripts();
   }
 },[trigger])
+
+
+const getSpeakers = () => {
+    const fetchData = new SessionService().getSessionDeviceSpeakers(sessionId,sessionDeviceId);
+    fetchData.then(
+      (response) => {
+        if (response.status === 200)
+          response.json().then((jsonObj) => {
+            const input = SpeakerModel.fromJsonList(jsonObj)
+            if (input && input.length) {
+              setSpeakers(input);
+            }
+          });
+      },
+      (apierror) => {
+        console.log("podcomponent func getspeakers 1", apierror);
+      }
+    );
+};
 
 const createDisplayTranscripts = ()=> {
     const accdisplaytrans = [];
@@ -132,6 +159,31 @@ const createDisplayTranscripts = ()=> {
     } else {
       return 'hsl(' + angle + ', 100%, 95%)';
     }
+  }
+
+  const handleSpeakerUpdate = (e) =>{
+    const speaker_id = e.target.value;
+    const selectedSpeaker = speakers.filter( (spkr) => spkr.id === Number(speaker_id) )
+    
+    const fetchData = new SessionService().updateranscriptSpeaker(sessionDeviceId,transcriptIdToUpdate,selectedSpeaker[0].id,selectedSpeaker[0].alias);
+    fetchData.then(
+      (response) => {
+        if (response.status === 200)
+          response.json().then((jsonObj) => {
+            setTranscriptUpdated(true)
+            setCurrentForm("")
+          });
+      },
+      (apierror) => {
+        console.log("transcript component func handleSpeakerUpdate", apierror);
+      }
+    );
+   
+  }
+  const openSpeakerDialog = (transcript_id) =>{
+    setTranscriptUpdated(false)
+    settranscriptIdToUpdate(transcript_id)
+    setCurrentForm("speakerupdate");
   }
 
   const openKeywordDialog = (dialogKeywords) =>{
@@ -204,6 +256,7 @@ const createDisplayTranscripts = ()=> {
       displayTranscripts = { displayTranscripts}
       formatSeconds = {formatSeconds}
       openKeywordDialog = {openKeywordDialog}
+      openSpeakerDialog = {openSpeakerDialog}
       closeDialog = {closeDialog}
       dialogKeywords = {dialogKeywords}
       showDoA = {showDoA}
@@ -214,6 +267,8 @@ const createDisplayTranscripts = ()=> {
       legendRef = {legendRef}
       showKeywords = {showKeywords}
       toggleKeywords = {toggleKeywords}
+      speakers = {speakers}
+      handleSpeakerUpdate = {handleSpeakerUpdate}
     />
   )
 }

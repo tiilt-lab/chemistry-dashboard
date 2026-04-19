@@ -28,7 +28,7 @@ function CollaborationFeedbackDashboard(props) {
   const llmresponse_group_summary = props.llmSessionAnalysis.Group_summary
   const llmresponse_window_summary = props.llmSessionAnalysis.Window_summary
   const selectedParticipantData = props.selectedSynthesizedData
-  const window_length = selectedParticipantData.participant_level_metric.length
+  const window_length = selectedParticipantData.participant_level_metric?.length
   const [selectedMoment, setSelectedMoment] = useState(selectedParticipantData.participant_level_metric[0])
   const [question, setQuestion] = useState([0, ""]);
   const scrollRef = useRef(null);
@@ -54,7 +54,7 @@ function CollaborationFeedbackDashboard(props) {
   }, [promptResponses.length]);
 
   useEffect(() => {
-    setSelectedMoment(selectedParticipantData.participant_level_metric.find((m) => m.windowid === props.selectedMomentIdAndIndex[1]))
+    setSelectedMoment(selectedParticipantData.participant_level_metric?.find((m) => m.windowid === props.selectedMomentIdAndIndex[1]))
   }, [props.selectedMomentIdAndIndex]);
 
 
@@ -318,7 +318,7 @@ function CollaborationFeedbackDashboard(props) {
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Verbal participation</div>
-                          <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary.avg_verbalshare}</div>
+                          <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_verbalshare}</div>
                         </div>
                         <div className="text-lg font-bold">{selectedParticipantData.session_level_metric.avg_verbalshare}%</div>
                       </div>
@@ -331,7 +331,7 @@ function CollaborationFeedbackDashboard(props) {
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Turn taking share</div>
-                          <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary.avg_turntaking}</div>
+                          <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_turntaking}</div>
                         </div>
                         <div className="text-lg font-bold">{selectedParticipantData.session_level_metric.avg_turntaking}%</div>
                       </div>
@@ -357,7 +357,7 @@ function CollaborationFeedbackDashboard(props) {
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Idea contribution</div>
-                          <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary.avg_ideacontributionscore}</div>
+                          <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_ideacontributionscore}</div>
                         </div>
                         <div className="text-lg font-bold">{selectedParticipantData.session_level_metric.avg_ideacontributionscore}%</div>
                       </div>
@@ -370,7 +370,7 @@ function CollaborationFeedbackDashboard(props) {
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Momentum</div>
-                          <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary.avg_momentum}</div>
+                          <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_momentum}</div>
                         </div>
                         <div className="text-lg font-bold">{selectedParticipantData.session_level_metric.avg_momentum}%</div>
                       </div>
@@ -514,13 +514,13 @@ function CollaborationFeedbackDashboard(props) {
                   <CardContent>
                     <ScrollArea className="h-[480px] pr-3">
                       <div className="space-y-3">
-                        {selectedParticipantData.participant_level_metric.map((item, index) => (
+                        {selectedParticipantData.participant_level_metric?.map((item, index) => (
                           <TimelinePill
                             key={item.windowid}
                             item={item}
                             item_index={index}
                             window_length={window_length}
-                            selected={selectedMoment.windowid === item.windowid}
+                            selected={selectedMoment?.windowid === item.windowid}
                             onClick={() => props.setSelectedMomentIdAndIndex([index, item.windowid])}
                           />
                         ))}
@@ -529,37 +529,37 @@ function CollaborationFeedbackDashboard(props) {
                   </CardContent>
                 </Card>
 
-                <Card className={`rounded-3xl border-0 shadow-sm ${selectedMoment.trenddirection === -1 ? "ring-2 ring-rose-200" : selectedMoment.trenddirection === 1 ? "ring-2 ring-emerald-200" : "ring-2 ring-amber-200"}`}>
+                <Card className={`rounded-3xl border-0 shadow-sm ${selectedMoment?.trenddirection === -1 ? "ring-2 ring-rose-200" : selectedMoment?.trenddirection === 1 ? "ring-2 ring-emerald-200" : "ring-2 ring-amber-200"}`}>
                   <CardHeader>
                     <div className="flex items-center justify-between gap-4">
                       <div>
-                        <CardTitle className="text-xl">Moment explanation: {formatSeconds(selectedMoment.starttime)}-{formatSeconds(selectedMoment.endtime)}</CardTitle>
+                        <CardTitle className="text-xl">Moment explanation: {formatSeconds(selectedMoment?.starttime)}-{formatSeconds(selectedMoment?.endtime)}</CardTitle>
                         <CardDescription>{props.selectedMomentIdAndIndex[0] <= ((window_length / 3) * 1) ? "Early" : props.selectedMomentIdAndIndex[0] <= ((window_length / 3) * 2) ? "Middle" : "Late"} phase • click different moments to compare changes over time</CardDescription>
                       </div>
-                      {statusBadge(selectedMoment.trenddirection)}
+                      {statusBadge(selectedMoment?.trenddirection)}
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-5">
                     <div className="grid gap-3 md:grid-cols-4">
                       <div className="rounded-2xl bg-sky-50 p-4">
                         <div className="flex items-center gap-2 text-xs text-muted-foreground"><Eye className="h-3.5 w-3.5" />Focus</div>
-                        <div className="mt-2 text-2xl font-semibold">{selectedMoment.focusscore}</div>
+                        <div className="mt-2 text-2xl font-semibold">{selectedMoment?.focusscore}</div>
                       </div>
                       <div className="rounded-2xl bg-violet-50 p-4">
                         <div className="flex items-center gap-2 text-xs text-muted-foreground"><Mic className="h-3.5 w-3.5" />Engagement</div>
-                        <div className="mt-2 text-2xl font-semibold">{selectedMoment.engagementscore}</div>
+                        <div className="mt-2 text-2xl font-semibold">{selectedMoment?.engagementscore}</div>
                       </div>
                       <div className="rounded-2xl bg-amber-50 p-4">
                         <div className="flex items-center gap-2 text-xs text-muted-foreground"><Lightbulb className="h-3.5 w-3.5" />Ideas</div>
-                        <div className="mt-2 text-2xl font-semibold">{selectedMoment.ideacontributionscore}</div>
+                        <div className="mt-2 text-2xl font-semibold">{selectedMoment?.ideacontributionscore}</div>
                       </div>
                       <div className="rounded-2xl bg-emerald-50 p-4">
                         <div className="flex items-center gap-2 text-xs text-muted-foreground"><Brain className="h-3.5 w-3.5" />Reasoning</div>
-                        <div className="mt-2 text-2xl font-semibold">{selectedMoment.reasoningscore}</div>
+                        <div className="mt-2 text-2xl font-semibold">{selectedMoment?.reasoningscore}</div>
                       </div>
                       <div className="rounded-2xl bg-rose-50 p-4">
                         <div className="flex items-center gap-2 text-xs text-muted-foreground"><Users className="h-3.5 w-3.5" />Leader</div>
-                        <div className="mt-2 text-2xl font-semibold">{selectedMoment.leadershipscore}</div>
+                        <div className="mt-2 text-2xl font-semibold">{selectedMoment?.leadershipscore}</div>
                       </div>
                     </div>
 
@@ -573,11 +573,11 @@ function CollaborationFeedbackDashboard(props) {
                         <div>
                           <div className="text-sm font-medium">Structured metrics</div>
                           <div className="mt-3 space-y-2 text-sm text-muted-foreground">
-                            <div>Analytic thinking: <span className="font-medium text-foreground">{selectedMoment.analyticthinking < 50 ? "low" : selectedMoment.analyticthinking > 50 ? "high" : "balanced"}</span></div>
-                            <div>Object focus: <span className="font-medium text-foreground">{selectedMoment.objectfocuson}</span></div>
-                            <div>Participation score: <span className="font-medium text-foreground">{selectedMoment.participationscore < 33 ? "low participation" : selectedMoment.participationscore < 67 ? "balanced participation" : "high participation"}</span></div>
-                            <div>Newness: <span className="font-medium text-foreground">{selectedMoment.newness < 50 ? "low" : selectedMoment.newness > 50 ? "high" : "balanced"}</span></div>
-                            <div>Verbal share: <span className="font-medium text-foreground">{selectedMoment.verbalshare < 50 ? "low" : selectedMoment.verbalshare > 50 ? "high" : "balanced"}</span></div>
+                            <div>Analytic thinking: <span className="font-medium text-foreground">{selectedMoment?.analyticthinking < 50 ? "low" : selectedMoment?.analyticthinking > 50 ? "high" : "balanced"}</span></div>
+                            <div>Object focus: <span className="font-medium text-foreground">{selectedMoment?.objectfocuson}</span></div>
+                            <div>Participation score: <span className="font-medium text-foreground">{selectedMoment?.participationscore < 33 ? "low participation" : selectedMoment?.participationscore < 67 ? "balanced participation" : "high participation"}</span></div>
+                            <div>Newness: <span className="font-medium text-foreground">{selectedMoment?.newness < 50 ? "low" : selectedMoment?.newness > 50 ? "high" : "balanced"}</span></div>
+                            <div>Verbal share: <span className="font-medium text-foreground">{selectedMoment?.verbalshare < 50 ? "low" : selectedMoment?.verbalshare > 50 ? "high" : "balanced"}</span></div>
                           </div>
                         </div>
                       </div>

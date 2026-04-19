@@ -88,7 +88,7 @@ function AppIndividualVideoFeaturesComponent(props) {
   useEffect(() => {
     if (props.videometrics.length === 0) return;
     updateGraphs(props.videometrics);
-  }, [props.videometrics, updateGraphs]);
+  }, [props.videometrics, props.spkrId]);
 
 
   const getInfo = (featureName) => {

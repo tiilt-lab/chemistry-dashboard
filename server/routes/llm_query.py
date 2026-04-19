@@ -2,6 +2,7 @@ from flask import Blueprint, Response, request, abort, session, make_response
 from app import socketio
 import logging
 import json
+import re
 import database
 from google import genai
 from dotenv import load_dotenv
@@ -34,16 +35,15 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
         try:
             response = call_gemini_with_retry(prompt)
             
-            # client.models.generate_content(
-            #     model="gemini-2.5-flash",
-            #     contents=prompt
-            # )
-
             raw = response.text.strip()
-
             if raw.startswith("```"):
                 raw = raw.replace("```json", "").replace("```", "").replace("\n","").strip()
 
+            raw = clean_llm_json(raw)     
+            
+
+           
+            
             #add to the database
             if metricObj['retrieve_existing_report'] != 'true' and exisiting_feedback:
                 #update the database
@@ -59,8 +59,12 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
     
     try:
         parsed = json.loads(raw)
-    except:
-        parsed = {"raw": raw}
+    except Exception as e:
+        logging.info("json load was unsuccessful {0}".format(e))
+        logging.info("parsed  {0}".format(parsed))
+        return json_response({
+                "message": "Unable to parse json"
+            }, 400)
 
     return json_response({
         "answer": parsed
@@ -85,10 +89,11 @@ def fetch_response_for_question(**kwargs):
         try:
             response = call_gemini_with_retry(prompt)
 
-            raw = response.text.replace('\n',"").strip()
-
+            raw = response.text.strip()
             if raw.startswith("```"):
-                raw = raw.replace("```json", "").replace("```", "").replace('\n',"").strip()
+                raw = raw.replace("```json", "").replace("```", "").replace("\n","").strip()
+
+            raw = clean_llm_json(raw)  
 
             #add to the database
             if questionObj['retrieve_existing_answer'] != 'true' and exisiting_response:
@@ -106,7 +111,9 @@ def fetch_response_for_question(**kwargs):
     try:
         parsed = json.loads(raw)
     except:
-        parsed = {"raw": raw}
+        return json_response({
+                "message": "Unable to parse json"
+            }, 400)
 
     return json_response({
         "answer": parsed
@@ -152,7 +159,19 @@ def call_gemini_with_retry(prompt, max_retries=5):
             else:
                 raise
     raise Exception("Max retries exceeded")
-        
+
+def clean_llm_json(s):
+    # Remove trailing commas
+    s = re.sub(r",\s*}", "}", s)
+    s = re.sub(r",\s*]", "]", s)
+
+    # # Fix smart quotes
+    # s = s.replace("“", '"').replace("”", '"')
+
+    # # Strip whitespace
+    # s = s.strip()
+
+    return s        
 
     
         
