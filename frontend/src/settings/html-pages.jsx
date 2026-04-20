@@ -35,22 +35,22 @@ function SettingComponentPage(props) {
 
               <React.Fragment>
                 <div className={style["section-header"]}>Manage Student Profile</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("ViewStudentProfile", true)}>View Students</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("AddStudentProfile")}>Add Student Profile</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeleteStudentProfile", true)}>Delete Student Profile</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("SyncStudentProfile", true)}>Sync Student Profiles</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("ViewStudentProfile", true)}>View Students</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("AddStudentProfile")}>Add Student Profile</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("DeleteStudentProfile", true)}>Delete Student Profile</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("SyncStudentProfile", true)}>Sync Student Profiles</div>
               </React.Fragment>
 
               <React.Fragment>
                 <div className={style["section-header"]}>Manage Raters</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("ViewRaters", true)}>View Raters</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("AddRater")}>Add Rater</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeleteRater", true)}>Delete Rater</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("ViewRaters", true)}>View Raters</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("AddRater")}>Add Rater</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("DeleteRater", true)}>Delete Rater</div>
               </React.Fragment>
 
               <React.Fragment>
                 <div className={style["section-header"]}>Manage Session Device Metrics </div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeleteDeviceData")}>Delete Session Device Data</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("DeleteDeviceData")}>Delete Session Device Data</div>
               </React.Fragment>
             </>
             :
@@ -60,12 +60,12 @@ function SettingComponentPage(props) {
           {(props.user.isSuper) ?
             <React.Fragment>
               <div className={style["section-header"]}>Manage Server</div>
-              <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("ServerLogs")}>Download Server Logs</div>
-              <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeviceLogs", false, true)}>Download Device Logs</div>
-              <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeleteServerLogs")}>Clear Server Logs</div>
-              <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeleteDeviceLogs", false, true)}>Clear Device Logs</div>
-              <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("AllowAPI", true)}>Allow API Access</div>
-              <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("RevokeAPI", true)}>Revoke API Access</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("ServerLogs")}>Download Server Logs</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("DeviceLogs", false, true)}>Download Device Logs</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("DeleteServerLogs")}>Clear Server Logs</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("DeleteDeviceLogs", false, true)}>Clear Device Logs</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("AllowAPI", true)}>Allow API Access</div>
+              <div className="option-button small-section" onClick={() => props.openDialog("RevokeAPI", true)}>Revoke API Access</div>
             </React.Fragment>
             :
             <></>
