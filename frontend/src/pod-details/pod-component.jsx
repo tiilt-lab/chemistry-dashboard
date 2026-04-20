@@ -616,6 +616,7 @@ function PodComponent() {
       retObj["sessionid"] = sessionId
       retObj["sessiondeviceid"] = sessionDeviceId
       retObj["retrieve_existing_report"] = retrieveExisting
+      retObj["source"] = "admin"
       retObj["promptcontext"] = contextForPrompt
       retObj["promptrefinement"] = refinementForPrompt
       retObj["participant_level_metric"] = synthesizedFeedbackMetrics.current["participants_level"][participantId]

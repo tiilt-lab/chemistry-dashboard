@@ -762,7 +762,7 @@ function StudentSessionDashboard() {
       }else{
         setReflectionDashboardDoneLoading(false)
         setDialogHeading("Error")
-        setAlertMessage("No Data available for this session, please notify the Professor/Instructor");
+        setAlertMessage("No reflection data available for this session");
         setShowAlert(true);
 
       }
@@ -782,7 +782,7 @@ function StudentSessionDashboard() {
       setReflectionDashboardDoneLoading(true)
     }else{
       setDialogHeading("Error")
-      setAlertMessage("No Data available for this session, please notify the Professor/Instructor");
+      setAlertMessage("No reflection data available for this session");
       setShowAlert(true);
     }
   }
@@ -874,6 +874,7 @@ function StudentSessionDashboard() {
         retObj["sessionid"] = sessionId
         retObj["sessiondeviceid"] = deviceId
         retObj["retrieve_existing_report"] = "true"
+        retObj["source"] = "student"
         retObj["promptcontext"] = ""
         retObj["promptrefinement"] = ""
         retObj["participant_level_metric"] = synthesizedFeedbackMetrics.current[sessionId][deviceId]["participants_level"][userDetail.username]

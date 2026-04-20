@@ -29,6 +29,8 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
     
     if exisiting_feedback and metricObj['retrieve_existing_report'] == 'true':
         raw = str(exisiting_feedback.feedback_analysis)
+    elif not exisiting_feedback and metricObj['source'] == "student":
+        return json_response({'message': 'No data.'}, 400)    
     else:
         prompt = build_prompt(metricObj,"Session_level analysis for participant")
 
