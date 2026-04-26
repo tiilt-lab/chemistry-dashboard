@@ -105,7 +105,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.facial_processor = FacialBiometricProcessor(facial_biometric_file,self.video_file,self.mediaExt,self.currAlias)
                     self.facial_processor.add_websocket_connection(self)
                     
-            logging.info('save-audio-video-fingerprinting: Audio process connected')
+            logging.info('save-audio-video-fingerprinting: video process connected')
             self.send_json({'type':'saveaudiovideo'})
 
         if data['type'] == 'Initialize_video_processing_analytics':

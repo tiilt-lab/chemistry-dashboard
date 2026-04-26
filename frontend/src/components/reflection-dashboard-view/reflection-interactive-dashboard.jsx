@@ -16,13 +16,13 @@ import { AppSectionBoxComponent } from "../section-box/section-box-component"
 
 function CollaborationFeedbackDashboard(props) {
   const selectedParticipantId = props.currentParticipant;
-  const llmresponse_session_summary = props.llmSessionAnalysis.Session_summary
-  const llmresponse_session_metric_summary = llmresponse_session_summary.Session_metric_summary
-  const llmresponse_group_summary = props.llmSessionAnalysis.Group_summary
-  const llmresponse_window_summary = props.llmSessionAnalysis.Window_summary
+  const llmresponse_session_summary = props.llmSessionAnalysis?.Session_summary
+  const llmresponse_session_metric_summary = llmresponse_session_summary?.Session_metric_summary
+  const llmresponse_group_summary = props.llmSessionAnalysis?.Group_summary
+  const llmresponse_window_summary = props.llmSessionAnalysis?.Window_summary
   const selectedParticipantData = props.selectedParticipantSynthesizedData
   const window_length = selectedParticipantData.participant_level_metric?.length
-  const [selectedMoment, setSelectedMoment] = useState(selectedParticipantData.participant_level_metric[0])
+  const [selectedMoment, setSelectedMoment] = useState(selectedParticipantData?.participant_level_metric[0])
   const [question, setQuestion] = useState([0, ""]);
   const scrollRef = useRef(null);
   const lastItemRef = useRef(null)
@@ -47,7 +47,7 @@ function CollaborationFeedbackDashboard(props) {
   }, [props.promptResponses[selectedParticipantId]?.length]);
 
   useEffect(() => {
-    setSelectedMoment(selectedParticipantData.participant_level_metric?.find((m) => m.windowid === props.selectedMomentIdAndIndex[1]))
+    setSelectedMoment(selectedParticipantData?.participant_level_metric?.find((m) => m.windowid === props.selectedMomentIdAndIndex[1]))
   }, [props.selectedMomentIdAndIndex]);
 
   // useEffect(() => {
@@ -118,35 +118,35 @@ function CollaborationFeedbackDashboard(props) {
     return (
       <button
         onClick={onClick}
-        className={`w-full rounded-2xl border p-3 text-left transition hover:shadow-sm ${statusClasses(item.trenddirection, selected)}`}
+        className={`w-full rounded-2xl border p-3 text-left transition hover:shadow-sm ${statusClasses(item?.trenddirection, selected)}`}
       >
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="text-sm font-semibold">{formatSeconds(item.starttime)}-{formatSeconds(item.endtime)} </div>
+            <div className="text-sm font-semibold">{formatSeconds(item?.starttime)}-{formatSeconds(item?.endtime)} </div>
             <div className="text-xs text-muted-foreground">{item_index <= ((window_length / 3) * 1) ? "Early" : item_index <= ((window_length / 3) * 2) ? "Middle" : "Late"} phase</div>
           </div>
-          {statusBadge(item.trenddirection)}
+          {statusBadge(item?.trenddirection)}
         </div>
         <div className="mt-3 grid grid-cols-5 gap-2 text-[11px]">
           <div className="rounded-xl bg-white/80 p-2">
             <div className="text-muted-foreground">Focus</div>
-            <div className="font-semibold">{item.focusscore}</div>
+            <div className="font-semibold">{item?.focusscore}</div>
           </div>
           <div className="rounded-xl bg-white/80 p-2">
             <div className="text-muted-foreground">Engagement</div>
-            <div className="font-semibold">{item.engagementscore}</div>
+            <div className="font-semibold">{item?.engagementscore}</div>
           </div>
           <div className="rounded-xl bg-white/80 p-2">
             <div className="text-muted-foreground">Ideas</div>
-            <div className="font-semibold">{item.ideacontributionscore}</div>
+            <div className="font-semibold">{item?.ideacontributionscore}</div>
           </div>
           <div className="rounded-xl bg-white/80 p-2">
             <div className="text-muted-foreground">Reasoning</div>
-            <div className="font-semibold">{item.reasoningscore}</div>
+            <div className="font-semibold">{item?.reasoningscore}</div>
           </div>
           <div className="rounded-xl bg-white/80 p-2">
             <div className="text-muted-foreground">Leader</div>
-            <div className="font-semibold">{item.leadershipscore}</div>
+            <div className="font-semibold">{item?.leadershipscore}</div>
           </div>
 
         </div>
@@ -164,13 +164,13 @@ function CollaborationFeedbackDashboard(props) {
         </div>
 
         <div className="rounded-2xl p-5 text-sm leading-7">
-          {response.Prompt_summary.Summary}
+          {response.Prompt_summary?.Summary}
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <div className="rounded-2xl border p-4">
             <div className="text-xs text-muted-foreground">Evidence windows</div>
             <ul className="mt-3 space-y-2 text-sm text-emerald-900/80">
-              {response.Prompt_summary.Evidencewindows.map((item) => (
+              {response.Prompt_summary?.Evidencewindows?.map((item) => (
                 <li key={item} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4" />{item}</li>
               ))}
             </ul>
@@ -178,7 +178,7 @@ function CollaborationFeedbackDashboard(props) {
           <div className="rounded-2xl border p-4">
             <div className="text-xs text-muted-foreground">Computed metrics used</div>
             <ul className="mt-3 space-y-2 text-sm text-emerald-900/80">
-              {response.Prompt_summary.Computedmetricsused.map((item) => (
+              {response.Prompt_summary?.Computedmetricsused?.map((item) => (
                 <li key={item} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4" />{item}</li>
               ))}
             </ul>
@@ -223,15 +223,15 @@ function CollaborationFeedbackDashboard(props) {
                   </div>
                   <div className="rounded-2xl bg-muted p-4">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground"><BarChart3 className="h-4 w-4" />Session Pattern</div>
-                    <div className="mt-2 text-sm ">{llmresponse_session_summary.Sessionpattern}</div>
+                    <div className="mt-2 text-sm ">{llmresponse_session_summary?.Sessionpattern}</div>
                   </div>
                   <div className="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
                     <div className="flex items-center gap-2 text-sm text-emerald-700"><TrendingUp className="h-4 w-4" />Strong zone</div>
-                    <div className="mt-2 text-sm ">{Array.isArray(llmresponse_session_summary.Strongzones)? llmresponse_session_summary.Strongzones[0] : llmresponse_session_summary.Strongzones}</div>
+                    <div className="mt-2 text-sm ">{Array.isArray(llmresponse_session_summary?.Strongzones)? llmresponse_session_summary?.Strongzones[0] : llmresponse_session_summary?.Strongzones}</div>
                   </div>
                   <div className="rounded-2xl bg-rose-50 p-4 ring-1 ring-rose-100">
                     <div className="flex items-center gap-2 text-sm text-rose-700"><TrendingDown className="h-4 w-4" />Decline zone</div>
-                    <div className="mt-2 text-sm">{Array.isArray(llmresponse_session_summary.Declinezones)? llmresponse_session_summary.Declinezones[0] :llmresponse_session_summary.Declinezones}</div>
+                    <div className="mt-2 text-sm">{Array.isArray(llmresponse_session_summary?.Declinezones)? llmresponse_session_summary?.Declinezones[0] :llmresponse_session_summary?.Declinezones}</div>
                   </div>
                 </div>
               </CardContent>
@@ -250,7 +250,7 @@ function CollaborationFeedbackDashboard(props) {
                       <SelectValue placeholder="Select participant" />
                     </SelectTrigger>
                     <SelectContent>
-                      {props.participants.map((p) => (
+                      {props.participants?.map((p) => (
                         <SelectItem key={p} value={p}>{p}</SelectItem>
                       ))}
                     </SelectContent>
@@ -260,7 +260,7 @@ function CollaborationFeedbackDashboard(props) {
                 <div className="rounded-2xl border bg-emerald-50 p-4 mt-4 text-lg leading-6">
                   <div className="flex items-center gap-2 font-medium text-emerald-700"><Brain className="h-4 w-4" />Your Strength</div>
                   <p className="mt-2 text-sm">
-                    {llmresponse_session_summary.Strengths.join("\n")}
+                    {llmresponse_session_summary?.Strengths?.join("\n")}
                   </p>
                 </div>
               </CardContent>
@@ -286,68 +286,68 @@ function CollaborationFeedbackDashboard(props) {
                     <CardDescription>These are your session-level measure of relevant collaboration quality indicators.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-5">
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.session_level_metric.avg_verbalshare)}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.session_level_metric?.avg_verbalshare)}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Verbal participation</div>
                           <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_verbalshare}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData.session_level_metric.avg_verbalshare}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_verbalshare}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
-                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.session_level_metric.avg_verbalshare)}`} style={{ width: `${selectedParticipantData.session_level_metric.avg_verbalshare}%` }} />
+                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_verbalshare)}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_verbalshare}%` }} />
                       </div>
                     </div>
 
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.session_level_metric.avg_turntaking)}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.session_level_metric?.avg_turntaking)}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Turn taking share</div>
                           <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_turntaking}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData.session_level_metric.avg_turntaking}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_turntaking}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
-                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.session_level_metric.avg_turntaking)}`} style={{ width: `${selectedParticipantData.session_level_metric.avg_turntaking}%` }} />
+                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_turntaking)}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_turntaking}%` }} />
                       </div>
                     </div>
 
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.session_level_metric.avg_focusscore)}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.session_level_metric?.avg_focusscore)}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Task focus</div>
                           <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_focusscore}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData.session_level_metric.avg_focusscore}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_focusscore}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
-                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.session_level_metric.avg_focusscore)}`} style={{ width: `${selectedParticipantData.session_level_metric.avg_focusscore}%` }} />
+                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_focusscore)}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_focusscore}%` }} />
                       </div>
                     </div>
 
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.session_level_metric.avg_ideacontributionscore)}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.session_level_metric?.avg_ideacontributionscore)}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Idea contribution</div>
                           <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_ideacontributionscore}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData.session_level_metric.avg_ideacontributionscore}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_ideacontributionscore}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
-                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.session_level_metric.avg_ideacontributionscore)}`} style={{ width: `${selectedParticipantData.session_level_metric.avg_ideacontributionscore}%` }} />
+                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_ideacontributionscore)}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_ideacontributionscore}%` }} />
                       </div>
                     </div>
 
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.session_level_metric.avg_momentum)}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.session_level_metric?.avg_momentum)}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Momentum</div>
                           <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_momentum}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData.session_level_metric.avg_momentum}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_momentum}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
-                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.session_level_metric.avg_momentum)}`} style={{ width: `${selectedParticipantData.session_level_metric.avg_momentum}%` }} />
+                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_momentum)}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_momentum}%` }} />
                       </div>
                     </div>
                     </CardContent>
@@ -360,68 +360,68 @@ function CollaborationFeedbackDashboard(props) {
                   </CardHeader>
                   <CardContent className="space-y-4">
 
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.group_level_metric.verbalparticipationbalance)}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.group_level_metric?.verbalparticipationbalance)}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Verbal participation balance</div>
-                          <div className="text-sm text-muted-foreground">{llmresponse_group_summary.verbalparticipationbalance}</div>
+                          <div className="text-sm text-muted-foreground">{llmresponse_group_summary?.verbalparticipationbalance}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.verbalparticipationbalance}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric?.verbalparticipationbalance}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
-                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.group_level_metric.verbalparticipationbalance)}`} style={{ width: `${selectedParticipantData.group_level_metric.verbalparticipationbalance}%` }} />
+                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric?.verbalparticipationbalance)}`} style={{ width: `${selectedParticipantData?.group_level_metric?.verbalparticipationbalance}%` }} />
                       </div>
                     </div>
 
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.group_level_metric.turntakingbalance)}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.group_level_metric?.turntakingbalance)}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Turn taking balance</div>
-                          <div className="text-sm text-muted-foreground">{llmresponse_group_summary.turntakingbalance}</div>
+                          <div className="text-sm text-muted-foreground">{llmresponse_group_summary?.turntakingbalance}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.turntakingbalance}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric?.turntakingbalance}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
-                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.group_level_metric.turntakingbalance)}`} style={{ width: `${selectedParticipantData.group_level_metric.turntakingbalance}%` }} />
+                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric?.turntakingbalance)}`} style={{ width: `${selectedParticipantData?.group_level_metric?.turntakingbalance}%` }} />
                       </div>
                     </div>
 
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.group_level_metric.Sharedtaskfocus)}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.group_level_metric?.Sharedtaskfocus)}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Shared task focus</div>
-                          <div className="text-sm text-muted-foreground">{llmresponse_group_summary.Sharedtaskfocus}</div>
+                          <div className="text-sm text-muted-foreground">{llmresponse_group_summary?.Sharedtaskfocus}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.Sharedtaskfocus}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric?.Sharedtaskfocus}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
-                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.group_level_metric.Sharedtaskfocus)}`} style={{ width: `${selectedParticipantData.group_level_metric.Sharedtaskfocus}%` }} />
+                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric?.Sharedtaskfocus)}`} style={{ width: `${selectedParticipantData?.group_level_metric?.Sharedtaskfocus}%` }} />
                       </div>
                     </div>
 
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.group_level_metric.ideacontribution)}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.group_level_metric?.ideacontribution)}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Idea contribution balance</div>
-                          <div className="text-sm text-muted-foreground">{llmresponse_group_summary.ideacontribution}</div>
+                          <div className="text-sm text-muted-foreground">{llmresponse_group_summary?.ideacontribution}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.ideacontribution}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric?.ideacontribution}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
-                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.group_level_metric.ideacontribution)}`} style={{ width: `${selectedParticipantData.group_level_metric.ideacontribution}%` }} />
+                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric?.ideacontribution)}`} style={{ width: `${selectedParticipantData?.group_level_metric?.ideacontribution}%` }} />
                       </div>
                     </div>
 
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.group_level_metric.momentum)}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.group_level_metric?.momentum)}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Momentum</div>
-                          <div className="text-sm text-muted-foreground">{llmresponse_group_summary.momentum}</div>
+                          <div className="text-sm text-muted-foreground">{llmresponse_group_summary?.momentum}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData.group_level_metric.momentum}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric?.momentum}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
-                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData.group_level_metric.momentum)}`} style={{ width: `${selectedParticipantData.group_level_metric.momentum}%` }} />
+                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric?.momentum)}`} style={{ width: `${selectedParticipantData?.group_level_metric?.momentum}%` }} />
                       </div>
                     </div>
 
@@ -437,13 +437,13 @@ function CollaborationFeedbackDashboard(props) {
                   </CardHeader>
                   <CardContent className="space-y-5">
                     <div className="rounded-2xl bg-muted p-4 text-sm leading-7">
-                      {llmresponse_session_summary.Summary}
+                      {llmresponse_session_summary?.Summary}
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                         <div className="flex items-center gap-2 font-medium text-emerald-800"><CheckCircle2 className="h-4 w-4" />What is going well</div>
                         <ul className="mt-3 space-y-2 text-sm text-emerald-900/80">
-                          {llmresponse_session_summary.Strengths.map((item) => (
+                          {llmresponse_session_summary?.Strengths?.map((item) => (
                             <li key={item} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4" />{item}</li>
                           ))}
                         </ul>
@@ -451,7 +451,7 @@ function CollaborationFeedbackDashboard(props) {
                       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                         <div className="flex items-center gap-2 font-medium text-amber-800"><AlertTriangle className="h-4 w-4" />What to pay attention to</div>
                         <ul className="mt-3 space-y-2 text-sm text-amber-900/80">
-                          {llmresponse_session_summary.Concerns.map((item) => (
+                          {llmresponse_session_summary?.Concerns?.map((item) => (
                             <li key={item} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4" />{item}</li>
                           ))}
                         </ul>
@@ -461,7 +461,7 @@ function CollaborationFeedbackDashboard(props) {
                     <div className="rounded-2xl bg-violet-50 p-4 ring-1 ring-violet-100">
                       <div className="flex items-center gap-2 font-medium text-violet-700"><Lightbulb className="h-4 w-4" />What to work on</div>
                       <ul className="mt-3 space-y-2 text-sm text-violet-700">
-                        {llmresponse_session_summary.Actions.map((item) => (
+                        {llmresponse_session_summary?.Actions?.map((item) => (
                           <li key={item} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4" />{item}</li>
                         ))}
                       </ul>
@@ -481,14 +481,14 @@ function CollaborationFeedbackDashboard(props) {
                   <CardContent>
                     <ScrollArea className="h-[480px] pr-3">
                       <div className="space-y-3">
-                        {selectedParticipantData.participant_level_metric?.map((item, index) => (
+                        {selectedParticipantData?.participant_level_metric?.map((item, index) => (
                           <TimelinePill
-                            key={item.windowid}
+                            key={item?.windowid}
                             item={item}
                             item_index={index}
                             window_length={window_length}
-                            selected={selectedMoment?.windowid === item.windowid}
-                            onClick={() => props.setSelectedMomentIdAndIndex([index, item.windowid])}
+                            selected={selectedMoment?.windowid === item?.windowid}
+                            onClick={() => props.setSelectedMomentIdAndIndex([index, item?.windowid])}
                           />
                         ))}
                       </div>
@@ -609,7 +609,7 @@ function CollaborationFeedbackDashboard(props) {
                     <div>
                       <div className="mb-2 text-sm font-medium">Suggested questions</div>
                       <div className="flex flex-wrap gap-2">
-                        {defaultQuestion.map((q) => (
+                        {defaultQuestion?.map((q) => (
                           <button
                             key={q[0]}
                             onClick={async () => {

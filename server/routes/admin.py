@@ -1,6 +1,6 @@
 import email
 
-from flask import Blueprint, Response, request, abort, session, send_file
+from flask import Blueprint, Response, request, abort, session, send_file,make_response
 from tables.user import User
 from app import base_dir
 import json
@@ -8,9 +8,10 @@ import logging
 import database
 import wrappers
 from device_websockets import ConnectionManager
-from io import BytesIO
+from io import BytesIO,StringIO
 import base64
 import os
+import csv
 import config as cf
 from redis_helper import RedisLogin
 from utility import json_response, sanitize, sanitize_int_value
@@ -288,3 +289,57 @@ def delete_device_logs(device_id, **kwargs):
         if success:
             return json_response()
     return json_response({'message': 'Device does not exist or did not respond.'}, 400)
+
+@api_routes.route('/api/v1/admin/surveyresponses',methods=['GET'])
+@wrappers.verify_login(roles=['super'], public=True)
+def export_survey_data(**kwargs):
+    field_names = None
+    fwrite = None  
+    si = StringIO()
+    session_dict = {}
+    session_device_dict = {}
+    survey_response = database.get_survey_reponse()
+    All_particiapants_video_metrics = []
+
+    field_names = ['Session ID','Session Name','Group ID', 'Group Name', 'Username', 'Communication rate', 'Climate rate', 'Conflict frequency','Particpation balance',"Reflection usefullness", 
+                   'Collaboration goal','Collaboration quality', 'Assessment accuracy', 'Open Reponse',"Submission date"]
+    fwrite = csv.DictWriter(si, fieldnames = field_names)
+    fwrite.writeheader()
+    for surv_resp in survey_response:
+        response = json.loads(str(surv_resp.response))
+        if surv_resp.sessiondeviceid not in session_device_dict:
+            session_device = database.get_session_devices(id=int(surv_resp.sessiondeviceid))
+            if session_device:
+                session_device_dict[surv_resp.sessiondeviceid] = session_device
+                session = database.get_sessions(id=session_device.session_id)
+                if session:
+                    session_dict[session_device.session_id] = session
+            else:
+                logging.info("Unable to find session device for survey response id: {0}".format(surv_resp.id))
+                continue        
+        else:
+            session_device = session_device_dict[surv_resp.sessiondeviceid]
+            session = session_dict[session_device.session_id]
+        survey_data = {
+            'Session ID': session.id,
+            'Session Name': session.name,
+            'Group ID': session_device.id,
+            'Group Name': session_device.name,
+            'Username': surv_resp.username,
+            'Communication rate': response.get('communication rate', ""),
+            'Climate rate': response.get('climate rate', ""),
+            'Conflict frequency': response.get('conflict frequency', ""),
+            'Particpation balance': response.get('Particpation balance', ""),
+            "Reflection usefullness": response.get('reflection usefullness', ""),
+            'Collaboration goal': response.get('collaboration goal', ""),
+            'Collaboration quality': response.get('collaboration quality', ""),
+            'Assessment accuracy': response.get('assessment accuracy', ""),
+            'Open Reponse': response.get('notes', ""),
+            'Submission date': surv_resp.creation_date.strftime("%Y-%m-%d %H:%M:%S") 
+        }
+        fwrite.writerow(survey_data) 
+
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = "attachment; filename=export.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output

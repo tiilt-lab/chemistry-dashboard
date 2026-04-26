@@ -114,7 +114,10 @@ function SettingsComponent(props) {
     } else if (!loadDevices && newForm === "SyncStudentProfile") {
       setCurrentForm("Loading")
       syncStudentProfile()
-    } else {
+    }else if (!loadDevices && newForm === "ExportSurveyResponses") {
+      setCurrentForm("Loading")
+      exportSurveyResponsesData()
+    }else {
       setCurrentForm(newForm);
     }
   }
@@ -136,6 +139,35 @@ function SettingsComponent(props) {
       setCurrentForm("Status")
     }
   }
+
+  const exportSurveyResponsesData = () => {
+    const fetchData = new AuthService().downloadSurveyResponses();
+
+      fetchData.then(
+        (response) => {
+          if (response.status === 200) {
+            response.text().then((Data) => {
+              const anchor = document.createElement("a");
+              anchor.href =
+                "data:attachment/csv;charset=utf-8," + encodeURI(Data);
+              anchor.download = "survey_reponse.csv";
+              anchor.click();
+             setCurrentForm("")
+            });
+          } else {
+            alert("Failed to download survey responses.");
+          }
+        },
+        (apierror) => {
+          console.log(
+            "Settingsfunc: exportSurveyResponsesData 1 ",
+            apierror
+          );
+          alert("Failed to download survey responses.");
+        }
+      );
+    
+  };
 
   const closeDialog = () => {
     setStatus("");

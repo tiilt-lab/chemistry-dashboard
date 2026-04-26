@@ -50,6 +50,7 @@ function SettingComponentPage(props) {
               <React.Fragment>
                 <div className={style["section-header"]}>Manage Session Device Metrics </div>
                 <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeleteDeviceData")}>Delete Session Device Data</div>
+                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("ExportSurveyResponses")}>Export Survey Responses</div>
               </React.Fragment>
             </>
             :

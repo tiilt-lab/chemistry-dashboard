@@ -38,7 +38,7 @@ def checkFingerprints(x, fingerprints, verification):
     try:
       # logging.info("np_signal shape: {0}".format(np_signal.shape))
       # logging.info("speaker_signal shape: {0}".format(speaker_signal.shape))
-      score, prediction = verification.verify_batch(np_signal, speaker_signal,threshold=0.25)
+      score, prediction = verification.verify_batch(np_signal, speaker_signal,threshold=0.15)#,threshold=0.25
       # logging.info("Current prediction is {} with score of {}".format(prediction.item(), score.item()))
     except Exception as e:
       logging.info("Error occured. while checking fingerprint: {0}".format(e))  
