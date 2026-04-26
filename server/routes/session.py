@@ -583,8 +583,6 @@ def export_session_transcript_video_metrics(session_id,windowsize, format, **kwa
     return output
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/synthesized_feedback_metrics',methods=['GET'])
-# @wrappers.verify_login(public=True)
-# @wrappers.verify_session_access
 def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
     session_device = database.get_session_devices(id=session_device_id)
     
@@ -615,6 +613,22 @@ def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
 
 
     return json_response(combine_metric_level)
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/username/<string:username>/single_survey_response',methods=['GET'])
+def getSingleSurveyResponse(session_id,session_device_id,username, **kwargs):
+    survey_response = database.get_survey_reponse(sessionid=session_id,sessiondeviceid=session_device_id,username=username)
+    parsed = None
+    if survey_response:
+        try:
+            parsed = json.loads(str(survey_response[0].response))
+            return json_response({"response": parsed})
+        except Exception as e:
+            logging.info("json load was unsuccessful for survey response {0}".format(e))
+            logging.info("parsed  {0}".format(parsed))
+            return json_response({ "message": "Unable to parse json"}, 400)        
+    else:
+        return json_response({'message': "survey reponse not found"}, 400)
+   
     
 @api_routes.route('/api/v1/sessions/getredissessionkey', methods=['POST'])
 def get_device_key(**kwargs):

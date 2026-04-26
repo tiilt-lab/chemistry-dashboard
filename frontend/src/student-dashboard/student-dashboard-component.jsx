@@ -91,6 +91,7 @@ function StudentSessionDashboard() {
   const [transcriptDoneLoading, setTranscriptDoneLoading] = useState(false);
   const [videoMetricDoneLoading, setVideoMetricDoneLoading] = useState(false);
   const [currentSessionRunning, setCurrentSessionRunning] = useState(false);
+  const [surveyAlreadyCompleted, setSurveyAlreadyCompleted] = useState(false)
 
   const [sessionPart, setSessionPart] = useState("");
   const [loadedAfresh, setLoadedAfresh] = useState(true)
@@ -604,6 +605,8 @@ function StudentSessionDashboard() {
     // console.log("tracking session and device ids inside group click  ", selectedSessionId1, selectedSessionDeviceId1,deviceId,selectedDeviceID)
     setTranscriptDoneLoading(false);
     setVideoMetricDoneLoading(false);
+    setRatings({})
+    setNotes("")
     setSession1Transcripts([]);
     setSession1VideoMetrics([]);
     setSession2Transcripts([]);
@@ -613,6 +616,20 @@ function StudentSessionDashboard() {
     setSelectedSessionDeviceId2(-1)
     setSelectedSessionDeviceId1(deviceId)
     setSelectedDeviceID(deviceId)
+    if (pathToSurveyOptions === "survey") {
+      getSurveySubmittedForSurveyPath(sessionId,deviceId)
+    }
+  }
+
+  const getSurveySubmittedForSurveyPath = async (sessId,deviceId) => {
+      let surv_resp = await getSurveySubmitted(sessId,deviceId)
+      console.log("survey response ", surv_resp)
+      if(surv_resp !== null){
+        setNotes(surv_resp.notes)
+        const {notes, ...rest } = surv_resp;
+        setRatings(rest)
+        setSurveyAlreadyCompleted(true)
+      }
   }
 
   const getSessionDevices = (selectedSessionId, sessionPart = "sessionOne") => {
@@ -750,7 +767,15 @@ function StudentSessionDashboard() {
       setShowAlert(true);
     } else {
       setReflectionDashboardDoneLoading(false)
+      setSurveyAlreadyCompleted(false)
       let actionstatus = await extractParticipantData(selectedSessionDeviceId1)
+      let surv_resp = await getSurveySubmitted(selectedSessionId1,selectedSessionDeviceId1)
+      if(surv_resp !== null){
+        setNotes(surv_resp.notes)
+        const {notes, ...rest } = surv_resp;
+        setRatings(rest)
+        setSurveyAlreadyCompleted(true)
+      }
       if (actionstatus) {
         const sess = previousSessions.current.find((ses) => ses.id === selectedSessionId1);
         const group = sessionDevices.find((dev) => dev.id === selectedSessionDeviceId1);
@@ -773,7 +798,16 @@ function StudentSessionDashboard() {
   const loadReflectionDashboardForNewSelection = async (newSessionDeviceID) => {
     setdeviceIDRefectionDashboard(newSessionDeviceID)
     setReflectionDashboardDoneLoading(false)
+    setSurveyAlreadyCompleted(false)
     let actionstatus = await extractParticipantData(newSessionDeviceID)
+    let surv_resp = await getSurveySubmitted(selectedSessionId1,newSessionDeviceID)
+
+    if(surv_resp !== null){
+      setNotes(surv_resp.notes)
+      const {notes, ...rest } = surv_resp;
+      setRatings(rest)
+      setSurveyAlreadyCompleted(true)
+    }
     if (actionstatus) {
       const sess = previousSessions.current.find((ses) => ses.id === selectedSessionId1);
       const group = selectFilteredDevice1.find((dev) => dev.id === newSessionDeviceID);
@@ -994,6 +1028,24 @@ function StudentSessionDashboard() {
     }
   }
 
+  const getSurveySubmitted = async (sessId,deviceId) =>{
+    try {
+      const response = await new SessionService().getSurveyResponseSubmitted(sessId, deviceId,userDetail.username);
+      if (response.status === 200) {
+        const jsonObj = await response.json()
+        return jsonObj.response
+      } else {
+        return null
+      }
+    } catch (error) {
+      console.log(
+        "student dashboard getSurveySubmitted",
+        error,
+      )
+      return null
+    }
+  }
+
   const getLLMAnalytics = async (respObj) => {
     try {
       const response = await new SessionService().getLLMFeedbackBasedOnMetrics(respObj);
@@ -1117,6 +1169,7 @@ function StudentSessionDashboard() {
 
       if (response.status === 200) {
         // console.log("Submitted rating form:", payload);
+        setRatings({})
         setDialogHeading("Success")
         setSubmitted(true);
         setAlertMessage("Survey Submission Successful");
@@ -1246,6 +1299,7 @@ function StudentSessionDashboard() {
       setNotes ={setNotes}
       notes = {notes}
       pathToSurveyOptions = {pathToSurveyOptions}
+      surveyAlreadyCompleted = {surveyAlreadyCompleted}
 
     />
   );

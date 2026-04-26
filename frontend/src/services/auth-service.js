@@ -116,6 +116,10 @@ class AuthService {
     return new ApiService().httpRequestCall("api/v1/callback/syncstudenttable", 'POST', body);
   }
  
+  downloadSurveyResponses() {
+   return new ApiService().httpRequestCall("api/v1/admin/surveyresponses", 'GET', {});
+  }
+
   getStudentProfileByID(username) {
     return new ApiService().httpRequestCall("api/v1/student/getstudentbyid/"+ username, 'GET', {});
   }

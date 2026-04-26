@@ -384,6 +384,14 @@ class SessionService {
     );
   }
 
+   getSurveyResponseSubmitted(sessionId, sessionDeviceId,username) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/username/${username}/single_survey_response`,
+      "GET",
+      {}
+    );
+  }
+
   getLLMFeedbackBasedOnMetrics(metricData) {
     return this.api.httpRequestCall(
       `api/v1/llmqueries/generate_llm_feedback_based_on_metrics`,

@@ -252,6 +252,7 @@ function StudentSessionDashboardPages(props) {
                                                         submitted ={props.submitted}
                                                         setNotes ={props.setNotes}
                                                         notes = {props.notes}
+                                                        surveyAlreadyCompleted = {props.surveyAlreadyCompleted}
                                                     />
 
                                                 ) : (
@@ -275,6 +276,7 @@ function StudentSessionDashboardPages(props) {
                                         submitted ={props.submitted}
                                         setNotes ={props.setNotes}
                                         notes = {props.notes}
+                                        surveyAlreadyCompleted = {props.surveyAlreadyCompleted}
                                     />
                                     </div>
                                 )}

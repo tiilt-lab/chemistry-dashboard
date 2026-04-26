@@ -1004,14 +1004,18 @@ def extract_videometrics_within_window(videoMetrics,speakers, window_start, wind
 def extract_transcriptmetrics_within_window(transcriptSpeakerMetric,speakers, keywords,window_start, window_end, index):
     metric_len = len(transcriptSpeakerMetric)
     metrics = defaultdict(dict)
-
+    prev_trans_id = None
+    trans_id = None
     while index < metric_len: 
         t, sm = transcriptSpeakerMetric[index]
+        
         if t.start_time >= window_start and t.start_time < window_end:
+            trans_id = t.id
             transcript_keywords = [keyword for keyword in keywords if keyword.transcript_id == t.id]
-            keyword_similarity_score = [round((1-keyword.similarity)*100,3) for keyword in transcript_keywords]
+            keyword_similarity_score = [round((1-keyword.similarity)*100,3) for keyword in transcript_keywords]  
             if  t.speaker_tag not in metrics: 
                 speakers.add(t.speaker_tag)
+                prev_trans_id = t.id
                 metrics[t.speaker_tag]={'analytic':[int(t.analytic_thinking_value)],
                                         'authenticity':[int(t.authenticity_value)],
                                         'certainty':[int(t.certainty_value)],
@@ -1027,20 +1031,30 @@ def extract_transcriptmetrics_within_window(transcriptSpeakerMetric,speakers, ke
                                         'keywords':[', '.join([keyword.keyword for keyword in transcript_keywords])],
                                         'keyword_similarity_score':[compute_average(keyword_similarity_score)]}
             else:
-                metrics[t.speaker_tag]['analytic'].append(int(t.analytic_thinking_value))
-                metrics[t.speaker_tag]['authenticity'].append(int(t.authenticity_value))
-                metrics[t.speaker_tag]['certainty'].append(int(t.certainty_value))  
-                metrics[t.speaker_tag]['clout'].append(int(t.clout_value)),
-                metrics[t.speaker_tag]['emotionaL_tone'].append(int(t.emotional_tone_value)),
-                metrics[t.speaker_tag]['participation_score'].append(float(sm.participation_score))
-                metrics[t.speaker_tag]['internal_cohesion'].append(float(sm.internal_cohesion))
-                metrics[t.speaker_tag]['responsivity'].append(float(sm.responsivity))
-                metrics[t.speaker_tag]['social_impact'].append(float(sm.social_impact))
-                metrics[t.speaker_tag]['newness'].append(float(sm.newness))
-                metrics[t.speaker_tag]['word_count'].append(int(t.word_count)),
-                metrics[t.speaker_tag]['words_per_window'].append(str(t.transcript))
-                metrics[t.speaker_tag]['keywords'].append(', '.join([keyword.keyword for keyword in transcript_keywords]))
-                metrics[t.speaker_tag]['keyword_similarity_score'].append(compute_average(keyword_similarity_score))
+                if trans_id != prev_trans_id:
+                    metrics[t.speaker_tag]['analytic'].append(int(t.analytic_thinking_value))
+                    metrics[t.speaker_tag]['authenticity'].append(int(t.authenticity_value))
+                    metrics[t.speaker_tag]['certainty'].append(int(t.certainty_value))  
+                    metrics[t.speaker_tag]['clout'].append(int(t.clout_value)),
+                    metrics[t.speaker_tag]['emotionaL_tone'].append(int(t.emotional_tone_value)),
+                    metrics[t.speaker_tag]['participation_score'].append(float(sm.participation_score))
+                    metrics[t.speaker_tag]['internal_cohesion'].append(float(sm.internal_cohesion))
+                    metrics[t.speaker_tag]['responsivity'].append(float(sm.responsivity))
+                    metrics[t.speaker_tag]['social_impact'].append(float(sm.social_impact))
+                    metrics[t.speaker_tag]['newness'].append(float(sm.newness))
+                    metrics[t.speaker_tag]['word_count'].append(int(t.word_count)),
+                    metrics[t.speaker_tag]['words_per_window'].append(str(t.transcript))
+                    metrics[t.speaker_tag]['keywords'].append(', '.join([keyword.keyword for keyword in transcript_keywords]))
+                    metrics[t.speaker_tag]['keyword_similarity_score'].append(compute_average(keyword_similarity_score))
+                    prev_trans_id = t.id
+                elif trans_id == prev_trans_id: 
+                    metrics[t.speaker_tag]['participation_score'][-1] = max(metrics[t.speaker_tag]['participation_score'][-1],float(sm.participation_score))
+                    metrics[t.speaker_tag]['internal_cohesion'][-1] =  max(metrics[t.speaker_tag]['internal_cohesion'][-1],float(sm.internal_cohesion))
+                    metrics[t.speaker_tag]['responsivity'][-1] = max(metrics[t.speaker_tag]['responsivity'][-1],float(sm.responsivity)) 
+                    metrics[t.speaker_tag]['social_impact'][-1] = max(metrics[t.speaker_tag]['social_impact'][-1],float(sm.social_impact)) 
+                    metrics[t.speaker_tag]['newness'][-1] = max(metrics[t.speaker_tag]['newness'][-1],float(sm.newness))
+
+                
         else:
             break    
         index += 1  
@@ -1067,7 +1081,7 @@ def aggregate_video_metric_per_window(videoMetrics_per_window,windowsize,window_
         attention_rate = 0
     prev_attention_rate = prev_metric[20]
     trend_direction = get_progression(prev_attention_rate, attention_rate,"numerical")
-    gazeontask =  1 if trend_direction == 1 else 0
+    gazeontask =  1 if trend_direction >= 0 else 0
     return [most_common_emotion,most_common_object,avg_attention,attention_rate,'focus_level',trend_direction,gazeontask]
 
 def aggregate_transcript_metric_per_window(transcriptMetrics_per_window,prev_metric):

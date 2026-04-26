@@ -9,7 +9,6 @@ import {  CheckCircle2} from "lucide-react";
 
 function SurveyCompletion(props) {
     const allComplete = props.completedCount === props.surveyquestion?.length && props.notes !== "";
-
     return (
         <div className="w-full ">
 
@@ -30,8 +29,8 @@ function SurveyCompletion(props) {
                               Reflect on your collaboration experience and provide answers to the following questions (survey should only take about 1-2 mins)
                             </CardDescription>
                           </div>
-                          <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
-                            {props.completedCount}/{props.surveyquestion.length} completed
+                          <Badge variant="secondary" className= {`rounded-full px-3 py-1 text-xs ${props.surveyAlreadyCompleted ? "ring-2 bg-emerald-300 hover:bg-emerald-300"  : "bg-rose-300 hover:bg-rose-300"}`}>
+                            {props.surveyAlreadyCompleted?" Survey already": props.completedCount + "/" + props.surveyquestion.length} completed
                           </Badge>
                         </div>
 
