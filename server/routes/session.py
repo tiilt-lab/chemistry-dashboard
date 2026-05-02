@@ -586,7 +586,7 @@ def export_session_transcript_video_metrics(session_id,windowsize, format, **kwa
 def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
     session_device = database.get_session_devices(id=session_device_id)
     
-    combine_metric_level = {'group_id': session_device.id, 'group_name': session_device.name, 'window_level':{}, 'participants_level':{}, 'session_level':{}, 'group_level':{}}
+    combine_metric_level = {'group_id': session_device.id, 'group_name': session_device.name, 'window_level':{}, 'participants_level':{}, 'session_level':{}, 'session_all_metrics':{},'group_level':{}}
     
     exisiting_synthesis = database.get_synthesized_feedback_report(sessionId=session_id, sessionDeviceId = session_device_id)
 
@@ -614,6 +614,61 @@ def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
 
     return json_response(combine_metric_level)
 
+@api_routes.route('/api/v1/sessions/<int:session_id>/sessionname/<string:session_name>/synthesized_session_analytics',methods=['GET'])
+def getSynthesizedSessionAnalytics(session_id,session_name, **kwargs):
+    si = io.StringIO()
+    field_names = None  
+    fwrite = None 
+    session_devices = database.get_session_devices(session_id=session_id)
+    field_names = ['Session ID','Session Name', 'Device ID', 'Device Name',"User ID" ,'Engagement', 'Focus','Idea Contribution', 'Initiative', 'Leadership', 'Momentum', 'Reasoning', 'Verbal Share','Turn Taking',
+                   "Shared Task Focus","Analytic Thinking",'Authenticity', 'Certainty','Clout','Internal Cohesion','Social Impact','Newness', 'Participation Score', 'Responsivity', 'Word Count']
+    fwrite = csv.DictWriter(si, fieldnames = field_names)
+    fwrite.writeheader()
+    for session_device in session_devices:
+        combine_metric_level = {'group_id': session_device.id, 'group_name': session_device.name, 'window_level':{}, 'participants_level':{}, 'session_level':{},'session_all_metrics':{},'group_level':{}}
+
+        keywords = database.get_keyword_usages(session_device_id=session_device.id)
+        # speakers = database.get_speakers(session_device_id=session_device_id)
+        videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device.id)
+        transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session_by_timeline(session_device_id=session_device.id)
+        combine_metric_level = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,windowsize=10)#speakers,
+        session_all_metrics = combine_metric_level['session_all_metrics']
+        ['avg_focusscore','avg_participationscore','avg_responsivity','avg_engagementscore','avg_reasoningscore','avg_leadershipscore', 'avg_initiativescore','avg_ideacontributionscore',
+                            'avg_speakingalignmentscore','avg_momentum','sharedtaskfocus','avg_analyticthinking','avg_authenticity','avg_certainty','avg_clout','avg_internalcohesion','avg_socialimpact','avg_newness',
+                            'avg_verbalshare','avg_turntaking','wordcount','avg_trenddirection','earlytrenddirection','midtrenddirection','latetrenddirection'] 
+        for speaker, metrics in session_all_metrics.items():
+            fwrite.writerow({'Session ID': session_id,
+                    'Session Name': session_name,
+                    'Device ID':session_device.id,
+                    'Device Name':session_device.name,
+                    'User ID': speaker,
+                    'Engagement': metrics.get('avg_engagementscore', 0),
+                    'Focus': metrics.get('avg_focusscore', 0),
+                    'Idea Contribution': metrics.get('avg_ideacontributionscore', 0),
+                    'Initiative': metrics.get('avg_initiativescore', 0),
+                    'Leadership': metrics.get('avg_leadershipscore', 0),
+                    'Momentum': metrics.get('avg_momentum', 0),
+                    'Reasoning': metrics.get('avg_reasoningscore', 0),
+                    'Verbal Share': metrics.get('avg_verbalshare', 0),
+                    'Turn Taking': metrics.get('avg_turntaking', 0),
+                    'Shared Task Focus': metrics.get('sharedtaskfocus', 0),
+                    'Analytic Thinking': metrics.get('avg_analyticthinking', 0),
+                    'Authenticity': metrics.get('avg_authenticity', 0),
+                    'Certainty': metrics.get('avg_certainty', 0),
+                    'Clout': metrics.get('avg_clout', 0),
+                    'Internal Cohesion':  metrics.get('avg_internalcohesion', 0),
+                    'Social Impact':  metrics.get('avg_socialimpact', 0),
+                    'Newness':  metrics.get('avg_newness', 0),
+                    'Participation Score': metrics.get('avg_participationscore', 0),
+                    'Responsivity':  metrics.get('avg_responsivity', 0),
+                    'Word Count': metrics.get('wordcount', 0)
+                    })
+            
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = "attachment; filename=export.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output
+    
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/username/<string:username>/single_survey_response',methods=['GET'])
 def getSingleSurveyResponse(session_id,session_device_id,username, **kwargs):
     survey_response = database.get_survey_reponse(sessionid=session_id,sessiondeviceid=session_device_id,username=username)

@@ -20,8 +20,10 @@ import {SurveyCompletion} from "../../student-dashboard/survey-question"
 function CollaborationFeedbackDashboard(props) {
   const allComplete = props.completedCount === props.surveyquestion?.length && props.notes !== "";
 
+  const username = props.username || "Unknown User";
   const selectedSessionId1 = props.selectedSessionId1
   const selectedSessionDeviceId1 = props.selectedSessionDeviceId1
+  const synthesizedFeedbackMetrics = (props.synthesizedFeedbackMetrics.hasOwnProperty(selectedSessionId1) && props.synthesizedFeedbackMetrics[selectedSessionId1].hasOwnProperty(selectedSessionDeviceId1)) ? props.synthesizedFeedbackMetrics[selectedSessionId1][selectedSessionDeviceId1] : undefined
   const promptResponses = (props.promptResponses.hasOwnProperty(selectedSessionId1) && props.promptResponses[selectedSessionId1].hasOwnProperty(selectedSessionDeviceId1)) ? props.promptResponses[selectedSessionId1][selectedSessionDeviceId1] : []
   const llmresponse_session_summary = props.llmSessionAnalysis?.Session_summary
   const llmresponse_session_metric_summary = llmresponse_session_summary?.Session_metric_summary
@@ -60,6 +62,62 @@ function CollaborationFeedbackDashboard(props) {
 
 
 
+  function ShareBar({ data = {}, metricKey = "verbalShare" }) {
+    const sessionMetrics = Object.entries(data)?.map(([name, metrics], index) => ({
+      id: name,
+      username: name || "Unknown",
+      contribution: Number(metrics?.[metricKey] || 0),
+      color: props.DEFAULT_COLORS[index % props.DEFAULT_COLORS.length],
+    }));
+
+    const total = sessionMetrics.reduce((sum, p) => sum + p.contribution, 0);
+
+    const normalized = sessionMetrics.map((p) => ({
+      ...p,
+      percent: total > 0 ? (p.contribution / total) * 100 : 0,
+    }));
+
+    return (
+      <div className="w-full space-y-4">
+        <div className="flex h-10 w-full overflow-hidden rounded-2xl bg-gray-200">
+          {normalized.map((p) => (
+            <div
+              key={p.id}
+              className="flex items-center justify-center text-xs font-semibold text-white"
+              style={{
+                width: `${p.percent}%`,
+                backgroundColor: p.color,
+              }}
+              title={`${p.name}: ${p.percent.toFixed(1)}%`}
+            >
+              {p.percent > 8 && `${p.percent.toFixed(0)}%`}
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-4">
+          {normalized.map((p,index) => (
+            <div
+              key={p.id}
+              className="flex items-center gap-3 rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition"
+            >
+              <span
+                className="h-3 w-3 rounded-full"
+                style={{ backgroundColor: p.color }}
+              />
+              <span className="font-semibold tracking-wide text-gray-800">
+                { p.username === username ? p.username : `Person ${index + 1}`}
+              </span>
+              <span className="text-xs font-mono text-gray-500">
+                {p.percent.toFixed(1)}%
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+
+  }
 
   const formatSeconds = (s) => {
     const date = new Date(1000 * Math.floor(s));
@@ -104,16 +162,34 @@ function CollaborationFeedbackDashboard(props) {
     return <Badge className="bg-amber-500 hover:bg-amber-500 text-black"><ArrowRight className="h-4 w-4" /></Badge>;
   }
 
-  function toneClass(value) {
-    if (value >= 50) return "bg-emerald-500";
-    if (value >= 30) return "bg-amber-400";
-    return "bg-rose-500";
+ function toneClass(value, componentype = "default") {
+    if (["verbalshare", "turntaking"].includes(componentype)) {
+      if (value > 120) return "bg-rose-500";
+      if (value >= 50 ) return "bg-emerald-500";
+      if (value >= 30) return "bg-amber-500";
+      return "bg-rose-400";
+    } else {
+      if (value >= 70) return "bg-emerald-500";
+      if (value >= 50) return "bg-emerald-300";
+      if (value >= 30) return "bg-amber-500";
+      return "bg-rose-500";
+    }
   }
 
-  function toneSurface(value) {
-    if (value >= 50) return "border-emerald-200 bg-emerald-50";
-    if (value >= 30) return "border-amber-200 bg-amber-50";
-    return "border-rose-200 bg-rose-50";
+  function toneSurface(value, componentype = "default") {
+    
+    if (["verbalshare", "turntaking"].includes(componentype)) {
+      if (value > 120) return "border-rose-200 bg-rose-50";
+      if (value >= 50)  return "border-emerald-200 bg-emerald-50";
+      if (value >= 30 ) return "border-amber-200 bg-amber-50";
+      return "border-rose-150 bg-rose-50";
+    } else {
+      if (value >= 70) return "border-emerald-200 bg-emerald-50";
+      if (value >= 50) return "border-emerald-200 bg-emerald-50";
+      if (value >= 30) return "border-amber-200 bg-amber-50";
+      return "border-rose-200 bg-rose-50";
+    }
+
   }
 
   function changeBackground(value, color) {
@@ -308,29 +384,67 @@ function CollaborationFeedbackDashboard(props) {
                     <CardDescription>These are your session-level measure of relevant collaboration quality indicators.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-5">
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.session_level_metric?.avg_verbalshare)}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.session_level_metric?.avg_verbalshare, "verbalshare")}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Verbal participation</div>
                           <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_verbalshare}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_verbalshare}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_verbalshare > 120 ? ">100" : selectedParticipantData?.session_level_metric?.avg_verbalshare > 100 ? "100" : selectedParticipantData?.session_level_metric?.avg_verbalshare}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
-                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_verbalshare)}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_verbalshare}%` }} />
+                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_verbalshare, "verbalshare")}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_verbalshare > 100 ? 100 : selectedParticipantData?.session_level_metric?.avg_verbalshare}%` }} />
+                      </div>
+
+                      <div className="flex flex-wrap gap-4 mt-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-rose-500 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide text-white"> Above 100% : Dominant</span>
+                          </div>
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-emerald-500 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide  text-white"> 50%-100% : Balanced</span>
+                          </div>
+                        </div>
+                         <div className="grid grid-cols-2 gap-4">
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-amber-500 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide text-white"> 30% - 50% : Moderate</span>
+                          </div>
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-rose-400 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide text-white"> below 30% : Low</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.session_level_metric?.avg_turntaking)}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.session_level_metric?.avg_turntaking, "turntaking")}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Turn taking share</div>
                           <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_turntaking}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_turntaking}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_turntaking > 120 ? ">100" : selectedParticipantData?.session_level_metric?.avg_turntaking > 100 ? "100" : selectedParticipantData?.session_level_metric?.avg_turntaking}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
-                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_turntaking)}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_turntaking}%` }} />
+                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_turntaking, "turntaking")}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_turntaking > 100 ? 100 : selectedParticipantData?.session_level_metric?.avg_turntaking}%` }} />
+                      </div>
+                       {/* Explanation Section */}
+                      <div className="flex flex-wrap gap-4 mt-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-rose-500 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide text-white"> Above 100% : Dominant</span>
+                          </div>
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-emerald-500 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide  text-white"> 50%-100% : Balanced</span>
+                          </div>
+                        </div>
+                         <div className="grid grid-cols-2 gap-4">
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-amber-500 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide text-white"> 30% - 50% : Moderate</span>
+                          </div>
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-rose-400 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide text-white"> below 30% : Low</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
@@ -345,18 +459,57 @@ function CollaborationFeedbackDashboard(props) {
                       <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_focusscore)}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_focusscore}%` }} />
                       </div>
+
+                      {/* Explanation Section */}
+                      <div className="flex flex-wrap gap-4 mt-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-emerald-500 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide text-white"> Above 70% : Excellent</span>
+                          </div>
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-emerald-400 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide  text-white"> 50%-100% : Good</span>
+                          </div>
+                        </div>
+                         <div className="grid grid-cols-2 gap-4">
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-amber-500 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide text-white"> 30% - 50% : Moderate</span>
+                          </div>
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-rose-500 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide text-white"> below 30% : Low</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.session_level_metric?.avg_ideacontributionscore)}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.session_level_metric?.avg_engagementscore)}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Idea contribution</div>
-                          <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_ideacontributionscore}</div>
+                          <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_engagementscore}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_ideacontributionscore}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_engagementscore}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
-                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_ideacontributionscore)}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_ideacontributionscore}%` }} />
+                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_engagementscore)}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_engagementscore}%` }} />
+                      </div>
+                      {/* Explanation Section */}
+                      <div className="flex flex-wrap gap-4 mt-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-emerald-500 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide text-white"> Above 70% : Excellent</span>
+                          </div>
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-emerald-400 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide  text-white"> 50%-100% : Good</span>
+                          </div>
+                        </div>
+                         <div className="grid grid-cols-2 gap-4">
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-amber-500 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide text-white"> 30% - 50% : Moderate</span>
+                          </div>
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-rose-500 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide text-white"> below 30% : Low</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
@@ -370,6 +523,25 @@ function CollaborationFeedbackDashboard(props) {
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_momentum)}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_momentum}%` }} />
+                      </div>
+                      {/* Explanation Section */}
+                      <div className="flex flex-wrap gap-4 mt-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-emerald-500 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide text-white"> Above 70% : Excellent</span>
+                          </div>
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-emerald-400 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide  text-white"> 50%-100% : Good</span>
+                          </div>
+                        </div>
+                         <div className="grid grid-cols-2 gap-4">
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-amber-500 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide text-white"> 30% - 50% : Moderate</span>
+                          </div>
+                          <div className="flex items-center justify-center gap-3 rounded-full bg-rose-500 px-4 py-2 shadow-sm ring-1 ring-gray-200 hover:shadow-md transition">
+                            <span className="text-xs leading-[10px] tracking-wide text-white"> below 30% : Low</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                     {/* <MetricBar label="Verbal participation" value={selectedParticipantData["session_level_metric"].avg_verbalshare} hint="share of spoken contribution" emphasize={selectedParticipantData["session_level_metric"].avg_verbalshare < 50 ? "risk" : "good"} />
@@ -395,9 +567,10 @@ function CollaborationFeedbackDashboard(props) {
                         </div>
                         <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric?.hasOwnProperty('verbalparticipationbalance') ? selectedParticipantData?.group_level_metric?.verbalparticipationbalance : 0}%</div>
                       </div>
-                      <div className="mt-4 h-2 rounded-full bg-white/70">
+                      <ShareBar data={synthesizedFeedbackMetrics?.session_level} metricKey="avg_verbalshare" />
+                      {/* <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric?.verbalparticipationbalance)}`} style={{ width: `${selectedParticipantData?.group_level_metric?.verbalparticipationbalance}%` }} />
-                      </div>
+                      </div> */}
                     </div>
 
                     <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.group_level_metric?.turntakingbalance)}`}>
@@ -408,35 +581,38 @@ function CollaborationFeedbackDashboard(props) {
                         </div>
                         <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric.hasOwnProperty('turntakingbalance') ? selectedParticipantData?.group_level_metric?.turntakingbalance : 0}%</div>
                       </div>
-                      <div className="mt-4 h-2 rounded-full bg-white/70">
+                      <ShareBar data={synthesizedFeedbackMetrics?.session_level} metricKey="avg_turntaking" />
+                      {/* <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric?.turntakingbalance)}`} style={{ width: `${selectedParticipantData?.group_level_metric?.turntakingbalance}%` }} />
-                      </div>
+                      </div> */}
                     </div>
 
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.group_level_metric?.Sharedtaskfocus)}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.group_level_metric?.focusscore)}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Shared task focus</div>
-                          <div className="text-sm text-muted-foreground">{llmresponse_group_summary?.Sharedtaskfocus}</div>
+                          <div className="text-sm text-muted-foreground">{llmresponse_group_summary?.focusscore}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric.hasOwnProperty('Sharedtaskfocus') ? selectedParticipantData?.group_level_metric?.Sharedtaskfocus : 0}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric.hasOwnProperty('focusscore') ? selectedParticipantData?.group_level_metric?.focusscore : 0}%</div>
                       </div>
-                      <div className="mt-4 h-2 rounded-full bg-white/70">
-                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric.Sharedtaskfocus)}`} style={{ width: `${selectedParticipantData.group_level_metric?.Sharedtaskfocus}%` }} />
-                      </div>
+                      <ShareBar data={synthesizedFeedbackMetrics?.session_level} metricKey="avg_focusscore" />
+                      {/* <div className="mt-4 h-2 rounded-full bg-white/70">
+                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric.focusscore)}`} style={{ width: `${selectedParticipantData.group_level_metric?.focusscore}%` }} />
+                      </div> */}
                     </div>
 
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.group_level_metric?.ideacontribution)}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.group_level_metric?.engagement)}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Idea contribution balance</div>
-                          <div className="text-sm text-muted-foreground">{llmresponse_group_summary?.ideacontribution}</div>
+                          <div className="text-sm text-muted-foreground">{llmresponse_group_summary?.engagement}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric?.hasOwnProperty('ideacontribution') ? selectedParticipantData?.group_level_metric?.ideacontribution : 0}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric?.hasOwnProperty('engagement') ? selectedParticipantData?.group_level_metric?.engagement : 0}%</div>
                       </div>
-                      <div className="mt-4 h-2 rounded-full bg-white/70">
+                      <ShareBar data={synthesizedFeedbackMetrics?.session_level} metricKey="avg_engagementscore" />
+                      {/* <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric?.ideacontribution)}`} style={{ width: `${selectedParticipantData?.group_level_metric?.ideacontribution}%` }} />
-                      </div>
+                      </div> */}
                     </div>
 
                     <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.group_level_metric?.momentum)}`}>
@@ -447,9 +623,10 @@ function CollaborationFeedbackDashboard(props) {
                         </div>
                         <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric?.hasOwnProperty('momentum') ? selectedParticipantData?.group_level_metric?.momentum : 0}%</div>
                       </div>
-                      <div className="mt-4 h-2 rounded-full bg-white/70">
+                       <ShareBar data={synthesizedFeedbackMetrics?.session_level} metricKey="avg_momentum" />
+                      {/* <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric?.momentum)}`} style={{ width: `${selectedParticipantData?.group_level_metri?.momentum}%` }} />
-                      </div>
+                      </div> */}
                     </div>
 
                   </CardContent>

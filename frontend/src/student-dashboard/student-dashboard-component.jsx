@@ -9,6 +9,15 @@ import { SessionModel } from "../models/session";
 import { SessionDeviceModel } from "../models/session-device";
 import { SpeakerModel } from "../models/speaker";
 
+const DEFAULT_COLORS = [
+  "#2563eb",
+  "#16a34a",
+  "#f97316",
+  "#9333ea",
+  "#dc2626",
+  "#0891b2",
+];
+
 const surveyquestion = [
   ["communication rate","How would you rate the level of communication?"],
   ["climate rate","How would  you rate the climate (group dynamics) during the collaboration session?"],
@@ -1287,6 +1296,9 @@ function StudentSessionDashboard() {
       interactivePromptFnc={interactivePromptFnc}
       loadReflectionDashboardForNewSelection={loadReflectionDashboardForNewSelection}
 
+
+      DEFAULT_COLORS ={DEFAULT_COLORS}
+      synthesizedFeedbackMetrics = {synthesizedFeedbackMetrics.current}
 
       //Survey props
       surveyquestion = {surveyquestion}

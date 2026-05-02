@@ -4,7 +4,15 @@ import { SpeakerModel } from "../models/speaker";
 import { useEffect, useState, useRef, useReducer } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { PodComponentPages } from "./html-pages";
-import { Satellite } from "lucide-react";
+
+const DEFAULT_COLORS = [
+  "#2563eb",
+  "#16a34a",
+  "#f97316",
+  "#9333ea",
+  "#dc2626",
+  "#0891b2",
+];
 
 function PodComponent() {
   const [sessionDevice, setSessionDevice] = useState({});
@@ -52,6 +60,7 @@ function PodComponent() {
   const [selectedMomentIdAndIndex, setSelectedMomentIdAndIndex] = useState(null);
   const [displayText, setDisplayText] = useState("")
   const [retrieveExisting, setRetrieveExisting] = useState("false")
+  const [LLMModel, setLLMModel] = useState("GOOGLE")
   const [contextForPrompt, setContextForPrompt] = useState("")
   const [refinementForPrompt, setRefinementForPrompt] = useState("")
   const [startPrompting, setStartPrompting] = useState(false)
@@ -617,6 +626,7 @@ function PodComponent() {
       retObj["sessiondeviceid"] = sessionDeviceId
       retObj["retrieve_existing_report"] = retrieveExisting
       retObj["source"] = "admin"
+      retObj["LLM_Model"] = LLMModel
       retObj["promptcontext"] = contextForPrompt
       retObj["promptrefinement"] = refinementForPrompt
       retObj["participant_level_metric"] = synthesizedFeedbackMetrics.current["participants_level"][participantId]
@@ -699,7 +709,8 @@ function PodComponent() {
     }
   }
 
-  const setLLMAnalyticParameter = (retrieveexisting, context, refinement) => {
+  const setLLMAnalyticParameter = (llmmodel, retrieveexisting, context, refinement) => {
+    setLLMModel(llmmodel)
     setRetrieveExisting(retrieveexisting)
     setContextForPrompt(context)
     setRefinementForPrompt(refinement)
@@ -914,6 +925,9 @@ function PodComponent() {
       currentParticipant={currentParticipant}
       selectedMomentIdAndIndex={selectedMomentIdAndIndex}
       setSelectedMomentIdAndIndex={setSelectedMomentIdAndIndex}
+
+      DEFAULT_COLORS ={DEFAULT_COLORS}
+      synthesizedFeedbackMetrics = {synthesizedFeedbackMetrics.current}
 
       //Process audio analytics 
       connecttoaudioservice={connecttoaudioservice}

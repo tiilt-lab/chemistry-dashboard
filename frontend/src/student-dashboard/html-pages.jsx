@@ -252,7 +252,10 @@ function StudentSessionDashboardPages(props) {
                                                         submitted ={props.submitted}
                                                         setNotes ={props.setNotes}
                                                         notes = {props.notes}
+                                                        username = {props.userDetail?.username}
                                                         surveyAlreadyCompleted = {props.surveyAlreadyCompleted}
+                                                        DEFAULT_COLORS ={props.DEFAULT_COLORS}
+                                                        synthesizedFeedbackMetrics = {props.synthesizedFeedbackMetrics} 
                                                     />
 
                                                 ) : (
