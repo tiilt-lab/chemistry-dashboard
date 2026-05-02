@@ -49,6 +49,10 @@ function PodsOverviewPages(props) {
                                     action: () => props.openDownloadOptionDialog("selectdownloadoption")
                                 },
                                 {
+                                    title: "Export Analytics",
+                                    action: () => props.ExportAnalytics()
+                                },
+                                {
                                     title: "Graph",
                                     action: () => props.goToGraph(),
                                 },

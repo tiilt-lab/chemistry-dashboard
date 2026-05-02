@@ -75,6 +75,8 @@ function PodComponentPages(props) {
                                 selectedMomentIdAndIndex={props.selectedMomentIdAndIndex}
                                 setSelectedMomentIdAndIndex={props.setSelectedMomentIdAndIndex}
                                 loadReflectiondashboard={props.loadReflectiondashboard}
+                                DEFAULT_COLORS ={props.DEFAULT_COLORS}
+                                synthesizedFeedbackMetrics = {props.synthesizedFeedbackMetrics} 
                             />
                             :
 
@@ -146,6 +148,11 @@ function PodComponentPages(props) {
                         <div className={style2["dialog-heading"]}>
                             LLM Prompt Fine-tuning
                         </div>
+                        <div className={style["input-header"]}>LLM Model</div>
+                        <select id='llmmodel'>
+                            <option value="GOOGLE">Google</option>
+                            <option value="OPENAI">OpenAI</option>
+                        </select>
                         <div className={style["input-header"]}>Retrieve report?</div>
                         <select id='retrieveexisting'>
                             <option value="true">Yes</option>
@@ -159,7 +166,7 @@ function PodComponentPages(props) {
                         <div className={style["dialog-button-container"]}>
                             <button
                                 className={style["basic-button"]}
-                                onClick={() => props.setLLMAnalyticParameter(document.getElementById('retrieveexisting').value, document.getElementById('context').value, document.getElementById('refinement').value)}
+                                onClick={() => props.setLLMAnalyticParameter(document.getElementById('llmmodel').value,document.getElementById('retrieveexisting').value, document.getElementById('context').value, document.getElementById('refinement').value)}
                             >
                                 Ok
                             </button>

@@ -201,10 +201,39 @@ function PodsOverviewComponent() {
     }
   };
 
- 
+ const exportSessionAnalytics = () => {
+   
+    const fetchData = new SessionService().getSynthesizedSessionAnalytics(session.id, session.title);
+    fetchData.then(
+        (response) => {
+          if (response.status === 200) {
+            response.text().then((Data) => {
+              const anchor = document.createElement("a");
+              anchor.href =
+                "data:attachment/csv;charset=utf-8," + encodeURI(Data);
+              anchor.download = session.title+"-analytics" + ".csv";
+              anchor.click();
+            });
+          } else {
+            alert("Failed to download Session Analytics.");
+          }
+        },
+        (apierror) => {
+          console.log(
+            "pods-overview-components func: exportSessionAnalytics  ",
+            apierror
+          );
+          alert("Failed to download Session Analytics.");
+        }
+      );
+  };
 
   const downloadData = (windowsize, datatype,format) => {
     exportSessionMetricsData(datatype,windowsize,format);
+  }
+
+  const ExportAnalytics = () => {
+    exportSessionAnalytics();
   }
 
   const closeDialog = () => {
@@ -279,6 +308,7 @@ function PodsOverviewComponent() {
       goToSpeakerMetrics={goToSpeakerMetrics}
       openDownloadOptionDialog={openDownloadOptionDialog}
       downloadData={downloadData}
+      ExportAnalytics={ExportAnalytics}
     />
   );
 }

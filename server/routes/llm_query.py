@@ -5,6 +5,7 @@ import json
 import re
 import database
 from google import genai
+from openai import OpenAI
 from dotenv import load_dotenv
 from utility import json_response, build_prompt
 import os
@@ -15,6 +16,7 @@ api_routes = Blueprint('llmquery', __name__)
 
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 client = genai.Client(api_key=GOOGLE_API_KEY)
 
@@ -35,13 +37,17 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
         prompt = build_prompt(metricObj,"Session_level analysis for participant")
 
         try:
-            response = call_gemini_with_retry(prompt)
-            
-            raw = response.text.strip()
-            if raw.startswith("```"):
-                raw = raw.replace("```json", "").replace("```", "").replace("\n","").strip()
-
-            raw = clean_llm_json(raw)     
+            if metricObj['LLM_Model'] == "OPENAI":
+                openai_client = OpenAI(api_key=OPENAI_API_KEY)
+                response = openai_client.chat.completions.create(model="gpt-5.4",messages=[{"role": "user","content": prompt}])
+                raw = response.choices[0].message.content
+                raw = clean_llm_json(raw)
+            elif metricObj['LLM_Model'] == "GOOGLE":    
+                response = call_gemini_with_retry(prompt)
+                raw = response.text.strip()
+                if raw.startswith("```"):
+                    raw = raw.replace("```json", "").replace("```", "").replace("\n","").strip()
+                raw = clean_llm_json(raw)     
             
 
            
@@ -61,6 +67,8 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
     
     try:
         parsed = json.loads(raw)
+        # logging.info("parsed  {0}".format(parsed))
+        return json_response({"answer": parsed})
     except Exception as e:
         logging.info("json load was unsuccessful {0}".format(e))
         logging.info("parsed  {0}".format(parsed))
@@ -68,9 +76,6 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
                 "message": "Unable to parse json"
             }, 400)
 
-    return json_response({
-        "answer": parsed
-    })
 
 @api_routes.route('/api/v1/llmqueries/fetch_response_for_question', methods=['POST'])
 def fetch_response_for_question(**kwargs):
@@ -139,6 +144,9 @@ def get_llm_question_answer_interactions(session_id,session_device_id,username, 
 
 def call_gemini_with_retry(prompt, max_retries=5):
     models = [
+    "gemini-2.5-pro",    
+    "gemini-3.1-pro-preview",    
+    "gemini-3-flash-preview",    
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
     "gemini-3-flash-preview",
@@ -163,9 +171,12 @@ def call_gemini_with_retry(prompt, max_retries=5):
     raise Exception("Max retries exceeded")
 
 def clean_llm_json(s):
+    s = re.sub(r"^```(?:json)?\s*", "", s.strip(), flags=re.IGNORECASE)
+    s = re.sub(r"\s*```$", "", s.strip())
     # Remove trailing commas
     s = re.sub(r",\s*}", "}", s)
     s = re.sub(r",\s*]", "]", s)
+    
 
     # # Fix smart quotes
     # s = s.replace("“", '"').replace("”", '"')

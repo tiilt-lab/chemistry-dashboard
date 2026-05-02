@@ -384,6 +384,14 @@ class SessionService {
     );
   }
 
+  getSynthesizedSessionAnalytics(sessionId, sessionName) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/sessionname/${sessionName}/synthesized_session_analytics`,
+      "GET",
+      {}
+    );
+  }
+
    getSurveyResponseSubmitted(sessionId, sessionDeviceId,username) {
     return this.api.httpRequestCall(
       `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/username/${username}/single_survey_response`,
