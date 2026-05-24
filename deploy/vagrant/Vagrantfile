@@ -31,7 +31,7 @@ Vagrant.configure("2") do |config|
       # ansible executes on host
       override.vm.provision "ansible" do |ansible|
         ansible.compatibility_mode = "2.0"
-        ansible.playbook = "./provisioning/bootstrap.yml"
+        ansible.playbook = "../provisioning/bootstrap.yml"
         ansible.raw_arguments = ['--timeout=30']
       end
 

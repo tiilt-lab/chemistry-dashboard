@@ -23,7 +23,7 @@
 
 - name: Link Discussion Capture backend
   file:
-    src: /vagrant/server
+    src: /vagrant/src/server
     dest: /var/lib/chemistry-dashboard/server
     state: link
     owner: "{{ app_user }}"
@@ -32,7 +32,7 @@
 
 - name: Link Audio Processing backend
   file:
-    src: /vagrant/audio_processing
+    src: /vagrant/src/audio_processing
     dest: /var/lib/chemistry-dashboard/audio_processing
     state: link
     owner: "{{ app_user }}"
@@ -41,7 +41,7 @@
 
 - name: Link Help Documentation client
   file:
-    src: /vagrant/UA
+    src: /vagrant/src/UA
     dest: /var/lib/chemistry-dashboard/UA
     state: link
     owner: "{{ app_user }}"
