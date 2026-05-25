@@ -360,6 +360,18 @@ def update_transcript_speaker(**kwargs):
         return json_response()
     return json_response({'message': 'Transcript not found.'}, 400)
 
+@api_routes.route('/api/v1/deletetranscriptById/<int:sessiondeviceId>/<int:transcriptId>', methods=['DELETE'])
+@wrappers.verify_login(allow_key=True)
+def delete_transcript_by_id(sessiondeviceId, transcriptId, **kwargs):
+    if not sessiondeviceId or not transcriptId:
+        return json_response({'message': 'All parameters must be provided.'}, 400)
+
+    
+    success = database.delete_transcript_by_id(transcriptId,sessiondeviceId)
+    if success:
+        return json_response()
+    return json_response({'message': 'Transcript not found.'}, 400)
+
 @api_routes.route('/api/v1/sessions/<int:session_id>/passcode', methods=['POST'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access

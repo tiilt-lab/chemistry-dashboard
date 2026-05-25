@@ -33,6 +33,7 @@ from tables.rater import Rater
 from tables.session_synthesized_report import SessionSynthesizedReport
 from tables.rating import Rating
 from tables.survey_response import SurveyResponse
+from tables.user_system_interaction import UserSystemInteraction
 
 # Saves changes made to database (models)
 def save_changes():
@@ -902,6 +903,17 @@ def delete_device_transcriptsV2(session_device_id):
     else:
         False
 
+def delete_transcript_by_id(transcript_id,sessiondeviceId):
+    trscrpt = get_transcripts(transcript_id=transcript_id,session_device_id=sessiondeviceId)
+    if trscrpt:
+        db.session.query(KeywordUsage).filter(KeywordUsage.transcript_id.in_(db.session.query(Transcript.id).filter(Transcript.session_device_id == sessiondeviceId,Transcript.id == transcript_id))).delete(synchronize_session='fetch')
+        db.session.query(SpeakerTranscriptMetrics).filter(SpeakerTranscriptMetrics.transcript_id.in_(db.session.query(Transcript.id).filter(Transcript.session_device_id == sessiondeviceId,Transcript.id == transcript_id))).delete(synchronize_session='fetch')
+        db.session.query(Transcript).filter(Transcript.session_device_id == sessiondeviceId, Transcript.id == transcript_id).delete(synchronize_session='fetch')
+        db.session.commit()
+        return True
+    else:
+        False
+
 def update_transcript_speaker(transcript_id=None,sessiondeviceid=None,speakerid=None,speakertag=None):
     transcript = get_transcripts(transcript_id=transcript_id, session_device_id = sessiondeviceid)
     if transcript:
@@ -1164,6 +1176,60 @@ def delete_survey_reponse(id):
         return survey
     else:
         return None  
+
+# -------------------------
+# User Interaction 
+# -------------------------
+
+def get_user_interactions(id=None,sessionid=None,sessiondeviceid=None,username=None):
+    query = db.session.query(UserSystemInteraction)
+    if id != None:
+        return query.filter(UserSystemInteraction.id == id).first()
+    if sessionid != None:
+        query = query.filter(UserSystemInteraction.sessionid == sessionid)
+    if sessiondeviceid != None:
+        query = query.filter(UserSystemInteraction.sessiondeviceid == sessiondeviceid)
+    if username != None:
+        query = query.filter(UserSystemInteraction.username == username)  
+    return query.all()
+
+def add_user_interaction(sessionid, sessiondeviceid, username,action):
+    interaction = UserSystemInteraction(sessionid, sessiondeviceid, username,action)
+    db.session.add(interaction)
+    db.session.commit()
+    return True, interaction
+
+def update_user_interaction(id,sessionid=None,sessiondeviceid=None,username=None,action=None):
+    interaction = get_user_interactions(id=id)
+    if interaction:
+        db_change = False
+        if sessionid:
+            interaction.sessionid = sessionid
+            db_change = True
+        if sessiondeviceid:
+            interaction.sessiondeviceid = sessiondeviceid
+            db_change = True  
+        if username:
+            interaction.username = username
+            db_change = True
+        if action:
+            interaction.action = action
+            db_change = True      
+        
+        if db_change:
+            db.session.commit()
+        return True, interaction
+    return False, None
+
+def delete_user_interaction(id):
+    interaction = get_user_interactions(id=id)
+    if interaction:
+        db.session.delete(interaction)
+        db.session.commit()
+        return interaction
+    else:
+        return None  
+    
 # -------------------------
 # Student
 # -------------------------

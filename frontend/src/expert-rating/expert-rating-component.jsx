@@ -8,6 +8,14 @@ import { RaterModel } from "../models/rater"
 import { SessionModel } from "../models/session";
 import { SessionDeviceModel } from "../models/session-device";
 
+const DEFAULT_COLORS = [
+  "#2563eb",
+  "#16a34a",
+  "#f97316",
+  "#9333ea",
+  "#dc2626",
+  "#0891b2",
+];
 const likertOptions = [1, 2, 3, 4, 5];
 const evaluation_one = [
   ["Interpretability", "This dashboard makes the collaboration patterns easy to understand."],
@@ -62,6 +70,7 @@ function ExpertRatingComponent() {
   const [evaluationOptionInstruction, setEvaluationOptionInstruction] = useState([])
   const [showAlert, setShowAlert] = useState(false)
   const [alertMessage, setAlertMessage] = useState("")
+  const [alertHeading, setAlertHeading] = useState("")
   const [notes, setNotes] = useState("");
   const [ratings, setRatings] = useState({});
   const [submitted, setSubmitted] = useState(false);
@@ -95,6 +104,7 @@ function ExpertRatingComponent() {
   const [groupNameForReflecDashboard, setGroupNameForReflecDashboard] = useState("")
   const [isThinking, setIsThinking] = useState(false)
   const [currentIndex, setCurrentIndex] = useState(0)
+  const studentAllRatingsCompleted = useRef({quantDash:false, refDash:false})
   const navigate = useNavigate()
   const sessionService = new SessionService()
   const authService = new AuthService()
@@ -140,8 +150,8 @@ function ExpertRatingComponent() {
   // first useEffect to be called one the evalutor class is selected
   useEffect(() => {
     if (evaluatorType === "student" && aliasExpertId !== "") {
-      setItemsForRating([{ rating_item_id: -1, sessId: 158, sessDevId: 443, speaker: "dklee1004", raterId: aliasExpertId, dashboardType: "quantitative", evalCat: "visualization" },
-      { rating_item_id: -1, sessId: 158, sessDevId: 443, speaker: "dklee1004", raterId: aliasExpertId, dashboardType: "reflection", evalCat: "reflection" }])
+      setItemsForRating([{ rating_item_id: -1, sessId: 158, sessDevId: 443, speaker: "jciohvud", raterId: aliasExpertId, dashboardType: "quantitative", evalCat: "visualization" },
+      { rating_item_id: -1, sessId: 158, sessDevId: 443, speaker: "jciohvud", raterId: aliasExpertId, dashboardType: "reflection", evalCat: "reflection" }])
 
     } else if (evaluatorType === "expert" && aliasExpertId !== "") {
       verifyExpertId(aliasExpertId)
@@ -205,10 +215,12 @@ function ExpertRatingComponent() {
 
   const getUserParameters = (evaluatorType, alias_expertid) => {
     if (evaluatorType === '') {
+      setAlertHeading("Error")
       setAlertMessage("Please Select Your Role");
       setShowAlert(true);
       document.getElementById("evaluaortype").focus();
     } else if (alias_expertid === '') {
+      setAlertHeading("Error")
       setAlertMessage("Please Enter Your Expert ID");
       setShowAlert(true);
       document.getElementById("expertid").focus();
@@ -233,6 +245,7 @@ function ExpertRatingComponent() {
               setItemsForRating(items)
             })
           } else {
+            setAlertHeading("Error")
             setAlertMessage("Invalid Expert ID");
             setShowAlert(true);
           }
@@ -277,6 +290,7 @@ function ExpertRatingComponent() {
               // setReload(reload + 1)
             })
           } else {
+            setAlertHeading("Error")
             setAlertMessage("No Previous Sessions Found for this User");
             setShowAlert(true);
           }
@@ -302,6 +316,7 @@ function ExpertRatingComponent() {
               setSessionDeviceId(session_device.id);
             })
           } else {
+            setAlertHeading("Error")
             setAlertMessage("No Previous Sessions device Found for this User");
             setShowAlert(true);
           }
@@ -465,8 +480,11 @@ function ExpertRatingComponent() {
         retObj["sessionid"] = sessionId
         retObj["sessiondeviceid"] = deviceId
         retObj["retrieve_existing_report"] = "true"
+        retObj["source"] = "student"
+        retObj["promptcontext"] = ""
+        retObj["promptrefinement"] = ""
         retObj["participant_level_metric"] = synthesizedFeedbackMetrics.current["participants_level"][username]
-        retObj["session_level_metric"] = synthesizedFeedbackMetrics.current["session_level"][username]
+        retObj["session_level_metric"] = synthesizedFeedbackMetrics.current["session_all_metrics"][username]
         retObj["group_level_metric"] = synthesizedFeedbackMetrics.current["group_level"]
       } else if (reporttype === "interactive prompting") {
         retObj["participant_name"] = username
@@ -476,7 +494,7 @@ function ExpertRatingComponent() {
         retObj["default_question_id"] = defaultQuestionId
         retObj["question"] = question
         retObj["window_level_metric"] = synthesizedFeedbackMetrics.current["window_level"]
-        retObj["session_level_metric"] = synthesizedFeedbackMetrics.current["session_level"]
+        retObj["session_level_metric"] = synthesizedFeedbackMetrics.current["session_all_metrics"]
         retObj["group_level_metric"] = synthesizedFeedbackMetrics.current["group_level"]
       }
     }
@@ -629,6 +647,7 @@ function ExpertRatingComponent() {
   const handleNavigationChange = (index, itemsForRating) => {
     setCurrentIndex(index);
     setRatings(Object.fromEntries(evaluationOption.map((item) => [item[0], 0])))
+    setNotes("")
     setSubmitted(false);
     loadDashboard(itemsForRating)
   };
@@ -655,8 +674,27 @@ function ExpertRatingComponent() {
 
       if (response.status === 200) {
         // console.log("Submitted rating form:", payload);
-        setSubmitted(true);
+       
+        if (selectedItemForRating.dashboardType === "quantitative"){
+          studentAllRatingsCompleted.current.quantDash = true 
+        } 
+        if (selectedItemForRating.dashboardType === "reflection"){
+          studentAllRatingsCompleted.current.refDash = true 
+        }
+
+        if (studentAllRatingsCompleted.current.quantDash && studentAllRatingsCompleted.current.refDash){
+          setAlertHeading("Success")
+          setAlertMessage("All rating submission completed! Thank you for taking time to complete these rating");
+          setShowAlert(true);
+        }else{
+          setSubmitted(true);
+          setAlertHeading("Success")
+          setAlertMessage("Rating Submission Successful!");
+          setShowAlert(true);
+        }
+        
       } else if (response.status === 400) {
+        setAlertHeading("Error")
         setAlertMessage("Rating Submission Unsuccessful, Please contact Admin");
         setShowAlert(true);
       }
@@ -682,6 +720,12 @@ function ExpertRatingComponent() {
     setCurrentForm("")
   }
   const navigateToLogin = (confirmed = false) => {
+     if (!studentAllRatingsCompleted.current.quantDash || !studentAllRatingsCompleted.current.refDash){
+      setAlertHeading("Error")
+      setAlertMessage("You have not completed rating for all the dashboards!");
+      setShowAlert(true);
+      return
+     }
     return navigate("/")
   }
 
@@ -701,6 +745,9 @@ function ExpertRatingComponent() {
 
   const closeAlert = () => {
     setShowAlert(false)
+    if (studentAllRatingsCompleted.current.quantDash && studentAllRatingsCompleted.current.refDash){
+          navigateToLogin()
+    }
   }
 
   const onClickedTimeline = (transcript) => {
@@ -724,6 +771,7 @@ function ExpertRatingComponent() {
       showAlert={showAlert}
       closeAlert={closeAlert}
       alertMessage={alertMessage}
+      alertHeading = {alertHeading}
       getUserParameters={getUserParameters}
       // loading={loading}
       itemsForRating={itemsForRating}
@@ -762,6 +810,8 @@ function ExpertRatingComponent() {
       setIsThinking={setIsThinking}
       sessionId={sessionId}
       sessionDeviceId={sessionDeviceId}
+      synthesizedFeedbackMetrics = {synthesizedFeedbackMetrics.current}
+      DEFAULT_COLORS= {DEFAULT_COLORS}
 
       //left pane props
       selectedItemForRating={selectedItemForRating}

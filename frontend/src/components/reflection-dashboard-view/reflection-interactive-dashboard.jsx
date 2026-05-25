@@ -362,16 +362,16 @@ function CollaborationFeedbackDashboard(props) {
                   </CardHeader>
                   <CardContent className="space-y-5">
 
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.session_level_metric?.avg_verbalshare, "verbalshare")}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.session_level_metric?.avg_verbalshare_bal, "verbalshare")}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Verbal participation</div>
-                          <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_verbalshare}</div>
+                          <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_verbalshare_bal}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_verbalshare > 120 ? ">100" : selectedParticipantData?.session_level_metric?.avg_verbalshare > 100 ? "100" : selectedParticipantData?.session_level_metric?.avg_verbalshare}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_verbalshare_bal > 120 ? ">100" : selectedParticipantData?.session_level_metric?.avg_verbalshare_bal > 100 ? "100" : selectedParticipantData?.session_level_metric?.avg_verbalshare_bal}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
-                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_verbalshare, "verbalshare")}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_verbalshare > 100 ? 100 : selectedParticipantData?.session_level_metric?.avg_verbalshare}%` }} />
+                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_verbalshare_bal, "verbalshare")}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_verbalshare_bal > 100 ? 100 : selectedParticipantData?.session_level_metric?.avg_verbalshare_bal}%` }} />
                       </div>
                       {/* Explanation Section */}
                       {/* <div className="flex h-14 mt-4 w-full overflow-hidden rounded-2xl bg-gray-200 text-[11px] text-white">
@@ -401,17 +401,17 @@ function CollaborationFeedbackDashboard(props) {
                       </div>
                     </div>
 
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.session_level_metric?.avg_turntaking, "turntaking")}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.session_level_metric?.avg_turntaking_bal, "turntaking")}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Turn taking share</div>
-                          <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_turntaking}</div>
+                          <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_turntaking_bal}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_turntaking > 120 ? ">100" : selectedParticipantData?.session_level_metric?.avg_turntaking > 100 ? "100" : selectedParticipantData?.session_level_metric?.avg_turntaking}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_turntaking_bal > 120 ? ">100" : selectedParticipantData?.session_level_metric?.avg_turntaking_bal > 100 ? "100" : selectedParticipantData?.session_level_metric?.avg_turntaking_bal}%</div>
                       </div>
                       
                       <div className="mt-4 h-2 rounded-full bg-white/70">
-                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_turntaking, "turntaking")}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_turntaking > 100 ? 100 : selectedParticipantData?.session_level_metric?.avg_turntaking}%` }} />
+                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_turntaking_bal, "turntaking")}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_turntaking_bal > 100 ? 100 : selectedParticipantData?.session_level_metric?.avg_turntaking_bal}%` }} />
                       </div>
                       {/* Explanation Section */}
                       <div className="flex flex-wrap gap-4 mt-4">
@@ -557,7 +557,7 @@ function CollaborationFeedbackDashboard(props) {
                         </div>
                         <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric?.verbalparticipationbalance}%</div>
                       </div>
-                      <ShareBar data={props.synthesizedFeedbackMetrics?.session_level} metricKey="avg_verbalshare" />
+                      <ShareBar data={props.synthesizedFeedbackMetrics?.session_all_metrics} metricKey="avg_verbalshare_bal" />
                       {/* <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric?.verbalparticipationbalance)}`} style={{ width: `${selectedParticipantData?.group_level_metric?.verbalparticipationbalance}%` }} />
                       </div> */}
@@ -571,22 +571,22 @@ function CollaborationFeedbackDashboard(props) {
                         </div>
                         <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric?.turntakingbalance}%</div>
                       </div>
-                      <ShareBar data={props.synthesizedFeedbackMetrics?.session_level} metricKey="avg_turntaking" />
+                      <ShareBar data={props.synthesizedFeedbackMetrics?.session_all_metrics} metricKey="avg_turntaking_bal" />
                       {/* <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric?.turntakingbalance)}`} style={{ width: `${selectedParticipantData?.group_level_metric?.turntakingbalance}%` }} />
                       </div>*/}
                     </div>
 
 
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.group_level_metric?.focusscore)}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.group_level_metric?.Sharedtaskfocus)}`}>
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-semibold">Task Focus</div>
-                          <div className="text-sm text-muted-foreground">{llmresponse_group_summary?.focusscore}</div>
+                          <div className="font-semibold">Shared task focus</div>
+                          <div className="text-sm text-muted-foreground">{llmresponse_group_summary?.Sharedtaskfocus}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric?.focusscore}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric?.Sharedtaskfocus}%</div>
                       </div>
-                      <ShareBar data={props.synthesizedFeedbackMetrics?.session_level} metricKey="avg_focusscore" />
+                      <ShareBar data={props.synthesizedFeedbackMetrics?.session_all_metrics} metricKey="sharedtaskfocus" />
                       {/* <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric?.Sharedtaskfocus)}`} style={{ width: `${selectedParticipantData?.group_level_metric?.Sharedtaskfocus}%` }} />
                       </div> */}
@@ -600,7 +600,7 @@ function CollaborationFeedbackDashboard(props) {
                         </div>
                         <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric?.engagement}%</div>
                       </div>
-                      <ShareBar data={props.synthesizedFeedbackMetrics?.session_level} metricKey="avg_engagementscore" />
+                      <ShareBar data={props.synthesizedFeedbackMetrics?.session_all_metrics} metricKey="avg_engagementscore" />
                       {/* <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric?.ideacontribution)}`} style={{ width: `${selectedParticipantData?.group_level_metric?.ideacontribution}%` }} />
                       </div> */}
@@ -614,7 +614,7 @@ function CollaborationFeedbackDashboard(props) {
                         </div>
                         <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric?.momentum}%</div>
                       </div>
-                      <ShareBar data={props.synthesizedFeedbackMetrics?.session_level} metricKey="avg_momentum" />
+                      <ShareBar data={props.synthesizedFeedbackMetrics?.session_all_metrics} metricKey="avg_momentum" />
                       {/* <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric?.momentum)}`} style={{ width: `${selectedParticipantData?.group_level_metric?.momentum}%` }} />
                       </div> */}

@@ -194,6 +194,15 @@ class SessionService {
     );
   }
 
+  postUserInteraction(payload){
+    const body =  payload;
+    return this.api.httpRequestCall(
+      `api/v1/student/postuserinteraction`,
+      "POST",
+      body
+    );
+  }
+
   getSpeakerIdTranscripts(deviceId, speakerId) {
     return this.api.httpRequestCall(
       `api/v1/sessions/devices/${deviceId}>/speakers/${speakerId}/transcripts`,
@@ -444,6 +453,11 @@ class SessionService {
     };
     
     return this.api.httpRequestCall(`api/v1/updatetranscriptspeaker`, "POST", body);
+  }
+
+   deleteTranscriptById(sessiondeviceId,transcriptId) {
+    
+    return this.api.httpRequestCall(`api/v1/deletetranscriptById/${sessiondeviceId}/${transcriptId}`, "DELETE", {});
   }
 }
 

@@ -67,7 +67,7 @@ function ExpertRatingPage(props) {
                                         <input
                                             className="text-box small-section"
                                             id="expertid-alias"
-                                            placeholder="Alias/Expert Id"
+                                            placeholder="Username/First name/Alias/Expert Id"
                                         />
                                     </div>
                                     <button
@@ -136,6 +136,8 @@ function ExpertRatingPage(props) {
                                                         setSelectedMomentIdAndIndex={props.setSelectedMomentIdAndIndex}
                                                         selectedSessionId = {props.sessionId}
                                                         selectedSessionDeviceId = {props.sessionDeviceId}
+                                                        synthesizedFeedbackMetrics = {props.synthesizedFeedbackMetrics} 
+                                                        DEFAULT_COLORS = {props.DEFAULT_COLORS}
 
                                                     />
 
@@ -250,7 +252,7 @@ function ExpertRatingPage(props) {
             </GenericDialogBox>
             <DialogBox
                 itsclass={"add-dialog"}
-                heading={"Error"}
+                heading={props.alertHeading}
                 message={props.alertMessage}
                 show={props.showAlert}
                 closedialog={props.closeAlert}

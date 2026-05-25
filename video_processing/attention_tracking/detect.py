@@ -105,6 +105,15 @@ class ImageObjectDetection:
         elif isinstance(names_model_2,dict):
             self.object_names_K_V = names_model_2
             self.object_names_V_K = {v: k for k, v in names_model_2.items()}
+        # {0: 'person', 1: 'head', 2: 'car', 3: 'motorcycle', 4: 'airplane', 5: 'bus', 6: 'train', 7: 'truck', 8: 'boat', 9: 'traffic light', 
+        # 10: 'fire hydrant', 11: 'stop sign', 12: 'parking meter', 13: 'bench', 14: 'bird', 15: 'cat', 16: 'dog', 17: 'horse', 18: 'sheep', 
+        # 19: 'cow', 20: 'elephant', 21: 'bear', 22: 'zebra', 23: 'giraffe', 24: 'backpack', 25: 'umbrella', 26: 'handbag', 27: 'tie', 28: 'suitcase',
+        # 29: 'frisbee', 30: 'skis', 31: 'snowboard', 32: 'sports ball', 33: 'kite', 34: 'baseball bat', 35: 'baseball glove', 36: 'skateboard', 
+        # 37: 'surfboard', 38: 'tennis racket', 39: 'bottle', 40: 'wine glass', 41: 'cup', 42: 'fork', 43: 'knife', 44: 'spoon', 45: 'bowl', 46: 'banana',
+        # 47: 'apple', 48: 'sandwich', 49: 'orange', 50: 'broccoli', 51: 'carrot', 52: 'hot dog', 53: 'pizza', 54: 'donut', 55: 'cake', 56: 'chair', 57: 'couch',
+        # 58: 'potted plant', 59: 'bed', 60: 'dining table', 61: 'toilet', 62: 'tv', 63: 'laptop', 64: 'mouse', 65: 'remote', 66: 'keyboard', 67: 'cell phone', 
+        # 68: 'microwave', 69: 'oven', 70: 'toaster', 71: 'sink', 72: 'refrigerator', 73: 'book', 74: 'clock', 75: 'vase', 76: 'scissors', 77: 'teddy bear', 78: 'hair drier', 79: 'toothbrush'}
+        # logging.info("Model 1 and Model 2 loaded successfully with object names: {0}".format(self.object_names_K_V))    
     
     def start(self):
         self.running = True
@@ -364,30 +373,58 @@ class ImageObjectDetection:
                     for *xyxy, conf, cls in reversed(det):
                         int_cls = int(cls)
                         match = "Unknown"
+                        face_embedding = None
                         score = -1  # cosine similarity ranges -1 to 1
                         if int_cls == self.object_names_V_K.get('head', None):
                             detected_faces = detected_faces+1
-                            face = self.crop_face_from_fame_with_bbox(im0,xyxy, "xyxy", False, 0.0, False)
+                            # logging.info("Detected face in frame {0}".format(detected_faces))
+                            face = self.crop_face_from_frame_with_bbox(im0,xyxy, "xyxy", False, 30, False)
+                            # face_big = cv2.resize(face, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+                            # face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
+
                             # plot_one_box(xyxy, im0, label=self.object_names_K_V.get(int_cls, None), color=[random.randint(0, 255) for _ in range(3)], line_thickness=3)
                             # save_to = os.path.join(vid_img_dir, "face_{0}_{1}_{2}.{3}".format(int(p),self.object_names_K_V.get(int_cls, None),detected_faces,'png'))
                             # cv2.imwrite(save_to,face)
                             x1, y1, x2, y2 = xyxy
                             # face_location = (int(y1), int(x2), int(y2), int(x1))
-                            face_locations = face_recognition.face_locations(face)
+                            # logging.info("frame shape : {0}, type: {1}, min: {2} and, max: {3}".format(im0.shape, im0.dtype, im0.min(), im0.max()))
+                            # logging.info("face shape : {0}, type: {1}, min: {2} and, max: {3}".format(face.shape, face.dtype, face.min(), face.max()))
+                            # logging.info("face big shape : {0}, type: {1}, min: {2} and, max: {3}".format(face_big.shape, face_big.dtype, face_big.min(), face.max()))
+                            
+                            quality_face = self.prepare_quality_face(face,min_size=90,min_blur=50,upscale_to=320)
+                            
+                            if  quality_face is None:
+                                continue
+
+                            face_locations = face_recognition.face_locations(quality_face, model="cnn") #hog is faster but less accurate than cnn. cnn may not work well with small faces.
+                            # logging.info("Face locations for small : {0}".format(face_locations))
+                            # face_locations = face_recognition.face_locations(face_big, model="cnn") #hog is faster but less accurate than cnn. cnn may not work well with small faces.
+                            # logging.info("Face locations for big : {0}".format(face_locations))
                             if face_locations:
-                                face_embedding  = face_recognition.face_encodings(face, face_locations,num_jitters=1)
-                                match, cos_score,L2_score = self.identify_student(face_embedding[0], facial_embeddings, "face_"+str(detected_faces),cos_threshold=0.95,L2_threshold=0.3)
+                                face_embedding  = face_recognition.face_encodings(quality_face, face_locations,num_jitters=2)
+                                # (top, right, bottom, left) =  face_locations[0]
+                                # face_2 = face_big[top:bottom, left:right]
+                                # save_to = os.path.join(vid_img_dir, "face_{0}_{1}_{2}.{3}".format(int(p),self.object_names_K_V.get(int_cls, None),detected_faces,'png'))
+                                # cv2.imwrite(save_to,face_2)
+                            else:  
+                                # logging.info("Face locations: empty")
+                                h_face, w_face = quality_face.shape[:2]
+                                face_embedding  = face_recognition.face_encodings(face,known_face_locations=[(0, w_face, h_face, 0)],num_jitters=2)
+                            # logging.info("Face locations: {0}".format(face_locations))
+                            if face_embedding:  
+                                match, cos_score,L2_score,dist_score = self.identify_student(face_embedding[0], facial_embeddings, "face_"+str(detected_faces),cos_threshold=0.95,L2_threshold=0.3,frame_index=int(p))
                                 if match != "Unknown":
                                     # plot_one_box(xyxy, im0, label=self.object_names_K_V.get(int_cls, None), color=[random.randint(0, 255) for _ in range(3)], line_thickness=3)
-                                    # save_to = os.path.join(vid_img_dir, "face_{0}_{1}_{2}_{3}.{4}".format(int(p),match,self.object_names_K_V.get(int_cls, None),detected_faces,'png'))
-                                    # cv2.imwrite(save_to,face)
-                                    # logging.info(f"Match: {match}, Confidence: {cos_score:.3f}")
+                                    # save_to = os.path.join(vid_img_dir, "face_detected_{0}_{1}_{2}_{3}.{4}".format(int(p),match,self.object_names_K_V.get(int_cls, None),detected_faces,'png'))
+                                    # cv2.imwrite(save_to,quality_face)
+                                    # logging.info("Match: {0}, cos score: {1}, Euclid: {2}, Distance: {3}".format(match,cos_score,L2_score,dist_score))
                                     self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_face",match,accumulator,time_marker,im0,int(p)) 
                                 else:
                                     pass
-                                    # logging.info(f"Match: {match}, Confidence: {cos_score:.3f}")    
+                                    # logging.info(f"Match: {match}, Confidence: {cos_score:.3f}")   
+                                 
                         else:
-                          #print("Other object dtected is: ",self.object_names_K_V.get(int_cls, None))
+                        #   logging.info("Other object dtected is: {0}".format(self.object_names_K_V.get(int_cls, None)))
                           self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_other_objects","None",accumulator,time_marker,im0,int(p)) 
                          
                     # print("number of detected faces for frame ",str(i)+" is "+str(detected_faces))
@@ -433,7 +470,7 @@ class ImageObjectDetection:
             f"norm={np.linalg.norm(v):.6f}, "
             f"nan?={np.isnan(v).any()}, inf?={np.isinf(v).any()}")
     
-    def identify_student(self,face_embedding, store_facial_embeddings,detect_img_name, cos_threshold=0.95,L2_threshold=0.3):
+    def identify_student(self,face_embedding, store_facial_embeddings,detect_img_name, cos_threshold=0.95,L2_threshold=0.3,frame_index=None):
         """
         Identify student by comparing a new face embedding against stored gallery.
         :param face_embedding: embedding vector of the new face
@@ -444,25 +481,30 @@ class ImageObjectDetection:
         best_match = "Unknown"
         best_cos_score = -1  # cosine similarity ranges -1 to 1
         best_L2_score = 1
+        best_distance = 1
         for person in store_facial_embeddings:
             stored_embedding = store_facial_embeddings[person]["data"]
             student = store_facial_embeddings[person]["alias"]
-            # logging.info(f"student is ......{student}")
+            # logging.info("student is ......{0}".format(student))
             # self.debug_embed(detect_img_name,face_embedding)
             # self.debug_embed(student,stored_embedding)
+            distance = face_recognition.face_distance([stored_embedding], face_embedding)[0]
             u = self.normalize(face_embedding)
             v = self.normalize(stored_embedding)
+            
             score = float(np.dot(u, v)) #self.cosine_similarity(face_embedding, stored_embedding)
             Euc_dist = float(np.linalg.norm(u - v))
-            # logging.info(f"score are Euclidean: {Euc_dist} and cos simillarity: {score}")
-            if score > 0.85 and score > best_cos_score and Euc_dist < best_L2_score:
+            # logging.info(f"score are Euclidean: {Euc_dist} and cos simillarity: {score} and distance: {distance}")
+            if distance < 0.5 and score > best_cos_score and Euc_dist < best_L2_score and distance < best_distance:
                 best_cos_score = score
                 best_L2_score = Euc_dist
                 best_match = student
-
+                best_distance = distance
+        # if best_distance < 0.5:
+        #     logging.info("distance for all embedding are {0}, but matched {1} at cos score {2} and euclid : {3} in frame {4}".format(best_distance,best_match,best_cos_score,best_L2_score,frame_index))    
         # if best_cos_score >= cos_threshold and best_L2_score <= L2_threshold:
         # logging.info(f"student is ...... {best_match} and score are cos_simmilarity: {best_cos_score} Euclidean Dist: {best_L2_score}")
-        return best_match, best_cos_score, best_L2_score
+        return best_match, best_cos_score, best_L2_score,best_distance
         # else:
         #     return "Unknown", best_cos_score,best_L2_score
     
@@ -509,13 +551,13 @@ class ImageObjectDetection:
             else:
                 accumulator['other_objects'][p] = [[cls,self.object_names_K_V[int(cls)],person_id,int(bbox[0]),int(bbox[1]),int(bbox[2]),int(bbox[3]) ]]  
    
-    def crop_face_from_fame_with_bbox(self,
+    def crop_face_from_frame_with_bbox(self,
         img: np.ndarray,
         bbox,
         fmt: str = "xyxy",          # "xyxy" (xmin,ymin,xmax,ymax) or "xywh" (x,y,w,h)
         normalized: bool = False,   # True if bbox values are in [0,1] relative to width/height
         margin: float = 0.0,        # extra border around the face; if normalized, treat as ratio of diag
-        square: bool = False        # pad to a square crop
+        square: bool = False       # pad to a square crop
         ):
         """
         Returns a cropped image as a NumPy array.
@@ -578,10 +620,90 @@ class ImageObjectDetection:
         if x2 <= x1 or y2 <= y1:
             raise ValueError("Invalid bbox after processing; no area to crop.")
 
+        
         return img[y1:y2, x1:x2].copy()
 
     
-    
+    def prepare_quality_face(self,face_rgb, min_size=120, min_blur=80, upscale_to=320, sharpen_amount=1.35,blur_sigma=1.0,apply_clahe=True):
+        """
+        Takes an RGB face crop and returns an enhanced quality face image or None.
+
+        Expected input:
+            face_rgb: np.ndarray, RGB, uint8, shape (H, W, 3)
+
+        Returns:
+            enhanced RGB face crop or None
+        """
+
+        if face_rgb is None:
+            return None
+
+        if not isinstance(face_rgb, np.ndarray):
+            return None
+
+        if face_rgb.ndim != 3 or face_rgb.shape[2] != 3:
+            return None
+
+        if face_rgb.dtype != np.uint8:
+            face_rgb = np.clip(face_rgb, 0, 255).astype(np.uint8)
+
+        h, w = face_rgb.shape[:2]
+
+        # reject very small faces
+        if h < min_size or w < min_size:
+            return None
+
+        # reject dark/overexposed faces
+        gray = cv2.cvtColor(face_rgb, cv2.COLOR_RGB2GRAY)
+        mean_brightness = np.mean(gray)
+
+        if mean_brightness < 40 or mean_brightness > 220:
+            return None
+
+        # reject blurry faces
+        blur_score = cv2.Laplacian(gray, cv2.CV_64F).var()
+
+        if blur_score < min_blur:
+            return None
+
+        face_out = face_rgb.copy()
+
+        # normalize lighting using CLAHE
+        if apply_clahe:
+            lab = cv2.cvtColor(face_out, cv2.COLOR_RGB2LAB)
+            l, a, b = cv2.split(lab)
+
+            clahe = cv2.createCLAHE(
+                clipLimit=2.0,
+                tileGridSize=(8, 8)
+            )
+
+            l = clahe.apply(l)
+            lab = cv2.merge((l, a, b))
+            face_out = cv2.cvtColor(lab, cv2.COLOR_LAB2RGB)
+
+        # upscale to stable face-recognition size
+        h, w = face_out.shape[:2]
+
+        if min(h, w) < upscale_to:
+            scale = upscale_to / min(h, w)
+
+            face_out = cv2.resize(
+                face_out,
+                None,
+                fx=scale,
+                fy=scale,
+                interpolation=cv2.INTER_CUBIC
+            )
+
+        # Mild sharpening
+        blur = cv2.GaussianBlur(face_out, (0, 0), blur_sigma)
+
+        face_out = cv2.addWeighted(face_out,sharpen_amount,blur,1 - sharpen_amount, 0)
+        
+
+        return face_out
+
 # if __name__ == '__main__':
 #     imge_detect = ImageObjectDetection()
 #     imge_detect.init_model()

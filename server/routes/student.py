@@ -72,7 +72,7 @@ def post_rating(**kwargs):
     raterid = content.get('raterid',None)
     evaluationCategory = content.get('evaluationCategory',None)
     response = content.get('response',None)
-    rating = database.get_ratings(sessionid=sessionid,sessiondeviceid=sessionDeviceId,speakertag=speakerTag,raterid=None,evaluationcategory=evaluationCategory)
+    rating = database.get_ratings(sessionid=sessionid,sessiondeviceid=sessionDeviceId,speakertag=speakerTag,raterid=raterid,evaluationcategory=evaluationCategory)
     if rating and response:
         resp = json.dumps(response)
         success, _ = database.update_rating(rating[0].id,response=resp)
@@ -105,3 +105,19 @@ def post_survey_response(**kwargs):
         return json_response({'message': "success"})
     else:
         return json_response({'message': "Survey submission unsuccessful"}, 400)
+
+@api_routes.route('/api/v1/student/postuserinteraction', methods=['POST'])
+def post_user_interaction(**kwargs):
+    content = request.json
+    id = content.get('id',None)
+    sessionid = content.get('sessionid',None)
+    sessionDeviceId = content.get('sessionDeviceId',None)
+    username = content.get('username',None)
+    action = content.get('action',None)
+    
+    if sessionid and sessionDeviceId and username and action:
+        success, _ = database.add_user_interaction(sessionid,sessionDeviceId, username,action) 
+    if success:
+        return json_response({'message': "success"})
+    else:
+        return json_response({'message': "Interaction submission unsuccessful"}, 400)    

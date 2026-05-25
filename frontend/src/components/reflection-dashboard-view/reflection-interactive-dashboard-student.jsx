@@ -368,10 +368,10 @@ function CollaborationFeedbackDashboard(props) {
             <Card className="rounded-3xl border-0 shadow-sm">
               <CardContent className="h-30 lg:h-10">
                 <TabsList className="grid w-full grid-cols-1 gap-2 rounded-2xl lg:grid-cols-4">
-                  <TabsTrigger className="h-10 text-base lg:h-8 lg:text-2xl" value="session">1. Session synthesis</TabsTrigger>
-                  <TabsTrigger className="h-10 text-base lg:h-8 lg:text-2xl" value="moment">2. Moment explanation</TabsTrigger>
-                  <TabsTrigger className="h-10 text-base lg:h-8 lg:text-2xl" value="qa">3. Reflective Q&amp;A</TabsTrigger>
-                  <TabsTrigger className="h-10 text-base lg:h-8 lg:text-2xl" value="survey">4. Survey</TabsTrigger>
+                  <TabsTrigger className="h-10 text-base lg:h-8 lg:text-2xl" value="session" onClick={() => props.logUserInteraction("Clicked on session synthesis tab")}>1. Session synthesis</TabsTrigger>
+                  <TabsTrigger className="h-10 text-base lg:h-8 lg:text-2xl" value="moment" onClick={() => props.logUserInteraction("Clicked on moment explanation tab")}>2. Moment explanation</TabsTrigger>
+                  <TabsTrigger className="h-10 text-base lg:h-8 lg:text-2xl" value="qa" onClick={() => props.logUserInteraction("Clicked on reflective Q&A tab")}>3. Reflective Q&amp;A</TabsTrigger>
+                  <TabsTrigger className="h-10 text-base lg:h-8 lg:text-2xl" value="survey" onClick={() => props.logUserInteraction("Clicked on survey tab")}>4. Survey</TabsTrigger>
                 </TabsList>
               </CardContent>
             </Card>
@@ -384,16 +384,16 @@ function CollaborationFeedbackDashboard(props) {
                     <CardDescription>These are your session-level measure of relevant collaboration quality indicators.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-5">
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.session_level_metric?.avg_verbalshare, "verbalshare")}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.session_level_metric?.avg_verbalshare_bal, "verbalshare")}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Verbal participation</div>
-                          <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_verbalshare}</div>
+                          <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_verbalshare_bal}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_verbalshare > 120 ? ">100" : selectedParticipantData?.session_level_metric?.avg_verbalshare > 100 ? "100" : selectedParticipantData?.session_level_metric?.avg_verbalshare}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_verbalshare_bal > 120 ? ">100" : selectedParticipantData?.session_level_metric?.avg_verbalshare_bal > 100 ? "100" : selectedParticipantData?.session_level_metric?.avg_verbalshare_bal}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
-                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_verbalshare, "verbalshare")}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_verbalshare > 100 ? 100 : selectedParticipantData?.session_level_metric?.avg_verbalshare}%` }} />
+                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_verbalshare_bal, "verbalshare")}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_verbalshare_bal > 100 ? 100 : selectedParticipantData?.session_level_metric?.avg_verbalshare_bal}%` }} />
                       </div>
 
                       <div className="flex flex-wrap gap-4 mt-4">
@@ -416,16 +416,16 @@ function CollaborationFeedbackDashboard(props) {
                       </div>
                     </div>
 
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.session_level_metric?.avg_turntaking, "turntaking")}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.session_level_metric?.avg_turntaking_bal, "turntaking")}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Turn taking share</div>
-                          <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_turntaking}</div>
+                          <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_turntaking_bal}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_turntaking > 120 ? ">100" : selectedParticipantData?.session_level_metric?.avg_turntaking > 100 ? "100" : selectedParticipantData?.session_level_metric?.avg_turntaking}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_turntaking_bal > 120 ? ">100" : selectedParticipantData?.session_level_metric?.avg_turntaking_bal > 100 ? "100" : selectedParticipantData?.session_level_metric?.avg_turntaking_bal}%</div>
                       </div>
                       <div className="mt-4 h-2 rounded-full bg-white/70">
-                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_turntaking, "turntaking")}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_turntaking > 100 ? 100 : selectedParticipantData?.session_level_metric?.avg_turntaking}%` }} />
+                        <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.session_level_metric?.avg_turntaking_bal, "turntaking")}`} style={{ width: `${selectedParticipantData?.session_level_metric?.avg_turntaking_bal > 100 ? 100 : selectedParticipantData?.session_level_metric?.avg_turntaking_bal}%` }} />
                       </div>
                        {/* Explanation Section */}
                       <div className="flex flex-wrap gap-4 mt-4">
@@ -484,7 +484,7 @@ function CollaborationFeedbackDashboard(props) {
                     <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData.session_level_metric?.avg_engagementscore)}`}>
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-semibold">Idea contribution</div>
+                          <div className="font-semibold">Engagement level</div>
                           <div className="text-sm text-muted-foreground">{llmresponse_session_metric_summary?.avg_engagementscore}</div>
                         </div>
                         <div className="text-lg font-bold">{selectedParticipantData?.session_level_metric?.avg_engagementscore}%</div>
@@ -567,7 +567,7 @@ function CollaborationFeedbackDashboard(props) {
                         </div>
                         <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric?.hasOwnProperty('verbalparticipationbalance') ? selectedParticipantData?.group_level_metric?.verbalparticipationbalance : 0}%</div>
                       </div>
-                      <ShareBar data={synthesizedFeedbackMetrics?.session_level} metricKey="avg_verbalshare" />
+                      <ShareBar data={synthesizedFeedbackMetrics?.session_all_metrics} metricKey="avg_verbalshare_bal" />
                       {/* <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric?.verbalparticipationbalance)}`} style={{ width: `${selectedParticipantData?.group_level_metric?.verbalparticipationbalance}%` }} />
                       </div> */}
@@ -581,21 +581,21 @@ function CollaborationFeedbackDashboard(props) {
                         </div>
                         <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric.hasOwnProperty('turntakingbalance') ? selectedParticipantData?.group_level_metric?.turntakingbalance : 0}%</div>
                       </div>
-                      <ShareBar data={synthesizedFeedbackMetrics?.session_level} metricKey="avg_turntaking" />
+                      <ShareBar data={synthesizedFeedbackMetrics?.session_all_metrics} metricKey="avg_turntaking_bal" />
                       {/* <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric?.turntakingbalance)}`} style={{ width: `${selectedParticipantData?.group_level_metric?.turntakingbalance}%` }} />
                       </div> */}
                     </div>
 
-                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.group_level_metric?.focusscore)}`}>
+                    <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.group_level_metric?.Sharedtaskfocus)}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="font-semibold">Shared task focus</div>
-                          <div className="text-sm text-muted-foreground">{llmresponse_group_summary?.focusscore}</div>
+                          <div className="text-sm text-muted-foreground">{llmresponse_group_summary?.Sharedtaskfocus}</div>
                         </div>
-                        <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric.hasOwnProperty('focusscore') ? selectedParticipantData?.group_level_metric?.focusscore : 0}%</div>
+                        <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric.hasOwnProperty('Sharedtaskfocus') ? selectedParticipantData?.group_level_metric?.Sharedtaskfocus : 0}%</div>
                       </div>
-                      <ShareBar data={synthesizedFeedbackMetrics?.session_level} metricKey="avg_focusscore" />
+                      <ShareBar data={synthesizedFeedbackMetrics?.session_all_metrics} metricKey="sharedtaskfocus" />
                       {/* <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric.focusscore)}`} style={{ width: `${selectedParticipantData.group_level_metric?.focusscore}%` }} />
                       </div> */}
@@ -604,12 +604,12 @@ function CollaborationFeedbackDashboard(props) {
                     <div className={`rounded-xl border p-4 ${toneSurface(selectedParticipantData?.group_level_metric?.engagement)}`}>
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-semibold">Idea contribution balance</div>
+                          <div className="font-semibold">Engagement</div>
                           <div className="text-sm text-muted-foreground">{llmresponse_group_summary?.engagement}</div>
                         </div>
                         <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric?.hasOwnProperty('engagement') ? selectedParticipantData?.group_level_metric?.engagement : 0}%</div>
                       </div>
-                      <ShareBar data={synthesizedFeedbackMetrics?.session_level} metricKey="avg_engagementscore" />
+                      <ShareBar data={synthesizedFeedbackMetrics?.session_all_metrics} metricKey="avg_engagementscore" />
                       {/* <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric?.ideacontribution)}`} style={{ width: `${selectedParticipantData?.group_level_metric?.ideacontribution}%` }} />
                       </div> */}
@@ -623,7 +623,7 @@ function CollaborationFeedbackDashboard(props) {
                         </div>
                         <div className="text-lg font-bold">{selectedParticipantData?.group_level_metric?.hasOwnProperty('momentum') ? selectedParticipantData?.group_level_metric?.momentum : 0}%</div>
                       </div>
-                       <ShareBar data={synthesizedFeedbackMetrics?.session_level} metricKey="avg_momentum" />
+                       <ShareBar data={synthesizedFeedbackMetrics?.session_all_metrics} metricKey="avg_momentum" />
                       {/* <div className="mt-4 h-2 rounded-full bg-white/70">
                         <div className={`h-2 rounded-full ${toneClass(selectedParticipantData?.group_level_metric?.momentum)}`} style={{ width: `${selectedParticipantData?.group_level_metri?.momentum}%` }} />
                       </div> */}
@@ -692,7 +692,10 @@ function CollaborationFeedbackDashboard(props) {
                             item_index={index}
                             window_length={window_length}
                             selected={selectedMoment?.windowid === item.windowid}
-                            onClick={() => props.setSelectedMomentIdAndIndex([index, item.windowid])}
+                            onClick={() => {
+                              props.setSelectedMomentIdAndIndex([index, item.windowid]);
+                              props.logUserInteraction(`Clicked on timeline moment with ${item.trenddirection === 1 ? 'upward' : item.trenddirection === -1 ? 'downward' : 'stable'} trend`);
+                            }}
                           />
                         ))}
                       </div>
@@ -788,6 +791,7 @@ function CollaborationFeedbackDashboard(props) {
                           onClick={async () => {
                             props.setIsThinking(true);
                             try {
+                              props.logUserInteraction(`Clicked on question: ${question[0]}`);
                               await props.interactivePromptFnc(
                                 selectedSessionId1,
                                 selectedSessionDeviceId1,

@@ -36,6 +36,10 @@ const likertOptions = [["Very low","Low","Normal","High","Very high"],
                       ["Communication","Participation","Focused attention","Idea contribution","Momemtum"],
                       ["Very low","Low","Normal","High","Very high"],
                       ["Did not receive","low","Just right","High","Too high"]]
+
+const reflectionUsers = ['cosmicjedi', 'ceb3259', 'chenb2264', 'agirmai', 'paytonh', 'dlhu1', 'rjanco', 'sallyliao', 'ryanpoon', 'harsarg', 'mahasomji', 'matthewxu', 'Ricardo', 'jsphzhao', 
+                        'MatiasK15', 'KalebC_27', 'sidagr', 'ManA8960', 'aryanavad2', 'rkbarocas','xuanangc', 'MClaure', 'snackiller', 'Fengli', 'Dustin', 'RRZ233', 'FrancescoB', 'katieshao', 'danantony',
+                        'Grass', 'cloud', 'rahib04', 'oliviawu', 'ktd9037', 'rokludy', 'UINT1024', 'azanmalik', 'mjvdd7', 'RDS09', 'izzybider','Ketchup','maxtong23','rkalun', 'nanipardi','Fengc','elliasc04']
 // const likertOptions = [1, 2, 3, 4, 5];
 
 function StudentSessionDashboard() {
@@ -785,7 +789,7 @@ function StudentSessionDashboard() {
         setRatings(rest)
         setSurveyAlreadyCompleted(true)
       }
-      if (actionstatus) {
+      if (actionstatus && reflectionUsers.includes(userDetail.username)) {
         const sess = previousSessions.current.find((ses) => ses.id === selectedSessionId1);
         const group = sessionDevices.find((dev) => dev.id === selectedSessionDeviceId1);
         setSessionNameForReflecDashboard(sess?.name + ": " + new Date(sess?.creation_date).toDateString())
@@ -793,6 +797,7 @@ function StudentSessionDashboard() {
         prevPages.current.push("displaygrouppage")
         setNextPage(view);
         setReflectionDashboardDoneLoading(true)
+        logUserInteraction("Clicked on reflection_dashboard")
       }else{
         setReflectionDashboardDoneLoading(false)
         setDialogHeading("Error")
@@ -921,7 +926,7 @@ function StudentSessionDashboard() {
         retObj["promptcontext"] = ""
         retObj["promptrefinement"] = ""
         retObj["participant_level_metric"] = synthesizedFeedbackMetrics.current[sessionId][deviceId]["participants_level"][userDetail.username]
-        retObj["session_level_metric"] = synthesizedFeedbackMetrics.current[sessionId][deviceId]["session_level"][userDetail.username]
+        retObj["session_level_metric"] = synthesizedFeedbackMetrics.current[sessionId][deviceId]["session_all_metrics"][userDetail.username]
         retObj["group_level_metric"] = synthesizedFeedbackMetrics.current[sessionId][deviceId]["group_level"]
       } else if (reporttype === "interactive prompting") {
         retObj["participant_name"] = userDetail.username
@@ -931,7 +936,7 @@ function StudentSessionDashboard() {
         retObj["default_question_id"] = defaultQuestionId
         retObj["question"] = question
         retObj["window_level_metric"] = synthesizedFeedbackMetrics.current[sessionId][deviceId]["window_level"]
-        retObj["session_level_metric"] = synthesizedFeedbackMetrics.current[sessionId][deviceId]["session_level"]
+        retObj["session_level_metric"] = synthesizedFeedbackMetrics.current[sessionId][deviceId]["session_all_metrics"]
         retObj["group_level_metric"] = synthesizedFeedbackMetrics.current[sessionId][deviceId]["group_level"]
       }
     }
@@ -1125,8 +1130,10 @@ function StudentSessionDashboard() {
   const seeAllTranscripts = () => {
     if (Object.keys(currentTranscript) > 0 && sessionDevices.length > 0 && selectedSessionDeviceId1 !== -1 && sessiontype === "previoussessions") { 
       setCurrentForm("gottoselectedtranscript")
+      logUserInteraction("Clicked on view all transcript")
     }else if (sessionDevices.length > 0 && selectedSessionDeviceId1 !== -1 && sessiontype === "previoussessions") {
-        setCurrentForm("gototranscript")
+      logUserInteraction("Clicked on view all transcript")
+      setCurrentForm("gototranscript")
     }
   }
 
@@ -1199,6 +1206,7 @@ function StudentSessionDashboard() {
   };
 
   const onClickedTimeline = (transcript) => {
+    logUserInteraction("Clicked on transcript timeline")
     setCurrentForm("Transcript")
     setCurrentTranscript(transcript)
   }
@@ -1206,6 +1214,36 @@ function StudentSessionDashboard() {
   const onClickedKeyword = (transcript) => {
     setCurrentTranscript(transcript)
     setCurrentForm("gottoselectedtranscript")
+  }
+
+  const logUserInteraction = async (actiondetail) => {
+    // This function can be expanded to log various user interactions for analytics purposes
+     const payload = {
+      sessionid: selectedSessionId1,
+      sessionDeviceId: selectedSessionDeviceId1,
+      username: userDetail.username,
+      action: actiondetail,
+    };
+    try {
+      const response = await new SessionService().postUserInteraction(payload);
+
+      if (response.status === 200) {
+        // console.log("Submitted rating form:", payload);
+        console.log(`User Interaction  Details: ${actiondetail}`);
+      } else if (response.status === 400) {
+        console.log("User Interaction Submission Unsuccessful, Please contact Admin");
+        // setDialogHeading("Error")
+        // setAlertMessage("User Interaction Submission Unsuccessful, Please contact Admin");
+        // setShowAlert(true);
+      }
+    } catch (error) {
+      console.log(
+        "Student dashboard handle submit",
+        error,
+      )
+      return null
+    }
+    
   }
 
   const navBackTo = ()=>{
@@ -1312,6 +1350,8 @@ function StudentSessionDashboard() {
       notes = {notes}
       pathToSurveyOptions = {pathToSurveyOptions}
       surveyAlreadyCompleted = {surveyAlreadyCompleted}
+
+      logUserInteraction = {logUserInteraction}
 
     />
   );

@@ -18,7 +18,7 @@ class AttentionDetection:
         self.input_resolution = 224
         self.output_resolution = 64
         self.model = None
-        self.object_of_interest = [1,63,67,68]
+        self.object_of_interest = [0,1,63,64,66,73]
         self.person_attention_focus_count = {}
 
     def init_model(self,batch_size):

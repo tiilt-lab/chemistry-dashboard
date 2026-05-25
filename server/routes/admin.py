@@ -115,7 +115,7 @@ def delete_user(user_id, **kwargs):
     if success:
         return json_response()
     else:
-        return json_response({'User not found.'}, 400)
+        return json_response({'message':'User not found.'}, 400)
     
 @api_routes.route('/api/v1/admin/students/<int:student_id>', methods=['DELETE'])
 @wrappers.verify_login(roles=['admin', 'super'])
@@ -139,13 +139,13 @@ def delete_rater(id, **kwargs):
     if rater is not None:
         return json_response()
     else:
-        return json_response({'Rater not found.'}, 400)
+        return json_response({'message':'Rater not found.'}, 400)
 
 
 @api_routes.route('/api/v1/admin/devicedata/sessiondeviceid/<int:session_device_id>/data_type/<string:data_type>', methods=['DELETE'])
 @wrappers.verify_login(roles=['admin', 'super'])
 def delete_session_device_data(session_device_id,data_type, **kwargs):
-    trscript = vidmetric = None
+    trscript = vidmetric = sessDevice = None
     if data_type == 'transcriptmetric':
         trscript = database.delete_device_transcriptsV2(session_device_id)
     elif data_type == 'videometric':
@@ -155,7 +155,7 @@ def delete_session_device_data(session_device_id,data_type, **kwargs):
     if trscript  or vidmetric or sessDevice:
         return json_response()
     else:
-        return json_response({'Data not found.'}, 400)
+        return json_response({'message':'Data not found.'}, 400)
 
 @api_routes.route('/api/v1/admin/users/<int:user_id>/lock', methods=['POST'])
 @wrappers.verify_login(roles=['admin', 'super'])

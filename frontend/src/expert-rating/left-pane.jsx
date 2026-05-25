@@ -15,7 +15,7 @@ import { motion } from "framer-motion";
 
 
 function LikertRatingInterface(props) {
-  const allComplete = props.completedCount === props.evaluationOption.length && props.selectedItemForRating !== -1;
+  const allComplete = props.completedCount === props.evaluationOption.length && props.selectedItemForRating !== -1 && props.notes !== "";
   const isAtStart = props.currentIndex <= 0;
   const isAtEnd = props.currentIndex >= props.itemsForRating.length - 1 || props.itemsForRating.length === 0;
 

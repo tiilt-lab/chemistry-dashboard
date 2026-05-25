@@ -180,10 +180,37 @@ const createDisplayTranscripts = ()=> {
     );
    
   }
+
+  const handleTranscriptDelete = () =>{
+    const fetchData = new SessionService().deleteTranscriptById(sessionDeviceId,transcriptIdToUpdate);
+    fetchData.then(
+      (response) => {
+        if (response.status === 200){
+          response.json().then((jsonObj) => {
+            setTranscriptUpdated(true)
+            setCurrentForm("")
+          });
+        }else{
+          // console.error("Error deleting transcript:", response);
+        }
+      },
+      (apierror) => {
+        console.log("transcript component func handleTranscriptDelete", apierror);
+      }
+    );
+   
+  }
+
   const openSpeakerDialog = (transcript_id) =>{
     setTranscriptUpdated(false)
     settranscriptIdToUpdate(transcript_id)
     setCurrentForm("speakerupdate");
+  }
+
+  const openDeleteTranscriptDialog = (transcript_id) =>{
+    setTranscriptUpdated(false)
+    settranscriptIdToUpdate(transcript_id)
+    setCurrentForm("deleteTranscript");
   }
 
   const openKeywordDialog = (dialogKeywords) =>{
@@ -269,6 +296,8 @@ const createDisplayTranscripts = ()=> {
       toggleKeywords = {toggleKeywords}
       speakers = {speakers}
       handleSpeakerUpdate = {handleSpeakerUpdate}
+      handleTranscriptDelete = {handleTranscriptDelete}
+      openDeleteTranscriptDialog = {openDeleteTranscriptDialog}
     />
   )
 }
