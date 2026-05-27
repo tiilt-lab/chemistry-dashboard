@@ -18,11 +18,11 @@ const DEFAULT_COLORS = [
 ];
 const likertOptions = [1, 2, 3, 4, 5];
 const evaluation_one = [
-  ["Interpretability", "This dashboard makes the collaboration patterns easy to understand."],
-  ["Usefulness for feedback", "This Feedbacks would help a learner reflect on and improve their collaboration."],
+  ["Interpretability", "This dashboard makes the collaboration patterns easy for me to understand."],
+  ["Usefulness for feedback", "This Feedbacks provided useful information and helped me reflect on my collaboration to identify ways to improve."],
   ["Clarity", "The information presented in the dashboard is clear and easy to follow."],
-  ["Actionability", "Interacting with this dashboard help learners determine actionable next steps."],
-  ["Confidence in interpretation", "I can confidently rely on the  information provided in this dashboard to judge the learner’s/my collaboration pattern."]
+  ["Actionability", "Interacting with this dashboard help me to determine actionable next steps."],
+  ["Confidence in interpretation", "I can confidently rely on the  information provided in this dashboard to judge my collaboration pattern."]
 ]
 
 const evaluation_two = [
@@ -150,8 +150,9 @@ function ExpertRatingComponent() {
   // first useEffect to be called one the evalutor class is selected
   useEffect(() => {
     if (evaluatorType === "student" && aliasExpertId !== "") {
-      setItemsForRating([{ rating_item_id: -1, sessId: 158, sessDevId: 443, speaker: "jciohvud", raterId: aliasExpertId, dashboardType: "quantitative", evalCat: "visualization" },
-      { rating_item_id: -1, sessId: 158, sessDevId: 443, speaker: "jciohvud", raterId: aliasExpertId, dashboardType: "reflection", evalCat: "reflection" }])
+      // setItemsForRating([{ rating_item_id: -1, sessId: 158, sessDevId: 443, speaker: "jciohvud", raterId: aliasExpertId, dashboardType: "quantitative", evalCat: "visualization" },
+      // { rating_item_id: -1, sessId: 158, sessDevId: 443, speaker: "jciohvud", raterId: aliasExpertId, dashboardType: "reflection", evalCat: "reflection" }])
+      verifyExpertId(aliasExpertId)
 
     } else if (evaluatorType === "expert" && aliasExpertId !== "") {
       verifyExpertId(aliasExpertId)

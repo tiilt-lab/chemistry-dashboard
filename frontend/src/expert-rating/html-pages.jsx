@@ -38,7 +38,7 @@ function ExpertRatingPage(props) {
                 )) || (
                     <div className="main-container">
                         <Appheader
-                            title={props.pageTitle}
+                            title={props.selectedItemForRating?.speaker + " : " + props.pageTitle}
                             leftText={false}
                             rightText={""}
                             ightEnabled={false}
@@ -138,6 +138,7 @@ function ExpertRatingPage(props) {
                                                         selectedSessionDeviceId = {props.sessionDeviceId}
                                                         synthesizedFeedbackMetrics = {props.synthesizedFeedbackMetrics} 
                                                         DEFAULT_COLORS = {props.DEFAULT_COLORS}
+                                                        selectedItemForRating={props.selectedItemForRating}
 
                                                     />
 

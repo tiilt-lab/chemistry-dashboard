@@ -79,7 +79,7 @@ def post_rating(**kwargs):
     elif sessionid and sessionDeviceId and speakerTag and raterid and evaluationCategory and response:
         resp = json.dumps(response)
         success, _ = database.add_rating(sessionid,sessionDeviceId, speakerTag,raterid,evaluationCategory,resp) 
-        database.update_rater(id,completed=1)
+        # database.update_rater(id,completed=1)
 
     if success:
         return json_response({'message': "success"})

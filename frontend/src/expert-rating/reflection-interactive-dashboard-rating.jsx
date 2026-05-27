@@ -15,6 +15,7 @@ import { AppSectionBoxComponent } from "../components/section-box/section-box-co
 
 
 function CollaborationFeedbackDashboard(props) {
+  const username = props.selectedItemForRating?.speaker || "Unknown User";
   const selectedSessionId = props.selectedSessionId
   const selectedSessionDeviceId = props.selectedSessionDeviceId
   const synthesizedFeedbackMetrics = props.synthesizedFeedbackMetrics
@@ -97,7 +98,7 @@ function ShareBar({ data = {}, metricKey = "verbalShare" }) {
                 style={{ backgroundColor: p.color }}
               />
               <span className="font-semibold tracking-wide text-gray-800">
-                { `Person ${index + 1}`}
+                { p.username === username ? p.username : `Person ${index + 1}`}
               </span>
               <span className="text-xs font-mono text-gray-500">
                 {p.percent.toFixed(1)}%
@@ -291,7 +292,7 @@ function ShareBar({ data = {}, metricKey = "verbalShare" }) {
                   <div className="rounded-2xl bg-sky-50 p-4 ring-1 ring-sky-100">
                     <div className="flex items-center gap-2 text-sm text-sky-700"><Users className="h-4 w-4" />Session - Group</div>
                     <div className="text-sm text-muted-foreground">{props.sessionNameForReflecDashboard}</div>
-                    <div className="mt-2 text-lg font-semibold">{props.groupNameForReflecDashboard}</div>
+                    <div className="mt-2 text-lg font-semibold">{username}</div>
                   </div>
                   <div className="rounded-2xl bg-muted p-4">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground"><BarChart3 className="h-4 w-4" />Session Pattern</div>

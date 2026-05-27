@@ -51,7 +51,7 @@ function PodsOverviewPages(props) {
                                 },
                                 {
                                     title: "Export Analytics",
-                                    //action: () => props.ExportAnalytics()
+                                    action: () => props.ExportAnalytics()
                                 },
                                 {
                                     title: "Graph",
