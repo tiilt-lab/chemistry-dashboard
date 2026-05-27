@@ -65,12 +65,12 @@ class EmotionDetectionModelV1:
     def set_persistent_variables(self,persons_emotions_detected):
         self.persons_emotions_detected = persons_emotions_detected
 
-    def predict_facial_emotion_for_all_participants(self, frames, faces,crop_face_from_fame_with_bbox):
+    def predict_facial_emotion_for_all_participants(self, frames, faces,crop_face_from_frame_with_bbox):
          for alias, person_detail in faces:
             for face_detail_by_frame in person_detail:
                 frame_index,alias,bbox,time_stamp  = face_detail_by_frame 
                 try:
-                    face = crop_face_from_fame_with_bbox(frames[frame_index],bbox,"xyxy", False, 0.0, False) 
+                    face = crop_face_from_frame_with_bbox(frames[frame_index],bbox,"xyxy", False, 0.0, False) 
                     
                     emotion_name = self.predict_facial_emotion(face)
                     if alias in self.persons_emotions_detected:
@@ -80,9 +80,9 @@ class EmotionDetectionModelV1:
                 except Exception as e:
                     logging.info('EmotionDetectionModelV1: exception occured while predicting facial emotion for {0} in frame {1} : {2}'.format(alias,frame_index,e))
 
-    def predict_facial_emotion_for_single_participant(self, image, bbox,alias,frame_index,crop_face_from_fame_with_bbox):
+    def predict_facial_emotion_for_single_participant(self, image, bbox,alias,frame_index,crop_face_from_frame_with_bbox):
         try:
-            face = crop_face_from_fame_with_bbox(image,bbox,"xyxy", False, 0.0, False) 
+            face = crop_face_from_frame_with_bbox(image,bbox,"xyxy", False, 0.0, False) 
             
             emotion_name = self.predict_facial_emotion(face)
             return emotion_name
@@ -115,12 +115,12 @@ class EmotionDetectionModel:
     def set_persistent_variables(self,persons_emotions_detected):
         self.persons_emotions_detected = persons_emotions_detected
 
-    def predict_facial_emotion_for_all_participants(self, frames, faces,crop_face_from_fame_with_bbox):
+    def predict_facial_emotion_for_all_participants(self, frames, faces,crop_face_from_frame_with_bbox):
          for alias, person_detail in faces:
             for face_detail_by_frame in person_detail:
                 frame_index,alias,bbox,time_stamp  = face_detail_by_frame 
                 try:
-                    face = crop_face_from_fame_with_bbox(frames[frame_index],bbox,"xyxy", False, 0.0, False) 
+                    face = crop_face_from_frame_with_bbox(frames[frame_index],bbox,"xyxy", False, 0.0, False) 
                     landmarks_object = self.get_facial_shape(face,bbox)
                     dict_emotions = self.emotion_estimator.get_emotions( landmarks_object )
                     emotion_name = dict_emotions['emotions']['name'] 

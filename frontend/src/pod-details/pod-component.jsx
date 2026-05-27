@@ -630,8 +630,9 @@ function PodComponent() {
       retObj["promptcontext"] = contextForPrompt
       retObj["promptrefinement"] = refinementForPrompt
       retObj["participant_level_metric"] = synthesizedFeedbackMetrics.current["participants_level"][participantId]
-      retObj["session_level_metric"] = synthesizedFeedbackMetrics.current["session_level"][participantId]
+      retObj["session_level_metric"] = synthesizedFeedbackMetrics.current["session_all_metrics"][participantId]
       retObj["group_level_metric"] = synthesizedFeedbackMetrics.current["group_level"]
+      retObj['transcript'] = synthesizedFeedbackMetrics.current["transcript"]
     } else if (reporttype === "interactive prompting" && synthesizedFeedbackMetrics.current !== null) {
       retObj["participant_name"] = participantId
       retObj["sessionid"] = sessionId
@@ -640,7 +641,7 @@ function PodComponent() {
       retObj["default_question_id"] = defaultQuestionId
       retObj["question"] = question
       retObj["window_level_metric"] = synthesizedFeedbackMetrics.current["window_level"]
-      retObj["session_level_metric"] = synthesizedFeedbackMetrics.current["session_level"]
+      retObj["session_level_metric"] = synthesizedFeedbackMetrics.current["session_all_metrics"]
       retObj["group_level_metric"] = synthesizedFeedbackMetrics.current["group_level"]
     }
 
@@ -654,13 +655,13 @@ function PodComponent() {
       return false;
     }
 
-    if (participantId in llmSessionAnalysis.current && retrieveExisting === "true") {
-      selectedParticipantLLMAnalysis.current = llmSessionAnalysis.current[participantId]
-      selectedParticipantSynthesizedData.current = respObj
-      setSelectedMomentIdAndIndex([0, selectedParticipantSynthesizedData.current.participant_level_metric[0].windowid])
-      setCurrentForm("")
-      return true
-    }
+    // if (participantId in llmSessionAnalysis.current && retrieveExisting === "true") {
+    //   selectedParticipantLLMAnalysis.current = llmSessionAnalysis.current[participantId]
+    //   selectedParticipantSynthesizedData.current = respObj
+    //   setSelectedMomentIdAndIndex([0, selectedParticipantSynthesizedData.current.participant_level_metric[0].windowid])
+    //   setCurrentForm("")
+    //   return true
+    // }
 
     try {
       setDisplayText("Please wait ...")

@@ -56,6 +56,7 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
             if metricObj['retrieve_existing_report'] != 'true' and exisiting_feedback:
                 #update the database
                 database.update_speaker_session_device_llm_report(id=exisiting_feedback.id,feedback_analysis=raw)
+                logging.info("LLM prompt report update was successfull!!!")
             else:
                 #insert to database
                 database.add_speaker_session_device_llm_report(metricObj['participant_name'], metricObj['sessionid'], metricObj['sessiondeviceid'],raw)  
@@ -144,10 +145,10 @@ def get_llm_question_answer_interactions(session_id,session_device_id,username, 
 
 def call_gemini_with_retry(prompt, max_retries=5):
     models = [
-    "gemini-2.5-pro",    
-    "gemini-3.1-pro-preview",    
-    "gemini-3-flash-preview",    
-    "gemini-2.5-flash",
+    "gemini-3.1-pro-preview", 
+    "gemini-2.5-pro",  
+    "gemini-2.5-flash", 
+    "gemini-3-flash-preview",  
     "gemini-2.5-flash-lite",
     "gemini-3-flash-preview",
     "gemini-flash-latest",

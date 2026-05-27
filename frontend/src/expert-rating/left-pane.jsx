@@ -15,7 +15,7 @@ import { motion } from "framer-motion";
 
 
 function LikertRatingInterface(props) {
-  const allComplete = props.completedCount === props.evaluationOption.length && props.selectedItemForRating !== -1;
+  const allComplete = props.completedCount === props.evaluationOption.length && props.selectedItemForRating !== -1 && props.notes !== "";
   const isAtStart = props.currentIndex <= 0;
   const isAtEnd = props.currentIndex >= props.itemsForRating.length - 1 || props.itemsForRating.length === 0;
 
@@ -128,7 +128,7 @@ function LikertRatingInterface(props) {
                 <Label htmlFor="notes">comments</Label>
                 <Textarea
                   id="notes"
-                  placeholder="Add any other comments or observations"
+                  placeholder="Provide comments on how much the dashboard helped you make sense of the feedback and how closely it reflected your collaboration experience"
                   value={props.notes}
                   onChange={(e) => props.setNotes(e.target.value)}
                   className="min-h-[110px] rounded-2xl bg-white"

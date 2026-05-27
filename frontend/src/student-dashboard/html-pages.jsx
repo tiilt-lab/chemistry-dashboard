@@ -256,6 +256,7 @@ function StudentSessionDashboardPages(props) {
                                                         surveyAlreadyCompleted = {props.surveyAlreadyCompleted}
                                                         DEFAULT_COLORS ={props.DEFAULT_COLORS}
                                                         synthesizedFeedbackMetrics = {props.synthesizedFeedbackMetrics} 
+                                                        logUserInteraction = {props.logUserInteraction}
                                                     />
 
                                                 ) : (
@@ -330,6 +331,7 @@ function StudentSessionDashboardPages(props) {
                                                         selectedSessionDeviceId2={props.selectedSessionDeviceId2}
                                                         getSessionDevices={props.getSessionDevices}
                                                         loadComparedSessionDeviceMetrics={props.loadComparedSessionDeviceMetrics}
+                                                        logUserInteraction = {props.logUserInteraction}
                                                     ></AppInfographicsSessionComparison>
 
                                                 ) : (

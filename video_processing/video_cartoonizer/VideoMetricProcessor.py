@@ -181,7 +181,7 @@ class VideoMetricAnalytics:
                     # with attention_emotion_det_lock:
                     torch.cuda.synchronize()
                     t1 = time.time()
-                    pred_emotion = self.EmotionDetection.predict_facial_emotion_for_single_participant(frames[frame_index], h_bbox,person_alias,frame_index,self.Imagedetection.crop_face_from_fame_with_bbox)
+                    pred_emotion = self.EmotionDetection.predict_facial_emotion_for_single_participant(frames[frame_index], h_bbox,person_alias,frame_index,self.Imagedetection.crop_face_from_frame_with_bbox)
                     gaze_x, gaze_y = self.AttentionTracking.get_gaze_direction_point(val_gaze_heatmap_preds[index], val_inout_preds[index], imsizes[index])
                     # torch.cuda.synchronize()
                     # t2 = time.time()

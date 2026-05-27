@@ -24,7 +24,7 @@ function TranscriptComponentPage(props) {
           {props.displayTranscripts.map((transcript, index) => (
             <div key={index}>
               <div id={`${transcript.id}`} className={transcript.id === props.transcriptIndex ? `${style["transcript-container"]} ${style.highlighted}` : style["transcript-container"]} style={{ backgroundColor: `${transcript.doaColor}` }}>
-                <div className={style.timestamp}>{props.formatSeconds(transcript.start_time)}</div>
+                <div className={style.timestamp} onClick={() => props.openDeleteTranscriptDialog(transcript.id)} >{props.formatSeconds(transcript.start_time)}</div>
                 <div className={style["transcript-text"]}>
                   {transcript.speaker_tag ?
                     <span className={style.bold} onClick={() => props.openSpeakerDialog(transcript.id)} >{transcript.speaker_tag}: </span>
@@ -89,6 +89,20 @@ function TranscriptComponentPage(props) {
 
             </div>
             <button className={style["delete-button"]} onClick={props.closeDialog}>Close</button>
+          </div>
+          :
+          <></>
+        }
+
+        {props.currentForm == "deleteTranscript" ?
+          <div className={style2["dialog-box"]}>
+            <div className={style2["dialog-heading"]}>Do you want to delete this transcript?</div>
+            <div className={style2["dialog-body"]}>
+              <p>This action cannot be undone.</p>
+              <p>Are you sure you want to proceed?</p>
+            </div>
+            <button className={style["delete-button"]} onClick={props.handleTranscriptDelete}>Delete</button>
+            <button className={style["delete-button"]} onClick={props.closeDialog}>Cancel</button>
           </div>
           :
           <></>
