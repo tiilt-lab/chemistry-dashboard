@@ -1,5 +1,5 @@
 moviepy==1.0.2
-Twisted==22.2.0
+Twisted==26.4.0rc2
 autobahn==20.12.3
 redis==3.2.1
 simplejson==3.16.0
