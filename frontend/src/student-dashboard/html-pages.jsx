@@ -332,6 +332,7 @@ function StudentSessionDashboardPages(props) {
                                                         getSessionDevices={props.getSessionDevices}
                                                         loadComparedSessionDeviceMetrics={props.loadComparedSessionDeviceMetrics}
                                                         logUserInteraction = {props.logUserInteraction}
+                                                        speakers = {props.speakers}
                                                     ></AppInfographicsSessionComparison>
 
                                                 ) : (

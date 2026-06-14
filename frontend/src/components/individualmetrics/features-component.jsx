@@ -67,18 +67,20 @@ function AppIndividualFeaturesComponent(props) {
       valueArrays[1].values.push(speaker_metric.social_impact * 100);
       valueArrays[2].values.push(speaker_metric.responsivity * 100);
       valueArrays[3].values.push(speaker_metric.internal_cohesion * 100);
+      valueArrays[4].values.push(speaker_metric.newness * 100);
       valueArrays[5].values.push(speaker_metric.communication_density * 100);
 
       valueArrays[0].time.push(t.start_time);
       valueArrays[1].time.push(t.start_time);
       valueArrays[2].time.push(t.start_time);
       valueArrays[3].time.push(t.start_time);
+      valueArrays[4].time.push(t.start_time);
       }
 
-      if(speaker_metric_by_contribution){
-        valueArrays[4].values.push(speaker_metric_by_contribution.newness * 100);
-        valueArrays[4].time.push(t.start_time);
-      }
+      // if(speaker_metric_by_contribution){
+      //   valueArrays[4].values.push(speaker_metric_by_contribution.newness * 100);
+      //   valueArrays[4].time.push(t.start_time);
+      // }
       
     });
 

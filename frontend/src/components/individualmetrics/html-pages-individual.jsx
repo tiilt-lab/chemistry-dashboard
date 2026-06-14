@@ -72,7 +72,7 @@ function IndividualFeaturePage(props) {
                                                         adjDim(22) + "px",
                                                 }}
                                             >
-                                                {index === 4 ? Math.round(feature.average) : Math.round(feature.last)}
+                                                { Math.round(feature.last)}
                                             </div>
                                             <div
                                                 className={

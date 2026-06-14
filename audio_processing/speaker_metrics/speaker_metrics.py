@@ -146,9 +146,12 @@ class SpeakerProcessor:
     def current_speaker_contextualized_contribution(self,current_speaker,embedding,speaker_window_size=2):
       speaker_past_embeddings = [emb for emb, spk in zip(self.embeddings, self.embedding_speakers) if spk == current_speaker]
       recent_self = speaker_past_embeddings[-speaker_window_size:]
-      context = np.concatenate([ np.asarray(recent_self),np.array([embedding])])
 
-      return self.aggregate_embeddings(context, weighted=True)
+      if len(recent_self) > 0:
+        context = np.concatenate(( np.asarray(recent_self),np.array([embedding])))
+        return self.aggregate_embeddings(context, weighted=True)
+      else:
+         return self.safe_normalize(embedding).astype(np.float32)
     
     # --------------------------------------------------
     # 3. Speaker-specific past context for internal cohesion
@@ -282,8 +285,8 @@ class SpeakerProcessor:
         normalized_new_data = normalizeVector(new_data)
         self.subspace_basis = np.concatenate((self.subspace_basis, normalized_new_data), axis = 0)
         total_group_newness = np.sum(self.total_new)
-        logging.info("contribution matrix {0}, sum : ".format(self.contributions,np.sum(self.contributions)))
-        logging.info("total_new matrix {0}, sum : ".format(self.total_new,np.sum(self.total_new)))
+        # logging.info("total newness matrix {0}, sum: {1} ".format(self.total_new,total_group_newness))
+        # logging.info("contribution matrix {0}, sum: {1} ".format(self.contributions,np.sum(self.contributions)))
         with np.errstate(divide='ignore', invalid='ignore'):
             self.newness = self.total_new/total_group_newness
             self.newness = np.nan_to_num(self.newness)
@@ -325,7 +328,7 @@ class SpeakerProcessor:
 
           if self.length > 0:
             cross_cohesion = self.calculateCohesionSums_V2(index, embedding, self.semantic_model) #self.calculateCohesionSums(index, embedding, self.semantic_model)
-            self.processResponsivity(cross_cohesion) #self.processResponsivity(cross_cohesion)
+            self.processResponsivity_v2(cross_cohesion) #self.processResponsivity(cross_cohesion)
             self.calculateNewness_by_group_contributions(embedding, index)
 
           else:
@@ -347,7 +350,7 @@ class SpeakerProcessor:
 
         if action == "speaker metric recomputation":
           processing_time =  time.time() - processing_timer
-          logging.info("all metric score at {0} is {1},{2},{3},{4},{5},{6} for {7}".format(speaker_transcript_data['start_time'],p_score.tolist(),ic_score.tolist(),or_score.tolist(),si_score.tolist(),n_score.tolist(),cd_score.tolist(), transcript)) 
+          # logging.info("all metric score at {0} is {1},{2},{3},{4},{5},{6} for {7}".format(speaker_transcript_data['start_time'],p_score.tolist(),ic_score.tolist(),or_score.tolist(),si_score.tolist(),n_score.tolist(),cd_score.tolist(), transcript)) 
           # success = None
           success = callbacks.post_recomputed_speaker_transcript_metrics(speaker_transcript_data,
                                                     speaker_ids,

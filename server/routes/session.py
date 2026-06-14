@@ -3,7 +3,8 @@ from utility import sanitize, string_to_bool, json_response
 from tables.session_device import SessionDevice
 from redis_helper import RedisSessions
 from tables.session import Session
-from utility import json_response,batch_video_metrics,batch_transcript_metrics,batch_transcript_video_metrics,synthesized_transcript_video_metrics_by_window
+from utility import json_response
+from compute_collaboration_metrics import batch_video_metrics,batch_transcript_metrics,batch_transcript_video_metrics,synthesized_transcript_video_metrics_by_window
 from app import socketio
 import logging
 import database
