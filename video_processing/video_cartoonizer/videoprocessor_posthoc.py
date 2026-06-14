@@ -110,21 +110,21 @@ class VideoProcessorPosthoc:
                             subclip = vidclip.subclip(start, end)
 
                             #use this to extract audio incase of incomplete audio in the original audio file
-                            # chunk_path = os.path.join(tmpdir, f"chunk_{start:04d}.wav")
+                            chunk_path = os.path.join(tmpdir, f"chunk_{start:04d}.wav")
 
-                            # subprocess.run([
-                            #                 "ffmpeg",
-                            #                 "-y",
-                            #                 "-ss", str(start),
-                            #                 "-t", str(dur),
-                            #                 "-i", self.video_file,
-                            #                 "-vn",
-                            #                 "-ar", "16000",
-                            #                 "-ac", "1",
-                            #                 "-acodec", "pcm_f32le",
-                            #                 chunk_path
-                            #             ], check=True)
-                            # chunk_files.append(chunk_path)
+                            subprocess.run([
+                                            "ffmpeg",
+                                            "-y",
+                                            "-ss", str(start),
+                                            "-t", str(dur),
+                                            "-i", self.video_file,
+                                            "-vn",
+                                            "-ar", "16000",
+                                            "-ac", "1",
+                                            "-acodec", "pcm_f32le",
+                                            chunk_path
+                                        ], check=True)
+                            chunk_files.append(chunk_path)
 
                             self.video_chunk_count+=1
                             subclib_frame_count = 0
@@ -169,17 +169,17 @@ class VideoProcessorPosthoc:
                         f.write(f"file '{path}'\n")
 
                 # concatenate into one final wav
-                # subprocess.run([
-                #                 "ffmpeg",
-                #                 "-y",
-                #                 "-f", "concat",
-                #                 "-safe", "0",
-                #                 "-i", list_file,
-                #                 "-ar", "16000",
-                #                 "-ac", "1",
-                #                 "-acodec", "pcm_f32le",
-                #                 final_audio_file
-                #             ], check=True)
+                subprocess.run([
+                                "ffmpeg",
+                                "-y",
+                                "-f", "concat",
+                                "-safe", "0",
+                                "-i", list_file,
+                                "-ar", "16000",
+                                "-ac", "1",
+                                "-acodec", "pcm_f32le",
+                                final_audio_file
+                            ], check=True)
                 vidclip.close()
         except Exception as e:
             error_str = traceback.format_exc()

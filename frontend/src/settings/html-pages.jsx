@@ -45,6 +45,7 @@ function SettingComponentPage(props) {
                 <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("ViewRaters", true)}>View Raters</div>
                 <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("AddRater")}>Add Rater</div>
                 <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeleteRater", true)}>Delete Rater</div>
+                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("ExportRatingResponses")}>Export Rating Responses</div>
               </React.Fragment>
 
               <React.Fragment>

@@ -144,22 +144,27 @@ def update_speaker_transcript_metricsBy_transcript_id(transcript_id=None,speaker
     return None
 
 def delete_speaker_transcript_metrics(id = None, speaker_id = None, transcript_id = None):
-    if id:
-        db.session.query(SpeakerTranscriptMetrics).filter(SpeakerTranscriptMetrics.id == id).delete(synchronize_session='fetch')
-    if speaker_id:
-        if transcript_id:
-            db.session.query(SpeakerTranscriptMetrics).filter(SpeakerTranscriptMetrics.speaker_id == speaker_id)\
-              .filter(SpeakerTranscriptMetrics.transcript_id == transcript_id)\
+    try:
+        if id:
+            db.session.query(SpeakerTranscriptMetrics).filter(SpeakerTranscriptMetrics.id == id).delete(synchronize_session='fetch')
+        if speaker_id:
+            if transcript_id:
+                db.session.query(SpeakerTranscriptMetrics).filter(SpeakerTranscriptMetrics.speaker_id == speaker_id)\
+                .filter(SpeakerTranscriptMetrics.transcript_id == transcript_id)\
+                    .delete(synchronize_session='fetch')
+            else:
+                db.session.query(SpeakerTranscriptMetrics).filter(SpeakerTranscriptMetrics.speaker_id == speaker_id)\
                 .delete(synchronize_session='fetch')
-        else:
-            db.session.query(SpeakerTranscriptMetrics).filter(SpeakerTranscriptMetrics.speaker_id == speaker_id)\
-              .delete(synchronize_session='fetch')
-    else:
-        db.session.query(SpeakerTranscriptMetrics).filter(SpeakerTranscriptMetrics.transcript_id == transcript_id)\
-          .delete(synchronize_session='fetch')
-    db.session.commit()
-    return True
-
+        elif transcript_id:
+            db.session.query(SpeakerTranscriptMetrics).filter(SpeakerTranscriptMetrics.transcript_id == transcript_id)\
+            .delete(synchronize_session='fetch')
+        db.session.commit()
+        return True
+    except Exception:
+        db.session.rollback()
+        raise
+    finally:
+        db.session.remove()
 
 # -------------------------
 # Video Metrics
@@ -277,8 +282,7 @@ def get_all_transcript_metrics_by_session_deviceId(id = None, session_id=None, s
 
 def get_all_transcript_metrics_by_session_by_timeline(id = None, student_username=None, session_id=None, session_device_id=None):
     query = db.session.query(Transcript,SpeakerTranscriptMetrics)
-    query = query.join(SpeakerTranscriptMetrics).filter((Transcript.id == SpeakerTranscriptMetrics.transcript_id) &
-                                                        (Transcript.speaker_id == SpeakerTranscriptMetrics.speaker_id))
+    query = query.join(SpeakerTranscriptMetrics).filter(Transcript.id == SpeakerTranscriptMetrics.transcript_id)  #&(Transcript.speaker_id == SpeakerTranscriptMetrics.speaker_id)
 
     if session_device_id != None:
         query = query.filter(Transcript.session_device_id == session_device_id) 

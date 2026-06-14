@@ -299,7 +299,6 @@ def export_survey_data(**kwargs):
     session_dict = {}
     session_device_dict = {}
     survey_response = database.get_survey_reponse()
-    All_particiapants_video_metrics = []
 
     field_names = ['Session ID','Session Name','Group ID', 'Group Name', 'Username', 'Communication rate', 'Climate rate', 'Conflict frequency','Particpation balance',"Reflection usefullness", 
                    'Collaboration goal','Collaboration quality', 'Assessment accuracy', 'Open Reponse',"Submission date"]
@@ -338,6 +337,60 @@ def export_survey_data(**kwargs):
             'Submission date': surv_resp.creation_date.strftime("%Y-%m-%d %H:%M:%S") 
         }
         fwrite.writerow(survey_data) 
+
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = "attachment; filename=export.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output
+
+
+
+@api_routes.route('/api/v1/admin/ratingresponses',methods=['GET'])
+@wrappers.verify_login(roles=['super'], public=True)
+def export_rating_data(**kwargs):
+    field_names = None
+    fwrite = None  
+    si = StringIO()
+    session_dict = {}
+    session_device_dict = {}
+    rating_response = database.get_ratings()
+
+    field_names = ['Session ID','Session Name','Group ID', 'Group Name','Evaluation Category' ,'Rater Id','Username', 'Compare 1', 'Compare 2', 'Compare 3','Compare 4',"Compare 5",  'Open Reponse',"Submission date"]
+    fwrite = csv.DictWriter(si, fieldnames = field_names)
+    fwrite.writeheader()
+    for rating_resp in rating_response:
+        response = json.loads(str(rating_resp.response))
+        if rating_resp.sessiondeviceid not in session_device_dict:
+            session_device = database.get_session_devices(id=int(rating_resp.sessiondeviceid))
+            if session_device:
+                session_device_dict[rating_resp.sessiondeviceid] = session_device
+                session = database.get_sessions(id=session_device.session_id)
+                if session:
+                    session_dict[session_device.session_id] = session
+            else:
+                logging.info("Unable to find session device for survey response id: {0}".format(rating_resp.id))
+                continue        
+        else:
+            session_device = session_device_dict[rating_resp.sessiondeviceid]
+            session = session_dict[session_device.session_id]
+        if rating_resp.evaluation_category == 'visualization' or rating_resp.evaluation_category == 'reflection':   
+            survey_data = {
+                'Session ID': session.id,
+                'Session Name': session.name,
+                'Group ID': session_device.id,
+                'Group Name': session_device.name,
+                'Evaluation Category': rating_resp.evaluation_category,
+                'Rater Id': rating_resp.raterid,
+                'Username': rating_resp.speakertag,
+                'Compare 1': response.get('Interpretability', ""),
+                'Compare 2': response.get('Usefulness for feedback', ""),
+                'Compare 3': response.get('Clarity', ""),
+                'Compare 4': response.get('Actionability', ""),
+                "Compare 5": response.get('Confidence in interpretation', ""),
+                'Open Reponse': response.get('notes', ""),
+                'Submission date': rating_resp.creation_date.strftime("%Y-%m-%d %H:%M:%S") 
+            }
+            fwrite.writerow(survey_data) 
 
     output = make_response(si.getvalue())
     output.headers["Content-Disposition"] = "attachment; filename=export.csv"

@@ -83,7 +83,7 @@ function AppInfographicsComparison(props) {
                                 <AppTimeline
                                     clickedTimeline={props.onClickedTimeline}
                                     session={props.session}
-                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
+                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1TimelineTranscripts}
                                     start={props.startTime}
                                     end={props.endTime}
                                 />
@@ -100,7 +100,7 @@ function AppInfographicsComparison(props) {
                                 <AppTimeline
                                     clickedTimeline={props.onClickedTimeline}
                                     session={props.session}
-                                    transcripts={props.spkr2Transcripts}
+                                    transcripts={props.spkr2TimelineTranscripts}
                                     start={props.startTime}
                                     end={props.endTime}
                                 />
@@ -116,7 +116,7 @@ function AppInfographicsComparison(props) {
                                 <AppKeywordsComponent
                                     session={props.session}
                                     sessionDevice={props.sessionDevice}
-                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts }
+                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1TimelineTranscripts }
                                     start={props.startTime}
                                     end={props.endTime}
                                     fromclient={props.fromclient}
@@ -134,7 +134,7 @@ function AppInfographicsComparison(props) {
                                 <AppKeywordsComponent
                                     session={props.session}
                                     sessionDevice={props.sessionDevice}
-                                    transcripts={props.spkr2Transcripts}
+                                    transcripts={props.spkr2TimelineTranscripts}
                                     start={props.startTime}
                                     end={props.endTime}
                                     fromclient={props.fromclient}
@@ -184,6 +184,7 @@ function AppInfographicsComparison(props) {
                             >
                                 <AppIndividualFeaturesComponent
                                     session={props.session}
+                                    speakers = {props.speakers.length}
                                     transcripts={props.spkr1Transcripts}
                                     spkrId={props.selectedSpkrId1}
                                     showFeatures={props.showFeatures}
@@ -200,6 +201,7 @@ function AppInfographicsComparison(props) {
                             >
                                 <AppIndividualFeaturesComponent
                                     session={props.session}
+                                    speakers = {props.speakers.length}
                                     transcripts={props.spkr2Transcripts}
                                     spkrId={props.selectedSpkrId2}
                                     showFeatures={props.showFeatures}

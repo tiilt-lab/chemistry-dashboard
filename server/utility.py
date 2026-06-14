@@ -636,7 +636,22 @@ def normalized_value_to_percentage(x):
     else:
         # high: [0.5, 2] -> [67, 100]
         return ((x - 0.5) / (2 - 0.5)) * (100 - 67) + 67  
-    
+
+def convert_to_participation_share(listofvalues,numofspeakers):
+    acc = [0]
+    for p_score in listofvalues:
+        share = ((p_score+1)/numofspeakers)*100
+        if share > 0:
+            acc.append(share)
+    return acc[-1]
+
+def get_last_metric_value(listofvalues):
+    acc = [0]
+    for val in listofvalues:
+        if val > 0:
+            acc.append(val)
+    return acc[-1]
+        
 def compute_average(list_of_values,exclude_zeros=False):
     if exclude_zeros:
         list_of_values = [x for x in list_of_values if x != 0]  
@@ -1009,19 +1024,21 @@ def write_or_append_metrics(metrics, fwrite,accumulator, format='csv'):
         accumulator.append(metrics)    
 
 
-def extract_videometrics_within_window(videoMetrics,speakers, window_start, window_end, index):
+def extract_videometrics_within_window(videoMetrics,speakers,speakers_obj, window_start, window_end, index):
     metric_len = len(videoMetrics)
     metrics = defaultdict(dict)
     while index < metric_len: 
         if videoMetrics[index].time_stamp >= window_start and videoMetrics[index].time_stamp < window_end:
             v = videoMetrics[index]
-            if  v.student_username not in metrics:
-                speakers.add(v.student_username)
-                metrics[v.student_username]={'facial_emotion':[str(v.facial_emotion)],'object_on_focus':[str(v.object_on_focus)],'attention_level':[int(v.attention_level)]}
+            speaker_id = speakers_obj[v.student_username]
+            if  speaker_id not in metrics:
+                if speaker_id not in speakers:
+                    speakers[speaker_id] = v.student_username
+                metrics[speaker_id]={'facial_emotion':[str(v.facial_emotion)],'object_on_focus':[str(v.object_on_focus)],'attention_level':[int(v.attention_level)]}
             else:
-                metrics[v.student_username]['facial_emotion'].append(str(v.facial_emotion)) 
-                metrics[v.student_username]['object_on_focus'].append(str(v.object_on_focus)) 
-                metrics[v.student_username]['attention_level'].append(int(v.attention_level)) 
+                metrics[speaker_id]['facial_emotion'].append(str(v.facial_emotion)) 
+                metrics[speaker_id]['object_on_focus'].append(str(v.object_on_focus)) 
+                metrics[speaker_id]['attention_level'].append(int(v.attention_level)) 
         else:
             break    
         index += 1
@@ -1033,54 +1050,96 @@ def extract_transcriptmetrics_within_window(transcriptSpeakerMetric,all_particip
     prev_trans_id = None
     trans_id = None
     while index < metric_len: 
-        t, sm = transcriptSpeakerMetric[index]
+        t = transcriptSpeakerMetric[index]['transcript']
+
+        if int(t.speaker_id) == -1:
+            index += 1
+            continue
         
+        speakerMetrics = transcriptSpeakerMetric[index]['speaker_metrics']
         if t.start_time >= window_start and t.start_time < window_end:
             trans_id = t.id
             transcript_keywords = [keyword for keyword in keywords if keyword.transcript_id == t.id]
             keyword_similarity_score = [round((1-keyword.similarity)*100,3) for keyword in transcript_keywords]  
-            if  t.speaker_tag not in metrics: 
-                speakers.add(t.speaker_tag)
+            if  t.speaker_id not in metrics:
+                if t.speaker_id not in speakers:
+                    speakers[t.speaker_id] = t.speaker_tag
                 prev_trans_id = t.id
-                metrics[t.speaker_tag]={'analytic':[int(t.analytic_thinking_value)],
+                metrics[t.speaker_id]={'analytic':[int(t.analytic_thinking_value)],
                                         'authenticity':[int(t.authenticity_value)],
                                         'certainty':[int(t.certainty_value)],
                                         'clout':[int(t.clout_value)],
                                         'emotionaL_tone':[int(t.emotional_tone_value)],
-                                        'participation_score':[float(sm.participation_score)],
-                                        'internal_cohesion':[float(sm.internal_cohesion)],
-                                        'responsivity':[float(sm.responsivity)],
-                                        'social_impact':[float(sm.social_impact)],
-                                        'newness':[float(sm.newness)],
+                                        'participation_score':[],
+                                        'internal_cohesion':[],
+                                        'responsivity':[],
+                                        'social_impact':[],
+                                        'newness':[],
                                         'word_count':[int(t.word_count)],
                                         'words_per_window':[str(t.transcript)],
                                         'keywords':[', '.join([keyword.keyword for keyword in transcript_keywords])],
                                         'keyword_similarity_score':[compute_average(keyword_similarity_score)]}
-                
+                for sm in speakerMetrics:
+                    #newness is strictly based on the actual verbal contributions by the participants
+                    if t.speaker_id == sm.speaker_id:
+                        metrics[sm.speaker_id]['newness'].append(float(sm.newness))
+                    if sm.speaker_id not in metrics:
+                        metrics[sm.speaker_id]={'analytic':[],
+                                        'authenticity':[],
+                                        'certainty':[],
+                                        'clout':[],
+                                        'emotionaL_tone':[],
+                                        'participation_score':[float(sm.participation_score)],
+                                        'internal_cohesion':[float(sm.internal_cohesion)],
+                                        'responsivity':[float(sm.responsivity)],
+                                        'social_impact':[float(sm.social_impact)],
+                                        'newness':[],
+                                        'word_count':[],
+                                        'words_per_window':[],
+                                        'keywords':[],
+                                        'keyword_similarity_score':[]}
+
+                    else:
+                        metrics[sm.speaker_id]['participation_score'].append(float(sm.participation_score))  
+                        metrics[sm.speaker_id]['internal_cohesion'].append(float(sm.internal_cohesion))
+                        metrics[sm.speaker_id]['responsivity'].append(float(sm.responsivity))
+                        metrics[sm.speaker_id]['social_impact'].append(float(sm.social_impact))  
                 
             else:
-                if trans_id != prev_trans_id:
-                    metrics[t.speaker_tag]['analytic'].append(int(t.analytic_thinking_value))
-                    metrics[t.speaker_tag]['authenticity'].append(int(t.authenticity_value))
-                    metrics[t.speaker_tag]['certainty'].append(int(t.certainty_value))  
-                    metrics[t.speaker_tag]['clout'].append(int(t.clout_value)),
-                    metrics[t.speaker_tag]['emotionaL_tone'].append(int(t.emotional_tone_value)),
-                    metrics[t.speaker_tag]['participation_score'].append(float(sm.participation_score))
-                    metrics[t.speaker_tag]['internal_cohesion'].append(float(sm.internal_cohesion))
-                    metrics[t.speaker_tag]['responsivity'].append(float(sm.responsivity))
-                    metrics[t.speaker_tag]['social_impact'].append(float(sm.social_impact))
-                    metrics[t.speaker_tag]['newness'].append(float(sm.newness))
-                    metrics[t.speaker_tag]['word_count'].append(int(t.word_count)),
-                    metrics[t.speaker_tag]['words_per_window'].append(str(t.transcript))
-                    metrics[t.speaker_tag]['keywords'].append(', '.join([keyword.keyword for keyword in transcript_keywords]))
-                    metrics[t.speaker_tag]['keyword_similarity_score'].append(compute_average(keyword_similarity_score))
-                    prev_trans_id = t.id
-                elif trans_id == prev_trans_id: 
-                    metrics[t.speaker_tag]['participation_score'][-1] = max(metrics[t.speaker_tag]['participation_score'][-1],float(sm.participation_score))
-                    metrics[t.speaker_tag]['internal_cohesion'][-1] =  max(metrics[t.speaker_tag]['internal_cohesion'][-1],float(sm.internal_cohesion))
-                    metrics[t.speaker_tag]['responsivity'][-1] = max(metrics[t.speaker_tag]['responsivity'][-1],float(sm.responsivity)) 
-                    metrics[t.speaker_tag]['social_impact'][-1] = max(metrics[t.speaker_tag]['social_impact'][-1],float(sm.social_impact)) 
-                    metrics[t.speaker_tag]['newness'][-1] = max(metrics[t.speaker_tag]['newness'][-1],float(sm.newness))
+                metrics[t.speaker_id]['analytic'].append(int(t.analytic_thinking_value))
+                metrics[t.speaker_id]['authenticity'].append(int(t.authenticity_value))
+                metrics[t.speaker_id]['certainty'].append(int(t.certainty_value))  
+                metrics[t.speaker_id]['clout'].append(int(t.clout_value))
+                metrics[t.speaker_id]['emotionaL_tone'].append(int(t.emotional_tone_value))
+                metrics[t.speaker_id]['word_count'].append(int(t.word_count)),
+                metrics[t.speaker_id]['words_per_window'].append(str(t.transcript))
+                metrics[t.speaker_id]['keywords'].append(', '.join([keyword.keyword for keyword in transcript_keywords]))
+                metrics[t.speaker_id]['keyword_similarity_score'].append(compute_average(keyword_similarity_score))
+
+                for sm in speakerMetrics:
+                    if t.speaker_id == sm.speaker_id:
+                        metrics[sm.speaker_id]['newness'].append(float(sm.newness))
+                    if sm.speaker_id not in metrics:
+                        metrics[sm.speaker_id]={'analytic':[],
+                                        'authenticity':[],
+                                        'certainty':[],
+                                        'clout':[],
+                                        'emotionaL_tone':[],
+                                        'participation_score':[float(sm.participation_score)],
+                                        'internal_cohesion':[float(sm.internal_cohesion)],
+                                        'responsivity':[float(sm.responsivity)],
+                                        'social_impact':[float(sm.social_impact)],
+                                        'newness':[],
+                                        'word_count':[],
+                                        'words_per_window':[],
+                                        'keywords':[],
+                                        'keyword_similarity_score':[]}
+
+                    else:
+                        metrics[sm.speaker_id]['participation_score'].append(float(sm.participation_score))  
+                        metrics[sm.speaker_id]['internal_cohesion'].append(float(sm.internal_cohesion))
+                        metrics[sm.speaker_id]['responsivity'].append(float(sm.responsivity))
+                        metrics[sm.speaker_id]['social_impact'].append(float(sm.social_impact))  
 
             all_participants_transcript.append([str(window_start)+"-"+str(window_end),t.speaker_tag,str(t.transcript)])
                 
@@ -1113,7 +1172,7 @@ def aggregate_video_metric_per_window(videoMetrics_per_window,windowsize,window_
     gazeontask =  1 if trend_direction >= 0 else 0
     return [most_common_emotion,most_common_object,avg_attention,attention_rate,'focus_level',trend_direction,gazeontask]
 
-def aggregate_transcript_metric_per_window(transcriptMetrics_per_window,prev_metric):
+def aggregate_transcript_metric_per_window(transcriptMetrics_per_window,prev_metric,noofspeakers):
     val = []
     analytic = transcriptMetrics_per_window['analytic']
     authenticity = transcriptMetrics_per_window['authenticity']
@@ -1135,61 +1194,61 @@ def aggregate_transcript_metric_per_window(transcriptMetrics_per_window,prev_met
     prev_participation_score_val, prev_internal_cohesion_val,prev_responsivity_val,prev_social_impact_val,prev_newness_val,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_ = prev_metric
     # Accumulate metrics for the window
     if analytic:
-        val = round(compute_average(analytic), 2)
+        val = compute_average(analytic)
         analytic_thinking_val = val
         trend_direction.append(get_progression(prev_analytic_thinking_val, val,"numerical"))
     else:
         analytic_thinking_val = 0
     if authenticity:
-        val = round(compute_average(authenticity), 2)
+        val = compute_average(authenticity)
         authenticity_val = val
         trend_direction.append(get_progression(prev_authenticity_val, val,"numerical"))
     else:
         authenticity_val = 0   
     if certainty:
-        val = round(compute_average(certainty), 2)
+        val = compute_average(certainty)
         certainty_val = val
         trend_direction.append(get_progression(prev_certainty_val, val,"numerical"))
     else:
         certainty_val = 0
     if clout:
-        val = round(compute_average(clout), 2)
+        val = compute_average(clout)
         clout_val = val
         trend_direction.append(get_progression(prev_clout_val, val,"numerical"))
     else:
         clout_val = 0
     if emotionaL_tone: 
-        val = round(compute_average(emotionaL_tone), 2)
+        val = compute_average(emotionaL_tone)
         emotional_tone_val = val
         trend_direction.append(get_progression(prev_emotional_tone_val, val,"numerical"))
     else:
         emotional_tone_val = 0
     if participation_score:
-        val = round(compute_average(participation_score), 2)
-        participation_score_val = normalized_value_to_percentage(val)
+        particpation_shares = convert_to_participation_share(participation_score,noofspeakers)
+        participation_score_val = particpation_shares
         trend_direction.append(get_progression(prev_participation_score_val, participation_score_val,"numerical"))
     else:
         participation_score_val = 0
     if internal_cohesion:
-        val = round(compute_average(internal_cohesion), 2)
+        val = get_last_metric_value(internal_cohesion)
         internal_cohesion_val = val*100
         trend_direction.append(get_progression(prev_internal_cohesion_val, val,"numerical"))
     else:
         internal_cohesion_val = 0
     if responsivity:
-        val = round(compute_average(responsivity), 2)
+        val = get_last_metric_value(responsivity)
         responsivity_val = val*100
         trend_direction.append(get_progression(prev_responsivity_val, val,"numerical")) 
     else:
         responsivity_val = 0
     if social_impact:
-        val = round(compute_average(social_impact), 2)
+        val = get_last_metric_value(social_impact)
         social_impact_val = val*100
         trend_direction.append(get_progression(prev_social_impact_val, val,"numerical"))
     else:
         social_impact_val = 0
     if newness:
-        val = round(compute_average(newness), 2)
+        val = compute_average(newness)
         newness_val = val*100
         trend_direction.append(get_progression(prev_newness_val, val,"numerical"))
     else:
@@ -1280,7 +1339,8 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
     speaker_window_metrics = None
     focusscore=[]
     participationscore=[]
-    responsivityscore=[]
+    session_particpantion_score = 0
+    session_responsivity=0
     enagementscore=[]
     reasoningscore=[]
     leadershipscore=[]
@@ -1297,8 +1357,8 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
     authenticity = []
     certainty = []
     clout = []
-    internalcohesion = []
-    socialimpact = []
+    session_internalcohesion = 0
+    session_socialimpact = 0
     newness = []
     focused_gazeOn_task = 0
     
@@ -1312,6 +1372,7 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
                'rawfocusrate','gazeontask',"focusscore",'engagementscore','reasoningscore','leadershipscore', 'initiativescore','ideacontributionscore','trenddirection','momentum','verbalshare','turntaking']
     
     previous_trend = None
+    ## FOR COMPUTING METRIC VALUE ACROSS THE WINDOWS
     # for window_id in all_windows:
     #     if window_id in speakerDetail:
     #         window_id,window_start,window_end,transcript_val,word_count_val,keywords_val,keyword_similarity_score_val,analytic_thinking_val,authenticity_val, \
@@ -1431,6 +1492,7 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
     #     else:
     #         Combined_object['participants_level'][speakeralias].append(dict(zip(metric_heading,speaker_window_metrics)))
     
+    ## FOR COMPUTING METRIC VALUE BASED ON EXPLICITLY WHAT THE SPEAKER ACCUMULATED
     for i , data in enumerate(speakerDetail):
         
         window_id,_,_,transcript_val,word_count_val,keywords_val,keyword_similarity_score_val,analytic_thinking_val,authenticity_val, \
@@ -1441,9 +1503,12 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
         authenticity.append(authenticity_val)
         certainty.append(certainty_val)
         clout.append(clout_val)
-        internalcohesion.append(internal_cohesion_val)
-        socialimpact.append(social_impact_val)
         newness.append(newness_val)
+
+        session_particpantion_score = participation_score_val if participation_score_val > 0 else session_particpantion_score
+        session_internalcohesion =  internal_cohesion_val if internal_cohesion_val > 0 else session_internalcohesion 
+        session_socialimpact =  social_impact_val if social_impact_val > 0 else session_socialimpact 
+        session_responsivity =  responsivity_val if responsivity_val > 0 else session_responsivity 
         
         focus_level = 0
         if mad != 0 and most_common_object != "None":
@@ -1460,41 +1525,41 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
         shared_task_focus.append(stf)
        
         speakingalignmentscore.append(keyword_similarity_score_val)
-        participationscore.append(participation_score_val)
-        responsivityscore.append(responsivity_val)
+       
 
         total_verbal_contri, total_turn  = get_total_verbal_turn_contribution_by_all_person_in_window(metric_acc_per_window[window_id],metric_acc_per_window[window_id]['persons'])
         comp_verbal_share = word_count_val/total_verbal_contri if total_verbal_contri > 0 else 0
-        verbalshare.append(round((comp_verbal_share)*100,2))
+        verbalshare.append(comp_verbal_share*100)
         turn = 1 if word_count_val > 0 else 0
         comp_turn = turn/total_turn if total_turn > 0 else 0
-        turnshare.append(round((comp_turn)*100,2))
+        turnshare.append(comp_turn*100)
 
-        focus = round((focus_level+verbalshare[-1])/2,2) if (focus_level > 0 and speaking > 0 ) else focus_level if focus_level > 0 else verbalshare[-1]  if speaking > 0 else 0
-        focusscore.append(round(focus,2))
+        focus = focus_level #(focus_level+participation_score_val)/2 if (focus_level > 0 and speaking > 0 ) else focus_level if focus_level > 0 else verbalshare[-1]  if speaking > 0 else 0
+        focusscore.append(focus)
 
-        eng_score = round((focusscore[-1]+participation_score_val+turnshare[-1]+ verbalshare[-1])/4,2) if word_count_val > 0 and facial_emotion != "None" \
-            else  round((focus_level),2)  if facial_emotion != "None" else round((participation_score_val+verbalshare[-1])/(2),2)
+        # eng_score = (focusscore[-1]+participation_score_val+turnshare[-1]+ verbalshare[-1])/4 if word_count_val > 0 and facial_emotion != "None" \
+        #     else  (focus_level)  if facial_emotion != "None" else (participation_score_val+verbalshare[-1])/(2)
+        eng_score = (0.4*focusscore[-1])+(0.3*participation_score_val)+(0.3*responsivity_val)
 
         # eng_score = round((focusscore[-1]+participation_score_val+emotional_tone_val+facial_expression[facial_emotion]+ speaking_slience_focus)/5,2) if word_count_val > 0 and facial_emotion != "None" \
         #     else  round((focus_level+facial_expression[facial_emotion]+ gazeontask*100)/3,2)  if facial_emotion != "None" else round((participation_score_val+emotional_tone_val+speaking*100)/3,2)
         enagementscore.append(eng_score)
 
-        reason_score = 0 if word_count_val <= 0  else  round((analytic_thinking_val+certainty_val+internal_cohesion_val)/3,2)
+        reason_score = 0 if word_count_val <= 0  else  (analytic_thinking_val+certainty_val+internal_cohesion_val)/3
         reasoningscore.append(reason_score)
         
-        idea_score = 0 if word_count_val <= 0  else round((analytic_thinking_val+authenticity_val+newness_val)/3,2)
+        idea_score = ((newness_val*0.3)+(social_impact_val*0.7))#0 if word_count_val <= 0  else (analytic_thinking_val+authenticity_val+newness_val)/3
         ideacontributionscore.append(idea_score)
 
-        initia_score = 0 if word_count_val <= 0  else round((certainty_val+participation_score_val+ideacontributionscore[-1])/3,2)
+        initia_score = 0 if word_count_val <= 0  else (certainty_val+participation_score_val+idea_score)/3
         initiativescore.append(initia_score)
 
-        lead_score = 0 if word_count_val <= 0  else round((clout_val+initiativescore[-1])/2,2)
+        lead_score = (0.2*participation_score_val)+(0.5*social_impact_val)+(0.3*responsivity_val)  #0 if word_count_val <= 0  else (clout_val+initiativescore[-1])/2
         leadershipscore.append(lead_score)
 
-        momentum.append(round((focusscore[-1]+participation_score_val+verbalshare[-1])/3,2))
+        momentum.append((focusscore[-1]+participation_score_val)/2)
 
-        avg_derivative_metric_val = round((participationscore[-1]+focusscore[-1]+enagementscore[-1]+reasoningscore[-1]+ideacontributionscore[-1]+initiativescore[-1]+leadershipscore[-1]+momentum[-1])/8,2)
+        avg_derivative_metric_val = round((participation_score_val+focusscore[-1]+enagementscore[-1]+reasoningscore[-1]+ideacontributionscore[-1]+initiativescore[-1]+leadershipscore[-1]+momentum[-1])/8,2)
         window_trend_dir = 1 if enagementscore[-1] >= 70 and focusscore[-1] >= 70 else 0 if  enagementscore[-1] >= 50 or focusscore[-1] >= 50 else -1 #    get_progression(previous_trend, avg_derivative_metric_val,"numerical")
         # previous_trend = avg_derivative_metric_val
         session_trend.append(window_trend_dir)
@@ -1503,26 +1568,26 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
             speaking_word_count.append(word_count_val)
 
         #update the derived value
-        speakerDetail[i][22] = focusscore[-1]
-        metric_acc_per_window[window_id][speakeralias][22] = focusscore[-1]
-        speakerDetail[i][23] = enagementscore[-1]
-        metric_acc_per_window[window_id][speakeralias][23] = enagementscore[-1]
-        speakerDetail[i][24] = reasoningscore[-1]
-        metric_acc_per_window[window_id][speakeralias][24] = reasoningscore[-1]
-        speakerDetail[i][25] = leadershipscore[-1]
-        metric_acc_per_window[window_id][speakeralias][25] = leadershipscore[-1]
-        speakerDetail[i][26] = initiativescore[-1]
-        metric_acc_per_window[window_id][speakeralias][26] = initiativescore[-1]
-        speakerDetail[i][27] = ideacontributionscore[-1]
-        metric_acc_per_window[window_id][speakeralias][27] = ideacontributionscore[-1]
+        speakerDetail[i][22] = round(focusscore[-1],2)
+        metric_acc_per_window[window_id][speakeralias][22] = round(focusscore[-1],2)
+        speakerDetail[i][23] = round(enagementscore[-1],2)
+        metric_acc_per_window[window_id][speakeralias][23] = round(enagementscore[-1],2)
+        speakerDetail[i][24] = round(reasoningscore[-1],2)
+        metric_acc_per_window[window_id][speakeralias][24] = round(reasoningscore[-1],2)
+        speakerDetail[i][25] = round(leadershipscore[-1],2)
+        metric_acc_per_window[window_id][speakeralias][25] = round(leadershipscore[-1],2)
+        speakerDetail[i][26] = round(initiativescore[-1],2)
+        metric_acc_per_window[window_id][speakeralias][26] = round(initiativescore[-1],2)
+        speakerDetail[i][27] = round(ideacontributionscore[-1],2)
+        metric_acc_per_window[window_id][speakeralias][27] = round(ideacontributionscore[-1],2)
         speakerDetail[i][28] = window_trend_dir
         metric_acc_per_window[window_id][speakeralias][28] = window_trend_dir
-        speakerDetail[i][29] = momentum[-1]
-        metric_acc_per_window[window_id][speakeralias][29] = momentum[-1]
-        speakerDetail[i][30] = verbalshare[-1]
-        metric_acc_per_window[window_id][speakeralias][30] = verbalshare[-1]
-        speakerDetail[i][31] = turnshare[-1]
-        metric_acc_per_window[window_id][speakeralias][31] = turnshare[-1]
+        speakerDetail[i][29] = round(momentum[-1],2)
+        metric_acc_per_window[window_id][speakeralias][29] = round(momentum[-1],2)
+        speakerDetail[i][30] = round(verbalshare[-1],2)
+        metric_acc_per_window[window_id][speakeralias][30] = round(verbalshare[-1],2)
+        speakerDetail[i][31] = round(turnshare[-1],2)
+        metric_acc_per_window[window_id][speakeralias][31] = round(turnshare[-1],2)
 
         if window_id not in Combined_object['window_level']:
             Combined_object['window_level'][window_id] = {speakeralias : dict(zip(metric_heading,speakerDetail[i]))}
@@ -1548,10 +1613,10 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
     if total_windows > 0:
         session_metrics.append(round(sum(focusscore)/total_windows,2))
         session_all_metrics.append(round(compute_average(focusscore, exclude_zeros=True),2))
-        session_metrics.append(round(sum(participationscore)/total_windows,2))
-        session_all_metrics.append(round(compute_average(participationscore, exclude_zeros=True),2))
-        session_metrics.append(round(sum(responsivityscore)/total_windows,2))
-        session_all_metrics.append(round(compute_average(responsivityscore, exclude_zeros=True),2))
+        session_metrics.append(round(session_particpantion_score,2))
+        session_all_metrics.append(round(session_particpantion_score,2))
+        session_metrics.append(round(session_responsivity,2))
+        session_all_metrics.append(round(session_responsivity,2))
         session_metrics.append(round(sum(enagementscore)/total_windows,2))           
         session_all_metrics.append(round(compute_average(enagementscore, exclude_zeros=True),2))
         session_metrics.append(round(sum(reasoningscore)/total_windows,2))
@@ -1573,9 +1638,17 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
         session_all_metrics.append(round(compute_average(authenticity, exclude_zeros=True),2))
         session_all_metrics.append(round(compute_average(certainty, exclude_zeros=True),2))
         session_all_metrics.append(round(compute_average(clout, exclude_zeros=True),2))
-        session_all_metrics.append(round(compute_average(internalcohesion, exclude_zeros=True),2))
-        session_all_metrics.append(round(compute_average(socialimpact, exclude_zeros=True),2))
+        session_all_metrics.append(round(session_internalcohesion,2))
+        session_all_metrics.append(round(session_socialimpact,2))
         session_all_metrics.append(round(compute_average(newness,exclude_zeros=True),2))
+
+        # logging.info("participationscore accumulated {0}".format(participationscore))
+        # logging.info("responsivityscore accumulated {0}, average_by_all: {1}, average_by_val: {2}, sum: {3}, total windows : {4}".format(responsivityscore,round(sum(responsivityscore)/total_windows,2),round(compute_average(responsivityscore, exclude_zeros=True),2),sum(responsivityscore),total_windows))
+        # logging.info("internalcohesion accumulated {0}, average_by_all: {1}, average_by_val: {2}, sum: {3}, total windows : {4}".format(internalcohesion,round(sum(internalcohesion)/total_windows,2),round(compute_average(internalcohesion, exclude_zeros=True),2),sum(internalcohesion),total_windows))
+        # logging.info("socialimpact accumulated {0}, average_by_all: {1}, average_by_val: {2}, sum: {3}, total windows : {4}".format(socialimpact,round(sum(socialimpact)/total_windows,2),round(compute_average(socialimpact, exclude_zeros=True),2),sum(socialimpact),total_windows))
+        # logging.info("newness accumulated {0}, average_by_all: {1}, average_by_val: {2}, sum: {3}, total windows : {4}".format(newness,round(sum(newness)/total_windows,2),round(compute_average(newness, exclude_zeros=True),2),sum(newness),total_windows))
+        # logging.info("ideacontributionscore accumulated {0}, average_by_all: {1}, average_by_val: {2}, sum: {3}, total windows : {4}".format(ideacontributionscore,round(sum(ideacontributionscore)/total_windows,2),round(compute_average(ideacontributionscore, exclude_zeros=True),2),sum(ideacontributionscore),total_windows))
+        
 
     else:
         session_metrics.append(0)
@@ -1608,9 +1681,9 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
         session_all_metrics.append(0)
         session_all_metrics.append(0)
         session_all_metrics.append(0)
-
-    if len(total_verbal_turn_acc) > 0:   
-        share_portion = round(100/no_of_participants, 2)
+    
+    share_portion = round(100/no_of_participants, 2) if no_of_participants > 0 else 0
+    if len(total_verbal_turn_acc) > 0:     
         session_metrics.append(round((((sum(speaking_word_count)/sum(total_verbal_turn_acc)) *100)/share_portion)*100,2))
         session_all_metrics.append(round((((sum(speaking_word_count)/sum(total_verbal_turn_acc)) *100)/share_portion)*100,2))
         session_metrics.append(round((sum(speaking_word_count)/sum(total_verbal_turn_acc))*100,2))
@@ -1619,6 +1692,7 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
         session_all_metrics.append(round((((len(speaking_word_count)/len(total_verbal_turn_acc)) *100)/share_portion)*100,2))
         session_metrics.append(round(((len(speaking_word_count)/len(total_verbal_turn_acc))*100),2))
         session_all_metrics.append(round(((len(speaking_word_count)/len(total_verbal_turn_acc))*100),2))
+        
     else:
         session_metrics.append(0)
         session_all_metrics.append(0)
@@ -1639,6 +1713,25 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
     session_all_metrics.append(mid_trend)
     session_metrics.append(late_trend)
     session_all_metrics.append(late_trend)
+
+    dominance= -1
+    undercontribution = -1 
+    if share_portion > 0:
+         
+        relative_contribution = session_particpantion_score/share_portion
+        if relative_contribution > 1:
+            overcontribution = max(0,relative_contribution - 1)
+            overcontribution = min(1,overcontribution) #cap any particpation share above 1 to 1. so that value range between 0 and 1
+            avg_responsivity = session_all_metrics[2]
+            dominance = overcontribution * (1- (avg_responsivity/100))
+        else: 
+            avg_soc_impt = session_all_metrics[16]
+            undercontribution = (1-relative_contribution)*(1-(avg_soc_impt/100)) 
+
+    session_all_metrics.append(round(dominance,2))
+    session_all_metrics.append(round(undercontribution,2)) 
+  
+
     
 
     group_level_metric_acc['focusscore'].append(session_all_metrics[0]/100)
@@ -1667,11 +1760,11 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
     
     session_all_data_heading = ['avg_focusscore','avg_participationscore','avg_responsivity','avg_engagementscore','avg_reasoningscore','avg_leadershipscore', 'avg_initiativescore','avg_ideacontributionscore',
                             'avg_speakingalignmentscore','avg_momentum','sharedtaskfocus','avg_analyticthinking','avg_authenticity','avg_certainty','avg_clout','avg_internalcohesion','avg_socialimpact','avg_newness',
-                            'avg_verbalshare_bal','avg_verbalshare','avg_turntaking_bal','avg_turntaking','wordcount','avg_trenddirection','earlytrenddirection','midtrenddirection','latetrenddirection'] 
+                            'avg_verbalshare_bal','avg_verbalshare','avg_turntaking_bal','avg_turntaking','wordcount','avg_trenddirection','earlytrenddirection','midtrenddirection','latetrenddirection','Dominance','undercontribution'] 
     Combined_object['session_level'][speakeralias] = dict(zip(session_data_heading,session_metrics))
     Combined_object['session_all_metrics'][speakeralias] = dict(zip(session_all_data_heading,session_all_metrics))
    
-def synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,windowsize=10): #speakers,
+def synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,speakers_obj,windowsize=10): #speakers,
     v_index = t_index = 0
     attention_rate_acc_per_speaker = defaultdict(list)
     metric_acc_per_speaker_list = defaultdict(list)
@@ -1680,46 +1773,46 @@ def synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,video
     group_level_metric_acc = defaultdict(list)
     all_participants_transcript = []
     total_verbal_turn_acc = []
-    speakers = set()
+    speakers = {}
     Combined_object = {'group_id': session_device.id, 'group_name': session_device.name, 'window_level':{}, 'participants_level':{}, 'session_level':{}, 'session_all_metrics':{},'transcript':{},'group_level':{}}
-    min_start = min(videoMetrics[0].time_stamp if videoMetrics else 0, transcriptSpeakerMetric[0][0].start_time if transcriptSpeakerMetric else 0)
-    max_end = max(videoMetrics[-1].time_stamp if videoMetrics else 0, transcriptSpeakerMetric[-1][0].start_time if transcriptSpeakerMetric else 0)
+    min_start = min(videoMetrics[0].time_stamp if videoMetrics else 0, transcriptSpeakerMetric[0]['transcript'].start_time if transcriptSpeakerMetric else 0)
+    max_end = max(videoMetrics[-1].time_stamp if videoMetrics else 0, transcriptSpeakerMetric[-1]['transcript'].start_time if transcriptSpeakerMetric else 0)
     window_start = min_start
     window_end = min_start+windowsize
     window_count = 0
     total_speaker_detected = 0
     while window_start <= max_end:
         window_id = f"w_{window_start}_{window_end}"
-        window_video_metrics, v_index = extract_videometrics_within_window(videoMetrics,speakers, window_start, window_end, v_index)
+        window_video_metrics, v_index = extract_videometrics_within_window(videoMetrics,speakers,speakers_obj, window_start, window_end, v_index)
         window_transcript_metrics, t_index = extract_transcriptmetrics_within_window(transcriptSpeakerMetric,all_participants_transcript,speakers,keywords, window_start, window_end, t_index)
 
         #combine transcrit and video metrics for this window
-        for speaker in speakers:
-            w_video_meteic = window_video_metrics.get(speaker,[])
-            w_transcript_metric = window_transcript_metrics.get(speaker,[])
-            prev_metric = metric_acc_per_speaker_list[speaker][-1] if metric_acc_per_speaker_list.get(speaker,None) else [None]*32
+        for speaker_id,speaker_alias in speakers.items():
+            w_video_meteic = window_video_metrics.get(speaker_id,[])
+            w_transcript_metric = window_transcript_metrics.get(speaker_id,[])
+            prev_metric = metric_acc_per_speaker_list[speaker_id][-1] if metric_acc_per_speaker_list.get(speaker_id,None) else [None]*32
             aggregated_video_metrics = aggregate_video_metric_per_window(w_video_meteic,windowsize,window_count,prev_metric) if w_video_meteic else []
-            aggregated_transcript_metrics = aggregate_transcript_metric_per_window(w_transcript_metric,prev_metric) if w_transcript_metric else []
+            aggregated_transcript_metrics = aggregate_transcript_metric_per_window(w_transcript_metric,prev_metric,len(speakers)) if w_transcript_metric else []
             
             #accumulate the attention rate for each speaker if there is video metrics. this will be used to compute the robust_z value
             if aggregated_video_metrics:
-                attention_rate_acc_per_speaker[speaker].append(aggregated_video_metrics[3]) 
+                attention_rate_acc_per_speaker[speaker_id].append(aggregated_video_metrics[3]) 
 
             combine_metrics = combine_transcript_video_metrics(aggregated_video_metrics,aggregated_transcript_metrics,window_id,window_start,window_end)
 
             if combine_metrics:
-                metric_acc_per_speaker_list[speaker].append(combine_metrics)
-                metric_acc_per_speaker_obj[speaker][window_id] = combine_metrics
-                metric_acc_per_window[window_id][speaker]=combine_metrics
+                metric_acc_per_speaker_list[speaker_id].append(combine_metrics)
+                metric_acc_per_speaker_obj[speaker_id][window_id] = combine_metrics
+                metric_acc_per_window[window_id][speaker_alias]=combine_metrics
 
                 #keep track of all the speaking turns
                 if combine_metrics[4] > 0:
                     total_verbal_turn_acc.append(combine_metrics[4])
 
                 if 'persons' not in metric_acc_per_window[window_id]:
-                    metric_acc_per_window[window_id]['persons'] = [speaker]
+                    metric_acc_per_window[window_id]['persons'] = [speaker_alias]
                 else:
-                    metric_acc_per_window[window_id]['persons'].append(speaker)
+                    metric_acc_per_window[window_id]['persons'].append(speaker_alias)
 
 
         window_start = window_end
@@ -1733,14 +1826,14 @@ def synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,video
     # so now we begin to compute the derived metrics for each speakers and update the record accordingly
     total_windows = len(metric_acc_per_window)
     object_of_interest_focus = ['laptop','book','paper','person','mouse','whiteboard']
-    object_of_interest_focus.extend(list(speakers))
+    object_of_interest_focus.extend(list(speakers.values()))
     all_windows = list(metric_acc_per_window.keys())
     for speaker, speakerDetail in  metric_acc_per_speaker_list.items():
     # for speaker, speakerDetail in  metric_acc_per_speaker_obj.items():
         attention_rates = attention_rate_acc_per_speaker.get(speaker,None)
         # logging.info("computing derived metrics for speaker: {0}: {1}".format(speaker, attention_rates))
         median_x,mad = compute_median_and_mad(np.array(attention_rates)) if attention_rates else [0,0]
-        compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerDetail,total_windows,total_verbal_turn_acc,speaker,median_x,mad,Combined_object,group_level_metric_acc,total_speaker_detected,object_of_interest_focus,len(speakers)) 
+        compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerDetail,total_windows,total_verbal_turn_acc,speakers[speaker],median_x,mad,Combined_object,group_level_metric_acc,total_speaker_detected,object_of_interest_focus,len(speakers)) 
         # session_metric_per_speaker[speaker.alias] = session_metrics  
 
     if total_speaker_detected > 1:

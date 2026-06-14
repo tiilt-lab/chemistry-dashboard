@@ -21,6 +21,7 @@ function PodComponent() {
   const [videoMetrics, setVideoMetrics] = useState([])
   const [speakerMetrics, setSpeakerMetrics] = useState([]);
   const [displayTranscripts, setDisplayTranscripts] = useState([]);
+  const [simplifiedTranscript,setSimplifiedTranscript] = useState([])
   const [displayVideoMetrics, setDisplayVideoMetrics] = useState([])
   const [currentTranscript, setCurrentTranscript] = useState({});
   const [currentForm, setCurrentForm] = useState("");
@@ -42,6 +43,8 @@ function PodComponent() {
   const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1);
   const [spkr1Transcripts, setSpkr1Transcripts] = useState([]);
   const [spkr2Transcripts, setSpkr2Transcripts] = useState([]);
+  const [spkr1TimelineTranscripts, setSpkr1TimelineTranscripts] = useState([]);
+  const [spkr2TimelineTranscripts, setSpkr2TimelineTranscripts] = useState([]);
   const [spkr1VideoMetrics, setSpkr1VideoMetrics] = useState([])
   const [spkr2VideoMetrics, setSpkr2VideoMetrics] = useState([])
   const [open, setOpen] = useState(true);
@@ -64,6 +67,8 @@ function PodComponent() {
   const [contextForPrompt, setContextForPrompt] = useState("")
   const [refinementForPrompt, setRefinementForPrompt] = useState("")
   const [startPrompting, setStartPrompting] = useState(false)
+  const [audioProcessingOperation,setAudioProcessingOperation] = useState("")
+  const [reloadTranscriptData,setReloadTranscriptData] = useState(false)
   const heartbeatIntervalRef = useRef(null)
 
   const audiowebsocket = useRef(null)
@@ -250,7 +255,7 @@ function PodComponent() {
       });
       clearInterval(intervalId);
     };
-  }, []);
+  }, [reloadTranscriptData]);
 
   useEffect(() => {
     const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
@@ -260,6 +265,7 @@ function PodComponent() {
     setEndTime(eTime);
     generateDisplayTranscripts(sTime, eTime);
     generateDisplayVideoMetrics(sTime, eTime);
+    setReloadTranscriptData(false)
   }, [startTime, endTime, transcripts, videoMetrics, timeRange]);
 
   useEffect(() => {
@@ -288,13 +294,25 @@ function PodComponent() {
   useEffect(() => {
     let message = null
     if (state.audioSocketOpen) {
-      message = {
-        type: "Initialize_audio_processing_analytics",
-        sessionid: sessionId,
-        server_start: session.creation_date,
-        keywords: session.keywords,
-        sessiondeviceid: sessionDeviceId,
-        speakers: speakers.map((sp) => { return { id: sp.id, alias: sp.alias } })
+      if(audioProcessingOperation!== "" && audioProcessingOperation === "audio analytics"){
+        message = {
+          type: "Initialize_audio_processing_analytics",
+          sessionid: sessionId,
+          server_start: session.creation_date,
+          keywords: session.keywords,
+          sessiondeviceid: sessionDeviceId,
+          speakers: speakers.map((sp) => { return { id: sp.id, alias: sp.alias } })
+        }
+      }else if(audioProcessingOperation!== "" && audioProcessingOperation === "compute P&I style"){
+        message = {
+          type: "Initialize_participation_and_impact_style_computation",
+          sessionid: sessionId,
+          server_start: session.creation_date,
+          keywords: session.keywords,
+          sessiondeviceid: sessionDeviceId,
+          speakers: speakers.map((sp) => { return { id: sp.id, alias: sp.alias } }),
+          transcript: simplifiedTranscript
+        }
       }
       console.log("sending message")
       audiowebsocket.current.send(JSON.stringify(message))
@@ -310,11 +328,15 @@ function PodComponent() {
     }
 
 
-  }, [state.audioSocketOpen, state.videoSocketOpen])
+  }, [state.audioSocketOpen, state.videoSocketOpen,audioProcessingOperation])
 
   useEffect(() => {
     if (state.audioSocketReady) {
+      if(audioProcessingOperation!== "" && audioProcessingOperation === "audio analytics"){
       audiowebsocket.current.send(JSON.stringify({ type: "start_posthoc_audio_processing" }));
+      }else if(audioProcessingOperation!== "" && audioProcessingOperation === "compute P&I style"){
+        audiowebsocket.current.send(JSON.stringify({ type: "start_speaker_transcript_processing" }));
+      }
     } else if (state.videoSocketReady) {
       videowebsocket.current.send(JSON.stringify({ type: "start_posthoc_video_processing" }));
     }
@@ -368,10 +390,14 @@ function PodComponent() {
       setDisplayText("PostHoc Audio Analytics Processing Completed")
       setCurrentForm("success")
       audiowebsocket.current.close()
+      setTranscripts([])
+      setReloadTranscriptData(true)
     } else if (state.videoProcessCompleted) {
       setDisplayText("PostHoc Video Analytics Processing Completed")
       setCurrentForm("success")
       videowebsocket.current.close()
+      setReloadTranscriptData(true)
+      setVideoMetrics([])
     }
   }, [state.audioProcessCompleted, state.videoProcessCompleted])
 
@@ -420,7 +446,9 @@ function PodComponent() {
 
   const setSpeakerTranscripts = () => {
     if (displayTranscripts.length) {
-      setSpkr1Transcripts(
+      setSpkr1Transcripts(displayTranscripts);
+
+      setSpkr1TimelineTranscripts(
         displayTranscripts.reduce((values, transcript) => {
 
           if (transcript.speaker_id === selectedSpkrId1
@@ -429,19 +457,23 @@ function PodComponent() {
           }
           return values;
         }, [])
-      );
-      setSpkr2Transcripts(
-        displayTranscripts.reduce((values, transcript) => {
+      )
+      setSpkr2Transcripts(displayTranscripts);
+
+      setSpkr2TimelineTranscripts(
+         displayTranscripts.reduce((values, transcript) => {
           if (transcript.speaker_id === selectedSpkrId2
           ) {
             values.push(transcript);
           }
           return values;
         }, [])
-      );
+      )
     } else {
       setSpkr1Transcripts([]);
+      setSpkr1TimelineTranscripts([])
       setSpkr2Transcripts([]);
+      setSpkr2TimelineTranscripts([])
     }
   };
 
@@ -474,9 +506,13 @@ function PodComponent() {
     }
   }
   const generateDisplayTranscripts = (s, e) => {
-    setDisplayTranscripts(
-      transcripts.filter((t) => t.start_time >= s && t.start_time <= e)
+    const timeRangeTranscript = transcripts.filter((t) => t.start_time >= s && t.start_time <= e)
+    // console.log("timeRangeTranscript",timeRangeTranscript)
+    setSimplifiedTranscript(
+      timeRangeTranscript.map(({id,start_time, speaker_id, speaker_tag,transcript }) => ({id,start_time, speaker_id, speaker_tag,transcript}))
     );
+    setDisplayTranscripts(timeRangeTranscript);
+
   };
 
   const generateDisplayVideoMetrics = (s, e) => {
@@ -788,18 +824,24 @@ function PodComponent() {
     setDetails("Individual");
   }
 
-  const connecttoaudioservice = () => {
+  const connecttoaudioservice = (operation) => {
     if (!state.audioSocketOpen) {
       audiowebsocket.current = new WebSocket(apiService.getAudioPosthocWebsocketEndpoint())
+      if(operation === "post hoc audio analytics"){
+        setAudioProcessingOperation("audio analytics")
+      }else if(operation === "compute participation and impact style"){
+        console.log("checking transcript ",simplifiedTranscript)
+        setAudioProcessingOperation("compute P&I style")
+      }
       connect_audio_posthoc_processor_service()
     }
 
   }
 
-  const connecttovideoservice = (speakerId, speakrAlias) => {
+  const connecttovideoservice = () => {
     if (!state.videoSocketOpen) {
       videowebsocket.current = new WebSocket(apiService.getVideoPosthocWebsocketEndpoint())
-      connect_video_processor_service()
+      connect_video_posthoc_processor_service()
     }
   }
 
@@ -814,9 +856,12 @@ function PodComponent() {
     audiowebsocket.current.onmessage = (e) => {
       if (typeof e.data === 'string') {
         const message = JSON.parse(e.data);
-        if (message['type'] === 'init posthoc analytics completed') {
+        if (message['type'] === 'init posthoc analytics completed' || message['type'] === "init participation and impact style completed" ) {
           dispatch({ type: "AUDIO_SOCKET_READY", payload: true })
         } else if (message['type'] === 'audio posthoc analytics started') {
+          setDisplayText(message['message'])
+          dispatch({ type: "AUDIO_PROCESSING_STARTED", payload: true })
+        }else if (message['type'] === 'speaker metric computation started') {
           setDisplayText(message['message'])
           dispatch({ type: "AUDIO_PROCESSING_STARTED", payload: true })
         } else if (message['type'] === 'process_completed') {
@@ -838,7 +883,7 @@ function PodComponent() {
   }
 
   // Connects to processor websocket server.
-  const connect_video_processor_service = () => {
+  const connect_video_posthoc_processor_service = () => {
     videowebsocket.current.binaryType = "arraybuffer"
 
     videowebsocket.current.onopen = (e) => {
@@ -905,6 +950,8 @@ function PodComponent() {
       setSelectedSpkrId2={setSelectedSpkrId2}
       spkr1Transcripts={spkr1Transcripts}
       spkr2Transcripts={spkr2Transcripts}
+      spkr1TimelineTranscripts = {spkr1TimelineTranscripts}
+      spkr2TimelineTranscripts = {spkr2TimelineTranscripts}
       spkr1VideoMetrics={spkr1VideoMetrics}
       spkr2VideoMetrics={spkr2VideoMetrics}
       getSpeakerAliasFromID={getSpeakerAliasFromID}
