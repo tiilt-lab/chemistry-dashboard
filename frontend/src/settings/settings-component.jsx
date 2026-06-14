@@ -114,9 +114,14 @@ function SettingsComponent(props) {
     } else if (!loadDevices && newForm === "SyncStudentProfile") {
       setCurrentForm("Loading")
       syncStudentProfile()
-    }else if (!loadDevices && newForm === "ExportSurveyResponses") {
+    }else if (!loadDevices && (newForm === "ExportSurveyResponses" || newForm === "ExportRatingResponses" )) {
       setCurrentForm("Loading")
-      exportSurveyResponsesData()
+      if (newForm === "ExportSurveyResponses"){
+        exportSurveyResponsesData()
+      }else if (newForm === "ExportRatingResponses"){
+        exportSurveyRatingData()
+      }
+      
     }else {
       setCurrentForm(newForm);
     }
@@ -164,6 +169,35 @@ function SettingsComponent(props) {
             apierror
           );
           alert("Failed to download survey responses.");
+        }
+      );
+    
+  };
+
+  const exportSurveyRatingData = () => {
+    const fetchData = new AuthService().downloadRatingResponses();
+
+      fetchData.then(
+        (response) => {
+          if (response.status === 200) {
+            response.text().then((Data) => {
+              const anchor = document.createElement("a");
+              anchor.href =
+                "data:attachment/csv;charset=utf-8," + encodeURI(Data);
+              anchor.download = "rating_reponse.csv";
+              anchor.click();
+             setCurrentForm("")
+            });
+          } else {
+            alert("Failed to download rating responses.");
+          }
+        },
+        (apierror) => {
+          console.log(
+            "Settingsfunc: exportRatingResponsesData 1 ",
+            apierror
+          );
+          alert("Failed to download rating responses.");
         }
       );
     

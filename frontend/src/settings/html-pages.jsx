@@ -46,6 +46,7 @@ function SettingComponentPage(props) {
                 <div className="option-button small-section" onClick={() => props.openDialog("ViewRaters", true)}>View Raters</div>
                 <div className="option-button small-section" onClick={() => props.openDialog("AddRater")}>Add Rater</div>
                 <div className="option-button small-section" onClick={() => props.openDialog("DeleteRater", true)}>Delete Rater</div>
+                <div className="option-button small-section" onClick={() => props.openDialog("ExportRatingResponses")}>Export Rating Responses</div>
               </React.Fragment>
 
               <React.Fragment>

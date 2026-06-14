@@ -101,3 +101,27 @@ def post_speaker_transcript_metrics(transcript_data, speakers, participation_sco
     except Exception as e:
         logging.warning('Speaker Metrics callback failed: {0}'.format(e))
         return False
+    
+#Post speaker metrics with transcript data
+def post_recomputed_speaker_transcript_metrics(transcript_data, speakers, participation_scores, internal_cohesion, responsivity, social_impact, newness, communication_density):
+    result = {
+        'source': transcript_data['source'],
+        'start_time': transcript_data['start_time'],
+        'transcript_id': transcript_data['transcript_id'],
+        'transcript': transcript_data['transcript'],
+        'speaker_tag': transcript_data['speaker_tag'],
+        'speaker_id':transcript_data['speaker_id'],
+        'speakers':speakers,
+        'participation_scores': participation_scores,
+        'internal_cohesion': internal_cohesion,
+        'responsivity': responsivity,
+        'social_impact': social_impact,
+        'newness': newness,
+        'communication_density': communication_density
+    }
+    try:
+        response = requests.post(config.recompute_speaker_metrics_callback(), json=result)
+        return response.status_code == 200
+    except Exception as e:
+        logging.warning('Speaker Metrics callback failed: {0}'.format(e))
+        return False    

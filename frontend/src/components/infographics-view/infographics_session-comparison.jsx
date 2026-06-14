@@ -213,6 +213,7 @@ function AppInfographicsSessionComparison(props) {
                     >
                         <AppIndividualFeaturesComponent
                             session={props.session}
+                            speakers = {props.speakers.length}
                             transcripts={props.session1Transcripts}
                             spkrId= "sessiontranscriptcomparison"
                             showFeatures={props.showFeatures}
@@ -229,6 +230,7 @@ function AppInfographicsSessionComparison(props) {
                     >
                         <AppIndividualFeaturesComponent
                             session={props.session}
+                            speakers = {props.speakers.length}
                             transcripts={props.session2Transcripts}
                             spkrId="sessiontranscriptcomparison"
                             showFeatures={props.showFeatures}

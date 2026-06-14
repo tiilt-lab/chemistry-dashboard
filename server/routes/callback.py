@@ -188,7 +188,7 @@ def add_speaker_transcript_metrics(**kwargs):
     room_name = str(session_device.session_id)
     metrics = []
     for i in range(0, len(participation_scores)):
-      speaker_id = speakers[i-1] if i != 0 else None
+      speaker_id =  speakers[i] #speakers[i-1] if i != 0 else None
       metric = database.add_speaker_transcript_metrics(speaker_id=speaker_id,
                                               transcript_id=transcript.id,
                                               participation_score=participation_scores[i],
@@ -201,6 +201,67 @@ def add_speaker_transcript_metrics(**kwargs):
     socketio.emit('transcript_metrics_update', json.dumps({'transcript':transcript.json(), 'speaker_metrics':metrics}), room=room_name, namespace="/session")
     res = {'transcript_id':transcript.__hash__()}
   return json_response(payload=res)
+
+
+@api_routes.route('/api/v1/callback/recompute_speaker_transcript_metrics', methods=['POST'])
+@wrappers.verify_local
+def add_recomputed_speaker_transcript_metrics(**kwargs):
+  # EXPECTED FORMAT
+  # {
+  #     'source': str
+  #     'start_time': int
+  #     'transcript_id': int
+  #     'transcript': str
+  #     'speaker_tag':str
+  #     'speaker_id': int
+  #     'speakers': [str]
+  #     'participation_scores': [float]
+  #     'internal_cohesion': [float]
+  #     'responsivity': [float]
+  #     'social_impact': [float]
+  #     'newness': [float]
+  #     'communication_density': [float]
+  # }
+  content = request.get_json()
+  key = content.get('source', '')
+  start_time = content.get('start_time', 0)
+  transcript_id = content.get('transcript_id', -1)
+  transcript = content.get('transcript', '')
+  speaker_tag = content.get('speaker_tag', '')
+  speaker_id = content.get('speaker_id', -1)
+  speakers = content.get('speakers', [])
+  participation_scores = content.get('participation_scores', [])
+  internal_cohesion = content.get('internal_cohesion', [])
+  responsivity = content.get('responsivity', [])
+  social_impact = content.get('social_impact', [])
+  newness = content.get('newness', [])
+  communication_density = content.get('communication_density', [])
+
+  res = {}
+
+  transcript_exist = database.get_transcripts(transcript_id=transcript_id)
+  
+  if transcript_exist:
+    speaker_metrics_exits = database.get_speaker_transcript_metrics(transcript_id=transcript_id)
+    
+    # if records exists for this transcript_id in speaker_transcript_metric, then delete it to insert recomputed one
+    if speaker_metrics_exits:
+      database.delete_speaker_transcript_metrics(transcript_id=transcript_id)
+
+    # metrics = []
+    for i in range(0, len(participation_scores)):
+      speaker_id =  speakers[i] #speakers[i-1] if i != 0 else None
+      metric = database.add_speaker_transcript_metrics(speaker_id=speaker_id,
+                                              transcript_id=transcript_id,
+                                              participation_score=participation_scores[i],
+                                              internal_cohesion=internal_cohesion[i],
+                                              responsivity=responsivity[i],
+                                              social_impact=social_impact[i],
+                                              newness=newness[i],
+                                              communication_density=communication_density[i])
+    res = {'inserted':True}
+  return json_response(payload=res)
+
 
 @api_routes.route('/api/v1/callback/speakervideometrics', methods=['POST'])
 def add_speaker_video_metrics(**kwargs):

@@ -72,19 +72,19 @@ function IndividualFeaturePage(props) {
                                                         adjDim(22) + "px",
                                                 }}
                                             >
-                                                {Math.round(feature.average)}
+                                                { Math.round(feature.last)}
                                             </div>
                                             <div
                                                 className={
                                                     feature.trend === 1
                                                         ? `${style["direction-indicator"]} ${style.positive}`
                                                         : feature.trend === 0
-                                                          ? `${style["direction-indicator"]} ${style.neutral}`
-                                                          : feature.trend === -1
-                                                            ? `${style["direction-indicator"]} ${style.negative}`
-                                                            : style[
-                                                                  "direction-indicator"
-                                                              ]
+                                                            ? `${style["direction-indicator"]} ${style.neutral}`
+                                                            : feature.trend === -1
+                                                                ? `${style["direction-indicator"]} ${style.negative}`
+                                                                : style[
+                                                                "direction-indicator"
+                                                                ]
                                                 }
                                             ></div>
                                         </td>
@@ -100,27 +100,92 @@ function IndividualFeaturePage(props) {
                                                     }}
                                                 ></div>
                                             ) : (
+                                                <>
+                                                    {index === 0 ? (
+                                                        // <ParticipationShareChart
+                                                        // shares = {feature.values}
+                                                        // time = {feature.time}
+                                                        // expectedShare={Math.round((1/props.speakers)*100)}
+                                                        // >  </ParticipationShareChart> 
 
-                                                    <Line 
-                                                    data={{
-                                                            labels: feature.time,
-                                                            datasets: [{
-                                                            data: feature.values,
-                                                            // stepped: true,
-                                                            borderWidth: 2,
-                                                            pointRadius: 0,
-                                                            }],
-                                                        }}
-                                                                                                        
-                                                    options={{
+                                                        <Line
+                                                            data={{
+                                                                labels: feature.time,
+                                                                datasets: [
+                                                                    {
+                                                                        label: "Participant share",
+                                                                        data: feature.values,
+                                                                        borderWidth: 2,
+                                                                        pointRadius: 0,
+                                                                    },
+                                                                    {
+                                                                        label: `Expected share (${Math.round((1 / props.speakers) * 100)}%)`,
+                                                                        data: feature.time.map(() => Math.round((1 / props.speakers) * 100)),
+                                                                        borderWidth: 2,
+                                                                        pointRadius: 0,
+                                                                        borderDash: [6, 6],
+                                                                    },
+                                                                ],
+                                                            }}
+                                                            options={{
+                                                                responsive: true,
+                                                                plugins: {
+                                                                    legend: {
+                                                                        display: true,
+                                                                        labels: {
+                                                                            usePointStyle: true,
+                                                                            pointStyle: 'line'
+                                                                        }
+                                                                    }
+                                                                },
+                                                                scales: {
+                                                                    x: {
+                                                                        title: {
+                                                                            text: "Time (s)",
+                                                                            display: true,
+                                                                        },
+                                                                    },
+                                                                    y: {
+                                                                        min: 0,
+                                                                        max: 100 //Math.min(100, Math.ceil((Math.max(...feature.values, Math.round((1 / props.speakers) * 100)) + 10) / 10) * 10)
+                                                                        ,
+                                                                        title: {
+                                                                            text: "Participation (%)",
+                                                                            display: true,
+                                                                        },
+                                                                        ticks: {
+                                                                            callback: function (value) {
+                                                                                return `${value}%`;
+                                                                            },
+                                                                        },
+                                                                    },
+                                                                },
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <Line
+                                                            data={{
+                                                                labels: feature.time,
+                                                                datasets: [{
+                                                                    data: feature.values,
+                                                                    // stepped: true,
+                                                                    borderWidth: 2,
+                                                                    pointRadius: 0,
+                                                                }],
+                                                            }}
+
+                                                            options={{
                                                                 responsive: true,
                                                                 plugins: { legend: { display: false } },
                                                                 scales: {
-                                                                x: { title: { text: "Time (s)", display: true } },
-                                                                y: { title: { text: feature.name, display: true } },
+                                                                    x: { title: { text: "Time (s)", display: true } },
+                                                                    y: { title: { text: feature.name, display: true } },
                                                                 },
-                                                            }} 
-                                                />
+                                                            }}
+                                                        />
+
+                                                    )}
+                                                </>
                                                 // <svg
                                                 //     viewBox="0 -0.5 74 39.5"
                                                 //     className={style.svg}
@@ -142,6 +207,7 @@ function IndividualFeaturePage(props) {
                                                 //         }
                                                 //     ></path>
                                                 // </svg>
+
                                             )}
                                         </td>
                                     </tr>

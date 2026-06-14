@@ -69,6 +69,7 @@ function StudentSessionDashboard() {
   const [wrongInput, setWrongInput] = useState(false)
   const [pcode, setPcode] = useState("")
   const [userDetail, setUserDetail] = useState(null)
+  const [speakers, setSpeakers] = useState([]);
 
   const [transcripts, setTranscripts] = useState([])
   const [videoMetrics, setVideoMetrics] = useState([])
@@ -229,6 +230,7 @@ function StudentSessionDashboard() {
       if (!firstLoadCompleted) {
         setSelectedSessionId1(sessionId)
       }
+      getSpeakers(sessionId,selectedDeviceID)
       setDetails("Individual");
       setDisplaySingleSession(true);
     }
@@ -502,6 +504,23 @@ function StudentSessionDashboard() {
   }
 
 
+  const getSpeakers = (sessionid,sessiondeviceid) => {
+    const fetchData = sessionService.getSessionDeviceSpeakers(sessionid,sessiondeviceid);
+    fetchData.then(
+      (response) => {
+        if (response.status === 200)
+          response.json().then((jsonObj) => {
+            const input = SpeakerModel.fromJsonList(jsonObj)
+            if (input && input.length) {
+              setSpeakers(input);
+            }
+          });
+      },
+      (apierror) => {
+        console.log("podcomponent func getspeakers 1", apierror);
+      }
+    );
+  };
 
   // ___________________________________________________________ 
   //   STEP 2.2: This is called inside step 2 if this student select to view current session           
@@ -1318,6 +1337,7 @@ function StudentSessionDashboard() {
       dialogHeading = {dialogHeading}
       setCurrentForm = {setCurrentForm}
       navBackTo = {navBackTo}
+      speakers={speakers}
 
       loadReflectiondashboard={loadReflectiondashboard}
       reflectionDashboardDoneLoading={reflectionDashboardDoneLoading}

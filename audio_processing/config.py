@@ -62,3 +62,6 @@ def root_dir():
 
 def speaker_metrics_callback():
     return str(config['output']['speaker_metrics_callback'])
+
+def recompute_speaker_metrics_callback():
+    return str(config['output']['recompute_speaker_metrics_callback'])

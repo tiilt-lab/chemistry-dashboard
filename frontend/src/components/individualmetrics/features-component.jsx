@@ -41,13 +41,17 @@ function AppIndividualFeaturesComponent(props) {
     }
 
     var speaker_metric;
+    var speaker_metric_by_contribution
     transcripts.forEach((t) => {
       // console.log("before find speaker metric is ", t.speaker_metrics,spkrId)
       if(spkrId !== "sessiontranscriptcomparison"){
         //select speaker metrics from transcripts based on the spkrId
-        speaker_metric = t.speaker_metrics.find(
-        (item) => item.speaker_id === spkrId
-      );
+        speaker_metric = t.speaker_metrics.find((item) => item.speaker_id === spkrId);
+       
+       //filter by transcript specifically contributed by the participant 
+      if(t.speaker_id === spkrId){
+        speaker_metric_by_contribution = t.speaker_metrics.find((item) => item.speaker_id === spkrId);
+      }
 
      
       }else{
@@ -60,7 +64,7 @@ function AppIndividualFeaturesComponent(props) {
       // console.log("speaker metric is ", speaker_metric,spkrId)
       if (speaker_metric){
         //accumulate each score into their value array
-      valueArrays[0].values.push(speaker_metric.participation_score * 100);
+      valueArrays[0].values.push(((speaker_metric.participation_score+1)/props.speakers) * 100);
       valueArrays[1].values.push(speaker_metric.social_impact * 100);
       valueArrays[2].values.push(speaker_metric.responsivity * 100);
       valueArrays[3].values.push(speaker_metric.internal_cohesion * 100);
@@ -73,6 +77,11 @@ function AppIndividualFeaturesComponent(props) {
       valueArrays[3].time.push(t.start_time);
       valueArrays[4].time.push(t.start_time);
       }
+
+      // if(speaker_metric_by_contribution){
+      //   valueArrays[4].values.push(speaker_metric_by_contribution.newness * 100);
+      //   valueArrays[4].time.push(t.start_time);
+      // }
       
     });
 
@@ -172,6 +181,7 @@ function AppIndividualFeaturesComponent(props) {
       features={features}
       getInfo={getInfo}
       showFeatures={props.showFeatures}
+      speakers = {props.speakers}
     />
   );
 }

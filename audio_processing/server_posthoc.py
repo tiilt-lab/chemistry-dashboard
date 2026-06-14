@@ -14,6 +14,7 @@ from scipy.io import wavfile
 from scipy.io import wavfile
 from recorder import VidRecorder
 from processor_posthoc import AudioProcessorPosthoc
+from processor_speaker_metric import SpeakerMetricProcessor
 from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager
 from audio_buffer import AudioBuffer
@@ -137,11 +138,56 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.send_json({'type':'init posthoc analytics completed','message':"Starting Audio Analytics Processing"})
                     logging.info('Audio Posthoc analytics initiated')
 
+        if data['type'] == 'Initialize_participation_and_impact_style_computation':
+            self.sessionid = data['sessionid']
+            self.session_device_id = data['sessiondeviceid']
+            self.server_start= data['server_start']
+            self.keywords= data['keywords'] 
+            self.transcript = data["transcript"]
+            self.sample_rate = 16000
+            self.speakers = dict()
+
+            self.audio_file = self.get_audio_file_path(self.session_device_id)
+
+            if not self.audio_file:
+                self.send_json({'type': 'error', 'message': 'No audio captured for this group.'})
+            else:
+                self.audio_file = str(self.audio_file)
+                file_path_split = self.audio_file.split("(")
+                key = file_path_split[0].split("/")[-1]
+                off_set_date = file_path_split[1].split(")")[0]
+ 
+                 #keep track of currently running posthoc video analytics
+                if key in running_audio_processes:
+                    self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
+
+                running_audio_processes[key] = "running"    
+
+                conf_val = {'key':key,'encoding': "pcm_f32le", 'sample_rate': self.sample_rate,'channels': 1,'sessionid': self.sessionid,'deviceid': self.session_device_id,
+                                'tag': True, 'server_start':self.server_start,'keywords':self.keywords,'transcribe':True,'features':True,'doa':True,'topic_model':None,'owner':1,'off_set_date':off_set_date}
+                valid, result = ProcessingConfig.from_json(conf_val,source="posthoc processing")
+                if not valid:
+                    logging.info("Confgiration setting failed for audio posthoc processing")
+                else:    
+                    self.config = result
+                    for speaker in data['speakers']:
+                        self.speakers[speaker["id"]] = {"alias": speaker["alias"], "id": speaker["id"]}
+                    self.processorspeakermetric = SpeakerMetricProcessor(self.sessionid, self.session_device_id, self.transcript,semantic_model,self.config,running_audio_processes)
+                    self.processorspeakermetric.setSpeakerFingerprints(self.speakers)
+                    self.send_json({'type':'init participation and impact style completed','message':"Starting Speaker Transcript Metric Processing"})
+                    logging.info('participation and impact style initiated')
+       
+
         if data['type'] == 'start_posthoc_audio_processing':
             # start reading audio from wav file and pass to processors
             self.send_json({'type':'audio posthoc analytics started','message':"Processing Audio posthoc Analytics"})
             self.audioreader.add_websocket_connection(self)
             self.audioreader.start()
+
+        if data['type'] == 'start_speaker_transcript_processing':
+            self.send_json({'type':'speaker metric computation started','message':"Computing Speaker Metric"})
+            self.processorspeakermetric.add_websocket_connection(self)
+            self.processorspeakermetric.start()
 
         if data['type'] == 'heartbeat_from_posthoc_processing':
             auth_key = data.get('key', None)

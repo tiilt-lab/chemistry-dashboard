@@ -68,6 +68,8 @@ function JoinPage() {
     const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1)
     const [spkr1Transcripts, setSpkr1Transcripts] = useState([])
     const [spkr2Transcripts, setSpkr2Transcripts] = useState([])
+    const [spkr1TimelineTranscripts, setSpkr1TimelineTranscripts] = useState([]);
+    const [spkr2TimelineTranscripts, setSpkr2TimelineTranscripts] = useState([]);
     const [spkr1VideoMetrics, setSpkr1VideoMetrics] = useState([])
     const [spkr2VideoMetrics, setSpkr2VideoMetrics] = useState([])
     const [selectedSpkralias, setSelectedSpkralias] = useState("");
@@ -1241,7 +1243,9 @@ function JoinPage() {
 
     const setSpeakerTranscripts = () => {
         if (displayTranscripts.length) {
-            setSpkr1Transcripts(
+            setSpkr1Transcripts(displayTranscripts);
+
+            setSpkr1TimelineTranscripts(
                 displayTranscripts.reduce((values, transcript) => {
 
                     if (transcript.speaker_id === selectedSpkrId1
@@ -1250,8 +1254,9 @@ function JoinPage() {
                     }
                     return values;
                 }, [])
-            );
-            setSpkr2Transcripts(
+            )
+            setSpkr2Transcripts(displayTranscripts);
+            setSpkr2TimelineTranscripts(
                 displayTranscripts.reduce((values, transcript) => {
                     if (transcript.speaker_id === selectedSpkrId2
                     ) {
@@ -1259,10 +1264,12 @@ function JoinPage() {
                     }
                     return values;
                 }, [])
-            );
+            )
         } else {
             setSpkr1Transcripts([]);
+            setSpkr1TimelineTranscripts([])
             setSpkr2Transcripts([]);
+            setSpkr2TimelineTranscripts([])
         }
     };
 
@@ -1593,7 +1600,7 @@ function JoinPage() {
         setIsRecording(true)
     };
 
-  
+
     return (
         <ByodJoinPage
             state={state}
@@ -1642,6 +1649,8 @@ function JoinPage() {
             setSelectedSpkrId1={setSelectedSpkrId1}
             selectedSpkrId2={selectedSpkrId2}
             setSelectedSpkrId2={setSelectedSpkrId2}
+            spkr1TimelineTranscripts={spkr1TimelineTranscripts}
+            spkr2TimelineTranscripts={spkr2TimelineTranscripts}
             getSpeakerAliasFromID={getSpeakerAliasFromID}
             spkr1Transcripts={spkr1Transcripts}
             spkr2Transcripts={spkr2Transcripts}

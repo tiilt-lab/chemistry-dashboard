@@ -230,7 +230,7 @@ class AudioProcessorPosthoc:
                         'topic_id': topic_id,
                         'speaker_tag': speaker_tag,
                         'speaker_id': speaker_id
-                    },source="posthoc_processing")
+                    },action="posthoc_processing")
             else:
                 if self.config.diarization:
                     if len(self.embeddings) == 0 and self.embeddings_file is not None:

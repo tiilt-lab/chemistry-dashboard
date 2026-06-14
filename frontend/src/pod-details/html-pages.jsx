@@ -41,11 +41,15 @@ function PodComponentPages(props) {
                                 },
                                 {
                                     title: "Post-Hoc Audio Analytics",
-                                    action: () => props.connecttoaudioservice(),
+                                    action: () => props.connecttoaudioservice("post hoc audio analytics"),
                                 },
                                 {
                                     title: "Post-Hoc Video Analytics",
                                     action: () => props.connecttovideoservice(),
+                                },
+                                {
+                                    title: "Re-compute P&I Style",
+                                    action: () => props.connecttoaudioservice("compute participation and impact style"),
                                 }
                             ]}
                             participants={props.speakers.map((speaker, index) => (
@@ -100,6 +104,8 @@ function PodComponentPages(props) {
                                 setSelectedSpkrId2={props.setSelectedSpkrId2}
                                 spkr1Transcripts={props.spkr1Transcripts}
                                 spkr2Transcripts={props.spkr2Transcripts}
+                                spkr1TimelineTranscripts = {props.spkr1TimelineTranscripts}
+                                spkr2TimelineTranscripts = {props.spkr2TimelineTranscripts}
                                 spkr1VideoMetrics={props.spkr1VideoMetrics}
                                 spkr2VideoMetrics={props.spkr2VideoMetrics}
                                 details={props.details}

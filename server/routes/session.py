@@ -3,7 +3,8 @@ from utility import sanitize, string_to_bool, json_response
 from tables.session_device import SessionDevice
 from redis_helper import RedisSessions
 from tables.session import Session
-from utility import json_response,batch_video_metrics,batch_transcript_metrics,batch_transcript_video_metrics,synthesized_transcript_video_metrics_by_window
+from utility import json_response
+from compute_collaboration_metrics import batch_video_metrics,batch_transcript_metrics,batch_transcript_video_metrics,synthesized_transcript_video_metrics_by_window
 from app import socketio
 import logging
 import database
@@ -356,7 +357,7 @@ def update_transcript_speaker(**kwargs):
 
     success, transcript = database.update_transcript_speaker(transcript_id=transcriptId,sessiondeviceid=sessiondeviceId,speakerid=speakerId,speakertag=speakerAlias)
     success2 = database.update_speaker_transcript_metricsBy_transcript_id(transcriptId,speakerId)
-    if success and success2:
+    if success or success2:
         return json_response()
     return json_response({'message': 'Transcript not found.'}, 400)
 
@@ -601,18 +602,24 @@ def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
     combine_metric_level = {'group_id': session_device.id, 'group_name': session_device.name, 'window_level':{}, 'participants_level':{}, 'session_level':{}, 'session_all_metrics':{},'group_level':{}}
     
     exisiting_synthesis = database.get_synthesized_feedback_report(sessionId=session_id, sessionDeviceId = session_device_id)
-
-    # if exisiting_synthesis:
-    #     raw = str(exisiting_synthesis[0].synthesized_feedback)
-    #     combine_metric_level = json.loads(raw)
-    # else:
-
     keywords = database.get_keyword_usages(session_device_id=session_device_id)
-    # speakers = database.get_speakers(session_device_id=session_device_id)
+
+    speakers = database.get_speakers(session_device_id=session_device.id)
+    speakers_obj = {}
+    for spk in speakers:
+        speakers_obj[spk.alias] = spk.id
 
     videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device_id)
-    transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session_by_timeline(session_device_id=session_device.id)
-    combine_metric_level = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,windowsize=10)#speakers,
+
+    transcriptSpeakerMetric=[]
+    transcripts = database.get_transcripts(session_device_id=session_device.id)
+    for transcript in transcripts:
+        speaker_metrics = database.get_speaker_transcript_metrics(transcript_id=transcript.id)
+        transcriptSpeakerMetric.append({'transcript' : transcript,
+                                            'speaker_metrics' : [speaker_metric for speaker_metric in speaker_metrics]})
+        
+    # transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session_by_timeline(session_device_id=session_device.id)
+    combine_metric_level = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,speakers_obj,windowsize=10)#speakers,
 
     combine_metric_dump = json.dumps(combine_metric_level)
     # add to the database
@@ -632,7 +639,7 @@ def getSynthesizedSessionAnalytics(session_id,session_name, **kwargs):
     field_names = None  
     fwrite = None 
     session_devices = database.get_session_devices(session_id=session_id)
-    field_names = ['Session ID','Session Name', 'Device ID', 'Device Name',"User ID" ,'Engagement', 'Focus','Idea Contribution', 'Initiative', 'Leadership', 'Momentum', 'Reasoning', 'Verbal Share','Turn Taking',
+    field_names = ['Session ID','Session Name', 'Device ID', 'Device Name',"User ID" ,'Engagement', 'Focus','Idea Contribution', 'Initiative', 'Leadership', 'Momentum', 'Reasoning', 'Verbal Share', 'Verbal Share (Balanced)','Dominance','Under Contribution', 'Turn Taking', 'Turn Taking (Balanced)',
                    "Shared Task Focus","Analytic Thinking",'Authenticity', 'Certainty','Clout','Internal Cohesion','Social Impact','Newness', 'Participation Score', 'Responsivity', 'Word Count']
     fwrite = csv.DictWriter(si, fieldnames = field_names)
     fwrite.writeheader()
@@ -640,14 +647,23 @@ def getSynthesizedSessionAnalytics(session_id,session_name, **kwargs):
         combine_metric_level = {'group_id': session_device.id, 'group_name': session_device.name, 'window_level':{}, 'participants_level':{}, 'session_level':{},'session_all_metrics':{},'group_level':{}}
 
         keywords = database.get_keyword_usages(session_device_id=session_device.id)
-        # speakers = database.get_speakers(session_device_id=session_device_id)
+       
+        speakers = database.get_speakers(session_device_id=session_device.id)
+        speakers_obj = {}
+        for spk in speakers:
+            speakers_obj[spk.alias] = spk.id
+
         videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device.id)
-        transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session_by_timeline(session_device_id=session_device.id)
-        combine_metric_level = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,windowsize=10)#speakers,
+        transcriptSpeakerMetric=[]
+        transcripts = database.get_transcripts(session_device_id=session_device.id)
+        for transcript in transcripts:
+            speaker_metrics = database.get_speaker_transcript_metrics(transcript_id=transcript.id)
+            transcriptSpeakerMetric.append({'transcript' : transcript,
+                                                'speaker_metrics' : [speaker_metric for speaker_metric in speaker_metrics]})
+                
+        # transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session_by_timeline(session_device_id=session_device.id)
+        combine_metric_level = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,speakers_obj,windowsize=10)#speakers,
         session_all_metrics = combine_metric_level['session_all_metrics']
-        ['avg_focusscore','avg_participationscore','avg_responsivity','avg_engagementscore','avg_reasoningscore','avg_leadershipscore', 'avg_initiativescore','avg_ideacontributionscore',
-                            'avg_speakingalignmentscore','avg_momentum','sharedtaskfocus','avg_analyticthinking','avg_authenticity','avg_certainty','avg_clout','avg_internalcohesion','avg_socialimpact','avg_newness',
-                            'avg_verbalshare','avg_turntaking','wordcount','avg_trenddirection','earlytrenddirection','midtrenddirection','latetrenddirection'] 
         for speaker, metrics in session_all_metrics.items():
             fwrite.writerow({'Session ID': session_id,
                     'Session Name': session_name,
@@ -662,7 +678,11 @@ def getSynthesizedSessionAnalytics(session_id,session_name, **kwargs):
                     'Momentum': metrics.get('avg_momentum', 0),
                     'Reasoning': metrics.get('avg_reasoningscore', 0),
                     'Verbal Share': metrics.get('avg_verbalshare', 0),
+                    'Verbal Share (Balanced)': metrics.get('avg_verbalshare_bal', 0),
+                    'Dominance': metrics.get('Dominance', -1), 
+                    'Under Contribution': metrics.get('undercontribution', -1),
                     'Turn Taking': metrics.get('avg_turntaking', 0),
+                    'Turn Taking (Balanced)': metrics.get('avg_turntaking_bal', 0),
                     'Shared Task Focus': metrics.get('sharedtaskfocus', 0),
                     'Analytic Thinking': metrics.get('avg_analyticthinking', 0),
                     'Authenticity': metrics.get('avg_authenticity', 0),

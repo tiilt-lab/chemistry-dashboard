@@ -120,6 +120,10 @@ class AuthService {
    return new ApiService().httpRequestCall("api/v1/admin/surveyresponses", 'GET', {});
   }
 
+  downloadRatingResponses() {
+   return new ApiService().httpRequestCall("api/v1/admin/ratingresponses", 'GET', {});
+  }
+
   getStudentProfileByID(username) {
     return new ApiService().httpRequestCall("api/v1/student/getstudentbyid/"+ username, 'GET', {});
   }
