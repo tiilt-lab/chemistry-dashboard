@@ -1025,15 +1025,15 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
         session_metrics.append(round(session_responsivity,2))
         session_all_metrics.append(round(session_responsivity,2))
         session_metrics.append(round(sum(enagementscore)/total_windows,2))           
-        session_all_metrics.append(round(compute_average(enagementscore, exclude_zeros=True),2))
+        session_all_metrics.append(round(get_last_metric_value(enagementscore),2))
         session_metrics.append(round(sum(reasoningscore)/total_windows,2))
         session_all_metrics.append(round(compute_average(reasoningscore, exclude_zeros=True),2))
         session_metrics.append(round(sum(leadershipscore)/total_windows,2))
-        session_all_metrics.append(round(compute_average(leadershipscore, exclude_zeros=True),2))
+        session_all_metrics.append(round(get_last_metric_value(leadershipscore),2))
         session_metrics.append(round(sum(initiativescore)/total_windows,2))
         session_all_metrics.append(round(compute_average(initiativescore, exclude_zeros=True),2))
         session_metrics.append(round(sum(ideacontributionscore)/total_windows,2))
-        session_all_metrics.append(round(compute_average(ideacontributionscore, exclude_zeros=True),2))
+        session_all_metrics.append(round(get_last_metric_value(ideacontributionscore),2))
         session_metrics.append(round(sum(speakingalignmentscore)/total_windows,2))
         session_all_metrics.append(round(compute_average(speakingalignmentscore, exclude_zeros=True),2))
         session_metrics.append(round(trajectory['trajectory_score']*100,2))
@@ -1130,11 +1130,11 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
         if relative_contribution > 1:
             overcontribution = max(0,relative_contribution - 1)
             overcontribution = min(1,overcontribution) #cap any particpation share above 1 to 1. so that value range between 0 and 1
-            avg_responsivity = session_all_metrics[2]
-            dominance = overcontribution * (1- (avg_responsivity/100))
+            final_responsivity = session_all_metrics[2]
+            dominance = overcontribution * (1- (final_responsivity/100))
         else: 
-            avg_soc_impt = session_all_metrics[16]
-            undercontribution = (1-relative_contribution)*(1-(avg_soc_impt/100)) 
+            final_soc_impt = session_all_metrics[16]
+            undercontribution = (1-relative_contribution)*(1-(final_soc_impt/100)) 
 
     session_all_metrics.append(round(dominance,2))
     session_all_metrics.append(round(undercontribution,2)) 
