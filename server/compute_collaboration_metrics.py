@@ -1025,7 +1025,7 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
         session_metrics.append(round(session_responsivity,2))
         session_all_metrics.append(round(session_responsivity,2))
         session_metrics.append(round(sum(enagementscore)/total_windows,2))           
-        session_all_metrics.append(round(get_last_metric_value(enagementscore),2))
+        session_all_metrics.append(round(compute_average(enagementscore, exclude_zeros=True),2))
         session_metrics.append(round(sum(reasoningscore)/total_windows,2))
         session_all_metrics.append(round(compute_average(reasoningscore, exclude_zeros=True),2))
         session_metrics.append(round(sum(leadershipscore)/total_windows,2))
