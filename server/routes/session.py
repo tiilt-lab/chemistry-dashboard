@@ -633,14 +633,18 @@ def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
 
     return json_response(combine_metric_level)
 
-@api_routes.route('/api/v1/sessions/<int:session_id>/sessionname/<string:session_name>/synthesized_session_analytics',methods=['GET'])
-def getSynthesizedSessionAnalytics(session_id,session_name, **kwargs):
+@api_routes.route('/api/v1/sessions/<int:session_id>/sessionname/<string:session_name>/datatype/<string:datatype>/synthesized_session_analytics',methods=['GET'])
+def getSynthesizedSessionAnalytics(session_id,session_name,datatype, **kwargs):
     si = io.StringIO()
     field_names = None  
     fwrite = None 
     session_devices = database.get_session_devices(session_id=session_id)
-    field_names = ['Session ID','Session Name', 'Device ID', 'Device Name',"User ID" ,'Engagement', 'Focus','Idea Contribution', 'Initiative', 'Leadership', 'Momentum', 'Reasoning', 'Verbal Share', 'Verbal Share (Balanced)','Dominance','Under Contribution', 'Turn Taking', 'Turn Taking (Balanced)',
-                   "Shared Task Focus","Analytic Thinking",'Authenticity', 'Certainty','Clout','Internal Cohesion','Social Impact','Newness', 'Participation Score', 'Responsivity', 'Word Count']
+    if datatype == 'individual-analytics':
+        field_names = ['Session ID','Session Name', 'Device ID', 'Device Name',"User ID" ,'Engagement', 'Focus','Idea Contribution', 'Initiative', 'Leadership', 'Momentum', 'Reasoning', 'Verbal Share', 'Verbal Share (Balanced)','Dominance','Under Contribution', 'Turn Taking', 'Turn Taking (Balanced)',
+                    "Shared Task Focus","Analytic Thinking",'Authenticity', 'Certainty','Clout','Internal Cohesion','Social Impact','Newness', 'Participation Score', 'Responsivity', 'Word Count']
+    elif datatype == 'group-analytics':   
+        field_names = ['Session ID','Session Name', 'Device ID', 'Device Name','Num of Particpants','Verbal Share (Balanced)','Participation(turntaking) Balance',"Shared Task Focus","Group Trajectory",'Group Engagement', 'Group Cohesion'] 
+    
     fwrite = csv.DictWriter(si, fieldnames = field_names)
     fwrite.writeheader()
     for session_device in session_devices:
@@ -663,39 +667,54 @@ def getSynthesizedSessionAnalytics(session_id,session_name, **kwargs):
                 
         # transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session_by_timeline(session_device_id=session_device.id)
         combine_metric_level = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,speakers_obj,windowsize=10)#speakers,
-        session_all_metrics = combine_metric_level['session_all_metrics']
-        for speaker, metrics in session_all_metrics.items():
+        if datatype == 'individual-analytics':
+            session_all_metrics = combine_metric_level['session_all_metrics']
+            for speaker, metrics in session_all_metrics.items():
+                fwrite.writerow({'Session ID': session_id,
+                        'Session Name': session_name,
+                        'Device ID':session_device.id,
+                        'Device Name':session_device.name,
+                        'User ID': speaker,
+                        'Engagement': metrics.get('avg_engagementscore', 0),
+                        'Focus': metrics.get('avg_focusscore', 0),
+                        'Idea Contribution': metrics.get('avg_ideacontributionscore', 0),
+                        'Initiative': metrics.get('avg_initiativescore', 0),
+                        'Leadership': metrics.get('avg_leadershipscore', 0),
+                        'Momentum': metrics.get('avg_momentum', 0),
+                        'Reasoning': metrics.get('avg_reasoningscore', 0),
+                        'Verbal Share': metrics.get('avg_verbalshare', 0),
+                        'Verbal Share (Balanced)': metrics.get('avg_verbalshare_bal', 0),
+                        'Dominance': metrics.get('Dominance', -1), 
+                        'Under Contribution': metrics.get('undercontribution', -1),
+                        'Turn Taking': metrics.get('avg_turntaking', 0),
+                        'Turn Taking (Balanced)': metrics.get('avg_turntaking_bal', 0),
+                        'Shared Task Focus': metrics.get('sharedtaskfocus', 0),
+                        'Analytic Thinking': metrics.get('avg_analyticthinking', 0),
+                        'Authenticity': metrics.get('avg_authenticity', 0),
+                        'Certainty': metrics.get('avg_certainty', 0),
+                        'Clout': metrics.get('avg_clout', 0),
+                        'Internal Cohesion':  metrics.get('avg_internalcohesion', 0),
+                        'Social Impact':  metrics.get('avg_socialimpact', 0),
+                        'Newness':  metrics.get('avg_newness', 0),
+                        'Participation Score': metrics.get('avg_participationscore', 0),
+                        'Responsivity':  metrics.get('avg_responsivity', 0),
+                        'Word Count': metrics.get('wordcount', 0)
+                        })
+        elif datatype == 'group-analytics':
+            metrics = combine_metric_level['group_level']
             fwrite.writerow({'Session ID': session_id,
                     'Session Name': session_name,
                     'Device ID':session_device.id,
                     'Device Name':session_device.name,
-                    'User ID': speaker,
-                    'Engagement': metrics.get('avg_engagementscore', 0),
-                    'Focus': metrics.get('avg_focusscore', 0),
-                    'Idea Contribution': metrics.get('avg_ideacontributionscore', 0),
-                    'Initiative': metrics.get('avg_initiativescore', 0),
-                    'Leadership': metrics.get('avg_leadershipscore', 0),
-                    'Momentum': metrics.get('avg_momentum', 0),
-                    'Reasoning': metrics.get('avg_reasoningscore', 0),
-                    'Verbal Share': metrics.get('avg_verbalshare', 0),
-                    'Verbal Share (Balanced)': metrics.get('avg_verbalshare_bal', 0),
-                    'Dominance': metrics.get('Dominance', -1), 
-                    'Under Contribution': metrics.get('undercontribution', -1),
-                    'Turn Taking': metrics.get('avg_turntaking', 0),
-                    'Turn Taking (Balanced)': metrics.get('avg_turntaking_bal', 0),
-                    'Shared Task Focus': metrics.get('sharedtaskfocus', 0),
-                    'Analytic Thinking': metrics.get('avg_analyticthinking', 0),
-                    'Authenticity': metrics.get('avg_authenticity', 0),
-                    'Certainty': metrics.get('avg_certainty', 0),
-                    'Clout': metrics.get('avg_clout', 0),
-                    'Internal Cohesion':  metrics.get('avg_internalcohesion', 0),
-                    'Social Impact':  metrics.get('avg_socialimpact', 0),
-                    'Newness':  metrics.get('avg_newness', 0),
-                    'Participation Score': metrics.get('avg_participationscore', 0),
-                    'Responsivity':  metrics.get('avg_responsivity', 0),
-                    'Word Count': metrics.get('wordcount', 0)
+                    'Num of Particpants': metrics.get('total_speaker_detected', 0),
+                    'Verbal Share (Balanced)': metrics.get('verbalcontributionbalance', -1),
+                    'Participation(turntaking) Balance': metrics.get('participationbalance', -1), 
+                    'Shared Task Focus': metrics.get('Sharedtaskfocus', 0),
+                    'Group Trajectory': metrics.get('trajectory', 0),
+                    'Group Engagement': metrics.get('engagement', 0),
+                    'Group Cohesion': metrics.get('groupcohesion', 0),
                     })
-            
+    
     output = make_response(si.getvalue())
     output.headers["Content-Disposition"] = "attachment; filename=export.csv"
     output.headers["Content-type"] = "text/csv"
