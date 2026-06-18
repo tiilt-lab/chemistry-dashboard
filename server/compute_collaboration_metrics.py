@@ -1255,7 +1255,7 @@ def synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,video
         participation_share_std = statistics.stdev(group_level_metric_acc['participationshare'])
         Combined_object['group_level']['total_speaker_detected'] = total_speaker_detected
         Combined_object['group_level']['verbalcontributionbalance'] = round((1 / (1+verbal_share_std)),2) if len(group_level_metric_acc['verbalsharebalance']) > 0 else 0
-        Combined_object['group_level']['participationbalance'] =  round((1 / (1+participation_share_std)),2) if group_level_metric_acc['participationshare'] > 0 else 0
+        Combined_object['group_level']['participationbalance'] =  round((1 / (1+participation_share_std)),2) if len(group_level_metric_acc['participationshare']) > 0 else 0
         Combined_object['group_level']['Sharedtaskfocus'] = round(sum(group_level_metric_acc['sharedtaskfocus'])/total_speaker_detected,2)
         # Combined_object['group_level']['responsivity'] = round((sum(group_level_metric_acc['responsivity'])/total_speaker_detected)*100,2)
         # Combined_object['group_level']['ideacontribution'] = round((sum(group_level_metric_acc['ideacontributionscore'])/total_speaker_detected)*100,2)
