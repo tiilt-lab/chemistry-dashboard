@@ -380,9 +380,9 @@ class SessionService {
     );
   }
 
-  getSynthesizedSessionAnalytics(sessionId, sessionName) {
+  getSynthesizedSessionAnalytics(sessionId, sessionName,datatype) {
     return this.api.httpRequestCall(
-      `api/v1/sessions/${sessionId}/sessionname/${sessionName}/synthesized_session_analytics`,
+      `api/v1/sessions/${sessionId}/sessionname/${sessionName}/datatype/${datatype}/synthesized_session_analytics`,
       "GET",
       {}
     );

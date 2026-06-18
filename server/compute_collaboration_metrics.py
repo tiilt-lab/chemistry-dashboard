@@ -1025,7 +1025,7 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
         session_metrics.append(round(session_responsivity,2))
         session_all_metrics.append(round(session_responsivity,2))
         session_metrics.append(round(sum(enagementscore)/total_windows,2))           
-        session_all_metrics.append(round(get_last_metric_value(enagementscore),2))
+        session_all_metrics.append(round(compute_average(enagementscore, exclude_zeros=True),2))
         session_metrics.append(round(sum(reasoningscore)/total_windows,2))
         session_all_metrics.append(round(compute_average(reasoningscore, exclude_zeros=True),2))
         session_metrics.append(round(sum(leadershipscore)/total_windows,2))
@@ -1090,8 +1090,9 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
         session_all_metrics.append(0)
         session_all_metrics.append(0)
     
-    share_portion = round(100/no_of_participants, 2) if no_of_participants > 0 else 0
+    share_portion = round(100/no_of_participants, 2) if no_of_participants > 0 else 1
     if len(total_verbal_turn_acc) > 0:     
+        # logging.info("checking:verbal contibution {0}; sum word count:{1}, total_verbal_turn_acc: {2},sum total_verbal_turn_acc: {3},share_portion: {4} verbal share:{5}".format(speaking_word_count,sum(speaking_word_count),total_verbal_turn_acc,sum(total_verbal_turn_acc),share_portion,(((sum(speaking_word_count)/sum(total_verbal_turn_acc)) *100)/share_portion)*100))
         session_metrics.append(round((((sum(speaking_word_count)/sum(total_verbal_turn_acc)) *100)/share_portion)*100,2))
         session_all_metrics.append(round((((sum(speaking_word_count)/sum(total_verbal_turn_acc)) *100)/share_portion)*100,2))
         session_metrics.append(round((sum(speaking_word_count)/sum(total_verbal_turn_acc))*100,2))
@@ -1141,9 +1142,9 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
   
 
     
-
+    
     group_level_metric_acc['focusscore'].append(session_all_metrics[0]/100)
-    group_level_metric_acc['participationscore'].append(session_all_metrics[1]/100)
+    group_level_metric_acc['participationshare'].append(session_all_metrics[1]/share_portion)
     group_level_metric_acc['responsivity'].append(session_all_metrics[2]/100)
     group_level_metric_acc['engagementscore'].append(session_all_metrics[3]/100)
     group_level_metric_acc['reasoningscore'].append(session_all_metrics[4]/100)
@@ -1151,8 +1152,9 @@ def compute_derived_metric_and_update(metric_acc_per_window,all_windows,speakerD
     group_level_metric_acc['initiativescore'].append(session_all_metrics[6]/100)
     group_level_metric_acc['ideacontributionscore'].append(session_all_metrics[7]/100)
     group_level_metric_acc['speakingalignmentscore'].append(session_all_metrics[8]/100)
-    group_level_metric_acc['momentum'].append(session_all_metrics[9]/100)
+    group_level_metric_acc['trajectory'].append(session_all_metrics[9]/100)
     group_level_metric_acc['sharedtaskfocus'].append(session_all_metrics[10])
+    group_level_metric_acc['verbalsharebalance'].append(session_all_metrics[18]/100)
     group_level_metric_acc['verbalshare'].append(session_all_metrics[19]/100)
     group_level_metric_acc['turntaking'].append(session_all_metrics[21]/100)
     group_level_metric_acc['trenddirection'].append(session_all_metrics[15])
@@ -1247,15 +1249,21 @@ def synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,video
 
     if total_speaker_detected > 1:
         #compute group level metric using the accumulated group data data 
-        Combined_object['group_level']['verbalparticipationbalance'] = round((1 - statistics.stdev(group_level_metric_acc['verbalshare']))*100,2) 
-        Combined_object['group_level']['turntakingbalance'] = round((1 - statistics.stdev(group_level_metric_acc['turntaking'])) * 100,2)
+        # logging.info("checking verbal shares : {0}, SD: {1} mean: {2}".format(group_level_metric_acc['verbalsharebalance'], statistics.stdev(group_level_metric_acc['verbalsharebalance']), round(compute_average(group_level_metric_acc['verbalsharebalance']),2)))
+        # logging.info("checking Participation shares : {0}, SD: {1} mean: {2}".format(group_level_metric_acc['participationshare'], statistics.stdev(group_level_metric_acc['participationshare']), round(compute_average(group_level_metric_acc['participationshare']),2)))
+        verbal_share_std = statistics.stdev(group_level_metric_acc['verbalsharebalance'])
+        participation_share_std = statistics.stdev(group_level_metric_acc['participationshare'])
+        Combined_object['group_level']['total_speaker_detected'] = total_speaker_detected
+        Combined_object['group_level']['verbalcontributionbalance'] = round((1 / (1+verbal_share_std)),2) if len(group_level_metric_acc['verbalsharebalance']) > 0 else 0
+        Combined_object['group_level']['participationbalance'] =  round((1 / (1+participation_share_std)),2) if group_level_metric_acc['participationshare'] > 0 else 0
         Combined_object['group_level']['Sharedtaskfocus'] = round(sum(group_level_metric_acc['sharedtaskfocus'])/total_speaker_detected,2)
-        Combined_object['group_level']['responsivity'] = round((sum(group_level_metric_acc['responsivity'])/total_speaker_detected)*100,2)
-        Combined_object['group_level']['ideacontribution'] = round((sum(group_level_metric_acc['ideacontributionscore'])/total_speaker_detected)*100,2)
-        Combined_object['group_level']['momentum'] = round((sum(group_level_metric_acc['momentum'])/total_speaker_detected)*100,2)
-        Combined_object['group_level']['participation'] = round((sum(group_level_metric_acc['participationscore'])/total_speaker_detected)*100,2)
+        # Combined_object['group_level']['responsivity'] = round((sum(group_level_metric_acc['responsivity'])/total_speaker_detected)*100,2)
+        # Combined_object['group_level']['ideacontribution'] = round((sum(group_level_metric_acc['ideacontributionscore'])/total_speaker_detected)*100,2)
+        Combined_object['group_level']['trajectory'] = round((sum(group_level_metric_acc['trajectory'])/total_speaker_detected)*100,2)
+        # Combined_object['group_level']['participation'] = round((sum(group_level_metric_acc['participationscore'])/total_speaker_detected)*100,2)
         Combined_object['group_level']['engagement'] = round((sum(group_level_metric_acc['engagementscore'])/total_speaker_detected)*100,2) 
-        Combined_object['group_level']['focusscore'] = round((sum(group_level_metric_acc['focusscore'])/total_speaker_detected)*100,2) 
+        # Combined_object['group_level']['focusscore'] = round((sum(group_level_metric_acc['focusscore'])/total_speaker_detected)*100,2) 
+        Combined_object['group_level']['groupcohesion'] = round(((0.5*sum(group_level_metric_acc['socialimpact'])*100) + (0.5*sum(group_level_metric_acc['responsivity'])*100)) /total_speaker_detected,2)
         
     
     return Combined_object

@@ -201,9 +201,9 @@ function PodsOverviewComponent() {
     }
   };
 
- const exportSessionAnalytics = () => {
+ const exportSessionAnalytics = (datatype) => {
    
-    const fetchData = new SessionService().getSynthesizedSessionAnalytics(session.id, session.title);
+    const fetchData = new SessionService().getSynthesizedSessionAnalytics(session.id, session.title,datatype);
     fetchData.then(
         (response) => {
           if (response.status === 200) {
@@ -232,8 +232,8 @@ function PodsOverviewComponent() {
     exportSessionMetricsData(datatype,windowsize,format);
   }
 
-  const ExportAnalytics = () => {
-    exportSessionAnalytics();
+  const exportData = (datatype) => {
+    exportSessionAnalytics(datatype);
   }
 
   const closeDialog = () => {
@@ -243,6 +243,7 @@ function PodsOverviewComponent() {
   const openDownloadOptionDialog = (dialog) => {
     setCurrentForm(dialog);
   };
+
 
   const goToGraph = () => {
     navigate("/sessions/" + session.id + "/graph");
@@ -308,7 +309,7 @@ function PodsOverviewComponent() {
       goToSpeakerMetrics={goToSpeakerMetrics}
       openDownloadOptionDialog={openDownloadOptionDialog}
       downloadData={downloadData}
-      ExportAnalytics={ExportAnalytics}
+      exportData = {exportData}
     />
   );
 }

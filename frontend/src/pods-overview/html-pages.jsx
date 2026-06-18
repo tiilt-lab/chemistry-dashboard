@@ -51,7 +51,7 @@ function PodsOverviewPages(props) {
                                 },
                                 {
                                     title: "Export Analytics",
-                                    action: () => props.ExportAnalytics()
+                                    action: () => props.openDownloadOptionDialog("selectexportoption") 
                                 },
                                 {
                                     title: "Graph",
@@ -265,6 +265,43 @@ function PodsOverviewPages(props) {
                             </button>
                         </div>
                     )) ||
+
+                    (props.currentForm === "selectexportoption" && (
+                        <div
+                            className={style5["dialog-window"]}
+                            style={{ "min-width": adjDim(200) + "px" }}
+                        >
+                            <div className={style5["dialog-heading"]}>
+                                Select the Data to Export:
+                            </div>
+                            <select
+                                id="datatype"
+                                className="dropdown small-section"
+                            >
+                                <option value="">Select data to export</option>
+                                <option value="individual-analytics">Individual Analytics</option>
+                                <option value="group-analytics">Group Analytics</option>
+                            </select>
+
+                            <button
+                                className={style5["basic-button"]}
+                                onClick={() => {
+                                    props.exportData(document.getElementById("datatype").value)
+                                }}
+                            >
+                                {" "}
+                                Confirm
+                            </button>
+                            <button
+                                className={style5["cancel-button"]}
+                                onClick={props.closeDialog}
+                            >
+                                {" "}
+                                Cancel
+                            </button>
+                        </div>
+                    ))
+                    ||
                     (props.currentForm === "Passcode" && (
                         <div>
                             <div className={style2["dialog-heading"]}>
