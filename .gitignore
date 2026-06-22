@@ -61,6 +61,9 @@ eggs/
 lib/
 lib64/
 lib64
+# Frontend shadcn utilities live in frontend/src/lib — keep them tracked despite the Python `lib/` rule above.
+!frontend/src/lib/
+!frontend/src/lib/**
 parts/
 sdist/
 var/
