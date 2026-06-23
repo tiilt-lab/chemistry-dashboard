@@ -56,20 +56,20 @@ app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=2 if cf.cloud() else 1, x_proto=1)
 
 # Redis
-r = redis.Redis(host='localhost', port=6379, db=0)
+r = redis.Redis(host=cf.redis_host(), port=cf.redis_port(), db=cf.redis_db())
 
 # Set API Limiter
 limiter = Limiter(app, key_func=get_remote_address)
 
 # Create SocketIO app (engineio_logger=True for advance debug)
 if cf.cloud():
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"127.0.0.1:5000","localhost"], manage_session=False, message_queue="redis://")
+	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"127.0.0.1:5000","localhost"], manage_session=False, message_queue=cf.redis_url())
 else:
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"127.0.0.1:5000","localhost"],manage_session=False, message_queue="redis://")
+	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"127.0.0.1:5000","localhost"],manage_session=False, message_queue=cf.redis_url())
 
 # Create database
 DATABASE_FILE = os.path.dirname(os.path.abspath(__file__)) + '/discussion_capture.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://{0}@localhost:3306/discussion_capture'.format(cf.database_user())
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://{0}@localhost:3306/{1}'.format(cf.database_user(), cf.database_name())
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
