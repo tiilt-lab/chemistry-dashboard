@@ -27,5 +27,22 @@ def database_user():
     user = str(config['server']['database_user'])
     return "{0}:{1}".format(user, user)
 
+def database_name():
+    return str(config['server'].get('database_name', 'discussion_capture'))
+
 def root_dir():
     return str(config['rootpath']['root_dir'])
+
+def redis_host():
+    return str(config['server'].get('redis_host', 'localhost'))
+
+def redis_port():
+    return int(config['server'].get('redis_port', 6379))
+
+def redis_db():
+    # Defaults to 0 so existing deployments are unchanged. Set to a distinct
+    # value per instance to isolate Redis keys + the SocketIO message queue.
+    return int(config['server'].get('redis_db', 0))
+
+def redis_url():
+    return 'redis://{0}:{1}/{2}'.format(redis_host(), redis_port(), redis_db())
