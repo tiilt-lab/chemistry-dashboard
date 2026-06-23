@@ -1,0 +1,34 @@
+# BLINC server configuration template.
+#
+# Copy this file to config.ini and edit for your environment:
+#     cp config.ini.example config.ini
+#
+# config.ini is intentionally git-ignored: it holds per-deployment values
+# (domain, paths) and per-instance isolation settings. Multiple instances can
+# share one machine by giving each its own database_name, redis_db, and
+# root_dir (plus DC_PORT / DC_DEVICE_WS_PORT env vars at launch).
+
+[server]
+# true behind HTTPS/AWS, false for local dev.
+https=false
+debug=true
+
+# Public host:port the frontend is served from.
+domain=localhost:3000
+
+# MySQL user (password is derived as user:user) and database name.
+# Give each instance its own database to isolate schema/migrations.
+database_user=vagrant
+database_name=discussion_capture
+
+# Redis connection. Defaults: localhost:6379, db 0.
+# Give each instance a distinct redis_db to isolate the SocketIO message
+# queue and helper keys from other instances on the same Redis server.
+#redis_host=localhost
+#redis_port=6379
+redis_db=0
+
+[rootpath]
+# Base directory for runtime file storage (biometrics, etc.).
+# Point each instance at its own path to avoid clobbering shared files.
+root_dir=/var/lib
