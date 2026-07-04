@@ -545,6 +545,13 @@ def get_pod_dynamics(session_id, session_device_id, **kwargs):
     # + the who-follows-whom response network.
     return json_response(database.get_conversation_dynamics(session_device_id))
 
+
+@api_routes.route('/api/v1/students/<username>/longitudinal', methods=['GET'])
+@wrappers.verify_login(public=True)
+def get_student_longitudinal(username, **kwargs):
+    # A student's per-session speaking share + attention across the term.
+    return json_response(database.get_student_longitudinal(username))
+
 @api_routes.route('/api/v1/devices/<int:session_device_id>/session_device', methods=['GET'])
 def session_device_by_id(session_device_id, **kwargs):
     device = database.get_session_devices(id=session_device_id)
