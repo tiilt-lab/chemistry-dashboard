@@ -387,8 +387,8 @@ export default function CollaborationFeedbackDashboardPrototype() {
                 <div className="mt-2 text-lg font-semibold">Idea relay</div>
                 <div className="text-sm text-muted-foreground">Needs stronger peer uptake</div>
               </div>
-              <div className="rounded-3xl bg-sky-50 p-4 ring-1 ring-sky-100">
-                <div className="flex items-center gap-2 text-sm text-sky-700"><CalendarRange className="h-4 w-4" />View mode</div>
+              <div className="rounded-3xl bg-tiilt-soft p-4 ring-1 ring-tiilt-soft">
+                <div className="flex items-center gap-2 text-sm text-tiilt"><CalendarRange className="h-4 w-4" />View mode</div>
                 <div className="mt-2 text-lg font-semibold">Session story</div>
                 <div className="text-sm text-muted-foreground">Flow, dips, and recovery</div>
               </div>

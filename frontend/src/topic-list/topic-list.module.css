@@ -11,12 +11,12 @@
   display: grid;
   padding: 10px;
   border-style: solid;
-  border-color: #FCFDFF;
+  border-color: #f5f3f9;
   margin: 16px 16px 16px 16px;
-  background-color: #FCFDFF;
+  background-color: #f5f3f9;
   border-radius: 4px;
-  -webkit-box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2), 0 8px 8px -4px rgba(69, 69, 153, 0.2);
-          box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2), 0 8px 8px -4px rgba(69, 69, 153, 0.2);
+  -webkit-box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.2), 0 8px 8px -4px rgba(42, 23, 74, 0.2);
+          box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.2), 0 8px 8px -4px rgba(42, 23, 74, 0.2);
   -webkit-transition: -webkit-box-shadow 0.2s ease-in-out;
   transition: -webkit-box-shadow 0.2s ease-in-out;
   transition: box-shadow 0.2s ease-in-out;
@@ -24,7 +24,7 @@
 }
 
 .model-selected {
-  border-color: #7878FA;
+  border-color: #3a2163;
 }
 
 .model-list-button .model-list-header {
@@ -45,7 +45,7 @@
   font-weight: 700;
   font-size: 17px;
   line-height: 24px;
-  color: #58585C;
+  color: #221a33;
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
@@ -58,7 +58,7 @@
   font-weight: 400;
   font-size: 12px;
   line-height: 20px;
-  color: #727278;
+  color: #675e7d;
   white-space: nowrap;
 }
 
@@ -77,7 +77,7 @@
   font-weight: 400;
   font-size: 12px;
   line-height: 20px;
-  color: #727278;
+  color: #675e7d;
   margin-top: 8px;
   width: 100%;
   display: -webkit-box;
@@ -96,7 +96,7 @@
   font-weight: 400;
   font-size: 12px;
   line-height: 20px;
-  color: #727278;
+  color: #675e7d;
   margin-top: 8px;
   width: 100%;
   display: -webkit-box;
@@ -118,7 +118,7 @@
   border-radius: 5px;
   border-style: solid;
   border-width: 1px;
-  border-color: #a7a7a7;
+  border-color: #c9bede;
   outline: none;
   -webkit-transition: border-color 0.5s;
   transition: border-color 0.5s;
@@ -145,8 +145,8 @@
   -webkit-box-sizing: border-box;
           box-sizing: border-box;
   cursor: pointer;
-  -webkit-box-shadow: 0 0 8px 0 rgba(69, 69, 153, 0.2), 0 8px 8px -4px rgba(69, 69, 153, 0.2);
-          box-shadow: 0 0 8px 0 rgba(69, 69, 153, 0.2), 0 8px 8px -4px rgba(69, 69, 153, 0.2);
+  -webkit-box-shadow: 0 0 8px 0 rgba(42, 23, 74, 0.2), 0 8px 8px -4px rgba(42, 23, 74, 0.2);
+          box-shadow: 0 0 8px 0 rgba(42, 23, 74, 0.2), 0 8px 8px -4px rgba(42, 23, 74, 0.2);
   -webkit-transition: -webkit-box-shadow 0.2s ease-in-out;
   transition: -webkit-box-shadow 0.2s ease-in-out;
   transition: box-shadow 0.2s ease-in-out;
@@ -155,8 +155,8 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #FAFAFC;
-  background: linear-gradient(147.59deg, #764BFF 0%, #7BB7F1 100%);
+  color: #ffffff;
+  background: linear-gradient(147.59deg, #3a2163 0%, #5b3a94 100%);
 }
 
 .basic-button:focus {
@@ -164,13 +164,13 @@
 }
 
 .basic-button:hover {
-  -webkit-box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2), 0 12px 12px -4px rgba(69, 69, 153, 0.2);
-          box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2), 0 12px 12px -4px rgba(69, 69, 153, 0.2);
+  -webkit-box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.2), 0 12px 12px -4px rgba(42, 23, 74, 0.2);
+          box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.2), 0 12px 12px -4px rgba(42, 23, 74, 0.2);
 }
 
 .basic-button:active {
-  -webkit-box-shadow: 0 0 2px 0 rgba(57, 57, 128, 0.08), 0 6px 6px -4px rgba(57, 57, 128, 0.24);
-          box-shadow: 0 0 2px 0 rgba(57, 57, 128, 0.08), 0 6px 6px -4px rgba(57, 57, 128, 0.24);
+  -webkit-box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.08), 0 6px 6px -4px rgba(42, 23, 74, 0.24);
+          box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.08), 0 6px 6px -4px rgba(42, 23, 74, 0.24);
 }
 
 .delete-button {
@@ -182,8 +182,8 @@
   -webkit-box-sizing: border-box;
           box-sizing: border-box;
   cursor: pointer;
-  -webkit-box-shadow: 0 0 8px 0 rgba(69, 69, 153, 0.2), 0 8px 8px -4px rgba(69, 69, 153, 0.2);
-          box-shadow: 0 0 8px 0 rgba(69, 69, 153, 0.2), 0 8px 8px -4px rgba(69, 69, 153, 0.2);
+  -webkit-box-shadow: 0 0 8px 0 rgba(42, 23, 74, 0.2), 0 8px 8px -4px rgba(42, 23, 74, 0.2);
+          box-shadow: 0 0 8px 0 rgba(42, 23, 74, 0.2), 0 8px 8px -4px rgba(42, 23, 74, 0.2);
   -webkit-transition: -webkit-box-shadow 0.2s ease-in-out;
   transition: -webkit-box-shadow 0.2s ease-in-out;
   transition: box-shadow 0.2s ease-in-out;
@@ -192,8 +192,8 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #FAFAFC;
-  background: #FF6363;
+  color: #ffffff;
+  background: #b3261e;
 }
 
 .delete-button:focus {
@@ -201,13 +201,13 @@
 }
 
 .delete-button:hover {
-  -webkit-box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2), 0 12px 12px -4px rgba(69, 69, 153, 0.2);
-          box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2), 0 12px 12px -4px rgba(69, 69, 153, 0.2);
+  -webkit-box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.2), 0 12px 12px -4px rgba(42, 23, 74, 0.2);
+          box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.2), 0 12px 12px -4px rgba(42, 23, 74, 0.2);
 }
 
 .delete-button:active {
-  -webkit-box-shadow: 0 0 2px 0 rgba(57, 57, 128, 0.08), 0 6px 6px -4px rgba(57, 57, 128, 0.24);
-          box-shadow: 0 0 2px 0 rgba(57, 57, 128, 0.08), 0 6px 6px -4px rgba(57, 57, 128, 0.24);
+  -webkit-box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.08), 0 6px 6px -4px rgba(42, 23, 74, 0.24);
+          box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.08), 0 6px 6px -4px rgba(42, 23, 74, 0.24);
 }
 
 .cancel-button {
@@ -227,7 +227,7 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #3991CC;
+  color: #5b3a94;
 }
 
 .cancel-button:focus {
@@ -237,7 +237,7 @@
 .pod-button {
   border-radius: 18px;
   border: none;
-  fill: #7878FA;
+  fill: #3a2163;
   background: transparent;
   -webkit-box-sizing: border-box;
           box-sizing: border-box;
@@ -251,7 +251,7 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #3991CC;
+  color: #5b3a94;
 }
 
 .pod-button:focus {
@@ -281,16 +281,16 @@
   font-weight: 700;
   font-size: 17px;
   line-height: 24px;
-  color: #2B2B2E;
+  color: #221a33;
   width: 150px;
   height: 150px;
-  background-color: #FCFDFF;
+  background-color: #f5f3f9;
   border-radius: 4px;
   margin-bottom: 16px;
   margin-left: 8px;
   margin-right: 8px;
-  -webkit-box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2), 0 8px 8px -4px rgba(69, 69, 153, 0.2);
-          box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2), 0 8px 8px -4px rgba(69, 69, 153, 0.2);
+  -webkit-box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.2), 0 8px 8px -4px rgba(42, 23, 74, 0.2);
+          box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.2), 0 8px 8px -4px rgba(42, 23, 74, 0.2);
   -webkit-transition: -webkit-box-shadow 0.2s ease-in-out;
   transition: -webkit-box-shadow 0.2s ease-in-out;
   transition: box-shadow 0.2s ease-in-out;
@@ -300,8 +300,8 @@
 .pod-overview-button:hover {
   cursor: pointer;
   background-color: #FFFFFF;
-  -webkit-box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2), 0 12px 12px -3px rgba(69, 69, 153, 0.2);
-          box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2), 0 12px 12px -3px rgba(69, 69, 153, 0.2);
+  -webkit-box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.2), 0 12px 12px -3px rgba(42, 23, 74, 0.2);
+          box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.2), 0 12px 12px -3px rgba(42, 23, 74, 0.2);
 }
 
 .pod-overview-button *::-moz-selection {
@@ -378,7 +378,7 @@
 }
 
 .dc-checkbox input:checked ~ .checkmark {
-  background-color: #7878FA;
+  background-color: #3a2163;
 }
 
 .checkmark:after {
@@ -422,8 +422,8 @@
   width: 100%;
   height: 80px;
   background-color: rgba(252, 252, 255, 0.6);
-  -webkit-box-shadow: 0 -1px 4px 0 rgba(69, 69, 153, 0.2);
-          box-shadow: 0 -1px 4px 0 rgba(69, 69, 153, 0.2);
+  -webkit-box-shadow: 0 -1px 4px 0 rgba(42, 23, 74, 0.2);
+          box-shadow: 0 -1px 4px 0 rgba(42, 23, 74, 0.2);
 }
 
 .footer {
@@ -435,7 +435,7 @@
   font-weight: 500;
   font-size: 22px;
   line-height: 32px;
-  color: #58585C;
+  color: #221a33;
   width: auto;
   margin-bottom: 32px;
 }
@@ -455,7 +455,7 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #58585C;
+  color: #221a33;
 }
 
 .list-container2 {
@@ -486,13 +486,13 @@
       grid-template-rows: 56px;
   display: -ms-grid;
   display: grid;
-  background: #FCFDFF;
-  -webkit-box-shadow: 0 0 2px 2px rgba(69, 69, 153, 0.2);
-          box-shadow: 0 0 2px 2px rgba(69, 69, 153, 0.2);
+  background: #f5f3f9;
+  -webkit-box-shadow: 0 0 2px 2px rgba(42, 23, 74, 0.2);
+          box-shadow: 0 0 2px 2px rgba(42, 23, 74, 0.2);
   border-radius: 4px;
   border-style: solid;
   border-width: 2px;
-  border-color: #FCFDFF;
+  border-color: #f5f3f9;
   margin: 12px 6px;
 }
 
@@ -535,14 +535,14 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #58585C;
-  background: #FCFDFF;
-  -webkit-box-shadow: 0 0 2px 2px rgba(69, 69, 153, 0.2);
-          box-shadow: 0 0 2px 2px rgba(69, 69, 153, 0.2);
+  color: #221a33;
+  background: #f5f3f9;
+  -webkit-box-shadow: 0 0 2px 2px rgba(42, 23, 74, 0.2);
+          box-shadow: 0 0 2px 2px rgba(42, 23, 74, 0.2);
   border-radius: 4px;
   border-style: solid;
   border-width: 2px;
-  border-color: #FCFDFF;
+  border-color: #f5f3f9;
   margin: 12px 5px;
 }
 
@@ -591,14 +591,14 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #58585C;
-  background: #FCFDFF;
-  -webkit-box-shadow: 0 0 2px 2px rgba(69, 69, 153, 0.2);
-          box-shadow: 0 0 2px 2px rgba(69, 69, 153, 0.2);
+  color: #221a33;
+  background: #f5f3f9;
+  -webkit-box-shadow: 0 0 2px 2px rgba(42, 23, 74, 0.2);
+          box-shadow: 0 0 2px 2px rgba(42, 23, 74, 0.2);
   border-radius: 4px;
   border-style: solid;
   border-width: 2px;
-  border-color: #FCFDFF;
+  border-color: #f5f3f9;
   margin: 12px 6px;
 }
 
@@ -607,7 +607,7 @@
   -ms-grid-row-span: 2;
   -ms-grid-column: 1;
   grid-area: left;
-  fill: #7878FA;
+  fill: #3a2163;
   padding: 16px 10px;
 }
 
@@ -627,7 +627,7 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #58585C;
+  color: #221a33;
 }
 
 .list-container .list .session-item .session-date {
@@ -638,7 +638,7 @@
   font-weight: 400;
   font-size: 12px;
   line-height: 20px;
-  color: #727278;
+  color: #675e7d;
   padding-bottom: 2px;
 }
 
@@ -662,7 +662,7 @@
 }
 
 .breadcrumb-container .crumb-name {
-  color: #7878FA;
+  color: #3a2163;
   text-overflow: ellipsis;
   max-width: 240px;
   white-space: nowrap;
@@ -699,7 +699,7 @@
   width: 20px;
   height: 20px;
   border-radius: 10px;
-  background: #7878FA;
+  background: #3a2163;
   cursor: pointer;
 }
 
@@ -707,7 +707,7 @@
   width: 20px;
   height: 20px;
   border-radius: 10px;
-  background: #7878FA;
+  background: #3a2163;
   cursor: pointer;
 }
 
@@ -716,7 +716,7 @@
   font-weight: 400;
   font-size: 12px;
   line-height: 20px;
-  color: #727278;
+  color: #675e7d;
   width: 343px;
 }
 

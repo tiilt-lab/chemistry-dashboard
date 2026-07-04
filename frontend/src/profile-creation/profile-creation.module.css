@@ -20,26 +20,26 @@
   padding: 12px 16px 12px 16px;
   box-sizing: border-box;
   cursor: pointer;
-  box-shadow: 0 0 8px 0 rgba(69, 69, 153, 0.2),
-    0 8px 8px -4px rgba(69, 69, 153, 0.2);
+  box-shadow: 0 0 8px 0 rgba(42, 23, 74, 0.2),
+    0 8px 8px -4px rgba(42, 23, 74, 0.2);
   transition: box-shadow 0.2s ease-in-out;
   font-family: "SST", sans-serif;
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #fafafc;
-  background: linear-gradient(147.59deg, #764bff 0%, #7bb7f1 100%);
+  color: #ffffff;
+  background: linear-gradient(147.59deg, #3a2163 0%, #5b3a94 100%);
 }
 .basic-button:focus {
   outline: 0;
 }
 .basic-button:hover {
-  box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2),
-    0 12px 12px -4px rgba(69, 69, 153, 0.2);
+  box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.2),
+    0 12px 12px -4px rgba(42, 23, 74, 0.2);
 }
 .basic-button:active {
-  box-shadow: 0 0 2px 0 rgba(57, 57, 128, 0.08),
-    0 6px 6px -4px rgba(57, 57, 128, 0.24);
+  box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.08),
+    0 6px 6px -4px rgba(42, 23, 74, 0.24);
 }
 
 .delete-button {
@@ -50,26 +50,26 @@
   padding: 12px 16px 12px 16px;
   box-sizing: border-box;
   cursor: pointer;
-  box-shadow: 0 0 8px 0 rgba(69, 69, 153, 0.2),
-    0 8px 8px -4px rgba(69, 69, 153, 0.2);
+  box-shadow: 0 0 8px 0 rgba(42, 23, 74, 0.2),
+    0 8px 8px -4px rgba(42, 23, 74, 0.2);
   transition: box-shadow 0.2s ease-in-out;
   font-family: "SST", sans-serif;
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #fafafc;
-  background: #ff6363;
+  color: #ffffff;
+  background: #b3261e;
 }
 .delete-button:focus {
   outline: 0;
 }
 .delete-button:hover {
-  box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2),
-    0 12px 12px -4px rgba(69, 69, 153, 0.2);
+  box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.2),
+    0 12px 12px -4px rgba(42, 23, 74, 0.2);
 }
 .delete-button:active {
-  box-shadow: 0 0 2px 0 rgba(57, 57, 128, 0.08),
-    0 6px 6px -4px rgba(57, 57, 128, 0.24);
+  box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.08),
+    0 6px 6px -4px rgba(42, 23, 74, 0.24);
 }
 
 .cancel-button {
@@ -85,7 +85,7 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #3991cc;
+  color: #5b3a94;
 }
 .cancel-button:focus {
   outline: 0;
@@ -94,7 +94,7 @@
 .pod-button {
   border-radius: 18px;
   border: none;
-  fill: #7878fa;
+  fill: #3a2163;
   background: transparent;
   box-sizing: border-box;
   padding: 12px 16px 12px 16px;
@@ -104,7 +104,7 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #3991cc;
+  color: #5b3a94;
 }
 .pod-button:focus {
   outline: 0;
@@ -123,23 +123,23 @@
   font-weight: 700;
   font-size: 17px;
   line-height: 24px;
-  color: #2b2b2e;
+  color: #221a33;
   width: 150px;
   height: 150px;
-  background-color: #fcfdff;
+  background-color: #f5f3f9;
   border-radius: 4px;
   margin-bottom: 16px;
   margin-left: 8px;
   margin-right: 8px;
-  box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2),
-    0 8px 8px -4px rgba(69, 69, 153, 0.2);
+  box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.2),
+    0 8px 8px -4px rgba(42, 23, 74, 0.2);
   transition: box-shadow 0.2s ease-in-out;
 }
 .pod-overview-button:hover {
   cursor: pointer;
   background-color: #ffffff;
-  box-shadow: 0 0 2px 0 rgba(69, 69, 153, 0.2),
-    0 12px 12px -3px rgba(69, 69, 153, 0.2);
+  box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.2),
+    0 12px 12px -3px rgba(42, 23, 74, 0.2);
 }
 .pod-overview-button *::selection {
   background: none;
@@ -207,7 +207,7 @@
 }
 
 .dc-checkbox input:checked ~ .checkmark {
-  background-color: #7878fa;
+  background-color: #3a2163;
 }
 
 .checkmark:after {
@@ -250,7 +250,7 @@
   width: 100%;
   height: 80px;
   background-color: rgba(252, 252, 255, 0.6);
-  box-shadow: 0 -1px 4px 0 rgba(69, 69, 153, 0.2);
+  box-shadow: 0 -1px 4px 0 rgba(42, 23, 74, 0.2);
 }
 
 .footer {
@@ -262,7 +262,7 @@
   font-weight: 500;
   font-size: 22px;
   line-height: 32px;
-  color: #58585c;
+  color: #221a33;
   width: auto;
   margin-bottom: 32px;
 }
@@ -279,7 +279,7 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #58585c;
+  color: #221a33;
 }
 
 .list-container {
@@ -304,12 +304,12 @@
   grid-template-columns: 48px auto min-content;
   grid-template-rows: 56px;
   display: grid;
-  background: #fcfdff;
-  box-shadow: 0 0 2px 2px rgba(69, 69, 153, 0.2);
+  background: #f5f3f9;
+  box-shadow: 0 0 2px 2px rgba(42, 23, 74, 0.2);
   border-radius: 4px;
   border-style: solid;
   border-width: 2px;
-  border-color: #fcfdff;
+  border-color: #f5f3f9;
   margin: 12px 6px;
 }
 .list-container .list .pod-item .pod-icon {
@@ -337,13 +337,13 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #58585c;
-  background: #fcfdff;
-  box-shadow: 0 0 2px 2px rgba(69, 69, 153, 0.2);
+  color: #221a33;
+  background: #f5f3f9;
+  box-shadow: 0 0 2px 2px rgba(42, 23, 74, 0.2);
   border-radius: 4px;
   border-style: solid;
   border-width: 2px;
-  border-color: #fcfdff;
+  border-color: #f5f3f9;
   margin: 12px 5px;
 }
 .list-container .list .folder-item .folder-icon {
@@ -377,18 +377,18 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #58585c;
-  background: #fcfdff;
-  box-shadow: 0 0 2px 2px rgba(69, 69, 153, 0.2);
+  color: #221a33;
+  background: #f5f3f9;
+  box-shadow: 0 0 2px 2px rgba(42, 23, 74, 0.2);
   border-radius: 4px;
   border-style: solid;
   border-width: 2px;
-  border-color: #fcfdff;
+  border-color: #f5f3f9;
   margin: 12px 6px;
 }
 .list-container .list .session-item .session-icon {
   grid-area: left;
-  fill: #7878fa;
+  fill: #3a2163;
   padding: 16px 10px;
 }
 .list-container .list .session-item .session-title {
@@ -402,7 +402,7 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #58585c;
+  color: #221a33;
 }
 .list-container .list .session-item .session-date {
   grid-area: middle-bottom;
@@ -410,7 +410,7 @@
   font-weight: 400;
   font-size: 12px;
   line-height: 20px;
-  color: #727278;
+  color: #675e7d;
   padding-bottom: 2px;
 }
 .list-container .list .session-item .session-options {
@@ -424,7 +424,7 @@
   margin-top: 5px;
 }
 .breadcrumb-container .crumb-name {
-  color: #7878fa;
+  color: #3a2163;
   text-overflow: ellipsis;
   max-width: 240px;
   white-space: nowrap;
@@ -459,7 +459,7 @@
   width: 20px;
   height: 20px;
   border-radius: 10px;
-  background: #7878fa;
+  background: #3a2163;
   cursor: pointer;
 }
 
@@ -467,7 +467,7 @@
   width: 20px;
   height: 20px;
   border-radius: 10px;
-  background: #7878fa;
+  background: #3a2163;
   cursor: pointer;
 }
 
@@ -482,7 +482,7 @@
   font-weight: 400;
   font-size: 12px;
   line-height: 20px;
-  color: #727278;
+  color: #675e7d;
 }
 
 .dropdown-input {
@@ -495,7 +495,7 @@
   border-radius: 5px;
   border-style: solid;
   border-width: 1px;
-  border-color: #a7a7a7;
+  border-color: #c9bede;
   outline: none;
   transition: border-color 0.5s;
 }
@@ -510,13 +510,13 @@
   border-radius: 5px;
   border-style: solid;
   border-width: 1px;
-  border-color: #a7a7a7;
+  border-color: #c9bede;
   outline: none;
   transition: border-color 0.5s;
 }
 
 .text-input:focus {
-  border-color: #006db3;
+  border-color: #3a2163;
 }
 
 .dialog-window {

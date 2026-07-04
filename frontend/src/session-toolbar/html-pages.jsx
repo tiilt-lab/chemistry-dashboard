@@ -23,8 +23,8 @@ function AppSessionPage(props) {
 
                 {props.speakers && props.speakers.length !== 0 ? (
                     <div className="flex relative max-w-4/6 flex-1 flex-row items-stretch justify-start sm:w-min sm:flex-col sm:max-w-full 
-                                border-2 border-blue-500 rounded-lg px-2 mt-8 before:content-[attr(data-label)] 
-                    before:absolute before:-top-3 before:left-4  before:px-2 before:bg-white before:text-blue-500 before:font-semibold"
+                                border-2 border-tiilt rounded-lg px-2 mt-8 before:content-[attr(data-label)] 
+                    before:absolute before:-top-3 before:left-4  before:px-2 before:bg-white before:text-tiilt before:font-semibold"
                         data-label="Participants">
                         <ScrollArea className="h-[200px] mt-5 pr-3 border border-red-500">
                             {props.speakers.map((part, index) => (
@@ -46,8 +46,8 @@ function AppSessionPage(props) {
 
                 {props.seesions && props.seesions.length !== 0 ? (
                     <div className="flex relative max-w-4/6 flex-1 flex-row items-stretch justify-start sm:w-min sm:flex-col sm:max-w-full 
-                                border-2 border-blue-500 rounded-lg px-2 mt-8 before:content-[attr(data-label)] 
-                    before:absolute before:-top-3 before:left-4  before:px-2 before:bg-white before:text-blue-500 before:font-semibold"
+                                border-2 border-tiilt rounded-lg px-2 mt-8 before:content-[attr(data-label)] 
+                    before:absolute before:-top-3 before:left-4  before:px-2 before:bg-white before:text-tiilt before:font-semibold"
                         data-label="Sessions">
                         <ScrollArea className="h-[200px] mt-5 pr-3 border border-red-500">
                             {props.seesions.map((part, index) => (
@@ -83,7 +83,7 @@ function AppSessionPage(props) {
                 </div>
 
                 <button
-                    className="relative mx-2 box-border w-19 cursor-pointer rounded-4xl border bg-[#FF6363] px-1 py-2 text-center font-sans text-base/normal font-normal text-[#FAFAFC] transition-shadow hover:shadow-2xl disabled:hidden sm:w-33 sm:text-xl/loose sm:mx-0 sm:my-5"
+                    className="relative mx-2 box-border w-19 cursor-pointer rounded-4xl border bg-tiilt-danger px-1 py-2 text-center font-sans text-base/normal font-normal text-white transition-shadow hover:shadow-2xl disabled:hidden sm:w-33 sm:text-xl/loose sm:mx-0 sm:my-5"
                     onClick={props.onEndSession}
                     disabled={!props.session.recording || props.fromClient}
                 >

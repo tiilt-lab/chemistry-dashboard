@@ -15,9 +15,9 @@
   display: grid;
   padding: 10px;
   border-style: solid;
-  border-color: #FCFDFF;
+  border-color: #f5f3f9;
   margin: $inset-L;
-  background-color: #FCFDFF;
+  background-color: #f5f3f9;
   border-radius: $space-XS;
   box-shadow: 0 0 2px 0 $shadow-blue-alpha, 0 8px 8px -4px $shadow-blue-alpha;
   transition: box-shadow 0.2s ease-in-out;
@@ -29,7 +29,7 @@
   }
 
   &:active {
-      box-shadow: 0 0 2px 0 rgba(57,57,128,0.08), 0 6px 6px -4px rgba(57,57,128,0.24);
+      box-shadow: 0 0 2px 0 rgba(42, 23, 74,0.08), 0 6px 6px -4px rgba(42, 23, 74,0.24);
   }
 
   .keyword-list-header {

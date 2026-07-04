@@ -215,8 +215,8 @@ function CollaborationFeedbackDashboard(props) {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 grid-cols-1 lg:grid-cols-4">
-                  <div className="rounded-2xl bg-sky-50 p-4 ring-1 ring-sky-100">
-                    <div className="flex items-center gap-2 text-sm text-sky-700"><Users className="h-4 w-4" />Session - Group</div>
+                  <div className="rounded-2xl bg-tiilt-soft p-4 ring-1 ring-tiilt-soft">
+                    <div className="flex items-center gap-2 text-sm text-tiilt"><Users className="h-4 w-4" />Session - Group</div>
                     <div className="text-sm text-muted-foreground">{props.sessionNameForReflecDashboard}</div>
                     <div className="mt-2 text-lg font-semibold">{props.groupNameForReflecDashboard}</div>
                   </div>
@@ -499,7 +499,7 @@ function CollaborationFeedbackDashboard(props) {
                   </CardHeader>
                   <CardContent className="space-y-5">
                     <div className="grid gap-3 md:grid-cols-4">
-                      <div className="rounded-2xl bg-sky-50 p-4">
+                      <div className="rounded-2xl bg-tiilt-soft p-4">
                         <div className="flex items-center gap-2 text-xs text-muted-foreground"><Eye className="h-3.5 w-3.5" />Focus</div>
                         <div className="mt-2 text-2xl font-semibold">{selectedMoment.focusscore}</div>
                       </div>

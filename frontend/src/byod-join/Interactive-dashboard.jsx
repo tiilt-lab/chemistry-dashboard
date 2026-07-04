@@ -184,7 +184,7 @@ function statusBadge(status) {
 
 function versionAccent(version) {
   if (version === "v2") return "from-rose-50 via-background to-amber-50";
-  if (version === "v3") return "from-sky-50 via-background to-violet-50";
+  if (version === "v3") return "from-tiilt-soft via-background to-violet-50";
   if (version === "v4") return "from-emerald-50 via-background to-cyan-50";
   return "from-background via-background to-muted/30";
 }
@@ -270,8 +270,8 @@ function VersionCards({ version, setVersion }) {
 function OverviewStrip({ selectedParticipant }) {
   return (
     <div className="grid gap-4 md:grid-cols-4">
-      <div className="rounded-2xl bg-sky-50 p-4 ring-1 ring-sky-100">
-        <div className="flex items-center gap-2 text-sm text-sky-700"><Users className="h-4 w-4" />Student</div>
+      <div className="rounded-2xl bg-tiilt-soft p-4 ring-1 ring-tiilt-soft">
+        <div className="flex items-center gap-2 text-sm text-tiilt"><Users className="h-4 w-4" />Student</div>
         <div className="mt-2 text-lg font-semibold">{selectedParticipant.name}</div>
       </div>
       <div className="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
@@ -459,7 +459,7 @@ function CollaborationFeedbackDashboardPrototype() {
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="grid gap-3 md:grid-cols-4">
-              <div className="rounded-2xl bg-sky-50 p-4"><div className="text-xs text-sky-700">Focus</div><div className="mt-2 text-2xl font-semibold">{selectedMoment.focus}</div></div>
+              <div className="rounded-2xl bg-tiilt-soft p-4"><div className="text-xs text-tiilt">Focus</div><div className="mt-2 text-2xl font-semibold">{selectedMoment.focus}</div></div>
               <div className="rounded-2xl bg-violet-50 p-4"><div className="text-xs text-violet-700">Talk</div><div className="mt-2 text-2xl font-semibold">{selectedMoment.participation}</div></div>
               <div className="rounded-2xl bg-amber-50 p-4"><div className="text-xs text-amber-700">Ideas</div><div className="mt-2 text-2xl font-semibold">{selectedMoment.idea}</div></div>
               <div className="rounded-2xl bg-emerald-50 p-4"><div className="text-xs text-emerald-700">Respond</div><div className="mt-2 text-2xl font-semibold">{selectedMoment.responsivity}</div></div>

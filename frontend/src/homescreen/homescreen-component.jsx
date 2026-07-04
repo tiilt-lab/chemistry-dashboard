@@ -36,12 +36,6 @@ const MENUS = [
         desc: "Train and manage topic models",
         path: "/topic-models",
     },
-    {
-        icon: settings,
-        name: "Settings",
-        desc: "Account and application settings",
-        path: "/settings",
-    },
 ]
 
 function MenuCard({ icon, name, desc, onClick }) {
@@ -96,6 +90,13 @@ function HomeScreen() {
                     </span>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
+                    <button
+                        onClick={() => navigate("/settings")}
+                        className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
+                    >
+                        <img alt="" src={settings} className="h-4 w-4" />
+                        Settings
+                    </button>
                     <button
                         onClick={navigateToHelp}
                         className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
