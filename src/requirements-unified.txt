@@ -207,7 +207,13 @@ nvidia-nvtx-cu12==12.8.90
 nvidia-nvvm==13.2.78
 omegaconf==2.3.1
 onnx==1.22.0
-onnxruntime==1.27.0
+# InsightFace runs on onnxruntime. Do NOT also install the CPU `onnxruntime`
+# package — it shadows the GPU provider (both ship the same module). PyPI's
+# onnxruntime-gpu==1.27.0 is a CUDA-13 build (needs libcudart.so.13) and will
+# not import against this stack's CUDA 12.8 (torch cu128). Install the CUDA-12
+# build from Microsoft's feed instead:
+#   pip install onnxruntime-gpu==1.27.0 \
+#     --index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/
 onnxruntime-gpu==1.27.0
 openai==2.44.0
 openai-harmony==0.0.8
