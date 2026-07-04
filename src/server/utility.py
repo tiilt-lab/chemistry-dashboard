@@ -34,6 +34,10 @@ def get_client_ip(request):
 def json_response(payload={}, status=200):
     resp = jsonify(payload)
     resp.status_code = status
+    # API responses are per-user (Vary: Cookie) and must never be served stale
+    # from the browser's heuristic cache — otherwise flags like has_video /
+    # has_posthoc and freshly changed data show up late. Force revalidation.
+    resp.headers['Cache-Control'] = 'no-store, must-revalidate'
     return resp
 
 def verify_characters(value, chars):
