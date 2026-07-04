@@ -1492,6 +1492,28 @@ def get_pod_durations(session_id):
     return {row[0]: int(row[1]) for row in rows if row[1] is not None}
 
 
+def get_pod_speaker_counts(session_id):
+    # {session_device_id: participant_count} for one session's pods.
+    rows = db.session.query(Speaker.session_device_id, func.count(Speaker.id)) \
+        .join(SessionDevice, Speaker.session_device_id == SessionDevice.id) \
+        .filter(SessionDevice.session_id == session_id) \
+        .group_by(Speaker.session_device_id).all()
+    return {row[0]: row[1] for row in rows}
+
+
+def get_session_participant_counts(owner_id=None):
+    # {session_id: total participants across the session's pods}, one query, so
+    # the sessions list can show participant totals (mirrors the video/posthoc
+    # flag helpers).
+    query = db.session.query(SessionDevice.session_id, func.count(Speaker.id)) \
+        .join(Speaker, Speaker.session_device_id == SessionDevice.id)
+    if owner_id is not None:
+        query = query.join(Session, SessionDevice.session_id == Session.id) \
+            .filter(Session.owner_id == owner_id)
+    query = query.group_by(SessionDevice.session_id)
+    return {row[0]: row[1] for row in query.all()}
+
+
 def mark_session_device_posthoc(session_device_id, models=None):
     device = get_session_devices(id=session_device_id)
     if device is None:
