@@ -240,9 +240,29 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
                         : "bg-tiilt-soft text-tiilt")
                 }
             >
-                <svg width="20" height="20" viewBox="0 0 20 30">
-                    <MicIcon fill="currentColor" />
-                </svg>
+                {session.has_video ? (
+                    <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                    >
+                        <rect
+                            x="2.5"
+                            y="6"
+                            width="12"
+                            height="12"
+                            rx="2.5"
+                            fill="currentColor"
+                        />
+                        <path d="M16 10l5-3v10l-5-3z" fill="currentColor" />
+                    </svg>
+                ) : (
+                    <svg width="20" height="20" viewBox="0 0 20 30">
+                        <MicIcon fill="currentColor" />
+                    </svg>
+                )}
             </span>
             <button
                 onClick={() => onOpen(session)}
@@ -271,34 +291,6 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
                                     : "participants"}
                             </span>
                         </>
-                    ) : null}
-                    {session.has_video ? (
-                        <span
-                            title="Video recorded for this session"
-                            className="flex items-center gap-1 rounded-full bg-tiilt-soft px-1.5 py-0.5 font-semibold text-tiilt"
-                        >
-                            <svg
-                                width="12"
-                                height="12"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                aria-hidden="true"
-                            >
-                                <rect
-                                    x="2.5"
-                                    y="6"
-                                    width="12"
-                                    height="12"
-                                    rx="2.5"
-                                    fill="currentColor"
-                                />
-                                <path
-                                    d="M16 10l5-3v10l-5-3z"
-                                    fill="currentColor"
-                                />
-                            </svg>
-                            Video
-                        </span>
                     ) : null}
                     {session.has_posthoc ? (
                         <span
