@@ -12,6 +12,7 @@ export class SessionModel {
   has_video;
   has_posthoc;
   pod_count;
+  participant_count;
 
   // Client Fields
   local_start_date;
@@ -77,6 +78,7 @@ export class SessionModel {
     model.has_video = json['has_video'] === true
     model.has_posthoc = json['has_posthoc'] === true
     model.pod_count = json['pod_count'] != null ? json['pod_count'] : null
+    model.participant_count = json['participant_count'] != null ? json['participant_count'] : null
     return model;
   }
 

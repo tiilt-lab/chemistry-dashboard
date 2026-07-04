@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { DialogBox, GenericDialogBox } from "../dialog/dialog-component"
 import { Appheader } from "../header/header-component"
@@ -133,10 +134,12 @@ function FolderRow({ folder, onOpen, openFolderDialog }) {
     )
 }
 
-// Lazily fetches a session's pods and shows each pod's duration.
+// Lazily fetches a session's pods and lists each one as a clickable row that
+// opens the pod's detail page, with duration, participant count and status.
 function PodDurations({ sessionId }) {
     const [pods, setPods] = useState(null) // null = loading
     const [error, setError] = useState(false)
+    const navigate = useNavigate()
     useEffect(() => {
         let alive = true
         new SessionService().getSessionDevices(sessionId).then(
@@ -158,31 +161,67 @@ function PodDurations({ sessionId }) {
         }
     }, [sessionId])
 
-    let body
-    if (error) {
-        body = <li className="py-1 text-tiilt-muted">Couldn't load pods.</li>
-    } else if (pods === null) {
-        body = <li className="py-1 text-tiilt-muted">Loading pods…</li>
-    } else if (pods.length === 0) {
-        body = <li className="py-1 text-tiilt-muted">No pods in this session.</li>
-    } else {
-        body = pods.map((pod) => (
-            <li
-                key={pod.id}
-                className="flex items-center justify-between py-1"
-            >
-                <span className="truncate text-tiilt-ink">
-                    {pod.name || `Pod ${pod.id}`}
-                </span>
-                <span className="font-ahamono tabular-nums text-tiilt-muted">
-                    {SessionModel.formatDuration(pod.duration)}
-                </span>
-            </li>
-        ))
+    if (error || pods === null || pods.length === 0) {
+        const msg = error
+            ? "Couldn't load pods."
+            : pods === null
+              ? "Loading pods…"
+              : "No pods in this session."
+        return (
+            <div className="border-t border-tiilt-line px-3 py-2 pl-[3.25rem] text-xs text-tiilt-muted">
+                {msg}
+            </div>
+        )
     }
+
     return (
-        <ul className="border-t border-tiilt-line px-3 py-1.5 pl-[3.25rem] text-xs">
-            {body}
+        <ul className="flex flex-col gap-0.5 border-t border-tiilt-line px-2 py-1.5 pl-[3rem]">
+            {pods.map((pod) => (
+                <li key={pod.id}>
+                    <button
+                        onClick={() =>
+                            navigate(`/sessions/${sessionId}/pods/${pod.id}`)
+                        }
+                        className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition hover:bg-tiilt-soft"
+                    >
+                        <span className="min-w-0 grow truncate font-medium text-tiilt-ink">
+                            {pod.name || `Pod ${pod.id}`}
+                        </span>
+                        {pod.speaker_count > 0 ? (
+                            <span className="flex-none text-tiilt-muted">
+                                {pod.speaker_count}{" "}
+                                {pod.speaker_count === 1
+                                    ? "participant"
+                                    : "participants"}
+                            </span>
+                        ) : null}
+                        {pod.posthoc_analyzed_date ? (
+                            <span className="flex-none rounded-full bg-tiilt-teal/15 px-1.5 py-0.5 font-semibold text-tiilt-teal">
+                                Analyzed
+                            </span>
+                        ) : null}
+                        <span className="flex-none font-ahamono tabular-nums text-tiilt-muted">
+                            {SessionModel.formatDuration(pod.duration)}
+                        </span>
+                        <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            aria-hidden="true"
+                            className="flex-none text-tiilt-muted"
+                        >
+                            <path
+                                d="M9 6l6 6-6 6"
+                                stroke="currentColor"
+                                strokeWidth="2.4"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    </button>
+                </li>
+            ))}
         </ul>
     )
 }
@@ -222,6 +261,17 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
                     <span className="font-ahamono tabular-nums">
                         {session.lengthFormatted}
                     </span>
+                    {session.participant_count > 0 ? (
+                        <>
+                            <span aria-hidden="true">·</span>
+                            <span>
+                                {session.participant_count}{" "}
+                                {session.participant_count === 1
+                                    ? "participant"
+                                    : "participants"}
+                            </span>
+                        </>
+                    ) : null}
                     {session.has_video ? (
                         <span
                             title="Video recorded for this session"
@@ -473,7 +523,8 @@ function DiscussionSessionPage(props) {
                                 <span className="font-semibold">pod</span> is a
                                 participant group (device) within that session — a
                                 session can have several pods running at once.
-                                Expand a session to see how long each pod lasted.
+                                Expand a session to see its pods, and click any
+                                pod to open its analysis.
                             </div>
                         ) : null}
 
