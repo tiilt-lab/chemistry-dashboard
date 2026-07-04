@@ -10,8 +10,23 @@
 # the DC_AUDIO_WS_PORT env var at launch (default 9000).
 
 [processing]
+# Speech-to-text backend:
+#   google-cloud-speech  (default; needs asr_connectors/google-cloud-key.json)
+#   whisper              (faster-whisper, offline; pip install faster-whisper)
 asr=google-cloud-speech
+
+# Expression & Thinking Style scorer:
+#   liwc  (default; LIWC / Harvard General Inquirer lexicon counting)
+#   llm   (Google Gemini rates the 5 dimensions; needs GOOGLE_API_KEY)
+scorer=liwc
+
 keyword_model_limit=20000
+
+# Whisper settings (only used when asr=whisper).
+#[whisper]
+#model_size=small.en
+#device=auto
+#compute_type=int8
 
 [output]
 processing_callback=http://127.0.0.1:5000/api/v1/callback/transcript

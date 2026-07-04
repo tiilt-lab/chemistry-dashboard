@@ -11,6 +11,7 @@ import threading
 import callbacks
 from speaker_metrics import speaker_metrics
 from features_detector import features_detector
+from features_detector import scorer_factory
 from keyword_detector import keyword_detector
 from doa.doa_respeaker_v2_6mic_array import calculateDOA
 from speaker_diarization.pyDiarization import clusterSpectralEmbeddings
@@ -209,7 +210,7 @@ class AudioProcessor:
 
             features = None
             if self.config.features:
-                features = features_detector.detect_features(transcript_text)
+                features = scorer_factory.get_scorer(cf.scorer()).detect_features(transcript_text)
 
             start_time += self.config.start_offset
             end_time += self.config.start_offset

@@ -26,7 +26,7 @@ from twisted.python import log
 from twisted.internet import reactor, task
 from autobahn.twisted.websocket import WebSocketServerFactory
 from autobahn.twisted.websocket import WebSocketServerProtocol
-from asr_connectors.google_asr_connector import GoogleASR
+from asr_connectors.factory import create_asr
 from features_detector import features_detector
 from keyword_detector import keyword_detector
 from speaker_tagging import speaker_tagging
@@ -304,7 +304,7 @@ class ServerProtocol(WebSocketServerProtocol):
         self.audio_buffer = AudioBuffer(self.config)
         self.asr_audio_queue = queue.Queue(maxsize=3)
         self.asr_transcript_queue = queue.Queue()
-        self.asr = GoogleASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data,self.interval)
+        self.asr = create_asr(cf.asr(), self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval)
         self.asr.start()
         self.processor = AudioProcessor(self.audio_buffer, self.asr_transcript_queue, diarization_model, semantic_model, self.config)
         self.processor.start()
@@ -368,7 +368,8 @@ if __name__ == '__main__':
 
     # Run Server
     logging.info('Starting Audio Processing Service...')
-    features_detector.initialize()
+    from features_detector.scorer_factory import get_scorer
+    get_scorer(cf.scorer()).initialize()
     keyword_detector.initialize(cf.keyword_model_limit())
 
     poll_connections = task.LoopingCall(cm.check_connections)
