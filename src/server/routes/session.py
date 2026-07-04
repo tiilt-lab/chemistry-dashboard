@@ -26,7 +26,14 @@ image_queue_dict = {}
 @api_routes.route('/api/v1/sessions', methods=['GET'])
 @wrappers.verify_login(public=True)
 def get_sessions(user, **kwargs):
-    return json_response([session.json() for session in database.get_sessions(owner_id=user['id'])])
+    sessions = database.get_sessions(owner_id=user['id'])
+    video_ids = database.get_session_ids_with_video(owner_id=user['id'])
+    result = []
+    for session in sessions:
+        data = session.json()
+        data['has_video'] = session.id in video_ids
+        result.append(data)
+    return json_response(result)
 
 @api_routes.route('/api/v1/sessions/<int:session_id>', methods=['GET'])
 @wrappers.verify_login(public=True)

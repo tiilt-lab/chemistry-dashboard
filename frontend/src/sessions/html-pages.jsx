@@ -116,6 +116,34 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
                     <span className="font-ahamono tabular-nums">
                         {session.lengthFormatted}
                     </span>
+                    {session.has_video ? (
+                        <span
+                            title="Video recorded for this session"
+                            className="flex items-center gap-1 rounded-full bg-tiilt-soft px-1.5 py-0.5 font-semibold text-tiilt"
+                        >
+                            <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                aria-hidden="true"
+                            >
+                                <rect
+                                    x="2.5"
+                                    y="6"
+                                    width="12"
+                                    height="12"
+                                    rx="2.5"
+                                    fill="currentColor"
+                                />
+                                <path
+                                    d="M16 10l5-3v10l-5-3z"
+                                    fill="currentColor"
+                                />
+                            </svg>
+                            Video
+                        </span>
+                    ) : null}
                 </span>
             </button>
             {session.recording ? (

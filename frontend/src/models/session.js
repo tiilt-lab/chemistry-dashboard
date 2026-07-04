@@ -9,6 +9,7 @@ export class SessionModel {
   passcode;
   keywords;
   folder;
+  has_video;
 
   // Client Fields
   local_start_date;
@@ -60,6 +61,7 @@ export class SessionModel {
     model.passcode = json['passcode'];
     model.keywords = json['keywords'];
     model.folder = json['folder']
+    model.has_video = json['has_video'] === true
     return model;
   }
 
