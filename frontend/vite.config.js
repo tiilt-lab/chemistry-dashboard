@@ -20,6 +20,20 @@ export default defineConfig(() => {
                 "@icons": path.resolve(__dirname, "./src/Icons"),
             },
         },
+        server: {
+            port: 3000,
+            proxy: {
+                "/api": {
+                    target: "http://localhost:5001",
+                    changeOrigin: false,
+                },
+                "/socket.io": {
+                    target: "http://localhost:5001",
+                    changeOrigin: false,
+                    ws: true,
+                },
+            },
+        },
         build: {
             outDir: "build",
             sourcemap: true,

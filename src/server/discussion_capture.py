@@ -46,7 +46,7 @@ def main():
 
 	device_websockets.run_server()
 	logging.info('Discussion Capture Server running...')
-	socketio.run(app, debug=cf.debug(), host="0.0.0.0", use_reloader=False)
+	socketio.run(app, debug=cf.debug(), host="0.0.0.0", port=int(os.environ.get('DC_PORT', 5000)), use_reloader=False)
 	scheduler.shutdown(wait=False)
 
 if __name__ == '__main__':

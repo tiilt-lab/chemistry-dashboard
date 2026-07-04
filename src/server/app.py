@@ -62,10 +62,7 @@ r = redis.Redis(host=cf.redis_host(), port=cf.redis_port(), db=cf.redis_db())
 limiter = Limiter(app, key_func=get_remote_address)
 
 # Create SocketIO app (engineio_logger=True for advance debug)
-if cf.cloud():
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"127.0.0.1:5000","localhost"], manage_session=False, message_queue=cf.redis_url())
-else:
-	socketio = SocketIO(app, log=logger, cors_allowed_origins=[cf.domain(),"127.0.0.1:5000","localhost"],manage_session=False, message_queue=cf.redis_url())
+socketio = SocketIO(app, log=logger, cors_allowed_origins=cf.domains() + ["127.0.0.1:5000", "localhost"], manage_session=False, message_queue=cf.redis_url())
 
 # Create database
 DATABASE_FILE = os.path.dirname(os.path.abspath(__file__)) + '/discussion_capture.db'

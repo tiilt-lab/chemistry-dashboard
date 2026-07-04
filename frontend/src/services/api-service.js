@@ -9,13 +9,7 @@ export class ApiService {
     }
   
     getVideoServerEndpoint() {
-    //   return (
-    //     "http://129.105.44.121:8080/"
-    //   );
-    return (
-      "videodev.tiilt-blinc.com"
-    );
-    
+    return window.location.host;
   }
 
   getAudioWebsocketEndpoint() {
