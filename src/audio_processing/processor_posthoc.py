@@ -221,6 +221,11 @@ class AudioProcessorPosthoc:
             if self.config.diarization and self.fingerprints and len(self.fingerprints):
                 speaker_tag, speaker_id = checkFingerprints(
                         audio_data, self.fingerprints, self.diarization_model)
+                if not speaker_tag:
+                    # Batch ASRs (WhisperX + pyannote) can carry a diarization
+                    # cluster label; better than leaving the utterance untagged
+                    # when fingerprint matching fails.
+                    speaker_tag = getattr(transcript_data, 'speaker_tag', None)
                 
                 # logging.info("processed for {0} : {1}".format(self.config.auth_key,[str(int(start_time//60))+':'+str(int(start_time%60)), str(int(end_time//60))+':'+str(int(end_time%60)),transcript_text,  speaker_tag, speaker_id]))
                 self.speaker_metrics_process.process_transcript(

@@ -21,12 +21,16 @@ from .base_asr import AsrResult
 
 class WhisperXASR:
     def __init__(self, audio_queue, transcript_queue, config, media_type,
-                 interval, audio_file=None, model_size=None):
+                 interval, audio_file=None, model_size=None, diarize=False):
         self.audio_queue = audio_queue
         self.transcript_queue = transcript_queue
         self.config = config
         self.audio_file = audio_file
         self.model_size = model_size or "small"
+        # Optional pyannote speaker-diarization pass (open SOTA; the gated
+        # weights need HUGGING_FACE_HUB_TOKEN). Segments get cluster labels
+        # (SPEAKER_00...) attached as .speaker_tag on each AsrResult.
+        self.diarize = diarize
         self.running = False
 
     def start(self):
@@ -81,6 +85,15 @@ class WhisperXASR:
                     language_code=language, device=device)
                 result = whisperx.align(result["segments"], align_model,
                                         metadata, audio, device)
+                if self.diarize:
+                    import os
+                    from whisperx.diarize import DiarizationPipeline, assign_word_speakers
+                    token = os.environ.get("HUGGING_FACE_HUB_TOKEN")
+                    logging.info("WhisperX: running pyannote diarization")
+                    diarizer = DiarizationPipeline(use_auth_token=token, device=device)
+                    diarize_segments = diarizer(audio)
+                    result = assign_word_speakers(diarize_segments, result)
+                    logging.info("WhisperX: diarization attached")
             finally:
                 torch.load = original_load
 
@@ -98,7 +111,11 @@ class WhisperXASR:
                     # Alignment can skip tokens (numbers etc.); fall back to
                     # the segment span so downstream timing still works.
                     words = [(text, segment.get("start", 0.0), segment.get("end", 0.0))]
-                self.transcript_queue.put(AsrResult(text, words))
+                asr_result = AsrResult(text, words)
+                # pyannote cluster label (SPEAKER_00...), consumed downstream
+                # when fingerprint matching yields nothing.
+                asr_result.speaker_tag = segment.get("speaker")
+                self.transcript_queue.put(asr_result)
                 emitted += 1
             logging.info("WhisperX: emitted %d transcript results", emitted)
         except Exception as e:
