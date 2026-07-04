@@ -115,7 +115,7 @@ function AppTimelineSlider(props) {
     <div className="section-box h-14">
       <div
         className={style["timeline-background"]}
-        style={{ width: "97%" }}
+        style={{ width: "100%" }}
         ref={timelineBackgroundRef}
       ></div>
       <div
