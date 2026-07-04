@@ -35,13 +35,19 @@ def _worker_python():
 
 class Qwen3ASR:
     def __init__(self, audio_queue, transcript_queue, config, media_type,
-                 interval, audio_file=None, model_id=None, diarize=False):
+                 interval, audio_file=None, model_id=None, diarize=False,
+                 max_speakers=None, enrolled=None, speaker_model=None):
         self.audio_queue = audio_queue
         self.transcript_queue = transcript_queue
         self.config = config
         self.audio_file = audio_file
         self.model_id = model_id or "Qwen/Qwen3-ASR-1.7B"
         self.diarize = diarize
+        # Optional constraint to a pod's known enrolled participants: cap
+        # pyannote at max_speakers and remap clusters onto enrolled voices.
+        self.max_speakers = max_speakers
+        self.enrolled = enrolled
+        self.speaker_model = speaker_model
         self.running = False
 
     def start(self):
@@ -80,7 +86,7 @@ class Qwen3ASR:
             pipeline = Pipeline.from_pretrained(
                 "pyannote/speaker-diarization-3.1", use_auth_token=token)
             pipeline.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
-            diarization = pipeline(self.audio_file)
+            diarization = pipeline(self.audio_file, max_speakers=self.max_speakers)
             return [(turn.start, turn.end, label)
                     for turn, _, label in diarization.itertracks(yield_label=True)]
         finally:
@@ -116,9 +122,14 @@ class Qwen3ASR:
             logging.info("Qwen3-ASR: %d segments", len(segments))
 
             turns = []
+            cluster_map = {}
             if self.diarize:
                 logging.info("Qwen3-ASR: running pyannote diarization")
                 turns = self._speaker_turns()
+                if turns and self.enrolled and self.speaker_model:
+                    from asr_connectors.cluster_reconcile import build_cluster_to_enrolled_map
+                    cluster_map = build_cluster_to_enrolled_map(
+                        self.audio_file, turns, self.enrolled, self.speaker_model)
 
             for segment in segments:
                 words = [(w, s, e) for (w, s, e) in segment.get("words", [])]
@@ -128,7 +139,8 @@ class Qwen3ASR:
                 result = AsrResult(text, words)
                 if turns:
                     midpoint = (words[0][1] + words[-1][2]) / 2.0
-                    result.speaker_tag = self._speaker_at(turns, midpoint)
+                    label = self._speaker_at(turns, midpoint)
+                    result.speaker_tag = cluster_map.get(label, label)
                 self.transcript_queue.put(result)
         except Exception as e:
             logging.error("Qwen3-ASR transcription failed: %s", e, exc_info=True)

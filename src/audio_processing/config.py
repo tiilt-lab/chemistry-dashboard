@@ -53,6 +53,14 @@ def semantic_embedder():
         initialize()
     return str(config.get('processing', 'semantic_embedder', fallback='all-mpnet-base-v2'))
 
+def diarization_constrain_to_enrolled():
+    # When true and a pod's enrolled participants are known, cap pyannote at the
+    # enrolled count (max_speakers) and remap each diarization cluster to its
+    # nearest enrolled voice print, so utterances resolve to real people instead
+    # of leftover SPEAKER_NN clusters. Only affects the WhisperX/Qwen3 paths.
+    return str(config.get('processing', 'diarization_constrain_to_enrolled',
+                          fallback='false')) in ['true', 'True', 't', '1']
+
 def diarization_fallback():
     # How the post-hoc fallback (no-fingerprint) path assigns speaker clusters.
     # Distinct from the per-run payload 'diarizer' (fingerprint|pyannote), which

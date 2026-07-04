@@ -359,17 +359,27 @@ class ServerProtocol(WebSocketServerProtocol):
         # Per-run ASR choice from the trigger UI (falls back to config.ini).
         # Whisper consumes the same PCM queue and runs fully offline; import
         # lazily so the Google path never needs faster-whisper installed.
+        # Constrain diarization to the pod's known enrolled participants
+        # (cap speaker count + remap clusters to enrolled voices), when enabled
+        # and the enrolled set is known. Off -> None args -> unchanged behaviour.
+        _enrolled = getattr(self, 'speakers', None) or None
+        if cf.diarization_constrain_to_enrolled() and _enrolled:
+            _max_spk, _enr, _spk_model = len(_enrolled), _enrolled, diarization_model
+        else:
+            _max_spk, _enr, _spk_model = None, None, None
         if getattr(self, 'asr_choice', None) in ('qwen3', 'qwen3-0.6b'):
             from asr_connectors.qwen3_asr import Qwen3ASR
             qwen_model = 'Qwen/Qwen3-ASR-0.6B' if self.asr_choice == 'qwen3-0.6b' else 'Qwen/Qwen3-ASR-1.7B'
             self.asr = Qwen3ASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval,
                                 audio_file=self.audio_file, model_id=qwen_model,
-                                diarize=(getattr(self, 'diarizer_choice', None) == 'pyannote'))
+                                diarize=(getattr(self, 'diarizer_choice', None) == 'pyannote'),
+                                max_speakers=_max_spk, enrolled=_enr, speaker_model=_spk_model)
         elif getattr(self, 'asr_choice', None) == 'whisperx':
             from asr_connectors.whisperx_asr import WhisperXASR
             self.asr = WhisperXASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval,
                                    audio_file=self.audio_file, model_size=cf.whisper_model_size(),
-                                   diarize=(getattr(self, 'diarizer_choice', None) == 'pyannote'))
+                                   diarize=(getattr(self, 'diarizer_choice', None) == 'pyannote'),
+                                   max_speakers=_max_spk, enrolled=_enr, speaker_model=_spk_model)
         elif getattr(self, 'asr_choice', None) == 'whisper':
             from asr_connectors.whisper_asr import WhisperASR
             self.asr = WhisperASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval)
