@@ -6,54 +6,70 @@ import { TiiltLogo } from "../components/tiilt-logo"
 import recordicon from "../assets/img/icon-record.svg"
 import wordlist from "../assets/img/icon-wordlist.svg"
 import pod from "../assets/img/icon-pod.svg"
-import trending from "../assets/img/icon-trending-up.svg"
 import settings from "../assets/img/settings.svg"
 import question from "../assets/img/question.svg"
 import logouticon from "../assets/img/logout.svg"
 
-const MENUS = [
+const GROUPS = [
     {
         icon: recordicon,
-        name: "Discussions",
-        desc: "Record and review discussion sessions",
-        path: "/sessions",
+        name: "Discussions & Pods",
+        desc: "Record and review sessions; manage recording devices",
+        links: [
+            { label: "Discussions", path: "/sessions", primary: true },
+            { label: "Pods", path: "/pods" },
+        ],
     },
     {
         icon: wordlist,
-        name: "Keywords",
-        desc: "Manage keyword lists for detection",
-        path: "/keyword-lists",
+        name: "Keywords & Topics",
+        desc: "Keyword lists for detection and topic models for analysis",
+        links: [
+            { label: "Keyword lists", path: "/keyword-lists", primary: true },
+            { label: "Topic models", path: "/topic-models" },
+        ],
     },
     {
         icon: pod,
-        name: "Pods",
-        desc: "Recording devices and their status",
-        path: "/pods",
-    },
-    {
-        icon: trending,
-        name: "Topic modeling",
-        desc: "Train and manage topic models",
-        path: "/topic-models",
+        name: "Students & Raters",
+        desc: "Manage student profiles and dashboard raters",
+        links: [{ label: "Manage people", path: "/people", primary: true }],
     },
 ]
 
-function MenuCard({ icon, name, desc, onClick }) {
+function GroupCard({ icon, name, desc, links, navigate }) {
     return (
-        <button
-            onClick={onClick}
-            className="flex items-center gap-4 rounded-xl border border-tiilt-line bg-white p-4 text-left transition hover:border-tiilt hover:shadow-[0_10px_24px_-14px_rgba(42,23,74,0.4)] active:translate-y-px"
-        >
-            <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-tiilt-soft">
-                <img alt="" src={icon} className="h-5 w-5" />
-            </span>
-            <span>
-                <span className="block text-base font-semibold text-tiilt-ink">
-                    {name}
+        <div className="flex flex-col gap-4 rounded-xl border border-tiilt-line bg-white p-5 transition hover:shadow-[0_10px_24px_-14px_rgba(42,23,74,0.4)]">
+            <div className="flex items-center gap-4">
+                <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-tiilt-soft">
+                    <img alt="" src={icon} className="h-5 w-5" />
                 </span>
-                <span className="block text-sm text-tiilt-muted">{desc}</span>
-            </span>
-        </button>
+                <span>
+                    <span className="block text-base font-semibold text-tiilt-ink">
+                        {name}
+                    </span>
+                    <span className="block text-sm text-tiilt-muted">
+                        {desc}
+                    </span>
+                </span>
+            </div>
+            <div className="mt-auto flex flex-wrap gap-2">
+                {links.map((link) => (
+                    <button
+                        key={link.path}
+                        onClick={() => navigate(link.path)}
+                        className={
+                            "rounded-lg px-4 py-2 text-sm font-semibold transition active:translate-y-px " +
+                            (link.primary
+                                ? "bg-tiilt text-white hover:bg-tiilt-deep"
+                                : "border border-tiilt-line bg-white text-tiilt-ink hover:border-tiilt hover:bg-tiilt-soft")
+                        }
+                    >
+                        {link.label}
+                    </button>
+                ))}
+            </div>
+        </div>
     )
 }
 
@@ -122,7 +138,7 @@ function HomeScreen() {
                 </div>
             </header>
 
-            <main className="mx-auto w-full max-w-3xl px-4 py-8 md:py-12">
+            <main className="mx-auto w-full max-w-4xl px-4 py-8 md:py-12">
                 <h2 className="text-2xl font-semibold text-tiilt-ink">
                     Good {timeOfDay}!
                 </h2>
@@ -132,14 +148,15 @@ function HomeScreen() {
                     recording a new discussion.
                 </p>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {MENUS.map((m) => (
-                        <MenuCard
-                            key={m.path}
-                            icon={m.icon}
-                            name={m.name}
-                            desc={m.desc}
-                            onClick={() => navigate(m.path)}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {GROUPS.map((g) => (
+                        <GroupCard
+                            key={g.name}
+                            icon={g.icon}
+                            name={g.name}
+                            desc={g.desc}
+                            links={g.links}
+                            navigate={navigate}
                         />
                     ))}
                 </div>

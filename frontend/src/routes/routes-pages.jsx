@@ -21,6 +21,7 @@ import {TranscriptsComponent} from '../transcripts/transcripts-component'
 import {TopicListComponent} from '../topic-list/topic-list-component'
 import {ManageTopicModelsComponent} from '../manage-topic-models/manage-topic-models-component'
 import {PodsComponent} from '../pods/pods-component'
+import {PeopleComponent} from '../people/people-component'
 import {ProtectedRoute} from './protected-route'
 
 function PageRouter() {
@@ -56,6 +57,7 @@ function PageRouter() {
                 <Route path='/topic-list' element={<ProtectedRoute component={TopicListComponent}/>} />
                 <Route path='/topic-list/new-session' element={<ProtectedRoute component={TopicListComponent}/>} />
                 <Route path='/pods' element={<ProtectedRoute component={PodsComponent}/> } />
+                <Route path='/people' element={<ProtectedRoute component={PeopleComponent}/> } />
                 <Route path='/settings' element={<ProtectedRoute component={SettingsComponent}/> } />
             </Routes>
         </BrowserRouter>
