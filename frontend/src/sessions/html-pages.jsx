@@ -178,7 +178,7 @@ function DiscussionSessionPage(props) {
                 />
 
                 <div className="relative min-h-0 w-full grow overflow-y-auto">
-                    <div className={style["list-container"]}>
+                    <div className="mx-auto w-full max-w-3xl px-4 py-8">
                         {props.isLoading ? (
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
                                 <div className={style["load-text"]}>
@@ -207,8 +207,8 @@ function DiscussionSessionPage(props) {
                             <></>
                         )}
 
-                        {props.folders.length > 0 ? (
-                            <nav className="mb-3 flex items-center gap-2 text-lg">
+                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                            <nav className="flex min-w-0 items-center gap-2 text-lg">
                                 {props.breadcrumbs.length > 0 ? (
                                     <button
                                         onClick={props.goBackToPrevious}
@@ -247,9 +247,23 @@ function DiscussionSessionPage(props) {
                                     <></>
                                 )}
                             </nav>
-                        ) : (
-                            <></>
-                        )}
+                            <div className="flex flex-none gap-2">
+                                <button
+                                    className="rounded-lg border border-tiilt-line bg-white px-4 py-2 text-sm font-semibold text-tiilt-ink transition hover:border-tiilt hover:bg-tiilt-soft active:translate-y-px"
+                                    onClick={() =>
+                                        props.openFolderDialog("NewFolder")
+                                    }
+                                >
+                                    New folder
+                                </button>
+                                <button
+                                    className="rounded-lg bg-tiilt px-4 py-2 text-sm font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
+                                    onClick={props.newRecording}
+                                >
+                                    New discussion
+                                </button>
+                            </div>
+                        </div>
 
                         {!props.isLoading &&
                         props.displayedFolders.length > 0 ? (
@@ -317,20 +331,6 @@ function DiscussionSessionPage(props) {
                             <></>
                         )}
                     </div>
-                </div>
-                <div className="flex w-full flex-none flex-wrap items-center justify-center gap-3 border-t border-tiilt-line bg-white px-4 py-3">
-                    <button
-                        className="h-11 w-full max-w-55 cursor-pointer rounded-lg border border-tiilt-line bg-white font-semibold text-tiilt transition hover:border-tiilt hover:bg-tiilt-soft active:translate-y-px"
-                        onClick={() => props.openFolderDialog("NewFolder")}
-                    >
-                        New Folder
-                    </button>
-                    <button
-                        className="h-11 w-full max-w-55 cursor-pointer rounded-lg bg-tiilt font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
-                        onClick={props.newRecording}
-                    >
-                        New Discussion
-                    </button>
                 </div>
             </div>
 
