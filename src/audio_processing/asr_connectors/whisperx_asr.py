@@ -21,12 +21,18 @@ from .base_asr import AsrResult
 
 class WhisperXASR:
     def __init__(self, audio_queue, transcript_queue, config, media_type,
-                 interval, audio_file=None, model_size=None, diarize=False):
+                 interval, audio_file=None, model_size=None, diarize=False,
+                 max_speakers=None, enrolled=None, speaker_model=None):
         self.audio_queue = audio_queue
         self.transcript_queue = transcript_queue
         self.config = config
         self.audio_file = audio_file
         self.model_size = model_size or "small"
+        # Optional constraint to a pod's known enrolled participants: cap
+        # pyannote at max_speakers and remap clusters onto enrolled voices.
+        self.max_speakers = max_speakers
+        self.enrolled = enrolled
+        self.speaker_model = speaker_model
         # Optional pyannote speaker-diarization pass (open SOTA; the gated
         # weights need HUGGING_FACE_HUB_TOKEN). Segments get cluster labels
         # (SPEAKER_00...) attached as .speaker_tag on each AsrResult.
@@ -85,15 +91,22 @@ class WhisperXASR:
                     language_code=language, device=device)
                 result = whisperx.align(result["segments"], align_model,
                                         metadata, audio, device)
+                cluster_map = {}
                 if self.diarize:
                     import os
                     from whisperx.diarize import DiarizationPipeline, assign_word_speakers
                     token = os.environ.get("HUGGING_FACE_HUB_TOKEN")
                     logging.info("WhisperX: running pyannote diarization")
                     diarizer = DiarizationPipeline(model_name="pyannote/speaker-diarization-3.1", token=token, device=device)
-                    diarize_segments = diarizer(audio)
+                    diarize_segments = diarizer(audio, max_speakers=self.max_speakers)
                     result = assign_word_speakers(diarize_segments, result)
                     logging.info("WhisperX: diarization attached")
+                    if self.enrolled and self.speaker_model:
+                        from asr_connectors.cluster_reconcile import build_cluster_to_enrolled_map
+                        turns = [(row['start'], row['end'], row['speaker'])
+                                 for _, row in diarize_segments.iterrows()]
+                        cluster_map = build_cluster_to_enrolled_map(
+                            self.audio_file, turns, self.enrolled, self.speaker_model)
             finally:
                 torch.load = original_load
 
@@ -112,9 +125,11 @@ class WhisperXASR:
                     # the segment span so downstream timing still works.
                     words = [(text, segment.get("start", 0.0), segment.get("end", 0.0))]
                 asr_result = AsrResult(text, words)
-                # pyannote cluster label (SPEAKER_00...), consumed downstream
-                # when fingerprint matching yields nothing.
-                asr_result.speaker_tag = segment.get("speaker")
+                # pyannote cluster label (SPEAKER_00...), remapped to an enrolled
+                # alias when reconciliation is on; consumed downstream when
+                # fingerprint matching yields nothing.
+                _sp = segment.get("speaker")
+                asr_result.speaker_tag = cluster_map.get(_sp, _sp)
                 self.transcript_queue.put(asr_result)
                 emitted += 1
             logging.info("WhisperX: emitted %d transcript results", emitted)
