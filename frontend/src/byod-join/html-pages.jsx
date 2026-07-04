@@ -65,11 +65,11 @@ function ByodJoinPage(props) {
                             <React.Fragment>
                                 <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto text-center">
                                     <div>
-                                        <div className="my-1.5 font-sans text-base leading-5 font-normal text-[#727278]">
+                                        <div className="my-1.5 font-sans text-base leading-5 font-normal text-tiilt-muted">
                                             Please type your name and passcode
                                             to join a discussion.
                                         </div>
-                                        <div className="my-1.5 font-sans text-xs leading-5 font-normal text-[#727278]">
+                                        <div className="my-1.5 font-sans text-xs leading-5 font-normal text-tiilt-muted">
                                             If rejoining a discussion, type the
                                             same name you used previously.
                                         </div>
@@ -155,11 +155,11 @@ function ByodJoinPage(props) {
                                 <React.Fragment>
                                     <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto text-center">
                                         <div className="w-[300px] px-2 sm:w-[400px] lg:w-3xl">
-                                            <div className="my-1.5 font-sans text-base/loose font-medium text-[#727278]">
+                                            <div className="my-1.5 font-sans text-base/loose font-medium text-tiilt-muted">
                                                 Please add a Speaker Fingerprint
                                                 for each speaker
                                             </div>
-                                            <div className="my-1.5 font-sans text-xs/normal font-normal text-[#727278]">
+                                            <div className="my-1.5 font-sans text-xs/normal font-normal text-tiilt-muted">
                                                 Each speaker must record and
                                                 temporarily save a short 3-5
                                                 second sample of their voice.
@@ -239,7 +239,7 @@ function ByodJoinPage(props) {
                                                             onClick={() => { }}
                                                         ></div>
                                                         <div className="flew-row flex grow text-center">
-                                                            <div className="grow font-sans text-lg/loose font-bold text-[#58585C]">
+                                                            <div className="grow font-sans text-lg/loose font-bold text-tiilt-ink">
                                                                 {speaker.alias}
                                                             </div>
                                                         </div>
@@ -309,11 +309,11 @@ function ByodJoinPage(props) {
                                 <React.Fragment>
                                     <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto text-center">
                                         <div className="w-[300px] px-2 sm:w-[400px] lg:w-3xl">
-                                            <div className="my-1.5 font-sans text-base/loose font-medium text-[#727278]">
+                                            <div className="my-1.5 font-sans text-base/loose font-medium text-tiilt-muted">
                                                 Please add a Speaker Fingerprint
                                                 for each speaker
                                             </div>
-                                            <div className="my-1.5 font-sans text-xs/normal font-normal text-[#727278]">
+                                            <div className="my-1.5 font-sans text-xs/normal font-normal text-tiilt-muted">
                                                 Each speaker must record and
                                                 temporarily save a short 3-5
                                                 second sample of their voice.
@@ -393,7 +393,7 @@ function ByodJoinPage(props) {
                                                             onClick={() => { }}
                                                         ></div>
                                                         <div className="flew-row flex grow text-center">
-                                                            <div className="grow font-sans text-lg/loose font-bold text-[#58585C]">
+                                                            <div className="grow font-sans text-lg/loose font-bold text-tiilt-ink">
                                                                 {speaker.alias}
                                                             </div>
                                                         </div>

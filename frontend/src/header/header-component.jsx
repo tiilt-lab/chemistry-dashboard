@@ -2,27 +2,27 @@ import backicon from "../assets/img/icon-back.svg"
 
 function Appheader(props) {
     return (
-        <div className="relative top-0 z-10 flex h-12 w-full flex-none flex-row items-center bg-[#FCFDFF] shadow m-h-1/12">
+        <div className="relative top-0 z-10 flex h-12 w-full flex-none flex-row items-center border-b border-tiilt-line bg-white">
             {props.leftText !== false ? (
-                <div onClick={props.nav} className="text-sans w-min p-4">
-                    {" "}
+                <div
+                    onClick={props.nav}
+                    className="w-min cursor-pointer p-4 text-sm font-semibold whitespace-nowrap text-tiilt-muted transition hover:text-tiilt"
+                >
                     {props.leftText}
                 </div>
             ) : (
-                <p  className={"flex w-max text-sans p-4"} onClick={props.nav} >
-                    <img
-                        onClick={props.nav}
-                        alt="back"
-                        className={""}
-                        src={backicon}
-                    />
+                <p
+                    className="flex w-max cursor-pointer items-center gap-1 p-4 text-sm font-semibold text-tiilt-muted transition hover:text-tiilt"
+                    onClick={props.nav}
+                >
+                    <img alt="" className="h-4 w-4" src={backicon} />
                     Back
                 </p>
             )}
-            <div className="text-sans w-full overflow-hidden text-center leading-14 whitespace-nowrap select-none">
+            <div className="w-full overflow-hidden text-center text-base leading-12 font-semibold whitespace-nowrap text-tiilt-ink select-none">
                 {props.editMode ? (
                     <input
-                        className="visible w-52 overflow-scroll border-0 leading-14"
+                        className="visible w-52 overflow-scroll border-0 text-center leading-12 outline-none"
                         type="text"
                         defaultValue={props.title}
                         onKeyUp={(event) =>
@@ -35,7 +35,7 @@ function Appheader(props) {
             </div>
             <div
                 onClick={props.rightTextClick}
-                className="text-sans w-max px-3 text-center leading-14 disabled:text-gray-50"
+                className="w-max cursor-pointer px-4 text-center text-sm leading-12 font-semibold whitespace-nowrap text-tiilt transition hover:text-tiilt-deep"
             >
                 {props.rightText}
             </div>

@@ -58,13 +58,13 @@
   border-radius: 5px;
   border-style: solid;
   border-width: 1px;
-  border-color: #a7a7a7;
+  border-color: #c9bede;
   outline: none;
   transition: border-color 0.5s;
 }
 
 .text-input:focus {
-  border-color: #006db3;
+  border-color: #3a2163;
 }
 
 .path-container {
@@ -87,7 +87,7 @@
   border-radius: 5px;
   border-style: solid;
   border-width: 1px;
-  border-color: #a7a7a7;
+  border-color: #c9bede;
   transition: none;
   white-space: nowrap;
   overflow: hidden;
