@@ -43,6 +43,24 @@ def scorer():
     # Expression & Thinking Style backend: 'liwc' (default) or 'llm'.
     return str(config['processing'].get('scorer', 'liwc'))
 
+def semantic_embedder():
+    # Sentence embedder for participation/cohesion metrics on the LIVE path.
+    # 'all-mpnet-base-v2' (default: light, comparable with historical metrics)
+    # or 'bge-large-en-v1.5' to match the post-hoc default.
+    # Self-inits because server.py resolves this at import time, before main()
+    # calls initialize().
+    if 'config' not in globals():
+        initialize()
+    return str(config.get('processing', 'semantic_embedder', fallback='all-mpnet-base-v2'))
+
+def diarizer():
+    # Speaker-diarization fallback clustering (post-hoc path only):
+    #   'spectral' (default) -- the original ECAPA + spectral clustering.
+    #   'pyannote'           -- reuse pyannote 3.1 cluster labels already
+    #                           attached by batch ASR (WhisperX/Qwen3); falls
+    #                           back to spectral when labels are absent.
+    return str(config.get('processing', 'diarizer', fallback='spectral'))
+
 def whisper_model_size():
     return str(config.get('whisper', 'model_size', fallback='small.en'))
 
@@ -54,6 +72,24 @@ def whisper_compute_type():
 
 def keyword_model_limit():
     return int(config['processing']['keyword_model_limit'])
+
+def keyword_backend():
+    # Keyword semantic-matching backend: 'word2vec' (2013 GoogleNews-300,
+    # default) or 'embedding' (a modern SentenceTransformer, see
+    # keyword_embedding_model).
+    return str(config.get('processing', 'keyword_backend', fallback='word2vec'))
+
+def keyword_embedding_model():
+    # SentenceTransformer used when keyword_backend='embedding'.
+    return str(config.get('processing', 'keyword_embedding_model',
+                          fallback='BAAI/bge-small-en-v1.5'))
+
+def keyword_embedding_threshold():
+    # Cosine-distance cutoff for the embedding backend (lower = stricter).
+    # Tighter than the word2vec 0.6 because sentence-embedding distances are
+    # compressed into a higher band.
+    return float(config.get('processing', 'keyword_embedding_threshold',
+                            fallback='0.28'))
 
 def processing_callback():
     return str(config['output']['processing_callback'])

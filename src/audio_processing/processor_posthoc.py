@@ -94,7 +94,10 @@ class AudioProcessorPosthoc:
                 logging.info(ex)
             _rd = os.path.join(os.path.dirname(os.path.abspath(__file__)), "speaker_diarization", "results")
             os.makedirs(_rd, exist_ok=True)
-            np.savetxt(os.path.join(_rd, "{}.txt".format(time.strftime("%Y%m%d-%H%M%S"))), self.speakers)
+            # self.speakers may be numeric cluster ids (spectral) or string
+            # labels (carried pyannote), so serialize as strings either way.
+            np.savetxt(os.path.join(_rd, "{}.txt".format(time.strftime("%Y%m%d-%H%M%S"))),
+                       np.array(self.speakers, dtype=str), fmt='%s')
 
     def add_websocket_connection(self, web_socket):
         self.web_socket_connection = web_socket
@@ -115,15 +118,38 @@ class AudioProcessorPosthoc:
     def send_speaker_taggings(self):
         processing_timer = time.time()
         results = []
-        spectralEmbeddings, n_speakers = getSpectralEmbeddings(self.embeddings)
-        self.speakers, speaker_class_names, cls_ctrs = clusterSpectralEmbeddings(
-            spectralEmbeddings, n_speakers)
-        for i in range(0, len(self.speakers)):
-            results.append({
-                'speaker': 'Speaker {0}'.format(self.speakers[i]),
-                'start': self.embeddings[i]['start'],
-                'end': self.embeddings[i]['end']
-            })
+
+        # Diarizer selection (config.py diarizer(), default 'spectral'):
+        #   'pyannote' -> reuse the pyannote 3.1 cluster labels the batch ASR
+        #                 (WhisperX/Qwen3) already attached to each utterance,
+        #                 skipping the 2020-era spectral clustering entirely.
+        #                 Falls back to spectral if labels are absent (e.g. the
+        #                 google/live ASR path, which carries no diarization).
+        #   'spectral' -> the original hand-rolled ECAPA + spectral clustering.
+        use_pyannote = (cf.diarizer() == 'pyannote'
+                        and self.embeddings
+                        and all(e.get('speaker_tag') for e in self.embeddings))
+
+        if use_pyannote:
+            logging.info("Diarization: using carried pyannote 3.1 labels for %d utterances",
+                         len(self.embeddings))
+            self.speakers = [e['speaker_tag'] for e in self.embeddings]
+            for i in range(0, len(self.speakers)):
+                results.append({
+                    'speaker': str(self.speakers[i]),
+                    'start': self.embeddings[i]['start'],
+                    'end': self.embeddings[i]['end']
+                })
+        else:
+            spectralEmbeddings, n_speakers = getSpectralEmbeddings(self.embeddings)
+            self.speakers, speaker_class_names, cls_ctrs = clusterSpectralEmbeddings(
+                spectralEmbeddings, n_speakers)
+            for i in range(0, len(self.speakers)):
+                results.append({
+                    'speaker': 'Speaker {0}'.format(self.speakers[i]),
+                    'start': self.embeddings[i]['start'],
+                    'end': self.embeddings[i]['end']
+                })
 
         # Convert results into expected JSON format.
         taggings = {}
@@ -277,6 +303,10 @@ class AudioProcessorPosthoc:
                         'embedding': embedding,
                         'start': start_time,
                         'end': end_time,
+                        # Carried pyannote 3.1 cluster label from batch ASR
+                        # (WhisperX/Qwen3), if any — used by send_speaker_taggings
+                        # when diarizer='pyannote' to skip hand-rolled clustering.
+                        'speaker_tag': getattr(transcript_data, 'speaker_tag', None),
                     })
                     
                     np.save(self.embeddings_file, np.array(self.embeddings))

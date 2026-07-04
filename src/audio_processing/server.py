@@ -37,7 +37,16 @@ from speechbrain.inference import SpeakerRecognition
 from sentence_transformers import SentenceTransformer
 
 cm = ConnectionManager()
-semantic_model = SentenceTransformer("all-mpnet-base-v2")
+# Sentence embedder for participation/cohesion metrics, selectable via
+# [processing] semantic_embedder (config.py). Default 'all-mpnet-base-v2' keeps
+# the light, low-latency model on the live path and preserves comparability with
+# historical metrics; set 'bge-large-en-v1.5' to match the post-hoc default.
+_SEMANTIC_IDS = {
+    "all-mpnet-base-v2": "all-mpnet-base-v2",
+    "bge-large-en-v1.5": "BAAI/bge-large-en-v1.5",
+}
+_semantic_choice = cf.semantic_embedder()
+semantic_model = SentenceTransformer(_SEMANTIC_IDS.get(_semantic_choice, _semantic_choice))
 diarization_model = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="pretrained_models/pretrained_ecapa")
 semantic_model.share_memory()
 
