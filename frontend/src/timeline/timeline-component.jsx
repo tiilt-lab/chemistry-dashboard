@@ -4,23 +4,47 @@ import { formatSeconds } from "../globals"
 function AppTimeline(props) {
     const sessionLen =
         props.session && props.session.length ? props.session.length : 0
+    const transcripts = props.transcripts || []
     const start = props.start !== undefined ? props.start : 0
     const end = props.end !== undefined ? props.end : sessionLen
-    const duration = Math.max(end - start, 0.0001)
 
-    const startText = start === 0 ? "Start" : formatSeconds(start)
+    // Speech bounds: first utterance start to last utterance end.
+    let speechStart = 0
+    let speechEnd = sessionLen
+    if (transcripts.length) {
+        speechStart = Math.min(...transcripts.map((t) => t.start_time))
+        speechEnd = Math.max(
+            ...transcripts.map((t) => t.start_time + t.length),
+        )
+    }
+
+    // When no sub-range is selected (the slider spans the whole session),
+    // auto-fit the window to the detected speech with a little padding, so the
+    // discussion fills the timeline instead of clustering in one corner. A
+    // narrower slider selection overrides this and is honored exactly.
+    const isFullRange = start <= 0.5 && end >= sessionLen - 0.5
+    let winStart = start
+    let winEnd = end
+    if (isFullRange && transcripts.length && speechEnd > speechStart) {
+        const pad = (speechEnd - speechStart) * 0.03
+        winStart = Math.max(0, speechStart - pad)
+        winEnd = Math.min(sessionLen || speechEnd, speechEnd + pad)
+    }
+    const duration = Math.max(winEnd - winStart, 0.0001)
+
+    const startText = winStart <= 0 ? "Start" : formatSeconds(winStart)
     const endText =
-        end === sessionLen
+        winEnd >= sessionLen && sessionLen > 0
             ? props.session && props.session.recording
                 ? "Now"
                 : "End"
-            : formatSeconds(end)
+            : formatSeconds(winEnd)
 
     // Recomputed on every render, so moving the range slider (which changes
     // props.start / props.end) redraws the timeline in step with it.
-    const displayTranscripts = (props.transcripts || [])
+    const displayTranscripts = transcripts
         .map((transcript) => {
-            const left = ((transcript.start_time - start) / duration) * 100
+            const left = ((transcript.start_time - winStart) / duration) * 100
             const width = (transcript.length / duration) * 100
             return { transcript, left, width }
         })
