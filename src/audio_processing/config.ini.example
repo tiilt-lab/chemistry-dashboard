@@ -26,6 +26,28 @@ scorer=liwc
 
 keyword_model_limit=20000
 
+# Keyword semantic matching backend:
+#   word2vec   (2013 GoogleNews-300 static vectors; large, dated)
+#   embedding  (default; a modern SentenceTransformer — better semantics,
+#              vocabulary-free. Model + threshold set below.)
+keyword_backend=embedding
+keyword_embedding_model=BAAI/bge-small-en-v1.5
+# Cosine-distance cutoff for the embedding backend (lower = stricter). Tighter
+# than the word2vec 0.6 because sentence-embedding distances sit in a higher band.
+keyword_embedding_threshold=0.28
+
+# Diarization fallback clustering (post-hoc path):
+#   spectral  (2020 ECAPA + spectral clustering)
+#   pyannote  (default; reuse pyannote 3.1 labels carried by the WhisperX/Qwen3
+#             batch ASR — falls back to spectral when none are present, e.g.
+#             the google/live ASR path)
+diarizer=pyannote
+
+# Live-path sentence embedder for participation/cohesion metrics:
+#   all-mpnet-base-v2  (default; light, comparable with historical metrics)
+#   bge-large-en-v1.5  (open SOTA; matches the post-hoc default)
+semantic_embedder=all-mpnet-base-v2
+
 # Whisper settings (only used when asr=whisper).
 #[whisper]
 #model_size=small.en

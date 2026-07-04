@@ -50,3 +50,15 @@ object_model=yolo11
 attention_model=gazelle
 ; Frames/second sampled by post-hoc video analysis (lower = faster, coarser).
 posthoc_fps=12
+; Face detection + embedding backend:
+;   dlib         (face_recognition 128-D; default)
+;   insightface  (ArcFace buffalo_l 512-D, open SOTA — requires
+;                `pip install insightface onnxruntime-gpu` AND re-enrolling all
+;                students, since galleries are backend-specific)
+face_model=dlib
+; Head/person detector:
+;   yolov5       (vendored yolo_head CrowdHuman YOLOv5m; default)
+;   ultralytics  (a YOLO11/YOLOv8 CrowdHuman head model via the ultralytics
+;                package — set head_weights; enables retiring vendored yolo_head/)
+head_model=yolov5
+head_weights=crowdhuman_yolov8m_head.pt
