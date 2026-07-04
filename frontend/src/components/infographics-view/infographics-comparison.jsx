@@ -3,6 +3,7 @@ import { TranscriptPanel } from "../transcript-panel/transcript-panel"
 import { VideoAnalyticsPanel } from "../video-analytics/video-analytics-panel"
 import { VideoPlayer } from "../video-player/video-player"
 import { PosthocTrigger } from "../posthoc/posthoc-trigger"
+import { ModelNote } from "../model-note/model-note"
 import { AppTimelineSlider } from "../timeline-slider/timeline-slider-component"
 import { AppTimeline } from "../../timeline/timeline-component"
 import { AppFeaturesComponent } from "../../features/features-component"
@@ -144,6 +145,7 @@ function AppInfographicsComparison(props) {
                                     }
                                     start={props.startTime}
                                     end={props.endTime}
+                                    models={models}
                                 />
                             </AppSectionBoxComponent>
                         )}
@@ -151,19 +153,33 @@ function AppInfographicsComparison(props) {
                     {props.details === "Group" && props.sessionDevice && (
                         <AppSectionBoxComponent
                             type={"w-full"}
-                            heading={"Discussion video"}
+                            heading={"Discussion video & transcript"}
                         >
-                            <VideoPlayer
-                                sessionId={props.session.id}
-                                sessionDeviceId={props.sessionDevice.id}
-                                selectedTime={selectedTime}
-                                transcripts={props.displayTranscripts}
-                                onPlaybackTime={setPlaybackTime}
-                            />
+                            <div className="flex w-full flex-col gap-3">
+                                <VideoPlayer
+                                    sessionId={props.session.id}
+                                    sessionDeviceId={props.sessionDevice.id}
+                                    selectedTime={selectedTime}
+                                    transcripts={props.displayTranscripts}
+                                    onPlaybackTime={setPlaybackTime}
+                                />
+                                <TranscriptPanel
+                                    transcripts={props.displayTranscripts}
+                                    start={props.startTime}
+                                    end={props.endTime}
+                                    onOpenFull={props.seeAllTranscripts}
+                                    selectedTime={selectedTime}
+                                    onSelectTime={setSelectedTime}
+                                    playbackTime={playbackTime}
+                                    compact
+                                    transcriptionLabel={models && models.transcription && models.transcription.label}
+                                />
+                            </div>
                         </AppSectionBoxComponent>
                     )}
 
-                    {props.details !== "Comparison" && (
+                    {props.details !== "Comparison" &&
+                        !(props.details === "Group" && props.sessionDevice) && (
                         <AppSectionBoxComponent
                             type={"w-full"}
                             heading={"Transcript"}
@@ -209,6 +225,11 @@ function AppInfographicsComparison(props) {
                                 type={"w-full"}
                                 heading={`Visual Analytics`}
                             >
+                                <div className="mb-2 flex flex-col gap-0.5">
+                                    <ModelNote label={models && models.attention && models.attention.label} fallback="the attended-visual-targets gaze model (GazeFollow) + YOLOv5m head detector" />
+                                    <ModelNote label={models && models.emotion && models.emotion.label} fallback="ResMaskingNet (FER-2013, 7 emotions)" />
+                                    <ModelNote label={models && models.objects && models.objects.label} fallback="YOLOv4-P7 object detector (COCO)" />
+                                </div>
                                 <AppIndividualVideoFeaturesComponent
                                     session={props.session}
                                     videometrics={props.spkr1VideoMetrics}
@@ -227,6 +248,11 @@ function AppInfographicsComparison(props) {
                                 type={"w-full"}
                                 heading={`Visual Analytics`}
                             >
+                                <div className="mb-2 flex flex-col gap-0.5">
+                                    <ModelNote label={models && models.attention && models.attention.label} fallback="the attended-visual-targets gaze model (GazeFollow) + YOLOv5m head detector" />
+                                    <ModelNote label={models && models.emotion && models.emotion.label} fallback="ResMaskingNet (FER-2013, 7 emotions)" />
+                                    <ModelNote label={models && models.objects && models.objects.label} fallback="YOLOv4-P7 object detector (COCO)" />
+                                </div>
                                 <AppIndividualVideoFeaturesComponent
                                     session={props.session}
                                     videometrics={props.spkr2VideoMetrics}
@@ -245,6 +271,9 @@ function AppInfographicsComparison(props) {
                                 type={"w-full"}
                                 heading={`Participation and Impact Style`}
                             >
+                                <div className="mb-2">
+                                    <ModelNote label={models && models.participation && models.participation.label} fallback="sentence-transformer semantic cohesion (all-mpnet-base-v2)" />
+                                </div>
                                 <AppIndividualFeaturesComponent
                                     session={props.session}
                                     transcripts={props.spkr1Transcripts}
@@ -261,6 +290,9 @@ function AppInfographicsComparison(props) {
                                 type={"w-full"}
                                 heading={`Participation and Impact Style`}
                             >
+                                <div className="mb-2">
+                                    <ModelNote label={models && models.participation && models.participation.label} fallback="sentence-transformer semantic cohesion (all-mpnet-base-v2)" />
+                                </div>
                                 <AppIndividualFeaturesComponent
                                     session={props.session}
                                     transcripts={props.spkr2Transcripts}
@@ -315,6 +347,9 @@ function AppInfographicsComparison(props) {
                                 type={"w-full"}
                                 heading={"Radar chart"}
                             >
+                                <div className="mb-2">
+                                    <ModelNote prefix="Scored from the transcript with" label={models && models.scoring && models.scoring.label} fallback="the LIWC & Harvard General Inquirer lexicons" />
+                                </div>
                                 <AppRadarComponent
                                     session={props.session}
                                     transcripts={
@@ -337,6 +372,9 @@ function AppInfographicsComparison(props) {
                                 type={"w-full"}
                                 heading={"Radar chart"}
                             >
+                                <div className="mb-2">
+                                    <ModelNote prefix="Scored from the transcript with" label={models && models.scoring && models.scoring.label} fallback="the LIWC & Harvard General Inquirer lexicons" />
+                                </div>
                                 <AppRadarComponent
                                     session={props.session}
                                     transcripts={props.spkr2Transcripts}
@@ -353,6 +391,9 @@ function AppInfographicsComparison(props) {
                                 type={"w-full"}
                                 heading={"Keyword detection"}
                             >
+                                <div className="mb-2">
+                                    <ModelNote prefix="Matched with" label={models && models.keywords && models.keywords.label} fallback="word2vec semantic matching (GoogleNews-300)" />
+                                </div>
                                 <AppKeywordsComponent
                                     session={props.session}
                                     sessionDevice={props.sessionDevice}
@@ -375,6 +416,9 @@ function AppInfographicsComparison(props) {
                                 type={"w-full"}
                                 heading={"Keyword detection"}
                             >
+                                <div className="mb-2">
+                                    <ModelNote prefix="Matched with" label={models && models.keywords && models.keywords.label} fallback="word2vec semantic matching (GoogleNews-300)" />
+                                </div>
                                 <AppKeywordsComponent
                                     session={props.session}
                                     sessionDevice={props.sessionDevice}
