@@ -29,7 +29,7 @@ function IndividualFeaturePage(props) {
         .filter((feature) => feature !== undefined)
 
     return (
-        <div className="medium-section flex flex-col gap-2">
+        <div className="flex w-full flex-col gap-2">
             {props.features.length > 0 &&
                 rows.map((feature, index) => (
                     <div
