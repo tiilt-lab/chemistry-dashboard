@@ -2,6 +2,7 @@ import { AppSectionBoxComponent } from "../section-box/section-box-component"
 import { TranscriptPanel } from "../transcript-panel/transcript-panel"
 import { VideoAnalyticsPanel } from "../video-analytics/video-analytics-panel"
 import { ConversationDynamicsPanel } from "../conversation-dynamics/conversation-dynamics-panel"
+import { DiscussionSummaryPanel } from "../discussion-summary/discussion-summary-panel"
 import { VideoPlayer } from "../video-player/video-player"
 import { PosthocTrigger } from "../posthoc/posthoc-trigger"
 import { ModelNote } from "../model-note/model-note"
@@ -161,6 +162,18 @@ function AppInfographicsComparison(props) {
                             heading={"Conversation dynamics"}
                         >
                             <ConversationDynamicsPanel
+                                sessionId={props.session.id}
+                                sessionDeviceId={props.sessionDevice.id}
+                            />
+                        </AppSectionBoxComponent>
+                    )}
+
+                    {props.details === "Group" && props.sessionDevice && (
+                        <AppSectionBoxComponent
+                            type={"w-full"}
+                            heading={"AI discussion summary"}
+                        >
+                            <DiscussionSummaryPanel
                                 sessionId={props.session.id}
                                 sessionDeviceId={props.sessionDevice.id}
                             />

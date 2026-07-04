@@ -128,6 +128,42 @@ def get_llm_question_answer_interactions(session_id,session_device_id,username, 
         return json_response([])
 
 
+@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/summary', methods=['GET'])
+def generate_discussion_summary(session_id, session_device_id, **kwargs):
+    # LLM summary of a pod's discussion: overview, key moments, participation
+    # read, and actionable suggestions, from the diarized transcript.
+    transcripts = database.get_transcripts(session_device_id=session_device_id)
+    lines = []
+    for t in transcripts:
+        text = (getattr(t, 'transcript', '') or '').strip()
+        if not text:
+            continue
+        spk = getattr(t, 'speaker_tag', None) or 'Unknown'
+        lines.append("{0}: {1}".format(spk, text))
+    if not lines:
+        return json_response({'summary': None, 'message': 'No transcript to summarize.'})
+    convo = "\n".join(lines)[:12000]  # cap prompt size
+    prompt = (
+        "You are analyzing a small-group student discussion. From the diarized "
+        "transcript below, return ONLY a JSON object with keys: "
+        "\"summary\" (2-3 sentences on what the group discussed), "
+        "\"key_moments\" (up to 4 short strings), "
+        "\"participation\" (1 sentence on how balanced participation was), "
+        "\"suggestions\" (up to 3 short actionable suggestions for the group).\n\n"
+        "Transcript:\n" + convo
+    )
+    try:
+        response = call_gemini_with_retry(prompt)
+        raw = response.text.strip()
+        if raw.startswith("```"):
+            raw = raw.replace("```json", "").replace("```", "").strip()
+        data = json.loads(raw)
+    except Exception as e:
+        logging.error("discussion summary failed: %s", e)
+        return json_response({'summary': None, 'message': 'Summary generation failed.'}, 502)
+    return json_response(data)
+
+
 def call_gemini_with_retry(prompt, max_retries=5):
     models = [
     "gemini-2.5-flash",
