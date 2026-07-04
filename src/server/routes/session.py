@@ -539,6 +539,27 @@ def session_device_by_id(session_device_id, **kwargs):
     device = database.get_session_devices(id=session_device_id)
     return json_response(device.json())
 
+
+def _face_thumb_path(alias):
+    # Representative face crop saved by the video pipeline (per student alias).
+    base = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        '..', 'video_processing', 'facial_embeddings', 'thumbnails')
+    safe = os.path.basename(str(alias))  # prevent path traversal
+    return os.path.join(base, "{0}.jpg".format(safe))
+
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/facethumb/<alias>', methods=['GET'])
+def get_face_thumbnail(session_id, session_device_id, alias, **kwargs):
+    # Face crop for a recognized student, scoped to a session+device path (same
+    # access model as the pod video). 404 until the pod is (re)processed.
+    path = _face_thumb_path(alias)
+    if not os.path.exists(path):
+        return ('', 404)
+    resp = make_response(send_file(path, mimetype='image/jpeg'))
+    resp.headers['Cache-Control'] = 'public, max-age=86400'
+    return resp
+
 @api_routes.route('/api/v1/help_button', methods=['POST'])
 @wrappers.verify_login(allow_key=True)
 def set_help_button(**kwargs):

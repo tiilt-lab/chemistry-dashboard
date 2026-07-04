@@ -105,6 +105,10 @@ class ImageObjectDetection:
         # Load model
         from facial_recognition_backend import get_face_backend
         self.face_backend = get_face_backend()  # dlib (default) or insightface, per config.face_model()
+        # One representative face crop per recognized student, so the UI can show
+        # a real face thumbnail (keyed by alias, first good match per run wins).
+        self._thumb_dir = os.path.join(_cf.facial_embedding_folder(), 'thumbnails')
+        self._saved_thumbs = set()
         import config as _cf
         # Head detector is config-selected: the vendored yolo_head CrowdHuman
         # YOLOv5m pickle (default) or an ultralytics YOLO11/YOLOv8 head model.
@@ -478,10 +482,9 @@ class ImageObjectDetection:
                                 match, cos_score,L2_score,dist_score = self.identify_student(face_embedding[0], facial_embeddings, "face_"+str(detected_faces),cos_threshold=0.95,L2_threshold=0.3,frame_index=int(p))
                                 if match != "Unknown":
                                     # plot_one_box(xyxy, im0, label=self.object_names_K_V.get(int_cls, None), color=[random.randint(0, 255) for _ in range(3)], line_thickness=3)
-                                    # save_to = os.path.join(vid_img_dir, "face_detected_{0}_{1}_{2}_{3}.{4}".format(int(p),match,self.object_names_K_V.get(int_cls, None),detected_faces,'png'))
-                                    # cv2.imwrite(save_to,quality_face)
                                     # logging.info("Match: {0}, cos score: {1}, Euclid: {2}, Distance: {3}".format(match,cos_score,L2_score,dist_score))
-                                    self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_face",match,accumulator,time_marker,im0,int(p)) 
+                                    self._save_face_thumbnail(match, quality_face)
+                                    self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_face",match,accumulator,time_marker,im0,int(p))
                                 else:
                                     pass
                                     # logging.info(f"Match: {match}, Confidence: {cos_score:.3f}")   
@@ -533,6 +536,24 @@ class ImageObjectDetection:
             f"norm={np.linalg.norm(v):.6f}, "
             f"nan?={np.isnan(v).any()}, inf?={np.isinf(v).any()}")
     
+    def _save_face_thumbnail(self, alias, face_img):
+        # Persist one representative face crop per recognized student so the UI
+        # can show a real thumbnail. First good match per run wins; never
+        # overwrites an existing file, and never breaks the pipeline on error.
+        try:
+            if not alias or alias in self._saved_thumbs:
+                return
+            self._saved_thumbs.add(alias)
+            os.makedirs(self._thumb_dir, exist_ok=True)
+            path = os.path.join(self._thumb_dir, "{0}.jpg".format(os.path.basename(str(alias))))
+            if os.path.exists(path):
+                return
+            # face_img is RGB (face_recognition/dlib convention); cv2 writes BGR.
+            cv2.imwrite(path, cv2.cvtColor(face_img, cv2.COLOR_RGB2BGR))
+            logging.info("saved face thumbnail for %s", alias)
+        except Exception as e:
+            logging.warning("face thumbnail save failed for %s: %s", alias, e)
+
     def identify_student(self,face_embedding, store_facial_embeddings,detect_img_name, cos_threshold=0.95,L2_threshold=0.3,frame_index=None):
         """
         Identify student by comparing a new face embedding against stored gallery.

@@ -176,6 +176,8 @@ function AppInfographicsComparison(props) {
                                     models={models}
                                     playbackTime={playbackTime}
                                     onSeek={setSelectedTime}
+                                    sessionId={props.session.id}
+                                    sessionDeviceId={props.sessionDevice.id}
                                 />
                             </AppSectionBoxComponent>
                         )}
