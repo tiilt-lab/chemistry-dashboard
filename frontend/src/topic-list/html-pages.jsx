@@ -1,7 +1,7 @@
 import React from 'react';
 import style from './topic-list.module.css'
 import { Appheader } from '../header/header-component'
-import { isLargeScreen, adjDim } from '../myhooks/custom-hooks';
+import {isLargeScreen} from '../myhooks/custom-hooks';
 import { AppContextMenu } from '../components/context-menu/context-menu-component';
 import style2 from '../components/context-menu/context-menu.module.css';
 import {DialogBox} from '../dialog/dialog-component';
@@ -53,7 +53,7 @@ function TopicListPage(props) {
 		message = {props.currentDialog == 'rename' ?
 		<React.Fragment>
 		<div className={style.container}>
-		<input id="txtName" className={style["text-input"]} style = {{width: adjDim(279) + 'px',}} defaultValue={props.topicListStruct[props.showedInd].tname} onKeyUp={(event) => props.setCurrInput(event.target.value)} maxLength='64' />
+		<input id="txtName" className={style["text-input"]} style={{ width: "min(20rem, 100%)" }} defaultValue={props.topicListStruct[props.showedInd].tname} onKeyUp={(event) => props.setCurrInput(event.target.value)} maxLength='64' />
 		<div>
 		<button className={style["basic-button"]} style = {{width: "min(26rem, 100%)", 'margin-bottom': ((props.changedName) ? 10 : 0) + 'px',}} onClick={() => {props.setTopicName()}} >Confirm</button >
 		</div>
@@ -69,7 +69,7 @@ function TopicListPage(props) {
 		  <React.Fragment>
 		    <div>
 		      {"If yes, select a name for your topics."}
-		      <input id="txtName" className={style["text-input"]} style = {{width: adjDim(279) + 'px',}} defaultValue={""} onKeyUp={(event) => props.setNameInput(event.target.value)} maxLength='64' />
+		      <input id="txtName" className={style["text-input"]} style={{ width: "min(20rem, 100%)" }} defaultValue={""} onKeyUp={(event) => props.setNameInput(event.target.value)} maxLength='64' />
 		    </div>
 		  </React.Fragment> : <></>}
 		  <div>

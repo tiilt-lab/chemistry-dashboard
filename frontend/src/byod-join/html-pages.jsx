@@ -11,7 +11,6 @@ import { AppSectionBoxComponent } from "../components/section-box/section-box-co
 import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { TranscriptsComponentClient } from "../transcripts/transcripts-component_client"
-import { adjDim, isLargeScreen } from "../myhooks/custom-hooks"
 // import SessionQRCode from "../feedback-form/session-qrcode";
 
 import style from "./byod-join.module.css"
@@ -767,7 +766,7 @@ function ByodJoinPage(props) {
                     (props.currentForm === "renameAlias" && (
                         <div
                             className={style5["dialog-window"]}
-                            style={{ "min-width": adjDim(270) + "px" }}
+                            style={{ minWidth: "min(20rem, 90vw)" }}
                         >
                             <div className={style5["dialog-heading"]}>
                                 Update Alias Name:
@@ -807,7 +806,7 @@ function ByodJoinPage(props) {
                     (props.currentForm === "savedAudioVideoFingerprint" && (
                         <div
                             className={style5["dialog-window"]}
-                            style={{ "min-width": adjDim(270) + "px" }}
+                            style={{ minWidth: "min(20rem, 90vw)" }}
                         >
                             <div className={style5["dialog-heading"]}>
                                 Enter Username:

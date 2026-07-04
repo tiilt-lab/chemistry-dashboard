@@ -6,7 +6,6 @@ import style5 from "../sessions/sessions.module.css"
 import { Appheader } from "../header/header-component"
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
-import { adjDim } from "../myhooks/custom-hooks"
 import { AppSpinner } from "../spinner/spinner-component"
 
 import MicIcon from "../Icons/Mic"
@@ -199,7 +198,7 @@ function PodsOverviewPages(props) {
                     (props.currentForm === "selectdownloadoption" && (
                         <div
                             className={style5["dialog-window"]}
-                            style={{ "min-width": adjDim(200) + "px" }}
+                            style={{ minWidth: "min(16rem, 90vw)" }}
                         >
                             <div className={style5["dialog-heading"]}>
                                 Select the Data to Download:

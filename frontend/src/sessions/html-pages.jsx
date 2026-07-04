@@ -7,7 +7,6 @@ import style2 from "../components/context-menu/context-menu.module.css"
 import breadcrumbIcon from "../assets/img/icon-back.svg"
 import FolderIcon from "../Icons/Folder"
 import MicIcon from "../Icons/Mic"
-import { adjDim } from "../myhooks/custom-hooks"
 import { AppSpinner } from "../spinner/spinner-component"
 
 const rowClass =
@@ -339,7 +338,7 @@ function DiscussionSessionPage(props) {
                 {props.currentForm === "RenameSession" ? (
                     <div
                         className={style["dialog-window"]}
-                        style={{ "min-width": adjDim(270) + "px" }}
+                        style={{ minWidth: "min(20rem, 90vw)" }}
                     >
                         <div className={style["dialog-heading"]}>
                             Update Discussion Name:
@@ -381,7 +380,7 @@ function DiscussionSessionPage(props) {
                 {props.currentForm === "RenameFolder" ? (
                     <div
                         className={style["dialog-window"]}
-                        style={{ "min-width": adjDim(270) + "px" }}
+                        style={{ minWidth: "min(20rem, 90vw)" }}
                     >
                         <div className={style["dialog-heading"]}>
                             Update Folder Name:
@@ -423,7 +422,7 @@ function DiscussionSessionPage(props) {
                 {props.currentForm === "DeleteSession" ? (
                     <div
                         className={style["dialog-window"]}
-                        style={{ "min-width": adjDim(270) + "px" }}
+                        style={{ minWidth: "min(20rem, 90vw)" }}
                     >
                         <div className={style["dialog-body"]}>
                             Are you sure you want to permanently delete this
@@ -451,7 +450,7 @@ function DiscussionSessionPage(props) {
                 {props.currentForm === "DeleteFolder" ? (
                     <div
                         className={style["dialog-window"]}
-                        style={{ "min-width": adjDim(270) + "px" }}
+                        style={{ minWidth: "min(20rem, 90vw)" }}
                     >
                         <div className={style["dialog-heading"]}>
                             {" "}
@@ -484,7 +483,7 @@ function DiscussionSessionPage(props) {
                 {props.currentForm === "NewFolder" ? (
                     <div
                         className={style["dialog-window"]}
-                        style={{ "min-width": adjDim(270) + "px" }}
+                        style={{ minWidth: "min(20rem, 90vw)" }}
                     >
                         <div className={style["dialog-heading"]}>
                             {" "}
@@ -543,7 +542,7 @@ function DiscussionSessionPage(props) {
                 {props.currentForm === "MoveFolder" ? (
                     <div
                         className={style["dialog-window"]}
-                        style={{ "min-width": adjDim(270) + "px" }}
+                        style={{ minWidth: "min(20rem, 90vw)" }}
                     >
                         <div className={style["dialog-heading"]}>
                             Move Folder
@@ -582,7 +581,7 @@ function DiscussionSessionPage(props) {
                 {props.currentForm === "MoveSession" ? (
                     <div
                         className={style["dialog-window"]}
-                        style={{ "min-width": adjDim(270) + "px" }}
+                        style={{ minWidth: "min(20rem, 90vw)" }}
                     >
                         <div className={style["dialog-heading"]}>
                             Move Discussion
@@ -621,7 +620,7 @@ function DiscussionSessionPage(props) {
                 {props.currentForm === "Loading" ? (
                     <div
                         className={style["dialog-window"]}
-                        style={{ "min-width": adjDim(270) + "px" }}
+                        style={{ minWidth: "min(20rem, 90vw)" }}
                     >
                         <div className={style["dialog-heading"]}>
                             Loading...please wait...
