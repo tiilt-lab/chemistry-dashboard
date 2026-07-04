@@ -155,6 +155,8 @@ function AppFeaturesComponent(props) {
     features = {features}
     getInfo = {getInfo}
     showFeatures = {props.showFeatures}
+    selectedTime = {props.selectedTime}
+    onSelectTime = {props.onSelectTime}
     />
   )
 }

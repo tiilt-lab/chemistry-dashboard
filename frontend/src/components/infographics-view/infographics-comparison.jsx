@@ -7,49 +7,34 @@ import { AppRadarComponent } from "../../radar/radar-component"
 import { AppKeywordsComponent } from "../../keywords/keywords-component"
 import { AppIndividualFeaturesComponent } from "../individualmetrics/features-component"
 import { AppIndividualVideoFeaturesComponent } from "../individualVideometrics/video-features-component"
-import React from "react"
+import React, { useState } from "react"
 
 function AppInfographicsComparison(props) {
-    
+    // Shared selection linking the transcript with the Expression & Thinking
+    // Style graphs. It is the start_time of the selected utterance, which maps
+    // 1:1 to a point on each feature graph.
+    const [selectedTime, setSelectedTime] = useState(null)
+
     return (
         <>
             {props.speakers && (
                 <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-6">
-                    {props.details !== "Group" && props.details!== "Individual" && (
-                        <div className="flex w-full flex-col gap-2 @sm:flex-row">
-                            <select
-                                id="speaker1"
-                                className="dropdown small-section"
-                                value={props.selectedSpkrId1}
-                                onChange={(e) =>
-                                    props.setSelectedSpkrId1(
-                                        parseInt(e.target.value, 10),
-                                    )
-                                }
-                            >
-                                <option value="-1">Select Participant</option>
-                                {props.speakers.map((speaker) => (
-                                    <option
-                                        key={speaker["id"]}
-                                        value={speaker["id"]}
-                                    >
-                                        {speaker["alias"]}
-                                    </option>
-                                ))}
-                            </select>
-
-                            {props.details === "Comparison" && (
+                    {props.details !== "Group" &&
+                        props.details !== "Individual" && (
+                            <div className="flex w-full flex-col gap-2 @sm:flex-row">
                                 <select
-                                    id="speaker2"
+                                    id="speaker1"
                                     className="dropdown small-section"
-                                    value={props.selectedSpkrId2}
+                                    value={props.selectedSpkrId1}
                                     onChange={(e) =>
-                                        props.setSelectedSpkrId2(
+                                        props.setSelectedSpkrId1(
                                             parseInt(e.target.value, 10),
                                         )
                                     }
                                 >
-                                    <option value="-1">Select Participant</option>
+                                    <option value="-1">
+                                        Select Participant
+                                    </option>
                                     {props.speakers.map((speaker) => (
                                         <option
                                             key={speaker["id"]}
@@ -59,9 +44,33 @@ function AppInfographicsComparison(props) {
                                         </option>
                                     ))}
                                 </select>
-                            )}
-                        </div>
-                    )}
+
+                                {props.details === "Comparison" && (
+                                    <select
+                                        id="speaker2"
+                                        className="dropdown small-section"
+                                        value={props.selectedSpkrId2}
+                                        onChange={(e) =>
+                                            props.setSelectedSpkrId2(
+                                                parseInt(e.target.value, 10),
+                                            )
+                                        }
+                                    >
+                                        <option value="-1">
+                                            Select Participant
+                                        </option>
+                                        {props.speakers.map((speaker) => (
+                                            <option
+                                                key={speaker["id"]}
+                                                value={speaker["id"]}
+                                            >
+                                                {speaker["alias"]}
+                                            </option>
+                                        ))}
+                                    </select>
+                                )}
+                            </div>
+                        )}
                     {props.showBoxes.length > 0 &&
                         (props.showBoxes[0]["clicked"] ||
                             props.showBoxes[1]["clicked"]) && (
@@ -82,9 +91,15 @@ function AppInfographicsComparison(props) {
                                 )}
                                 {props.showBoxes[1]["clicked"] && (
                                     <AppTimeline
-                                        clickedTimeline={props.onClickedTimeline}
+                                        clickedTimeline={
+                                            props.onClickedTimeline
+                                        }
                                         session={props.session}
-                                        transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
+                                        transcripts={
+                                            props.details === "Group"
+                                                ? props.displayTranscripts
+                                                : props.spkr1Transcripts
+                                        }
                                         start={props.startTime}
                                         end={props.endTime}
                                     />
@@ -98,10 +113,16 @@ function AppInfographicsComparison(props) {
                             heading={"Transcript"}
                         >
                             <TranscriptPanel
-                                transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
+                                transcripts={
+                                    props.details === "Group"
+                                        ? props.displayTranscripts
+                                        : props.spkr1Transcripts
+                                }
                                 start={props.startTime}
                                 end={props.endTime}
                                 onOpenFull={props.seeAllTranscripts}
+                                selectedTime={selectedTime}
+                                onSelectTime={setSelectedTime}
                             />
                         </AppSectionBoxComponent>
                     )}
@@ -123,45 +144,9 @@ function AppInfographicsComparison(props) {
                             </AppSectionBoxComponent>
                         )}
 
-                    {props.showBoxes.length > 0 &&
-                        props.showBoxes[2]["clicked"] && (
-                            <AppSectionBoxComponent
-                                type={"w-full"}
-                                heading={"Keyword detection"}
-                            >
-                                <AppKeywordsComponent
-                                    session={props.session}
-                                    sessionDevice={props.sessionDevice}
-                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts }
-                                    start={props.startTime}
-                                    end={props.endTime}
-                                    fromclient={props.fromclient}
-                                />
-                            </AppSectionBoxComponent>
-                        )}
-
-                    {props.details === "Comparison" &&
-                        props.showBoxes.length > 0 &&
-                        props.showBoxes[2]["clicked"] && (
-                            <AppSectionBoxComponent
-                                type={"w-full"}
-                                heading={"Keyword detection"}
-                            >
-                                <AppKeywordsComponent
-                                    session={props.session}
-                                    sessionDevice={props.sessionDevice}
-                                    transcripts={props.spkr2Transcripts}
-                                    start={props.startTime}
-                                    end={props.endTime}
-                                    fromclient={props.fromclient}
-                                />
-                            </AppSectionBoxComponent>
-                        )}
-
-                    
                     {props.details !== "Group" &&
                         props.showBoxes.length > 0 &&
-                        props.showBoxes[11]["clicked"] && ( 
+                        props.showBoxes[11]["clicked"] && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={`Visual Analytics`}
@@ -169,7 +154,9 @@ function AppInfographicsComparison(props) {
                                 <AppIndividualVideoFeaturesComponent
                                     session={props.session}
                                     videometrics={props.spkr1VideoMetrics}
-                                    spkrId={props.getSpeakerAliasFromID(props.selectedSpkrId1)}
+                                    spkrId={props.getSpeakerAliasFromID(
+                                        props.selectedSpkrId1,
+                                    )}
                                     showFeatures={props.showFeatures}
                                 />
                             </AppSectionBoxComponent>
@@ -185,7 +172,9 @@ function AppInfographicsComparison(props) {
                                 <AppIndividualVideoFeaturesComponent
                                     session={props.session}
                                     videometrics={props.spkr2VideoMetrics}
-                                    spkrId={props.getSpeakerAliasFromID(props.selectedSpkrId2)}
+                                    spkrId={props.getSpeakerAliasFromID(
+                                        props.selectedSpkrId2,
+                                    )}
                                     showFeatures={props.showFeatures}
                                 />
                             </AppSectionBoxComponent>
@@ -231,8 +220,14 @@ function AppInfographicsComparison(props) {
                             >
                                 <AppFeaturesComponent
                                     session={props.session}
-                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
+                                    transcripts={
+                                        props.details === "Group"
+                                            ? props.displayTranscripts
+                                            : props.spkr1Transcripts
+                                    }
                                     showFeatures={props.showFeatures}
+                                    selectedTime={selectedTime}
+                                    onSelectTime={setSelectedTime}
                                 />
                             </AppSectionBoxComponent>
                         )}
@@ -248,6 +243,8 @@ function AppInfographicsComparison(props) {
                                     session={props.session}
                                     transcripts={props.spkr2Transcripts}
                                     showFeatures={props.showFeatures}
+                                    selectedTime={selectedTime}
+                                    onSelectTime={setSelectedTime}
                                 />
                             </AppSectionBoxComponent>
                         )}
@@ -255,12 +252,16 @@ function AppInfographicsComparison(props) {
                     {props.showBoxes.length > 0 &&
                         props.showBoxes[4]["clicked"] && (
                             <AppSectionBoxComponent
-                                type={"w-full"} 
+                                type={"w-full"}
                                 heading={"Radar chart"}
                             >
                                 <AppRadarComponent
                                     session={props.session}
-                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
+                                    transcripts={
+                                        props.details === "Group"
+                                            ? props.displayTranscripts
+                                            : props.spkr1Transcripts
+                                    }
                                     radarTrigger={props.radarTrigger}
                                     start={props.startTime}
                                     end={props.endTime}
@@ -283,6 +284,44 @@ function AppInfographicsComparison(props) {
                                     start={props.startTime}
                                     end={props.endTime}
                                     showFeatures={props.showFeatures}
+                                />
+                            </AppSectionBoxComponent>
+                        )}
+                    {props.showBoxes.length > 0 &&
+                        props.showBoxes[2]["clicked"] && (
+                            <AppSectionBoxComponent
+                                type={"w-full"}
+                                heading={"Keyword detection"}
+                            >
+                                <AppKeywordsComponent
+                                    session={props.session}
+                                    sessionDevice={props.sessionDevice}
+                                    transcripts={
+                                        props.details === "Group"
+                                            ? props.displayTranscripts
+                                            : props.spkr1Transcripts
+                                    }
+                                    start={props.startTime}
+                                    end={props.endTime}
+                                    fromclient={props.fromclient}
+                                />
+                            </AppSectionBoxComponent>
+                        )}
+
+                    {props.details === "Comparison" &&
+                        props.showBoxes.length > 0 &&
+                        props.showBoxes[2]["clicked"] && (
+                            <AppSectionBoxComponent
+                                type={"w-full"}
+                                heading={"Keyword detection"}
+                            >
+                                <AppKeywordsComponent
+                                    session={props.session}
+                                    sessionDevice={props.sessionDevice}
+                                    transcripts={props.spkr2Transcripts}
+                                    start={props.startTime}
+                                    end={props.endTime}
+                                    fromclient={props.fromclient}
                                 />
                             </AppSectionBoxComponent>
                         )}
