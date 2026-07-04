@@ -107,6 +107,9 @@ function FeaturePage(props) {
                                                             datasets: [{
                                                             data: feature.values,
                                                             // stepped: true,
+                                                            borderColor: "#3a2163",
+                                                            backgroundColor: "rgba(58,33,99,0.08)",
+                                                            fill: true,
                                                             borderWidth: 2,
                                                             pointRadius: 0,
                                                             }],
