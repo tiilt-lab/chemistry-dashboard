@@ -10,8 +10,10 @@ worker. Rebuild with:
     src/venv-unified/bin/python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
 
 Hard pins and why:
-- torch/torchaudio/torchvision 2.8.0 — newest supporting the installed CUDA
-  12.8 driver (2.10+ wheels require a newer driver).
+- torch/torchaudio/torchvision 2.11.0 via the cu128 index
+  (https://download.pytorch.org/whl/cu128) — PyPI's default wheels moved to
+  CUDA 13, which the 570 driver cannot run; the cu128 builds are current and
+  include Turing (sm_75) kernels. torchcodec must also come from that index.
 - transformers 4.57.6 — pinned by qwen-asr.
 - numpy 2.x — py3.13 has no numpy 1.x wheels; gensim>=4.4 accepts numpy 2.
 - Gaze-LLE's DINOv2 backbone loads via torch.hub; the hub cache pins
