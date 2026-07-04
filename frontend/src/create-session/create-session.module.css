@@ -23,7 +23,7 @@
   font-size: 16px;
   line-height: 24px;
   color: #ffffff;
-  background: linear-gradient(147.59deg, #3a2163 0%, #5b3a94 100%);
+  background: #3a2163;
 }
 
 .basic-button:focus, .footer-button:focus, .dialog-button:focus {
@@ -282,7 +282,7 @@
           align-items: center;
   position: relative;
   width: 100%;
-  height: 100vh;
+  height: 100%;
 }
 
 .footer-bar {
@@ -333,8 +333,9 @@
 .list-container {
   max-width: 42rem;
   width: 100%;
-  height: 100vh;
-  overflow: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   margin-top: 8px;
 }
 
@@ -602,7 +603,7 @@
   font-size: 16px;
   line-height: 24px;
   color: #ffffff;
-  background: linear-gradient(147.59deg, #3a2163 0%, #5b3a94 100%);
+  background: #3a2163;
 }
 
 .basic-button:focus, .footer-button:focus, .dialog-button:focus {
