@@ -1,169 +1,101 @@
-import style from "./features.module.css"
-import { DialogBox } from "../../dialog/dialog-component"
-import questIcon from "../../assets/img/question.svg"
-import { adjDim } from "../../myhooks/custom-hooks"
-import { Line } from "react-chartjs-2";
-import { Chart as ChartJS } from "chart.js/auto";
-import React from "react"
+import { Line } from "react-chartjs-2"
+import { Chart as ChartJS } from "chart.js/auto"
+
+// Inline classifier explanations (previously behind a ? dialog).
+const FEATURE_DESCRIPTIONS = {
+    "Emotional tone":
+        "Above 50 is a positive emotional tone; below 50 is negative.",
+    "Analytic thinking":
+        "Above 50 is analytic thinking; below 50 is narrative thinking.",
+    Clout: "Higher scores indicate more confidence or leadership.",
+    Authenticity: "Higher scores indicate more honest, authentic communication.",
+    Certainty: "Higher scores indicate more certainty or conviction.",
+    Confusion: "Higher scores indicate more confusion in a speaker's communication.",
+}
+
+const trendClass = (trend) =>
+    trend === 1
+        ? "text-tiilt-teal"
+        : trend === -1
+          ? "text-tiilt-danger"
+          : "text-tiilt-muted"
+
+const trendGlyph = (trend) => (trend === 1 ? "▲" : trend === -1 ? "▼" : "—")
 
 function IndividualFeaturePage(props) {
+    const rows = props.showFeatures
+        .filter((sf) => sf["clicked"])
+        .map((sf) => props.features[sf["value"]])
+        .filter((feature) => feature !== undefined)
+
     return (
-        <>
-            <div className="small-section">
-                <table
-                    className={style["features-table"]}
-                >
-                    <thead>
-                        <tr>
-                            <th
-                                className={style["desc-header"]}
-                                style={{ width: adjDim(186) + "px" }}
+        <div className="medium-section flex flex-col gap-2">
+            {props.features.length > 0 &&
+                rows.map((feature, index) => (
+                    <div
+                        key={index}
+                        className="flex items-center gap-4 border-b border-tiilt-line py-3 last:border-b-0"
+                    >
+                        <div className="min-w-0 grow">
+                            <div className="text-sm font-semibold text-tiilt-ink">
+                                {feature.name}
+                            </div>
+                            {FEATURE_DESCRIPTIONS[feature.name] ? (
+                                <div className="mt-0.5 text-xs leading-snug text-tiilt-muted">
+                                    {FEATURE_DESCRIPTIONS[feature.name]}
+                                </div>
+                            ) : (
+                                <></>
+                            )}
+                        </div>
+                        <div className="flex w-12 flex-none flex-col items-center">
+                            <div className="text-xl font-bold text-tiilt-ink tabular-nums">
+                                {Math.round(feature.average)}
+                            </div>
+                            <div
+                                className={
+                                    "text-[10px] " + trendClass(feature.trend)
+                                }
                             >
-                                Classifier
-                            </th>
-                            <th
-                                className={style["score-header"]}
-                                style={{
-                                    width: adjDim(59) + "px",
-                                    "padding-right": adjDim(24) + "px",
-                                }}
-                            >
-                                Score
-                            </th>
-                            <th
-                                className={style["graph-header"]}
-                                style={{ width: adjDim(74) + "px" }}
-                            >
-                                Graph
-                            </th>
-                        </tr>
-                    </thead>
-                    {props.features.length > 0 ? (
-                        <tbody>
-                            {props.showFeatures
-                                .filter((sf) => sf["clicked"])
-                                .map((sf) => props.features[sf["value"]])
-                                .filter((feature) => feature !== undefined) // Ensure feature is defined
-                                .map((feature, index) => (
-                                    <tr key={index}>
-                                        <td>
-                                            <img
-                                                alt="information about selected feature"
-                                                onClick={() =>
-                                                    props.getInfo(feature.name)
-                                                }
-                                                className={style["info-button"]}
-                                                src={questIcon}
-                                            />
-                                            {feature.name}
-                                        </td>
-                                        <td
-                                            className={style.score}
-                                            style={{
-                                                width: adjDim(59) + "px",
-                                                "padding-right":
-                                                    adjDim(24) + "px",
-                                            }}
-                                        >
-                                            <div
-                                                className={style.number}
-                                                style={{
-                                                    "font-size":
-                                                        adjDim(22) + "px",
-                                                }}
-                                            >
-                                                {Math.round(feature.average)}
-                                            </div>
-                                            <div
-                                                className={
-                                                    feature.trend === 1
-                                                        ? `${style["direction-indicator"]} ${style.positive}`
-                                                        : feature.trend === 0
-                                                          ? `${style["direction-indicator"]} ${style.neutral}`
-                                                          : feature.trend === -1
-                                                            ? `${style["direction-indicator"]} ${style.negative}`
-                                                            : style[
-                                                                  "direction-indicator"
-                                                              ]
-                                                }
-                                            ></div>
-                                        </td>
-                                        <td>
-                                            {feature.values.length === 0 ? (
-                                                <div
-                                                    className={
-                                                        style["no-data-span"]
-                                                    }
-                                                    style={{
-                                                        width:
-                                                            adjDim(74) + "px",
-                                                    }}
-                                                ></div>
-                                            ) : (
-
-                                                    <Line 
-                                                    data={{
-                                                            labels: feature.time,
-                                                            datasets: [{
-                                                            data: feature.values,
-                                                            // stepped: true,
-                                                            borderColor: "#3a2163",
-                                                            backgroundColor: "rgba(58,33,99,0.08)",
-                                                            fill: true,
-                                                            borderWidth: 2,
-                                                            pointRadius: 0,
-                                                            }],
-                                                        }}
-                                                                                                        
-                                                    options={{
-                                                                responsive: true,
-                                                                plugins: { legend: { display: false } },
-                                                                scales: {
-                                                                x: { title: { text: "Time (s)", display: true } },
-                                                                y: { title: { text: feature.name, display: true } },
-                                                                },
-                                                            }} 
-                                                />
-                                                // <svg
-                                                //     viewBox="0 -0.5 74 39.5"
-                                                //     className={style.svg}
-                                                //     style={{
-                                                //         width:
-                                                //             adjDim(74) + "px",
-                                                //     }}
-                                                // >
-                                                //     <path
-                                                //         d={feature.path}
-                                                //         fill="none"
-                                                //         className={
-                                                //             feature.trend >= 0
-                                                //                 ? style.positive
-                                                //                 : feature.trend ===
-                                                //                     -1
-                                                //                   ? style.negative
-                                                //                   : ""
-                                                //         }
-                                                //     ></path>
-                                                // </svg>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                        </tbody>
-                    ) : (
-                        <></>
-                    )}
-                </table>
-            </div>
-
-            <DialogBox
-                itsclass={"add-dialog"}
-                heading={props.featureHeader}
-                message={props.featureDescription}
-                show={props.showFeatureDialog}
-                closedialog={props.closeDialog}
-            />
-        </>
+                                {trendGlyph(feature.trend)}
+                            </div>
+                        </div>
+                        <div className="h-24 w-40 flex-none sm:w-56">
+                            {feature.values.length === 0 ? (
+                                <div className="flex h-full items-center justify-center text-xs text-tiilt-muted">
+                                    No data
+                                </div>
+                            ) : (
+                                <Line
+                                    data={{
+                                        labels: feature.time,
+                                        datasets: [
+                                            {
+                                                data: feature.values,
+                                                borderColor: "#3a2163",
+                                                backgroundColor:
+                                                    "rgba(58,33,99,0.08)",
+                                                fill: true,
+                                                borderWidth: 2,
+                                                pointRadius: 0,
+                                            },
+                                        ],
+                                    }}
+                                    options={{
+                                        responsive: true,
+                                        maintainAspectRatio: false,
+                                        plugins: { legend: { display: false } },
+                                        scales: {
+                                            x: { display: false },
+                                            y: { display: false },
+                                        },
+                                    }}
+                                />
+                            )}
+                        </div>
+                    </div>
+                ))}
+        </div>
     )
 }
 
