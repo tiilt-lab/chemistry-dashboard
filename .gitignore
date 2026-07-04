@@ -245,3 +245,12 @@ pretrained_ecapa/mean_var_norm_emb.ckpt
 src/server/config.ini
 src/audio_processing/config.ini
 src/video_processing/config.ini
+
+# Media + model assets (symlinked from the videodev checkout or generated)
+src/video_processing/videorecordings/
+src/video_processing/videorecordings_fixed/
+src/video_processing/attention_tracking/pretrained-models
+src/video_processing/emotion_detector/checkpoints
+src/video_processing/emotion_detector/facial_expression_model
+src/audio_processing/recordings/
+src/audio_processing/keyword_detector/models/
