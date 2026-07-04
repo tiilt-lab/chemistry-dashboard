@@ -8,7 +8,12 @@ import json
 from queue import Full
 
 class AudioStreamReader:
-    def __init__(self, audio_buffer, asr_audio_queue,audio_file,queue_put_timeout, config,STOP_SIGNAL,running_audio_processes):
+    def __init__(self, audio_buffer, asr_audio_queue,audio_file,queue_put_timeout, config,STOP_SIGNAL,running_audio_processes, realtime=True):
+        # realtime=True paces the file at 1x speed — required only by the
+        # streaming Google ASR. Batch ASRs (WhisperX/Qwen3) read the whole
+        # buffer up front, so pacing just adds the recording's full duration
+        # to every re-run for no benefit.
+        self.realtime = realtime
         self.audio_buffer = audio_buffer
         self.asr_audio_queue = asr_audio_queue
         self.config = config
@@ -34,7 +39,7 @@ class AudioStreamReader:
     def stop(self):
         self.running = False
 
-    def _run(self, realtime=True, extra_lag=0.0):
+    def _run(self, extra_lag=0.0):
         try:
             audio, sample_rate = sf.read(self.audio_file, dtype="float32")
             # # Convert stereo to mono if needed
@@ -65,7 +70,7 @@ class AudioStreamReader:
                 if self.running == False:
                     break
                 
-                if realtime:
+                if self.realtime:
                     time.sleep(chunk_duration)
               
         except Exception as e:
@@ -74,9 +79,9 @@ class AudioStreamReader:
         finally:
             try:
                 self.asr_audio_queue.put(self.STOP_SIGNAL, timeout=self.queue_put_timeout)
-                self.running_audio_processes.pop(self.config.auth_key,None)
                 logging.info('Audio Stream Reader thread stopped for {0}.'.format(self.config.auth_key))
-                self.send_json({'type': 'process_completed', 'message': "Audio posthoc analytics completed"})  
+                # Completion is signalled by the processor when all utterances
+                # are done - the reader finishing only means the file was read.
             except Full:
                 pass
 

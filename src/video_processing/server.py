@@ -215,7 +215,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
                     #accumulate. the file names to be used to combine the video chunks as one file
                     vidclip = mp.VideoFileClip(self.filename+'.'+self.config.mimeExtension)
-                    subclips = vidclip.subclip((self.video_count-1)*self.interval,self.video_count*self.interval)
+                    subclips = (vidclip.subclipped if hasattr(vidclip, 'subclipped') else vidclip.subclip)((self.video_count-1)*self.interval,self.video_count*self.interval)  # moviepy 2 rename
                     subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=16000,bitrate='50k') #nbytes=2,codec='pcm_s16le',
 
                     wavObj = wave.open(temp_aud_file+'.wav')

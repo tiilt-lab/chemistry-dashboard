@@ -205,7 +205,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 if end <= 0:
                     err = "Clip has zero/unknown duration"
                 else:
-                    sub = clip.subclip(0, end)
+                    sub = (clip.subclipped if hasattr(clip, 'subclipped') else clip.subclip)(0, end)  # moviepy 2 rename
                     if sub.audio is not None:
                         sub.audio.write_audiofile(
                                         audio_fingerprint_file ,
