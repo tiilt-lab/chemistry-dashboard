@@ -36,12 +36,15 @@ keyword_embedding_model=BAAI/bge-small-en-v1.5
 # than the word2vec 0.6 because sentence-embedding distances sit in a higher band.
 keyword_embedding_threshold=0.28
 
-# Diarization fallback clustering (post-hoc path):
+# Fallback clustering for the post-hoc no-fingerprint path. NOTE: distinct from
+# the per-run 'diarizer' field the trigger UI sends (fingerprint|pyannote),
+# which decides whether the ASR runs pyannote at all. This decides what the
+# fallback clustering does with any labels produced:
 #   spectral  (2020 ECAPA + spectral clustering)
 #   pyannote  (default; reuse pyannote 3.1 labels carried by the WhisperX/Qwen3
 #             batch ASR — falls back to spectral when none are present, e.g.
 #             the google/live ASR path)
-diarizer=pyannote
+diarization_fallback=pyannote
 
 # Live-path sentence embedder for participation/cohesion metrics:
 #   all-mpnet-base-v2  (default; light, comparable with historical metrics)
