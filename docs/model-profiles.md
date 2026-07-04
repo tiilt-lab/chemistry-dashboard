@@ -69,7 +69,7 @@ human-readable labels.
 
 | Backend | Enable | Prerequisite |
 |---|---|---|
-| InsightFace face recognition | `face_model=insightface` | `pip install insightface onnxruntime-gpu`; re-enrol all students (512-D galleries) |
+| InsightFace face recognition | `face_model=insightface` | Installed & GPU-enabled (onnxruntime-gpu CUDA-12 build, verified on CUDAExecutionProvider). Only remaining step to enable: re-enrol all students (512-D galleries differ from dlib's 128-D). |
 | Ultralytics head detector | `head_model=ultralytics` + `head_weights=<file>` | supply a CrowdHuman YOLO11/YOLOv8 `.pt` |
 | BERTopic topic modeling | `topic_backend=bertopic` | `pip install bertopic` |
 | bge-large live embedder | `semantic_embedder=bge-large-en-v1.5` | none (already cached) |
