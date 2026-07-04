@@ -1,7 +1,10 @@
+import { useState, useEffect } from "react"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { DialogBox, GenericDialogBox } from "../dialog/dialog-component"
 import { Appheader } from "../header/header-component"
 import { AppFolderSelectComponent } from "../components/folder-select/folder-select-component"
+import { SessionService } from "../services/session-service"
+import { SessionModel } from "../models/session"
 import style from "./sessions.module.css"
 import style2 from "../components/context-menu/context-menu.module.css"
 import breadcrumbIcon from "../assets/img/icon-back.svg"
@@ -9,8 +12,11 @@ import FolderIcon from "../Icons/Folder"
 import MicIcon from "../Icons/Mic"
 import { AppSpinner } from "../spinner/spinner-component"
 
+// Row wrapper (border/bg/hover) is a column so the expandable pod panel can sit
+// below the horizontal row content.
 const rowClass =
-    "group flex items-center gap-2.5 rounded-lg border border-tiilt-line bg-white px-3 py-2 transition hover:border-tiilt hover:shadow-[0_8px_20px_-16px_rgba(42,23,74,0.5)]"
+    "group flex flex-col rounded-lg border border-tiilt-line bg-white transition hover:border-tiilt hover:shadow-[0_8px_20px_-16px_rgba(42,23,74,0.5)]"
+const rowInnerClass = "flex items-center gap-2.5 px-3 py-2"
 const menuItemClass = style2["menu-item"]
 const menuDangerClass = `${style2["menu-item"]} ${style2["red"]}`
 
@@ -125,9 +131,66 @@ function FolderRow({ folder, onOpen, openFolderDialog }) {
     )
 }
 
+// Lazily fetches a session's pods and shows each pod's duration.
+function PodDurations({ sessionId }) {
+    const [pods, setPods] = useState(null) // null = loading
+    const [error, setError] = useState(false)
+    useEffect(() => {
+        let alive = true
+        new SessionService().getSessionDevices(sessionId).then(
+            (response) => {
+                if (response.status === 200) {
+                    response.json().then((devices) => {
+                        if (alive) setPods(devices)
+                    })
+                } else if (alive) {
+                    setError(true)
+                }
+            },
+            () => {
+                if (alive) setError(true)
+            },
+        )
+        return () => {
+            alive = false
+        }
+    }, [sessionId])
+
+    let body
+    if (error) {
+        body = <li className="py-1 text-tiilt-muted">Couldn't load pods.</li>
+    } else if (pods === null) {
+        body = <li className="py-1 text-tiilt-muted">Loading pods…</li>
+    } else if (pods.length === 0) {
+        body = <li className="py-1 text-tiilt-muted">No pods in this session.</li>
+    } else {
+        body = pods.map((pod) => (
+            <li
+                key={pod.id}
+                className="flex items-center justify-between py-1"
+            >
+                <span className="truncate text-tiilt-ink">
+                    {pod.name || `Pod ${pod.id}`}
+                </span>
+                <span className="font-ahamono tabular-nums text-tiilt-muted">
+                    {SessionModel.formatDuration(pod.duration)}
+                </span>
+            </li>
+        ))
+    }
+    return (
+        <ul className="border-t border-tiilt-line px-3 py-1.5 pl-[3.25rem] text-xs">
+            {body}
+        </ul>
+    )
+}
+
 function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
+    const [expanded, setExpanded] = useState(false)
+    const hasPods = session.pod_count != null && session.pod_count > 0
     return (
         <li className={rowClass}>
+            <div className={rowInnerClass}>
             <span
                 className={
                     "flex h-9 w-9 flex-none items-center justify-center rounded-md " +
@@ -187,7 +250,7 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
                     ) : null}
                     {session.has_posthoc ? (
                         <span
-                            title="Post-hoc analysis has been run for this discussion"
+                            title="Post-hoc analysis has been run for this session"
                             className="flex items-center gap-1 rounded-full bg-tiilt-teal/15 px-1.5 py-0.5 font-semibold text-tiilt-teal"
                         >
                             <svg
@@ -209,6 +272,15 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
                             Re-analyzed
                         </span>
                     ) : null}
+                    {hasPods ? (
+                        <span
+                            title="Pods (participant groups) recorded in this session"
+                            className="flex items-center gap-1 rounded-full bg-tiilt-soft px-1.5 py-0.5 font-semibold text-tiilt"
+                        >
+                            {session.pod_count}{" "}
+                            {session.pod_count === 1 ? "pod" : "pods"}
+                        </span>
+                    ) : null}
                 </span>
             </button>
             {session.recording ? (
@@ -216,6 +288,34 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
                     <span className="h-1.5 w-1.5 rounded-full bg-tiilt-danger" />
                     Live
                 </span>
+            ) : null}
+            {hasPods ? (
+                <button
+                    onClick={() => setExpanded((v) => !v)}
+                    title={expanded ? "Hide pods" : "Show pod durations"}
+                    aria-expanded={expanded}
+                    className="flex h-7 w-7 flex-none items-center justify-center rounded-md text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
+                >
+                    <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        aria-hidden="true"
+                        style={{
+                            transform: expanded ? "rotate(180deg)" : "none",
+                            transition: "transform 0.15s",
+                        }}
+                    >
+                        <path
+                            d="M6 9l6 6 6-6"
+                            stroke="currentColor"
+                            strokeWidth="2.4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        />
+                    </svg>
+                </button>
             ) : null}
             <div className="flex-none">
                 <AppContextMenu>
@@ -254,6 +354,8 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
                     )}
                 </AppContextMenu>
             </div>
+            </div>
+            {expanded ? <PodDurations sessionId={session.id} /> : null}
         </li>
     )
 }
@@ -263,7 +365,7 @@ function DiscussionSessionPage(props) {
         <>
             <div className="main-container">
                 <Appheader
-                    title={"Manage Discussions"}
+                    title={"Manage Sessions"}
                     leftText={false}
                     rightText={""}
                     rightEnabled={false}
@@ -288,12 +390,12 @@ function DiscussionSessionPage(props) {
                             <div className={style["empty-session-list"]}>
                                 <div className={style["load-text"]}>
                                     {" "}
-                                    No Discussions or Folders{" "}
+                                    No Sessions or Folders{" "}
                                 </div>
                                 <div className={style["load-text-description"]}>
                                     {" "}
                                     Tap the buttons below to record your first
-                                    discussion or create your first folder.{" "}
+                                    session or create your first folder.{" "}
                                 </div>
                             </div>
                         ) : (
@@ -353,10 +455,25 @@ function DiscussionSessionPage(props) {
                                     className="rounded-lg bg-tiilt px-4 py-2 text-sm font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
                                     onClick={props.newRecording}
                                 >
-                                    New discussion
+                                    New session
                                 </button>
                             </div>
                         </div>
+
+                        {!props.isLoading ? (
+                            <div className="mb-4 rounded-lg border border-tiilt-line bg-tiilt-soft/40 px-3.5 py-2.5 text-xs leading-relaxed text-tiilt-muted">
+                                <span className="font-semibold text-tiilt-ink">
+                                    Sessions vs. pods:
+                                </span>{" "}
+                                A{" "}
+                                <span className="font-semibold">session</span> is
+                                one recorded discussion. Each{" "}
+                                <span className="font-semibold">pod</span> is a
+                                participant group (device) within that session — a
+                                session can have several pods running at once.
+                                Expand a session to see how long each pod lasted.
+                            </div>
+                        ) : null}
 
                         {!props.isLoading &&
                         props.displayedFolders.length > 0 ? (
