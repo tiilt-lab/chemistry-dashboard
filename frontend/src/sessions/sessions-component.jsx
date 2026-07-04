@@ -24,6 +24,7 @@ function SessionsComponent(props) {
     const [folderSelect, setFolderSelect] = useState(null)
     const [invalidName, setInvalidName] = useState(false)
     const [sortBy, setSortBy] = useState("date-desc")
+    const [videoFilter, setVideoFilter] = useState("all")
     const navigate = useNavigate()
     const [searchParam, setSearchParam] = useSearchParams()
 
@@ -507,14 +508,28 @@ function SessionsComponent(props) {
         "length-asc": (a, b) => a.length - b.length,
         "name-asc": (a, b) => a.title.localeCompare(b.title),
     }
-    const sortedSessions = [...displayedSessions].sort(
+    const filteredSessions = displayedSessions.filter((s) =>
+        videoFilter === "video"
+            ? s.has_video
+            : videoFilter === "audio"
+              ? !s.has_video
+              : true,
+    )
+    const sortedSessions = [...filteredSessions].sort(
         SESSION_SORTERS[sortBy] || SESSION_SORTERS["date-desc"],
     )
+    // Counts across the unfiltered set so the filter labels can show totals.
+    const videoCount = displayedSessions.filter((s) => s.has_video).length
+    const audioCount = displayedSessions.length - videoCount
 
     return (
         <DiscussionSessionPage
             sortBy={sortBy}
             setSortBy={setSortBy}
+            videoFilter={videoFilter}
+            setVideoFilter={setVideoFilter}
+            videoCount={videoCount}
+            audioCount={audioCount}
             openFolderDialog={openFolderDialog}
             navigateToHomescreen={navigateToHomescreen}
             isLoading={isLoading}
