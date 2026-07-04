@@ -1517,6 +1517,62 @@ def get_session_participant_counts(owner_id=None):
     return {row[0]: row[1] for row in query.all()}
 
 
+def get_pod_video_presence(session_id):
+    # Set of session_device_ids in a session that have any video metrics, so the
+    # pod list can flag pods that captured no data at all.
+    rows = db.session.query(SpeakerVideoMetrics.session_device_id) \
+        .join(SessionDevice, SpeakerVideoMetrics.session_device_id == SessionDevice.id) \
+        .filter(SessionDevice.session_id == session_id).distinct().all()
+    return set(r[0] for r in rows)
+
+
+def get_conversation_dynamics(session_device_id):
+    # Turn-taking dynamics from a pod's diarized transcript: per-speaker turn
+    # count + speaking time (participation equity), and a who-follows-whom
+    # transition matrix (the response network). A "turn" is a maximal run of
+    # consecutive utterances by the same speaker.
+    rows = db.session.query(
+        Transcript.speaker_tag, Transcript.start_time, Transcript.length) \
+        .filter(Transcript.session_device_id == session_device_id,
+                Transcript.speaker_tag.isnot(None)) \
+        .order_by(Transcript.start_time).all()
+    speakers = {}
+    transitions = {}
+    prev_speaker = None
+    for tag, start, length in rows:
+        s = speakers.setdefault(tag, {'turns': 0, 'utterances': 0, 'seconds': 0})
+        s['utterances'] += 1
+        s['seconds'] += (length or 0)
+        if tag != prev_speaker:
+            s['turns'] += 1
+            if prev_speaker is not None:
+                key = (prev_speaker, tag)
+                transitions[key] = transitions.get(key, 0) + 1
+            prev_speaker = tag
+    total_sec = sum(v['seconds'] for v in speakers.values()) or 1
+    speaker_list = [
+        {'name': k, 'turns': v['turns'], 'utterances': v['utterances'],
+         'speaking_seconds': v['seconds'], 'share': round(v['seconds'] / total_sec, 4)}
+        for k, v in sorted(speakers.items(), key=lambda x: -x[1]['seconds'])]
+    # Gini coefficient of speaking-time shares (0 = perfectly equal).
+    shares = sorted(v['seconds'] for v in speakers.values())
+    n = len(shares)
+    gini = 0.0
+    if n and total_sec:
+        cum = sum((i + 1) * x for i, x in enumerate(shares))
+        gini = round((2 * cum) / (n * total_sec) - (n + 1) / n, 4)
+    transition_list = [
+        {'from': f, 'to': t, 'count': c}
+        for (f, t), c in sorted(transitions.items(), key=lambda x: -x[1])]
+    return {
+        'speakers': speaker_list,
+        'transitions': transition_list,
+        'total_turns': sum(v['turns'] for v in speakers.values()),
+        'total_speaking_seconds': total_sec,
+        'gini': gini,
+    }
+
+
 def mark_session_device_posthoc(session_device_id, models=None):
     device = get_session_devices(id=session_device_id)
     if device is None:

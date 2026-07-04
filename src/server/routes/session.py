@@ -526,13 +526,24 @@ def session_devices(session_id, **kwargs):
         # session_device stores no start/end) + participant count.
         durations = database.get_pod_durations(session_id)
         speaker_counts = database.get_pod_speaker_counts(session_id)
+        video_pods = database.get_pod_video_presence(session_id)
         result = []
         for device in devices:
             data = device.json()
             data['duration'] = durations.get(device.id)
             data['speaker_count'] = speaker_counts.get(device.id, 0)
+            # True if the pod captured any usable data (transcript or video);
+            # ~17% of pods recorded nothing and should be flagged, not analyzed.
+            data['has_data'] = (durations.get(device.id) is not None) or (device.id in video_pods)
             result.append(data)
         return json_response(result)
+
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/dynamics', methods=['GET'])
+def get_pod_dynamics(session_id, session_device_id, **kwargs):
+    # Conversation dynamics for a pod: per-speaker turns/speaking-share (equity)
+    # + the who-follows-whom response network.
+    return json_response(database.get_conversation_dynamics(session_device_id))
 
 @api_routes.route('/api/v1/devices/<int:session_device_id>/session_device', methods=['GET'])
 def session_device_by_id(session_device_id, **kwargs):
