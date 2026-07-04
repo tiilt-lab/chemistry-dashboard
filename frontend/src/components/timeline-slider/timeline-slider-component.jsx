@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from "react";
 import style from "./timeline-slider.module.css";
-import { adjDim } from "../../myhooks/custom-hooks";
 
 function AppTimelineSlider(props) {
   const [min, setMin] = useState(0.0);

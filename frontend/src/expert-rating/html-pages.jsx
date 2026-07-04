@@ -10,7 +10,6 @@ import { LikertRatingInterface } from "./left-pane"
 import { AppInfographicsSessionComparison } from "../components/infographics-view/infographics_session-comparison"
 import { CollaborationFeedbackDashboard } from "./reflection-interactive-dashboard-rating"
 import { TranscriptsComponentClient } from "../transcripts/transcripts-component_client"
-import { adjDim, isLargeScreen } from "../myhooks/custom-hooks"
 
 import MicIcon from "../Icons/Mic"
 

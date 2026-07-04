@@ -7,7 +7,6 @@ import style2 from "../dialog/dialog.module.css";
 import openFolderIcon from "../assets/img/open-folder.svg";
 import podIcon from "../assets/img/icon-pod.svg";
 import LightIcon from "@icons/Light";
-import { adjDim } from "../myhooks/custom-hooks";
 
 function CreateSessionPage(props) {
   return (
@@ -77,14 +76,14 @@ function CreateSessionPage(props) {
             <div className={style["button-side-container"]}>
               <button
                 className={style["footer-button"]}
-                style={{ width: adjDim(374 / 2) + "px", "margin-right": "5px" }}
+                style={{ width: "min(50%, 20rem)" }}
                 onClick={props.navigateToSessions}
               >
                 Back
               </button>
               <button
                 className={style["footer-button"]}
-                style={{ width: adjDim(374 / 2) + "px", "margin-left": "5px" }}
+                style={{ width: "min(50%, 20rem)" }}
                 onClick={props.goToKeywords}
               >
                 Next
@@ -149,14 +148,14 @@ function CreateSessionPage(props) {
             <div className={style["button-side-container"]}>
               <button
                 className={style["footer-button"]}
-                style={{ width: adjDim(374 / 2) + "px", "margin-right": "5px" }}
+                style={{ width: "min(50%, 20rem)" }}
                 onClick={props.goToSettings}
               >
                 Back
               </button>
               <button
                 className={style["footer-button"]}
-                style={{ width: adjDim(374 / 2) + "px", "margin-left": "5px" }}
+                style={{ width: "min(50%, 20rem)" }}
                 onClick={props.goToTopModels}
               >
                 Next

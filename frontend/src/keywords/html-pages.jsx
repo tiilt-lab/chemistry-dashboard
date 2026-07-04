@@ -1,7 +1,6 @@
 import React from "react"
 import style from "./keywords.module.css"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
-import { adjDim } from "../myhooks/custom-hooks"
 import { DialogBox } from "../dialog/dialog-component"
 import questIcon from "../assets/img/question.svg"
 

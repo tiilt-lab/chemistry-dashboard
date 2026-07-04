@@ -3,7 +3,6 @@ import { DialogBoxTwoOption } from "../dialog/dialog-component";
 import { Appheader } from "../header/header-component";
 import style from "./manage-keyword-lists.module.css";
 import style2 from "../components/context-menu/context-menu.module.css";
-import { isLargeScreen } from "../myhooks/custom-hooks";
 
 function KeywordListPage(props) {
   const actualKeywordList =

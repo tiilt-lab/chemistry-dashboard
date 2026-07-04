@@ -3,7 +3,6 @@ import style from './keyword-list-items.module.css';
 import { Appheader } from '../header/header-component';
 import removeicon from '../assets/img/remove.svg'
 import React from 'react';
-import { isLargeScreen } from '../myhooks/custom-hooks';
 
 function KeywordListPages(props) {
 

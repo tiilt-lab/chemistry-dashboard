@@ -2,7 +2,6 @@ import style from './settings.module.css'
 import { Appheader } from '../header/header-component'
 import { GenericDialogBox } from '../dialog/dialog-component'
 import React from 'react'
-import { adjDim } from '../myhooks/custom-hooks';
 
 
 function SettingComponentPage(props) {

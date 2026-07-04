@@ -3,7 +3,6 @@ import style2 from "../dialog/dialog.module.css"
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { AppSpinner } from "../spinner/spinner-component"
 import React from "react"
-import { isLargeScreen } from "../myhooks/custom-hooks"
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 function AppSessionPage(props) {
