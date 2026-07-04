@@ -39,7 +39,10 @@ def join_session(message):
 
     transcripts = database.get_transcripts(session_id=room)
     videoMetrics = database.get_speaker_video_metrics(session_id=room)
-    page_size = 1000
+    # Small first page so the pod page renders content immediately; larger
+    # pages after that for throughput.
+    first_page_size = 200
+    page_size = first_page_size
 
     # Fetch every speaker-transcript metric for the session in one query
     # and group by transcript id, instead of one query per transcript.
@@ -53,6 +56,7 @@ def join_session(message):
         if len(transcript_speaker_metrics) == page_size:
             emit('transcript_metrics_digest', json.dumps(transcript_speaker_metrics))
             transcript_speaker_metrics = []
+            page_size = 1000
         transcript_speaker_metrics.append({'transcript' : transcript.json(),
                                            'speaker_metrics' : metrics_by_transcript.get(transcript.id, [])})
     emit('transcript_metrics_digest', json.dumps(transcript_speaker_metrics))

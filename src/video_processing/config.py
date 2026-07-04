@@ -88,3 +88,11 @@ def attention_model():
     if 'config' not in globals():
         initialize()
     return str(config.get('videoprocessing', 'attention_model', fallback='gazelle'))
+
+def posthoc_fps():
+    # Frames per second sampled by the post-hoc video pipeline. 12 matches the
+    # original behaviour; lower it (e.g. 6) to halve processing time when
+    # coarse attention/emotion trends are enough.
+    if 'config' not in globals():
+        initialize()
+    return int(config.get('videoprocessing', 'posthoc_fps', fallback=12))

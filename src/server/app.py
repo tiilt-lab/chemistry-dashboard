@@ -1,4 +1,3 @@
-import eventlet
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from flask import Flask
@@ -40,7 +39,6 @@ logger.addHandler(log_console)
 # Create app
 app = Flask(__name__)
 
-eventlet.patcher.monkey_patch(select=True, socket=True)
  
 app.config['SECRET_KEY'] = '\xf9\xc5_!\x9c^t\x80\xce\xee\xbc\x8c_\xd2\xd6\xf3\x92C\x9e\xcb\x88\xc7\xa9('
 app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -62,7 +60,9 @@ r = redis.Redis(host=cf.redis_host(), port=cf.redis_port(), db=cf.redis_db())
 limiter = Limiter(get_remote_address, app=app)
 
 # Create SocketIO app (engineio_logger=True for advance debug)
-socketio = SocketIO(app, log=logger, cors_allowed_origins=cf.domains() + ["127.0.0.1:5000", "localhost"], manage_session=False, message_queue=cf.redis_url())
+# threading mode (simple-websocket) replaces deprecated eventlet; the
+# in-process Twisted device-websocket server gets real sockets again.
+socketio = SocketIO(app, async_mode='threading', log=logger, cors_allowed_origins=cf.domains() + ["127.0.0.1:5000", "localhost"], manage_session=False, message_queue=cf.redis_url())
 
 # Create database
 DATABASE_FILE = os.path.dirname(os.path.abspath(__file__)) + '/discussion_capture.db'

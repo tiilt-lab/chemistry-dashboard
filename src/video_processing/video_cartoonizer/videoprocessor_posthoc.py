@@ -131,7 +131,7 @@ class VideoProcessorPosthoc:
 
                             self.video_chunk_count+=1
                             subclib_frame_count = 0
-                            for ts, frame in subclip.iter_frames(fps=12, dtype="uint8", with_times=True):
+                            for ts, frame in subclip.iter_frames(fps=cf.posthoc_fps(), dtype="uint8", with_times=True):
                                 subclib_frame_count =  subclib_frame_count + 1
                                 # self.frame_batch.append(frame)
                                 self.frame_batch.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
