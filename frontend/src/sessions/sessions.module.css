@@ -23,7 +23,7 @@
   font-size: 16px;
   line-height: 24px;
   color: #ffffff;
-  background: linear-gradient(147.59deg, #3a2163 0%, #5b3a94 100%);
+  background: #3a2163;
 }
 
 .basic-button:focus {
@@ -278,7 +278,7 @@
   align-items: center;
   position: relative;
   width: 100%;
-  height: 100vh;
+  height: 100%;
 }
 
 .footer-bar {
@@ -327,11 +327,11 @@
 
 
 .list-container {
-  /*max-width: 42rem;*/
   width: 100%;
-  height: 100vh;
-  overflow: auto;
-  margin-top: 8px;
+  max-width: 42rem;
+  margin: 8px auto 0;
+  padding: 0 16px;
+  box-sizing: border-box;
 }
 
 .list-container .list {
