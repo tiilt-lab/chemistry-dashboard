@@ -81,3 +81,10 @@ def object_model():
     if 'config' not in globals():
         initialize()
     return str(config.get('videoprocessing', 'object_model', fallback='yolo11'))
+
+def attention_model():
+    # Gaze/attention backend: 'gazelle' (Gaze-LLE, open SOTA, default) or
+    # 'gazefollow' (the 2020 ModelSpatial weights).
+    if 'config' not in globals():
+        initialize()
+    return str(config.get('videoprocessing', 'attention_model', fallback='gazelle'))

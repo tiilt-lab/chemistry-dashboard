@@ -46,3 +46,5 @@ root_dir=/var/lib/
 emotion_model=hsemotion
 ; Object-of-focus detector: yolo11 (open SOTA) or yolov4 (original weights).
 object_model=yolo11
+; Gaze/attention backend: gazelle (Gaze-LLE, open SOTA) or gazefollow (2020 weights).
+attention_model=gazelle
