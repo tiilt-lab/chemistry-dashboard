@@ -1,4 +1,5 @@
 import { AuthService } from '../services/auth-service';
+import { ApiService } from '../services/api-service';
 import { DeviceService } from '../services/device-service';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -116,6 +117,42 @@ function SettingsComponent(props) {
     } else {
       setCurrentForm(newForm);
     }
+  }
+
+  const addStudentProfile = async (firstname, lastname, username) => {
+    firstname = firstname.trim();
+    lastname = lastname.trim();
+    username = username.trim();
+    if (!firstname || !lastname || !username) {
+      setStatus("Please fill in first name, last name, and username.");
+      return;
+    }
+    if (username.length < 5 || username.length > 10) {
+      setStatus("Username must be 5-10 characters.");
+      return;
+    }
+    setCurrentForm("Loading");
+    try {
+      const response = await new ApiService().httpRequestCall(
+        "api/v1/student/addstudent", "POST",
+        { firstname: firstname, lastname: lastname, username: username });
+      if (response.status === 200) {
+        setStatusTitle("Student Added");
+        setStatus(username + " has been created.");
+      } else {
+        let message = "Could not create the student profile.";
+        try {
+          const err = await response.json();
+          if (err["message"]) message = err["message"];
+        } catch { /* non-JSON error body */ }
+        setStatusTitle("Failed to Add Student");
+        setStatus(message);
+      }
+    } catch {
+      setStatusTitle("Failed to Add Student");
+      setStatus("The server could not be reached.");
+    }
+    setCurrentForm("Status");
   }
 
   const syncStudentProfile = async () => {
@@ -584,6 +621,7 @@ function SettingsComponent(props) {
     <SettingComponentPage
       navigateToHomescreen={navigateToHomescreen}
       openDialog={openDialog}
+      addStudentProfile={addStudentProfile}
       user={user}
       currentForm={currentForm}
       status={status}

@@ -378,6 +378,62 @@ function SettingComponentPage(props) {
                     <></>
                 )}
 
+                {props.currentForm === "AddStudentProfile" ? (
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>Add Student Profile</div>
+                        <div className={dlgLabel}>First name</div>
+                        <input
+                            id="stuFirstname"
+                            className={dlgInput}
+                            type="text"
+                            maxLength={50}
+                        />
+                        <div className={dlgLabel}>Last name</div>
+                        <input
+                            id="stuLastname"
+                            className={dlgInput}
+                            type="text"
+                            maxLength={50}
+                        />
+                        <div className={dlgLabel}>Username (5-10 characters)</div>
+                        <input
+                            id="stuUsername"
+                            className={dlgInput}
+                            type="text"
+                            minLength={5}
+                            maxLength={10}
+                        />
+                        {props.status ? (
+                            <div className={dlgError}>{props.status}</div>
+                        ) : (
+                            <></>
+                        )}
+                        <button
+                            className={dlgPrimary}
+                            onClick={() =>
+                                props.addStudentProfile(
+                                    document.getElementById("stuFirstname")
+                                        .value,
+                                    document.getElementById("stuLastname")
+                                        .value,
+                                    document.getElementById("stuUsername")
+                                        .value,
+                                )
+                            }
+                        >
+                            Create Student
+                        </button>
+                        <button
+                            className={dlgCancel}
+                            onClick={props.closeDialog}
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                ) : (
+                    <></>
+                )}
+
                 {props.currentForm === "AddRater" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Add Rater</div>
