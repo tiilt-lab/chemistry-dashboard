@@ -53,6 +53,18 @@ def semantic_embedder():
         initialize()
     return str(config.get('processing', 'semantic_embedder', fallback='all-mpnet-base-v2'))
 
+def prosody():
+    # Compute prosodic features (pitch/energy/voicing) per utterance (librosa).
+    return str(config.get('processing', 'prosody', fallback='false')) in ['true', 'True', 't', '1']
+
+def vocal_emotion():
+    # Speech (vocal) emotion recognition per utterance (wav2vec2 SER).
+    return str(config.get('processing', 'vocal_emotion', fallback='false')) in ['true', 'True', 't', '1']
+
+def vocal_emotion_model():
+    return str(config.get('processing', 'vocal_emotion_model',
+                          fallback='superb/wav2vec2-base-superb-er'))
+
 def diarization_constrain_to_enrolled():
     # When true and a pod's enrolled participants are known, cap pyannote at the
     # enrolled count (max_speakers) and remap each diarization cluster to its
