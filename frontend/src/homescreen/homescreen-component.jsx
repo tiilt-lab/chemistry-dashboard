@@ -39,7 +39,7 @@ const GROUPS = [
 
 function GroupCard({ icon, name, desc, links, navigate }) {
     return (
-        <div className="flex flex-col gap-4 rounded-xl border border-tiilt-line bg-white p-5 transition hover:shadow-[0_10px_24px_-14px_rgba(42,23,74,0.4)]">
+        <div className="flex flex-col gap-4 rounded-xl border border-tiilt-line bg-white p-5 transition hover:shadow-[0_10px_24px_-14px_rgba(42,23,74,0.4)] sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
                 <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-tiilt-soft">
                     <img alt="" src={icon} className="h-5 w-5" />
@@ -53,7 +53,7 @@ function GroupCard({ icon, name, desc, links, navigate }) {
                     </span>
                 </span>
             </div>
-            <div className="mt-auto flex flex-wrap gap-2">
+            <div className="flex flex-none flex-wrap gap-2">
                 {links.map((link) => (
                     <button
                         key={link.path}
@@ -138,7 +138,7 @@ function HomeScreen() {
                 </div>
             </header>
 
-            <main className="mx-auto w-full max-w-4xl px-4 py-8 md:py-12">
+            <main className="mx-auto w-full max-w-3xl px-4 py-8 md:py-12">
                 <h2 className="text-2xl font-semibold text-tiilt-ink">
                     Good {timeOfDay}!
                 </h2>
@@ -148,7 +148,7 @@ function HomeScreen() {
                     recording a new discussion.
                 </p>
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="flex flex-col gap-4">
                     {GROUPS.map((g) => (
                         <GroupCard
                             key={g.name}
