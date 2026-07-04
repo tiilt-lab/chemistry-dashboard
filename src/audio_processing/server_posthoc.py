@@ -255,6 +255,7 @@ class ServerProtocol(WebSocketServerProtocol):
             # start reading audio from wav file and pass to processors
             self.send_json({'type':'audio posthoc analytics started','message':"Processing Audio posthoc Analytics"})
             self.audioreader.add_websocket_connection(self)
+            self.processor.add_websocket_connection(self)
             self.audioreader.start()
 
         if data['type'] == 'start_speaker_transcript_processing':
@@ -360,7 +361,8 @@ class ServerProtocol(WebSocketServerProtocol):
         self.asr.start()
         self.processor = AudioProcessorPosthoc(self.audio_buffer, self.asr_transcript_queue, diarization_model, get_semantic_model(getattr(self, 'embedder_choice', None)), self.config, scorer=getattr(self, 'scorer_choice', None))
         self.processor.start()
-        self.audioreader = AudioStreamReader(self.audio_buffer, self.asr_audio_queue, self.audio_file, self.queue_put_timeout,self.config,STOP_SIGNAL,running_audio_processes)
+        batch_asr = getattr(self, 'asr_choice', None) in ('whisperx', 'qwen3')
+        self.audioreader = AudioStreamReader(self.audio_buffer, self.asr_audio_queue, self.audio_file, self.queue_put_timeout,self.config,STOP_SIGNAL,running_audio_processes, realtime=not batch_asr)
         
 
     def signal_end(self):

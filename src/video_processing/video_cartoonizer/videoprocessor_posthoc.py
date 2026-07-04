@@ -110,7 +110,7 @@ class VideoProcessorPosthoc:
                         with warnings.catch_warnings():
                             warnings.simplefilter("error", UserWarning)
 
-                            subclip = vidclip.subclip(start, end)
+                            subclip = (vidclip.subclipped if hasattr(vidclip, 'subclipped') else vidclip.subclip)(start, end)  # moviepy 2 rename
 
                             #use this to extract audio incase of incomplete audio in the original audio file
                             chunk_path = os.path.join(tmpdir, f"chunk_{start:04d}.wav")

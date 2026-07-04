@@ -52,6 +52,7 @@ class AudioProcessorPosthoc:
         self.cohesion_window = 20
 
         self.semantic_model = semantic_model
+        self.web_socket_connection = None
         logging.info("Start metrics process")
         self.speaker_metrics_process = speaker_metrics.SpeakerProcessor(
             config, self.semantic_model)
@@ -76,6 +77,11 @@ class AudioProcessorPosthoc:
 
     def __complete_callback(self):
         logging.info("completing callback")
+        # The processor - not the stream reader - knows when every utterance
+        # has been fully processed; signal the client here so completion is
+        # correct even when the reader finishes in seconds (unpaced batch ASR).
+        if self.web_socket_connection is not None:
+            self.send_json({'type': 'process_completed', 'message': 'Audio posthoc analytics completed'})
         '''
         self.speaker_transcript_queue.put(None)
         self.speaker_metrics_process.join()
@@ -89,6 +95,17 @@ class AudioProcessorPosthoc:
             _rd = os.path.join(os.path.dirname(os.path.abspath(__file__)), "speaker_diarization", "results")
             os.makedirs(_rd, exist_ok=True)
             np.savetxt(os.path.join(_rd, "{}.txt".format(time.strftime("%Y%m%d-%H%M%S"))), self.speakers)
+
+    def add_websocket_connection(self, web_socket):
+        self.web_socket_connection = web_socket
+
+    def send_json(self, message):
+        import json as _json
+        try:
+            payload = _json.dumps(message).encode('utf8')
+            self.web_socket_connection.sendMessage(payload, isBinary=False)
+        except Exception as e:
+            logging.info('completion notify failed: {0}'.format(e))
 
     def setSpeakerFingerprints(self, fingerprints):
         self.fingerprints = fingerprints

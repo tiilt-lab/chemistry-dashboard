@@ -90,7 +90,7 @@ class WhisperXASR:
                     from whisperx.diarize import DiarizationPipeline, assign_word_speakers
                     token = os.environ.get("HUGGING_FACE_HUB_TOKEN")
                     logging.info("WhisperX: running pyannote diarization")
-                    diarizer = DiarizationPipeline(use_auth_token=token, device=device)
+                    diarizer = DiarizationPipeline(model_name="pyannote/speaker-diarization-3.1", token=token, device=device)
                     diarize_segments = diarizer(audio)
                     result = assign_word_speakers(diarize_segments, result)
                     logging.info("WhisperX: diarization attached")

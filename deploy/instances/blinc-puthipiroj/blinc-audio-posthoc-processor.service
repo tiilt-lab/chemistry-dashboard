@@ -4,6 +4,7 @@ After=network-online.target redis-server.service
 StartLimitIntervalSec=0
 
 [Service]
+EnvironmentFile=-/etc/blinc/secrets.env
 User=vlj9405
 Group=www-data
 Type=simple
