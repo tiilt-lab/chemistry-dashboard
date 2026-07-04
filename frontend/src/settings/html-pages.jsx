@@ -1,5 +1,6 @@
 import { Appheader } from "../header/header-component"
 import { GenericDialogBox } from "../dialog/dialog-component"
+import { DataTable } from "../components/data-table"
 
 const SECTIONS = [
     {
@@ -22,36 +23,6 @@ const SECTIONS = [
             { label: "Lock User", dialog: ["LockUser", true] },
             { label: "Unlock User", dialog: ["UnlockUser", true] },
             { label: "Reset User Password", dialog: ["ResetUser", true] },
-        ],
-    },
-    {
-        title: "Manage Student Profiles",
-        show: (u) => u.isAdmin || u.isSuper,
-        items: [
-            { label: "View Students", dialog: ["ViewStudentProfile", true] },
-            { label: "Add Student Profile", dialog: ["AddStudentProfile"] },
-            {
-                label: "Delete Student Profile",
-                dialog: ["DeleteStudentProfile", true],
-                danger: true,
-            },
-            {
-                label: "Sync Student Profiles",
-                dialog: ["SyncStudentProfile", true],
-            },
-        ],
-    },
-    {
-        title: "Manage Raters",
-        show: (u) => u.isAdmin || u.isSuper,
-        items: [
-            { label: "View Raters", dialog: ["ViewRaters", true] },
-            { label: "Add Rater", dialog: ["AddRater"] },
-            {
-                label: "Delete Rater",
-                dialog: ["DeleteRater", true],
-                danger: true,
-            },
         ],
     },
     {
@@ -119,52 +90,6 @@ const dlgError =
     "rounded-md bg-tiilt-danger-soft px-3 py-2 text-sm text-tiilt-danger"
 const dlgDanger =
     "mt-2 h-11 rounded-lg bg-tiilt-danger font-semibold text-white transition hover:brightness-90 active:translate-y-px"
-
-function DataTable({ columns, rows }) {
-    return (
-        <div className="max-h-[60vh] overflow-auto rounded-lg border border-tiilt-line">
-            <table className="w-full border-collapse text-left text-sm">
-                <thead>
-                    <tr>
-                        {columns.map((c) => (
-                            <th
-                                key={c}
-                                className="sticky top-0 bg-tiilt-soft px-3 py-2 font-semibold whitespace-nowrap text-tiilt-ink"
-                            >
-                                {c}
-                            </th>
-                        ))}
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows.length === 0 ? (
-                        <tr>
-                            <td
-                                colSpan={columns.length}
-                                className="px-3 py-6 text-center text-tiilt-muted"
-                            >
-                                Nothing to show.
-                            </td>
-                        </tr>
-                    ) : (
-                        rows.map((row, i) => (
-                            <tr key={i} className="border-t border-tiilt-line">
-                                {row.map((cell, j) => (
-                                    <td
-                                        key={j}
-                                        className="px-3 py-2 whitespace-nowrap text-tiilt-ink"
-                                    >
-                                        {cell}
-                                    </td>
-                                ))}
-                            </tr>
-                        ))
-                    )}
-                </tbody>
-            </table>
-        </div>
-    )
-}
 
 function SettingComponentPage(props) {
     return (
@@ -287,60 +212,6 @@ function SettingComponentPage(props) {
                     <></>
                 )}
 
-                {props.currentForm === "ViewStudentProfile" ? (
-                    <div className="min-w-[min(30rem,88vw)]">
-                        <div className={dlgHeading}>View Students</div>
-                        <DataTable
-                            columns={["Username", "First Name", "Last Name"]}
-                            rows={props.students.map((s) => [
-                                s.username,
-                                s.firstname,
-                                s.lastname,
-                            ])}
-                        />
-                        <button
-                            className={dlgClose}
-                            onClick={props.closeDialog}
-                        >
-                            Close
-                        </button>
-                    </div>
-                ) : (
-                    <></>
-                )}
-
-                {props.currentForm === "ViewRaters" ? (
-                    <div className="min-w-[min(34rem,88vw)]">
-                        <div className={dlgHeading}>View Raters</div>
-                        <DataTable
-                            columns={[
-                                "Rater",
-                                "Session",
-                                "Device",
-                                "Speaker",
-                                "Tag",
-                                "Type",
-                            ]}
-                            rows={props.raters.map((r) => [
-                                r.raterid,
-                                r.sessionid,
-                                r.sessiondeviceid,
-                                r.speakerid,
-                                r.speakertag,
-                                r.dashboardtype,
-                            ])}
-                        />
-                        <button
-                            className={dlgClose}
-                            onClick={props.closeDialog}
-                        >
-                            Close
-                        </button>
-                    </div>
-                ) : (
-                    <></>
-                )}
-
                 {props.currentForm === "AddUser" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Add User</div>
@@ -366,143 +237,6 @@ function SettingComponentPage(props) {
                             }
                         >
                             Create User
-                        </button>
-                        <button
-                            className={dlgCancel}
-                            onClick={props.closeDialog}
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                ) : (
-                    <></>
-                )}
-
-                {props.currentForm === "AddStudentProfile" ? (
-                    <div className={dlgBody}>
-                        <div className={dlgHeading}>Add Student Profile</div>
-                        <div className={dlgLabel}>First name</div>
-                        <input
-                            id="stuFirstname"
-                            className={dlgInput}
-                            type="text"
-                            maxLength={50}
-                        />
-                        <div className={dlgLabel}>Last name</div>
-                        <input
-                            id="stuLastname"
-                            className={dlgInput}
-                            type="text"
-                            maxLength={50}
-                        />
-                        <div className={dlgLabel}>Username (5-10 characters)</div>
-                        <input
-                            id="stuUsername"
-                            className={dlgInput}
-                            type="text"
-                            minLength={5}
-                            maxLength={10}
-                        />
-                        {props.status ? (
-                            <div className={dlgError}>{props.status}</div>
-                        ) : (
-                            <></>
-                        )}
-                        <button
-                            className={dlgPrimary}
-                            onClick={() =>
-                                props.addStudentProfile(
-                                    document.getElementById("stuFirstname")
-                                        .value,
-                                    document.getElementById("stuLastname")
-                                        .value,
-                                    document.getElementById("stuUsername")
-                                        .value,
-                                )
-                            }
-                        >
-                            Create Student
-                        </button>
-                        <button
-                            className={dlgCancel}
-                            onClick={props.closeDialog}
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                ) : (
-                    <></>
-                )}
-
-                {props.currentForm === "AddRater" ? (
-                    <div className={dlgBody}>
-                        <div className={dlgHeading}>Add Rater</div>
-                        <div className={dlgLabel}>Session ID</div>
-                        <input
-                            id="sessionId"
-                            className={dlgInput}
-                            type="text"
-                        />
-                        <div className={dlgLabel}>Session Device ID</div>
-                        <input
-                            id="sessionDeviceId"
-                            className={dlgInput}
-                            type="text"
-                        />
-                        <div className={dlgLabel}>Speaker ID</div>
-                        <input
-                            id="speakerId"
-                            className={dlgInput}
-                            type="text"
-                        />
-                        <div className={dlgLabel}>Speaker Tag</div>
-                        <input
-                            id="speakertag"
-                            className={dlgInput}
-                            type="text"
-                        />
-                        <div className={dlgLabel}>Rater ID</div>
-                        <input id="raterId" className={dlgInput} type="text" />
-                        <div className={dlgLabel}>Dashboard Type</div>
-                        <select id="type" className={dlgSelect}>
-                            <option value="quantitative">
-                                Quantitative Dashboard
-                            </option>
-                            <option value="reflection">
-                                Reflection Dashboard
-                            </option>
-                        </select>
-                        <select id="evaluationcategory" className={dlgSelect}>
-                            <option value="visualization">Visualization</option>
-                            <option value="reflection">Reflection</option>
-                            <option value="multimodal">Multimodal</option>
-                            <option value="unimodal">Unimodal </option>
-                            <option value="structured">Structured</option>
-                            <option value="unstructured">Unstructured </option>
-                        </select>
-                        {props.status ? (
-                            <div className={dlgError}>{props.status}</div>
-                        ) : (
-                            <></>
-                        )}
-                        <button
-                            className={dlgPrimary}
-                            onClick={() =>
-                                props.createRater(
-                                    document.getElementById("sessionId").value,
-                                    document.getElementById("sessionDeviceId")
-                                        .value,
-                                    document.getElementById("speakerId").value,
-                                    document.getElementById("speakertag").value,
-                                    document.getElementById("raterId").value,
-                                    document.getElementById("type").value,
-                                    document.getElementById(
-                                        "evaluationcategory",
-                                    ).value,
-                                )
-                            }
-                        >
-                            Create Rater
                         </button>
                         <button
                             className={dlgCancel}
@@ -552,89 +286,6 @@ function SettingComponentPage(props) {
                 ) : (
                     <></>
                 )}
-                {props.currentForm === "DeleteStudentProfile" ? (
-                    <div className={dlgBody}>
-                        <div className={dlgHeading}>Delete Student</div>
-                        <div className={dlgLabel}>Select Student</div>
-                        <select id="ddStudent" className={dlgSelect}>
-                            {props.students.map((s, index) => (
-                                <option key={index} value={s.id}>
-                                    {s.username}
-                                </option>
-                            ))}
-                        </select>
-
-                        {props.status ? (
-                            <div className={dlgError}>{props.status}</div>
-                        ) : (
-                            <></>
-                        )}
-                        <button
-                            className={dlgDanger}
-                            onClick={() =>
-                                props.confirmDeleteStudent(
-                                    document.getElementById("ddStudent").value,
-                                )
-                            }
-                        >
-                            Delete Student
-                        </button>
-                        <button
-                            className={dlgCancel}
-                            onClick={props.closeDialog}
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                ) : (
-                    <></>
-                )}
-
-                {props.currentForm === "DeleteRater" ? (
-                    <div className={dlgBody}>
-                        <div className={dlgHeading}>Delete Rater</div>
-                        <div className={dlgLabel}>Select Rater</div>
-                        <select id="ddRater" className={dlgSelect}>
-                            {props.raters.map((s, index) => (
-                                <option key={index} value={s.id}>
-                                    {s.raterid +
-                                        " " +
-                                        s.sessionid +
-                                        " " +
-                                        s.sessiondeviceid +
-                                        " " +
-                                        s.speakertag +
-                                        " " +
-                                        s.dashboardtype}
-                                </option>
-                            ))}
-                        </select>
-
-                        {props.status ? (
-                            <div className={dlgError}>{props.status}</div>
-                        ) : (
-                            <></>
-                        )}
-                        <button
-                            className={dlgDanger}
-                            onClick={() =>
-                                props.confirmDeleteRater(
-                                    document.getElementById("ddRater").value,
-                                )
-                            }
-                        >
-                            Delete Rater
-                        </button>
-                        <button
-                            className={dlgCancel}
-                            onClick={props.closeDialog}
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                ) : (
-                    <></>
-                )}
 
                 {props.currentForm === "ConfirmDeleteUser" ? (
                     <div className={dlgBody}>
@@ -659,59 +310,6 @@ function SettingComponentPage(props) {
                     <></>
                 )}
 
-                {props.currentForm === "ConfirmDeleteStudent" ? (
-                    <div className={dlgBody}>
-                        <div className={dlgHeading}>
-                            Are you sure you want to delete{" "}
-                            {props.studentToDelete.username}?
-                        </div>
-                        <button
-                            className={dlgDanger}
-                            onClick={props.deleteSelectedStudent}
-                        >
-                            Delete Student
-                        </button>
-                        <button
-                            className={dlgCancel}
-                            onClick={props.closeDialog}
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                ) : (
-                    <></>
-                )}
-                {props.currentForm === "ConfirmDeleteRater" ? (
-                    <div className={dlgBody}>
-                        <div className={dlgHeading}>
-                            Are you sure you want to delete{" "}
-                            {props.raterToDelete.raterid +
-                                " for " +
-                                props.raterToDelete.sessionid +
-                                " " +
-                                props.raterToDelete.sessiondeviceid +
-                                " " +
-                                props.raterToDelete.speakertag +
-                                " " +
-                                props.raterToDelete.dashboardtype}
-                            ?
-                        </div>
-                        <button
-                            className={dlgDanger}
-                            onClick={props.deleteSelectedRater}
-                        >
-                            Delete Rater
-                        </button>
-                        <button
-                            className={dlgCancel}
-                            onClick={props.closeDialog}
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                ) : (
-                    <></>
-                )}
                 {props.currentForm === "LockUser" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Lock User</div>
