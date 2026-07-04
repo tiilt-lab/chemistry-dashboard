@@ -1481,11 +1481,14 @@ def get_session_device_counts(owner_id=None):
 
 def get_pod_durations(session_id):
     # {session_device_id: duration_seconds} for one session. session_device has
-    # no timestamps of its own, so a pod's duration is derived from its
-    # transcripts as the end of the last utterance: MAX(start_time + length).
+    # no timestamps of its own, and transcript.start_time is offset from the
+    # SESSION start (not the pod's own start), so a pod's duration is the span
+    # of its speech activity: last-utterance-end minus first-utterance-start,
+    # i.e. MAX(start_time + length) - MIN(start_time).
     rows = db.session.query(
         Transcript.session_device_id,
-        func.max(Transcript.start_time + Transcript.length)) \
+        func.max(Transcript.start_time + Transcript.length)
+        - func.min(Transcript.start_time)) \
         .join(SessionDevice, Transcript.session_device_id == SessionDevice.id) \
         .filter(SessionDevice.session_id == session_id) \
         .group_by(Transcript.session_device_id).all()
