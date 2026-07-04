@@ -27,7 +27,15 @@ export class ApiService {
          this.getWSSProtocol() +
       "//" + this.getVideoServerEndpoint() +"/video_socket"
     );
-      
+
+  }
+
+  getAudioPosthocWebsocketEndpoint() {
+    return this.getWSSProtocol() + "//" + window.location.host + "/audio_posthoc_socket";
+  }
+
+  getVideoPosthocWebsocketEndpoint() {
+    return this.getWSSProtocol() + "//" + window.location.host + "/video_posthoc_socket";
   }
 
    _generateHeaders(headers,data) {

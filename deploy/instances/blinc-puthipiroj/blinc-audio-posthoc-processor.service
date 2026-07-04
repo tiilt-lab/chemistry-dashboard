@@ -1,0 +1,19 @@
+[Unit]
+Description=BLINC Audio Post-hoc Processing Service (blinc.puthipiroj.com)
+After=network-online.target redis-server.service
+StartLimitIntervalSec=0
+
+[Service]
+User=vlj9405
+Group=www-data
+Type=simple
+Restart=always
+RestartSec=1
+LimitRTPRIO=99
+LimitRTTIME=infinity
+Environment="DC_AUDIO_POSTHOC_WS_PORT=9015"
+WorkingDirectory=/home/vlj9405/code/chemistry-dashboard/
+ExecStart=/home/vlj9405/code/chemistry-dashboard/src/audio_processing/venv/bin/python src/audio_processing/server_posthoc.py
+
+[Install]
+WantedBy=multi-user.target
