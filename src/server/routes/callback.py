@@ -317,8 +317,11 @@ def _read_audio_models():
     path = os.environ.get('AUDIO_CONFIG_PATH') or os.path.join(
         os.path.dirname(os.path.abspath(__file__)), '..', '..',
         'audio_processing', 'config.ini')
+    # Defaults MUST match the config.py fallbacks, else this endpoint would
+    # advertise a model the pipeline doesn't actually run when config.ini omits
+    # the key (config.py keyword_backend() falls back to 'word2vec').
     models = {'asr': 'google-cloud-speech', 'scorer': 'liwc',
-              'keyword_backend': 'embedding', 'semantic_embedder': 'all-mpnet-base-v2'}
+              'keyword_backend': 'word2vec', 'semantic_embedder': 'all-mpnet-base-v2'}
     try:
         parser = configparser.RawConfigParser()
         parser.read(path)
@@ -349,9 +352,11 @@ def _read_video_models():
     import configparser
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..',
                         'video_processing', 'config.ini')
-    # Defaults track the current config.py fallbacks (open-SOTA stack), not the
-    # historical resmasking/yolov4/gazefollow that used to be hard-coded here.
-    models = {'emotion': 'hsemotion', 'objects': 'yolo11', 'attention': 'gazelle',
+    # Defaults MUST match the config.py fallbacks so this endpoint never
+    # advertises a model the pipeline isn't running. Note emotion_model() falls
+    # back to 'resmasking' (config.ini sets hsemotion); object/attention fall
+    # back to yolo11/gazelle.
+    models = {'emotion': 'resmasking', 'objects': 'yolo11', 'attention': 'gazelle',
               'face': 'dlib', 'head': 'yolov5'}
     try:
         parser = configparser.RawConfigParser(allow_no_value=True)

@@ -143,10 +143,11 @@ class ImageObjectDetection:
                 self.model_2.half()  # to FP16
 
 
-        # Run inference
-        if self.model_1 is not None and self.device.type != 'cpu':
-            self.model_1(torch.zeros(self.batch_size, 3, imgsz_1, imgsz_1).to(self.device).type_as(next(self.model_1.parameters())))  # run once
-
+        # Run inference — warm up each legacy model independently (ultralytics
+        # models manage their own warmup, so they are skipped here).
+        if self.device.type != 'cpu':
+            if self.model_1 is not None:
+                self.model_1(torch.zeros(self.batch_size, 3, imgsz_1, imgsz_1).to(self.device).type_as(next(self.model_1.parameters())))  # run once
             if self.model_2 is not None:
                 self.model_2(torch.zeros(self.batch_size, 3, imgsz_2, imgsz_2).to(self.device).type_as(next(self.model_2.parameters())))  # run once
 
@@ -161,7 +162,12 @@ class ImageObjectDetection:
         else:
             names_model_2 = self.model_2.module.names if hasattr(self.model_2, 'module') else self.model_2.names
         #change the value of the name in key 1 to the value of name in names_model_1[1]
-        names_model_2[1] = names_model_1[1]
+        # Defensive: a head-only ultralytics checkpoint may expose names {0:'head'}
+        # with no index 1, so fall back to 'head' rather than KeyError/IndexError.
+        try:
+            names_model_2[1] = names_model_1[1]
+        except (KeyError, IndexError):
+            names_model_2[1] = 'head'
 
         if  isinstance(names_model_2,list):
             for k, v in enumerate(names_model_2):
@@ -554,7 +560,12 @@ class ImageObjectDetection:
             score = float(np.dot(u, v)) #self.cosine_similarity(face_embedding, stored_embedding)
             Euc_dist = float(np.linalg.norm(u - v))
             # logging.info(f"score are Euclidean: {Euc_dist} and cos simillarity: {score} and distance: {distance}")
-            if distance < max_distance and score > best_cos_score and Euc_dist < best_L2_score and distance < best_distance:
+            # Select by the backend's own distance metric under its calibrated
+            # cutoff. The previous compound gate also required Euc_dist < 1
+            # (i.e. cos > 0.5), a dlib-tuned bound that rejected valid ArcFace
+            # matches (which sit around cos 0.32-0.5); score/Euc_dist are kept
+            # only for logging/return.
+            if distance < max_distance and distance < best_distance:
                 best_cos_score = score
                 best_L2_score = Euc_dist
                 best_match = student

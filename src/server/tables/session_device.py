@@ -18,8 +18,10 @@ class SessionDevice(db.Model):
     posthoc_analyzed_date = db.Column(db.DateTime, nullable=True)
     # JSON blob of the model choices used by the last post-hoc run (asr,
     # embedder, diarizer, scorer, emotion, attention, object, face, head, ...),
-    # for reproducibility/provenance. Nullable; older rows and pre-migration
-    # deployments read as None (see defensive access in database.py).
+    # for reproducibility/provenance. Nullable. NOTE: this is a mapped column,
+    # so migration f1a2b3c4d5e6 MUST be applied before deploying this code — a
+    # missing DB column raises on every SessionDevice query, it does not read as
+    # None. The _posthoc_models_json guard only protects against bad JSON.
     posthoc_models = db.Column(db.Text, nullable=True)
     
     speakers = db.relationship("Speaker", back_populates="session_device", cascade="all, delete",passive_deletes=True)
