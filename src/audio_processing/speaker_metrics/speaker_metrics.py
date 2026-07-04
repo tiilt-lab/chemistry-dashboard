@@ -24,7 +24,7 @@ class SpeakerProcessor:
     participants = 0
     indicies = None
 
-    def __init__(self, config, semantic_model):
+    def __init__(self, config, semantic_model, usedby="audio_processor"):
 
         logging.info("[Speaker_Metrics]Inside speaker metric init")
         self.total_contributions = 0
@@ -33,6 +33,10 @@ class SpeakerProcessor:
         logging.info(self.auth_key)
         logging.info('[Speaker_Metrics]Loaded semenatic model')
 
+        # Which pipeline created this processor (live audio vs post-hoc speaker
+        # metric recomputation); accepted for compatibility with the post-hoc
+        # SpeakerMetricProcessor.
+        self.usedby = usedby
         self.running_process = None
         self.running = False
 
@@ -117,7 +121,7 @@ class SpeakerProcessor:
         self.running = False
         self.asr_complete = True
 
-    def process_transcript(self, speaker_transcript_data):
+    def process_transcript(self, speaker_transcript_data, action="realtime_processing"):
       try:
         processing_timer = time.time()
         speaker_ids = list(self.speakers.keys())
