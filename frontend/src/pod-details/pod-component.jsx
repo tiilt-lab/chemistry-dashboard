@@ -340,7 +340,7 @@ function PodComponent() {
   };
 
   const seeAllTranscripts = () => {
-    if (currentTranscript !== undefined) {
+    if (currentTranscript != null && currentTranscript.id != null) {
       navigate(
         "/sessions/" +
         session.id +
