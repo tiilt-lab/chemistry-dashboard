@@ -16,35 +16,35 @@ function SettingComponentPage(props) {
           rightEnabled={false}
           nav={props.navigateToHomescreen}
         />
-        <div className={style["list-container"]}  style={{ "max-width": adjDim(375) + "px" }}>
+        <div className={style["list-container"]}  style={{ maxWidth: "42rem" }}>
           <div className={style["section-header"]}>Account Settings</div>
-          <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("ChangePassword")}>Change Password</div>
+          <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("ChangePassword")}>Change Password</div>
           {(props.user.isAdmin || props.user.isSuper) ?
             <>
               <React.Fragment>
                 <div className={style["section-header"]}>Manage Accounts</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("ViewUsers", true)}>View Users</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("AddUser")}>Add User</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeleteUser", true)}>Delete User</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("UserRole", true)}>Change User Role</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("LockUser", true)}>Lock User</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("UnlockUser", true)}>Unlock User</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("ResetUser", true)}>Reset User Password</div>
+                <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("ViewUsers", true)}>View Users</div>
+                <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("AddUser")}>Add User</div>
+                <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("DeleteUser", true)}>Delete User</div>
+                <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("UserRole", true)}>Change User Role</div>
+                <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("LockUser", true)}>Lock User</div>
+                <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("UnlockUser", true)}>Unlock User</div>
+                <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("ResetUser", true)}>Reset User Password</div>
               </React.Fragment>
 
               <React.Fragment>
                 <div className={style["section-header"]}>Manage Student Profile</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("ViewStudentProfile", true)}>View Students</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("AddStudentProfile")}>Add Student Profile</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeleteStudentProfile", true)}>Delete Student Profile</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("SyncStudentProfile", true)}>Sync Student Profiles</div>
+                <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("ViewStudentProfile", true)}>View Students</div>
+                <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("AddStudentProfile")}>Add Student Profile</div>
+                <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("DeleteStudentProfile", true)}>Delete Student Profile</div>
+                <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("SyncStudentProfile", true)}>Sync Student Profiles</div>
               </React.Fragment>
 
               <React.Fragment>
                 <div className={style["section-header"]}>Manage Raters</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("ViewRaters", true)}>View Raters</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("AddRater")}>Add Rater</div>
-                <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeleteRater", true)}>Delete Rater</div>
+                <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("ViewRaters", true)}>View Raters</div>
+                <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("AddRater")}>Add Rater</div>
+                <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("DeleteRater", true)}>Delete Rater</div>
               </React.Fragment>
             </>
             :
@@ -54,12 +54,12 @@ function SettingComponentPage(props) {
           {(props.user.isSuper) ?
             <React.Fragment>
               <div className={style["section-header"]}>Manage Server</div>
-              <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("ServerLogs")}>Download Server Logs</div>
-              <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeviceLogs", false, true)}>Download Device Logs</div>
-              <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeleteServerLogs")}>Clear Server Logs</div>
-              <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("DeleteDeviceLogs", false, true)}>Clear Device Logs</div>
-              <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("AllowAPI", true)}>Allow API Access</div>
-              <div className={style["option-button"]} style={{ width: adjDim(300) + 'px', }} onClick={() => props.openDialog("RevokeAPI", true)}>Revoke API Access</div>
+              <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("ServerLogs")}>Download Server Logs</div>
+              <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("DeviceLogs", false, true)}>Download Device Logs</div>
+              <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("DeleteServerLogs")}>Clear Server Logs</div>
+              <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("DeleteDeviceLogs", false, true)}>Clear Device Logs</div>
+              <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("AllowAPI", true)}>Allow API Access</div>
+              <div className={style["option-button"]} style={{ width: "min(26rem, 100%)" }} onClick={() => props.openDialog("RevokeAPI", true)}>Revoke API Access</div>
             </React.Fragment>
             :
             <></>

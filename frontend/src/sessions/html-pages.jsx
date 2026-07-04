@@ -24,7 +24,7 @@ function DiscussionSessionPage(props) {
 
                 <div
                     className={style["list-container"]}
-                    style={{ "max-width": adjDim(375) + "px" }}
+                    style={{ maxWidth: "42rem" }}
                 >
                     {props.isLoading ? (
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -204,24 +204,22 @@ function DiscussionSessionPage(props) {
                                             <svg
                                                 x="0"
                                                 y="0"
-                                                with={adjDim(24) + ""}
-                                                height={adjDim(24) + ""}
+                                                width="24"
+                                                height="24"
                                                 viewBox="0 0 20 30"
                                                 className="m-2"
                                             >
                                                 <MicIcon
                                                     fill={
                                                         session.recording
-                                                            ? "#FF6363"
-                                                            : "#7878FA"
+                                                            ? "#b3261e"
+                                                            : "#3a2163"
                                                     }
                                                 ></MicIcon>
                                             </svg>
                                             <div
                                                 className={style["click-mask"]}
-                                                style={{
-                                                    width: adjDim(310) + "px",
-                                                }}
+                                                style={{ width: "min(26rem, 100%)" }}
                                                 onClick={() => {
                                                     props.goToSession(session)
                                                 }}
@@ -341,14 +339,14 @@ function DiscussionSessionPage(props) {
                 <button
                     className={`${style["basic-button"]} ${style["medium-button"]}`}
                     onClick={() => props.openFolderDialog("NewFolder")}
-                    style={{ width: adjDim(374) + "px" }}
+                    style={{ width: "min(42rem, 100%)" }}
                 >
                     New Folder
                 </button>
                 <button
                     className={`${style["basic-button"]} ${style["medium-button"]}`}
                     onClick={props.newRecording}
-                    style={{ width: adjDim(374) + "px" }}
+                    style={{ width: "min(42rem, 100%)" }}
                 >
                     New Discussion
                 </button>
