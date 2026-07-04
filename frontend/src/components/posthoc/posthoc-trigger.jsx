@@ -36,6 +36,7 @@ const STARTED_ACKS = new Set([
 const ASR_OPTIONS = [
     { id: "google-cloud-speech", label: "Google Cloud Speech-to-Text" },
     { id: "whisper", label: "Whisper (open, offline)" },
+    { id: "whisperx", label: "WhisperX (open SOTA: batched + word-aligned)" },
 ]
 const SCORER_OPTIONS = [
     { id: "liwc", label: "LIWC & Harvard General Inquirer lexicons" },
@@ -235,6 +236,19 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
               ? "text-tiilt-danger"
               : "text-tiilt-muted"
 
+    // Wall-clock estimate for a full re-run, measured on this instance:
+    // a 5.5-min recording took ~6.3 min end-to-end (WhisperX transcribes in
+    // seconds; the per-utterance semantic/diarization/keyword processing
+    // dominates), so estimate ~1.2x the recording length. The pod's recording
+    // is often much shorter than the session, so use the transcript extent as
+    // the recording-length proxy and fall back to the session length.
+    let recordingSeconds = (session && session.length) || 0
+    if (transcripts && transcripts.length > 0) {
+        const times = transcripts.map((t) => t.start_time)
+        recordingSeconds = Math.max(...times) - Math.min(...times) + 30
+    }
+    const fullEstimateMin = Math.max(1, Math.ceil((recordingSeconds / 60) * 1.2) || 5)
+
     const btn =
         "h-10 rounded-lg px-4 text-sm font-semibold transition active:translate-y-px disabled:opacity-50"
     const selectCls =
@@ -337,7 +351,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                     disabled={running}
                     className={btn + " bg-tiilt text-white hover:bg-tiilt-deep"}
                 >
-                    Re-run full analysis
+                    Re-run full analysis (~{fullEstimateMin} min)
                 </button>
                 <button
                     onClick={() => runStyle("pi")}
@@ -352,7 +366,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                         " border border-tiilt-line bg-white text-tiilt-ink hover:border-tiilt hover:bg-tiilt-soft"
                     }
                 >
-                    Re-compute P&I Style
+                    Re-compute P&I Style (&lt;1 min)
                 </button>
                 <button
                     onClick={() => runStyle("et")}
@@ -367,7 +381,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                         " border border-tiilt-line bg-white text-tiilt-ink hover:border-tiilt hover:bg-tiilt-soft"
                     }
                 >
-                    Re-compute E&T Style
+                    Re-compute E&T Style (&lt;1 min)
                 </button>
             </div>
 

@@ -46,7 +46,13 @@ cm = ConnectionManager()
 cartoon_model = VideoCartoonifyLoader()
 facial_emotion_detector = EmotionDetectionModel()
 attention_detection = AttentionDetection()
-facial_emotion_detector_V1 = EmotionDetectionModelV1()
+# Emotion backend is config-selected: 'hsemotion' (AffectNet-8, open SOTA)
+# or the original ResMaskingNet.
+if cf.emotion_model() == 'hsemotion':
+    from emotion_detector.hsemotion_model import EmotionDetectionModelV2
+    facial_emotion_detector_V1 = EmotionDetectionModelV2()
+else:
+    facial_emotion_detector_V1 = EmotionDetectionModelV1()
 image_object_detection = ImageObjectDetection()
 video_metric_analytics = VideoMetricAnalytics(attention_detection, facial_emotion_detector_V1, image_object_detection)
 

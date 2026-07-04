@@ -40,7 +40,13 @@ from video_cartoonizer.VideoMetricProcessor import VideoMetricAnalytics
 STOP_SIGNAL = object()
 cm = ConnectionManager()
 attention_detection = AttentionDetection()
-facial_emotion_detector = EmotionDetectionModelV1()
+# Emotion backend is config-selected: 'hsemotion' (AffectNet-8, open SOTA)
+# or the original ResMaskingNet.
+if cf.emotion_model() == 'hsemotion':
+    from emotion_detector.hsemotion_model import EmotionDetectionModelV2
+    facial_emotion_detector = EmotionDetectionModelV2()
+else:
+    facial_emotion_detector = EmotionDetectionModelV1()
 image_object_detection = ImageObjectDetection(STOP_SIGNAL,source="post_hoc")
 video_metric_analytics = VideoMetricAnalytics(attention_detection, facial_emotion_detector, image_object_detection,STOP_SIGNAL,source="post_hoc")
 batch_size = 40

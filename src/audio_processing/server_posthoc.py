@@ -312,13 +312,20 @@ class ServerProtocol(WebSocketServerProtocol):
         self.send_json({'type': 'end', 'message': message})
 
     def signal_start(self):
-        self.audio_buffer = AudioBuffer(self.config)
+        # WhisperX transcribes the whole file before emitting results, so the
+        # buffer must retain the entire recording (2h cap ≈ 230MB PCM).
+        buffer_seconds = 7200 if getattr(self, 'asr_choice', None) == 'whisperx' else None
+        self.audio_buffer = AudioBuffer(self.config, max_seconds=buffer_seconds)
         self.asr_audio_queue = Queue()
         self.asr_transcript_queue = Queue()
         # Per-run ASR choice from the trigger UI (falls back to config.ini).
         # Whisper consumes the same PCM queue and runs fully offline; import
         # lazily so the Google path never needs faster-whisper installed.
-        if getattr(self, 'asr_choice', None) == 'whisper':
+        if getattr(self, 'asr_choice', None) == 'whisperx':
+            from asr_connectors.whisperx_asr import WhisperXASR
+            self.asr = WhisperXASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval,
+                                   audio_file=self.audio_file, model_size=cf.whisper_model_size())
+        elif getattr(self, 'asr_choice', None) == 'whisper':
             from asr_connectors.whisper_asr import WhisperASR
             self.asr = WhisperASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval)
         else:

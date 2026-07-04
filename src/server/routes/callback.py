@@ -296,6 +296,11 @@ def sync_enabled(**kwargs):
 _ASR_LABELS = {
     "google-cloud-speech": "Google Cloud Speech-to-Text (video model, en-US)",
     "whisper": "Whisper (open, offline)",
+    "whisperx": "WhisperX (open; batched + word-level alignment)",
+}
+_EMOTION_LABELS = {
+    "resmasking": "ResMaskingNet (FER-2013, 7 emotions)",
+    "hsemotion": "HSEmotion EfficientNet-B2 (AffectNet-8, open SOTA)",
 }
 _SCORER_LABELS = {
     "liwc": "LIWC & Harvard General Inquirer lexicons",
@@ -352,15 +357,30 @@ _STATIC_MODELS = {
 }
 
 
+def _read_video_emotion_model():
+    import os
+    import configparser
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..',
+                        'video_processing', 'config.ini')
+    try:
+        parser = configparser.RawConfigParser(allow_no_value=True)
+        parser.read(path)
+        return parser.get('videoprocessing', 'emotion_model', fallback='resmasking').strip()
+    except Exception:
+        return 'resmasking'
+
+
 @api_routes.route('/api/v1/models', methods=['GET'])
 @wrappers.verify_login(public=True)
 def get_models(**kwargs):
     asr, scorer = _read_audio_models()
+    emotion = _read_video_emotion_model()
     result = {
         "transcription": {"id": asr, "label": _ASR_LABELS.get(asr, asr)},
         "scoring": {"id": scorer, "label": _SCORER_LABELS.get(scorer, scorer)},
     }
     result.update(_STATIC_MODELS)
+    result["emotion"] = {"id": emotion, "label": _EMOTION_LABELS.get(emotion, emotion)}
     return json_response(result)
 
 
