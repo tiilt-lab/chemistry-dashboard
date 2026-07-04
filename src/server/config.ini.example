@@ -35,3 +35,12 @@ redis_db=0
 # Base directory for runtime file storage (biometrics, etc.).
 # Point each instance at its own path to avoid clobbering shared files.
 root_dir=/var/lib
+
+# Optional cross-instance student-profile syncing. Leave this section out (or
+# either value blank) to disable it entirely: no data leaves this instance,
+# the inbound sync endpoint rejects all requests, and the People page hides
+# the "Sync profiles" action. To mirror students with a peer BLINC deployment,
+# set its base URL and a shared secret that BOTH instances must match.
+#[sync]
+#peer_url=https://peer.example.org
+#token=change-me-to-a-long-random-string
