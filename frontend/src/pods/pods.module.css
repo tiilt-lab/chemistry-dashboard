@@ -332,8 +332,8 @@
 
 
 .list-container {
-  max-width: 375px;
-  width: 100vh;
+  max-width: 42rem;
+  width: 100%;
   height: 100vh;
   overflow: auto;
   margin-top: 8px;

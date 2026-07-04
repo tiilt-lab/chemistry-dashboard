@@ -17,7 +17,7 @@ function FileUploadPage(props) {
         <div className={style["padding-file"]}></div>
         <div className={style["load-text"]}>Upload files for topic modeling.</div>
       </div>
-      <form onSubmit={props.onSubmit} action="#" encType="multipart/form-data" style = {{width: adjDim(300) + 'px',}}>
+      <form onSubmit={props.onSubmit} action="#" encType="multipart/form-data" style={{ width: "min(26rem, 100%)" }}>
         <div>
         <label for="file-upload" className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} style = {{'margin-right': adjDim(374 / 2) + 'px',}}>
     		Select File
@@ -31,7 +31,7 @@ function FileUploadPage(props) {
         <p className={style["instruction"]}> {props.uploadStr} </p>
       </form>
       <div>
-        <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} style = {{width: adjDim(374) + 'px',}} onClick={props.createTopicModel}>
+        <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} style={{ width: "min(26rem, 100%)" }} onClick={props.createTopicModel}>
           View Topic Model
         </button>
       </div>

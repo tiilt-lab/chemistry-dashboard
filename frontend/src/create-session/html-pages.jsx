@@ -141,7 +141,7 @@ function CreateSessionPage(props) {
 
             <button
               className={style["footer-button"]}
-              style={{ width: adjDim(374) + "px" }}
+              style={{ width: "min(42rem, 100%)" }}
               onClick={props.navigateToKeywordLists}
             >
               Create Keyword List
@@ -214,21 +214,21 @@ function CreateSessionPage(props) {
 
             <button
               className={style["footer-button"]}
-              style={{ width: adjDim(374) + "px" }}
+              style={{ width: "min(42rem, 100%)" }}
               onClick={props.navigateToFileUpload}
             >
               Create Topic Model
             </button>
             <button
               className={style["footer-button"]}
-              style={{ width: adjDim(374) + "px" }}
+              style={{ width: "min(42rem, 100%)" }}
               onClick={props.goToKeywords}
             >
               Back
             </button>
             <button
               className={style["footer-button"]}
-              style={{ width: adjDim(374) + "px" }}
+              style={{ width: "min(42rem, 100%)" }}
               onClick={props.createSession}
             >
               Start Discussion
@@ -297,14 +297,14 @@ function CreateSessionPage(props) {
             </button>
             <button
               className={style["footer-button"]}
-              style={{ width: adjDim(374) + "px" }}
+              style={{ width: "min(42rem, 100%)" }}
               onClick={props.goToTopModels}
             >
               Back
             </button>
             <button
               className={style["footer-button"]}
-              style={{ width: adjDim(374) + "px" }}
+              style={{ width: "min(42rem, 100%)" }}
               onClick={props.createSession}
             >
               Start Discussion
