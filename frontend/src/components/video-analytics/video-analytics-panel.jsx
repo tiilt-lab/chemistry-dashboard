@@ -224,6 +224,62 @@ function Legend({ items, colorFor }) {
     )
 }
 
+// Facial-emotion -> valence in [-1, 1], for the fused engagement signal.
+const EMOTION_VALENCE = {
+    happy: 1,
+    happiness: 1,
+    surprise: 0.3,
+    surprised: 0.3,
+    neutral: 0,
+    sad: -0.7,
+    sadness: -0.7,
+    fear: -0.7,
+    afraid: -0.7,
+    disgust: -0.6,
+    anger: -0.8,
+    angry: -0.8,
+    contempt: -0.5,
+}
+
+// Fused engagement per bin from attention + emotional valence, in [0,1].
+// engagement = 0.6·(attention/maxAttn) + 0.4·((valence+1)/2).
+function engagementCells(samples, t0, t1, nBins, maxAttn) {
+    const span = t1 - t0 || 1
+    const bins = Array.from({ length: nBins }, () => ({ attn: 0, val: 0, n: 0 }))
+    for (const s of samples) {
+        let idx = Math.floor(((s.time_stamp - t0) / span) * nBins)
+        idx = Math.max(0, Math.min(nBins - 1, idx))
+        bins[idx].attn += s.attention_level || 0
+        bins[idx].val += EMOTION_VALENCE[(s.facial_emotion || "").toLowerCase()] ?? 0
+        bins[idx].n += 1
+    }
+    const n = bins.length
+    return bins.map((b, i) => {
+        if (!b.n) return { color: "#16a34a", opacity: 0, title: "" }
+        const attnN = maxAttn ? b.attn / b.n / maxAttn : 0
+        const valN = (b.val / b.n + 1) / 2
+        const e = Math.max(0, Math.min(1, 0.6 * attnN + 0.4 * valN))
+        const t = t0 + ((t1 - t0) * (i + 0.5)) / n
+        return { color: "#16a34a", opacity: e, title: `${formatSeconds(t)} · ${Math.round(e * 100)}%` }
+    })
+}
+
+// Rough on-task read from object-of-focus: gaze on a phone reads as off-task,
+// no focus reads as disengaged, anything else (people, materials, screen) as
+// on-task. Deliberately simple — the object timeline shows the detail.
+const OFF_TASK_OBJECTS = new Set(["cell phone", "phone", "cellphone"])
+const AWAY_OBJECTS = new Set(["nothing", "none", ""])
+function onTaskPct(samples) {
+    let on = 0,
+        total = 0
+    for (const s of samples) {
+        const v = (s.object_on_focus || "").toLowerCase()
+        total += 1
+        if (!OFF_TASK_OBJECTS.has(v) && !AWAY_OBJECTS.has(v)) on += 1
+    }
+    return total ? Math.round((on / total) * 100) : null
+}
+
 // Short initials for an identity avatar chip (usernames are usually one token).
 function initials(name) {
     if (!name) return "?"
@@ -384,6 +440,7 @@ function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, o
     const times = metrics.map((m) => m.time_stamp)
     const t0 = Math.min(...times)
     const t1 = Math.max(...times)
+    const maxAttn = Math.max(1, ...metrics.map((m) => m.attention_level || 0))
 
     // Object of focus: keep the top N, collapse the rest into "other".
     const topObjects = tally(metrics.map((m) => m.object_on_focus))
@@ -555,6 +612,36 @@ function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, o
 
             <div>
                 <SectionHeader>
+                    Engagement over time
+                    {person ? ` · ${person}` : ""}
+                </SectionHeader>
+                <div className="mb-2 text-xs text-tiilt-muted">
+                    Fused from attention + emotional valence — darker = more engaged.
+                </div>
+                <TimelineTracks
+                    tracks={
+                        isAll
+                            ? participants.map((p) => ({
+                                  name: p,
+                                  avatar: { initials: initials(p), color: speakerColor(p), imgUrl: thumbUrl(p) },
+                                  cells: engagementCells(byParticipant[p] || [], t0, t1, N_BINS, maxAttn),
+                              }))
+                            : [{
+                                  name: person,
+                                  cells: engagementCells(byParticipant[person] || [], t0, t1, N_BINS, maxAttn),
+                              }]
+                    }
+                    t0={t0}
+                    t1={t1}
+                    zoom={zoom}
+                    playbackTime={playbackTime}
+                    onSeek={onSeek}
+                />
+                <Axis t0={t0} t1={t1} />
+            </div>
+
+            <div>
+                <SectionHeader>
                     Facial emotion over time
                     {person ? ` · ${person}` : ""}
                 </SectionHeader>
@@ -617,6 +704,19 @@ function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, o
                         label={models && models.objects && models.objects.label}
                         fallback="YOLO11m object detector (COCO) + gaze direction"
                     />
+                </div>
+                <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-tiilt-muted">
+                    {(isAll ? participants : [person]).map((p) => {
+                        const pct = onTaskPct(byParticipant[p] || [])
+                        return pct == null ? null : (
+                            <span key={p}>
+                                <span className="font-semibold text-tiilt-ink">
+                                    {p}
+                                </span>{" "}
+                                on-task {pct}%
+                            </span>
+                        )
+                    })}
                 </div>
                 <TimelineTracks
                     tracks={
