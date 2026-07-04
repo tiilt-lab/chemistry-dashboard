@@ -2,6 +2,7 @@ import json
 import os
 import re
 from .respeaker_hi_liwc import populate_dictionary_index_hi, populate_dictionary_index_liwc, process_text
+from .liwc_composite import COMPOSITE_LIWC_INDICES, mean_liwc_index, balance_index, extract_liwc_categories
 
 def initialize():
     print('Unpacking features model...')
@@ -33,6 +34,33 @@ def detect_features(transcript):
         'certainty_value':certainty_val,
         'clout_value': collab_quality_val,
         'emotional_tone_value': emotion_val
+    }
+
+# Composite LIWC style indices used by the post-hoc P&I / E&T re-computation
+# (SpeakerMetricProcessor). Distinct from detect_features above: this returns
+# the balanced analytic/authenticity/certainty/clout/emotional-tone indices.
+def detect_LIWC_Indices(transcript):
+    results = {}
+    liwc_emots, liwc_dictionary = populate_dictionary_index_liwc()
+    liwc_features = extract_liwc_categories(transcript, liwc_dictionary, liwc_emots)
+    for summary_name, weights in COMPOSITE_LIWC_INDICES.items():
+        raw_score = mean_liwc_index(liwc_features, weights)
+        results[f"{summary_name}"] = round(raw_score, 3)
+
+    return {
+        'analytic_thinking_value': results["analytical_thinking"],
+        'Narrative_thinking': results["Narrative_thinking"],
+        'composite_analytical_thinking': balance_index(results["analytical_thinking"], results["Narrative_thinking"]),
+        'authenticity_value': results["authenticity"],
+        'certainty': results["certainty"],
+        'uncertainty': results["uncertainty"],
+        'certainty_value': balance_index(results["certainty"], results["uncertainty"]),
+        'clout': results["clout"],
+        'no_clout': results["no_clout"],
+        'clout_value': balance_index(results["clout"], results["no_clout"]),
+        'positive_climate': results["positive_climate"],
+        'negative_conflict_climate': results["negative_conflict_climate"],
+        'emotional_tone_value': balance_index(results["positive_climate"], results["negative_conflict_climate"])
     }
 
 # The question detector may eventually need it's own folder/module.

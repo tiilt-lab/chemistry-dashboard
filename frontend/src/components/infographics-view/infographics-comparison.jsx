@@ -375,6 +375,7 @@ function AppInfographicsComparison(props) {
                                 session={props.session}
                                 sessionDeviceId={props.sessionDevice.id}
                                 speakers={props.speakers}
+                                transcripts={props.displayTranscripts}
                             />
                         </AppSectionBoxComponent>
                     )}
