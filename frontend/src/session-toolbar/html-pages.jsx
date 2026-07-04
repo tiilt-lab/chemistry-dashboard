@@ -19,11 +19,14 @@ function AppSessionPage(props) {
                 </div>
 
                 {props.speakers && props.speakers.length !== 0 ? (
-                    <div className="flex min-w-0 flex-1 flex-col px-3 sm:w-full sm:flex-none sm:px-6">
+                    <div className="flex min-w-0 flex-1 flex-col px-3 sm:min-h-0 sm:w-full sm:px-6">
                         <div className="mb-2 font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
                             Participants
+                            <span className="ml-1 text-tiilt-muted/70">
+                                ({props.speakers.length})
+                            </span>
                         </div>
-                        <ScrollArea className="max-h-[220px] pr-1">
+                        <ScrollArea className="max-h-[220px] pr-1 sm:max-h-none sm:min-h-0 sm:flex-1">
                             <div className="flex flex-row gap-2 sm:flex-col">
                                 {props.speakers.map((part, index) => (
                                     <button

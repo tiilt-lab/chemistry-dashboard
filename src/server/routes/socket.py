@@ -30,15 +30,21 @@ def join_session(message):
             transcripts = database.get_transcripts(session_id=room)
             videoMetrics = database.get_speaker_video_metrics(session_id=room)
             page_size = 1000
+
+            # Fetch every speaker-transcript metric for the session in one query
+            # and group by transcript id, instead of one query per transcript.
+            metrics_by_transcript = {}
+            for metric in database.get_speaker_transcript_metrics(session_id=room):
+                metrics_by_transcript.setdefault(metric.transcript_id, []).append(metric.json())
+
             transcript_speaker_metrics = []
             speaker_video_metrics = []
             for transcript in transcripts:
                 if len(transcript_speaker_metrics) == page_size:
                     emit('transcript_metrics_digest', json.dumps(transcript_speaker_metrics))
-                    transcript_speaker_metrics = [] 
-                speaker_metrics = database.get_speaker_transcript_metrics(transcript_id=transcript.id)
+                    transcript_speaker_metrics = []
                 transcript_speaker_metrics.append({'transcript' : transcript.json(),
-                                                   'speaker_metrics' : [speaker_metric.json() for speaker_metric in speaker_metrics]})
+                                                   'speaker_metrics' : metrics_by_transcript.get(transcript.id, [])})
             emit('transcript_metrics_digest', json.dumps(transcript_speaker_metrics))
 
 
