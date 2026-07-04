@@ -1,4 +1,5 @@
-from flask import Blueprint, Response, request, abort, session, make_response
+from flask import Blueprint, Response, request, abort, session, make_response, send_file
+import glob
 from utility import sanitize, string_to_bool, json_response
 from tables.session_device import SessionDevice
 from redis_helper import RedisSessions
@@ -159,6 +160,31 @@ def device_join_session(session_id, **kwargs):
         return json_response({'session_device': data.json(), 'key': data.processing_key})
     else:
         return json_response({'message': data}, 400)
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/video', methods=['GET'])
+@wrappers.verify_login(public=True)
+def get_session_device_video(session_id, session_device_id, user, **kwargs):
+    # Stream a pod's recorded video for playback beside the transcript. Files
+    # are keyed by session_device_id at the filename start
+    # (e.g. "887-<uuid>_<sid>_<did>_(...)_orig.webm"). conditional=True lets
+    # Flask honor HTTP Range requests so the player can seek. Owner-gated.
+    owned = database.get_sessions(id=session_id, owner_id=user['id'], first=True)
+    if owned is None:
+        abort(404)
+    recordings_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        '..', 'video_processing', 'videorecordings')
+    matches = (
+        glob.glob(os.path.join(recordings_dir, '{0}-*_orig.webm'.format(session_device_id)))
+        or glob.glob(os.path.join(recordings_dir, '{0}-*.webm'.format(session_device_id)))
+        or glob.glob(os.path.join(recordings_dir, '{0}-*.mp4'.format(session_device_id)))
+    )
+    if not matches:
+        abort(404)
+    path = os.path.realpath(matches[0])
+    mimetype = 'video/mp4' if path.lower().endswith('.mp4') else 'video/webm'
+    return send_file(path, mimetype=mimetype, conditional=True)
+
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/posthoc_completed', methods=['POST'])
 @wrappers.verify_login(public=True)
