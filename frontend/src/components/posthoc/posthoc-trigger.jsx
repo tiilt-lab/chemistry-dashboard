@@ -116,8 +116,19 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
         // has had a post-hoc re-analysis so the sessions list can flag it.
         if (allSettled && !marked.current && active.some((s) => s === "done")) {
             marked.current = true
+            // Record which models produced this re-analysis (provenance).
+            const modelChoices = {
+                asr,
+                scorer,
+                diarizer,
+                embedder,
+                emotion: models && models.emotion && models.emotion.id,
+                attention: models && models.attention && models.attention.id,
+                objects: models && models.objects && models.objects.id,
+                keywords: models && models.keywords && models.keywords.id,
+            }
             new SessionService()
-                .markPosthocCompleted(session.id, sessionDeviceId)
+                .markPosthocCompleted(session.id, sessionDeviceId, modelChoices)
                 .catch(() => {})
         }
     }

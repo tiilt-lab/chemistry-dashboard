@@ -11,9 +11,21 @@ export class SessionModel {
   folder;
   has_video;
   has_posthoc;
+  pod_count;
 
   // Client Fields
   local_start_date;
+
+  // Format a duration in seconds as H:MM:SS / M:SS (used for pod durations).
+  static formatDuration(seconds) {
+    if (seconds == null || isNaN(seconds)) return '—';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    const mm = m.toString().padStart(2, '0');
+    const ss = s.toString().padStart(2, '0');
+    return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
+  }
 
   get recording(){
     return (this.end_date == null);
@@ -64,6 +76,7 @@ export class SessionModel {
     model.folder = json['folder']
     model.has_video = json['has_video'] === true
     model.has_posthoc = json['has_posthoc'] === true
+    model.pod_count = json['pod_count'] != null ? json['pod_count'] : null
     return model;
   }
 
