@@ -96,36 +96,38 @@ function SortControl({
 function FolderRow({ folder, onOpen, openFolderDialog }) {
     return (
         <li className={rowClass}>
-            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-tiilt-soft text-tiilt">
-                <FolderIcon />
-            </span>
-            <button
-                onClick={() => onOpen(folder.id)}
-                className="min-w-0 grow cursor-pointer truncate text-left text-base font-semibold text-tiilt-ink"
-            >
-                {folder.name}
-            </button>
-            <div className="flex-none">
-                <AppContextMenu>
-                    <div
-                        className={menuItemClass}
-                        onClick={() => openFolderDialog("RenameFolder", folder)}
-                    >
-                        Edit Name
-                    </div>
-                    <div
-                        className={menuItemClass}
-                        onClick={() => openFolderDialog("MoveFolder", folder)}
-                    >
-                        Move To...
-                    </div>
-                    <div
-                        className={menuDangerClass}
-                        onClick={() => openFolderDialog("DeleteFolder", folder)}
-                    >
-                        Delete
-                    </div>
-                </AppContextMenu>
+            <div className={rowInnerClass}>
+                <span className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-tiilt-soft text-tiilt">
+                    <FolderIcon />
+                </span>
+                <button
+                    onClick={() => onOpen(folder.id)}
+                    className="min-w-0 grow cursor-pointer truncate text-left text-base font-semibold text-tiilt-ink"
+                >
+                    {folder.name}
+                </button>
+                <div className="flex-none">
+                    <AppContextMenu>
+                        <div
+                            className={menuItemClass}
+                            onClick={() => openFolderDialog("RenameFolder", folder)}
+                        >
+                            Edit Name
+                        </div>
+                        <div
+                            className={menuItemClass}
+                            onClick={() => openFolderDialog("MoveFolder", folder)}
+                        >
+                            Move To...
+                        </div>
+                        <div
+                            className={menuDangerClass}
+                            onClick={() => openFolderDialog("DeleteFolder", folder)}
+                        >
+                            Delete
+                        </div>
+                    </AppContextMenu>
+                </div>
             </div>
         </li>
     )
