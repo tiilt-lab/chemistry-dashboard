@@ -19,14 +19,31 @@ MAX_SEGMENT_SECONDS = 30.0
 def main():
     wav = sys.argv[1]
     model_id = sys.argv[2] if len(sys.argv) > 2 else "Qwen/Qwen3-ASR-1.7B"
+    # vLLM writes progress bars to stdout, so the JSON result goes to a file
+    # when a path is given (the connector always passes one).
+    out_path = sys.argv[3] if len(sys.argv) > 3 else None
     from qwen_asr import Qwen3ASRModel
 
-    model = Qwen3ASRModel.from_pretrained(
-        model_id,
-        forced_aligner="Qwen/Qwen3-ForcedAligner-0.6B",
-        dtype="bfloat16",
-        device_map="cuda:0",
-    )
+    # Prefer the vLLM backend (2-4x faster decode) when the dedicated worker
+    # venv has it; fall back to the transformers backend otherwise. Turing has
+    # no bfloat16, so fp16 either way.
+    try:
+        import vllm  # noqa: F401
+        model = Qwen3ASRModel.LLM(
+            model_id,
+            forced_aligner="Qwen/Qwen3-ForcedAligner-0.6B",
+            gpu_memory_utilization=0.5,
+            dtype="float16",
+        )
+        print("qwen3 worker: vLLM backend", file=sys.stderr)
+    except ImportError:
+        model = Qwen3ASRModel.from_pretrained(
+            model_id,
+            forced_aligner="Qwen/Qwen3-ForcedAligner-0.6B",
+            dtype="float16",
+            device_map="cuda:0",
+        )
+        print("qwen3 worker: transformers backend", file=sys.stderr)
     result = model.transcribe(audio=wav, return_time_stamps=True)
     r = result[0] if isinstance(result, list) else result
     items = list(getattr(r, "time_stamps", None) or [])
@@ -59,7 +76,12 @@ def main():
             flush()
     flush()
 
-    json.dump({"segments": segments, "text": getattr(r, "text", "")}, sys.stdout)
+    payload = {"segments": segments, "text": getattr(r, "text", "")}
+    if out_path:
+        with open(out_path, "w") as f:
+            json.dump(payload, f)
+    else:
+        json.dump(payload, sys.stdout)
 
 
 if __name__ == "__main__":

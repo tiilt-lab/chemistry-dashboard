@@ -96,12 +96,22 @@ class Qwen3ASR:
     def _transcribe_file(self):
         try:
             logging.info("Qwen3-ASR: transcribing %s via %s", self.audio_file, self.model_id)
-            proc = subprocess.run(
-                [_worker_python(), _WORKER, self.audio_file, self.model_id],
-                capture_output=True, timeout=3600)
-            if proc.returncode != 0:
-                raise RuntimeError("worker failed: %s" % proc.stderr.decode()[-500:])
-            data = json.loads(proc.stdout.decode())
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tf:
+                out_path = tf.name
+            try:
+                proc = subprocess.run(
+                    [_worker_python(), _WORKER, self.audio_file, self.model_id, out_path],
+                    capture_output=True, timeout=3600)
+                if proc.returncode != 0:
+                    raise RuntimeError("worker failed: %s" % proc.stderr.decode()[-500:])
+                with open(out_path) as f:
+                    data = json.load(f)
+            finally:
+                try:
+                    os.remove(out_path)
+                except OSError:
+                    pass
             segments = data.get("segments", [])
             logging.info("Qwen3-ASR: %d segments", len(segments))
 
