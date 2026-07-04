@@ -50,6 +50,12 @@ diarization_fallback=pyannote
 # voice print, so utterances resolve to real people instead of leftover
 # SPEAKER_NN clusters. WhisperX/Qwen3 (batch ASR) paths only.
 diarization_constrain_to_enrolled=false
+# Prosody (#6): per-utterance pitch/energy/voicing via librosa (prosody.py).
+prosody=false
+# Vocal (speech) emotion (#5): per-utterance wav2vec2 SER (vocal_emotion.py);
+# downloads vocal_emotion_model on first use.
+vocal_emotion=false
+vocal_emotion_model=superb/wav2vec2-base-superb-er
 
 # Live-path sentence embedder for participation/cohesion metrics:
 #   all-mpnet-base-v2  (default; light, comparable with historical metrics)
