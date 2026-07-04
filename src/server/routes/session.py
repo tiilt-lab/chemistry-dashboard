@@ -1,6 +1,7 @@
 from flask import Blueprint, Response, request, abort, session, make_response, send_file
 import glob
 import subprocess
+import threading
 from utility import sanitize, string_to_bool, json_response
 from tables.session_device import SessionDevice
 from redis_helper import RedisSessions
@@ -202,8 +203,15 @@ def _evict_video_cache(cache_dir, incoming_bytes):
         logging.warning('video cache eviction failed: %s', e)
 
 
+_remux_locks = {}
+_remux_locks_guard = threading.Lock()
+
+
 def _fixed_video_path(session_device_id):
     # Returns the remuxed (duration+cues fixed) copy, creating it on demand.
+    # The remux writes to a temp name and renames atomically, and concurrent
+    # requests for the same device serialize on a lock — so a request can never
+    # be served a partially written file.
     original = _find_original_video(session_device_id)
     if original is None:
         return None
@@ -211,18 +219,31 @@ def _fixed_video_path(session_device_id):
     os.makedirs(cache_dir, exist_ok=True)
     ext = '.mp4' if original.lower().endswith('.mp4') else '.webm'
     fixed = os.path.join(cache_dir, '{0}{1}'.format(session_device_id, ext))
-    if not os.path.exists(fixed):
+    if os.path.exists(fixed):
+        return fixed
+    with _remux_locks_guard:
+        lock = _remux_locks.setdefault(session_device_id, threading.Lock())
+    with lock:
+        if os.path.exists(fixed):  # a concurrent request already remuxed it
+            return fixed
         _evict_video_cache(cache_dir, os.path.getsize(original))
-        result = subprocess.run(
-            ['ffmpeg', '-y', '-v', 'error', '-i', original, '-c', 'copy', fixed],
-            capture_output=True, timeout=300)
-        if result.returncode != 0:
-            logging.warning('ffmpeg remux failed for %s: %s', original, result.stderr[-500:])
+        tmp = '{0}.tmp{1}'.format(fixed, ext)
+        try:
+            result = subprocess.run(
+                ['ffmpeg', '-y', '-v', 'error', '-i', original, '-c', 'copy', tmp],
+                capture_output=True, timeout=300)
+            if result.returncode != 0:
+                logging.warning('ffmpeg remux failed for %s: %s', original, result.stderr[-500:])
+                return original  # fall back to the raw file
+            os.replace(tmp, fixed)  # atomic: readers see nothing or all of it
+        except Exception as e:
+            logging.warning('remux error for %s: %s', original, e)
+            return original
+        finally:
             try:
-                os.remove(fixed)
+                os.remove(tmp)
             except OSError:
                 pass
-            return original  # fall back to the raw file
     return fixed
 
 
