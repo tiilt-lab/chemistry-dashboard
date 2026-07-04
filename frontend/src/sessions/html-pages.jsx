@@ -184,25 +184,40 @@ function PodDurations({ sessionId }) {
                         }
                         className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition hover:bg-tiilt-soft"
                     >
-                        <span className="min-w-0 grow truncate font-medium text-tiilt-ink">
+                        <span
+                            className={
+                                "min-w-0 grow truncate font-medium " +
+                                (pod.has_data === false
+                                    ? "text-tiilt-muted"
+                                    : "text-tiilt-ink")
+                            }
+                        >
                             {pod.name || `Pod ${pod.id}`}
                         </span>
-                        {pod.speaker_count > 0 ? (
-                            <span className="flex-none text-tiilt-muted">
-                                {pod.speaker_count}{" "}
-                                {pod.speaker_count === 1
-                                    ? "participant"
-                                    : "participants"}
+                        {pod.has_data === false ? (
+                            <span className="flex-none rounded-full bg-tiilt-line/40 px-1.5 py-0.5 font-semibold text-tiilt-muted">
+                                No data recorded
                             </span>
-                        ) : null}
-                        {pod.posthoc_analyzed_date ? (
-                            <span className="flex-none rounded-full bg-tiilt-teal/15 px-1.5 py-0.5 font-semibold text-tiilt-teal">
-                                Analyzed
-                            </span>
-                        ) : null}
-                        <span className="flex-none font-ahamono tabular-nums text-tiilt-muted">
-                            {SessionModel.formatDuration(pod.duration)}
-                        </span>
+                        ) : (
+                            <>
+                                {pod.speaker_count > 0 ? (
+                                    <span className="flex-none text-tiilt-muted">
+                                        {pod.speaker_count}{" "}
+                                        {pod.speaker_count === 1
+                                            ? "participant"
+                                            : "participants"}
+                                    </span>
+                                ) : null}
+                                {pod.posthoc_analyzed_date ? (
+                                    <span className="flex-none rounded-full bg-tiilt-teal/15 px-1.5 py-0.5 font-semibold text-tiilt-teal">
+                                        Analyzed
+                                    </span>
+                                ) : null}
+                                <span className="flex-none font-ahamono tabular-nums text-tiilt-muted">
+                                    {SessionModel.formatDuration(pod.duration)}
+                                </span>
+                            </>
+                        )}
                         <svg
                             width="12"
                             height="12"
