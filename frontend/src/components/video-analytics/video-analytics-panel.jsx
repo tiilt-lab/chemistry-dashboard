@@ -3,6 +3,30 @@ import { Line } from "react-chartjs-2"
 import { Chart as ChartJS } from "chart.js/auto"
 import { formatSeconds } from "../../globals"
 import { ModelNote } from "../model-note/model-note"
+import { ApiService } from "../../services/api-service"
+
+// Identity avatar: the person's real face crop (saved by the video pipeline)
+// overlaid on an initials-in-color chip that shows until/unless the image loads.
+function TrackAvatar({ initials, color, imgUrl }) {
+    const [failed, setFailed] = useState(false)
+    return (
+        <span
+            className="relative flex h-4 w-4 flex-none items-center justify-center overflow-hidden rounded-full text-[8px] font-bold text-white"
+            style={{ backgroundColor: color }}
+            aria-hidden="true"
+        >
+            {initials}
+            {imgUrl && !failed ? (
+                <img
+                    src={imgUrl}
+                    alt=""
+                    onError={() => setFailed(true)}
+                    className="absolute inset-0 h-full w-full object-cover"
+                />
+            ) : null}
+        </span>
+    )
+}
 
 // Per-participant line colors, matching the transcript panel palette.
 const SPEAKER_COLORS = [
@@ -273,15 +297,7 @@ function TimelineTracks({ tracks, t0, t1, zoom, playbackTime, onSeek }) {
                         className="flex h-4 items-center gap-1 text-xs text-tiilt-ink"
                         title={tr.name}
                     >
-                        {tr.avatar ? (
-                            <span
-                                className="flex h-4 w-4 flex-none items-center justify-center rounded-full text-[8px] font-bold text-white"
-                                style={{ backgroundColor: tr.avatar.color }}
-                                aria-hidden="true"
-                            >
-                                {tr.avatar.initials}
-                            </span>
-                        ) : null}
+                        {tr.avatar ? <TrackAvatar {...tr.avatar} /> : null}
                         <span className="truncate">{tr.name}</span>
                     </div>
                 ))}
@@ -334,9 +350,14 @@ function SectionHeader({ children }) {
     )
 }
 
-function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, onSeek }) {
+function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, onSeek, sessionId, sessionDeviceId }) {
     const [selected, setSelected] = useState(ALL)
     const [zoom, setZoom] = useState(1)
+    const thumbUrl = (alias) =>
+        sessionId && sessionDeviceId
+            ? new ApiService().getEndpoint() +
+              `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/facethumb/${encodeURIComponent(alias)}`
+            : null
     const metrics = (videometrics || []).filter((m) => inRange(m, start, end))
 
     if (metrics.length === 0) {
@@ -548,7 +569,7 @@ function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, o
                         isAll
                             ? participants.map((p) => ({
                                   name: p,
-                                  avatar: { initials: initials(p), color: speakerColor(p) },
+                                  avatar: { initials: initials(p), color: speakerColor(p), imgUrl: thumbUrl(p) },
                                   cells: swimlaneCells(
                                       binCounts(byParticipant[p] || [], "facial_emotion", t0, t1, N_BINS),
                                       emotionColor,
@@ -602,7 +623,7 @@ function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, o
                         isAll
                             ? participants.map((p) => ({
                                   name: p,
-                                  avatar: { initials: initials(p), color: speakerColor(p) },
+                                  avatar: { initials: initials(p), color: speakerColor(p), imgUrl: thumbUrl(p) },
                                   cells: swimlaneCells(
                                       binCounts(byParticipant[p] || [], "_focus", t0, t1, N_BINS),
                                       objectColor,
