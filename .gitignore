@@ -254,3 +254,4 @@ src/video_processing/emotion_detector/checkpoints
 src/video_processing/emotion_detector/facial_expression_model
 src/audio_processing/recordings/
 src/audio_processing/keyword_detector/models/
+src/venv-unified/
