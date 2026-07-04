@@ -39,12 +39,12 @@ const GROUPS = [
 
 function GroupCard({ icon, name, desc, links, navigate }) {
     return (
-        <div className="flex flex-col gap-4 rounded-xl border border-tiilt-line bg-white p-5 transition hover:shadow-[0_10px_24px_-14px_rgba(42,23,74,0.4)] sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-                <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-tiilt-soft">
+        <div className="flex flex-col gap-4 rounded-xl border border-tiilt-line bg-white p-5 shadow-[0_1px_2px_rgba(42,23,74,0.05)] sm:flex-row sm:items-center sm:gap-6">
+            <div className="flex min-w-0 grow items-center gap-4">
+                <span className="flex h-12 w-12 flex-none items-center justify-center rounded-lg bg-tiilt-soft">
                     <img alt="" src={icon} className="h-5 w-5" />
                 </span>
-                <span>
+                <span className="min-w-0">
                     <span className="block text-base font-semibold text-tiilt-ink">
                         {name}
                     </span>
@@ -53,13 +53,13 @@ function GroupCard({ icon, name, desc, links, navigate }) {
                     </span>
                 </span>
             </div>
-            <div className="flex flex-none flex-wrap gap-2">
+            <div className="flex flex-none gap-2">
                 {links.map((link) => (
                     <button
                         key={link.path}
                         onClick={() => navigate(link.path)}
                         className={
-                            "rounded-lg px-4 py-2 text-sm font-semibold transition active:translate-y-px " +
+                            "min-w-[8.25rem] rounded-lg px-4 py-2.5 text-sm font-semibold transition active:translate-y-px " +
                             (link.primary
                                 ? "bg-tiilt text-white hover:bg-tiilt-deep"
                                 : "border border-tiilt-line bg-white text-tiilt-ink hover:border-tiilt hover:bg-tiilt-soft")
@@ -138,17 +138,20 @@ function HomeScreen() {
                 </div>
             </header>
 
-            <main className="mx-auto w-full max-w-3xl px-4 py-8 md:py-12">
-                <h2 className="text-2xl font-semibold text-tiilt-ink">
+            <main className="mx-auto flex w-full max-w-3xl grow flex-col justify-center px-4 py-10">
+                <h2 className="text-3xl font-semibold tracking-tight text-tiilt-ink">
                     Good {timeOfDay}!
                 </h2>
-                <p className="mt-1 mb-8 max-w-[60ch] text-sm text-tiilt-muted">
+                <p className="mt-2 max-w-[60ch] text-[15px] text-tiilt-muted">
                     Welcome to the Building Literacy in N-person Collaborations
                     (BLINC) dashboard. Start gathering analytic data by
                     recording a new discussion.
                 </p>
 
-                <div className="flex flex-col gap-4">
+                <div className="mt-10 mb-3 font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
+                    Workspace
+                </div>
+                <div className="flex flex-col gap-3">
                     {GROUPS.map((g) => (
                         <GroupCard
                             key={g.name}
