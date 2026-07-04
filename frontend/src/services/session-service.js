@@ -22,6 +22,14 @@ class SessionService {
     return this.api.httpRequestCall(`api/v1/sessions/${sessionId}`, "GET", {});
   }
 
+  markPosthocCompleted(sessionId, sessionDeviceId) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/posthoc_completed`,
+      "POST",
+      {},
+    );
+  }
+
   getSessionByPasscode(passcode) {
     return this.api.httpRequestCall(`api/v1/sessions/student/passcode/${passcode}`, "GET", {});
   }

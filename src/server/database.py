@@ -1425,3 +1425,30 @@ def get_session_ids_with_video(owner_id=None):
         query = query.join(Session, SessionDevice.session_id == Session.id) \
             .filter(Session.owner_id == owner_id)
     return set(row[0] for row in query.distinct().all())
+
+
+def get_session_ids_with_posthoc(owner_id=None):
+    # Set of session ids where any device has had a post-hoc re-analysis run,
+    # so the sessions list can flag it without a per-session query. Degrades to
+    # empty if the posthoc_analyzed_date column has not been migrated in yet, so
+    # the sessions list never breaks on an un-migrated database.
+    try:
+        query = db.session.query(SessionDevice.session_id) \
+            .filter(SessionDevice.posthoc_analyzed_date.isnot(None))
+        if owner_id is not None:
+            query = query.join(Session, SessionDevice.session_id == Session.id) \
+                .filter(Session.owner_id == owner_id)
+        return set(row[0] for row in query.distinct().all())
+    except Exception as e:
+        logging.warning('posthoc flag query failed (migration pending?): %s', e)
+        db.session.rollback()
+        return set()
+
+
+def mark_session_device_posthoc(session_device_id):
+    device = get_session_devices(id=session_device_id)
+    if device is None:
+        return False
+    device.posthoc_analyzed_date = datetime.utcnow()
+    db.session.commit()
+    return True
