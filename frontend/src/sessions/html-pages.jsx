@@ -22,12 +22,53 @@ const SORT_OPTIONS = [
     { value: "name-asc", label: "Name (A–Z)" },
 ]
 
-function SortControl({ value, onChange, count }) {
+function FilterTab({ active, onClick, children }) {
     return (
-        <div className="mb-3 flex items-center justify-between gap-3">
-            <span className="text-sm text-tiilt-muted">
-                {count} {count === 1 ? "discussion" : "discussions"}
-            </span>
+        <button
+            onClick={onClick}
+            className={
+                "cursor-pointer rounded-md px-3 py-1 text-sm font-semibold transition " +
+                (active
+                    ? "bg-white text-tiilt shadow-[0_1px_3px_-1px_rgba(42,23,74,0.35)]"
+                    : "text-tiilt-muted hover:text-tiilt-ink")
+            }
+        >
+            {children}
+        </button>
+    )
+}
+
+function SortControl({
+    value,
+    onChange,
+    count,
+    videoFilter,
+    setVideoFilter,
+    videoCount,
+    audioCount,
+}) {
+    return (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-1 rounded-lg border border-tiilt-line bg-tiilt-ground p-1">
+                <FilterTab
+                    active={videoFilter === "all"}
+                    onClick={() => setVideoFilter("all")}
+                >
+                    All {count}
+                </FilterTab>
+                <FilterTab
+                    active={videoFilter === "video"}
+                    onClick={() => setVideoFilter("video")}
+                >
+                    Video {videoCount}
+                </FilterTab>
+                <FilterTab
+                    active={videoFilter === "audio"}
+                    onClick={() => setVideoFilter("audio")}
+                >
+                    Audio only {audioCount}
+                </FilterTab>
+            </div>
             <label className="flex items-center gap-2 text-sm text-tiilt-muted">
                 Sort by
                 <select
@@ -312,28 +353,44 @@ function DiscussionSessionPage(props) {
                         )}
 
                         {!props.isLoading &&
-                        props.displayedSessions.length > 0 ? (
+                        props.videoCount + props.audioCount > 0 ? (
                             <div className="mt-4">
                                 <SortControl
                                     value={props.sortBy}
                                     onChange={props.setSortBy}
-                                    count={props.displayedSessions.length}
+                                    count={props.videoCount + props.audioCount}
+                                    videoFilter={props.videoFilter}
+                                    setVideoFilter={props.setVideoFilter}
+                                    videoCount={props.videoCount}
+                                    audioCount={props.audioCount}
                                 />
-                                <ul className="flex flex-col gap-1.5">
-                                    {props.displayedSessions.map(
-                                        (session, index) => (
-                                            <SessionRow
-                                                key={index}
-                                                session={session}
-                                                onOpen={props.goToSession}
-                                                openSessionDialog={
-                                                    props.openSessionDialog
-                                                }
-                                                endSession={props.endSession}
-                                            />
-                                        ),
-                                    )}
-                                </ul>
+                                {props.displayedSessions.length > 0 ? (
+                                    <ul className="flex flex-col gap-1.5">
+                                        {props.displayedSessions.map(
+                                            (session, index) => (
+                                                <SessionRow
+                                                    key={index}
+                                                    session={session}
+                                                    onOpen={props.goToSession}
+                                                    openSessionDialog={
+                                                        props.openSessionDialog
+                                                    }
+                                                    endSession={
+                                                        props.endSession
+                                                    }
+                                                />
+                                            ),
+                                        )}
+                                    </ul>
+                                ) : (
+                                    <div className="py-8 text-center text-sm text-tiilt-muted">
+                                        No{" "}
+                                        {props.videoFilter === "video"
+                                            ? "discussions with video"
+                                            : "audio-only discussions"}
+                                        .
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <></>
