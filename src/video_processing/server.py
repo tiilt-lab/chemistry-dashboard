@@ -16,7 +16,10 @@ import cv2
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
-import moviepy.editor as mp
+try:
+    import moviepy.editor as mp  # moviepy 1.x
+except ImportError:
+    import moviepy as mp  # moviepy 2.x dropped the .editor module
 import face_recognition
 # import ffmpeg
 

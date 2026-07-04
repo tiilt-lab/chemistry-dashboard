@@ -1,6 +1,9 @@
 import logging
 import threading
-import moviepy.editor as mp
+try:
+    import moviepy.editor as mp  # moviepy 1.x
+except ImportError:
+    import moviepy as mp  # moviepy 2.x dropped the .editor module
 import  cv2
 import face_recognition
 import numpy as np

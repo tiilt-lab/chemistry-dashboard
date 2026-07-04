@@ -27,6 +27,13 @@ scheduler = BackgroundScheduler({
 
 # Verifies if session is still active.
 def check_transcripts():
+	# Flask-SQLAlchemy 3: background jobs need an app context for db access.
+	from app import app
+	with app.app_context():
+		_check_transcripts()
+
+
+def _check_transcripts():
 	try:
 		active_sessions = database.get_sessions(active=True)
 		for session in active_sessions:

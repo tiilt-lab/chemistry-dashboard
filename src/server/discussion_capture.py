@@ -34,12 +34,14 @@ app.register_blueprint(llm_api)
 
 
 def main():
-    
-	# Set device connection status to false
-	devices = database.get_devices(connected=True)
-	for device in devices:
-		device.connected = False
-	database.save_changes()
+
+	# Set device connection status to false. Flask-SQLAlchemy 3 requires an
+	# app context for any session use outside a request.
+	with app.app_context():
+		devices = database.get_devices(connected=True)
+		for device in devices:
+			device.connected = False
+		database.save_changes()
 
 	# Schedule tasks
 	scheduler.add_job(scheduled_tasks.check_transcripts, 'interval', seconds=60)

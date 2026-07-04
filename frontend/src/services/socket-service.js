@@ -1,11 +1,11 @@
-import * as SocketIO from  'socket.io-client';
+import { io } from 'socket.io-client';
 export class SocketService {
 
   //api = new ApiService()
 
   // Creates socket connection to server.
   createSocket(endpoint, room = null) {
-    const socket = SocketIO.connect(window.location.protocol + '//' + window.location.host + '/' + endpoint, {transports: ['websocket'], upgrade: false});
+    const socket = io(window.location.protocol + '//' + window.location.host + '/' + endpoint, {transports: ['websocket'], upgrade: false});
     socket.on('connect', e => {
       if (room != null) {
         socket.emit('join_room', {room: room});
