@@ -39,6 +39,19 @@ def video_recordings_folder():
 def asr():
     return str(config['processing']['asr'])
 
+def scorer():
+    # Expression & Thinking Style backend: 'liwc' (default) or 'llm'.
+    return str(config['processing'].get('scorer', 'liwc'))
+
+def whisper_model_size():
+    return str(config.get('whisper', 'model_size', fallback='small.en'))
+
+def whisper_device():
+    return str(config.get('whisper', 'device', fallback='auto'))
+
+def whisper_compute_type():
+    return str(config.get('whisper', 'compute_type', fallback='int8'))
+
 def keyword_model_limit():
     return int(config['processing']['keyword_model_limit'])
 
