@@ -5,10 +5,10 @@ try:
 except ImportError:
     import moviepy as mp  # moviepy 2.x dropped the .editor module
 import  cv2
-import face_recognition
 import numpy as np
 import json
 import os
+from facial_recognition_backend import get_face_backend
 
 class FacialBiometricProcessor:
     def __init__(self,facial_biometric_file,video_file,mediaExt,currAlias):
@@ -34,15 +34,16 @@ class FacialBiometricProcessor:
     def savefacialembedding(self,facial_biometric_file,video_file,mediaExt,currAlias):
         embeddings = []
         student_embedding = {}
+        face_backend = get_face_backend()
 
         vidclip = mp.VideoFileClip(video_file+'.'+mediaExt)
         for frame in vidclip.iter_frames(fps=5, dtype="uint8"):
             # Detect face locations in the frame
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            face_locations = face_recognition.face_locations(frame)
+            face_locations = face_backend.locate(frame)
 
-            # Get 128-D face embeddings for each detected face
-            encodings = face_recognition.face_encodings(frame, face_locations,num_jitters=2)
+            # Face embeddings for each detected face (backend-specific dimension)
+            encodings = face_backend.encode(frame, face_locations, num_jitters=2)
         
             if len(encodings) > 0:
                 embeddings.append(encodings[0])  # Take first detected face
