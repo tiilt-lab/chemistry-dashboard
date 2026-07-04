@@ -820,8 +820,11 @@ def set_speaker_tag(transcript, tag):
     return True
 
 def get_transcripts(session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
-    query = db.session.query(Transcript).order_by(Transcript.start_time.asc())  
+    query = db.session.query(Transcript).order_by(Transcript.start_time.asc())
     if session_id != None:
+        # Join is required: filtering on SessionDevice without it produces a
+        # cartesian product (every transcript x every device in the session).
+        query = query.join(SessionDevice, Transcript.session_device_id == SessionDevice.id)
         query = query.filter(SessionDevice.session_id == session_id)
     if session_device_id != None:
         query = query.filter(Transcript.session_device_id == session_device_id)
