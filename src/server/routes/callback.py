@@ -317,44 +317,29 @@ def _read_audio_models():
     path = os.environ.get('AUDIO_CONFIG_PATH') or os.path.join(
         os.path.dirname(os.path.abspath(__file__)), '..', '..',
         'audio_processing', 'config.ini')
-    asr, scorer = 'google-cloud-speech', 'liwc'
+    models = {'asr': 'google-cloud-speech', 'scorer': 'liwc',
+              'keyword_backend': 'embedding', 'semantic_embedder': 'all-mpnet-base-v2'}
     try:
         parser = configparser.RawConfigParser()
         parser.read(path)
         if parser.has_section('processing'):
-            asr = parser['processing'].get('asr', asr).strip()
-            scorer = parser['processing'].get('scorer', scorer).strip()
+            p = parser['processing']
+            models['asr'] = p.get('asr', models['asr']).strip()
+            models['scorer'] = p.get('scorer', models['scorer']).strip()
+            models['keyword_backend'] = p.get('keyword_backend', models['keyword_backend']).strip()
+            models['semantic_embedder'] = p.get('semantic_embedder', models['semantic_embedder']).strip()
     except Exception as e:
         logging.warning('Could not read audio model config: {0}'.format(e))
-    return asr, scorer
+    return models
 
 
-# Fixed model stack of the video/metrics pipelines (not config-switchable yet),
-# surfaced so every analysis section in the UI can say what computed it.
+# Diarization is a compound stack (ECAPA fingerprints + a selectable clustering
+# backend), so it stays described statically. All other analyses are resolved
+# from live config in get_models().
 _STATIC_MODELS = {
-    "attention": {
-        "id": "gazefollow-modelspatial",
-        "label": "Attended-visual-targets gaze model (Chong et al. 2020, GazeFollow) + YOLOv5m head detector (CrowdHuman)",
-    },
-    "emotion": {
-        "id": "resmasking-fer2013",
-        "label": "ResMaskingNet (FER-2013, 7 emotions)",
-    },
-    "objects": {
-        "id": "yolov4-p7-coco",
-        "label": "YOLOv4-P7 object detector (COCO)",
-    },
-    "participation": {
-        "id": "bge-large-en-v1.5",
-        "label": "Semantic cohesion: BGE large v1.5 (open SOTA; mpnet selectable per re-run)",
-    },
     "diarization": {
         "id": "spkrec-ecapa-voxceleb",
         "label": "SpeechBrain ECAPA-TDNN fingerprints; pyannote 3.1 clustering selectable per re-run",
-    },
-    "keywords": {
-        "id": "word2vec-googlenews",
-        "label": "word2vec semantic matching (GoogleNews-300)",
     },
 }
 
@@ -364,16 +349,21 @@ def _read_video_models():
     import configparser
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..',
                         'video_processing', 'config.ini')
-    emotion, objects, attention = 'resmasking', 'yolov4', 'gazefollow'
+    # Defaults track the current config.py fallbacks (open-SOTA stack), not the
+    # historical resmasking/yolov4/gazefollow that used to be hard-coded here.
+    models = {'emotion': 'hsemotion', 'objects': 'yolo11', 'attention': 'gazelle',
+              'face': 'dlib', 'head': 'yolov5'}
     try:
         parser = configparser.RawConfigParser(allow_no_value=True)
         parser.read(path)
-        emotion = parser.get('videoprocessing', 'emotion_model', fallback=emotion).strip()
-        objects = parser.get('videoprocessing', 'object_model', fallback=objects).strip()
-        attention = parser.get('videoprocessing', 'attention_model', fallback=attention).strip()
+        models['emotion'] = parser.get('videoprocessing', 'emotion_model', fallback=models['emotion']).strip()
+        models['objects'] = parser.get('videoprocessing', 'object_model', fallback=models['objects']).strip()
+        models['attention'] = parser.get('videoprocessing', 'attention_model', fallback=models['attention']).strip()
+        models['face'] = parser.get('videoprocessing', 'face_model', fallback=models['face']).strip()
+        models['head'] = parser.get('videoprocessing', 'head_model', fallback=models['head']).strip()
     except Exception:
         pass
-    return emotion, objects, attention
+    return models
 
 
 _ATTENTION_LABELS = {
@@ -384,21 +374,46 @@ _OBJECT_LABELS = {
     "yolov4": "YOLOv4-P7 object detector (COCO)",
     "yolo11": "YOLO11m object detector (COCO, open SOTA)",
 }
+_KEYWORD_LABELS = {
+    "word2vec": "word2vec semantic matching (GoogleNews-300)",
+    "embedding": "SentenceTransformer semantic matching (BGE, open)",
+}
+_EMBEDDER_LABELS = {
+    "all-mpnet-base-v2": "MPNet sentence embedder (all-mpnet-base-v2)",
+    "bge-large-en-v1.5": "BGE large v1.5 (open SOTA)",
+}
+_FACE_LABELS = {
+    "dlib": "dlib ResNet face recognition (128-D)",
+    "insightface": "InsightFace ArcFace buffalo_l (512-D, open SOTA)",
+}
+_HEAD_LABELS = {
+    "yolov5": "YOLOv5m head detector (CrowdHuman)",
+    "ultralytics": "YOLO11/YOLOv8 head detector (CrowdHuman)",
+}
 
 
 @api_routes.route('/api/v1/models', methods=['GET'])
 @wrappers.verify_login(public=True)
 def get_models(**kwargs):
-    asr, scorer = _read_audio_models()
-    emotion, objects, attention = _read_video_models()
+    a = _read_audio_models()
+    v = _read_video_models()
+
+    def entry(value, labels):
+        return {"id": value, "label": labels.get(value, value)}
+
     result = {
-        "transcription": {"id": asr, "label": _ASR_LABELS.get(asr, asr)},
-        "scoring": {"id": scorer, "label": _SCORER_LABELS.get(scorer, scorer)},
+        "transcription": entry(a['asr'], _ASR_LABELS),
+        "scoring": entry(a['scorer'], _SCORER_LABELS),
+        "participation": entry(a['semantic_embedder'], _EMBEDDER_LABELS),
+        "keywords": entry(a['keyword_backend'], _KEYWORD_LABELS),
+        "emotion": entry(v['emotion'], _EMOTION_LABELS),
+        "objects": entry(v['objects'], _OBJECT_LABELS),
+        "attention": entry(v['attention'], _ATTENTION_LABELS),
+        "face": entry(v['face'], _FACE_LABELS),
+        "head_detector": entry(v['head'], _HEAD_LABELS),
     }
-    result.update(_STATIC_MODELS)
-    result["emotion"] = {"id": emotion, "label": _EMOTION_LABELS.get(emotion, emotion)}
-    result["objects"] = {"id": objects, "label": _OBJECT_LABELS.get(objects, objects)}
-    result["attention"] = {"id": attention, "label": _ATTENTION_LABELS.get(attention, attention)}
+    # Diarization stays a compound (fingerprint + selectable clustering) entry.
+    result["diarization"] = _STATIC_MODELS["diarization"]
     return json_response(result)
 
 

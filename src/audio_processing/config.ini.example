@@ -51,11 +51,16 @@ diarization_fallback=pyannote
 #   bge-large-en-v1.5  (open SOTA; matches the post-hoc default)
 semantic_embedder=all-mpnet-base-v2
 
-# Whisper settings (only used when asr=whisper).
-#[whisper]
-#model_size=small.en
-#device=auto
-#compute_type=int8
+# Whisper settings (used by the whisper / whisperx ASR backends).
+# Post-hoc is latency-tolerant, so a large model is worthwhile:
+#   model_size=large-v3         (most accurate)
+#   model_size=distil-large-v3  (~2x faster, near-large accuracy)
+#   model_size=small.en         (fastest, lowest accuracy — old default)
+# compute_type=float16 on ample-VRAM GPUs; int8 to save memory.
+[whisper]
+model_size=large-v3
+device=auto
+compute_type=float16
 
 [output]
 processing_callback=http://127.0.0.1:5000/api/v1/callback/transcript

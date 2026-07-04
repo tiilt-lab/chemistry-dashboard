@@ -68,6 +68,37 @@ video_metric_analytics = VideoMetricAnalytics(attention_detection, facial_emotio
 batch_size = 40
 running_video_processes = {}
 
+# Lazy per-run model caches so a post-hoc run can request a different emotion /
+# attention backend than the deployment default without reloading each run
+# (mirrors the audio server's get_semantic_model). Seeded with the
+# config-selected singletons already loaded above. The object/face/head
+# detector stays config-level: it is the heavy, CUDA-lock-serialized model
+# shared across concurrent runs.
+_EMOTION_CACHE = {cf.emotion_model(): facial_emotion_detector}
+_ATTENTION_CACHE = {cf.attention_model(): attention_detection}
+
+def get_emotion_detector(name=None):
+    name = (name or cf.emotion_model()).strip()
+    if name not in _EMOTION_CACHE:
+        logging.info("Loading emotion backend '%s' for this run", name)
+        if name == 'hsemotion':
+            from emotion_detector.hsemotion_model import EmotionDetectionModelV2
+            _EMOTION_CACHE[name] = EmotionDetectionModelV2()
+        else:
+            _EMOTION_CACHE[name] = EmotionDetectionModelV1()
+    return _EMOTION_CACHE[name]
+
+def get_attention_detector(name=None):
+    name = (name or cf.attention_model()).strip()
+    if name not in _ATTENTION_CACHE:
+        logging.info("Loading attention backend '%s' for this run", name)
+        if name == 'gazelle':
+            from attention_tracking.gazelle_attention import GazeLLEAttentionDetection
+            _ATTENTION_CACHE[name] = GazeLLEAttentionDetection()
+        else:
+            _ATTENTION_CACHE[name] = AttentionDetection()
+    return _ATTENTION_CACHE[name]
+
 class ServerProtocol(WebSocketServerProtocol):
 
     def __init__(self, *args, **kwargs):
@@ -162,8 +193,22 @@ class ServerProtocol(WebSocketServerProtocol):
                 valid, result = ProcessingConfig.from_json(conf_val,source="posthoc processing")
                 if not valid:
                     logging.info("Confgiration setting failed for video posthoc processing")
-                else:    
+                else:
                     self.config = result
+                    # Optional per-run model choices from the trigger UI; fall
+                    # back to the deployment config when the field is absent.
+                    self.facial_emotion_detector = get_emotion_detector(data.get('emotion_model'))
+                    self.attention_detection = get_attention_detector(data.get('attention_model'))
+                    self.video_metric_analytics = VideoMetricAnalytics(
+                        self.attention_detection, self.facial_emotion_detector,
+                        self.image_object_detection, STOP_SIGNAL, source="post_hoc")
+                    self.model_choices = {
+                        'emotion_model': data.get('emotion_model') or cf.emotion_model(),
+                        'attention_model': data.get('attention_model') or cf.attention_model(),
+                        'object_model': cf.object_model(),
+                        'face_model': cf.face_model(),
+                        'head_model': cf.head_model(),
+                    }
                     self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_{1}_{2}_({3})".format(self.config.auth_key,self.config.sessionId,self.config.deviceId,  str(time.ctime())))
                     #start processing
                     for speaker in data['speakers']:
