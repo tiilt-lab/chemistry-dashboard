@@ -297,6 +297,7 @@ _ASR_LABELS = {
     "google-cloud-speech": "Google Cloud Speech-to-Text (video model, en-US)",
     "whisper": "Whisper (open, offline)",
     "whisperx": "WhisperX (open; batched + word-level alignment)",
+    "qwen3": "Qwen3-ASR 1.7B + ForcedAligner (open)",
 }
 _EMOTION_LABELS = {
     "resmasking": "ResMaskingNet (FER-2013, 7 emotions)",
@@ -348,7 +349,7 @@ _STATIC_MODELS = {
     },
     "diarization": {
         "id": "spkrec-ecapa-voxceleb",
-        "label": "SpeechBrain ECAPA-TDNN speaker embeddings (VoxCeleb)",
+        "label": "SpeechBrain ECAPA-TDNN fingerprints; pyannote 3.1 clustering selectable per re-run",
     },
     "keywords": {
         "id": "word2vec-googlenews",

@@ -37,6 +37,11 @@ const ASR_OPTIONS = [
     { id: "google-cloud-speech", label: "Google Cloud Speech-to-Text" },
     { id: "whisper", label: "Whisper (open, offline)" },
     { id: "whisperx", label: "WhisperX (open SOTA: batched + word-aligned)" },
+    { id: "qwen3", label: "Qwen3-ASR 1.7B (open; leaderboard-best WER, slower)" },
+]
+const DIARIZER_OPTIONS = [
+    { id: "fingerprint", label: "ECAPA fingerprint matching (enrolled voices)" },
+    { id: "pyannote", label: "pyannote 3.1 clustering (open SOTA; WhisperX only)" },
 ]
 const SCORER_OPTIONS = [
     { id: "liwc", label: "LIWC & Harvard General Inquirer lexicons" },
@@ -60,6 +65,8 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     const [scorerChoice, setScorerChoice] = useState(null)
     const asr = asrChoice || (models && models.transcription && models.transcription.id) || "google-cloud-speech"
     const scorer = scorerChoice || (models && models.scoring && models.scoring.id) || "liwc"
+    const [diarizerChoice, setDiarizerChoice] = useState(null)
+    const diarizer = diarizerChoice || "fingerprint"
 
     const running = Object.values(streams).some(
         (s) => s === "connecting" || s === "running",
@@ -183,6 +190,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                     type: "Initialize_audio_processing_analytics",
                     asr,
                     scorer,
+                    diarizer,
                 },
             },
             {
@@ -257,7 +265,6 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     // Fixed-stack modules: shown so it's explicit what computes each result,
     // but locked because only one implementation exists.
     const fixedModules = [
-        ["Speaker identification", "diarization", "SpeechBrain ECAPA-TDNN (VoxCeleb)"],
         ["P&I semantic cohesion", "participation", "all-mpnet-base-v2"],
         ["Facial emotion", "emotion", "ResMaskingNet (FER-2013)"],
         ["Attention / gaze", "attention", "GazeFollow + YOLOv5m heads"],
@@ -296,6 +303,20 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                         className={selectCls}
                     >
                         {ASR_OPTIONS.map((o) => (
+                            <option key={o.id} value={o.id}>
+                                {o.label}
+                            </option>
+                        ))}
+                    </select>
+                </ModuleRow>
+                <ModuleRow name="Speaker identification" usedBy="Full re-run">
+                    <select
+                        value={diarizer}
+                        onChange={(e) => setDiarizerChoice(e.target.value)}
+                        disabled={running}
+                        className={selectCls}
+                    >
+                        {DIARIZER_OPTIONS.map((o) => (
                             <option key={o.id} value={o.id}>
                                 {o.label}
                             </option>
