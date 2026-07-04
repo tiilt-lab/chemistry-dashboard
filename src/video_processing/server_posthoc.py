@@ -15,6 +15,14 @@ import config as cf
 import cv2
 import numpy as np
 import torch
+# torch>=2.6 defaults weights_only=True, which rejects several of the local
+# model checkpoints (yolov4/crowdhuman pickles, gaze weights with numpy
+# globals). These files ship with the deployment and are trusted.
+_torch_load_original = torch.load
+def _torch_load_permissive(*args, **kwargs):
+    kwargs.setdefault('weights_only', False)
+    return _torch_load_original(*args, **kwargs)
+torch.load = _torch_load_permissive
 import torch.backends.cudnn as cudnn
 import moviepy.editor as mp
 import face_recognition
