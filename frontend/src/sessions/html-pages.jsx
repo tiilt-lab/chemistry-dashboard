@@ -10,7 +10,7 @@ import MicIcon from "../Icons/Mic"
 import { AppSpinner } from "../spinner/spinner-component"
 
 const rowClass =
-    "group flex items-center gap-3 rounded-xl border border-tiilt-line bg-white px-3 py-3 transition hover:border-tiilt hover:shadow-[0_10px_24px_-16px_rgba(42,23,74,0.5)]"
+    "group flex items-center gap-2.5 rounded-lg border border-tiilt-line bg-white px-3 py-2 transition hover:border-tiilt hover:shadow-[0_8px_20px_-16px_rgba(42,23,74,0.5)]"
 const menuItemClass = style2["menu-item"]
 const menuDangerClass = `${style2["menu-item"]} ${style2["red"]}`
 
@@ -49,7 +49,7 @@ function SortControl({ value, onChange, count }) {
 function FolderRow({ folder, onOpen, openFolderDialog }) {
     return (
         <li className={rowClass}>
-            <span className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-tiilt-soft text-tiilt">
+            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-tiilt-soft text-tiilt">
                 <FolderIcon />
             </span>
             <button
@@ -89,7 +89,7 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
         <li className={rowClass}>
             <span
                 className={
-                    "flex h-10 w-10 flex-none items-center justify-center rounded-lg " +
+                    "flex h-9 w-9 flex-none items-center justify-center rounded-md " +
                     (session.recording
                         ? "bg-tiilt-danger-soft text-tiilt-danger"
                         : "bg-tiilt-soft text-tiilt")
@@ -267,7 +267,7 @@ function DiscussionSessionPage(props) {
 
                         {!props.isLoading &&
                         props.displayedFolders.length > 0 ? (
-                            <ul className="flex flex-col gap-2">
+                            <ul className="flex flex-col gap-1.5">
                                 {props.displayedFolders.map((folder, index) => (
                                     <FolderRow
                                         key={index}
@@ -291,7 +291,7 @@ function DiscussionSessionPage(props) {
                                     onChange={props.setSortBy}
                                     count={props.displayedSessions.length}
                                 />
-                                <ul className="flex flex-col gap-2">
+                                <ul className="flex flex-col gap-1.5">
                                     {props.displayedSessions.map(
                                         (session, index) => (
                                             <SessionRow
