@@ -265,7 +265,10 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
         const times = transcripts.map((t) => t.start_time)
         recordingSeconds = Math.max(...times) - Math.min(...times) + 30
     }
-    const fullEstimateMin = Math.max(1, Math.ceil((recordingSeconds / 60) * 1.2) || 5)
+    // Measured: audio-only ~1.2x recording length; with video ~1.8x (the CV
+    // pass runs in parallel but finishes later).
+    const estimateFactor = session && session.has_video ? 1.8 : 1.2
+    const fullEstimateMin = Math.max(1, Math.ceil((recordingSeconds / 60) * estimateFactor) || 5)
 
     const btn =
         "h-10 rounded-lg px-4 text-sm font-semibold transition active:translate-y-px disabled:opacity-50"

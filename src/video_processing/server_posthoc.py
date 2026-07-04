@@ -72,6 +72,10 @@ class ServerProtocol(WebSocketServerProtocol):
         self.video_metric_analytics = video_metric_analytics
         self.interval = 10
         self.batch_size = batch_size
+        # Consulted by the connection manager's periodic key check and by
+        # signal_end cleanup; post-hoc connections aren't live-key gated.
+        self.running = False
+        self.config = None
 
         cm.add(self)
         logging.info('New client connected...')
