@@ -287,13 +287,14 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     const selectCls =
         "w-full cursor-pointer rounded-lg border border-tiilt-line bg-white py-1.5 pr-8 pl-3 text-sm text-tiilt-ink transition outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30 disabled:cursor-default disabled:bg-tiilt-ground disabled:text-tiilt-muted"
 
-    // Fixed-stack modules: shown so it's explicit what computes each result,
-    // but locked because only one implementation exists.
+    // Config-selected modules: the live label comes from /api/v1/models (the
+    // `models` prop); these fallbacks are only shown before that loads, so they
+    // track the current default stack rather than the historical one.
     const fixedModules = [
-        ["Facial emotion", "emotion", "ResMaskingNet (FER-2013)"],
-        ["Attention / gaze", "attention", "GazeFollow + YOLOv5m heads"],
-        ["Object of focus", "objects", "YOLOv4-P7 (COCO)"],
-        ["Keyword matching", "keywords", "word2vec (GoogleNews-300)"],
+        ["Facial emotion", "emotion", "HSEmotion EfficientNet-B2 (AffectNet-8)"],
+        ["Attention / gaze", "attention", "Gaze-LLE (DINOv2) + YOLOv5m heads"],
+        ["Object of focus", "objects", "YOLO11m (COCO)"],
+        ["Keyword matching", "keywords", "SentenceTransformer (BGE)"],
     ]
 
     const ModuleRow = ({ name, usedBy, children }) => (
