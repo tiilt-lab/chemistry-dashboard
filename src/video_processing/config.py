@@ -74,3 +74,10 @@ def emotion_model():
     if 'config' not in globals():
         initialize()
     return str(config.get('videoprocessing', 'emotion_model', fallback='resmasking'))
+
+def object_model():
+    # Object-of-focus detector: 'yolo11' (open SOTA, ultralytics) or 'yolov4'
+    # (the original YOLOv4-P7 weights). Read at server start.
+    if 'config' not in globals():
+        initialize()
+    return str(config.get('videoprocessing', 'object_model', fallback='yolo11'))

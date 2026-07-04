@@ -43,6 +43,10 @@ const DIARIZER_OPTIONS = [
     { id: "fingerprint", label: "ECAPA fingerprint matching (enrolled voices)" },
     { id: "pyannote", label: "pyannote 3.1 clustering (open SOTA; WhisperX only)" },
 ]
+const EMBEDDER_OPTIONS = [
+    { id: "bge-large-en-v1.5", label: "BGE large v1.5 (open SOTA embedder)" },
+    { id: "all-mpnet-base-v2", label: "all-mpnet-base-v2 (matches historical metrics)" },
+]
 const SCORER_OPTIONS = [
     { id: "liwc", label: "LIWC & Harvard General Inquirer lexicons" },
     { id: "open", label: "Harvard General Inquirer (open)" },
@@ -63,10 +67,14 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     // once /api/v1/models arrives.
     const [asrChoice, setAsrChoice] = useState(null)
     const [scorerChoice, setScorerChoice] = useState(null)
-    const asr = asrChoice || (models && models.transcription && models.transcription.id) || "google-cloud-speech"
+    // Post-hoc defaults to the open SOTA stack (batch WhisperX + pyannote),
+    // independent of the live pipeline's config default.
+    const asr = asrChoice || "whisperx"
     const scorer = scorerChoice || (models && models.scoring && models.scoring.id) || "liwc"
     const [diarizerChoice, setDiarizerChoice] = useState(null)
-    const diarizer = diarizerChoice || "fingerprint"
+    const diarizer = diarizerChoice || "pyannote"
+    const [embedderChoice, setEmbedderChoice] = useState(null)
+    const embedder = embedderChoice || "bge-large-en-v1.5"
 
     const running = Object.values(streams).some(
         (s) => s === "connecting" || s === "running",
@@ -191,6 +199,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                     asr,
                     scorer,
                     diarizer,
+                    embedder,
                 },
             },
             {
@@ -220,6 +229,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                         : "Initialize_expressing_and_thinking_style_computation",
                     transcript: simplifiedTranscript,
                     scorer,
+                    embedder,
                 },
             },
         ])
@@ -265,7 +275,6 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     // Fixed-stack modules: shown so it's explicit what computes each result,
     // but locked because only one implementation exists.
     const fixedModules = [
-        ["P&I semantic cohesion", "participation", "all-mpnet-base-v2"],
         ["Facial emotion", "emotion", "ResMaskingNet (FER-2013)"],
         ["Attention / gaze", "attention", "GazeFollow + YOLOv5m heads"],
         ["Object of focus", "objects", "YOLOv4-P7 (COCO)"],
@@ -303,6 +312,23 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                         className={selectCls}
                     >
                         {ASR_OPTIONS.map((o) => (
+                            <option key={o.id} value={o.id}>
+                                {o.label}
+                            </option>
+                        ))}
+                    </select>
+                </ModuleRow>
+                <ModuleRow
+                    name="P&I semantic cohesion"
+                    usedBy="P&I recompute · Full re-run"
+                >
+                    <select
+                        value={embedder}
+                        onChange={(e) => setEmbedderChoice(e.target.value)}
+                        disabled={running}
+                        className={selectCls}
+                    >
+                        {EMBEDDER_OPTIONS.map((o) => (
                             <option key={o.id} value={o.id}>
                                 {o.label}
                             </option>

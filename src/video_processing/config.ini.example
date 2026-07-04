@@ -39,3 +39,10 @@ processvideoanalytics = true
 
 [rootpath]
 root_dir=/var/lib/
+
+[videoprocessing]
+; Facial-emotion backend: hsemotion (EfficientNet-B2, AffectNet-8, open SOTA)
+; or resmasking (ResMaskingNet, FER-2013).
+emotion_model=hsemotion
+; Object-of-focus detector: yolo11 (open SOTA) or yolov4 (original weights).
+object_model=yolo11
