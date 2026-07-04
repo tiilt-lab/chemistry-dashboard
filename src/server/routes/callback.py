@@ -8,6 +8,7 @@ import logging
 import database
 import json
 import wrappers
+import config as cf
 import requests
 from handlers import callback_handlers
 
@@ -251,29 +252,42 @@ def add_tagging(**kwargs):
 
 @api_routes.route('/api/v1/processsyncstudentdata', methods=['POST'])
 def process_sync_student_data(**kwargs):
-  contents = request.get_json()
-  students_data = contents.get("Students_data",[])
-  logging.info("dumping the student data {0}".format(students_data))
+  # Inbound: a configured peer pushes its roster here. Reject unless syncing
+  # is enabled on this instance and the shared token matches.
+  if not cf.sync_enabled() or request.headers.get('X-Sync-Token', '') != cf.sync_token():
+    return json_response({"message": "sync not permitted"}, 403)
+  contents = request.get_json() or {}
+  students_data = contents.get("Students_data", [])
+  logging.info("syncing {0} student records from peer".format(len(students_data)))
   try:
-      for content in contents:
-        database.sync_student(content.get("lastname"),content.get("firstname"),content.get("username"),content.get("biometric_captured"))
+      for content in students_data:
+        database.sync_student(content.get("lastname"), content.get("firstname"), content.get("username"), content.get("biometric_captured"))
   except Exception as e:
-      logging.warning('video metric callback failed: {0}'.format(e))
-      return False
-  return True 
-     
+      logging.warning('student sync ingest failed: {0}'.format(e))
+      return json_response({"message": "syncing failed"}, 400)
+  return json_response()
+
+
+@api_routes.route('/api/v1/sync/enabled', methods=['GET'])
+@wrappers.verify_login(public=True)
+def sync_enabled(**kwargs):
+    return json_response({"enabled": cf.sync_enabled()})
+
 
 @api_routes.route('/api/v1/syncstudenttable', methods=['POST'])
+@wrappers.verify_login()
 def sync_student_table(**kwargs):
-    url = "https://nublinc.org/api/v1/callback/processsyncstudentdata"
+    if not cf.sync_enabled():
+        return json_response({"message": "Student syncing is not configured for this instance."}, 400)
+    url = cf.sync_peer_url() + "/api/v1/callback/processsyncstudentdata"
     try:
         students = database.get_students()
         result = {"Students_data": [student.json() for student in students]}
-        response = requests.post(url, json=result)
-        if response:
+        response = requests.post(url, json=result, headers={'X-Sync-Token': cf.sync_token()})
+        if response.status_code == 200:
           return json_response()
         else:
-          return json_response({"message":"syncing failed"},400)
+          return json_response({"message": "syncing failed"}, 400)
     except Exception as e:
         logging.warning("Student data sync callback failed: {0}".format(e))
-        return json_response({"message":"syncing failed"},400)
+        return json_response({"message": "syncing failed"}, 400)

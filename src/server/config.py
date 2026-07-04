@@ -52,3 +52,16 @@ def redis_db():
 
 def redis_url():
     return 'redis://{0}:{1}/{2}'.format(redis_host(), redis_port(), redis_db())
+
+def sync_peer_url():
+    # Base URL of a peer BLINC deployment to mirror student profiles with.
+    # Empty (the default) disables cross-instance student syncing entirely.
+    return str(config['sync'].get('peer_url', '')).rstrip('/') if config.has_section('sync') else ''
+
+def sync_token():
+    # Shared secret required on both the outbound and inbound sync requests.
+    return str(config['sync'].get('token', '')) if config.has_section('sync') else ''
+
+def sync_enabled():
+    # Syncing is only available when both a peer and a shared token are set.
+    return bool(sync_peer_url()) and bool(sync_token())

@@ -41,6 +41,7 @@ function PeopleComponent() {
     const [status, setStatus] = useState("")
     const [statusTitle, setStatusTitle] = useState("")
     const [toDelete, setToDelete] = useState(null)
+    const [syncEnabled, setSyncEnabled] = useState(false)
 
     const loadStudents = async () => {
         try {
@@ -67,6 +68,11 @@ function PeopleComponent() {
     useEffect(() => {
         loadStudents()
         loadRaters()
+        new AuthService()
+            .syncEnabled()
+            .then((r) => (r.status === 200 ? r.json() : { enabled: false }))
+            .then((d) => setSyncEnabled(!!d.enabled))
+            .catch(() => setSyncEnabled(false))
     }, [])
 
     const showStatus = (title, message) => {
@@ -264,12 +270,17 @@ function PeopleComponent() {
                                             : `${students.length} ${students.length === 1 ? "student" : "students"}`}
                                     </span>
                                     <div className="flex gap-2">
-                                        <button
-                                            className={secondaryBtn}
-                                            onClick={syncStudents}
-                                        >
-                                            Sync profiles
-                                        </button>
+                                        {syncEnabled ? (
+                                            <button
+                                                className={secondaryBtn}
+                                                onClick={syncStudents}
+                                                title="Push this instance's student roster to the configured peer deployment"
+                                            >
+                                                Sync profiles
+                                            </button>
+                                        ) : (
+                                            <></>
+                                        )}
                                         <button
                                             className={primaryBtn}
                                             onClick={() =>
