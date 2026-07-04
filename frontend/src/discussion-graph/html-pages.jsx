@@ -8,17 +8,16 @@ function DiscussionPage(props){
   
   return(
   <>
-    <div>
-    <Appheader 
+    <div className="main-container">
+    <Appheader
         title={"Discussion Graph"}
         leftText={false}
         rightText={"Options"}
         rightEnabled={true}
         rightTextClick={()=>{props.openForms("checkbox", props.selectedDevice)}}
-        nav={props.navigateToSession} 
+        nav={props.navigateToSession}
         headerclass={"discussion-graph-header"}
       />
-</div>
 <div className={style["page-container"]}>
   <div className={style["header-container"]}>
     <span className={style["header-spacer"]}></span>
@@ -65,6 +64,7 @@ function DiscussionPage(props){
       ))
     }
   </div>
+</div>
 </div>
 
  <GenericDialogBox show = {props.currentForm !== ""} checkBox = {props.currentForm} displayDevices = {props.displayDevices} changeCheck = {props.changeCheck} >

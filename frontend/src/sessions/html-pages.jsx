@@ -208,74 +208,49 @@ function DiscussionSessionPage(props) {
                             <></>
                         )}
 
-                        <div className={style["breadcrumb-container"]}>
-                            {props.breadcrumbs.length > 0 ? (
-                                <div onClick={props.goBackToPrevious}>
-                                    <img
-                                        alt="breadcumbs"
-                                        src={breadcrumbIcon}
-                                        className={
-                                            style["breadcrumb-arrow-icon"]
-                                        }
-                                    />
-                                </div>
-                            ) : (
-                                <></>
-                            )}
-                            {props.folders.length > 0 ? (
-                                <>
-                                    <span
+                        {props.folders.length > 0 ? (
+                            <nav className="mb-3 flex items-center gap-2 text-lg">
+                                {props.breadcrumbs.length > 0 ? (
+                                    <button
                                         onClick={props.goBackToPrevious}
-                                        className={style["crumb-name"]}
-                                        style={{
-                                            "max-width": adjDim(240) + "px",
-                                        }}
+                                        className="flex items-center gap-2 font-semibold text-tiilt hover:underline"
                                     >
-                                        {" "}
+                                        <img
+                                            alt=""
+                                            src={breadcrumbIcon}
+                                            className="h-4 w-4"
+                                        />
+                                        Home
+                                    </button>
+                                ) : (
+                                    <span className="font-semibold text-tiilt-ink">
                                         Home
                                     </span>
-                                    {props.breadcrumbs.length > 1 ? (
-                                        <span
-                                            className={style.breadcrumbs}
-                                            style={{ cursor: "default" }}
-                                        >
-                                            {" "}
-                                            / . . . /{" "}
-                                        </span>
-                                    ) : (
-                                        <></>
-                                    )}
-                                    {props.breadcrumbs.length === 1 ? (
-                                        <span className={style["breadcrumbs"]}>
-                                            {" "}
-                                            /{" "}
-                                        </span>
-                                    ) : (
-                                        <></>
-                                    )}
-                                    {props.breadcrumbs.length > 0 ? (
-                                        <div
-                                            className={style["crumb-name"]}
-                                            style={{
-                                                "max-width": adjDim(240) + "px",
-                                                cursor: "default",
-                                            }}
-                                        >
-                                            {" "}
-                                            {
-                                                props.breadcrumbs[
-                                                    props.breadcrumbs.length - 1
-                                                ].name
-                                            }
-                                        </div>
-                                    ) : (
-                                        <></>
-                                    )}
-                                </>
-                            ) : (
-                                <></>
-                            )}
-                        </div>
+                                )}
+                                {props.breadcrumbs.length > 1 ? (
+                                    <span className="text-tiilt-muted">
+                                        / … /
+                                    </span>
+                                ) : props.breadcrumbs.length === 1 ? (
+                                    <span className="text-tiilt-muted">/</span>
+                                ) : (
+                                    <></>
+                                )}
+                                {props.breadcrumbs.length > 0 ? (
+                                    <span className="max-w-60 truncate font-semibold text-tiilt-ink">
+                                        {
+                                            props.breadcrumbs[
+                                                props.breadcrumbs.length - 1
+                                            ].name
+                                        }
+                                    </span>
+                                ) : (
+                                    <></>
+                                )}
+                            </nav>
+                        ) : (
+                            <></>
+                        )}
 
                         {!props.isLoading &&
                         props.displayedFolders.length > 0 ? (
