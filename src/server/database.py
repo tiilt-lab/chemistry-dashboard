@@ -1468,10 +1468,18 @@ def get_session_ids_with_posthoc(owner_id=None):
         return set()
 
 
-def mark_session_device_posthoc(session_device_id):
+def mark_session_device_posthoc(session_device_id, models=None):
     device = get_session_devices(id=session_device_id)
     if device is None:
         return False
     device.posthoc_analyzed_date = datetime.utcnow()
+    if models is not None:
+        # Persist the per-run model provenance blob. Guard so a missing column
+        # (pre-migration) or bad value never blocks the completion timestamp.
+        try:
+            import json as _json
+            device.posthoc_models = _json.dumps(models)
+        except Exception as e:
+            logging.warning("Could not persist posthoc_models: %s", e)
     db.session.commit()
     return True

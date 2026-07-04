@@ -16,6 +16,11 @@ class SessionDevice(db.Model):
     embeddings = db.Column(db.String(64))
     # Set when a post-hoc re-analysis (audio/video/style) completes for this pod.
     posthoc_analyzed_date = db.Column(db.DateTime, nullable=True)
+    # JSON blob of the model choices used by the last post-hoc run (asr,
+    # embedder, diarizer, scorer, emotion, attention, object, face, head, ...),
+    # for reproducibility/provenance. Nullable; older rows and pre-migration
+    # deployments read as None (see defensive access in database.py).
+    posthoc_models = db.Column(db.Text, nullable=True)
     
     speakers = db.relationship("Speaker", back_populates="session_device", cascade="all, delete",passive_deletes=True)
     llmfeedbackreports = db.relationship("LLMFeedbackReport", back_populates="session_device", cascade="all, delete",passive_deletes=True)
@@ -53,8 +58,21 @@ class SessionDevice(db.Model):
             removed=self.removed,
             button_pressed=self.button_pressed,
             embeddings=self.embeddings,
-            posthoc_analyzed_date=str(self.posthoc_analyzed_date) + ' UTC' if self.posthoc_analyzed_date else None
+            posthoc_analyzed_date=str(self.posthoc_analyzed_date) + ' UTC' if self.posthoc_analyzed_date else None,
+            posthoc_models=self._posthoc_models_json()
         )
+
+    def _posthoc_models_json(self):
+        # Defensive: column may be absent on un-migrated deployments, or hold a
+        # bad value. Never let provenance break the pod's json().
+        import json as _json
+        raw = getattr(self, 'posthoc_models', None)
+        if not raw:
+            return None
+        try:
+            return _json.loads(raw)
+        except Exception:
+            return None
 
     @staticmethod
     def verify_fields(name=None):
