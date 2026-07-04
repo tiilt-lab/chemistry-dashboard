@@ -53,13 +53,16 @@ def semantic_embedder():
         initialize()
     return str(config.get('processing', 'semantic_embedder', fallback='all-mpnet-base-v2'))
 
-def diarizer():
-    # Speaker-diarization fallback clustering (post-hoc path only):
+def diarization_fallback():
+    # How the post-hoc fallback (no-fingerprint) path assigns speaker clusters.
+    # Distinct from the per-run payload 'diarizer' (fingerprint|pyannote), which
+    # decides whether the ASR *runs* pyannote; this decides what the fallback
+    # clustering *does with* any labels the ASR produced:
     #   'spectral' (default) -- the original ECAPA + spectral clustering.
     #   'pyannote'           -- reuse pyannote 3.1 cluster labels already
     #                           attached by batch ASR (WhisperX/Qwen3); falls
     #                           back to spectral when labels are absent.
-    return str(config.get('processing', 'diarizer', fallback='spectral'))
+    return str(config.get('processing', 'diarization_fallback', fallback='spectral'))
 
 def whisper_model_size():
     return str(config.get('whisper', 'model_size', fallback='small.en'))
