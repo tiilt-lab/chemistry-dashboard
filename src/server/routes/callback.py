@@ -274,6 +274,47 @@ def sync_enabled(**kwargs):
     return json_response({"enabled": cf.sync_enabled()})
 
 
+# Human-readable labels for the models the audio processor is configured with,
+# so the UI can state provenance without duplicating the audio config here.
+_ASR_LABELS = {
+    "google-cloud-speech": "Google Cloud Speech-to-Text (video model, en-US)",
+    "whisper": "Whisper (open, offline)",
+}
+_SCORER_LABELS = {
+    "liwc": "LIWC & Harvard General Inquirer lexicons",
+    "open": "Harvard General Inquirer lexicon (open)",
+    "llm": "Google Gemini (LLM)",
+}
+
+
+def _read_audio_models():
+    import os
+    import configparser
+    path = os.environ.get('AUDIO_CONFIG_PATH') or os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), '..', '..',
+        'audio_processing', 'config.ini')
+    asr, scorer = 'google-cloud-speech', 'liwc'
+    try:
+        parser = configparser.RawConfigParser()
+        parser.read(path)
+        if parser.has_section('processing'):
+            asr = parser['processing'].get('asr', asr).strip()
+            scorer = parser['processing'].get('scorer', scorer).strip()
+    except Exception as e:
+        logging.warning('Could not read audio model config: {0}'.format(e))
+    return asr, scorer
+
+
+@api_routes.route('/api/v1/models', methods=['GET'])
+@wrappers.verify_login(public=True)
+def get_models(**kwargs):
+    asr, scorer = _read_audio_models()
+    return json_response({
+        "transcription": {"id": asr, "label": _ASR_LABELS.get(asr, asr)},
+        "scoring": {"id": scorer, "label": _SCORER_LABELS.get(scorer, scorer)},
+    })
+
+
 @api_routes.route('/api/v1/syncstudenttable', methods=['POST'])
 @wrappers.verify_login()
 def sync_student_table(**kwargs):

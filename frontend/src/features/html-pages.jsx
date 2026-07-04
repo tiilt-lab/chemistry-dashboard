@@ -142,8 +142,9 @@ function FeaturePage(props) {
     return (
         <div className="flex w-full flex-col gap-3">
             <div className="text-xs text-tiilt-muted">
-                Scored from the transcript with the LIWC &amp; Harvard General
-                Inquirer lexicons
+                Scored from the transcript with{" "}
+                {props.scoringLabel ||
+                    "the LIWC & Harvard General Inquirer lexicons"}
             </div>
             {props.features.length > 0 &&
                 rows.map((feature, index) => (
