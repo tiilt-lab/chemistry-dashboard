@@ -1,4 +1,4 @@
-import { GenericDialogBox,WaitingDialog } from "../dialog/dialog-component"
+import { GenericDialogBox, WaitingDialog } from "../dialog/dialog-component"
 import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { Appheader } from "../header/header-component"
@@ -13,7 +13,12 @@ function PodComponentPages(props) {
         <>
             <div className="main-container">
                 <Appheader
-                    title={props.details === "Group" || props.details === "Reflection Dashboard" ? props.sessionDevice.name : props.selectedSpkralias}
+                    title={
+                        props.details === "Group" ||
+                        props.details === "Reflection Dashboard"
+                            ? props.sessionDevice.name
+                            : props.selectedSpkralias
+                    }
                     leftText={false}
                     rightText={"Option"}
                     rightEnabled={true}
@@ -27,78 +32,103 @@ function PodComponentPages(props) {
                             closingSession={props.onSessionClosing}
                             menus={[
                                 {
+                                    title: "Transcripts",
+                                    action: () => props.seeAllTranscripts(),
+                                },
+                                {
                                     title: "Group",
                                     action: () => props.dashboardView("Group"),
                                 },
                                 {
                                     title: "Comparison",
-                                    action: () => props.dashboardView("Comparison"),
+                                    action: () =>
+                                        props.dashboardView("Comparison"),
                                 },
                                 {
                                     title: "Reflection Dashboard",
-                                    action:  () =>  props.loadReflectiondashboard("Reflection Dashboard"),
-                                }
+                                    action: () =>
+                                        props.loadReflectiondashboard(
+                                            "Reflection Dashboard",
+                                        ),
+                                },
                             ]}
-                            participants={ props.speakers.map((speaker, index) => (
-                                {
+                            participants={props.speakers.map(
+                                (speaker, index) => ({
                                     alias: speaker.alias,
-                                    action: () => props.loadSpeakerMetrics(speaker.id,speaker.alias),
-                                }
-                            ))}
-
+                                    action: () =>
+                                        props.loadSpeakerMetrics(
+                                            speaker.id,
+                                            speaker.alias,
+                                        ),
+                                }),
+                            )}
                         />
                     ) : (
                         <></>
                     )}
                     <div className="center-column-container">
-                   
-                        {props.details === 'Reflection Dashboard'?
+                        {props.details === "Reflection Dashboard" ? (
                             <CollaborationFeedbackDashboard
-                                participants = {props.participants}
-                                currentParticipant = {props.currentParticipant}
-                                llmSessionAnalysis = {props.selectedParticipantLLMAnalysis}
-                                selectedParticipantSynthesizedData = {props.selectedParticipantSynthesizedData}
-                                interactivePromptFnc = {props.interactivePromptFnc}
-                                promptResponses = {props.promptResponses}
-                                isThinking = {props.isThinking}
-                                setIsThinking = {props.setIsThinking}
-                                setParticipantIDRefectionDashboard = {props.setParticipantIDRefectionDashboard}
-                                selectedMomentIdAndIndex = {props.selectedMomentIdAndIndex}
-                                setSelectedMomentIdAndIndex = {props.setSelectedMomentIdAndIndex}
+                                participants={props.participants}
+                                currentParticipant={props.currentParticipant}
+                                llmSessionAnalysis={
+                                    props.selectedParticipantLLMAnalysis
+                                }
+                                selectedParticipantSynthesizedData={
+                                    props.selectedParticipantSynthesizedData
+                                }
+                                interactivePromptFnc={
+                                    props.interactivePromptFnc
+                                }
+                                promptResponses={props.promptResponses}
+                                isThinking={props.isThinking}
+                                setIsThinking={props.setIsThinking}
+                                setParticipantIDRefectionDashboard={
+                                    props.setParticipantIDRefectionDashboard
+                                }
+                                selectedMomentIdAndIndex={
+                                    props.selectedMomentIdAndIndex
+                                }
+                                setSelectedMomentIdAndIndex={
+                                    props.setSelectedMomentIdAndIndex
+                                }
                             />
-                        :
-                        
-                        <AppInfographicsComparison
-                            displayTranscripts={props.displayTranscripts}
-                            displayVideoMetrics={props.displayVideoMetrics}
-                            fromclient={false}
-                            onClickedTimeline={props.onClickedTimeline}
-                            radarTrigger={props.radarTrigger}
-                            session={props.session}
-                            sessionDevice={props.sessionDevice}
-                            setRange={props.setRange}
-                            showBoxes={props.showBoxes}
-                            showFeatures={props.showFeatures}
-                            startTime={props.startTime}
-                            endTime={props.endTime}
-                            speakers={props.speakers}
-                            selectedSpkrId1={props.selectedSpkrId1}
-                            setSelectedSpkrId1={props.setSelectedSpkrId1}
-                            selectedSpkrId2={props.selectedSpkrId2}
-                            setSelectedSpkrId2={props.setSelectedSpkrId2}
-                            spkr1Transcripts={props.spkr1Transcripts}
-                            spkr2Transcripts={props.spkr2Transcripts}
-                            spkr1VideoMetrics={props.spkr1VideoMetrics}
-                            spkr2VideoMetrics={props.spkr2VideoMetrics}
-                            details={props.details}
-                            getSpeakerAliasFromID={props.getSpeakerAliasFromID}
-                        ></AppInfographicsComparison>
-                
-                        }
-                        
+                        ) : (
+                            <AppInfographicsComparison
+                                displayTranscripts={props.displayTranscripts}
+                                displayVideoMetrics={props.displayVideoMetrics}
+                                fromclient={false}
+                                onClickedTimeline={props.onClickedTimeline}
+                                radarTrigger={props.radarTrigger}
+                                session={props.session}
+                                sessionDevice={props.sessionDevice}
+                                setRange={props.setRange}
+                                showBoxes={props.showBoxes}
+                                showFeatures={props.showFeatures}
+                                startTime={props.startTime}
+                                endTime={props.endTime}
+                                speakers={props.speakers}
+                                selectedSpkrId1={props.selectedSpkrId1}
+                                setSelectedSpkrId1={props.setSelectedSpkrId1}
+                                selectedSpkrId2={props.selectedSpkrId2}
+                                setSelectedSpkrId2={props.setSelectedSpkrId2}
+                                spkr1Transcripts={props.spkr1Transcripts}
+                                spkr2Transcripts={props.spkr2Transcripts}
+                                spkr1VideoMetrics={props.spkr1VideoMetrics}
+                                spkr2VideoMetrics={props.spkr2VideoMetrics}
+                                details={props.details}
+                                getSpeakerAliasFromID={
+                                    props.getSpeakerAliasFromID
+                                }
+                            ></AppInfographicsComparison>
+                        )}
                     </div>
                 </div>
-                {props.loading(props.details) ? <AppSpinner></AppSpinner> : <></>}
+                {props.loading(props.details) ? (
+                    <AppSpinner></AppSpinner>
+                ) : (
+                    <></>
+                )}
             </div>
             <GenericDialogBox
                 show={props.currentForm !== ""}
