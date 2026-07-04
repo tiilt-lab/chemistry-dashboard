@@ -344,8 +344,8 @@ _STATIC_MODELS = {
         "label": "YOLOv4-P7 object detector (COCO)",
     },
     "participation": {
-        "id": "all-mpnet-base-v2",
-        "label": "Sentence-transformer semantic cohesion (all-mpnet-base-v2)",
+        "id": "bge-large-en-v1.5",
+        "label": "Semantic cohesion: BGE large v1.5 (open SOTA; mpnet selectable per re-run)",
     },
     "diarization": {
         "id": "spkrec-ecapa-voxceleb",
@@ -358,30 +358,40 @@ _STATIC_MODELS = {
 }
 
 
-def _read_video_emotion_model():
+def _read_video_models():
     import os
     import configparser
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..',
                         'video_processing', 'config.ini')
+    emotion, objects = 'resmasking', 'yolov4'
     try:
         parser = configparser.RawConfigParser(allow_no_value=True)
         parser.read(path)
-        return parser.get('videoprocessing', 'emotion_model', fallback='resmasking').strip()
+        emotion = parser.get('videoprocessing', 'emotion_model', fallback=emotion).strip()
+        objects = parser.get('videoprocessing', 'object_model', fallback=objects).strip()
     except Exception:
-        return 'resmasking'
+        pass
+    return emotion, objects
+
+
+_OBJECT_LABELS = {
+    "yolov4": "YOLOv4-P7 object detector (COCO)",
+    "yolo11": "YOLO11m object detector (COCO, open SOTA)",
+}
 
 
 @api_routes.route('/api/v1/models', methods=['GET'])
 @wrappers.verify_login(public=True)
 def get_models(**kwargs):
     asr, scorer = _read_audio_models()
-    emotion = _read_video_emotion_model()
+    emotion, objects = _read_video_models()
     result = {
         "transcription": {"id": asr, "label": _ASR_LABELS.get(asr, asr)},
         "scoring": {"id": scorer, "label": _SCORER_LABELS.get(scorer, scorer)},
     }
     result.update(_STATIC_MODELS)
     result["emotion"] = {"id": emotion, "label": _EMOTION_LABELS.get(emotion, emotion)}
+    result["objects"] = {"id": objects, "label": _OBJECT_LABELS.get(objects, objects)}
     return json_response(result)
 
 

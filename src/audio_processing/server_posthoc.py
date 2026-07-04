@@ -29,6 +29,25 @@ from sentence_transformers import SentenceTransformer
 
 cm = ConnectionManager()
 semantic_model = SentenceTransformer("all-mpnet-base-v2")
+
+# P&I semantic-cohesion embedder, selectable per run. bge-large-en-v1.5 (open
+# SOTA sentence embedder) is the default; mpnet kept for comparability with
+# historical metrics. Loaded lazily, cached for the server lifetime.
+_EMBEDDERS = {"all-mpnet-base-v2": semantic_model}
+_EMBEDDER_IDS = {
+    "bge-large-en-v1.5": "BAAI/bge-large-en-v1.5",
+    "all-mpnet-base-v2": "all-mpnet-base-v2",
+}
+
+def get_semantic_model(name=None):
+    key = (name or "bge-large-en-v1.5").strip()
+    if key not in _EMBEDDER_IDS:
+        logging.warning("Unknown embedder '%s'; using bge-large-en-v1.5", name)
+        key = "bge-large-en-v1.5"
+    if key not in _EMBEDDERS:
+        logging.info("Loading semantic embedder %s", _EMBEDDER_IDS[key])
+        _EMBEDDERS[key] = SentenceTransformer(_EMBEDDER_IDS[key])
+    return _EMBEDDERS[key]
 diarization_model = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="pretrained_models/pretrained_ecapa")
 semantic_model.share_memory()
 STOP_SIGNAL = object()
@@ -98,6 +117,7 @@ class ServerProtocol(WebSocketServerProtocol):
             self.asr_choice = data.get('asr') or cf.asr()
             self.scorer_choice = data.get('scorer') or None
             self.diarizer_choice = data.get('diarizer') or 'fingerprint'
+            self.embedder_choice = data.get('embedder') or None
             self.speakers = dict()
             self.stream_data = "audio"
             self.buffer_size = 4096
@@ -187,7 +207,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.config = result
                 for speaker in data['speakers']:
                     self.speakers[speaker["id"]] = {"alias": speaker["alias"], "id": speaker["id"]}
-                self.processorspeakermetric = SpeakerMetricProcessor(self.sessionid, self.session_device_id, self.transcript,semantic_model,self.config,running_audio_processes, scorer=data.get('scorer'))
+                self.processorspeakermetric = SpeakerMetricProcessor(self.sessionid, self.session_device_id, self.transcript,get_semantic_model(data.get('embedder')),self.config,running_audio_processes, scorer=data.get('scorer'))
                 self.processorspeakermetric.setSpeakerFingerprints(self.speakers)
                 self.send_json({'type':'init participation and impact style completed','message':"Starting Speaker Transcript Metric Processing"})
                 logging.info('participation and impact style initiated')
@@ -226,7 +246,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.config = result
                     for speaker in data['speakers']:
                         self.speakers[speaker["id"]] = {"alias": speaker["alias"], "id": speaker["id"]}
-                    self.processorspeakermetric = SpeakerMetricProcessor(self.sessionid, self.session_device_id, self.transcript,semantic_model,self.config,running_audio_processes, scorer=data.get('scorer'))
+                    self.processorspeakermetric = SpeakerMetricProcessor(self.sessionid, self.session_device_id, self.transcript,get_semantic_model(data.get('embedder')),self.config,running_audio_processes, scorer=data.get('scorer'))
                     self.processorspeakermetric.setSpeakerFingerprints(self.speakers)
                     self.send_json({'type':'init expression and thinking style completed','message':"Starting Transcript Metric Processing"})
                     logging.info('Expression and thinking style initiated')
@@ -338,7 +358,7 @@ class ServerProtocol(WebSocketServerProtocol):
         else:
             self.asr = GoogleASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data,self.interval,STOP_SIGNAL)
         self.asr.start()
-        self.processor = AudioProcessorPosthoc(self.audio_buffer, self.asr_transcript_queue, diarization_model, semantic_model, self.config, scorer=getattr(self, 'scorer_choice', None))
+        self.processor = AudioProcessorPosthoc(self.audio_buffer, self.asr_transcript_queue, diarization_model, get_semantic_model(getattr(self, 'embedder_choice', None)), self.config, scorer=getattr(self, 'scorer_choice', None))
         self.processor.start()
         self.audioreader = AudioStreamReader(self.audio_buffer, self.asr_audio_queue, self.audio_file, self.queue_put_timeout,self.config,STOP_SIGNAL,running_audio_processes)
         
