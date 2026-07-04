@@ -10,6 +10,162 @@ import MicIcon from "../Icons/Mic"
 import { adjDim } from "../myhooks/custom-hooks"
 import { AppSpinner } from "../spinner/spinner-component"
 
+const rowClass =
+    "group flex items-center gap-3 rounded-xl border border-tiilt-line bg-white px-3 py-3 transition hover:border-tiilt hover:shadow-[0_10px_24px_-16px_rgba(42,23,74,0.5)]"
+const menuItemClass = style2["menu-item"]
+const menuDangerClass = `${style2["menu-item"]} ${style2["red"]}`
+
+const SORT_OPTIONS = [
+    { value: "date-desc", label: "Newest first" },
+    { value: "date-asc", label: "Oldest first" },
+    { value: "length-desc", label: "Longest first" },
+    { value: "length-asc", label: "Shortest first" },
+    { value: "name-asc", label: "Name (A–Z)" },
+]
+
+function SortControl({ value, onChange, count }) {
+    return (
+        <div className="mb-3 flex items-center justify-between gap-3">
+            <span className="text-sm text-tiilt-muted">
+                {count} {count === 1 ? "discussion" : "discussions"}
+            </span>
+            <label className="flex items-center gap-2 text-sm text-tiilt-muted">
+                Sort by
+                <select
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    className="cursor-pointer rounded-lg border border-tiilt-line bg-white py-1.5 pr-8 pl-3 text-sm font-semibold text-tiilt-ink transition outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
+                >
+                    {SORT_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                            {o.label}
+                        </option>
+                    ))}
+                </select>
+            </label>
+        </div>
+    )
+}
+
+function FolderRow({ folder, onOpen, openFolderDialog }) {
+    return (
+        <li className={rowClass}>
+            <span className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-tiilt-soft text-tiilt">
+                <FolderIcon />
+            </span>
+            <button
+                onClick={() => onOpen(folder.id)}
+                className="min-w-0 grow cursor-pointer truncate text-left text-base font-semibold text-tiilt-ink"
+            >
+                {folder.name}
+            </button>
+            <div className="flex-none">
+                <AppContextMenu>
+                    <div
+                        className={menuItemClass}
+                        onClick={() => openFolderDialog("RenameFolder", folder)}
+                    >
+                        Edit Name
+                    </div>
+                    <div
+                        className={menuItemClass}
+                        onClick={() => openFolderDialog("MoveFolder", folder)}
+                    >
+                        Move To...
+                    </div>
+                    <div
+                        className={menuDangerClass}
+                        onClick={() => openFolderDialog("DeleteFolder", folder)}
+                    >
+                        Delete
+                    </div>
+                </AppContextMenu>
+            </div>
+        </li>
+    )
+}
+
+function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
+    return (
+        <li className={rowClass}>
+            <span
+                className={
+                    "flex h-10 w-10 flex-none items-center justify-center rounded-lg " +
+                    (session.recording
+                        ? "bg-tiilt-danger-soft text-tiilt-danger"
+                        : "bg-tiilt-soft text-tiilt")
+                }
+            >
+                <svg width="20" height="20" viewBox="0 0 20 30">
+                    <MicIcon fill="currentColor" />
+                </svg>
+            </span>
+            <button
+                onClick={() => onOpen(session)}
+                className="flex min-w-0 grow cursor-pointer flex-col text-left"
+            >
+                <span className="truncate text-base font-semibold text-tiilt-ink">
+                    {session.title}
+                </span>
+                <span className="mt-0.5 flex items-center gap-2 text-xs text-tiilt-muted">
+                    {session.creation_date.toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                    })}
+                    <span aria-hidden="true">·</span>
+                    <span className="font-ahamono tabular-nums">
+                        {session.lengthFormatted}
+                    </span>
+                </span>
+            </button>
+            {session.recording ? (
+                <span className="flex flex-none items-center gap-1.5 rounded-full bg-tiilt-danger-soft px-2.5 py-1 text-xs font-semibold text-tiilt-danger">
+                    <span className="h-1.5 w-1.5 rounded-full bg-tiilt-danger" />
+                    Live
+                </span>
+            ) : null}
+            <div className="flex-none">
+                <AppContextMenu>
+                    <div
+                        className={menuItemClass}
+                        onClick={() =>
+                            openSessionDialog("RenameSession", session)
+                        }
+                    >
+                        Edit Name
+                    </div>
+                    <div
+                        className={menuItemClass}
+                        onClick={() =>
+                            openSessionDialog("MoveSession", session)
+                        }
+                    >
+                        Move To...
+                    </div>
+                    {!session.recording ? (
+                        <div
+                            className={menuDangerClass}
+                            onClick={() =>
+                                openSessionDialog("DeleteSession", session)
+                            }
+                        >
+                            Delete
+                        </div>
+                    ) : (
+                        <div
+                            className={menuDangerClass}
+                            onClick={() => endSession(session)}
+                        >
+                            End
+                        </div>
+                    )}
+                </AppContextMenu>
+            </div>
+        </li>
+    )
+}
+
 function DiscussionSessionPage(props) {
     return (
         <>
@@ -123,223 +279,42 @@ function DiscussionSessionPage(props) {
 
                         {!props.isLoading &&
                         props.displayedFolders.length > 0 ? (
-                            <div>
-                                <ul className={style.list}>
-                                    {props.displayedFolders.map(
-                                        (folder, index) => (
-                                            <li
-                                                key={index}
-                                                className={style["folder-item"]}
-                                            >
-                                                <div
-                                                    alt="folder"
-                                                    className={
-                                                        style["folder-icon"]
-                                                    }
-                                                >
-                                                    <FolderIcon />
-                                                </div>
-                                                <div
-                                                    className={
-                                                        style["folder-title"]
-                                                    }
-                                                    onClick={() => {
-                                                        props.displayFolder(
-                                                            folder.id,
-                                                        )
-                                                    }}
-                                                >
-                                                    {folder.name}
-                                                </div>
-                                                <div
-                                                    className={
-                                                        style["folder-options"]
-                                                    }
-                                                >
-                                                    <AppContextMenu>
-                                                        <div
-                                                            className={
-                                                                style2[
-                                                                    "menu-item"
-                                                                ]
-                                                            }
-                                                            onClick={() => {
-                                                                props.openFolderDialog(
-                                                                    "RenameFolder",
-                                                                    folder,
-                                                                )
-                                                            }}
-                                                        >
-                                                            Edit Name
-                                                        </div>
-                                                        <div
-                                                            className={
-                                                                style2[
-                                                                    "menu-item"
-                                                                ]
-                                                            }
-                                                            onClick={() => {
-                                                                props.openFolderDialog(
-                                                                    "MoveFolder",
-                                                                    folder,
-                                                                )
-                                                            }}
-                                                        >
-                                                            {" "}
-                                                            Move To...
-                                                        </div>
-                                                        <div
-                                                            className={`${style2["menu-item"]} ${style2["red"]}`}
-                                                            onClick={() => {
-                                                                props.openFolderDialog(
-                                                                    "DeleteFolder",
-                                                                    folder,
-                                                                )
-                                                            }}
-                                                        >
-                                                            {" "}
-                                                            Delete
-                                                        </div>
-                                                    </AppContextMenu>
-                                                </div>
-                                            </li>
-                                        ),
-                                    )}
-                                </ul>
-                            </div>
+                            <ul className="flex flex-col gap-2">
+                                {props.displayedFolders.map((folder, index) => (
+                                    <FolderRow
+                                        key={index}
+                                        folder={folder}
+                                        onOpen={props.displayFolder}
+                                        openFolderDialog={
+                                            props.openFolderDialog
+                                        }
+                                    />
+                                ))}
+                            </ul>
                         ) : (
                             <></>
                         )}
 
                         {!props.isLoading &&
                         props.displayedSessions.length > 0 ? (
-                            <div>
-                                <ul className={style.list}>
+                            <div className="mt-4">
+                                <SortControl
+                                    value={props.sortBy}
+                                    onChange={props.setSortBy}
+                                    count={props.displayedSessions.length}
+                                />
+                                <ul className="flex flex-col gap-2">
                                     {props.displayedSessions.map(
                                         (session, index) => (
-                                            <li
+                                            <SessionRow
                                                 key={index}
-                                                className={
-                                                    style["session-item"]
+                                                session={session}
+                                                onOpen={props.goToSession}
+                                                openSessionDialog={
+                                                    props.openSessionDialog
                                                 }
-                                            >
-                                                <svg
-                                                    x="0"
-                                                    y="0"
-                                                    width="24"
-                                                    height="24"
-                                                    viewBox="0 0 20 30"
-                                                    className="m-2"
-                                                >
-                                                    <MicIcon
-                                                        fill={
-                                                            session.recording
-                                                                ? "#b3261e"
-                                                                : "#3a2163"
-                                                        }
-                                                    ></MicIcon>
-                                                </svg>
-                                                <div
-                                                    className={
-                                                        style["click-mask"]
-                                                    }
-                                                    style={{
-                                                        width: "min(26rem, 100%)",
-                                                    }}
-                                                    onClick={() => {
-                                                        props.goToSession(
-                                                            session,
-                                                        )
-                                                    }}
-                                                ></div>
-                                                <div
-                                                    className={
-                                                        style["session-title"]
-                                                    }
-                                                >
-                                                    {session.title}
-                                                </div>
-                                                <div
-                                                    className={
-                                                        style["session-date"]
-                                                    }
-                                                >
-                                                    {session.formattedDate}
-                                                </div>
-                                                <div className="m-2">
-                                                    <AppContextMenu>
-                                                        <div
-                                                            className={
-                                                                style2[
-                                                                    "menu-item"
-                                                                ]
-                                                            }
-                                                            onClick={() => {
-                                                                props.openSessionDialog(
-                                                                    "RenameSession",
-                                                                    session,
-                                                                )
-                                                            }}
-                                                        >
-                                                            Edit Name
-                                                        </div>
-                                                        <div
-                                                            className={
-                                                                style2[
-                                                                    "menu-item"
-                                                                ]
-                                                            }
-                                                            onClick={() => {
-                                                                props.openSessionDialog(
-                                                                    "MoveSession",
-                                                                    session,
-                                                                )
-                                                            }}
-                                                        >
-                                                            {" "}
-                                                            Move To...
-                                                        </div>
-                                                        {!session.recording ? (
-                                                            <div
-                                                                className={`${style2["menu-item"]} ${style2["red"]}`}
-                                                                onClick={() => {
-                                                                    props.openSessionDialog(
-                                                                        "DeleteSession",
-                                                                        session,
-                                                                    )
-                                                                }}
-                                                            >
-                                                                {" "}
-                                                                Delete
-                                                            </div>
-                                                        ) : (
-                                                            <></>
-                                                        )}
-                                                        {session.recording ? (
-                                                            <div
-                                                                className={`${style2["menu-item"]} ${style2["red"]}`}
-                                                                onClick={() => {
-                                                                    props.endSession(
-                                                                        session,
-                                                                    )
-                                                                }}
-                                                            >
-                                                                {" "}
-                                                                End
-                                                            </div>
-                                                        ) : (
-                                                            <></>
-                                                        )}
-                                                    </AppContextMenu>
-                                                </div>
-                                                <div
-                                                    className={
-                                                        style["session-title"]
-                                                    }
-                                                >
-                                                    {session.name}
-                                                </div>
-                                            </li>
+                                                endSession={props.endSession}
+                                            />
                                         ),
                                     )}
                                 </ul>
