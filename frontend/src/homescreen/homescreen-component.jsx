@@ -14,58 +14,80 @@ const GROUPS = [
     {
         icon: recordicon,
         name: "Discussions & Pods",
-        desc: "Record and review sessions; manage recording devices",
         links: [
-            { label: "Discussions", path: "/sessions", primary: true },
-            { label: "Pods", path: "/pods" },
+            {
+                label: "Discussions",
+                desc: "Record new sessions and review past ones",
+                path: "/sessions",
+            },
+            {
+                label: "Pods",
+                desc: "Recording devices and their connection status",
+                path: "/pods",
+            },
         ],
     },
     {
         icon: wordlist,
         name: "Keywords & Topics",
-        desc: "Keyword lists for detection and topic models for analysis",
         links: [
-            { label: "Keyword lists", path: "/keyword-lists", primary: true },
-            { label: "Topic models", path: "/topic-models" },
+            {
+                label: "Keyword lists",
+                desc: "Terms to detect as they come up in discussion",
+                path: "/keyword-lists",
+            },
+            {
+                label: "Topic models",
+                desc: "Models that tag what each utterance is about",
+                path: "/topic-models",
+            },
         ],
     },
     {
         icon: pod,
         name: "Students & Raters",
-        desc: "Manage student profiles and dashboard raters",
-        links: [{ label: "Manage people", path: "/people", primary: true }],
+        links: [
+            {
+                label: "Manage people",
+                desc: "Student profiles and dashboard raters",
+                path: "/people",
+            },
+        ],
     },
 ]
 
-function GroupCard({ icon, name, desc, links, navigate }) {
+function GroupCard({ icon, name, links, navigate }) {
     return (
-        <div className="flex flex-col gap-4 rounded-xl border border-tiilt-line bg-white p-5 shadow-[0_1px_2px_rgba(42,23,74,0.05)] sm:flex-row sm:items-center sm:gap-6">
-            <div className="flex min-w-0 grow items-center gap-4">
-                <span className="flex h-12 w-12 flex-none items-center justify-center rounded-lg bg-tiilt-soft">
-                    <img alt="" src={icon} className="h-5 w-5" />
+        <div className="overflow-hidden rounded-xl border border-tiilt-line bg-white shadow-[0_1px_2px_rgba(42,23,74,0.05)]">
+            <div className="flex items-center gap-3 border-b border-tiilt-line bg-tiilt-ground/60 px-5 py-3">
+                <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-tiilt-soft">
+                    <img alt="" src={icon} className="h-4 w-4" />
                 </span>
-                <span className="min-w-0">
-                    <span className="block text-base font-semibold text-tiilt-ink">
-                        {name}
-                    </span>
-                    <span className="block text-sm text-tiilt-muted">
-                        {desc}
-                    </span>
+                <span className="text-sm font-semibold text-tiilt-ink">
+                    {name}
                 </span>
             </div>
-            <div className="flex flex-none gap-2">
+            <div className="divide-y divide-tiilt-line">
                 {links.map((link) => (
                     <button
                         key={link.path}
                         onClick={() => navigate(link.path)}
-                        className={
-                            "min-w-[8.25rem] rounded-lg px-4 py-2.5 text-sm font-semibold transition active:translate-y-px " +
-                            (link.primary
-                                ? "bg-tiilt text-white hover:bg-tiilt-deep"
-                                : "border border-tiilt-line bg-white text-tiilt-ink hover:border-tiilt hover:bg-tiilt-soft")
-                        }
+                        className="group flex w-full items-center gap-4 px-5 py-3.5 text-left transition hover:bg-tiilt-soft"
                     >
-                        {link.label}
+                        <span className="min-w-0 grow">
+                            <span className="block text-[15px] font-semibold text-tiilt-ink group-hover:text-tiilt">
+                                {link.label}
+                            </span>
+                            <span className="block text-sm text-tiilt-muted">
+                                {link.desc}
+                            </span>
+                        </span>
+                        <span
+                            aria-hidden="true"
+                            className="flex-none text-tiilt-muted transition group-hover:translate-x-0.5 group-hover:text-tiilt"
+                        >
+                            ›
+                        </span>
                     </button>
                 ))}
             </div>
