@@ -1,5 +1,35 @@
 @import "tailwindcss";
 
+/* TIILT's typeface (tiilt.northwestern.edu); Regular is the only weight. */
+@font-face {
+    font-family: "AHAMONO";
+    src: url("./assets/font/AHAMONO-Regular.woff") format("woff");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@theme {
+    --font-ahamono: "AHAMONO", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+    /* TIILT brand palette (tiilt.northwestern.edu logo tokens) */
+    --color-tiilt: #3a2163;
+    --color-tiilt-deep: #2a174a;
+    --color-tiilt-ink: #221a33;
+    --color-tiilt-muted: #675e7d;
+    --color-tiilt-line: #ded7ea;
+    --color-tiilt-ground: #f5f3f9;
+    --color-tiilt-soft: #eee8f8;
+    --color-tiilt-lavender: #a794c9;
+    --color-tiilt-panel-text: #eae3f6;
+    --color-tiilt-orange: #fbb040;
+    --color-tiilt-teal: #00a79d;
+    --color-tiilt-pink: #ec008c;
+    --color-tiilt-green: #8dc63f;
+    --color-tiilt-danger: #b3261e;
+    --color-tiilt-danger-soft: #fceceb;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
