@@ -10,6 +10,7 @@ export class SessionModel {
   keywords;
   folder;
   has_video;
+  has_posthoc;
 
   // Client Fields
   local_start_date;
@@ -62,6 +63,7 @@ export class SessionModel {
     model.keywords = json['keywords'];
     model.folder = json['folder']
     model.has_video = json['has_video'] === true
+    model.has_posthoc = json['has_posthoc'] === true
     return model;
   }
 

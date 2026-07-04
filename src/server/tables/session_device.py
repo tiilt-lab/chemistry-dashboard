@@ -14,6 +14,8 @@ class SessionDevice(db.Model):
     removed = db.Column(db.Boolean, nullable=False, default=False) # If the device was removed from the session by the owner.
     button_pressed = db.Column(db.Boolean, nullable=False)
     embeddings = db.Column(db.String(64))
+    # Set when a post-hoc re-analysis (audio/video/style) completes for this pod.
+    posthoc_analyzed_date = db.Column(db.DateTime, nullable=True)
     
     speakers = db.relationship("Speaker", back_populates="session_device", cascade="all, delete",passive_deletes=True)
     llmfeedbackreports = db.relationship("LLMFeedbackReport", back_populates="session_device", cascade="all, delete",passive_deletes=True)
@@ -50,7 +52,8 @@ class SessionDevice(db.Model):
             connected=self.connected,
             removed=self.removed,
             button_pressed=self.button_pressed,
-            embeddings=self.embeddings
+            embeddings=self.embeddings,
+            posthoc_analyzed_date=str(self.posthoc_analyzed_date) + ' UTC' if self.posthoc_analyzed_date else None
         )
 
     @staticmethod

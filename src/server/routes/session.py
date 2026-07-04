@@ -28,10 +28,12 @@ image_queue_dict = {}
 def get_sessions(user, **kwargs):
     sessions = database.get_sessions(owner_id=user['id'])
     video_ids = database.get_session_ids_with_video(owner_id=user['id'])
+    posthoc_ids = database.get_session_ids_with_posthoc(owner_id=user['id'])
     result = []
     for session in sessions:
         data = session.json()
         data['has_video'] = session.id in video_ids
+        data['has_posthoc'] = session.id in posthoc_ids
         result.append(data)
     return json_response(result)
 
@@ -157,6 +159,19 @@ def device_join_session(session_id, **kwargs):
         return json_response({'session_device': data.json(), 'key': data.processing_key})
     else:
         return json_response({'message': data}, 400)
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/posthoc_completed', methods=['POST'])
+@wrappers.verify_login(public=True)
+def mark_posthoc_completed(session_id, session_device_id, user, **kwargs):
+    # Recorded when a post-hoc re-analysis finishes for a pod, so the sessions
+    # list can show which discussions have been re-analyzed. Owner-gated.
+    owned = database.get_sessions(id=session_id, owner_id=user['id'], first=True)
+    if owned is None:
+        return json_response({'message': 'Session not found.'}, 404)
+    if database.mark_session_device_posthoc(session_device_id):
+        return json_response({'ok': True})
+    return json_response({'message': 'Device not found.'}, 404)
+
 
 @api_routes.route('/api/v1/sessions/pod', methods=['POST'])
 @wrappers.verify_login(public=True)

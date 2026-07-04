@@ -1,5 +1,6 @@
 import { useRef, useState } from "react"
 import { ApiService } from "../../services/api-service"
+import { SessionService } from "../../services/session-service"
 
 // Post-hoc re-analysis actions, faithfully ported from the videodev
 // pod-component's dual-socket protocol. Three operations:
@@ -63,6 +64,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts }) {
         speakers: speakerList,
     }
 
+    const marked = useRef(false)
     const setStream = (label, value) => {
         streamsRef.current = { ...streamsRef.current, [label]: value }
         setStreams(streamsRef.current)
@@ -73,6 +75,14 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts }) {
         if (allSettled && heartbeat.current) {
             clearInterval(heartbeat.current)
             heartbeat.current = null
+        }
+        // When at least one stream completed successfully, record that this pod
+        // has had a post-hoc re-analysis so the sessions list can flag it.
+        if (allSettled && !marked.current && active.some((s) => s === "done")) {
+            marked.current = true
+            new SessionService()
+                .markPosthocCompleted(session.id, sessionDeviceId)
+                .catch(() => {})
         }
     }
 
@@ -135,6 +145,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts }) {
         }
         sockets.current = []
         streamsRef.current = {}
+        marked.current = false
         setStreams({})
         setMessage("")
         setAction(kind)
