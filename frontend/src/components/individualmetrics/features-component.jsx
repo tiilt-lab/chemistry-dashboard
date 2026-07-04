@@ -147,7 +147,7 @@ function AppIndividualFeaturesComponent(props) {
         }
       case "Newness":
         {
-          setFeatureDescription("How much new info you present throughout the discussion");
+          setFeatureDescription("How much new info you present throughout the session");
           break;
         }
       case "Communication Density":

@@ -294,22 +294,22 @@ function CreateSessionComponent(props) {
 
   const goToKeywords = ()=> {
     setCurrentMenu("Keywords");
-    setPageTitle('Create Discussion: Keywords');
+    setPageTitle('Create Session: Keywords');
   }
   
   const goToTopModels = ()=> {
     setCurrentMenu("TopModels");
-    setPageTitle('Create Discussion: Topic Models');
+    setPageTitle('Create Session: Topic Models');
   }
 
   const goToSettings = ()=> {
     setCurrentMenu("Settings");
-    setPageTitle('Create Discussion: Settings');
+    setPageTitle('Create Session: Settings');
   }
 
   const goToDevices = () =>{
     setCurrentMenu("Devices");
-    setPageTitle('Create Discussion: Devices');
+    setPageTitle('Create Session: Devices');
   }
 
   const navigateToSessions = ()=> {

@@ -81,7 +81,7 @@ function BrandPanel({ pitch = true }) {
             </div>
             {pitch && (
                 <p className="hidden max-w-[34ch] text-[15px] md:block">
-                    Real-time multimodal analytics for group discussion —
+                    Real-time multimodal analytics for group session —
                     speech, attention, and emotion, live from the room.
                 </p>
             )}

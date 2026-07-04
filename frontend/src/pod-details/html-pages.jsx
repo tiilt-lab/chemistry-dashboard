@@ -177,7 +177,7 @@ function PodComponentPages(props) {
                             />
                         </div>
                         <div className={style["dialog-heading"]}>
-                            Discussion Features
+                            Session Features
                         </div>
                         <div className={style["dialog-dropdown"]}>
                             <Select
@@ -220,7 +220,7 @@ function PodComponentPages(props) {
                                 </div>
                                 <div className={style["dialog-body"]}>
                                     All data will be saved, but the device will
-                                    be disconnected from the discussion.
+                                    be disconnected from the session.
                                 </div>
                             </React.Fragment>
                         ) : (

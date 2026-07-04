@@ -85,7 +85,7 @@ const participants = [
     watchouts: [
       "Late-phase engagement drop",
       "Few explicit uptake moves",
-      "Low initiative in entering the discussion",
+      "Low initiative in entering the session",
     ],
   },
   {
@@ -131,7 +131,7 @@ const moments = [
     stability: 80,
     transcript: "What's the difference between? What's the difference?",
     explanation:
-      "This is a strong launch moment. Energy, focus, and initiative are high, with clear effort to move the discussion. The main growth area is linking the question back to a peer contribution.",
+      "This is a strong launch moment. Energy, focus, and initiative are high, with clear effort to move the session. The main growth area is linking the question back to a peer contribution.",
   },
   {
     id: 2,
@@ -170,7 +170,7 @@ const moments = [
     stability: 27,
     transcript: "...makes it like if it was the example before with...",
     explanation:
-      "This may be an attempted re-entry into the discussion. It hints at reconnecting to an earlier example, but the move remains underdeveloped and low in uptake.",
+      "This may be an attempted re-entry into the session. It hints at reconnecting to an earlier example, but the move remains underdeveloped and low in uptake.",
   },
 ];
 
@@ -344,7 +344,7 @@ export default function CollaborationFeedbackDashboardPrototype() {
       return "Your momentum is strongest early in the session, where energy, focus, and initiative move together. The main drop appears in the late phase, and recovery is only partial afterward.";
     }
     if (q.includes("listening")) {
-      return "Your listening presence is stronger than your verbal share. That suggests you stay with the discussion even when you are not speaking, which is valuable, but there is room to convert that presence into clearer entry points.";
+      return "Your listening presence is stronger than your verbal share. That suggests you stay with the session even when you are not speaking, which is valuable, but there is room to convert that presence into clearer entry points.";
     }
     if (q.includes("relay") || q.includes("idea")) {
       return "Idea relay is one of the weaker group-level dimensions. You generate some promising moves, but they are not always picked up. A next step would be to explicitly anchor your comment to a teammate's earlier idea.";

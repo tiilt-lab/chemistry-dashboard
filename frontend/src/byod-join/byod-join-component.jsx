@@ -73,7 +73,7 @@ function JoinPage() {
     const [details, setDetails] = useState("Group")
     const [currentForm, setCurrentForm] = useState("")
     const [displayText, setDisplayText] = useState("")
-    const [pageTitle, setPageTitle] = useState("Join Discussion")
+    const [pageTitle, setPageTitle] = useState("Join Session")
     const [prevSessionId, setPrevSessionId] = useState(-1)
     const [pcode, setPcode] = useState("")
     const [constraintObj, setConstraintObj] = useState(null)
@@ -159,9 +159,9 @@ function JoinPage() {
         // initialize the components toolbar
         let boxArr = [
             "Timeline control",
-            "Discussion timeline",
+            "Session timeline",
             "Keyword detection",
-            "Discussion features",
+            "Session features",
             "Radar chart",
             "Participation",
             "Social Impact",
@@ -496,7 +496,7 @@ function JoinPage() {
         if (ending.current)
             return
         if (permanent && session !== null) {
-            setPageTitle("Join Discussion")
+            setPageTitle("Join Session")
             name.current = ""
             setPcode("")
             ending.current = true

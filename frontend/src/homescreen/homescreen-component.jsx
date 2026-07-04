@@ -13,10 +13,10 @@ import logouticon from "../assets/img/logout.svg"
 const GROUPS = [
     {
         icon: recordicon,
-        name: "Discussions & Pods",
+        name: "Sessions & Pods",
         links: [
             {
-                label: "Discussions",
+                label: "Sessions",
                 desc: "Record new sessions and review past ones",
                 path: "/sessions",
             },
@@ -33,7 +33,7 @@ const GROUPS = [
         links: [
             {
                 label: "Keyword lists",
-                desc: "Terms to detect as they come up in discussion",
+                desc: "Terms to detect as they come up in session",
                 path: "/keyword-lists",
             },
             {
@@ -164,7 +164,7 @@ function HomeScreen() {
                 </h2>
                 <p className="mt-1 mb-6 max-w-[60ch] text-sm text-tiilt-muted">
                     Welcome to the BLINC dashboard. Start gathering analytic
-                    data by recording a new discussion.
+                    data by recording a new session.
                 </p>
 
                 <div className="flex flex-col gap-3">

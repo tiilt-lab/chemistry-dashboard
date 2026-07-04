@@ -95,7 +95,7 @@ function AppInfographicsComparison(props) {
                             props.showBoxes[1]["clicked"]) && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
-                                heading={"Discussion timeline"}
+                                heading={"Session timeline"}
                             >
                                 {props.showBoxes[0]["clicked"] && (
                                     <div className="mb-4">
@@ -129,7 +129,7 @@ function AppInfographicsComparison(props) {
                     {props.details === "Group" && props.sessionDevice && (
                         <AppSectionBoxComponent
                             type={"w-full"}
-                            heading={"Discussion video & transcript"}
+                            heading={"Session video & transcript"}
                         >
                             <div className="flex w-full flex-col gap-3">
                                 <VideoPlayer
@@ -206,7 +206,7 @@ function AppInfographicsComparison(props) {
                         props.showBoxes[1]["clicked"] && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
-                                heading={"Discussion timeline"}
+                                heading={"Session timeline"}
                             >
                                 <AppTimeline
                                     clickedTimeline={props.onClickedTimeline}

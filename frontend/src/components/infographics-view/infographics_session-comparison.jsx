@@ -111,7 +111,7 @@ function AppInfographicsSessionComparison(props) {
                 props.showBoxes[1]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
-                        heading={"Discussion timeline"}
+                        heading={"Session timeline"}
                     >
                         <AppTimeline
                             clickedTimeline={props.onClickedTimeline}
@@ -128,7 +128,7 @@ function AppInfographicsSessionComparison(props) {
                 props.showBoxes[1]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
-                        heading={"Discussion timeline"}
+                        heading={"Session timeline"}
                     >
                         <AppTimeline
                             clickedTimeline={props.onClickedTimeline}
