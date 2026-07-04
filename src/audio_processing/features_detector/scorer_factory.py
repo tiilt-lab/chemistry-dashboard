@@ -22,7 +22,12 @@ def get_scorer(name=None):
         return _active
 
     key = (name or "liwc").strip().lower()
-    if key == "llm":
+    if key == "open":
+        from . import open_scorer
+
+        logging.info("Feature scorer: open (Harvard General Inquirer)")
+        _active = open_scorer  # module implements initialize() + detect_features()
+    elif key == "llm":
         from .llm_scorer import LlmScorer
 
         logging.info("Feature scorer: LLM (Gemini)")

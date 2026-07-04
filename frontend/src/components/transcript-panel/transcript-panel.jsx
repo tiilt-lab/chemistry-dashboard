@@ -44,6 +44,7 @@ function TranscriptPanel({
     onOpenFull,
     selectedTime,
     onSelectTime,
+    transcriptionLabel,
 }) {
     const scrollRef = useRef(null)
     const selectedRef = useRef(null)
@@ -69,8 +70,9 @@ function TranscriptPanel({
         <div className="w-full">
             <div className="mb-2 flex flex-col gap-1.5 text-xs text-tiilt-muted sm:flex-row sm:items-center sm:justify-between">
                 <span>
-                    Transcribed with Google Cloud Speech-to-Text (video model,
-                    en-US)
+                    Transcribed with{" "}
+                    {transcriptionLabel ||
+                        "Google Cloud Speech-to-Text (video model, en-US)"}
                 </span>
                 {speakers.length > 0 ? (
                     <span className="flex flex-wrap gap-x-3 gap-y-1">

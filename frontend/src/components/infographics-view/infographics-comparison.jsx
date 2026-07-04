@@ -7,13 +7,25 @@ import { AppRadarComponent } from "../../radar/radar-component"
 import { AppKeywordsComponent } from "../../keywords/keywords-component"
 import { AppIndividualFeaturesComponent } from "../individualmetrics/features-component"
 import { AppIndividualVideoFeaturesComponent } from "../individualVideometrics/video-features-component"
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
+import { ApiService } from "../../services/api-service"
 
 function AppInfographicsComparison(props) {
     // Shared selection linking the transcript with the Expression & Thinking
     // Style graphs. It is the start_time of the selected utterance, which maps
     // 1:1 to a point on each feature graph.
     const [selectedTime, setSelectedTime] = useState(null)
+
+    // Active transcription / scoring models, reported by the server from the
+    // audio processor's live config, so labels reflect what actually ran.
+    const [models, setModels] = useState(null)
+    useEffect(() => {
+        new ApiService()
+            .httpRequestCall("api/v1/models", "GET", {})
+            .then((r) => (r.status === 200 ? r.json() : null))
+            .then((d) => d && setModels(d))
+            .catch(() => {})
+    }, [])
 
     return (
         <>
@@ -123,6 +135,7 @@ function AppInfographicsComparison(props) {
                                 onOpenFull={props.seeAllTranscripts}
                                 selectedTime={selectedTime}
                                 onSelectTime={setSelectedTime}
+                                transcriptionLabel={models && models.transcription && models.transcription.label}
                             />
                         </AppSectionBoxComponent>
                     )}
@@ -228,6 +241,7 @@ function AppInfographicsComparison(props) {
                                     showFeatures={props.showFeatures}
                                     selectedTime={selectedTime}
                                     onSelectTime={setSelectedTime}
+                                    scoringLabel={models && models.scoring && models.scoring.label}
                                 />
                             </AppSectionBoxComponent>
                         )}
@@ -245,6 +259,7 @@ function AppInfographicsComparison(props) {
                                     showFeatures={props.showFeatures}
                                     selectedTime={selectedTime}
                                     onSelectTime={setSelectedTime}
+                                    scoringLabel={models && models.scoring && models.scoring.label}
                                 />
                             </AppSectionBoxComponent>
                         )}

@@ -157,6 +157,7 @@ function AppFeaturesComponent(props) {
     showFeatures = {props.showFeatures}
     selectedTime = {props.selectedTime}
     onSelectTime = {props.onSelectTime}
+    scoringLabel = {props.scoringLabel}
     />
   )
 }

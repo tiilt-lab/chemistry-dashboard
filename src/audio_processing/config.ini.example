@@ -11,13 +11,17 @@
 
 [processing]
 # Speech-to-text backend:
-#   google-cloud-speech  (default; needs asr_connectors/google-cloud-key.json)
-#   whisper              (faster-whisper, offline; pip install faster-whisper)
+#   google-cloud-speech  (default; PROPRIETARY paid API; needs google-cloud-key.json)
+#   whisper              (faster-whisper; MIT, open, offline; pip install faster-whisper)
 asr=google-cloud-speech
 
 # Expression & Thinking Style scorer:
-#   liwc  (default; LIWC / Harvard General Inquirer lexicon counting)
-#   llm   (Google Gemini rates the 5 dimensions; needs GOOGLE_API_KEY)
+#   liwc  (default; uses the PROPRIETARY LIWC2007 dictionary + Harvard GI)
+#   open  (Harvard General Inquirer only; fully open, offline, no license)
+#   llm   (Google Gemini; PROPRIETARY paid API; needs GOOGLE_API_KEY)
+#
+# For a fully open-source, zero-license, offline pipeline use:
+#   asr=whisper  and  scorer=open
 scorer=liwc
 
 keyword_model_limit=20000
