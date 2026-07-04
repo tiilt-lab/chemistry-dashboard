@@ -94,6 +94,10 @@ def get_speaker_transcript_metrics(id = None, speaker_id=None, transcript_id=Non
         query = query.filter(SpeakerTranscriptMetrics.transcript_id == transcript_id)
     if session_device_id != None:
         query = query.join(Transcript, SpeakerTranscriptMetrics.transcript_id).filter(Transcript.session_device_id == session_device_id)
+    if session_id != None:
+        query = query.join(Transcript, SpeakerTranscriptMetrics.transcript_id == Transcript.id) \
+                     .join(SessionDevice, Transcript.session_device_id == SessionDevice.id) \
+                     .filter(SessionDevice.session_id == session_id)
     return query.all()
 
 def add_speaker_transcript_metrics(speaker_id, transcript_id, participation_score, internal_cohesion, responsivity, social_impact, newness, communication_density):
