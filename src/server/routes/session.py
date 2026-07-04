@@ -32,11 +32,13 @@ def get_sessions(user, **kwargs):
     sessions = database.get_sessions(owner_id=user['id'])
     video_ids = database.get_session_ids_with_video(owner_id=user['id'])
     posthoc_ids = database.get_session_ids_with_posthoc(owner_id=user['id'])
+    pod_counts = database.get_session_device_counts(owner_id=user['id'])
     result = []
     for session in sessions:
         data = session.json()
         data['has_video'] = session.id in video_ids
         data['has_posthoc'] = session.id in posthoc_ids
+        data['pod_count'] = pod_counts.get(session.id, 0)
         result.append(data)
     return json_response(result)
 
@@ -518,7 +520,15 @@ def session_device(session_id, session_device_id, processing_key, **kwargs):
 @wrappers.verify_session_access
 def session_devices(session_id, **kwargs):
         devices = database.get_session_devices(session_id=session_id)
-        return json_response([device.json() for device in devices])
+        # Per-pod duration (seconds), derived from transcript timestamps since
+        # session_device stores no start/end of its own.
+        durations = database.get_pod_durations(session_id)
+        result = []
+        for device in devices:
+            data = device.json()
+            data['duration'] = durations.get(device.id)
+            result.append(data)
+        return json_response(result)
 
 @api_routes.route('/api/v1/devices/<int:session_device_id>/session_device', methods=['GET'])
 def session_device_by_id(session_device_id, **kwargs):
