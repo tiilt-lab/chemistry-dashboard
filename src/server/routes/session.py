@@ -1,5 +1,6 @@
 from flask import Blueprint, Response, request, abort, session, make_response, send_file
 import glob
+import subprocess
 from utility import sanitize, string_to_bool, json_response
 from tables.session_device import SessionDevice
 from redis_helper import RedisSessions
@@ -161,27 +162,120 @@ def device_join_session(session_id, **kwargs):
     else:
         return json_response({'message': data}, 400)
 
-@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/video', methods=['GET'])
-def get_session_device_video(session_id, session_device_id, **kwargs):
-    # Stream a pod's recorded video for playback beside the transcript. Files
-    # are keyed by session_device_id at the filename start
-    # (e.g. "887-<uuid>_<sid>_<did>_(...)_orig.webm"). conditional=True lets
-    # Flask honor HTTP Range requests so the player can seek. Access mirrors the
-    # pod's other media (the /client metric + transcript routes are not
-    # owner-gated), so viewers who can open the pod can play its video.
-    recordings_dir = os.path.join(
+# Lazy remux cache for pod recordings. MediaRecorder .webm files carry no
+# duration or seek cues (players show 24:00:00 and cannot scrub), so on first
+# request the original is stream-copied through ffmpeg — which writes both —
+# into a cache directory, evicted LRU above the size cap.
+VIDEO_CACHE_CAP_BYTES = 12 * 1024 ** 3
+
+
+def _video_dirs():
+    base = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        '..', 'video_processing', 'videorecordings')
+        '..', 'video_processing')
+    return (os.path.join(base, 'videorecordings'),
+            os.path.join(base, 'videorecordings_fixed'))
+
+
+def _find_original_video(session_device_id):
+    recordings_dir, _ = _video_dirs()
     matches = (
         glob.glob(os.path.join(recordings_dir, '{0}-*_orig.webm'.format(session_device_id)))
         or glob.glob(os.path.join(recordings_dir, '{0}-*.webm'.format(session_device_id)))
         or glob.glob(os.path.join(recordings_dir, '{0}-*.mp4'.format(session_device_id)))
     )
-    if not matches:
+    return os.path.realpath(matches[0]) if matches else None
+
+
+def _evict_video_cache(cache_dir, incoming_bytes):
+    try:
+        entries = [(os.path.join(cache_dir, f), os.stat(os.path.join(cache_dir, f)))
+                   for f in os.listdir(cache_dir)]
+        entries.sort(key=lambda e: e[1].st_atime)  # oldest access first
+        total = sum(st.st_size for _, st in entries) + incoming_bytes
+        for path, st in entries:
+            if total <= VIDEO_CACHE_CAP_BYTES:
+                break
+            os.remove(path)
+            total -= st.st_size
+    except Exception as e:
+        logging.warning('video cache eviction failed: %s', e)
+
+
+def _fixed_video_path(session_device_id):
+    # Returns the remuxed (duration+cues fixed) copy, creating it on demand.
+    original = _find_original_video(session_device_id)
+    if original is None:
+        return None
+    _, cache_dir = _video_dirs()
+    os.makedirs(cache_dir, exist_ok=True)
+    ext = '.mp4' if original.lower().endswith('.mp4') else '.webm'
+    fixed = os.path.join(cache_dir, '{0}{1}'.format(session_device_id, ext))
+    if not os.path.exists(fixed):
+        _evict_video_cache(cache_dir, os.path.getsize(original))
+        result = subprocess.run(
+            ['ffmpeg', '-y', '-v', 'error', '-i', original, '-c', 'copy', fixed],
+            capture_output=True, timeout=300)
+        if result.returncode != 0:
+            logging.warning('ffmpeg remux failed for %s: %s', original, result.stderr[-500:])
+            try:
+                os.remove(fixed)
+            except OSError:
+                pass
+            return original  # fall back to the raw file
+    return fixed
+
+
+def _video_start_offset(session_id, session_device_id):
+    # Seconds between session start and recording start, parsed from the
+    # recording filename's "(...)" timestamp — needed to align video time with
+    # transcript start_time (both are session-relative).
+    original = _find_original_video(session_device_id)
+    session_model = database.get_sessions(id=session_id, first=True)
+    if original is None or session_model is None:
+        return 0.0
+    try:
+        stamp = original.split('(')[1].split(')')[0]
+        recording_start = datetime.strptime(stamp, '%a %b %d %H:%M:%S %Y')
+        return max((recording_start - session_model.creation_date).total_seconds(), 0.0)
+    except Exception:
+        return 0.0
+
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/video', methods=['GET'])
+def get_session_device_video(session_id, session_device_id, **kwargs):
+    # Stream a pod's recorded video for playback beside the transcript.
+    # conditional=True lets Flask honor HTTP Range requests so the player can
+    # seek. Access mirrors the pod's other media (the /client metric +
+    # transcript routes are not owner-gated).
+    path = _fixed_video_path(session_device_id)
+    if path is None:
         abort(404)
-    path = os.path.realpath(matches[0])
     mimetype = 'video/mp4' if path.lower().endswith('.mp4') else 'video/webm'
     return send_file(path, mimetype=mimetype, conditional=True)
+
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/video/info', methods=['GET'])
+def get_session_device_video_info(session_id, session_device_id, **kwargs):
+    # Playback metadata: real duration (ffprobe of the remuxed copy) and the
+    # session-relative start offset, so the player can map video time <->
+    # transcript time and build subtitle cues.
+    path = _fixed_video_path(session_device_id)
+    if path is None:
+        return json_response({'message': 'No recording.'}, 404)
+    duration = None
+    try:
+        probe = subprocess.run(
+            ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+             '-of', 'default=noprint_wrappers=1:nokey=1', path],
+            capture_output=True, timeout=60)
+        duration = float(probe.stdout.strip())
+    except Exception as e:
+        logging.warning('ffprobe failed for %s: %s', path, e)
+    return json_response({
+        'duration': duration,
+        'offset': _video_start_offset(session_id, session_device_id),
+    })
 
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/posthoc_completed', methods=['POST'])

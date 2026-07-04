@@ -18,6 +18,9 @@ function AppInfographicsComparison(props) {
     // Style graphs. It is the start_time of the selected utterance, which maps
     // 1:1 to a point on each feature graph.
     const [selectedTime, setSelectedTime] = useState(null)
+    // Session-relative playhead of the discussion video, so the transcript can
+    // follow along while it plays.
+    const [playbackTime, setPlaybackTime] = useState(null)
 
     // Active transcription / scoring models, reported by the server from the
     // audio processor's live config, so labels reflect what actually ran.
@@ -154,7 +157,8 @@ function AppInfographicsComparison(props) {
                                 sessionId={props.session.id}
                                 sessionDeviceId={props.sessionDevice.id}
                                 selectedTime={selectedTime}
-                                onSelectTime={setSelectedTime}
+                                transcripts={props.displayTranscripts}
+                                onPlaybackTime={setPlaybackTime}
                             />
                         </AppSectionBoxComponent>
                     )}
@@ -175,6 +179,7 @@ function AppInfographicsComparison(props) {
                                 onOpenFull={props.seeAllTranscripts}
                                 selectedTime={selectedTime}
                                 onSelectTime={setSelectedTime}
+                                playbackTime={playbackTime}
                                 transcriptionLabel={models && models.transcription && models.transcription.label}
                             />
                         </AppSectionBoxComponent>

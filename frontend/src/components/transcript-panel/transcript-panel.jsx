@@ -45,9 +45,11 @@ function TranscriptPanel({
     selectedTime,
     onSelectTime,
     transcriptionLabel,
+    playbackTime,
 }) {
     const scrollRef = useRef(null)
     const selectedRef = useRef(null)
+    const playingRef = useRef(null)
 
     const speakerColors = buildSpeakerColors(transcripts)
     const speakers = Object.keys(speakerColors)
@@ -57,6 +59,17 @@ function TranscriptPanel({
         return t.start_time >= start && t.start_time <= end
     })
 
+    // The utterance the video playhead is currently inside (or the most recent
+    // one), so the transcript can follow along while the video plays.
+    let playingIndex = -1
+    if (playbackTime != null) {
+        for (let i = 0; i < list.length; i++) {
+            if (list[i].start_time <= playbackTime) playingIndex = i
+            else break
+        }
+    }
+    const playingKey = playingIndex >= 0 ? list[playingIndex].start_time : null
+
     useEffect(() => {
         if (selectedRef.current && scrollRef.current) {
             selectedRef.current.scrollIntoView({
@@ -65,6 +78,17 @@ function TranscriptPanel({
             })
         }
     }, [selectedTime])
+
+    // Follow playback: scroll only when the active utterance changes so manual
+    // scrolling between utterances isn't constantly fought.
+    useEffect(() => {
+        if (playingRef.current && scrollRef.current) {
+            playingRef.current.scrollIntoView({
+                block: "nearest",
+                behavior: "smooth",
+            })
+        }
+    }, [playingKey])
 
     return (
         <div className="w-full">
@@ -107,13 +131,20 @@ function TranscriptPanel({
                     <ul className="flex flex-col gap-0.5">
                         {list.map((t, index) => {
                             const isSelected = t.start_time === selectedTime
+                            const isPlaying = index === playingIndex
                             const color = t.speaker_tag
                                 ? speakerColors[t.speaker_tag]
                                 : "#d5cde4"
                             return (
                                 <li
                                     key={index}
-                                    ref={isSelected ? selectedRef : null}
+                                    ref={
+                                        isSelected
+                                            ? selectedRef
+                                            : isPlaying
+                                              ? playingRef
+                                              : null
+                                    }
                                     onClick={() =>
                                         onSelectTime &&
                                         onSelectTime(
@@ -125,7 +156,9 @@ function TranscriptPanel({
                                         "cursor-pointer rounded-r-lg border-l-[3px] py-2 pr-2 pl-3 transition " +
                                         (isSelected
                                             ? "bg-tiilt-soft"
-                                            : "hover:bg-tiilt-ground/70")
+                                            : isPlaying
+                                              ? "bg-tiilt-ground ring-1 ring-tiilt-line ring-inset"
+                                              : "hover:bg-tiilt-ground/70")
                                     }
                                 >
                                     <div className="flex gap-3">
