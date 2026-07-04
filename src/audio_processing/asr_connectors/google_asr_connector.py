@@ -19,7 +19,7 @@ NANO = 1000000000
 
 # Path for google asr credentials.
 cf.initialize()
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = cf.root_dir()+'chemistry-dashboard/audio_processing/asr_connectors/google-cloud-key.json'
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'google-cloud-key.json')
 os.environ['GRPC_DNS_RESOLVER'] = 'native'
 
 class GoogleASR():

@@ -241,5 +241,7 @@ pretrained_ecapa/label_encoder.ckpt
 pretrained_ecapa/mean_var_norm_emb.ckpt
 
 .vscode
-# Per-deployment server config (use config.ini.example as a template)
+# Per-deployment configs (use config.ini.example as templates)
 src/server/config.ini
+src/audio_processing/config.ini
+src/video_processing/config.ini

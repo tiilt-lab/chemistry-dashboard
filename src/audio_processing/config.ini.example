@@ -1,0 +1,46 @@
+# Audio processing service configuration template.
+#
+# Copy this file to config.ini and edit for your environment:
+#     cp config.ini.example config.ini
+#
+# config.ini is intentionally git-ignored: it holds per-deployment values.
+# For multi-instance machines, point the [output] callbacks at the instance's
+# Flask server port (DC_PORT) and give each instance its own redis_db
+# (must match the server's redis_db). The websocket listen port is set with
+# the DC_AUDIO_WS_PORT env var at launch (default 9000).
+
+[processing]
+asr=google-cloud-speech
+keyword_model_limit=20000
+
+[output]
+processing_callback=http://127.0.0.1:5000/api/v1/callback/transcript
+connect_callback=http://127.0.0.1:5000/api/v1/callback/connect
+disconnect_callback=http://127.0.0.1:5000/api/v1/callback/disconnect
+tagging_callback=http://127.0.0.1:5000/api/v1/callback/tag
+speaker_metrics_callback=http://127.0.0.1:5000/api/v1/callback/speaker_transcript_metrics
+
+[redis]
+# Must match the server instance's redis_db (session auth/config keys live there).
+#redis_host=localhost
+#redis_port=6379
+redis_db=0
+
+[record]
+original=false
+reduced=false
+recording_folder=recordings
+
+[videorecord]
+original=true
+reduced=false
+video_recording_folder=videorecordings
+
+[videocartoonize]
+cartoonize = false
+
+[rootpath]
+root_dir=/var/lib/
+
+[biometrics]
+biometrics_folder=audiobiometrics

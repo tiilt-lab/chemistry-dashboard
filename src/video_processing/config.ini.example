@@ -1,3 +1,13 @@
+# Video processing service configuration template.
+#
+# Copy this file to config.ini and edit for your environment:
+#     cp config.ini.example config.ini
+#
+# config.ini is intentionally git-ignored: it holds per-deployment values.
+# For multi-instance machines, point the [output] callbacks at the instance's
+# Flask server port (DC_PORT) and give each instance its own redis_db
+# (must match the server's redis_db). The websocket listen port is set with
+# the DC_VIDEO_WS_PORT env var at launch (default 9003).
 
 [output]
 cartoonize_image_callback=http://127.0.0.1:5000/api/v1/session/addcartoonizedimage
@@ -6,11 +16,12 @@ connect_callback=http://127.0.0.1:5000/api/v1/callback/connect
 disconnect_callback=http://127.0.0.1:5000/api/v1/callback/disconnect
 redis_get_session_key_callback=http://127.0.0.1:5000/api/v1/sessions/getredissessionkey
 redis_get_session_config_callback=http://127.0.0.1:5000/api/v1/sessions/getredissessionconfig
-; video_metrics_callback=https://nublinc.org/api/v1/callback/speakervideometrics
-; connect_callback=https://nublinc.org/api/v1/callback/connect
-; disconnect_callback=https://nublinc.org/api/v1/callback/disconnect
-; redis_get_session_key_callback=https://nublinc.org/api/v1/sessions/getredissessionkey
-; redis_get_session_config_callback=https://nublinc.org/api/v1/sessions/getredissessionconfig
+
+[redis]
+# Must match the server instance's redis_db (session auth/config keys live there).
+#redis_host=localhost
+#redis_port=6379
+redis_db=0
 
 [videorecord]
 original=true
@@ -21,10 +32,10 @@ video_recording_folder=videorecordings
 facial_embedding_folder=facial_embeddings
 
 [videocartoonize]
-cartoonize = true 
+cartoonize = true
 
 [videoanalyics]
 processvideoanalytics = true
 
 [rootpath]
-root_dir=/var/lib/ 
+root_dir=/var/lib/

@@ -1,0 +1,19 @@
+[Unit]
+Description=BLINC Audio Processing Service (blinc.puthipiroj.com)
+After=network-online.target redis-server.service
+StartLimitIntervalSec=0
+
+[Service]
+User=vlj9405
+Group=www-data
+Type=simple
+Restart=always
+RestartSec=1
+LimitRTPRIO=99
+LimitRTTIME=infinity
+Environment="DC_AUDIO_WS_PORT=9010"
+WorkingDirectory=/home/vlj9405/code/chemistry-dashboard/
+ExecStart=/home/vlj9405/code/chemistry-dashboard/src/audio_processing/venv/bin/python src/audio_processing/server.py
+
+[Install]
+WantedBy=multi-user.target
