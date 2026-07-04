@@ -126,30 +126,6 @@ function AppInfographicsComparison(props) {
                             </AppSectionBoxComponent>
                         )}
 
-                    {props.details !== "Comparison" &&
-                        (props.details === "Group"
-                            ? props.displayVideoMetrics
-                            : props.spkr1VideoMetrics) &&
-                        (props.details === "Group"
-                            ? props.displayVideoMetrics.length
-                            : props.spkr1VideoMetrics.length) > 0 && (
-                            <AppSectionBoxComponent
-                                type={"w-full"}
-                                heading={"Video analytics"}
-                            >
-                                <VideoAnalyticsPanel
-                                    videometrics={
-                                        props.details === "Group"
-                                            ? props.displayVideoMetrics
-                                            : props.spkr1VideoMetrics
-                                    }
-                                    start={props.startTime}
-                                    end={props.endTime}
-                                    models={models}
-                                />
-                            </AppSectionBoxComponent>
-                        )}
-
                     {props.details === "Group" && props.sessionDevice && (
                         <AppSectionBoxComponent
                             type={"w-full"}
@@ -177,6 +153,30 @@ function AppInfographicsComparison(props) {
                             </div>
                         </AppSectionBoxComponent>
                     )}
+
+                    {props.details !== "Comparison" &&
+                        (props.details === "Group"
+                            ? props.displayVideoMetrics
+                            : props.spkr1VideoMetrics) &&
+                        (props.details === "Group"
+                            ? props.displayVideoMetrics.length
+                            : props.spkr1VideoMetrics.length) > 0 && (
+                            <AppSectionBoxComponent
+                                type={"w-full"}
+                                heading={"Video analytics"}
+                            >
+                                <VideoAnalyticsPanel
+                                    videometrics={
+                                        props.details === "Group"
+                                            ? props.displayVideoMetrics
+                                            : props.spkr1VideoMetrics
+                                    }
+                                    start={props.startTime}
+                                    end={props.endTime}
+                                    models={models}
+                                />
+                            </AppSectionBoxComponent>
+                        )}
 
                     {props.details !== "Comparison" &&
                         !(props.details === "Group" && props.sessionDevice) && (
@@ -436,6 +436,7 @@ function AppInfographicsComparison(props) {
                             heading={"Re-run analysis"}
                         >
                             <PosthocTrigger
+                                models={models}
                                 session={props.session}
                                 sessionDeviceId={props.sessionDevice.id}
                                 speakers={props.speakers}

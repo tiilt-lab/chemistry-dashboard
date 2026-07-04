@@ -67,7 +67,10 @@ class WhisperASR(BaseASR):
                 chunk = self.audio_queue.get(timeout=0.25)
             except queue.Empty:
                 continue
-            if chunk is None:
+            # None is the live pipeline's end sentinel; the post-hoc stream
+            # reader pushes an arbitrary STOP_SIGNAL object instead, so treat
+            # anything that isn't audio bytes as end-of-stream.
+            if chunk is None or not isinstance(chunk, (bytes, bytearray)):
                 break
             self._buffer.extend(chunk)
             if self._window_full():

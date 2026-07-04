@@ -818,6 +818,29 @@ def add_transcript(session_device_id, start_time, length, transcript, question, 
     #     close_session()
     return transcript
 
+def update_transcript_features_batch(session_device_id, updates):
+    # Overwrite the five E&T feature values on existing transcript rows (used
+    # by the post-hoc style recomputation). Rows are matched by id AND device
+    # so a stray id can't touch another pod's data. Returns rows updated.
+    keys = ('emotional_tone_value', 'analytic_thinking_value', 'clout_value',
+            'authenticity_value', 'certainty_value')
+    count = 0
+    for update in updates:
+        row = db.session.query(Transcript).filter(
+            Transcript.id == update.get('id'),
+            Transcript.session_device_id == session_device_id).first()
+        if row is None:
+            continue
+        features = update.get('features') or {}
+        for key in keys:
+            value = features.get(key)
+            if value is not None:
+                setattr(row, key, int(round(float(value))))
+        count += 1
+    db.session.commit()
+    return count
+
+
 def set_speaker_tag(transcript, tag):
     transcript.speaker_tag = tag
     db.session.commit()

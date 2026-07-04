@@ -62,6 +62,18 @@ def post_connect(source):
         logging.info('connect callback failed: {0}'.format(e))
         return False
 
+def post_transcript_features(source, updates):
+    # Persist re-scored E&T feature values onto existing transcript rows
+    # (post-hoc style recomputation). `updates` = [{id, features:{...}}].
+    payload = {'source': source, 'updates': updates}
+    try:
+        url = config.processing_callback().replace('/callback/transcript', '/callback/transcript_features')
+        response = requests.post(url, json=payload)
+        return response.status_code == 200
+    except Exception as e:
+        logging.warning('transcript features callback failed: {0}'.format(e))
+        return False
+
 def post_disconnect(source):
     disconnection = {
         'source': source,
