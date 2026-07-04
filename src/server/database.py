@@ -1468,6 +1468,30 @@ def get_session_ids_with_posthoc(owner_id=None):
         return set()
 
 
+def get_session_device_counts(owner_id=None):
+    # {session_id: pod_count} in one query, so the sessions list can show pod
+    # counts without a per-session query (mirrors get_session_ids_with_video).
+    query = db.session.query(SessionDevice.session_id, func.count(SessionDevice.id))
+    if owner_id is not None:
+        query = query.join(Session, SessionDevice.session_id == Session.id) \
+            .filter(Session.owner_id == owner_id)
+    query = query.group_by(SessionDevice.session_id)
+    return {row[0]: row[1] for row in query.all()}
+
+
+def get_pod_durations(session_id):
+    # {session_device_id: duration_seconds} for one session. session_device has
+    # no timestamps of its own, so a pod's duration is derived from its
+    # transcripts as the end of the last utterance: MAX(start_time + length).
+    rows = db.session.query(
+        Transcript.session_device_id,
+        func.max(Transcript.start_time + Transcript.length)) \
+        .join(SessionDevice, Transcript.session_device_id == SessionDevice.id) \
+        .filter(SessionDevice.session_id == session_id) \
+        .group_by(Transcript.session_device_id).all()
+    return {row[0]: int(row[1]) for row in rows if row[1] is not None}
+
+
 def mark_session_device_posthoc(session_device_id, models=None):
     device = get_session_devices(id=session_device_id)
     if device is None:
