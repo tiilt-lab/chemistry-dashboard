@@ -68,14 +68,17 @@ class _InsightFaceBackend:
         from insightface.app import FaceAnalysis  # lazy: only needed if selected
         self._app = FaceAnalysis(name="buffalo_l")
         self._app.prepare(ctx_id=ctx_id, det_size=(det_size, det_size))
-        self._cache = None  # (id(frame), faces)
+        self._cache = None  # (frame_array, faces)
         logging.info("InsightFace ArcFace buffalo_l backend loaded")
 
     def _faces(self, rgb_frame):
-        key = id(rgb_frame)
-        if self._cache is None or self._cache[0] != key:
+        # Cache by object *identity* (is), not id(): CPython recycles id() for
+        # freed arrays, so an id() key could match a different, later frame and
+        # return stale detections. Holding the array reference here also keeps
+        # it alive, so a distinct frame can never reuse its identity.
+        if self._cache is None or self._cache[0] is not rgb_frame:
             # insightface expects BGR; caller passes RGB (dlib convention).
-            self._cache = (key, self._app.get(rgb_frame[:, :, ::-1]))
+            self._cache = (rgb_frame, self._app.get(rgb_frame[:, :, ::-1]))
         return self._cache[1]
 
     def locate(self, rgb_frame, model=None):

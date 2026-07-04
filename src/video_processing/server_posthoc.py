@@ -76,27 +76,34 @@ running_video_processes = {}
 # shared across concurrent runs.
 _EMOTION_CACHE = {cf.emotion_model(): facial_emotion_detector}
 _ATTENTION_CACHE = {cf.attention_model(): attention_detection}
+# Serialize cache-miss loads so two concurrent runs requesting the same
+# not-yet-loaded backend don't both construct the heavy CUDA model (OOM risk).
+_MODEL_CACHE_LOCK = threading.Lock()
 
 def get_emotion_detector(name=None):
     name = (name or cf.emotion_model()).strip()
     if name not in _EMOTION_CACHE:
-        logging.info("Loading emotion backend '%s' for this run", name)
-        if name == 'hsemotion':
-            from emotion_detector.hsemotion_model import EmotionDetectionModelV2
-            _EMOTION_CACHE[name] = EmotionDetectionModelV2()
-        else:
-            _EMOTION_CACHE[name] = EmotionDetectionModelV1()
+        with _MODEL_CACHE_LOCK:
+            if name not in _EMOTION_CACHE:  # re-check under lock
+                logging.info("Loading emotion backend '%s' for this run", name)
+                if name == 'hsemotion':
+                    from emotion_detector.hsemotion_model import EmotionDetectionModelV2
+                    _EMOTION_CACHE[name] = EmotionDetectionModelV2()
+                else:
+                    _EMOTION_CACHE[name] = EmotionDetectionModelV1()
     return _EMOTION_CACHE[name]
 
 def get_attention_detector(name=None):
     name = (name or cf.attention_model()).strip()
     if name not in _ATTENTION_CACHE:
-        logging.info("Loading attention backend '%s' for this run", name)
-        if name == 'gazelle':
-            from attention_tracking.gazelle_attention import GazeLLEAttentionDetection
-            _ATTENTION_CACHE[name] = GazeLLEAttentionDetection()
-        else:
-            _ATTENTION_CACHE[name] = AttentionDetection()
+        with _MODEL_CACHE_LOCK:
+            if name not in _ATTENTION_CACHE:  # re-check under lock
+                logging.info("Loading attention backend '%s' for this run", name)
+                if name == 'gazelle':
+                    from attention_tracking.gazelle_attention import GazeLLEAttentionDetection
+                    _ATTENTION_CACHE[name] = GazeLLEAttentionDetection()
+                else:
+                    _ATTENTION_CACHE[name] = AttentionDetection()
     return _ATTENTION_CACHE[name]
 
 class ServerProtocol(WebSocketServerProtocol):
