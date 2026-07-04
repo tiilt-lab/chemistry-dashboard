@@ -200,6 +200,14 @@ function Legend({ items, colorFor }) {
     )
 }
 
+// Short initials for an identity avatar chip (usernames are usually one token).
+function initials(name) {
+    if (!name) return "?"
+    const parts = name.replace(/[^a-zA-Z0-9]/g, " ").trim().split(/\s+/)
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+    return name.slice(0, 2).toUpperCase()
+}
+
 // Cells for a "dominant value per bin" track (one row per participant).
 function swimlaneCells(bins, colorFor, t0, t1) {
     const n = bins.length
@@ -258,14 +266,23 @@ function TimelineTracks({ tracks, t0, t1, zoom, playbackTime, onSeek }) {
 
     return (
         <div className="flex gap-2">
-            <div className="flex w-20 flex-none flex-col gap-1">
+            <div className="flex w-24 flex-none flex-col gap-1">
                 {tracks.map((tr) => (
                     <div
                         key={tr.name}
-                        className="flex h-4 items-center truncate text-xs text-tiilt-ink"
+                        className="flex h-4 items-center gap-1 text-xs text-tiilt-ink"
                         title={tr.name}
                     >
-                        {tr.name}
+                        {tr.avatar ? (
+                            <span
+                                className="flex h-4 w-4 flex-none items-center justify-center rounded-full text-[8px] font-bold text-white"
+                                style={{ backgroundColor: tr.avatar.color }}
+                                aria-hidden="true"
+                            >
+                                {tr.avatar.initials}
+                            </span>
+                        ) : null}
+                        <span className="truncate">{tr.name}</span>
                     </div>
                 ))}
             </div>
@@ -400,6 +417,11 @@ function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, o
         responsive: true,
         maintainAspectRatio: false,
         parsing: false,
+        onClick: (evt, els, chart) => {
+            if (!onSeek || !chart) return
+            const val = chart.scales.x.getValueForPixel(evt.x)
+            if (val != null && !isNaN(val)) onSeek(val)
+        },
         plugins: {
             legend: { display: participants.length > 1, position: "bottom" },
             tooltip: {
@@ -479,11 +501,34 @@ function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, o
                 <div className="mb-2">
                     <ModelNote
                         label={models && models.attention && models.attention.label}
-                        fallback="the attended-visual-targets gaze model (GazeFollow) + YOLOv5m head detector"
+                        fallback="Gaze-LLE (DINOv2, open SOTA) + YOLOv5m head detector"
                     />
                 </div>
                 <div className="h-40">
-                    <Line data={attentionData} options={attentionOptions} />
+                    <Line
+                        data={attentionData}
+                        options={attentionOptions}
+                        plugins={[
+                            {
+                                id: "attnPlaybackCursor",
+                                afterDraw(chart) {
+                                    if (playbackTime == null) return
+                                    const x = chart.scales.x.getPixelForValue(playbackTime)
+                                    const area = chart.chartArea
+                                    if (x < area.left || x > area.right) return
+                                    const ctx = chart.ctx
+                                    ctx.save()
+                                    ctx.beginPath()
+                                    ctx.moveTo(x, area.top)
+                                    ctx.lineTo(x, area.bottom)
+                                    ctx.lineWidth = 2
+                                    ctx.strokeStyle = "#b3261e"
+                                    ctx.stroke()
+                                    ctx.restore()
+                                },
+                            },
+                        ]}
+                    />
                 </div>
             </div>
 
@@ -495,7 +540,7 @@ function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, o
                 <div className="mb-2">
                     <ModelNote
                         label={models && models.emotion && models.emotion.label}
-                        fallback="ResMaskingNet (FER-2013, 7 emotions)"
+                        fallback="HSEmotion EfficientNet-B2 (AffectNet-8)"
                     />
                 </div>
                 <TimelineTracks
@@ -503,6 +548,7 @@ function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, o
                         isAll
                             ? participants.map((p) => ({
                                   name: p,
+                                  avatar: { initials: initials(p), color: speakerColor(p) },
                                   cells: swimlaneCells(
                                       binCounts(byParticipant[p] || [], "facial_emotion", t0, t1, N_BINS),
                                       emotionColor,
@@ -548,7 +594,7 @@ function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, o
                 <div className="mb-2">
                     <ModelNote
                         label={models && models.objects && models.objects.label}
-                        fallback="YOLOv4-P7 object detector (COCO) + gaze direction"
+                        fallback="YOLO11m object detector (COCO) + gaze direction"
                     />
                 </div>
                 <TimelineTracks
@@ -556,6 +602,7 @@ function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, o
                         isAll
                             ? participants.map((p) => ({
                                   name: p,
+                                  avatar: { initials: initials(p), color: speakerColor(p) },
                                   cells: swimlaneCells(
                                       binCounts(byParticipant[p] || [], "_focus", t0, t1, N_BINS),
                                       objectColor,

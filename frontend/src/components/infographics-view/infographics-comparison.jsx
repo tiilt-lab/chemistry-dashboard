@@ -228,9 +228,9 @@ function AppInfographicsComparison(props) {
                                 heading={`Visual Analytics`}
                             >
                                 <div className="mb-2 flex flex-col gap-0.5">
-                                    <ModelNote label={models && models.attention && models.attention.label} fallback="the attended-visual-targets gaze model (GazeFollow) + YOLOv5m head detector" />
-                                    <ModelNote label={models && models.emotion && models.emotion.label} fallback="ResMaskingNet (FER-2013, 7 emotions)" />
-                                    <ModelNote label={models && models.objects && models.objects.label} fallback="YOLOv4-P7 object detector (COCO)" />
+                                    <ModelNote label={models && models.attention && models.attention.label} fallback="Gaze-LLE (DINOv2, open SOTA) + YOLOv5m head detector" />
+                                    <ModelNote label={models && models.emotion && models.emotion.label} fallback="HSEmotion EfficientNet-B2 (AffectNet-8)" />
+                                    <ModelNote label={models && models.objects && models.objects.label} fallback="YOLO11m object detector (COCO)" />
                                 </div>
                                 <AppIndividualVideoFeaturesComponent
                                     session={props.session}
@@ -251,9 +251,9 @@ function AppInfographicsComparison(props) {
                                 heading={`Visual Analytics`}
                             >
                                 <div className="mb-2 flex flex-col gap-0.5">
-                                    <ModelNote label={models && models.attention && models.attention.label} fallback="the attended-visual-targets gaze model (GazeFollow) + YOLOv5m head detector" />
-                                    <ModelNote label={models && models.emotion && models.emotion.label} fallback="ResMaskingNet (FER-2013, 7 emotions)" />
-                                    <ModelNote label={models && models.objects && models.objects.label} fallback="YOLOv4-P7 object detector (COCO)" />
+                                    <ModelNote label={models && models.attention && models.attention.label} fallback="Gaze-LLE (DINOv2, open SOTA) + YOLOv5m head detector" />
+                                    <ModelNote label={models && models.emotion && models.emotion.label} fallback="HSEmotion EfficientNet-B2 (AffectNet-8)" />
+                                    <ModelNote label={models && models.objects && models.objects.label} fallback="YOLO11m object detector (COCO)" />
                                 </div>
                                 <AppIndividualVideoFeaturesComponent
                                     session={props.session}
