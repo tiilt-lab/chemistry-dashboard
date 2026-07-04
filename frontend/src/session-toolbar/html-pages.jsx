@@ -3,75 +3,68 @@ import style2 from "../dialog/dialog.module.css"
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { AppSpinner } from "../spinner/spinner-component"
 import React from "react"
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 function AppSessionPage(props) {
     return (
         <>
             <div className="side_bar">
-                <span className="m-3 inline-block h-fit w-min px-3 relative">
-                    <div className="inline-block w-max font-sans text-xl/normal font-bold sm:text-3xl/loose">
+                <div className="flex flex-none flex-col px-4 py-2 sm:w-full sm:items-start sm:px-6 sm:py-0">
+                    <div className="font-sans text-2xl leading-none font-bold text-tiilt-ink tabular-nums sm:text-3xl">
                         {props.timeText}
                     </div>
-                    <div className="inline-block w-max font-sans text-xs/snug font-normal sm:text-base/normal">
+                    <div className="mt-1 font-sans text-xs font-normal text-tiilt-muted sm:text-sm">
                         Total duration
                     </div>
-                </span>
-
-
+                </div>
 
                 {props.speakers && props.speakers.length !== 0 ? (
-                    <div className="flex relative max-w-4/6 flex-1 flex-row items-stretch justify-start sm:w-min sm:flex-col sm:max-w-full 
-                                border-2 border-tiilt rounded-lg px-2 mt-8 before:content-[attr(data-label)] 
-                    before:absolute before:-top-3 before:left-4  before:px-2 before:bg-white before:text-tiilt before:font-semibold"
-                        data-label="Participants">
-                        <ScrollArea className="h-[200px] mt-5 pr-3 border border-red-500">
-                            {props.speakers.map((part, index) => (
-
-                                <button
-                                    className="toolbar-button"
-                                    onClick={part.action}
-                                    key={index}
-                                >{`${part.alias}`}</button>
-
-                            ))
-                            }
+                    <div className="flex min-w-0 flex-1 flex-col px-3 sm:w-full sm:flex-none sm:px-6">
+                        <div className="mb-2 font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
+                            Participants
+                        </div>
+                        <ScrollArea className="max-h-[220px] pr-1">
+                            <div className="flex flex-row gap-2 sm:flex-col">
+                                {props.speakers.map((part, index) => (
+                                    <button
+                                        className="rounded-lg border border-tiilt-line bg-white px-3 py-2 text-sm font-semibold text-tiilt-ink transition hover:border-tiilt hover:bg-tiilt-soft sm:w-full sm:text-left"
+                                        onClick={part.action}
+                                        key={index}
+                                    >{`${part.alias}`}</button>
+                                ))}
+                            </div>
                         </ScrollArea>
-                    </div>) :
-
-                    (
-                        <></>
-                    )}
+                    </div>
+                ) : (
+                    <></>
+                )}
 
                 {props.seesions && props.seesions.length !== 0 ? (
-                    <div className="flex relative max-w-4/6 flex-1 flex-row items-stretch justify-start sm:w-min sm:flex-col sm:max-w-full 
-                                border-2 border-tiilt rounded-lg px-2 mt-8 before:content-[attr(data-label)] 
-                    before:absolute before:-top-3 before:left-4  before:px-2 before:bg-white before:text-tiilt before:font-semibold"
-                        data-label="Sessions">
-                        <ScrollArea className="h-[200px] mt-5 pr-3 border border-red-500">
-                            {props.seesions.map((part, index) => (
-
-                                <button
-                                    className="toolbar-button"
-                                    onClick={part.action}
-                                    key={index}
-                                >{`${part.title}`}</button>
-
-                            ))
-                            }
+                    <div className="flex min-w-0 flex-1 flex-col px-3 sm:w-full sm:flex-none sm:px-6">
+                        <div className="mb-2 font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
+                            Sessions
+                        </div>
+                        <ScrollArea className="max-h-[220px] pr-1">
+                            <div className="flex flex-row gap-2 sm:flex-col">
+                                {props.seesions.map((part, index) => (
+                                    <button
+                                        className="rounded-lg border border-tiilt-line bg-white px-3 py-2 text-sm font-semibold text-tiilt-ink transition hover:border-tiilt hover:bg-tiilt-soft sm:w-full sm:text-left"
+                                        onClick={part.action}
+                                        key={index}
+                                    >{`${part.title}`}</button>
+                                ))}
+                            </div>
                         </ScrollArea>
-                    </div>) :
+                    </div>
+                ) : (
+                    <></>
+                )}
 
-                    (
-                        <></>
-                    )}
-
-
-                <div className="flex relative max-w-4/6 flex-1 flex-row items-center justify-center sm:w-min sm:flex-col sm:max-w-full">
+                <div className="flex flex-row items-center gap-2 px-3 sm:mt-auto sm:w-full sm:flex-col sm:px-6">
                     {props.menus && props.menus.length ? (
                         props.menus.map((menu, index) => (
                             <button
-                                className="toolbar-button"
+                                className="rounded-lg bg-tiilt px-4 py-2 text-sm font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px sm:w-full"
                                 onClick={menu.action}
                                 key={index}
                             >{`${menu.title}`}</button>
@@ -79,15 +72,14 @@ function AppSessionPage(props) {
                     ) : (
                         <></>
                     )}
+                    <button
+                        className="rounded-lg bg-tiilt-danger px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 active:translate-y-px disabled:hidden sm:w-full"
+                        onClick={props.onEndSession}
+                        disabled={!props.session.recording || props.fromClient}
+                    >
+                        End
+                    </button>
                 </div>
-
-                <button
-                    className="relative mx-2 box-border w-19 cursor-pointer rounded-4xl border bg-tiilt-danger px-1 py-2 text-center font-sans text-base/normal font-normal text-white transition-shadow hover:shadow-2xl disabled:hidden sm:w-33 sm:text-xl/loose sm:mx-0 sm:my-5"
-                    onClick={props.onEndSession}
-                    disabled={!props.session.recording || props.fromClient}
-                >
-                    End
-                </button>
             </div>
 
             <GenericDialogBox show={props.sessionEnding}>
