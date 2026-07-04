@@ -7,9 +7,26 @@ import questIcon from "../assets/img/question.svg"
 function AppKeywordsPage(props) {
     return (
         <>
-            <div
-                className="min-h-20 w-full"
-            >
+            <div className="min-h-20 w-full">
+                <div className="mb-2 flex items-center justify-between">
+                    <img
+                        onClick={() => props.toggleDisplay(true)}
+                        className="h-4 w-4 cursor-pointer opacity-70"
+                        alt="About keyword detection"
+                        src={questIcon}
+                    />
+                    <AppContextMenu setcallback={props.setCallbackFunc}>
+                        <div
+                            className="mt-2.5"
+                            onClick={() => {
+                                props.toggleGraph()
+                                props.callbackfunc(false)
+                            }}
+                        >
+                            {props.showGraph ? "Show Words" : "Show Timeline"}
+                        </div>
+                    </AppContextMenu>
+                </div>
                 {!props.showGraph ? (
                     <React.Fragment>
                         {props.displayKeywords
@@ -105,25 +122,6 @@ function AppKeywordsPage(props) {
                 ) : (
                     <></>
                 )}
-                <img
-                    onClick={() => props.toggleDisplay(true)}
-                    className="absolute top-0 left-0 mt-3.5 ml-1 cursor-pointer"
-                    alt="question"
-                    src={questIcon}
-                />
-                <div className="absolute top-0 right-0 mt-3.5 mr-1 cursor-pointer">
-                    <AppContextMenu setcallback={props.setCallbackFunc}>
-                        <div
-                            className="mt-2.5"
-                            onClick={() => {
-                                props.toggleGraph()
-                                props.callbackfunc(false)
-                            }}
-                        >
-                            {props.showGraph ? "Show Words" : "Show Timeline"}
-                        </div>
-                    </AppContextMenu>
-                </div>
             </div>
 
             <DialogBox
