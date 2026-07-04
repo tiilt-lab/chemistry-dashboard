@@ -16,6 +16,24 @@ function VideoPlayer({ sessionId, sessionDeviceId, selectedTime, onSelectTime })
         new ApiService().getEndpoint() +
         `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/video`
 
+    // MediaRecorder .webm files ship without a duration in the header, so the
+    // browser reports Infinity (shown as 24:00:00) and the scrubber is useless.
+    // Seeking to a huge time forces the browser to read to the end and recover
+    // the real duration, then we snap back to the start.
+    const recoverDuration = () => {
+        const v = ref.current
+        if (!v) return
+        if (v.duration === Infinity || v.duration > 1e6) {
+            const restore = () => {
+                v.removeEventListener("timeupdate", restore)
+                seekingFromProp.current = true
+                v.currentTime = 0
+            }
+            v.addEventListener("timeupdate", restore)
+            v.currentTime = 1e7
+        }
+    }
+
     // External selection (transcript / graph) -> seek the video.
     useEffect(() => {
         const v = ref.current
@@ -56,7 +74,10 @@ function VideoPlayer({ sessionId, sessionDeviceId, selectedTime, onSelectTime })
             src={src}
             controls
             preload="metadata"
-            onLoadedMetadata={() => setStatus("ready")}
+            onLoadedMetadata={() => {
+                setStatus("ready")
+                recoverDuration()
+            }}
             onError={() => setStatus("missing")}
             onSeeked={onSeeked}
             className="max-h-[60vh] w-full rounded-lg bg-black"

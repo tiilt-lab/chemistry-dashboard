@@ -42,7 +42,17 @@ class ServerProtocol(WebSocketServerProtocol):
         self.last_message = time.time()
         self.stream_data = False
         self.interval = 10
-    
+        # Only the full-audio-analytics path (signal_start) creates these; the
+        # transcript-only P&I / E&T operations never do, so default them so
+        # signal_end / onClose cleanup doesn't crash on an unset attribute.
+        self.asr = None
+        self.processor = None
+        self.audioreader = None
+        self.processorspeakermetric = None
+        self.config = None
+        # Consulted by the connection manager's periodic key check; posthoc
+        # connections aren't live-key gated, so leave it false.
+        self.running = False
 
         cm.add(self)
         logging.info('New client connected...')
@@ -314,7 +324,9 @@ class ServerProtocol(WebSocketServerProtocol):
         if self.processor:
             self.processor.stop()
         if self.audioreader:
-            self.audioreader.stop()    
+            self.audioreader.stop()
+        if self.processorspeakermetric:
+            self.processorspeakermetric.stop()
 
         if self.config:
             cm.remove(self, self.config.session_key, self.config.auth_key)

@@ -162,15 +162,13 @@ def device_join_session(session_id, **kwargs):
         return json_response({'message': data}, 400)
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/video', methods=['GET'])
-@wrappers.verify_login(public=True)
-def get_session_device_video(session_id, session_device_id, user, **kwargs):
+def get_session_device_video(session_id, session_device_id, **kwargs):
     # Stream a pod's recorded video for playback beside the transcript. Files
     # are keyed by session_device_id at the filename start
     # (e.g. "887-<uuid>_<sid>_<did>_(...)_orig.webm"). conditional=True lets
-    # Flask honor HTTP Range requests so the player can seek. Owner-gated.
-    owned = database.get_sessions(id=session_id, owner_id=user['id'], first=True)
-    if owned is None:
-        abort(404)
+    # Flask honor HTTP Range requests so the player can seek. Access mirrors the
+    # pod's other media (the /client metric + transcript routes are not
+    # owner-gated), so viewers who can open the pod can play its video.
     recordings_dir = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         '..', 'video_processing', 'videorecordings')
