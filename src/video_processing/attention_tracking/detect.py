@@ -74,6 +74,26 @@ class ImageObjectDetection:
         pred2 = self.model_2(img, augment=self.augment)[0]
         return non_max_suppression(pred2, self.model2_conf_thres, self.model2_iou_thres, classes=self.classes, agnostic=self.agnostic_nms)
 
+    def _predict_heads(self, img):
+        # Head/person detections as a list of (N,6) [x1,y1,x2,y2,conf,cls]
+        # tensors in the SAME letterboxed coordinate space as the object
+        # predictions, so the downstream cat + scale_coords is unchanged.
+        if self.model_1v2 is not None:
+            results = self.model_1v2(img.float(), conf=self.model1_conf_thres,
+                                     iou=self.model1_iou_thres, half=True, verbose=False)
+            out = []
+            for r in results:
+                # The downstream merge keeps class-id >= 1 as "head". A
+                # CrowdHuman head-only model typically emits class 0, so remap
+                # every detection to class 1 to preserve heads.
+                # NOTE: confirm the class layout of your chosen checkpoint — if
+                # it also emits 'person', filter to the head class before remap.
+                cls = torch.ones((r.boxes.xyxy.shape[0], 1), device=r.boxes.xyxy.device)
+                out.append(torch.cat((r.boxes.xyxy, r.boxes.conf.unsqueeze(1), cls), dim=1))
+            return out
+        pred = self.model_1(img, augment=self.augment)[0]
+        return non_max_suppression(pred, self.model1_conf_thres, self.model1_iou_thres, classes=self.classes, agnostic=self.agnostic_nms)
+
     def init_model(self,batch_size):
         self.batch_size = batch_size
         base_path = os.path.dirname(os.path.abspath(__file__))
@@ -83,10 +103,21 @@ class ImageObjectDetection:
         self.device = select_device('')
         self.half = self.device.type != 'cpu'  # half precision only supported on CUDA
         # Load model
-        self.model_1 = attempt_load(weight_1, map_location=self.device)  # load FP32 model for head and person detection
+        from facial_recognition_backend import get_face_backend
+        self.face_backend = get_face_backend()  # dlib (default) or insightface, per config.face_model()
+        import config as _cf
+        # Head detector is config-selected: the vendored yolo_head CrowdHuman
+        # YOLOv5m pickle (default) or an ultralytics YOLO11/YOLOv8 head model.
+        # Moving to 'ultralytics' is the path to retiring the vendored yolo_head/.
+        self.model_1v2 = None
+        if _cf.head_model() == 'ultralytics':
+            from ultralytics import YOLO as _YOLO
+            self.model_1v2 = _YOLO(os.path.join(base_path, _cf.head_weights()))
+            self.model_1 = None
+        else:
+            self.model_1 = attempt_load(weight_1, map_location=self.device)  # load FP32 model for head and person detection
         # Object detector is config-selected: YOLO11 (open SOTA; default) or the
         # original YOLOv4-P7 pickle (requires the legacy mish_cuda package).
-        import config as _cf
         self.model_2v2 = None
         if _cf.object_model() == 'yolo11':
             from ultralytics import YOLO as _YOLO
@@ -94,11 +125,15 @@ class ImageObjectDetection:
             self.model_2 = None
         else:
             self.model_2 = attempt_load(weight_2, map_location=self.device)  # load FP32 model for person and other object detection
-        #prep model 1
-        self.stride = int(self.model_1.stride.max())  # model stride
-        imgsz_1 = check_img_size(self.imgsz, s=self.stride)  # check img_size
-        if self.half:
-            self.model_1.half()  # to FP16 
+        #prep model 1 (legacy yolov5 head path only; ultralytics manages its own)
+        imgsz_1 = self.imgsz
+        if self.model_1 is not None:
+            self.stride = int(self.model_1.stride.max())  # model stride
+            imgsz_1 = check_img_size(self.imgsz, s=self.stride)  # check img_size
+            if self.half:
+                self.model_1.half()  # to FP16
+        else:
+            self.stride = 32
 
         #prep model 2 (legacy yolov4 path only)
         if self.model_2 is not None:
@@ -109,14 +144,17 @@ class ImageObjectDetection:
 
 
         # Run inference
-        if self.device.type != 'cpu':
+        if self.model_1 is not None and self.device.type != 'cpu':
             self.model_1(torch.zeros(self.batch_size, 3, imgsz_1, imgsz_1).to(self.device).type_as(next(self.model_1.parameters())))  # run once
 
             if self.model_2 is not None:
                 self.model_2(torch.zeros(self.batch_size, 3, imgsz_2, imgsz_2).to(self.device).type_as(next(self.model_2.parameters())))  # run once
 
         # Get names  for pred 1
-        names_model_1 = self.model_1.module.names if hasattr(self.model_1, 'module') else self.model_1.names
+        if self.model_1v2 is not None:
+            names_model_1 = dict(self.model_1v2.names)
+        else:
+            names_model_1 = self.model_1.module.names if hasattr(self.model_1, 'module') else self.model_1.names
         # Get names for pred 2
         if self.model_2v2 is not None:
             names_model_2 = dict(self.model_2v2.names)
@@ -303,10 +341,8 @@ class ImageObjectDetection:
             if img.ndimension() == 3:
                 img = img.unsqueeze(0)
 
-            # Inference
-            pred = self.model_1(img, augment=self.augment)[0]
-            # Apply NMS
-            pred = non_max_suppression(pred, self.model1_conf_thres, self.model1_iou_thres, classes=self.classes, agnostic=self.agnostic_nms)
+            # Inference (+ NMS) — head detector, config-selected backend
+            pred = self._predict_heads(img)
             pred2 = self._predict_objects(img)
             
             #combine pred and pred 2, filter out all cls 0 (person) detection for pred. keep only head (cls 1) detection 
@@ -364,10 +400,8 @@ class ImageObjectDetection:
                 if img.ndimension() == 3:
                     img = img.unsqueeze(0)
 
-                # Inference
-                pred = self.model_1(img, augment=self.augment)[0]
-                # Apply NMS
-                pred = non_max_suppression(pred, self.model1_conf_thres, self.model1_iou_thres, classes=self.classes, agnostic=self.agnostic_nms)
+                # Inference (+ NMS) — head detector, config-selected backend
+                pred = self._predict_heads(img)
                 pred2 = self._predict_objects(img)
                 
                 #combine pred and pred 2, filter out all cls 0 (person) detection for pred. keep only head (cls 1) detection 
@@ -419,12 +453,12 @@ class ImageObjectDetection:
                             if  quality_face is None:
                                 continue
 
-                            face_locations = face_recognition.face_locations(quality_face, model="cnn") #hog is faster but less accurate than cnn. cnn may not work well with small faces.
+                            face_locations = self.face_backend.locate(quality_face, model="cnn") #hog is faster but less accurate than cnn. cnn may not work well with small faces.
                             # logging.info("Face locations for small : {0}".format(face_locations))
                             # face_locations = face_recognition.face_locations(face_big, model="cnn") #hog is faster but less accurate than cnn. cnn may not work well with small faces.
                             # logging.info("Face locations for big : {0}".format(face_locations))
                             if face_locations:
-                                face_embedding  = face_recognition.face_encodings(quality_face, face_locations,num_jitters=2)
+                                face_embedding  = self.face_backend.encode(quality_face, face_locations,num_jitters=2)
                                 # (top, right, bottom, left) =  face_locations[0]
                                 # face_2 = face_big[top:bottom, left:right]
                                 # save_to = os.path.join(vid_img_dir, "face_{0}_{1}_{2}.{3}".format(int(p),self.object_names_K_V.get(int_cls, None),detected_faces,'png'))
@@ -432,7 +466,7 @@ class ImageObjectDetection:
                             else:  
                                 # logging.info("Face locations: empty")
                                 h_face, w_face = quality_face.shape[:2]
-                                face_embedding  = face_recognition.face_encodings(face,known_face_locations=[(0, w_face, h_face, 0)],num_jitters=2)
+                                face_embedding  = self.face_backend.encode(face,known_face_locations=[(0, w_face, h_face, 0)],num_jitters=2)
                             # logging.info("Face locations: {0}".format(face_locations))
                             if face_embedding:  
                                 match, cos_score,L2_score,dist_score = self.identify_student(face_embedding[0], facial_embeddings, "face_"+str(detected_faces),cos_threshold=0.95,L2_threshold=0.3,frame_index=int(p))
@@ -505,20 +539,22 @@ class ImageObjectDetection:
         best_cos_score = -1  # cosine similarity ranges -1 to 1
         best_L2_score = 1
         best_distance = 1
+        # Backend-appropriate acceptance cutoff (dlib: L2<0.5; ArcFace: cos-dist).
+        max_distance = self.face_backend.match_params()["max_distance"]
         for person in store_facial_embeddings:
             stored_embedding = store_facial_embeddings[person]["data"]
             student = store_facial_embeddings[person]["alias"]
             # logging.info("student is ......{0}".format(student))
             # self.debug_embed(detect_img_name,face_embedding)
             # self.debug_embed(student,stored_embedding)
-            distance = face_recognition.face_distance([stored_embedding], face_embedding)[0]
+            distance = self.face_backend.distance(stored_embedding, face_embedding)
             u = self.normalize(face_embedding)
             v = self.normalize(stored_embedding)
-            
+
             score = float(np.dot(u, v)) #self.cosine_similarity(face_embedding, stored_embedding)
             Euc_dist = float(np.linalg.norm(u - v))
             # logging.info(f"score are Euclidean: {Euc_dist} and cos simillarity: {score} and distance: {distance}")
-            if distance < 0.5 and score > best_cos_score and Euc_dist < best_L2_score and distance < best_distance:
+            if distance < max_distance and score > best_cos_score and Euc_dist < best_L2_score and distance < best_distance:
                 best_cos_score = score
                 best_L2_score = Euc_dist
                 best_match = student

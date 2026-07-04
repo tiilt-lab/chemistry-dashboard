@@ -82,6 +82,33 @@ def object_model():
         initialize()
     return str(config.get('videoprocessing', 'object_model', fallback='yolo11'))
 
+def head_model():
+    # Head/person detector: 'yolov5' (the vendored yolo_head CrowdHuman
+    # YOLOv5m, default) or 'ultralytics' (a YOLO11/YOLOv8 head model loaded via
+    # the ultralytics package — set head_weights). Moving to 'ultralytics' is
+    # what allows retiring the vendored yolo_head/ repo. No official
+    # CrowdHuman-YOLO11 checkpoint exists yet; supply your own weights.
+    if 'config' not in globals():
+        initialize()
+    return str(config.get('videoprocessing', 'head_model', fallback='yolov5'))
+
+def head_weights():
+    # Weights file for head_model='ultralytics' (e.g. a CrowdHuman-trained
+    # YOLOv8/YOLO11 .pt). Relative to attention_tracking/.
+    if 'config' not in globals():
+        initialize()
+    return str(config.get('videoprocessing', 'head_weights',
+                          fallback='crowdhuman_yolov8m_head.pt'))
+
+def face_model():
+    # Face detection + embedding backend: 'dlib' (face_recognition 128-D,
+    # default) or 'insightface' (ArcFace buffalo_l 512-D, open SOTA). Switching
+    # requires re-enrolling students and using ArcFace thresholds — see
+    # facial_recognition_backend.py.
+    if 'config' not in globals():
+        initialize()
+    return str(config.get('videoprocessing', 'face_model', fallback='dlib'))
+
 def attention_model():
     # Gaze/attention backend: 'gazelle' (Gaze-LLE, open SOTA, default) or
     # 'gazefollow' (the 2020 ModelSpatial weights).
