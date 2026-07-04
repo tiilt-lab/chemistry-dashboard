@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Line } from "react-chartjs-2"
 import { Chart as ChartJS } from "chart.js/auto"
 import { formatSeconds } from "../../globals"
@@ -200,6 +200,115 @@ function Legend({ items, colorFor }) {
     )
 }
 
+// Cells for a "dominant value per bin" track (one row per participant).
+function swimlaneCells(bins, colorFor, t0, t1) {
+    const n = bins.length
+    return bins.map((b, i) => {
+        const d = dominant(b.counts)
+        const t = t0 + ((t1 - t0) * (i + 0.5)) / n
+        return {
+            color: d ? colorFor(d) : "transparent",
+            title: d ? `${formatSeconds(t)} · ${d}` : "",
+        }
+    })
+}
+
+// Cells for a "category intensity per bin" track (one row per category).
+function heatCells(bins, category, color, t0, t1) {
+    const n = bins.length
+    return bins.map((b, i) => {
+        const intensity = b.total ? (b.counts[category] || 0) / b.total : 0
+        const t = t0 + ((t1 - t0) * (i + 0.5)) / n
+        return {
+            color,
+            opacity: intensity,
+            title: `${formatSeconds(t)} · ${Math.round(intensity * 100)}%`,
+        }
+    })
+}
+
+// A stack of aligned category/participant tracks with a fixed label column and
+// a shared horizontally-scrollable time area. Draws a playback cursor synced to
+// the video (playbackTime, session seconds) and seeks the video on click.
+function TimelineTracks({ tracks, t0, t1, zoom, playbackTime, onSeek }) {
+    const vpRef = useRef(null)
+    const frac =
+        playbackTime != null && t1 > t0
+            ? Math.min(1, Math.max(0, (playbackTime - t0) / (t1 - t0)))
+            : null
+
+    // Keep the cursor in view as the video plays.
+    useEffect(() => {
+        const vp = vpRef.current
+        if (!vp || frac == null) return
+        const x = frac * vp.scrollWidth
+        if (x < vp.scrollLeft + 24 || x > vp.scrollLeft + vp.clientWidth - 24) {
+            vp.scrollLeft = x - vp.clientWidth / 2
+        }
+    }, [frac, zoom])
+
+    const handleClick = (e) => {
+        const vp = vpRef.current
+        if (!vp || !onSeek) return
+        const rect = vp.getBoundingClientRect()
+        const xInContent = e.clientX - rect.left + vp.scrollLeft
+        const f = Math.min(1, Math.max(0, xInContent / vp.scrollWidth))
+        onSeek(t0 + f * (t1 - t0))
+    }
+
+    return (
+        <div className="flex gap-2">
+            <div className="flex w-20 flex-none flex-col gap-1">
+                {tracks.map((tr) => (
+                    <div
+                        key={tr.name}
+                        className="flex h-4 items-center truncate text-xs text-tiilt-ink"
+                        title={tr.name}
+                    >
+                        {tr.name}
+                    </div>
+                ))}
+            </div>
+            <div
+                ref={vpRef}
+                onClick={handleClick}
+                className="relative grow overflow-x-auto"
+                style={{ cursor: onSeek ? "pointer" : "default" }}
+            >
+                <div
+                    className="relative flex flex-col gap-1"
+                    style={{ width: `${zoom * 100}%`, minWidth: "100%" }}
+                >
+                    {tracks.map((tr) => (
+                        <div
+                            key={tr.name}
+                            className="flex h-4 overflow-hidden rounded border border-tiilt-line/60"
+                        >
+                            {tr.cells.map((c, i) => (
+                                <span
+                                    key={i}
+                                    className="h-full flex-1"
+                                    title={c.title}
+                                    style={{
+                                        backgroundColor: c.color,
+                                        opacity: c.opacity == null ? 1 : c.opacity,
+                                    }}
+                                />
+                            ))}
+                        </div>
+                    ))}
+                    {frac != null ? (
+                        <div
+                            className="pointer-events-none absolute top-0 bottom-0 z-10 w-0.5 bg-tiilt-danger"
+                            style={{ left: `${frac * 100}%` }}
+                        />
+                    ) : null}
+                </div>
+            </div>
+        </div>
+    )
+}
+
 function SectionHeader({ children }) {
     return (
         <div className="font-ahamono mb-2 text-[11px] tracking-wider text-tiilt-muted uppercase">
@@ -208,8 +317,9 @@ function SectionHeader({ children }) {
     )
 }
 
-function VideoAnalyticsPanel({ videometrics, start, end, models }) {
+function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, onSeek }) {
     const [selected, setSelected] = useState(ALL)
+    const [zoom, setZoom] = useState(1)
     const metrics = (videometrics || []).filter((m) => inRange(m, start, end))
 
     if (metrics.length === 0) {
@@ -319,7 +429,34 @@ function VideoAnalyticsPanel({ videometrics, start, end, models }) {
 
     return (
         <div className="flex w-full flex-col gap-6">
-            <div className="flex items-center justify-end">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-1 text-sm text-tiilt-muted">
+                    <span className="mr-1">Zoom</span>
+                    <button
+                        onClick={() => setZoom((z) => Math.max(1, +(z - 0.5).toFixed(1)))}
+                        disabled={zoom <= 1}
+                        className="flex h-7 w-7 items-center justify-center rounded-md border border-tiilt-line font-semibold transition hover:bg-tiilt-soft disabled:opacity-40"
+                        aria-label="Zoom out"
+                    >
+                        −
+                    </button>
+                    <span className="w-8 text-center font-ahamono tabular-nums">
+                        {zoom}×
+                    </span>
+                    <button
+                        onClick={() => setZoom((z) => Math.min(8, +(z + 0.5).toFixed(1)))}
+                        disabled={zoom >= 8}
+                        className="flex h-7 w-7 items-center justify-center rounded-md border border-tiilt-line font-semibold transition hover:bg-tiilt-soft disabled:opacity-40"
+                        aria-label="Zoom in"
+                    >
+                        +
+                    </button>
+                    {onSeek ? (
+                        <span className="ml-2 hidden text-xs text-tiilt-muted sm:inline">
+                            · click a timeline to jump the video
+                        </span>
+                    ) : null}
+                </div>
                 <label className="flex items-center gap-2 text-sm text-tiilt-muted">
                     Participant
                     <select
@@ -361,36 +498,29 @@ function VideoAnalyticsPanel({ videometrics, start, end, models }) {
                         fallback="ResMaskingNet (FER-2013, 7 emotions)"
                     />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                    {isAll
-                        ? participants.map((p) => (
-                              <Swimlane
-                                  key={p}
-                                  name={p}
-                                  bins={binCounts(
-                                      byParticipant[p] || [],
-                                      "facial_emotion",
+                <TimelineTracks
+                    tracks={
+                        isAll
+                            ? participants.map((p) => ({
+                                  name: p,
+                                  cells: swimlaneCells(
+                                      binCounts(byParticipant[p] || [], "facial_emotion", t0, t1, N_BINS),
+                                      emotionColor,
                                       t0,
                                       t1,
-                                      N_BINS,
-                                  )}
-                                  colorFor={emotionColor}
-                                  t0={t0}
-                                  t1={t1}
-                              />
-                          ))
-                        : emotionCats.map((c) => (
-                              <HeatStrip
-                                  key={c}
-                                  label={c}
-                                  category={c}
-                                  bins={emotionBins}
-                                  color={emotionColor(c)}
-                                  t0={t0}
-                                  t1={t1}
-                              />
-                          ))}
-                </div>
+                                  ),
+                              }))
+                            : emotionCats.map((c) => ({
+                                  name: c,
+                                  cells: heatCells(emotionBins, c, emotionColor(c), t0, t1),
+                              }))
+                    }
+                    t0={t0}
+                    t1={t1}
+                    zoom={zoom}
+                    playbackTime={playbackTime}
+                    onSeek={onSeek}
+                />
                 <Axis t0={t0} t1={t1} />
                 <div className="mt-2 flex flex-col gap-1.5">
                     <StackedBar
@@ -421,36 +551,29 @@ function VideoAnalyticsPanel({ videometrics, start, end, models }) {
                         fallback="YOLOv4-P7 object detector (COCO) + gaze direction"
                     />
                 </div>
-                <div className="flex flex-col gap-1.5">
-                    {isAll
-                        ? participants.map((p) => (
-                              <Swimlane
-                                  key={p}
-                                  name={p}
-                                  bins={binCounts(
-                                      byParticipant[p] || [],
-                                      "_focus",
+                <TimelineTracks
+                    tracks={
+                        isAll
+                            ? participants.map((p) => ({
+                                  name: p,
+                                  cells: swimlaneCells(
+                                      binCounts(byParticipant[p] || [], "_focus", t0, t1, N_BINS),
+                                      objectColor,
                                       t0,
                                       t1,
-                                      N_BINS,
-                                  )}
-                                  colorFor={objectColor}
-                                  t0={t0}
-                                  t1={t1}
-                              />
-                          ))
-                        : objectCats.map((c) => (
-                              <HeatStrip
-                                  key={c}
-                                  label={c}
-                                  category={c}
-                                  bins={focusBins}
-                                  color={objectColor(c)}
-                                  t0={t0}
-                                  t1={t1}
-                              />
-                          ))}
-                </div>
+                                  ),
+                              }))
+                            : objectCats.map((c) => ({
+                                  name: c,
+                                  cells: heatCells(focusBins, c, objectColor(c), t0, t1),
+                              }))
+                    }
+                    t0={t0}
+                    t1={t1}
+                    zoom={zoom}
+                    playbackTime={playbackTime}
+                    onSeek={onSeek}
+                />
                 <Axis t0={t0} t1={t1} />
                 <div className="mt-2 flex flex-col gap-1.5">
                     <StackedBar

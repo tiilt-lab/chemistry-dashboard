@@ -174,6 +174,8 @@ function AppInfographicsComparison(props) {
                                     start={props.startTime}
                                     end={props.endTime}
                                     models={models}
+                                    playbackTime={playbackTime}
+                                    onSeek={setSelectedTime}
                                 />
                             </AppSectionBoxComponent>
                         )}
