@@ -341,7 +341,12 @@ def mark_posthoc_completed(session_id, session_device_id, user, **kwargs):
     owned = database.get_sessions(id=session_id, owner_id=user['id'], first=True)
     if owned is None:
         return json_response({'message': 'Session not found.'}, 404)
-    if database.mark_session_device_posthoc(session_device_id):
+    # Optional per-run model provenance blob (e.g. {asr, embedder, diarizer,
+    # scorer, emotion, attention, ...}); absent for older callers.
+    from flask import request as _request
+    body = _request.get_json(silent=True) or {}
+    models = body.get('models')
+    if database.mark_session_device_posthoc(session_device_id, models=models):
         return json_response({'ok': True})
     return json_response({'message': 'Device not found.'}, 404)
 

@@ -22,11 +22,13 @@ class SessionService {
     return this.api.httpRequestCall(`api/v1/sessions/${sessionId}`, "GET", {});
   }
 
-  markPosthocCompleted(sessionId, sessionDeviceId) {
+  markPosthocCompleted(sessionId, sessionDeviceId, models = null) {
+    // `models` is the per-run model choice set (asr, embedder, diarizer,
+    // scorer, emotion, attention, ...) for provenance; optional.
     return this.api.httpRequestCall(
       `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/posthoc_completed`,
       "POST",
-      {},
+      models ? { models } : {},
     );
   }
 
