@@ -1,33 +1,105 @@
-import React, { useState } from "react"
+import React from "react"
 import { Appheader } from "../header/header-component"
-import { VoiceRecorder } from "react-voice-recorder-player"
-import {
-    DialogBox,
-    WaitingDialog,
-    DialogBoxTwoOption,
-    GenericDialogBox,
-} from "../dialog/dialog-component"
-import { AppSectionBoxComponent } from "../components/section-box/section-box-component"
-import { AppSpinner } from "../spinner/spinner-component"
-import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
-import { TranscriptsComponentClient } from "../transcripts/transcripts-component_client"
-import { adjDim, isLargeScreen } from "../myhooks/custom-hooks"
+import { DialogBox, WaitingDialog } from "../dialog/dialog-component"
+import { BrandCard } from "../components/brand-panel"
+import { RecordingCoach } from "./recording-coach"
 
-import style from "./profile-creation.module.css"
-import style2 from "../pod-details/pod.module.css"
-import style3 from "../manage-keyword-lists/manage-keyword-lists.module.css"
-import style4 from "../components/context-menu/context-menu.module.css"
-import style5 from "../sessions/sessions.module.css"
-import MicIcon from "@icons/Mic"
-import Checkmark from "@assets/img/checkmark.svg"
-import { AppContextMenu } from "../components/context-menu/context-menu-component"
-import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
-import {RecordingCoach} from "./recording-coach"
+const inputClass =
+    "h-12 w-full rounded-lg border border-tiilt-line bg-white px-3.5 text-base text-tiilt-ink transition outline-none " +
+    "focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
 
 function ProfileCreationPage(props) {
     return (
         <>
-            {(
+            {props.nextPage === "profile_creation" && (
+                <BrandCard>
+                    <button
+                        onClick={() => props.navigateToLogin()}
+                        className="mb-4 self-start text-sm font-semibold text-tiilt-muted hover:text-tiilt"
+                    >
+                        &larr; Back
+                    </button>
+                    <h2 className="text-xl font-semibold text-tiilt-ink">
+                        {props.pageTitle}
+                    </h2>
+                    <p className="mt-1 mb-6 text-sm text-tiilt-muted">
+                        Enter your name and a username. On the next page you
+                        will record a short video so BLINC can match your voice
+                        and face during analytics.
+                    </p>
+
+                    <div className="flex max-w-md flex-col gap-4">
+                        <div className="flex flex-col gap-1.5">
+                            <label
+                                htmlFor="firstname"
+                                className="text-sm font-semibold text-tiilt-ink"
+                            >
+                                First name
+                            </label>
+                            <input
+                                id="firstname"
+                                maxLength={50}
+                                autoComplete="given-name"
+                                placeholder="First name"
+                                className={inputClass}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label
+                                htmlFor="lastname"
+                                className="text-sm font-semibold text-tiilt-ink"
+                            >
+                                Last name
+                            </label>
+                            <input
+                                id="lastname"
+                                maxLength={50}
+                                autoComplete="family-name"
+                                placeholder="Last name"
+                                className={inputClass}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label
+                                htmlFor="username"
+                                className="text-sm font-semibold text-tiilt-ink"
+                            >
+                                Username
+                            </label>
+                            <input
+                                id="username"
+                                minLength={5}
+                                maxLength={10}
+                                autoCapitalize="off"
+                                spellCheck="false"
+                                placeholder="5–10 characters"
+                                className={inputClass}
+                            />
+                        </div>
+
+                        <button
+                            className="flex h-12 items-center justify-center rounded-lg bg-tiilt text-base font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
+                            onClick={() =>
+                                props.verifyUserProfileInput(
+                                    document
+                                        .getElementById("lastname")
+                                        .value.trim(),
+                                    document
+                                        .getElementById("firstname")
+                                        .value.trim(),
+                                    document
+                                        .getElementById("username")
+                                        .value.trim(),
+                                )
+                            }
+                        >
+                            Continue
+                        </button>
+                    </div>
+                </BrandCard>
+            )}
+
+            {props.nextPage === "video_audio_capture_page" && (
                 <div className="main-container">
                     <Appheader
                         title={props.pageTitle}
@@ -36,77 +108,20 @@ function ProfileCreationPage(props) {
                         rightEnabled={false}
                         nav={() => props.navigateToLogin()}
                     />
-                    {props.nextPage === "profile_creation" && (
-                        <React.Fragment>
-                            <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto text-center">
-                                <div>
-                                    <div className="my-1.5 font-sans text-base leading-5 font-normal text-[#727278]">
-                                        Please complete the form by providing your first and last name, and username
-                                    </div>
-                                    <div className="my-1.5 font-sans text-xs leading-5 font-normal text-[#727278]">
-                                        Your will need to record a 10 seconds video in the next page. This video will be stored to
-                                        help match you voice and face during analytics
-                                    </div>
-                                </div>
-                                <div>
-                                    <div>Last Name:</div>
-                                    <input
-                                        className="text-box small-section"
-                                        maxlength={50}
-                                        id="lastname"
-                                        placeholder="Last Name"
-                                    />
-                                    <div>First Name:</div>
-                                    <input
-                                        className="text-box small-section"
-                                        maxLength={50}
-                                        id="firstname"
-                                        placeholder="First Name"
-                                    />
-                                    <div>User Name:</div>
-                                    <input
-                                        maxlength={10}
-                                        minlength={5}
-                                        className="text-box small-section"
-                                        id="username"
-                                        placeholder="Username (10 characters max)"
-                                    />
-                                </div>
-                                <button
-                                    className="wide-button"
-                                    onClick={() =>
-                                        props.verifyUserProfileInput(
-                                            document
-                                                .getElementById("lastname")
-                                                .value.trim(),
-                                            document
-                                                .getElementById("firstname")
-                                                .value.trim(),
-                                            document
-                                                .getElementById("username")
-                                                .value.trim()
-                                        )
-                                    }
-                                >
-                                    Continue
-                                </button>
-                            </div>
-                        </React.Fragment>
-                    )}
-                    {props.nextPage === "video_audio_capture_page" && (
-                        <React.Fragment>
-                            <RecordingCoach
-                                maxDurationSec={60}
-                                minDurationSec={15}
-                                onTestClip={(blob, diag) => console.log('test', blob, diag)}
-                                onComplete={(blob, diag) => console.log('full', blob, diag)}
-                                saveRecording={props.saveRecording}
-                            />
-                        </React.Fragment>
-                    )}
-
+                    <RecordingCoach
+                        maxDurationSec={60}
+                        minDurationSec={15}
+                        onTestClip={(blob, diag) =>
+                            console.log("test", blob, diag)
+                        }
+                        onComplete={(blob, diag) =>
+                            console.log("full", blob, diag)
+                        }
+                        saveRecording={props.saveRecording}
+                    />
                 </div>
             )}
+
             <DialogBox
                 itsclass={"add-dialog"}
                 heading={"Error"}
