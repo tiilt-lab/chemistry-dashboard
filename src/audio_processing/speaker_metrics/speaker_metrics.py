@@ -1,4 +1,5 @@
 import numpy as np
+import threading
 from sentence_transformers import SentenceTransformer
 import logging
 import os
@@ -37,6 +38,10 @@ class SpeakerProcessor:
         # metric recomputation); accepted for compatibility with the post-hoc
         # SpeakerMetricProcessor.
         self.usedby = usedby
+        # The metric math below is stateful and order-dependent; post-hoc
+        # processing calls process_transcript from one thread per utterance
+        # (all at once for batch ASRs), so serialize it.
+        self.process_lock = threading.Lock()
         self.running_process = None
         self.running = False
 
@@ -123,6 +128,7 @@ class SpeakerProcessor:
 
     def process_transcript(self, speaker_transcript_data, action="realtime_processing"):
       try:
+       with self.process_lock:
         processing_timer = time.time()
         speaker_ids = list(self.speakers.keys())
 
@@ -163,7 +169,7 @@ class SpeakerProcessor:
         else:
            logging.warning('[Speaker_Metrics]Processing results FAILED to post for client {0} (Processing time: {1})'.format(self.auth_key, processing_time))
       except Exception as e:
-         logging.error('[Speaker Metrics]Processing FAILED for client {0}: {1}'.format(auth_key, e))
+         logging.error('[Speaker Metrics]Processing FAILED for client {0}: {1}'.format(self.auth_key, e))
 
 
 

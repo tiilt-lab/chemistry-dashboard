@@ -38,7 +38,10 @@ def checkFingerprints(x, fingerprints, verification):
       score, prediction = verification.verify_batch(np_signal, speaker_signal)
       # logging.info("Current prediction is {} with score of {}".format(prediction.item(), score.item()))
     except Exception as e:
-      logging.info("Error occured. while checking fingerprint: {0}".format(e))  
+      # A failed comparison (e.g. segment too short) must not abort the whole
+      # utterance — skip this speaker and keep going.
+      logging.info("Error occured. while checking fingerprint: {0}".format(e))
+      continue
     if prediction.item():
       if score.item() > max_score:
         max_score = score

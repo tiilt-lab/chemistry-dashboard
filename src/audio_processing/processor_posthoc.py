@@ -270,7 +270,7 @@ class AudioProcessorPosthoc:
                     logging.info( f"Processing results posted successfully for client {self.config.auth_key} (Processing time: {processing_time}) @ {start_time} for transcript {transcript_id}")
                 else:
                     logging.warning("Processing results FAILED to post for"
-                                    " client %d (Processing time: {%f)",
+                                    " client %s (Processing time: %f)",
                                     self.config.auth_key, processing_time)
 
             # Get source seperation
@@ -278,7 +278,7 @@ class AudioProcessorPosthoc:
             #   source_seperation = source_seperation_pre_trained(audio_data)
 
         except Exception as e:
-            logging.error("Processing FAILED for client %d: %s",
+            logging.error("Processing FAILED for client %s: %s",
                           self.config.auth_key, e)
 
         # Check if this was the final process of the transmission.

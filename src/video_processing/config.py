@@ -66,3 +66,11 @@ def redis_port():
 
 def redis_db():
     return int(config.get('redis', 'redis_db', fallback=0))
+def emotion_model():
+    # Facial-emotion backend: 'resmasking' (FER-2013, default) or 'hsemotion'
+    # (EfficientNet-B2 on AffectNet-8 via ONNX — the open SOTA option).
+    # Self-initializes because the servers select the model at import time,
+    # before main() calls initialize().
+    if 'config' not in globals():
+        initialize()
+    return str(config.get('videoprocessing', 'emotion_model', fallback='resmasking'))
