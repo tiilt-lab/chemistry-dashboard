@@ -19,8 +19,14 @@ def debug():
     return str(config['server']['debug']) in ['true', 'True', 't']
 
 def domain():
-    domain = str(config['server']['domain'])
-    return '{0}://{1}'.format('https' if https() else 'http', domain)
+    return domains()[0]
+
+def domains():
+    # 'domain' accepts a comma-separated list so one instance can serve
+    # several hostnames (all must be allowed as SocketIO CORS origins).
+    scheme = 'https' if https() else 'http'
+    value = str(config['server']['domain'])
+    return ['{0}://{1}'.format(scheme, d.strip()) for d in value.split(',') if d.strip()]
 
 # Temp field until we implement RDS.
 def database_user():

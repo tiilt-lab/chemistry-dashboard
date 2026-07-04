@@ -3,6 +3,7 @@ from twisted.internet import reactor, task
 from autobahn.twisted.websocket import WebSocketServerFactory
 from autobahn.twisted.websocket import WebSocketServerProtocol
 from app import socketio
+import os
 import json
 import time
 import threading
@@ -165,7 +166,7 @@ def run_server():
     ConnectionManager()
     factory = WebSocketServerFactory()
     factory.protocol = ServerProtocol
-    reactor.listenTCP(9001, factory, interface='127.0.0.1')
+    reactor.listenTCP(int(os.environ.get('DC_DEVICE_WS_PORT', 9001)), factory, interface='127.0.0.1')
     thread = threading.Thread(target=reactor.run, kwargs={'installSignalHandlers': False})
     thread.daemon = True
     thread.start()
