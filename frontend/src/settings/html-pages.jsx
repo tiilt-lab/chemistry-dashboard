@@ -103,6 +103,56 @@ function OptionButton({ label, danger, onClick }) {
     )
 }
 
+const dlgHeading = "mb-3 text-lg font-semibold text-tiilt-ink"
+const dlgClose =
+    "mt-4 w-full rounded-lg border border-tiilt-line bg-white py-2.5 text-sm font-semibold text-tiilt-ink transition hover:bg-tiilt-soft active:translate-y-px"
+
+function DataTable({ columns, rows }) {
+    return (
+        <div className="max-h-[60vh] overflow-auto rounded-lg border border-tiilt-line">
+            <table className="w-full border-collapse text-left text-sm">
+                <thead>
+                    <tr>
+                        {columns.map((c) => (
+                            <th
+                                key={c}
+                                className="sticky top-0 bg-tiilt-soft px-3 py-2 font-semibold whitespace-nowrap text-tiilt-ink"
+                            >
+                                {c}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows.length === 0 ? (
+                        <tr>
+                            <td
+                                colSpan={columns.length}
+                                className="px-3 py-6 text-center text-tiilt-muted"
+                            >
+                                Nothing to show.
+                            </td>
+                        </tr>
+                    ) : (
+                        rows.map((row, i) => (
+                            <tr key={i} className="border-t border-tiilt-line">
+                                {row.map((cell, j) => (
+                                    <td
+                                        key={j}
+                                        className="px-3 py-2 whitespace-nowrap text-tiilt-ink"
+                                    >
+                                        {cell}
+                                    </td>
+                                ))}
+                            </tr>
+                        ))
+                    )}
+                </tbody>
+            </table>
+        </div>
+    )
+}
+
 function SettingComponentPage(props) {
     return (
         <>
@@ -207,44 +257,24 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "ViewUsers" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
-                            View Users
-                        </div>
-                        <div className={style["user-table"]}>
-                            <div className={style["user-row"]}>
-                                <span className={style["user-name bold"]}>
-                                    Username / Email
-                                </span>
-                                <span className={style["user-role bold"]}>
-                                    Role
-                                </span>
-                                <span className={style["user-locked bold"]}>
-                                    Locked
-                                </span>
-                                <span className={style["user-api bold"]}>
-                                    API
-                                </span>
-                            </div>
-                            {props.users.map((u, index) => (
-                                <div key={index} className={style["user-row"]}>
-                                    <span className={style["user-name"]}>
-                                        {u.email}
-                                    </span>
-                                    <span className={style["user-role"]}>
-                                        {u.role}
-                                    </span>
-                                    <span className={style["user-locked"]}>
-                                        {JSON.stringify(u.locked)}
-                                    </span>
-                                    <span className={style["user-api"]}>
-                                        {JSON.stringify(u.api_access)}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
+                    <div className="min-w-[min(34rem,88vw)]">
+                        <div className={dlgHeading}>View Users</div>
+                        <DataTable
+                            columns={[
+                                "Username / Email",
+                                "Role",
+                                "Locked",
+                                "API",
+                            ]}
+                            rows={props.users.map((u) => [
+                                u.email,
+                                u.role,
+                                u.locked ? "Yes" : "No",
+                                u.api_access ? "Yes" : "No",
+                            ])}
+                        />
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgClose}
                             onClick={props.closeDialog}
                         >
                             Close
@@ -255,38 +285,18 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "ViewStudentProfile" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
-                            View Students
-                        </div>
-                        <div className={style["user-table"]}>
-                            <div className={style["user-row"]}>
-                                <span className={style["user-name bold"]}>
-                                    Username
-                                </span>
-                                <span className={style["user-role bold"]}>
-                                    First Name
-                                </span>
-                                <span className={style["user-locked bold"]}>
-                                    Last Name
-                                </span>
-                            </div>
-                            {props.students.map((s, index) => (
-                                <div key={index} className={style["user-row"]}>
-                                    <span className={style["user-name"]}>
-                                        {s.username}
-                                    </span>
-                                    <span className={style["user-role"]}>
-                                        {s.lastname}
-                                    </span>
-                                    <span className={style["user-locked"]}>
-                                        {s.firstname}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
+                    <div className="min-w-[min(30rem,88vw)]">
+                        <div className={dlgHeading}>View Students</div>
+                        <DataTable
+                            columns={["Username", "First Name", "Last Name"]}
+                            rows={props.students.map((s) => [
+                                s.username,
+                                s.firstname,
+                                s.lastname,
+                            ])}
+                        />
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgClose}
                             onClick={props.closeDialog}
                         >
                             Close
@@ -297,56 +307,28 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "ViewRaters" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
-                            View Raters
-                        </div>
-                        <div className={style["user-table"]}>
-                            <div className={style["user-row"]}>
-                                <span className={style["user-name bold"]}>
-                                    rater_id
-                                </span>
-                                <span className={style["user-role bold"]}>
-                                    sess_id
-                                </span>
-                                <span className={style["user-locked bold"]}>
-                                    dev_id
-                                </span>
-                                <span className={style["user-locked bold"]}>
-                                    spkr_id
-                                </span>
-                                <span className={style["user-locked bold"]}>
-                                    spkr_Tag
-                                </span>
-                                <span className={style["user-locked bold"]}>
-                                    type
-                                </span>
-                            </div>
-                            {props.raters.map((r, index) => (
-                                <div key={index} className={style["user-row"]}>
-                                    <span className={style["user-name"]}>
-                                        {r.raterid}
-                                    </span>
-                                    <span className={style["user-role"]}>
-                                        {r.sessionid}
-                                    </span>
-                                    <span className={style["user-locked"]}>
-                                        {r.sessiondeviceid}
-                                    </span>
-                                    <span className={style["user-locked"]}>
-                                        {r.speakerid}
-                                    </span>
-                                    <span className={style["user-locked"]}>
-                                        {r.speakertag}
-                                    </span>
-                                    <span className={style["user-locked"]}>
-                                        {r.dashboardtype}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
+                    <div className="min-w-[min(34rem,88vw)]">
+                        <div className={dlgHeading}>View Raters</div>
+                        <DataTable
+                            columns={[
+                                "Rater",
+                                "Session",
+                                "Device",
+                                "Speaker",
+                                "Tag",
+                                "Type",
+                            ]}
+                            rows={props.raters.map((r) => [
+                                r.raterid,
+                                r.sessionid,
+                                r.sessiondeviceid,
+                                r.speakerid,
+                                r.speakertag,
+                                r.dashboardtype,
+                            ])}
+                        />
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgClose}
                             onClick={props.closeDialog}
                         >
                             Close
