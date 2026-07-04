@@ -263,6 +263,40 @@ def _video_start_offset(session_id, session_device_id):
         return 0.0
 
 
+def prewarm_video_cache():
+    # Remux every pod recording into the fixed cache in the background at
+    # server start (newest first, within the LRU cap), so the first viewer of
+    # any video never waits behind "Preparing video...".
+    def _worker():
+        try:
+            recordings_dir, _ = _video_dirs()
+            files = sorted(glob.glob(os.path.join(recordings_dir, '*-*.webm')),
+                           key=os.path.getmtime, reverse=True)
+            _, cache_dir = _video_dirs()
+            done = 0
+            for path in files:
+                # Stop once the cache is ~80% full — remuxing more would only
+                # churn the LRU eviction.
+                try:
+                    used = sum(os.path.getsize(os.path.join(cache_dir, f))
+                               for f in os.listdir(cache_dir))
+                except OSError:
+                    used = 0
+                if used > VIDEO_CACHE_CAP_BYTES * 0.8:
+                    break
+                name = os.path.basename(path)
+                device_part = name.split('-', 1)[0]
+                if not device_part.isdigit():
+                    continue
+                _fixed_video_path(int(device_part))
+                done += 1
+            logging.info('video cache pre-warm finished (%d recordings considered)', done)
+        except Exception as e:
+            logging.warning('video cache pre-warm failed: %s', e)
+    t = threading.Thread(target=_worker, daemon=True, name='video-cache-prewarm')
+    t.start()
+
+
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/video', methods=['GET'])
 def get_session_device_video(session_id, session_device_id, **kwargs):
     # Stream a pod's recorded video for playback beside the transcript.

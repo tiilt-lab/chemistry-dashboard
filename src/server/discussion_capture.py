@@ -46,9 +46,16 @@ def main():
 	# Schedule tasks
 	scheduler.add_job(scheduled_tasks.check_transcripts, 'interval', seconds=60)
 
+	# Pre-warm the video remux cache so first views never wait.
+	from routes.session import prewarm_video_cache
+	prewarm_video_cache()
+
 	device_websockets.run_server()
 	logging.info('Discussion Capture Server running...')
-	socketio.run(app, debug=cf.debug(), host="0.0.0.0", port=int(os.environ.get('DC_PORT', 5000)), use_reloader=False)
+	# Threaded Werkzeug behind nginx is fine at this instance's scale
+	# (research tool, a handful of concurrent users); the flag is Flask-
+	# SocketIO's required acknowledgment of that choice.
+	socketio.run(app, debug=cf.debug(), host="0.0.0.0", port=int(os.environ.get('DC_PORT', 5000)), use_reloader=False, allow_unsafe_werkzeug=True)
 	scheduler.shutdown(wait=False)
 
 if __name__ == '__main__':

@@ -38,6 +38,7 @@ const ASR_OPTIONS = [
     { id: "whisper", label: "Whisper (open, offline)" },
     { id: "whisperx", label: "WhisperX (open SOTA: batched + word-aligned)" },
     { id: "qwen3", label: "Qwen3-ASR 1.7B (open; leaderboard-best WER, slower)" },
+    { id: "qwen3-0.6b", label: "Qwen3-ASR 0.6B (open; fast variant)" },
 ]
 const DIARIZER_OPTIONS = [
     { id: "fingerprint", label: "ECAPA fingerprint matching (enrolled voices)" },

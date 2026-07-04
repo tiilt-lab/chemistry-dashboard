@@ -65,7 +65,7 @@ class ImageObjectDetection:
         # predictions, so the downstream cat + scale_coords is unchanged.
         if self.model_2v2 is not None:
             results = self.model_2v2(img.float(), conf=self.model2_conf_thres,
-                                     iou=self.model2_iou_thres, verbose=False)
+                                     iou=self.model2_iou_thres, half=True, verbose=False)
             return [
                 torch.cat((r.boxes.xyxy, r.boxes.conf.unsqueeze(1),
                            r.boxes.cls.unsqueeze(1)), dim=1)

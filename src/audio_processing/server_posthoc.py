@@ -343,10 +343,11 @@ class ServerProtocol(WebSocketServerProtocol):
         # Per-run ASR choice from the trigger UI (falls back to config.ini).
         # Whisper consumes the same PCM queue and runs fully offline; import
         # lazily so the Google path never needs faster-whisper installed.
-        if getattr(self, 'asr_choice', None) == 'qwen3':
+        if getattr(self, 'asr_choice', None) in ('qwen3', 'qwen3-0.6b'):
             from asr_connectors.qwen3_asr import Qwen3ASR
+            qwen_model = 'Qwen/Qwen3-ASR-0.6B' if self.asr_choice == 'qwen3-0.6b' else 'Qwen/Qwen3-ASR-1.7B'
             self.asr = Qwen3ASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval,
-                                audio_file=self.audio_file,
+                                audio_file=self.audio_file, model_id=qwen_model,
                                 diarize=(getattr(self, 'diarizer_choice', None) == 'pyannote'))
         elif getattr(self, 'asr_choice', None) == 'whisperx':
             from asr_connectors.whisperx_asr import WhisperXASR

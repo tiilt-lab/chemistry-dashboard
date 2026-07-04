@@ -48,3 +48,5 @@ emotion_model=hsemotion
 object_model=yolo11
 ; Gaze/attention backend: gazelle (Gaze-LLE, open SOTA) or gazefollow (2020 weights).
 attention_model=gazelle
+; Frames/second sampled by post-hoc video analysis (lower = faster, coarser).
+posthoc_fps=12
