@@ -60,7 +60,15 @@ function BrandPanel({ pitch = true }) {
                         BLINC{" "}
                         <span className="font-ahamono text-base font-normal text-tiilt-lavender">
                             (by&nbsp;
-                            <span className="text-tiilt-orange">tiilt</span>)
+                            <a
+                                href="https://tiilt.northwestern.edu"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-tiilt-orange hover:underline"
+                            >
+                                tiilt
+                            </a>
+                            )
                         </span>
                     </div>
                     <div className="mt-1 font-ahamono text-[11px] tracking-wide uppercase">

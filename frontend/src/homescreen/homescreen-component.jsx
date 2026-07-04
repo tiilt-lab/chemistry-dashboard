@@ -84,9 +84,17 @@ function HomeScreen() {
                 <TiiltLogo className="h-8 w-8 text-tiilt" />
                 <div className="text-lg leading-none font-extrabold text-tiilt-ink">
                     BLINC{" "}
-                    <span className="font-ahamono text-xs font-normal text-tiilt-muted">
+                    <span className="font-ahamono text-sm font-normal text-tiilt-muted">
                         (by&nbsp;
-                        <span className="text-tiilt-orange">tiilt</span>)
+                        <a
+                            href="https://tiilt.northwestern.edu"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-semibold text-tiilt hover:underline"
+                        >
+                            tiilt
+                        </a>
+                        )
                     </span>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
