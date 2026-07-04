@@ -30,7 +30,20 @@ const STARTED_ACKS = new Set([
     "speaker metric computation started",
 ])
 
-function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts }) {
+// Selectable backends per module. Only transcription and E&T scoring have
+// alternative implementations today; the rest are shown (single option,
+// locked) so it is explicit what computes each result.
+const ASR_OPTIONS = [
+    { id: "google-cloud-speech", label: "Google Cloud Speech-to-Text" },
+    { id: "whisper", label: "Whisper (open, offline)" },
+]
+const SCORER_OPTIONS = [
+    { id: "liwc", label: "LIWC & Harvard General Inquirer lexicons" },
+    { id: "open", label: "Harvard General Inquirer (open)" },
+    { id: "llm", label: "Google Gemini (LLM)" },
+]
+
+function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, models }) {
     const api = new ApiService()
     const sockets = useRef([])
     const heartbeat = useRef(null)
@@ -40,6 +53,12 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts }) {
     const streamsRef = useRef({})
     const [action, setAction] = useState(null) // "full" | "pi" | "et" | null
     const [message, setMessage] = useState("")
+    // Model choices for the next run; default to the active deployment config
+    // once /api/v1/models arrives.
+    const [asrChoice, setAsrChoice] = useState(null)
+    const [scorerChoice, setScorerChoice] = useState(null)
+    const asr = asrChoice || (models && models.transcription && models.transcription.id) || "google-cloud-speech"
+    const scorer = scorerChoice || (models && models.scoring && models.scoring.id) || "liwc"
 
     const running = Object.values(streams).some(
         (s) => s === "connecting" || s === "running",
@@ -161,6 +180,8 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts }) {
                 init: {
                     ...baseInit,
                     type: "Initialize_audio_processing_analytics",
+                    asr,
+                    scorer,
                 },
             },
             {
@@ -189,6 +210,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts }) {
                         ? "Initialize_participation_and_impact_style_computation"
                         : "Initialize_expressing_and_thinking_style_computation",
                     transcript: simplifiedTranscript,
+                    scorer,
                 },
             },
         ])
@@ -215,6 +237,27 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts }) {
 
     const btn =
         "h-10 rounded-lg px-4 text-sm font-semibold transition active:translate-y-px disabled:opacity-50"
+    const selectCls =
+        "w-full cursor-pointer rounded-lg border border-tiilt-line bg-white py-1.5 pr-8 pl-3 text-sm text-tiilt-ink transition outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30 disabled:cursor-default disabled:bg-tiilt-ground disabled:text-tiilt-muted"
+
+    // Fixed-stack modules: shown so it's explicit what computes each result,
+    // but locked because only one implementation exists.
+    const fixedModules = [
+        ["Speaker identification", "diarization", "SpeechBrain ECAPA-TDNN (VoxCeleb)"],
+        ["P&I semantic cohesion", "participation", "all-mpnet-base-v2"],
+        ["Facial emotion", "emotion", "ResMaskingNet (FER-2013)"],
+        ["Attention / gaze", "attention", "GazeFollow + YOLOv5m heads"],
+        ["Object of focus", "objects", "YOLOv4-P7 (COCO)"],
+        ["Keyword matching", "keywords", "word2vec (GoogleNews-300)"],
+    ]
+
+    const ModuleRow = ({ name, usedBy, children }) => (
+        <div className="grid grid-cols-1 items-center gap-1 sm:grid-cols-[11rem_1fr_10rem] sm:gap-3">
+            <span className="text-sm font-semibold text-tiilt-ink">{name}</span>
+            {children}
+            <span className="text-xs text-tiilt-muted">{usedBy}</span>
+        </div>
+    )
 
     return (
         <div className="flex w-full flex-col gap-4">
@@ -224,6 +267,67 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts }) {
                     re-run reads the stored recording off disk and regenerates
                     the transcript and all metrics; the style re-computations
                     re-score the existing transcript only (no re-transcription).
+                </div>
+            </div>
+
+            <div className="flex flex-col gap-2 rounded-lg border border-tiilt-line bg-tiilt-ground/50 p-3">
+                <div className="font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
+                    Models used for the next run
+                </div>
+                <ModuleRow name="Transcription" usedBy="Full re-run">
+                    <select
+                        value={asr}
+                        onChange={(e) => setAsrChoice(e.target.value)}
+                        disabled={running}
+                        className={selectCls}
+                    >
+                        {ASR_OPTIONS.map((o) => (
+                            <option key={o.id} value={o.id}>
+                                {o.label}
+                            </option>
+                        ))}
+                    </select>
+                </ModuleRow>
+                <ModuleRow
+                    name="E&T scoring"
+                    usedBy="Full re-run · E&T recompute"
+                >
+                    <select
+                        value={scorer}
+                        onChange={(e) => setScorerChoice(e.target.value)}
+                        disabled={running}
+                        className={selectCls}
+                    >
+                        {SCORER_OPTIONS.map((o) => (
+                            <option key={o.id} value={o.id}>
+                                {o.label}
+                            </option>
+                        ))}
+                    </select>
+                </ModuleRow>
+                {fixedModules.map(([name, key, fallback]) => (
+                    <ModuleRow
+                        key={key}
+                        name={name}
+                        usedBy={
+                            key === "participation"
+                                ? "P&I recompute · Full re-run"
+                                : key === "keywords" || key === "diarization"
+                                  ? "Full re-run"
+                                  : "Full re-run (video)"
+                        }
+                    >
+                        <select disabled className={selectCls}>
+                            <option>
+                                {(models && models[key] && models[key].label) ||
+                                    fallback}
+                            </option>
+                        </select>
+                    </ModuleRow>
+                ))}
+                <div className="text-xs text-tiilt-muted">
+                    Greyed-out modules have a single implementation; dropdowns
+                    apply to the next run you start below.
                 </div>
             </div>
 

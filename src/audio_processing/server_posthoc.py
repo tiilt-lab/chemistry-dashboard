@@ -93,6 +93,10 @@ class ServerProtocol(WebSocketServerProtocol):
             self.session_device_id = data['sessiondeviceid']
             self.server_start= data['server_start']
             self.keywords= data['keywords']
+            # Optional per-run model choices from the trigger UI; fall back to
+            # the deployment config when absent.
+            self.asr_choice = data.get('asr') or cf.asr()
+            self.scorer_choice = data.get('scorer') or None
             self.speakers = dict()
             self.stream_data = "audio"
             self.buffer_size = 4096
@@ -182,7 +186,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.config = result
                 for speaker in data['speakers']:
                     self.speakers[speaker["id"]] = {"alias": speaker["alias"], "id": speaker["id"]}
-                self.processorspeakermetric = SpeakerMetricProcessor(self.sessionid, self.session_device_id, self.transcript,semantic_model,self.config,running_audio_processes)
+                self.processorspeakermetric = SpeakerMetricProcessor(self.sessionid, self.session_device_id, self.transcript,semantic_model,self.config,running_audio_processes, scorer=data.get('scorer'))
                 self.processorspeakermetric.setSpeakerFingerprints(self.speakers)
                 self.send_json({'type':'init participation and impact style completed','message':"Starting Speaker Transcript Metric Processing"})
                 logging.info('participation and impact style initiated')
@@ -221,7 +225,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.config = result
                     for speaker in data['speakers']:
                         self.speakers[speaker["id"]] = {"alias": speaker["alias"], "id": speaker["id"]}
-                    self.processorspeakermetric = SpeakerMetricProcessor(self.sessionid, self.session_device_id, self.transcript,semantic_model,self.config,running_audio_processes)
+                    self.processorspeakermetric = SpeakerMetricProcessor(self.sessionid, self.session_device_id, self.transcript,semantic_model,self.config,running_audio_processes, scorer=data.get('scorer'))
                     self.processorspeakermetric.setSpeakerFingerprints(self.speakers)
                     self.send_json({'type':'init expression and thinking style completed','message':"Starting Transcript Metric Processing"})
                     logging.info('Expression and thinking style initiated')
@@ -311,9 +315,16 @@ class ServerProtocol(WebSocketServerProtocol):
         self.audio_buffer = AudioBuffer(self.config)
         self.asr_audio_queue = Queue()
         self.asr_transcript_queue = Queue()
-        self.asr = GoogleASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data,self.interval,STOP_SIGNAL)
+        # Per-run ASR choice from the trigger UI (falls back to config.ini).
+        # Whisper consumes the same PCM queue and runs fully offline; import
+        # lazily so the Google path never needs faster-whisper installed.
+        if getattr(self, 'asr_choice', None) == 'whisper':
+            from asr_connectors.whisper_asr import WhisperASR
+            self.asr = WhisperASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval)
+        else:
+            self.asr = GoogleASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data,self.interval,STOP_SIGNAL)
         self.asr.start()
-        self.processor = AudioProcessorPosthoc(self.audio_buffer, self.asr_transcript_queue, diarization_model, semantic_model, self.config)
+        self.processor = AudioProcessorPosthoc(self.audio_buffer, self.asr_transcript_queue, diarization_model, semantic_model, self.config, scorer=getattr(self, 'scorer_choice', None))
         self.processor.start()
         self.audioreader = AudioStreamReader(self.audio_buffer, self.asr_audio_queue, self.audio_file, self.queue_put_timeout,self.config,STOP_SIGNAL,running_audio_processes)
         

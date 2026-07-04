@@ -62,6 +62,23 @@ def device_disconnected(**kwargs):
       ConnectionManager.instance.send_command(session_device.device_id, {'cmd': 'start', 'key': session_device.processing_key})
   return json_response()
 
+@api_routes.route('/api/v1/callback/transcript_features', methods=['POST'])
+def update_transcript_features(**kwargs):
+    # Post-hoc E&T recomputation posts re-scored feature values for existing
+    # transcript rows. Authenticated the same way as the other processing
+    # callbacks: by the device's processing key ('source').
+    content = request.get_json()
+    key = content.get('source', '')
+    updates = content.get('updates', [])
+    session_device = database.get_session_devices(processing_key=key)
+    if not session_device:
+        return json_response({'message': 'Unknown processing key.'}, 400)
+    count = database.update_transcript_features_batch(session_device.id, updates)
+    logging.info('Recomputed features persisted for %d transcripts on device %d.',
+                 count, session_device.id)
+    return json_response({'updated': count})
+
+
 @api_routes.route('/api/v1/callback/transcript', methods=['POST'])
 @wrappers.verify_local
 def add_transcript(**kwargs):

@@ -28,7 +28,10 @@ NANO = 1000000000
 
 class AudioProcessorPosthoc:
     def __init__(self, audio_buffer, transcript_queue, diarization_model,
-                 semantic_model, config):
+                 semantic_model, config, scorer=None):
+        # Per-run E&T scoring backend chosen in the trigger UI
+        # (liwc | open | llm); None falls back to the deployment config.
+        self.scorer = scorer
         self.audio_buffer = audio_buffer
         self.transcript_queue = transcript_queue
         self.mt_feats = np.array([])
@@ -205,7 +208,9 @@ class AudioProcessorPosthoc:
                                    16000, self.config.channels, self.config.depth)
             features = None
             if self.config.features:
-                features = features_detector.detect_features(transcript_text)
+                from features_detector import scorer_factory
+                features = scorer_factory.get_scorer(
+                    self.scorer or cf.scorer()).detect_features(transcript_text)
 
             start_time += self.config.start_offset
             end_time += self.config.start_offset

@@ -17,10 +17,13 @@ import config as cf
 import json
 
 class SpeakerMetricProcessor:
-    def __init__(self, sessionid, session_device_id, transcripts, semantic_model, config,running_audio_processes):
+    def __init__(self, sessionid, session_device_id, transcripts, semantic_model, config,running_audio_processes, scorer=None):
         self.sessionid = sessionid
         self.session_device_id = session_device_id
         self.transcripts = transcripts
+        # E&T scoring backend for the re-computation (liwc | open | llm);
+        # None keeps the default composite LIWC indices.
+        self.scorer = scorer
         self.running_audio_processes = running_audio_processes
         self.speakers = None
         self.config = config
@@ -91,23 +94,38 @@ class SpeakerMetricProcessor:
 
     def process_transcript_metrics(self):
         try:
+            # Re-score every utterance with the chosen E&T backend and persist
+            # the five feature values back onto the transcript rows. (The
+            # original implementation computed and only logged the scores.)
+            FEATURE_KEYS = ('emotional_tone_value', 'analytic_thinking_value',
+                            'clout_value', 'authenticity_value', 'certainty_value')
+            # Composite-LIWC balance indices are 0..1; the DB convention (live
+            # pipeline and the other scorers) is 0..100.
+            BALANCE_KEYS = ('emotional_tone_value', 'clout_value', 'certainty_value')
+
+            scoring_fn = None
+            if self.scorer in ('open', 'llm'):
+                from features_detector import scorer_factory
+                scoring_fn = scorer_factory.get_scorer(self.scorer).detect_features
+
+            updates = []
             for transcriptObj in self.transcripts:
                 # id,start_time, speaker_id, speaker_tag,transcript
-                liwc_summary = detect_LIWC_Indices(transcriptObj['transcript'])
+                if scoring_fn is not None:
+                    summary = scoring_fn(transcriptObj['transcript'])
+                else:
+                    summary = detect_LIWC_Indices(transcriptObj['transcript'])
+                    summary = dict(summary)
+                    for k in BALANCE_KEYS:
+                        summary[k] = round(100.0 * summary[k], 2)
+                updates.append({
+                    'id': transcriptObj['id'],
+                    'features': {k: summary.get(k, 0) for k in FEATURE_KEYS},
+                })
 
-                logging.info("transcript: {0} ; liwcsummary: {1}".format(transcriptObj['transcript'],liwc_summary))
-                # self.speaker_metrics_process.process_transcript(
-                #     {
-                #         'source': self.config.auth_key,
-                #         'transcript_id': transcriptObj['id'],
-                #         'start_time': transcriptObj['start_time'],
-                #         'transcript': transcriptObj['transcript'],
-                #         'speaker_tag': transcriptObj['speaker_tag'],
-                #         'speaker_id': transcriptObj['speaker_id']
-                #     },action="speaker metric recomputation")
-                
-                # compute_particpation_score(transcriptObj['speaker_id'],transcriptObj['start_time'],transcriptObj['transcript'])
-              
+            posted = callbacks.post_transcript_features(self.config.auth_key, updates)
+            logging.info('transcript metric recompute (%s): %d utterances, persisted=%s',
+                         self.scorer or 'liwc', len(updates), posted)
         except Exception as e:
             error_str = traceback.format_exc()
             logging.info('exception occured while computing transcript metrics  : {0}'.format(error_str))
