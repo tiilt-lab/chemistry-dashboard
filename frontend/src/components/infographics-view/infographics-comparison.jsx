@@ -1,4 +1,5 @@
 import { AppSectionBoxComponent } from "../section-box/section-box-component"
+import { TranscriptPanel } from "../transcript-panel/transcript-panel"
 import { AppTimelineSlider } from "../timeline-slider/timeline-slider-component"
 import { AppTimeline } from "../../timeline/timeline-component"
 import { AppFeaturesComponent } from "../../features/features-component"
@@ -90,6 +91,20 @@ function AppInfographicsComparison(props) {
                                 )}
                             </AppSectionBoxComponent>
                         )}
+
+                    {props.details !== "Comparison" && (
+                        <AppSectionBoxComponent
+                            type={"w-full"}
+                            heading={"Transcript"}
+                        >
+                            <TranscriptPanel
+                                transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
+                                start={props.startTime}
+                                end={props.endTime}
+                                onOpenFull={props.seeAllTranscripts}
+                            />
+                        </AppSectionBoxComponent>
+                    )}
 
                     {props.details === "Comparison" &&
                         props.showBoxes.length > 0 &&

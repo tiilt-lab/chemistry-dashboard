@@ -120,6 +120,7 @@ function PodComponentPages(props) {
                                 getSpeakerAliasFromID={
                                     props.getSpeakerAliasFromID
                                 }
+                                seeAllTranscripts={props.seeAllTranscripts}
                             ></AppInfographicsComparison>
                         )}
                     </div>
