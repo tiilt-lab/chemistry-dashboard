@@ -1414,3 +1414,14 @@ def update_synthesized_feedback_report(id, sessionId=None, sessionDeviceId=None,
         return True,feedback
     return False, None
    
+
+
+def get_session_ids_with_video(owner_id=None):
+    # One query returning the set of session ids that have any video metrics,
+    # so the sessions list can flag video without a per-session query.
+    query = db.session.query(SessionDevice.session_id) \
+        .join(SpeakerVideoMetrics, SpeakerVideoMetrics.session_device_id == SessionDevice.id)
+    if owner_id is not None:
+        query = query.join(Session, SessionDevice.session_id == Session.id) \
+            .filter(Session.owner_id == owner_id)
+    return set(row[0] for row in query.distinct().all())
