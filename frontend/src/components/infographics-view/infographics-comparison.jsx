@@ -62,31 +62,32 @@ function AppInfographicsComparison(props) {
                         </div>
                     )}
                     {props.showBoxes.length > 0 &&
-                        props.showBoxes[0]["clicked"] && (
-                            <AppSectionBoxComponent
-                                type={"w-full"}
-                                heading={"Timeline control"}
-                            >
-                                <AppTimelineSlider
-                                    id="timeSlider"
-                                    inputChanged={props.setRange}
-                                />
-                            </AppSectionBoxComponent>
-                        )}
-
-                    {props.showBoxes.length > 0 &&
-                        props.showBoxes[1]["clicked"] && (
+                        (props.showBoxes[0]["clicked"] ||
+                            props.showBoxes[1]["clicked"]) && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={"Discussion timeline"}
                             >
-                                <AppTimeline
-                                    clickedTimeline={props.onClickedTimeline}
-                                    session={props.session}
-                                    transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
-                                    start={props.startTime}
-                                    end={props.endTime}
-                                />
+                                {props.showBoxes[0]["clicked"] && (
+                                    <div className="mb-4">
+                                        <div className="mb-2 font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
+                                            Adjust time range
+                                        </div>
+                                        <AppTimelineSlider
+                                            id="timeSlider"
+                                            inputChanged={props.setRange}
+                                        />
+                                    </div>
+                                )}
+                                {props.showBoxes[1]["clicked"] && (
+                                    <AppTimeline
+                                        clickedTimeline={props.onClickedTimeline}
+                                        session={props.session}
+                                        transcripts={props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts}
+                                        start={props.startTime}
+                                        end={props.endTime}
+                                    />
+                                )}
                             </AppSectionBoxComponent>
                         )}
 

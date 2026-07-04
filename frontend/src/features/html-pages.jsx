@@ -22,6 +22,69 @@ const trendClass = (trend) =>
 
 const trendGlyph = (trend) => (trend === 1 ? "▲" : trend === -1 ? "▼" : "—")
 
+const CHART_OPTIONS = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+        x: { display: false },
+        y: { grid: { color: "rgba(58,33,99,0.08)" }, ticks: { display: true } },
+    },
+}
+
+function FeatureCard({ feature }) {
+    return (
+        <div className="rounded-xl border border-tiilt-line bg-white p-4">
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                    <div className="text-base font-semibold text-tiilt-ink">
+                        {feature.name}
+                    </div>
+                    {FEATURE_DESCRIPTIONS[feature.name] ? (
+                        <div className="mt-0.5 text-sm text-tiilt-muted">
+                            {FEATURE_DESCRIPTIONS[feature.name]}
+                        </div>
+                    ) : (
+                        <></>
+                    )}
+                </div>
+                <div className="flex flex-none items-baseline gap-1">
+                    <span className="text-2xl font-bold text-tiilt-ink tabular-nums">
+                        {Math.round(feature.average)}
+                    </span>
+                    <span className={"text-xs " + trendClass(feature.trend)}>
+                        {trendGlyph(feature.trend)}
+                    </span>
+                </div>
+            </div>
+            <div className="mt-3 h-28">
+                {feature.values.length === 0 ? (
+                    <div className="flex h-full items-center justify-center rounded-lg bg-tiilt-ground/60 text-sm text-tiilt-muted">
+                        No data for this time range
+                    </div>
+                ) : (
+                    <Line
+                        data={{
+                            labels: feature.time,
+                            datasets: [
+                                {
+                                    data: feature.values,
+                                    borderColor: "#3a2163",
+                                    backgroundColor: "rgba(58,33,99,0.08)",
+                                    fill: true,
+                                    borderWidth: 2,
+                                    pointRadius: 0,
+                                },
+                            ],
+                        }}
+                        options={CHART_OPTIONS}
+                    />
+                )}
+            </div>
+        </div>
+    )
+}
+
 function FeaturePage(props) {
     const rows = props.showFeatures
         .filter((sf) => sf["clicked"])
@@ -29,71 +92,10 @@ function FeaturePage(props) {
         .filter((feature) => feature !== undefined)
 
     return (
-        <div className="flex w-full flex-col gap-2">
+        <div className="flex w-full flex-col gap-3">
             {props.features.length > 0 &&
                 rows.map((feature, index) => (
-                    <div
-                        key={index}
-                        className="flex items-center gap-4 border-b border-tiilt-line py-3 last:border-b-0"
-                    >
-                        <div className="min-w-0 grow">
-                            <div className="text-sm font-semibold text-tiilt-ink">
-                                {feature.name}
-                            </div>
-                            {FEATURE_DESCRIPTIONS[feature.name] ? (
-                                <div className="mt-0.5 text-xs leading-snug text-tiilt-muted">
-                                    {FEATURE_DESCRIPTIONS[feature.name]}
-                                </div>
-                            ) : (
-                                <></>
-                            )}
-                        </div>
-                        <div className="flex w-12 flex-none flex-col items-center">
-                            <div className="text-xl font-bold text-tiilt-ink tabular-nums">
-                                {Math.round(feature.average)}
-                            </div>
-                            <div
-                                className={
-                                    "text-[10px] " + trendClass(feature.trend)
-                                }
-                            >
-                                {trendGlyph(feature.trend)}
-                            </div>
-                        </div>
-                        <div className="h-24 w-40 flex-none sm:w-56">
-                            {feature.values.length === 0 ? (
-                                <div className="flex h-full items-center justify-center text-xs text-tiilt-muted">
-                                    No data
-                                </div>
-                            ) : (
-                                <Line
-                                    data={{
-                                        labels: feature.time,
-                                        datasets: [
-                                            {
-                                                data: feature.values,
-                                                borderColor: "#3a2163",
-                                                backgroundColor:
-                                                    "rgba(58,33,99,0.08)",
-                                                fill: true,
-                                                borderWidth: 2,
-                                                pointRadius: 0,
-                                            },
-                                        ],
-                                    }}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        plugins: { legend: { display: false } },
-                                        scales: {
-                                            x: { display: false },
-                                            y: { display: false },
-                                        },
-                                    }}
-                                />
-                            )}
-                        </div>
-                    </div>
+                    <FeatureCard key={index} feature={feature} />
                 ))}
         </div>
     )
