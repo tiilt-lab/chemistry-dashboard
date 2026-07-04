@@ -22,17 +22,43 @@ const trendClass = (trend) =>
 
 const trendGlyph = (trend) => (trend === 1 ? "▲" : trend === -1 ? "▼" : "—")
 
-const CHART_OPTIONS = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-        x: { display: false },
-        y: { grid: { color: "rgba(58,33,99,0.08)" }, ticks: { display: true } },
-    },
-}
+function FeatureCard({ feature, selectedTime, onSelectTime }) {
+    const selectedIndex = feature.time.indexOf(selectedTime)
+    const pointRadius = feature.time.map((_, i) =>
+        i === selectedIndex ? 5 : 0,
+    )
+    const pointColor = feature.time.map((_, i) =>
+        i === selectedIndex ? "#ec008c" : "#3a2163",
+    )
+    const selectedValue =
+        selectedIndex >= 0 ? Math.round(feature.values[selectedIndex]) : null
 
-function FeatureCard({ feature }) {
+    const options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        interaction: { mode: "index", intersect: false },
+        onClick: (evt, elements, chart) => {
+            if (!onSelectTime) return
+            const points = chart.getElementsAtEventForMode(
+                evt,
+                "index",
+                { intersect: false },
+                true,
+            )
+            if (points && points.length) {
+                onSelectTime(feature.time[points[0].index])
+            }
+        },
+        scales: {
+            x: { display: false },
+            y: {
+                grid: { color: "rgba(58,33,99,0.08)" },
+                ticks: { display: true },
+            },
+        },
+    }
+
     return (
         <div className="rounded-xl border border-tiilt-line bg-white p-4">
             <div className="flex items-start justify-between gap-3">
@@ -49,6 +75,13 @@ function FeatureCard({ feature }) {
                     )}
                 </div>
                 <div className="flex flex-none items-baseline gap-1">
+                    {selectedValue !== null ? (
+                        <span className="mr-1 rounded-md bg-tiilt-pink/10 px-1.5 py-0.5 text-sm font-semibold text-tiilt-pink tabular-nums">
+                            {selectedValue}
+                        </span>
+                    ) : (
+                        <></>
+                    )}
                     <span className="text-2xl font-bold text-tiilt-ink tabular-nums">
                         {Math.round(feature.average)}
                     </span>
@@ -73,11 +106,13 @@ function FeatureCard({ feature }) {
                                     backgroundColor: "rgba(58,33,99,0.08)",
                                     fill: true,
                                     borderWidth: 2,
-                                    pointRadius: 0,
+                                    pointRadius: pointRadius,
+                                    pointBackgroundColor: pointColor,
+                                    pointBorderColor: pointColor,
                                 },
                             ],
                         }}
-                        options={CHART_OPTIONS}
+                        options={options}
                     />
                 )}
             </div>
@@ -95,7 +130,12 @@ function FeaturePage(props) {
         <div className="flex w-full flex-col gap-3">
             {props.features.length > 0 &&
                 rows.map((feature, index) => (
-                    <FeatureCard key={index} feature={feature} />
+                    <FeatureCard
+                        key={index}
+                        feature={feature}
+                        selectedTime={props.selectedTime}
+                        onSelectTime={props.onSelectTime}
+                    />
                 ))}
         </div>
     )
