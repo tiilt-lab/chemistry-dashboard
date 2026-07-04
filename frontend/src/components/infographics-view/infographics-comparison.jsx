@@ -1,5 +1,6 @@
 import { AppSectionBoxComponent } from "../section-box/section-box-component"
 import { TranscriptPanel } from "../transcript-panel/transcript-panel"
+import { VideoAnalyticsPanel } from "../video-analytics/video-analytics-panel"
 import { AppTimelineSlider } from "../timeline-slider/timeline-slider-component"
 import { AppTimeline } from "../../timeline/timeline-component"
 import { AppFeaturesComponent } from "../../features/features-component"
@@ -116,6 +117,29 @@ function AppInfographicsComparison(props) {
                                         end={props.endTime}
                                     />
                                 )}
+                            </AppSectionBoxComponent>
+                        )}
+
+                    {props.details !== "Comparison" &&
+                        (props.details === "Group"
+                            ? props.displayVideoMetrics
+                            : props.spkr1VideoMetrics) &&
+                        (props.details === "Group"
+                            ? props.displayVideoMetrics.length
+                            : props.spkr1VideoMetrics.length) > 0 && (
+                            <AppSectionBoxComponent
+                                type={"w-full"}
+                                heading={"Video analytics"}
+                            >
+                                <VideoAnalyticsPanel
+                                    videometrics={
+                                        props.details === "Group"
+                                            ? props.displayVideoMetrics
+                                            : props.spkr1VideoMetrics
+                                    }
+                                    start={props.startTime}
+                                    end={props.endTime}
+                                />
                             </AppSectionBoxComponent>
                         )}
 
