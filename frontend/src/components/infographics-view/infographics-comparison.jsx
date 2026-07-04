@@ -1,6 +1,7 @@
 import { AppSectionBoxComponent } from "../section-box/section-box-component"
 import { TranscriptPanel } from "../transcript-panel/transcript-panel"
 import { VideoAnalyticsPanel } from "../video-analytics/video-analytics-panel"
+import { VideoPlayer } from "../video-player/video-player"
 import { PosthocTrigger } from "../posthoc/posthoc-trigger"
 import { AppTimelineSlider } from "../timeline-slider/timeline-slider-component"
 import { AppTimeline } from "../../timeline/timeline-component"
@@ -143,6 +144,20 @@ function AppInfographicsComparison(props) {
                                 />
                             </AppSectionBoxComponent>
                         )}
+
+                    {props.details === "Group" && props.sessionDevice && (
+                        <AppSectionBoxComponent
+                            type={"w-full"}
+                            heading={"Discussion video"}
+                        >
+                            <VideoPlayer
+                                sessionId={props.session.id}
+                                sessionDeviceId={props.sessionDevice.id}
+                                selectedTime={selectedTime}
+                                onSelectTime={setSelectedTime}
+                            />
+                        </AppSectionBoxComponent>
+                    )}
 
                     {props.details !== "Comparison" && (
                         <AppSectionBoxComponent
