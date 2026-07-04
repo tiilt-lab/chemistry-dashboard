@@ -1,4 +1,3 @@
-import style from "./settings.module.css"
 import { Appheader } from "../header/header-component"
 import { GenericDialogBox } from "../dialog/dialog-component"
 
@@ -106,6 +105,20 @@ function OptionButton({ label, danger, onClick }) {
 const dlgHeading = "mb-3 text-lg font-semibold text-tiilt-ink"
 const dlgClose =
     "mt-4 w-full rounded-lg border border-tiilt-line bg-white py-2.5 text-sm font-semibold text-tiilt-ink transition hover:bg-tiilt-soft active:translate-y-px"
+const dlgBody = "flex min-w-[min(22rem,86vw)] flex-col gap-3"
+const dlgLabel = "text-sm font-semibold text-tiilt-ink"
+const dlgInput =
+    "h-11 w-full rounded-lg border border-tiilt-line bg-white px-3 text-base text-tiilt-ink transition outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
+const dlgSelect =
+    "h-11 w-full cursor-pointer rounded-lg border border-tiilt-line bg-white px-3 pr-8 text-base text-tiilt-ink transition outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
+const dlgPrimary =
+    "mt-2 h-11 rounded-lg bg-tiilt font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
+const dlgCancel =
+    "h-11 rounded-lg border border-tiilt-line bg-white font-semibold text-tiilt-ink transition hover:bg-tiilt-soft active:translate-y-px"
+const dlgError =
+    "rounded-md bg-tiilt-danger-soft px-3 py-2 text-sm text-tiilt-danger"
+const dlgDanger =
+    "mt-2 h-11 rounded-lg bg-tiilt-danger font-semibold text-white transition hover:brightness-90 active:translate-y-px"
 
 function DataTable({ columns, rows }) {
     return (
@@ -198,43 +211,33 @@ function SettingComponentPage(props) {
 
             <GenericDialogBox show={props.currentForm !== ""}>
                 {props.currentForm === "ChangePassword" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
-                            Change Password
-                        </div>
-                        <div className={style["input-header"]}>
-                            Current password
-                        </div>
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>Change Password</div>
+                        <div className={dlgLabel}>Current password</div>
                         <input
                             id="txtCurrent"
-                            className={style["field-input"]}
+                            className={dlgInput}
                             type="password"
                         />
-                        <div className={style["input-header"]}>
-                            New password
-                        </div>
+                        <div className={dlgLabel}>New password</div>
                         <input
                             id="txtNew"
-                            className={style["field-input"]}
+                            className={dlgInput}
                             type="password"
                         />
-                        <div className={style["input-header"]}>
-                            Confirm new password
-                        </div>
+                        <div className={dlgLabel}>Confirm new password</div>
                         <input
                             id="txtConfirm"
-                            className={style["field-input"]}
+                            className={dlgInput}
                             type="password"
                         />
                         {props.status ? (
-                            <div className={style["error-status"]}>
-                                {props.status}
-                            </div>
+                            <div className={dlgError}>{props.status}</div>
                         ) : (
                             <></>
                         )}
                         <button
-                            className={style["basic-button"]}
+                            className={dlgPrimary}
                             onClick={() =>
                                 props.changePassword(
                                     document.getElementById("txtCurrent").value,
@@ -246,7 +249,7 @@ function SettingComponentPage(props) {
                             Change Password
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -339,28 +342,22 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "AddUser" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>Add User</div>
-                        <div className={style["input-header"]}>Email</div>
-                        <input
-                            id="txtName"
-                            className={style["field-input"]}
-                            type="text"
-                        />
-                        <div className={style["input-header"]}>Role</div>
-                        <select id="ddRole" className={style["dropdown-input"]}>
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>Add User</div>
+                        <div className={dlgLabel}>Email</div>
+                        <input id="txtName" className={dlgInput} type="text" />
+                        <div className={dlgLabel}>Role</div>
+                        <select id="ddRole" className={dlgSelect}>
                             <option value="user">User</option>
                             <option value="admin">Admin</option>
                         </select>
                         {props.status ? (
-                            <div className={style["error-status"]}>
-                                {props.status}
-                            </div>
+                            <div className={dlgError}>{props.status}</div>
                         ) : (
                             <></>
                         )}
                         <button
-                            className={style["basic-button"]}
+                            className={dlgPrimary}
                             onClick={() =>
                                 props.createUser(
                                     document.getElementById("txtName").value,
@@ -371,7 +368,7 @@ function SettingComponentPage(props) {
                             Create User
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -382,44 +379,36 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "AddRater" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>Add Rater</div>
-                        <div className={style["input-header"]}>Session ID</div>
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>Add Rater</div>
+                        <div className={dlgLabel}>Session ID</div>
                         <input
                             id="sessionId"
-                            className={style["field-input"]}
+                            className={dlgInput}
                             type="text"
                         />
-                        <div className={style["input-header"]}>
-                            Session Device ID
-                        </div>
+                        <div className={dlgLabel}>Session Device ID</div>
                         <input
                             id="sessionDeviceId"
-                            className={style["field-input"]}
+                            className={dlgInput}
                             type="text"
                         />
-                        <div className={style["input-header"]}>Speaker ID</div>
+                        <div className={dlgLabel}>Speaker ID</div>
                         <input
                             id="speakerId"
-                            className={style["field-input"]}
+                            className={dlgInput}
                             type="text"
                         />
-                        <div className={style["input-header"]}>Speaker Tag</div>
+                        <div className={dlgLabel}>Speaker Tag</div>
                         <input
                             id="speakertag"
-                            className={style["field-input"]}
+                            className={dlgInput}
                             type="text"
                         />
-                        <div className={style["input-header"]}>Rater ID</div>
-                        <input
-                            id="raterId"
-                            className={style["field-input"]}
-                            type="text"
-                        />
-                        <div className={style["input-header"]}>
-                            Dashboard Type
-                        </div>
-                        <select id="type" className={style["dropdown-input"]}>
+                        <div className={dlgLabel}>Rater ID</div>
+                        <input id="raterId" className={dlgInput} type="text" />
+                        <div className={dlgLabel}>Dashboard Type</div>
+                        <select id="type" className={dlgSelect}>
                             <option value="quantitative">
                                 Quantitative Dashboard
                             </option>
@@ -427,10 +416,7 @@ function SettingComponentPage(props) {
                                 Reflection Dashboard
                             </option>
                         </select>
-                        <select
-                            id="evaluationcategory"
-                            className={style["dropdown-input"]}
-                        >
+                        <select id="evaluationcategory" className={dlgSelect}>
                             <option value="visualization">Visualization</option>
                             <option value="reflection">Reflection</option>
                             <option value="multimodal">Multimodal</option>
@@ -439,14 +425,12 @@ function SettingComponentPage(props) {
                             <option value="unstructured">Unstructured </option>
                         </select>
                         {props.status ? (
-                            <div className={style["error-status"]}>
-                                {props.status}
-                            </div>
+                            <div className={dlgError}>{props.status}</div>
                         ) : (
                             <></>
                         )}
                         <button
-                            className={style["basic-button"]}
+                            className={dlgPrimary}
                             onClick={() =>
                                 props.createRater(
                                     document.getElementById("sessionId").value,
@@ -465,7 +449,7 @@ function SettingComponentPage(props) {
                             Create Rater
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -476,12 +460,10 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "DeleteUser" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
-                            Delete User
-                        </div>
-                        <div className={style["input-header"]}>Select user</div>
-                        <select id="ddUser" className={style["dropdown-input"]}>
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>Delete User</div>
+                        <div className={dlgLabel}>Select user</div>
+                        <select id="ddUser" className={dlgSelect}>
                             {props.users.map((u, index) => (
                                 <option key={index} value={u.id}>
                                     {u.email}
@@ -490,14 +472,12 @@ function SettingComponentPage(props) {
                         </select>
 
                         {props.status ? (
-                            <div className={style["error-status"]}>
-                                {props.status}
-                            </div>
+                            <div className={dlgError}>{props.status}</div>
                         ) : (
                             <></>
                         )}
                         <button
-                            className={style["basic-button"]}
+                            className={dlgDanger}
                             onClick={() =>
                                 props.confirmDeleteUser(
                                     document.getElementById("ddUser").value,
@@ -507,7 +487,7 @@ function SettingComponentPage(props) {
                             Delete User
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -517,17 +497,10 @@ function SettingComponentPage(props) {
                     <></>
                 )}
                 {props.currentForm === "DeleteStudentProfile" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
-                            Delete Student
-                        </div>
-                        <div className={style["input-header"]}>
-                            Select Student
-                        </div>
-                        <select
-                            id="ddStudent"
-                            className={style["dropdown-input"]}
-                        >
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>Delete Student</div>
+                        <div className={dlgLabel}>Select Student</div>
+                        <select id="ddStudent" className={dlgSelect}>
                             {props.students.map((s, index) => (
                                 <option key={index} value={s.id}>
                                     {s.username}
@@ -536,14 +509,12 @@ function SettingComponentPage(props) {
                         </select>
 
                         {props.status ? (
-                            <div className={style["error-status"]}>
-                                {props.status}
-                            </div>
+                            <div className={dlgError}>{props.status}</div>
                         ) : (
                             <></>
                         )}
                         <button
-                            className={style["basic-button"]}
+                            className={dlgDanger}
                             onClick={() =>
                                 props.confirmDeleteStudent(
                                     document.getElementById("ddStudent").value,
@@ -553,7 +524,7 @@ function SettingComponentPage(props) {
                             Delete Student
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -564,17 +535,10 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "DeleteRater" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
-                            Delete Rater
-                        </div>
-                        <div className={style["input-header"]}>
-                            Select Rater
-                        </div>
-                        <select
-                            id="ddRater"
-                            className={style["dropdown-input"]}
-                        >
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>Delete Rater</div>
+                        <div className={dlgLabel}>Select Rater</div>
+                        <select id="ddRater" className={dlgSelect}>
                             {props.raters.map((s, index) => (
                                 <option key={index} value={s.id}>
                                     {s.raterid +
@@ -591,14 +555,12 @@ function SettingComponentPage(props) {
                         </select>
 
                         {props.status ? (
-                            <div className={style["error-status"]}>
-                                {props.status}
-                            </div>
+                            <div className={dlgError}>{props.status}</div>
                         ) : (
                             <></>
                         )}
                         <button
-                            className={style["basic-button"]}
+                            className={dlgDanger}
                             onClick={() =>
                                 props.confirmDeleteRater(
                                     document.getElementById("ddRater").value,
@@ -608,7 +570,7 @@ function SettingComponentPage(props) {
                             Delete Rater
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -619,19 +581,19 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "ConfirmDeleteUser" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>
                             Are you sure you want to delete{" "}
                             {props.userToDelete.email}?
                         </div>
                         <button
-                            className={style["basic-button"]}
+                            className={dlgDanger}
                             onClick={props.deleteSelectedUser}
                         >
                             Delete User
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -642,19 +604,19 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "ConfirmDeleteStudent" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>
                             Are you sure you want to delete{" "}
                             {props.studentToDelete.username}?
                         </div>
                         <button
-                            className={style["basic-button"]}
+                            className={dlgDanger}
                             onClick={props.deleteSelectedStudent}
                         >
                             Delete Student
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -664,8 +626,8 @@ function SettingComponentPage(props) {
                     <></>
                 )}
                 {props.currentForm === "ConfirmDeleteRater" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>
                             Are you sure you want to delete{" "}
                             {props.raterToDelete.raterid +
                                 " for " +
@@ -679,13 +641,13 @@ function SettingComponentPage(props) {
                             ?
                         </div>
                         <button
-                            className={style["basic-button"]}
+                            className={dlgDanger}
                             onClick={props.deleteSelectedRater}
                         >
                             Delete Rater
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -695,10 +657,10 @@ function SettingComponentPage(props) {
                     <></>
                 )}
                 {props.currentForm === "LockUser" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>Lock User</div>
-                        <div className={style["input-header"]}>Select user</div>
-                        <select id="ddUser" className={style["dropdown-input"]}>
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>Lock User</div>
+                        <div className={dlgLabel}>Select user</div>
+                        <select id="ddUser" className={dlgSelect}>
                             {props.users.map((u, index) => (
                                 <option key={index} value={u.id}>
                                     {u.email}
@@ -706,14 +668,12 @@ function SettingComponentPage(props) {
                             ))}
                         </select>
                         {props.status ? (
-                            <div className={style["error-status"]}>
-                                {props.status}
-                            </div>
+                            <div className={dlgError}>{props.status}</div>
                         ) : (
                             <></>
                         )}
                         <button
-                            className={style["basic-button"]}
+                            className={dlgPrimary}
                             onClick={() =>
                                 props.lockUser(
                                     document.getElementById("ddUser").value,
@@ -723,7 +683,7 @@ function SettingComponentPage(props) {
                             Lock User
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -734,12 +694,10 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "UnlockUser" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
-                            Unlock User
-                        </div>
-                        <div className={style["input-header"]}>Select user</div>
-                        <select id="ddUser" className={style["dropdown-input"]}>
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>Unlock User</div>
+                        <div className={dlgLabel}>Select user</div>
+                        <select id="ddUser" className={dlgSelect}>
                             {props.users.map((u, index) => (
                                 <option key={index} value={u.id}>
                                     {u.email}
@@ -747,14 +705,12 @@ function SettingComponentPage(props) {
                             ))}
                         </select>
                         {props.status ? (
-                            <div className={style["error-status"]}>
-                                {props.status}
-                            </div>
+                            <div className={dlgError}>{props.status}</div>
                         ) : (
                             <></>
                         )}
                         <button
-                            className={style["basic-button"]}
+                            className={dlgPrimary}
                             onClick={() =>
                                 props.unlockUser(
                                     document.getElementById("ddUser").value,
@@ -764,7 +720,7 @@ function SettingComponentPage(props) {
                             Unlock User
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -774,25 +730,23 @@ function SettingComponentPage(props) {
                     <></>
                 )}
                 {props.currentForm === "UserRole" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
-                            Change Role
-                        </div>
-                        <div className={style["input-header"]}>Select user</div>
-                        <select id="ddUser" className={style["dropdown-input"]}>
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>Change Role</div>
+                        <div className={dlgLabel}>Select user</div>
+                        <select id="ddUser" className={dlgSelect}>
                             {props.users.map((u, index) => (
                                 <option key={index} value={u.id}>
                                     {u.email}
                                 </option>
                             ))}
                         </select>
-                        <div className={style["input-header"]}>Select role</div>
-                        <select id="ddRole" className={style["dropdown-input"]}>
+                        <div className={dlgLabel}>Select role</div>
+                        <select id="ddRole" className={dlgSelect}>
                             <option value="user">User</option>
                             <option value="admin">Admin</option>
                         </select>
                         <button
-                            className={style["basic-button"]}
+                            className={dlgPrimary}
                             onClick={() =>
                                 props.changeUserRole(
                                     document.getElementById("ddUser").value,
@@ -803,7 +757,7 @@ function SettingComponentPage(props) {
                             Change Role
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -814,12 +768,10 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "ResetUser" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
-                            Reset User Password
-                        </div>
-                        <div className={style["input-header"]}>User</div>
-                        <select id="ddUser" className={style["dropdown-input"]}>
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>Reset User Password</div>
+                        <div className={dlgLabel}>User</div>
+                        <select id="ddUser" className={dlgSelect}>
                             {props.users.map((u, index) => (
                                 <option key={index} value={u.id}>
                                     {u.email}
@@ -827,14 +779,12 @@ function SettingComponentPage(props) {
                             ))}
                         </select>
                         {props.status ? (
-                            <div className={style["error-status"]}>
-                                {props.status}
-                            </div>
+                            <div className={dlgError}>{props.status}</div>
                         ) : (
                             <></>
                         )}
                         <button
-                            className={style["basic-button"]}
+                            className={dlgPrimary}
                             onClick={() =>
                                 props.resetUserPassword(
                                     document.getElementById("ddUser").value,
@@ -844,7 +794,7 @@ function SettingComponentPage(props) {
                             Reset Password
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -855,17 +805,10 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "ServerLogs" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
-                            Download Server Logs
-                        </div>
-                        <div className={style["input-header"]}>
-                            Select service
-                        </div>
-                        <select
-                            id="ddService"
-                            className={style["dropdown-input"]}
-                        >
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>Download Server Logs</div>
+                        <div className={dlgLabel}>Select service</div>
+                        <select id="ddService" className={dlgSelect}>
                             <option value="dcs">
                                 Discussion Capture Server
                             </option>
@@ -874,7 +817,7 @@ function SettingComponentPage(props) {
                             </option>
                         </select>
                         <button
-                            className={style["basic-button"]}
+                            className={dlgPrimary}
                             onClick={() =>
                                 props.downloadServerLogs(
                                     document.getElementById("ddService").value,
@@ -884,7 +827,7 @@ function SettingComponentPage(props) {
                             Download logs
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -895,17 +838,10 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "DeviceLogs" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
-                            Download Device Logs
-                        </div>
-                        <div className={style["input-header"]}>
-                            Select device
-                        </div>
-                        <select
-                            id="ddDevice"
-                            className={style["dropdown-input"]}
-                        >
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>Download Device Logs</div>
+                        <div className={dlgLabel}>Select device</div>
+                        <select id="ddDevice" className={dlgSelect}>
                             {props.devices.map((u, index) => (
                                 <option key={index} value={u.id}>
                                     {u.name}
@@ -913,7 +849,7 @@ function SettingComponentPage(props) {
                             ))}
                         </select>
                         <button
-                            className={style["basic-button"]}
+                            className={dlgPrimary}
                             onClick={() =>
                                 props.downloadDeviceLogs(
                                     document.getElementById("ddDevice").value,
@@ -923,7 +859,7 @@ function SettingComponentPage(props) {
                             Download logs
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -934,17 +870,10 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "DeleteServerLogs" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
-                            Clear Server Logs
-                        </div>
-                        <div className={style["input-header"]}>
-                            Select service
-                        </div>
-                        <select
-                            id="ddService"
-                            className={style["dropdown-input"]}
-                        >
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>Clear Server Logs</div>
+                        <div className={dlgLabel}>Select service</div>
+                        <select id="ddService" className={dlgSelect}>
                             <option value="dcs">
                                 Discussion Capture Server
                             </option>
@@ -953,7 +882,7 @@ function SettingComponentPage(props) {
                             </option>
                         </select>
                         <button
-                            className={style["basic-button"]}
+                            className={dlgDanger}
                             onClick={() =>
                                 props.deleteServerLogs(
                                     document.getElementById("ddService").value,
@@ -963,7 +892,7 @@ function SettingComponentPage(props) {
                             Clear logs
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -974,17 +903,10 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "DeleteDeviceLogs" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
-                            Clear Device Logs
-                        </div>
-                        <div className={style["input-header"]}>
-                            Select device
-                        </div>
-                        <select
-                            id="ddDevice"
-                            className={style["dropdown-input"]}
-                        >
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>Clear Device Logs</div>
+                        <div className={dlgLabel}>Select device</div>
+                        <select id="ddDevice" className={dlgSelect}>
                             {props.devices.map((u, index) => (
                                 <option key={index} value={u.id}>
                                     {u.name}
@@ -992,7 +914,7 @@ function SettingComponentPage(props) {
                             ))}
                         </select>
                         <button
-                            className={style["basic-button"]}
+                            className={dlgDanger}
                             onClick={() =>
                                 props.deleteDeviceLogs(
                                     document.getElementById("ddDevice").value,
@@ -1002,7 +924,7 @@ function SettingComponentPage(props) {
                             Clear logs
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -1013,12 +935,10 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "AllowAPI" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
-                            Allow API Access
-                        </div>
-                        <div className={style["input-header"]}>Select user</div>
-                        <select id="ddUser" className={style["dropdown-input"]}>
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>Allow API Access</div>
+                        <div className={dlgLabel}>Select user</div>
+                        <select id="ddUser" className={dlgSelect}>
                             {props.users.map((u, index) => (
                                 <option key={index} value={u.id}>
                                     {u.email}
@@ -1026,14 +946,12 @@ function SettingComponentPage(props) {
                             ))}
                         </select>
                         {props.status ? (
-                            <div className={style["error-status"]}>
-                                {props.status}
-                            </div>
+                            <div className={dlgError}>{props.status}</div>
                         ) : (
                             <></>
                         )}
                         <button
-                            className={style["basic-button"]}
+                            className={dlgPrimary}
                             onClick={() =>
                                 props.allowAPIAccess(
                                     document.getElementById("ddUser").value,
@@ -1043,7 +961,7 @@ function SettingComponentPage(props) {
                             Allow
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -1054,12 +972,10 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "RevokeAPI" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
-                            Revoke API Access
-                        </div>
-                        <div className={style["input-header"]}>Select user</div>
-                        <select id="ddUser" className={style["dropdown-input"]}>
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>Revoke API Access</div>
+                        <div className={dlgLabel}>Select user</div>
+                        <select id="ddUser" className={dlgSelect}>
                             {props.users.map((u, index) => (
                                 <option key={index} value={u.id}>
                                     {u.email}
@@ -1067,14 +983,12 @@ function SettingComponentPage(props) {
                             ))}
                         </select>
                         {props.status ? (
-                            <div className={style["error-status"]}>
-                                {props.status}
-                            </div>
+                            <div className={dlgError}>{props.status}</div>
                         ) : (
                             <></>
                         )}
                         <button
-                            className={style["basic-button"]}
+                            className={dlgDanger}
                             onClick={() =>
                                 props.revokeAPIAccess(
                                     document.getElementById("ddUser").value,
@@ -1084,7 +998,7 @@ function SettingComponentPage(props) {
                             Revoke
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Cancel
@@ -1095,8 +1009,8 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "Loading" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>
                             Loading...please wait...
                         </div>
                     </div>
@@ -1105,13 +1019,11 @@ function SettingComponentPage(props) {
                 )}
 
                 {props.currentForm === "Status" ? (
-                    <div className={style["add-dialog"]}>
-                        <div className={style["dialog-heading"]}>
-                            {props.statusTitle}
-                        </div>
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>{props.statusTitle}</div>
                         <div>{props.status}</div>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             Close
