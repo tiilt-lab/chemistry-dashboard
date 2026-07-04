@@ -1,6 +1,4 @@
 import gensim
-from gensim.summarization import keywords
-from gensim.summarization import summarize
 import logging
 import re
 import nltk
@@ -21,8 +19,8 @@ def detect_keywords(transcript, keywords, threshold=0.6):
     words = re.sub("[.,!?]", '', transcript).split()
 
     # Reduce transcript words and keywords down to words in model.
-    words = [word for word in words if word in KEYWORD_MODEL.vocab]
-    keywords = [keyword for keyword in keywords if keyword in KEYWORD_MODEL.vocab]
+    words = [word for word in words if word in KEYWORD_MODEL.key_to_index]
+    keywords = [keyword for keyword in keywords if keyword in KEYWORD_MODEL.key_to_index]
 
     results = []
     for word in words:

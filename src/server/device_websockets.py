@@ -25,14 +25,18 @@ class ConnectionManager:
         if match:
             self.remove_connection(match['id'], match['socket'])
         self.connections.append({'id':device_id, 'socket': socket})
-        database.set_device_connected(device_id, True)
-        database.close_session()
+        from app import app
+        with app.app_context():
+            database.set_device_connected(device_id, True)
+            database.close_session()
         print(len(self.connections))
 
     def remove_connection(self, device_id, socket):
         match = next((conn for conn in self.connections if conn['id'] == device_id and conn['socket'] == socket), None)
         if match != None:
-            database.set_device_connected(device_id, False)
+            from app import app
+            with app.app_context():
+                database.set_device_connected(device_id, False)
             self.connections = [conn for conn in self.connections if conn['id'] != device_id]
             database.close_session()
             logging.info('Device {0} has disconnected.'.format(device_id))

@@ -20,8 +20,17 @@ import queue as queue_module
 from .base_asr import AsrResult
 
 _WORKER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "qwen3_worker.py")
-_VENV_PYTHON = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                            "qwen_venv", "bin", "python")
+
+
+def _worker_python():
+    # Historically qwen-asr lived in a dedicated py3.10 venv (the pipeline ran
+    # py3.9). On the unified py3.10 environment qwen-asr is installed alongside
+    # everything else, so the current interpreter works; prefer the dedicated
+    # venv only if it still exists.
+    import sys
+    dedicated = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                             "qwen_venv", "bin", "python")
+    return dedicated if os.path.exists(dedicated) else sys.executable
 
 
 class Qwen3ASR:
@@ -88,7 +97,7 @@ class Qwen3ASR:
         try:
             logging.info("Qwen3-ASR: transcribing %s via %s", self.audio_file, self.model_id)
             proc = subprocess.run(
-                [_VENV_PYTHON, _WORKER, self.audio_file, self.model_id],
+                [_worker_python(), _WORKER, self.audio_file, self.model_id],
                 capture_output=True, timeout=3600)
             if proc.returncode != 0:
                 raise RuntimeError("worker failed: %s" % proc.stderr.decode()[-500:])

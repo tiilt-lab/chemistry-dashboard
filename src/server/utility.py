@@ -1,5 +1,6 @@
 # File for generic helper functions.
-from flask import escape, jsonify
+from flask import jsonify
+from markupsafe import escape  # flask.escape removed in Flask 2.3
 from collections import Counter,defaultdict
 import numpy as np
 from scipy.stats import median_abs_deviation

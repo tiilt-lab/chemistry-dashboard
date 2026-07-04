@@ -5,7 +5,10 @@ from scipy.io import wavfile
 import os
 import numpy as np
 import cv2
-from moviepy.editor import *
+try:
+    from moviepy.editor import *  # moviepy 1.x
+except ImportError:
+    from moviepy import *  # moviepy 2.x dropped the .editor module
 
 class VidRecorder:
 

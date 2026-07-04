@@ -20,7 +20,7 @@ def get_request_client_id():
     return request.headers.get('X-Client-Id', None)
 
 @api_routes.route('/api/v1/login', methods=['POST'])
-@limiter.limit("5 per 5 second", get_request_username)
+@limiter.limit("5 per 5 second", key_func=get_request_username)
 def login():
     content = request.json
     ip = utility.get_client_ip(request)
@@ -98,7 +98,7 @@ def change_password(**kwargs):
     return json_response({'message': message}, 400)
 
 @api_routes.route('/api/v1/token', methods=['GET'])
-@limiter.limit("5 per 5 second", get_request_client_id)
+@limiter.limit("5 per 5 second", key_func=get_request_client_id)
 def get_access_token(**kwargs):
     client_id = request.headers.get('X-Client-Id', None)
     client_secret = request.headers.get('X-Client-Secret', None)

@@ -59,7 +59,7 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=2 if cf.cloud() else 1, x_proto=1)
 r = redis.Redis(host=cf.redis_host(), port=cf.redis_port(), db=cf.redis_db())
 
 # Set API Limiter
-limiter = Limiter(app, key_func=get_remote_address)
+limiter = Limiter(get_remote_address, app=app)
 
 # Create SocketIO app (engineio_logger=True for advance debug)
 socketio = SocketIO(app, log=logger, cors_allowed_origins=cf.domains() + ["127.0.0.1:5000", "localhost"], manage_session=False, message_queue=cf.redis_url())

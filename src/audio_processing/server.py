@@ -12,7 +12,10 @@ import wave
 import scipy.signal
 import config as cf
 import numpy as np
-import moviepy.editor as mp
+try:
+    import moviepy.editor as mp  # moviepy 1.x
+except ImportError:
+    import moviepy as mp  # moviepy 2.x dropped the .editor module
 from queue import Full, Empty
 from recorder import WaveRecorder
 from recorder import VidRecorder

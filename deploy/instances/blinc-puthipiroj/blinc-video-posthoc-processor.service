@@ -14,7 +14,7 @@ LimitRTTIME=infinity
 Environment="DC_VIDEO_POSTHOC_WS_PORT=9014"
 Environment="PYTHONPATH=/home/vlj9405/code/chemistry-dashboard/src/video_processing:/home/vlj9405/code/chemistry-dashboard/src/video_processing/yolo_head"
 WorkingDirectory=/home/vlj9405/code/chemistry-dashboard/
-ExecStart=/home/vlj9405/code/chemistry-dashboard/src/video_processing/venv/bin/python src/video_processing/server_posthoc.py
+ExecStart=/home/vlj9405/code/chemistry-dashboard/src/venv-unified/bin/python src/video_processing/server_posthoc.py
 
 [Install]
 WantedBy=multi-user.target

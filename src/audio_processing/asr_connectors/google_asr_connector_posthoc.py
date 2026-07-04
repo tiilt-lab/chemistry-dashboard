@@ -1,8 +1,6 @@
 from email.mime import audio
 from http.client import responses
 from google.cloud import speech_v1p1beta1 as speech
-from google.cloud.speech_v1p1beta1 import enums
-from google.cloud.speech_v1p1beta1 import types
 from google.api_core import exceptions
 from google.cloud import speech as speechV1
 from queue import Empty
@@ -132,14 +130,14 @@ class GoogleASR():
         language_code = 'en-US'
 
         client = speech.SpeechClient()
-        recognition_config = types.RecognitionConfig(
-            encoding=enums.RecognitionConfig.AudioEncoding.LINEAR16,
+        recognition_config = speech.RecognitionConfig(
+            encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
             sample_rate_hertz=GoogleASR.SAMPLE_RATE,
             language_code=language_code,
             enable_word_time_offsets=True,
             enable_automatic_punctuation=True,
             model='video')
-        streaming_config = types.StreamingRecognitionConfig(
+        streaming_config = speech.StreamingRecognitionConfig(
             config= recognition_config,
             interim_results=False)
 
@@ -149,8 +147,12 @@ class GoogleASR():
         while self.running:
             try:
                 audio_generator = self.generator()
-                requests = (types.StreamingRecognizeRequest(audio_content=content) for content in audio_generator)
-                responses = client.streaming_recognize(streaming_config, requests)
+                requests = (speech.StreamingRecognizeRequest(audio_content=content) for content in audio_generator)
+                # 2.x API: the streaming config rides as the first request; chain
+                # lazily so the live audio generator is not drained eagerly.
+                import itertools
+                config_request = speech.StreamingRecognizeRequest(streaming_config=streaming_config)
+                responses = client.streaming_recognize(requests=itertools.chain([config_request], requests))
                 self.process_responses(responses, self.audio_time)
             except exceptions.InvalidArgument as e:
                 logging.warning('Invalid args for Google ASR Connector for client {0}. Attempting to restart connection...'.format(self.config.auth_key))
@@ -173,8 +175,8 @@ class GoogleASR():
         language_code = 'en-US'
 
         client = speech.SpeechClient()
-        recognition_config = types.RecognitionConfig(
-            encoding=enums.RecognitionConfig.AudioEncoding.LINEAR16,
+        recognition_config = speech.RecognitionConfig(
+            encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
             sample_rate_hertz=GoogleASR.SAMPLE_RATE,
             language_code=language_code,
             enable_word_time_offsets=True,
