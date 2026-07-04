@@ -363,17 +363,22 @@ def _read_video_models():
     import configparser
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..',
                         'video_processing', 'config.ini')
-    emotion, objects = 'resmasking', 'yolov4'
+    emotion, objects, attention = 'resmasking', 'yolov4', 'gazefollow'
     try:
         parser = configparser.RawConfigParser(allow_no_value=True)
         parser.read(path)
         emotion = parser.get('videoprocessing', 'emotion_model', fallback=emotion).strip()
         objects = parser.get('videoprocessing', 'object_model', fallback=objects).strip()
+        attention = parser.get('videoprocessing', 'attention_model', fallback=attention).strip()
     except Exception:
         pass
-    return emotion, objects
+    return emotion, objects, attention
 
 
+_ATTENTION_LABELS = {
+    "gazefollow": "Attended-visual-targets gaze model (Chong et al. 2020, GazeFollow) + YOLOv5m head detector",
+    "gazelle": "Gaze-LLE (Meta 2024, DINOv2; open SOTA) + YOLOv5m head detector",
+}
 _OBJECT_LABELS = {
     "yolov4": "YOLOv4-P7 object detector (COCO)",
     "yolo11": "YOLO11m object detector (COCO, open SOTA)",
@@ -384,7 +389,7 @@ _OBJECT_LABELS = {
 @wrappers.verify_login(public=True)
 def get_models(**kwargs):
     asr, scorer = _read_audio_models()
-    emotion, objects = _read_video_models()
+    emotion, objects, attention = _read_video_models()
     result = {
         "transcription": {"id": asr, "label": _ASR_LABELS.get(asr, asr)},
         "scoring": {"id": scorer, "label": _SCORER_LABELS.get(scorer, scorer)},
@@ -392,6 +397,7 @@ def get_models(**kwargs):
     result.update(_STATIC_MODELS)
     result["emotion"] = {"id": emotion, "label": _EMOTION_LABELS.get(emotion, emotion)}
     result["objects"] = {"id": objects, "label": _OBJECT_LABELS.get(objects, objects)}
+    result["attention"] = {"id": attention, "label": _ATTENTION_LABELS.get(attention, attention)}
     return json_response(result)
 
 

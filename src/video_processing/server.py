@@ -40,7 +40,12 @@ STOP_SIGNAL = object()
 cm = ConnectionManager()
 cartoon_model = VideoCartoonifyLoader()
 facial_emotion_detector = EmotionDetectionModel()
-attention_detection = AttentionDetection()
+# Gaze backend is config-selected: Gaze-LLE (open SOTA) or GazeFollow.
+if cf.attention_model() == 'gazelle':
+    from attention_tracking.gazelle_attention import GazeLLEAttentionDetection
+    attention_detection = GazeLLEAttentionDetection()
+else:
+    attention_detection = AttentionDetection()
 # Emotion backend is config-selected: 'hsemotion' (AffectNet-8, open SOTA)
 # or the original ResMaskingNet.
 if cf.emotion_model() == 'hsemotion':
