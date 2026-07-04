@@ -280,6 +280,20 @@ function onTaskPct(samples) {
     return total ? Math.round((on / total) * 100) : null
 }
 
+// Social attention: fraction of gaze on a person (peers) rather than objects —
+// a lightweight #7 signal. Full who-looks-at-whom needs identity threading in
+// the video pipeline (target-person identity isn't stored yet).
+function socialAttentionPct(samples) {
+    let social = 0,
+        total = 0
+    for (const s of samples) {
+        const v = (s.object_on_focus || "").toLowerCase()
+        total += 1
+        if (v === "person" || v.startsWith("person:")) social += 1
+    }
+    return total ? Math.round((social / total) * 100) : null
+}
+
 // Short initials for an identity avatar chip (usernames are usually one token).
 function initials(name) {
     if (!name) return "?"
@@ -708,12 +722,16 @@ function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, o
                 <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-tiilt-muted">
                     {(isAll ? participants : [person]).map((p) => {
                         const pct = onTaskPct(byParticipant[p] || [])
+                        const social = socialAttentionPct(byParticipant[p] || [])
                         return pct == null ? null : (
                             <span key={p}>
                                 <span className="font-semibold text-tiilt-ink">
                                     {p}
                                 </span>{" "}
                                 on-task {pct}%
+                                {social != null
+                                    ? ` · looking at peers ${social}%`
+                                    : ""}
                             </span>
                         )
                     })}
