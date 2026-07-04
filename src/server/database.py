@@ -1526,6 +1526,38 @@ def get_pod_video_presence(session_id):
     return set(r[0] for r in rows)
 
 
+def get_student_longitudinal(username):
+    # A student's trajectory across every session they took part in: per-session
+    # speaking share (transcript) + average attention (video), chronologically,
+    # so the UI can show growth/engagement over a term.
+    devices = db.session.query(
+        SessionDevice.id, SessionDevice.session_id, Session.name, Session.creation_date) \
+        .join(Speaker, Speaker.session_device_id == SessionDevice.id) \
+        .join(Session, SessionDevice.session_id == Session.id) \
+        .filter(Speaker.alias == username) \
+        .order_by(Session.creation_date).all()
+    out = []
+    for did, sid, sname, sdate in devices:
+        their_sec = db.session.query(func.sum(Transcript.length)).filter(
+            Transcript.session_device_id == did,
+            Transcript.speaker_tag == username).scalar() or 0
+        total_sec = db.session.query(func.sum(Transcript.length)).filter(
+            Transcript.session_device_id == did,
+            Transcript.speaker_tag.isnot(None)).scalar() or 0
+        avg_attn = db.session.query(func.avg(SpeakerVideoMetrics.attention_level)).filter(
+            SpeakerVideoMetrics.session_device_id == did,
+            SpeakerVideoMetrics.student_username == username).scalar()
+        out.append({
+            'session_id': sid,
+            'session_name': sname,
+            'date': str(sdate) if sdate else None,
+            'speaking_share': round(their_sec / total_sec, 3) if total_sec else 0,
+            'speaking_seconds': int(their_sec),
+            'avg_attention': round(float(avg_attn), 2) if avg_attn is not None else None,
+        })
+    return out
+
+
 def get_conversation_dynamics(session_device_id):
     # Turn-taking dynamics from a pod's diarized transcript: per-speaker turn
     # count + speaking time (participation equity), and a who-follows-whom
