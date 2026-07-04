@@ -83,8 +83,10 @@ class AudioProcessor:
                 self.send_speaker_taggings()
             except Exception as ex:
                 logging.info(ex)
-            np.savetxt(cf.root_dir()+"chemistry-dashboard/audio_processing/speaker_diarization/results/{}.txt".format(
-                time.strftime("%Y%m%d-%H%M%S")), self.speakers)
+            results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'speaker_diarization', 'results')
+            os.makedirs(results_dir, exist_ok=True)
+            np.savetxt(os.path.join(results_dir, "{}.txt".format(
+                time.strftime("%Y%m%d-%H%M%S"))), self.speakers)
 
     def setSpeakerFingerprints(self, fingerprints):
         self.fingerprints = fingerprints

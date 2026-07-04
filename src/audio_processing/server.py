@@ -378,7 +378,7 @@ if __name__ == '__main__':
     factory = WebSocketServerFactory()
     factory.protocol = ServerProtocol
 
-    reactor.listenTCP(9000, factory)
+    reactor.listenTCP(int(os.environ.get('DC_AUDIO_WS_PORT', 9000)), factory)
     logging.info('Audio Processing Service started.')
     reactor.run()
     logging.info('Audio Processing Service ended.')

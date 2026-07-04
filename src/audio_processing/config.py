@@ -62,3 +62,12 @@ def root_dir():
 
 def speaker_metrics_callback():
     return str(config['output']['speaker_metrics_callback'])
+
+def redis_host():
+    return str(config.get('redis', 'redis_host', fallback='localhost'))
+
+def redis_port():
+    return int(config.get('redis', 'redis_port', fallback=6379))
+
+def redis_db():
+    return int(config.get('redis', 'redis_db', fallback=0))

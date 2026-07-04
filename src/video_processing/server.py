@@ -440,7 +440,7 @@ if __name__ == '__main__':
     auth_connections.start(5.0)
     factory = WebSocketServerFactory()
     factory.protocol = ServerProtocol
-    reactor.listenTCP(9003, factory)
+    reactor.listenTCP(int(os.environ.get('DC_VIDEO_WS_PORT', 9003)), factory)
     logging.info('Video Processing Service started.')
     reactor.run()
     logging.info('Video Processing Service ended.')

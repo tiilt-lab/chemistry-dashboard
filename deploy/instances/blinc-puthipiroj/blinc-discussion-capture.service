@@ -1,0 +1,20 @@
+[Unit]
+Description=BLINC Discussion Capture Server (blinc.puthipiroj.com)
+After=network-online.target mysql.service redis-server.service
+StartLimitIntervalSec=0
+
+[Service]
+User=vlj9405
+Group=www-data
+Type=simple
+Restart=always
+RestartSec=1
+LimitRTPRIO=99
+LimitRTTIME=infinity
+Environment="DC_PORT=5001"
+Environment="DC_DEVICE_WS_PORT=9011"
+WorkingDirectory=/home/vlj9405/code/chemistry-dashboard/
+ExecStart=/home/vlj9405/code/chemistry-dashboard/src/server/venv/bin/python src/server/discussion_capture.py
+
+[Install]
+WantedBy=multi-user.target

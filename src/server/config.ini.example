@@ -6,14 +6,17 @@
 # config.ini is intentionally git-ignored: it holds per-deployment values
 # (domain, paths) and per-instance isolation settings. Multiple instances can
 # share one machine by giving each its own database_name, redis_db, and
-# root_dir (plus DC_PORT / DC_DEVICE_WS_PORT env vars at launch).
+# root_dir (plus DC_PORT / DC_DEVICE_WS_PORT env vars at launch; the processors
+# take DC_AUDIO_WS_PORT / DC_VIDEO_WS_PORT).
 
 [server]
 # true behind HTTPS/AWS, false for local dev.
 https=false
 debug=true
 
-# Public host:port the frontend is served from.
+# Public host:port the frontend is served from. Accepts a comma-separated
+# list when one instance serves several hostnames (each becomes an allowed
+# SocketIO CORS origin), e.g. domain=example.com,dashboard.example.org
 domain=localhost:3000
 
 # MySQL user (password is derived as user:user) and database name.
