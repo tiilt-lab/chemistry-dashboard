@@ -19,7 +19,7 @@ function LandingPageComponent() {
             </h2>
             <p className="mt-1 mb-6 text-sm text-tiilt-muted">
                 Welcome to the BLINC platform. Sign in to manage recordings, or
-                join a live discussion.
+                join a live session.
             </p>
 
             <div className="flex max-w-md flex-col gap-3">
@@ -34,7 +34,7 @@ function LandingPageComponent() {
                         className={secondaryClass}
                         onClick={() => navigate("/join")}
                     >
-                        Join discussion
+                        Join session
                     </button>
                     <button
                         className={secondaryClass}

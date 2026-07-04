@@ -467,7 +467,7 @@ function DiscussionSessionPage(props) {
                                 </span>{" "}
                                 A{" "}
                                 <span className="font-semibold">session</span> is
-                                one recorded discussion. Each{" "}
+                                one recorded session. Each{" "}
                                 <span className="font-semibold">pod</span> is a
                                 participant group (device) within that session — a
                                 session can have several pods running at once.
@@ -527,8 +527,8 @@ function DiscussionSessionPage(props) {
                                     <div className="py-8 text-center text-sm text-tiilt-muted">
                                         No{" "}
                                         {props.videoFilter === "video"
-                                            ? "discussions with video"
-                                            : "audio-only discussions"}
+                                            ? "sessions with video"
+                                            : "audio-only sessions"}
                                         .
                                     </div>
                                 )}
@@ -567,7 +567,7 @@ function DiscussionSessionPage(props) {
                         style={{ minWidth: "min(20rem, 90vw)" }}
                     >
                         <div className={style["dialog-heading"]}>
-                            Update Discussion Name:
+                            Update Session Name:
                         </div>
                         <input
                             id="txtName"
@@ -810,7 +810,7 @@ function DiscussionSessionPage(props) {
                         style={{ minWidth: "min(20rem, 90vw)" }}
                     >
                         <div className={style["dialog-heading"]}>
-                            Move Discussion
+                            Move Session
                         </div>
                         <AppFolderSelectComponent
                             selectableFolders={props.selectableFolders}

@@ -42,7 +42,7 @@ const participants = [
         "You were one of the more active speakers and remained highly task-focused, though some contributions could connect more explicitly to teammate ideas.",
       strengths: ["High verbal presence", "Strong task focus"],
       growth: ["Improve idea linkage", "Balance speaking with collaborative uptake"],
-      declineZones: ["Idea linkage weakens in middle-to-late discussion", "Responsivity remains lower than speaking rate"],
+      declineZones: ["Idea linkage weakens in middle-to-late session", "Responsivity remains lower than speaking rate"],
       strongZones: ["Strong early question-driven engagement", "High focus sustained across most windows"],
     },
   },
@@ -129,7 +129,7 @@ const timelineData = [
       responsivity: "low",
     },
     llmExplanation:
-      "This appears to be a lower-engagement moment. The system detected a drop in visual task focus and only a limited verbal contribution. It may represent fatigue, uncertainty, or a transition point in the discussion rather than disengagement alone.",
+      "This appears to be a lower-engagement moment. The system detected a drop in visual task focus and only a limited verbal contribution. It may represent fatigue, uncertainty, or a transition point in the session rather than disengagement alone.",
     reflectionQuestion: "What was happening in the group here, and what might have helped you re-enter more actively?",
   },
   {
@@ -315,10 +315,10 @@ function CollaborationFeedbackDashboardPrototype() {
       return "Your responsive contribution rate is lower than your overall speaking rate. This suggests you spoke regularly, but fewer of your contributions explicitly built on teammate statements. The clearest opportunities to improve appear in middle and late moments where participation stayed present but responsivity remained low.";
     }
     if (q.includes("idea") || q.includes("contribute")) {
-      return "Your strongest idea contribution appears earlier in the discussion, where newness and verbal participation are both relatively high. Later contributions seem more clarifying or tentative than generative. A useful next step would be pairing your questions with a proposal or evidence claim.";
+      return "Your strongest idea contribution appears earlier in the session, where newness and verbal participation are both relatively high. Later contributions seem more clarifying or tentative than generative. A useful next step would be pairing your questions with a proposal or evidence claim.";
     }
     if (q.includes("engagement") || q.includes("focus") || q.includes("drop")) {
-      return "The biggest engagement drop appears in later windows where visual task focus falls sharply while verbal contributions become shorter and less connected. This could reflect fatigue, uncertainty, or a transition in the group discussion rather than disengagement alone.";
+      return "The biggest engagement drop appears in later windows where visual task focus falls sharply while verbal contributions become shorter and less connected. This could reflect fatigue, uncertainty, or a transition in the group session rather than disengagement alone.";
     }
     return "Based on the current evidence, your collaboration pattern combines strong task focus with uneven idea uptake. You were present and engaged, but the biggest opportunity is making your contributions more explicitly responsive to peers and more visible as idea-building moves.";
   }, [question]);

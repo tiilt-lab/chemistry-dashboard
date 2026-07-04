@@ -10,7 +10,7 @@ function DiscussionPage(props){
   <>
     <div className="main-container">
     <Appheader
-        title={"Discussion Graph"}
+        title={"Session Graph"}
         leftText={false}
         rightText={"Options"}
         rightEnabled={true}

@@ -66,10 +66,10 @@ function ByodJoinPage(props) {
                                     <div>
                                         <div className="my-1.5 font-sans text-base leading-5 font-normal text-tiilt-muted">
                                             Please type your name and passcode
-                                            to join a discussion.
+                                            to join a session.
                                         </div>
                                         <div className="my-1.5 font-sans text-xs leading-5 font-normal text-tiilt-muted">
-                                            If rejoining a discussion, type the
+                                            If rejoining a session, type the
                                             same name you used previously.
                                         </div>
                                     </div>
@@ -164,8 +164,8 @@ function ByodJoinPage(props) {
                                                 second sample of their voice.
                                                 This is used to track each
                                                 speaker's metrics throughout a
-                                                discussion and is deleted upon
-                                                ending the discussion.
+                                                session and is deleted upon
+                                                ending the session.
                                             </div>
                                         </div>
                                         <div className="mt-2 h-fit w-[300px] sm:w-[400px] lg:w-3xl">
@@ -294,7 +294,7 @@ function ByodJoinPage(props) {
                                                 className="wide-button"
                                                 onClick={props.confirmSpeakers}
                                             >
-                                                Join Discussion
+                                                Join Session
                                             </button>
                                         </div>
                                     </div>
@@ -318,8 +318,8 @@ function ByodJoinPage(props) {
                                                 second sample of their voice.
                                                 This is used to track each
                                                 speaker's metrics throughout a
-                                                discussion and is deleted upon
-                                                ending the discussion.
+                                                session and is deleted upon
+                                                ending the session.
                                             </div>
                                         </div>
                                         <div className="mt-2 h-fit w-[300px] sm:w-[400px] lg:w-3xl">
@@ -448,7 +448,7 @@ function ByodJoinPage(props) {
                                                 className="wide-button"
                                                 onClick={props.confirmSpeakers}
                                             >
-                                                Join Discussion
+                                                Join Session
                                             </button>
                                         </div>
                                     </div>
@@ -875,10 +875,10 @@ function ByodJoinPage(props) {
 
             {/* <GenericDialogBox
                 itsclass={"add-dialog small-section"}
-                heading={"Discussion Closed"}
+                heading={"Session Closed"}
                 show={props.currentForm === "ClosedSession"}
             >
-                <div className="text-xl/loose font-sans font-bold m-2">Discussion Closed</div>
+                <div className="text-xl/loose font-sans font-bold m-2">Session Closed</div>
                 <div className="text-base font-sans font-normal m-2">{props.displayText}</div>
                 <SessionQRCode sessionId={props.prevSessionId} />
                 <button className="option-button font-sans small-section bg-red-500 hover:bg-red-400 m-2" onClick={props.closeDialog}>Close</button>

@@ -27,7 +27,7 @@ function CreateSessionPage(props) {
         {props.currentMenu === "Settings" ? (
           <React.Fragment>
             <div className="center-column-container text-center">
-              <div>Discussion name:</div>
+              <div>Session name:</div>
               <input
                 id="txtName"
                 className="text-box"
@@ -63,7 +63,7 @@ function CreateSessionPage(props) {
                 <span className={style.checkmark}></span>
               </label>
               <label className={style["dc-checkbox"]}>
-                Analyze discussion features
+                Analyze session features
                 <input
                   type="checkbox"
                   checked={props.features}
@@ -230,7 +230,7 @@ function CreateSessionPage(props) {
               style={{ width: "min(42rem, 100%)" }}
               onClick={props.createSession}
             >
-              Start Discussion
+              Start Session
             </button>
           </React.Fragment>
         ) : (
@@ -306,7 +306,7 @@ function CreateSessionPage(props) {
               style={{ width: "min(42rem, 100%)" }}
               onClick={props.createSession}
             >
-              Start Discussion
+              Start Session
             </button>
           </React.Fragment>
         ) : (

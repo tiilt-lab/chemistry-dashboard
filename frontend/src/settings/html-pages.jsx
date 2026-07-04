@@ -464,7 +464,7 @@ function SettingComponentPage(props) {
                         <div className={dlgLabel}>Select service</div>
                         <select id="ddService" className={dlgSelect}>
                             <option value="dcs">
-                                Discussion Capture Server
+                                Session Capture Server
                             </option>
                             <option value="aps">
                                 Audio Processing Service
@@ -529,7 +529,7 @@ function SettingComponentPage(props) {
                         <div className={dlgLabel}>Select service</div>
                         <select id="ddService" className={dlgSelect}>
                             <option value="dcs">
-                                Discussion Capture Server
+                                Session Capture Server
                             </option>
                             <option value="aps">
                                 Audio Processing Service
