@@ -1,5 +1,6 @@
 import { Line } from "react-chartjs-2"
 import { Chart as ChartJS } from "chart.js/auto"
+import { formatSeconds } from "../globals"
 
 // Inline classifier explanations (previously behind a ? dialog).
 const FEATURE_DESCRIPTIONS = {
@@ -36,7 +37,19 @@ function FeatureCard({ feature, selectedTime, onSelectTime }) {
     const options = {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    title: (items) =>
+                        items.length
+                            ? formatSeconds(feature.time[items[0].dataIndex])
+                            : "",
+                    label: (item) =>
+                        `${feature.name}: ${Math.round(item.parsed.y)}`,
+                },
+            },
+        },
         interaction: { mode: "index", intersect: false },
         onClick: (evt, elements, chart) => {
             if (!onSelectTime) return
