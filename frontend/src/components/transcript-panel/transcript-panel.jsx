@@ -46,6 +46,7 @@ function TranscriptPanel({
     onSelectTime,
     transcriptionLabel,
     playbackTime,
+    compact,
 }) {
     const scrollRef = useRef(null)
     const selectedRef = useRef(null)
@@ -127,7 +128,13 @@ function TranscriptPanel({
                     No transcript in this time range.
                 </div>
             ) : (
-                <div ref={scrollRef} className="max-h-96 overflow-y-auto pr-1">
+                <div
+                    ref={scrollRef}
+                    className={
+                        (compact ? "max-h-52" : "max-h-96") +
+                        " overflow-y-auto pr-1"
+                    }
+                >
                     <ul className="flex flex-col gap-0.5">
                         {list.map((t, index) => {
                             const isSelected = t.start_time === selectedTime

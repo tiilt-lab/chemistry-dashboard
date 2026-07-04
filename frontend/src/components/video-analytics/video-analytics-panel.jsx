@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Line } from "react-chartjs-2"
 import { Chart as ChartJS } from "chart.js/auto"
 import { formatSeconds } from "../../globals"
+import { ModelNote } from "../model-note/model-note"
 
 // Per-participant line colors, matching the transcript panel palette.
 const SPEAKER_COLORS = [
@@ -207,7 +208,7 @@ function SectionHeader({ children }) {
     )
 }
 
-function VideoAnalyticsPanel({ videometrics, start, end }) {
+function VideoAnalyticsPanel({ videometrics, start, end, models }) {
     const [selected, setSelected] = useState(ALL)
     const metrics = (videometrics || []).filter((m) => inRange(m, start, end))
 
@@ -338,6 +339,12 @@ function VideoAnalyticsPanel({ videometrics, start, end }) {
 
             <div>
                 <SectionHeader>Attention over time</SectionHeader>
+                <div className="mb-2">
+                    <ModelNote
+                        label={models && models.attention && models.attention.label}
+                        fallback="the attended-visual-targets gaze model (GazeFollow) + YOLOv5m head detector"
+                    />
+                </div>
                 <div className="h-40">
                     <Line data={attentionData} options={attentionOptions} />
                 </div>
@@ -348,6 +355,12 @@ function VideoAnalyticsPanel({ videometrics, start, end }) {
                     Facial emotion over time
                     {person ? ` · ${person}` : ""}
                 </SectionHeader>
+                <div className="mb-2">
+                    <ModelNote
+                        label={models && models.emotion && models.emotion.label}
+                        fallback="ResMaskingNet (FER-2013, 7 emotions)"
+                    />
+                </div>
                 <div className="flex flex-col gap-1.5">
                     {isAll
                         ? participants.map((p) => (
@@ -402,6 +415,12 @@ function VideoAnalyticsPanel({ videometrics, start, end }) {
                     Object of focus over time
                     {person ? ` · ${person}` : ""}
                 </SectionHeader>
+                <div className="mb-2">
+                    <ModelNote
+                        label={models && models.objects && models.objects.label}
+                        fallback="YOLOv4-P7 object detector (COCO) + gaze direction"
+                    />
+                </div>
                 <div className="flex flex-col gap-1.5">
                     {isAll
                         ? participants.map((p) => (

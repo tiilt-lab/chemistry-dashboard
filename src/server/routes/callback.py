@@ -305,14 +305,46 @@ def _read_audio_models():
     return asr, scorer
 
 
+# Fixed model stack of the video/metrics pipelines (not config-switchable yet),
+# surfaced so every analysis section in the UI can say what computed it.
+_STATIC_MODELS = {
+    "attention": {
+        "id": "gazefollow-modelspatial",
+        "label": "Attended-visual-targets gaze model (Chong et al. 2020, GazeFollow) + YOLOv5m head detector (CrowdHuman)",
+    },
+    "emotion": {
+        "id": "resmasking-fer2013",
+        "label": "ResMaskingNet (FER-2013, 7 emotions)",
+    },
+    "objects": {
+        "id": "yolov4-p7-coco",
+        "label": "YOLOv4-P7 object detector (COCO)",
+    },
+    "participation": {
+        "id": "all-mpnet-base-v2",
+        "label": "Sentence-transformer semantic cohesion (all-mpnet-base-v2)",
+    },
+    "diarization": {
+        "id": "spkrec-ecapa-voxceleb",
+        "label": "SpeechBrain ECAPA-TDNN speaker embeddings (VoxCeleb)",
+    },
+    "keywords": {
+        "id": "word2vec-googlenews",
+        "label": "word2vec semantic matching (GoogleNews-300)",
+    },
+}
+
+
 @api_routes.route('/api/v1/models', methods=['GET'])
 @wrappers.verify_login(public=True)
 def get_models(**kwargs):
     asr, scorer = _read_audio_models()
-    return json_response({
+    result = {
         "transcription": {"id": asr, "label": _ASR_LABELS.get(asr, asr)},
         "scoring": {"id": scorer, "label": _SCORER_LABELS.get(scorer, scorer)},
-    })
+    }
+    result.update(_STATIC_MODELS)
+    return json_response(result)
 
 
 @api_routes.route('/api/v1/syncstudenttable', methods=['POST'])
