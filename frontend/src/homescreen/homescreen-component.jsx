@@ -59,11 +59,11 @@ const GROUPS = [
 function GroupCard({ icon, name, links, navigate }) {
     return (
         <div className="overflow-hidden rounded-xl border border-tiilt-line bg-white shadow-[0_1px_2px_rgba(42,23,74,0.05)]">
-            <div className="flex items-center gap-3 border-b border-tiilt-line bg-tiilt-ground/60 px-5 py-3">
-                <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-tiilt-soft">
-                    <img alt="" src={icon} className="h-4 w-4" />
+            <div className="flex items-center gap-2.5 border-b border-tiilt-line bg-tiilt-ground/60 px-5 py-2">
+                <span className="flex h-7 w-7 flex-none items-center justify-center rounded-md bg-tiilt-soft">
+                    <img alt="" src={icon} className="h-3.5 w-3.5" />
                 </span>
-                <span className="text-sm font-semibold text-tiilt-ink">
+                <span className="font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
                     {name}
                 </span>
             </div>
@@ -72,15 +72,13 @@ function GroupCard({ icon, name, links, navigate }) {
                     <button
                         key={link.path}
                         onClick={() => navigate(link.path)}
-                        className="group flex w-full items-center gap-4 px-5 py-3.5 text-left transition hover:bg-tiilt-soft"
+                        className="group flex w-full items-center gap-3 px-5 py-2.5 text-left transition hover:bg-tiilt-soft"
                     >
-                        <span className="min-w-0 grow">
-                            <span className="block text-[15px] font-semibold text-tiilt-ink group-hover:text-tiilt">
-                                {link.label}
-                            </span>
-                            <span className="block text-sm text-tiilt-muted">
-                                {link.desc}
-                            </span>
+                        <span className="flex-none text-[15px] font-semibold text-tiilt-ink group-hover:text-tiilt">
+                            {link.label}
+                        </span>
+                        <span className="hidden grow truncate text-sm text-tiilt-muted sm:block">
+                            {link.desc}
                         </span>
                         <span
                             aria-hidden="true"
@@ -160,19 +158,15 @@ function HomeScreen() {
                 </div>
             </header>
 
-            <main className="mx-auto flex w-full max-w-3xl grow flex-col justify-center px-4 py-10">
-                <h2 className="text-3xl font-semibold tracking-tight text-tiilt-ink">
+            <main className="mx-auto w-full max-w-3xl px-4 py-8">
+                <h2 className="text-2xl font-semibold tracking-tight text-tiilt-ink">
                     Good {timeOfDay}!
                 </h2>
-                <p className="mt-2 max-w-[60ch] text-[15px] text-tiilt-muted">
-                    Welcome to the Building Literacy in N-person Collaborations
-                    (BLINC) dashboard. Start gathering analytic data by
-                    recording a new discussion.
+                <p className="mt-1 mb-6 max-w-[60ch] text-sm text-tiilt-muted">
+                    Welcome to the BLINC dashboard. Start gathering analytic
+                    data by recording a new discussion.
                 </p>
 
-                <div className="mt-10 mb-3 font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
-                    Workspace
-                </div>
                 <div className="flex flex-col gap-3">
                     {GROUPS.map((g) => (
                         <GroupCard
