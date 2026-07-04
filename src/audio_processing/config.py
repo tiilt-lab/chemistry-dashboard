@@ -76,6 +76,13 @@ def whisper_compute_type():
 def keyword_model_limit():
     return int(config['processing']['keyword_model_limit'])
 
+def topic_backend():
+    # Topic-modeling backend: 'lda' (default; the pre-trained per-owner gensim
+    # LDA model, active only when a run supplies topic_model) or 'bertopic'
+    # (fits on the session's transcripts using the loaded BGE embeddings — the
+    # practical re-enable of topic modeling; requires `pip install bertopic`).
+    return str(config.get('processing', 'topic_backend', fallback='lda'))
+
 def keyword_backend():
     # Keyword semantic-matching backend: 'word2vec' (2013 GoogleNews-300,
     # default) or 'embedding' (a modern SentenceTransformer, see

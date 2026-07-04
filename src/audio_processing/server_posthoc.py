@@ -118,6 +118,22 @@ class ServerProtocol(WebSocketServerProtocol):
             self.scorer_choice = data.get('scorer') or None
             self.diarizer_choice = data.get('diarizer') or 'fingerprint'
             self.embedder_choice = data.get('embedder') or None
+            # Optional per-analysis toggles — default to running everything, so
+            # omitting them reproduces the previous behaviour. Lets a re-run skip
+            # expensive stages (e.g. re-score features without re-running DOA).
+            self.run_transcribe = data.get('run_transcribe', True)
+            self.run_features = data.get('run_features', True)
+            self.run_doa = data.get('run_doa', True)
+            self.run_tagging = data.get('run_tagging', True)
+            self.topic_model_choice = data.get('topic_model', None)
+            # Per-run model provenance (persisted on completion, see #5).
+            self.model_choices = {
+                'asr': self.asr_choice, 'scorer': self.scorer_choice or cf.scorer(),
+                'diarizer': self.diarizer_choice,
+                'embedder': self.embedder_choice or 'bge-large-en-v1.5',
+                'keyword_backend': cf.keyword_backend(),
+                'diarization_fallback': cf.diarization_fallback(),
+            }
             self.speakers = dict()
             self.stream_data = "audio"
             self.buffer_size = 4096
@@ -140,7 +156,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 running_audio_processes[key] = "running"
 
                 conf_val = {'key':key,'encoding': "pcm_f32le", 'sample_rate': self.sample_rate,'channels': 1,'sessionid': self.sessionid,'deviceid': self.session_device_id,
-                            'tag': True, 'server_start':self.server_start,'keywords':self.keywords,'transcribe':True,'features':True,'doa':True,'topic_model':None,'owner':1,'off_set_date':off_set_date}
+                            'tag': self.run_tagging, 'server_start':self.server_start,'keywords':self.keywords,'transcribe':self.run_transcribe,'features':self.run_features,'doa':self.run_doa,'topic_model':self.topic_model_choice,'owner':1,'off_set_date':off_set_date}
                 valid, result = ProcessingConfig.from_json(conf_val,source="posthoc processing")
                 if not valid:
                     logging.info("Confgiration setting failed for audio posthoc processing")
