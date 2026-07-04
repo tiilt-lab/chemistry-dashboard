@@ -117,11 +117,27 @@ function PodsOverviewPages(props) {
                         <></>
                     )}
                     <div className="min-h-0 grow overflow-y-auto">
-                        <div className="mx-auto w-full max-w-3xl px-4 py-6">
+                        <div className="mx-auto w-full max-w-3xl px-4 py-8">
+                            <div className="mb-4 flex items-baseline justify-between gap-3">
+                                <h2 className="text-lg font-semibold text-tiilt-ink">
+                                    Pods
+                                    {props.sessionDevices !== null &&
+                                    props.initialized ? (
+                                        <span className="ml-1.5 font-normal text-tiilt-muted">
+                                            ({props.sessionDevices.length})
+                                        </span>
+                                    ) : (
+                                        <></>
+                                    )}
+                                </h2>
+                                <span className="text-sm text-tiilt-muted">
+                                    Open a pod to view its analytics
+                                </span>
+                            </div>
                             {props.sessionDevices !== null &&
                             props.initialized &&
                             Object.keys(props.sessionDevices).length === 0 ? (
-                                <div className="py-16 text-center">
+                                <div className="rounded-xl border border-dashed border-tiilt-line py-16 text-center">
                                     <div className="text-base font-semibold text-tiilt-ink">
                                         No pods in this session
                                     </div>
