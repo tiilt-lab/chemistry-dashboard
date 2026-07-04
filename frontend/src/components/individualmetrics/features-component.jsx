@@ -44,19 +44,21 @@ function AppIndividualFeaturesComponent(props) {
     transcripts.forEach((t) => {
       if(spkrId !== "sessiontranscriptcomparison"){
         //select speaker metrics from transcripts based on the spkrId
-        speaker_metric = t.speaker_metrics.find(
+        speaker_metric = (t.speaker_metrics || []).find(
         (item) => item.speaker_id === spkrId
       );
 
-     
+
       }else{
        //select speaker metrics from transcripts based on the spkrId
-        speaker_metric = t.speaker_metrics.find(
+        speaker_metric = (t.speaker_metrics || []).find(
         (item) => item.speaker_id !== null
       );
       }
-      
-      // console.log("speaker metric is ", speaker_metric)
+
+      // Not every transcript has a metric row for this speaker (they only
+      // exist for utterances the speaker was matched on) — skip those.
+      if (!speaker_metric) return;
 
       //accumulate each score into their value array
       valueArrays[0].values.push(speaker_metric.participation_score * 100);
@@ -115,7 +117,11 @@ function AppIndividualFeaturesComponent(props) {
     // console.log("tracking spker id ", props.spkrId, props.transcripts.length)
     if (props.transcripts.length === 0) return;
     updateGraphs(props.transcripts,props.spkrId);
-  }, [props.spkrId]);
+    // The per-speaker transcripts arrive a render AFTER the speaker id is
+    // selected, so this must also re-run when they land — with only spkrId in
+    // the deps the charts stayed empty forever.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.spkrId, props.transcripts]);
 
   const getInfo = (featureName) => {
     switch (featureName) {
