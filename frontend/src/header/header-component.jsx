@@ -1,4 +1,26 @@
+import { useState } from "react"
 import backicon from "../assets/img/icon-back.svg"
+
+function ThemeToggle() {
+    const [dark, setDark] = useState(
+        document.documentElement.classList.contains("dark"),
+    )
+    const flip = () => {
+        const next = !dark
+        document.documentElement.classList.toggle("dark", next)
+        localStorage.setItem("theme", next ? "dark" : "light")
+        setDark(next)
+    }
+    return (
+        <button
+            onClick={flip}
+            title={dark ? "Switch to light mode" : "Switch to dark mode"}
+            className="mr-2 flex h-8 w-8 flex-none cursor-pointer items-center justify-center rounded-full text-sm transition hover:bg-tiilt-soft"
+        >
+            {dark ? "\u2600\ufe0f" : "\ud83c\udf19"}
+        </button>
+    )
+}
 
 function Appheader(props) {
     return (
@@ -39,6 +61,7 @@ function Appheader(props) {
             >
                 {props.rightText}
             </div>
+            <ThemeToggle />
         </div>
     )
 }
