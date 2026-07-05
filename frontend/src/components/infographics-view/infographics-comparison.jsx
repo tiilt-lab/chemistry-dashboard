@@ -29,6 +29,23 @@ function AppInfographicsComparison(props) {
     // Active transcription / scoring models, reported by the server from the
     // audio processor's live config, so labels reflect what actually ran.
     const [models, setModels] = useState(null)
+    // What actually transcribed the STORED rows: prefer the pod's per-run
+    // provenance (posthoc_models, stamped at completion) over the deployment
+    // config's live ASR that /api/v1/models reports.
+    const ASR_LABELS = {
+        "google-cloud-speech": "Google Cloud Speech-to-Text (video model, en-US)",
+        whisper: "Whisper (open, offline)",
+        whisperx: "WhisperX large-v3 (open; batched + word-aligned)",
+        qwen3: "Qwen3-ASR 1.7B + ForcedAligner (open)",
+        "qwen3-0.6b": "Qwen3-ASR 0.6B + ForcedAligner (open, fast)",
+    }
+    const podModels =
+        props.sessionDevice && props.sessionDevice.posthoc_models
+    const transcriptionLabel =
+        (podModels &&
+            podModels.asr &&
+            (ASR_LABELS[podModels.asr] || podModels.asr)) ||
+        (models && models.transcription && models.transcription.label)
     useEffect(() => {
         new ApiService()
             .httpRequestCall("api/v1/models", "GET", {})
@@ -151,7 +168,7 @@ function AppInfographicsComparison(props) {
                                     onSelectTime={setSelectedTime}
                                     playbackTime={playbackTime}
                                     compact
-                                    transcriptionLabel={models && models.transcription && models.transcription.label}
+                                    transcriptionLabel={transcriptionLabel}
                                 />
                             </div>
                         </AppSectionBoxComponent>
@@ -227,7 +244,7 @@ function AppInfographicsComparison(props) {
                                 selectedTime={selectedTime}
                                 onSelectTime={setSelectedTime}
                                 playbackTime={playbackTime}
-                                transcriptionLabel={models && models.transcription && models.transcription.label}
+                                transcriptionLabel={transcriptionLabel}
                             />
                         </AppSectionBoxComponent>
                     )}
