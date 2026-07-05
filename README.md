@@ -1,13 +1,14 @@
 # Chemistry Dashboard
 
-> ⚠️ **The setup instructions below are superseded.** Production now runs from a
+> ⚠️ **The "Installing Dependencies" setup sections below are superseded** (the
+> **Developer Guide** near the bottom is current). Production now runs from a
 > single unified virtualenv (`src/venv-unified`) that serves every component —
 > see [`src/requirements-unified.README.md`](src/requirements-unified.txt) for how
 > to build it, and [`deploy/instances/blinc-puthipiroj/README.md`](deploy/instances/blinc-puthipiroj/README.md)
 > for the current systemd/nginx deployment. The pyenv + per-component-venv +
-> `deploy/install.sh` method documented below (and its `deploy/*.service` files
-> and per-component `requirements.txt`) has been retired. The CUDA / dlib / model-
-> download steps in the middle are still relevant regardless of venv method.
+> `deploy/install.sh` method documented below (and the retired `deploy/*.service`
+> files and per-component `requirements.txt`) is stale, but the CUDA / dlib /
+> model-download steps in the middle are still relevant regardless of venv method.
 
 ## Installing Dependencies
 
@@ -290,33 +291,57 @@ sudo nginx -s reload
 
 ## Developer Guide
 
-### Manually Running Services
+### Services and how they run
 
-The services run automatically on boot via systemd. For development, you can stop the systemd service and run manually:
+Every component runs from one unified virtualenv (`src/venv-unified` — see
+[`src/requirements-unified.README.md`](src/requirements-unified.txt) to build
+it). In production each runs under systemd; the unit files live in
+[`deploy/instances/blinc-puthipiroj/`](deploy/instances/blinc-puthipiroj)
+(`blinc-*.service`), execute from the repo root, and set each component's ports
+via environment variables:
 
-**Discussion Capture Server:**
+| systemd unit                    | Entry point                              | Port env var (code default)                          |
+| ------------------------------- | ---------------------------------------- | ---------------------------------------------------- |
+| `blinc-discussion-capture`      | `src/server/discussion_capture.py`       | `DC_PORT` (5000, Flask), `DC_DEVICE_WS_PORT` (9001)  |
+| `blinc-audio-processor`         | `src/audio_processing/server.py`         | `DC_AUDIO_WS_PORT` (9000)                            |
+| `blinc-video-processor`         | `src/video_processing/server.py`         | `DC_VIDEO_WS_PORT` (9003)                            |
+| `blinc-audio-posthoc-processor` | `src/audio_processing/server_posthoc.py` | `DC_AUDIO_POSTHOC_WS_PORT` (9005)                    |
+| `blinc-video-posthoc-processor` | `src/video_processing/server_posthoc.py` | `DC_VIDEO_POSTHOC_WS_PORT` (9004)                    |
+
+Each unit overrides the defaults so multiple instances can share one host (e.g.
+blinc.puthipiroj.com uses 5001 / 9010 / 9013 / 9014 / 9015) — the instance
+README has the full port map. The frontend is built with Vite
+(`cd frontend && npm run build`) and served by nginx, which also proxies `/api`
+and the socket to the Flask server.
+
+### Running a service manually
+
+For development, stop the systemd unit and run the same entry point by hand from
+the repo root with the unified venv:
+
 ```
-sudo systemctl stop discussion_capture
-cd /var/lib/chemistry-dashboard
-pyenv local discussion_capture
-python server/discussion_capture.py
+sudo systemctl stop blinc-discussion-capture
+src/venv-unified/bin/python src/server/discussion_capture.py
 ```
 
-**Audio Processing Service:**
+The other components follow the same pattern:
+
 ```
-sudo systemctl stop audio_processor
-cd /var/lib/chemistry-dashboard
-pyenv local audio_processor
-python audio_processing/server.py
+src/venv-unified/bin/python src/audio_processing/server.py           # audio, live
+src/venv-unified/bin/python src/audio_processing/server_posthoc.py   # audio, post-hoc
+src/venv-unified/bin/python src/video_processing/server.py           # video, live
+src/venv-unified/bin/python src/video_processing/server_posthoc.py   # video, post-hoc
 ```
 
-**Video Processing Service:**
+The video processors expect their packages on `PYTHONPATH` (the systemd units
+set this); export it first when running them by hand:
+
 ```
-sudo systemctl stop video_processor
-cd /var/lib/chemistry-dashboard
-pyenv local video_processor
-python video_processing/server.py
+export PYTHONPATH=src/video_processing:src/video_processing/yolo_head
 ```
+
+To bind the same ports as a running instance, export the matching `DC_*` vars
+from that unit file; otherwise the code defaults above apply.
 
 ### Chrome HTTPS Workaround for Local Development
 
@@ -330,7 +355,11 @@ Add your local server's IP (e.g. `http://192.168.1.101`) to the "Insecure origin
 
 ### Accessing the UI
 
-After installation and reboot, access the dashboard at `http://<server_ip>` where `server_ip` is the IP of the server on the network.
+nginx serves the built frontend and proxies the API/socket to the Flask server,
+so the dashboard is reached at the instance's address — e.g.
+`https://blinc.puthipiroj.com`, or `http://<server_ip>` for a plain local box.
+The nginx config for the current instance is in
+[`deploy/instances/blinc-puthipiroj/`](deploy/instances/blinc-puthipiroj).
 
 ## TODO
 - [ ] Audit and update outdated dependencies across all components (frontend npm packages, server/audio/video Python packages). Stale Dependabot PRs were closed — dependency updates will be handled as a coordinated batch effort.
