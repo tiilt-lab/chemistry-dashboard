@@ -15,6 +15,16 @@ import { AppSpinner } from "../spinner/spinner-component"
 
 // Row wrapper (border/bg/hover) is a column so the expandable pod panel can sit
 // below the horizontal row content.
+
+// Sleek dialog styling, matching the pods-overview dialogs.
+const dlgWindow = "flex min-w-[min(22rem,86vw)] flex-col gap-3"
+const dlgHeading = "mb-1 text-lg font-semibold text-tiilt-ink"
+const dlgInput =
+    "h-11 w-full rounded-lg border border-tiilt-line bg-white px-3 text-base text-tiilt-ink transition outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
+const dlgPrimary =
+    "mt-2 h-11 rounded-lg bg-tiilt font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
+const dlgCancel =
+    "h-11 rounded-lg border border-tiilt-line bg-white font-semibold text-tiilt-ink transition hover:bg-tiilt-soft active:translate-y-px"
 const rowClass =
     "group flex flex-col rounded-lg border border-tiilt-line bg-white transition hover:border-tiilt hover:shadow-[0_8px_20px_-16px_rgba(42,23,74,0.5)]"
 const rowInnerClass = "flex items-center gap-2.5 px-3 py-1.5"
@@ -694,16 +704,16 @@ function DiscussionSessionPage(props) {
             <GenericDialogBox show={props.currentForm !== ""}>
                 {props.currentForm === "RenameSession" ? (
                     <div
-                        className={style["dialog-window"]}
+                        className={dlgWindow}
                         style={{ minWidth: "min(20rem, 90vw)" }}
                     >
-                        <div className={style["dialog-heading"]}>
+                        <div className={dlgHeading}>
                             Update Session Name:
                         </div>
                         <input
                             id="txtName"
                             defaultValue={props.selectedSession.title}
-                            className={style["field-input"]}
+                            className={dlgInput}
                             maxLength="64"
                         />
                         <div>
@@ -712,7 +722,7 @@ function DiscussionSessionPage(props) {
                                 : ""}
                         </div>
                         <button
-                            className={style["basic-button"]}
+                            className={dlgPrimary}
                             onClick={() =>
                                 props.changeSessionName(
                                     document.getElementById("txtName").value,
@@ -723,7 +733,7 @@ function DiscussionSessionPage(props) {
                             Confirm
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             {" "}
@@ -736,16 +746,16 @@ function DiscussionSessionPage(props) {
 
                 {props.currentForm === "RenameFolder" ? (
                     <div
-                        className={style["dialog-window"]}
+                        className={dlgWindow}
                         style={{ minWidth: "min(20rem, 90vw)" }}
                     >
-                        <div className={style["dialog-heading"]}>
+                        <div className={dlgHeading}>
                             Update Folder Name:
                         </div>
                         <input
                             id="txtName"
                             defaultValue={props.selectedFolder.name}
-                            className={style["field-input"]}
+                            className={dlgInput}
                             maxLength="64"
                         />
                         <div>
@@ -754,7 +764,7 @@ function DiscussionSessionPage(props) {
                                 : ""}
                         </div>
                         <button
-                            className={style["basic-button"]}
+                            className={dlgPrimary}
                             onClick={() => {
                                 props.changeFolderName(
                                     document.getElementById("txtName").value,
@@ -765,7 +775,7 @@ function DiscussionSessionPage(props) {
                             Confirm
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             {" "}
@@ -778,7 +788,7 @@ function DiscussionSessionPage(props) {
 
                 {props.currentForm === "DeleteSession" ? (
                     <div
-                        className={style["dialog-window"]}
+                        className={dlgWindow}
                         style={{ minWidth: "min(20rem, 90vw)" }}
                     >
                         <div className={style["dialog-body"]}>
@@ -793,7 +803,7 @@ function DiscussionSessionPage(props) {
                             Delete
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             {" "}
@@ -806,10 +816,10 @@ function DiscussionSessionPage(props) {
 
                 {props.currentForm === "DeleteFolder" ? (
                     <div
-                        className={style["dialog-window"]}
+                        className={dlgWindow}
                         style={{ minWidth: "min(20rem, 90vw)" }}
                     >
-                        <div className={style["dialog-heading"]}>
+                        <div className={dlgHeading}>
                             {" "}
                             Delete Folder
                         </div>
@@ -826,7 +836,7 @@ function DiscussionSessionPage(props) {
                             Delete
                         </button>
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             {" "}
@@ -839,22 +849,22 @@ function DiscussionSessionPage(props) {
 
                 {props.currentForm === "NewFolder" ? (
                     <div
-                        className={style["dialog-window"]}
+                        className={dlgWindow}
                         style={{ minWidth: "min(20rem, 90vw)" }}
                     >
-                        <div className={style["dialog-heading"]}>
+                        <div className={dlgHeading}>
                             {" "}
                             Add New Folder
                         </div>
                         <input
                             placeholder="Enter new file name"
                             id="txtName"
-                            className={style["field-input"]}
+                            className={dlgInput}
                             maxLength="64"
                         />
                         {!props.breadcrumbs.length > 0 ? (
                             <div
-                                className={style["basic-button"]}
+                                className={dlgPrimary}
                                 onClick={() =>
                                     props.addFolder(
                                         document.getElementById("txtName")
@@ -868,7 +878,7 @@ function DiscussionSessionPage(props) {
                             </div>
                         ) : (
                             <div
-                                className={style["basic-button"]}
+                                className={dlgPrimary}
                                 onClick={() =>
                                     props.addFolder(
                                         document.getElementById("txtName")
@@ -885,7 +895,7 @@ function DiscussionSessionPage(props) {
                         )}
 
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             {" "}
@@ -898,10 +908,10 @@ function DiscussionSessionPage(props) {
 
                 {props.currentForm === "MoveFolder" ? (
                     <div
-                        className={style["dialog-window"]}
+                        className={dlgWindow}
                         style={{ minWidth: "min(20rem, 90vw)" }}
                     >
-                        <div className={style["dialog-heading"]}>
+                        <div className={dlgHeading}>
                             Move Folder
                         </div>
                         <AppFolderSelectComponent
@@ -912,7 +922,7 @@ function DiscussionSessionPage(props) {
                         {/* <app-folder-select #folderSelect [folders] = "selectableFolders" ></app - folder - select > */}
                         {props.folderSelect !== null ? (
                             <button
-                                className={style["basic-button"]}
+                                className={dlgPrimary}
                                 onClick={() =>
                                     props.moveFolder(props.folderSelect)
                                 }
@@ -924,7 +934,7 @@ function DiscussionSessionPage(props) {
                             <></>
                         )}
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             {" "}
@@ -937,10 +947,10 @@ function DiscussionSessionPage(props) {
 
                 {props.currentForm === "MoveSession" ? (
                     <div
-                        className={style["dialog-window"]}
+                        className={dlgWindow}
                         style={{ minWidth: "min(20rem, 90vw)" }}
                     >
-                        <div className={style["dialog-heading"]}>
+                        <div className={dlgHeading}>
                             Move Session
                         </div>
                         <AppFolderSelectComponent
@@ -951,7 +961,7 @@ function DiscussionSessionPage(props) {
                         {/* <app-folder-select #folderSelect [folders] = "selectableFolders" ></app - folder - select > */}
                         {props.folderSelect !== null ? (
                             <button
-                                className={style["basic-button"]}
+                                className={dlgPrimary}
                                 onClick={() =>
                                     props.moveSession(props.folderSelect)
                                 }
@@ -963,7 +973,7 @@ function DiscussionSessionPage(props) {
                             <></>
                         )}
                         <button
-                            className={style["cancel-button"]}
+                            className={dlgCancel}
                             onClick={props.closeDialog}
                         >
                             {" "}
@@ -976,10 +986,10 @@ function DiscussionSessionPage(props) {
 
                 {props.currentForm === "Loading" ? (
                     <div
-                        className={style["dialog-window"]}
+                        className={dlgWindow}
                         style={{ minWidth: "min(20rem, 90vw)" }}
                     >
-                        <div className={style["dialog-heading"]}>
+                        <div className={dlgHeading}>
                             Loading...please wait...
                         </div>
                     </div>
