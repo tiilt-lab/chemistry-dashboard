@@ -304,22 +304,6 @@ function PodComponentSession() {
     setSessionClosing(isClosing);
   };
 
-  // const seeAllTranscripts = () => {
-  //   if (currentTranscript !== undefined) {
-  //     navigate(
-  //       "/sessions/" +
-  //       session.id +
-  //       "/pods/" +
-  //       sessionDeviceId +
-  //       "/transcripts?index=" +
-  //       currentTranscript.id
-  //     );
-  //   } else {
-  //     navigate(
-  //       "/sessions/" + session.id + "/pods/" + sessionDeviceId + "/transcripts"
-  //     );
-  //   }
-  // };
 
   const loading = () => {
     return session === null || transcripts === null;
@@ -353,26 +337,6 @@ function PodComponentSession() {
       );
     };
 
-  // const removeDeviceFromSession = (deleteDevice = false) => {
-  //   const fetchData = new SessionService().removeDeviceFromSession(
-  //     session.id,
-  //     sessionDeviceId,
-  //     deleteDevice
-  //   );
-  //   fetchData.then(
-  //     (response) => {
-  //       if (response.status === 200) {
-  //         closeDialog();
-  //         if (deleteDevice) {
-  //           navigateToSession();
-  //         }
-  //       }
-  //     },
-  //     (apierror) => {
-  //       console.log("podcomponent func removedevicesession 1", apierror);
-  //     }
-  //   );
-  // };
 
   const onClickedTimeline = (transcript) => {
     setCurrentForm("Transcript");

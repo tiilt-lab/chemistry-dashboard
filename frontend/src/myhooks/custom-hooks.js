@@ -1,22 +1,7 @@
-import { useEffect, useState } from "react";
-import {ApiService} from '../services/api-service';
 import React from 'react';
 import * as d3 from 'd3';
 
-function useLogin(apipath , type,data,tomodel){
-    const [value,setValue] = useState();
-    const [error,setError] = useState();
-
-    useEffect(()=>{
-        if(data!==null){
-        new ApiService().httpRequestCallV2(apipath , type,data,tomodel,setError,setValue)
-        }
-    },[apipath , type,data,tomodel])
-
-    return [error,value];
-}
-
-const useD3 = (renderChartFn, dependencies) => {
+const useD3 =(renderChartFn, dependencies) => {
     const ref = React.useRef();
 
     React.useEffect(() => {
@@ -48,4 +33,4 @@ const unpackTopModels = (topModels) => {
     return topModels
 }
 
-export {useLogin, useD3, isLargeScreen, adjDim, unpackTopModels}
+export {useD3, isLargeScreen, adjDim, unpackTopModels}

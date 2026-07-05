@@ -1,7 +1,6 @@
 import React from "react"
 import { AppSpinner } from "../../spinner/spinner-component"
 
-import style from "../../student-dashboard/student-dashboard.module.css"
 
 function CategoryDistributionPage(props) {
     return (

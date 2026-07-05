@@ -125,10 +125,6 @@ html {
     @apply box-border flex h-screen w-screen overflow-clip;
 }
 
-.text-sans {
-    @apply font-sans text-lg font-bold text-tiilt;
-}
-
 .main-container {
     @apply @container relative box-border flex h-full w-full min-w-fit flex-col;
 }
