@@ -103,13 +103,13 @@ class ImageObjectDetection:
         self.device = select_device('')
         self.half = self.device.type != 'cpu'  # half precision only supported on CUDA
         # Load model
+        import config as _cf
         from facial_recognition_backend import get_face_backend
         self.face_backend = get_face_backend()  # dlib (default) or insightface, per config.face_model()
         # One representative face crop per recognized student, so the UI can show
         # a real face thumbnail (keyed by alias, first good match per run wins).
         self._thumb_dir = os.path.join(_cf.facial_embedding_folder(), 'thumbnails')
         self._saved_thumbs = set()
-        import config as _cf
         # Head detector is config-selected: the vendored yolo_head CrowdHuman
         # YOLOv5m pickle (default) or an ultralytics YOLO11/YOLOv8 head model.
         # Moving to 'ultralytics' is the path to retiring the vendored yolo_head/.
