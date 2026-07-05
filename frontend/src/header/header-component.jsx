@@ -1,6 +1,33 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import backicon from "../assets/img/icon-back.svg"
+
+// Opt-in (escToBack prop): Escape triggers the header Back action, so the
+// keyboard can walk back up the session hierarchy. Deliberately inert while
+// a dialog or context menu is open (their own Escape handling wins) and
+// while the user is typing in a field.
+function useEscapeBack(enabled, nav) {
+    useEffect(() => {
+        if (!enabled || !nav) return
+        const onKey = (e) => {
+            if (e.key !== "Escape") return
+            if (document.querySelector('[role="dialog"], [role="menu"]'))
+                return
+            const t = e.target
+            if (
+                t &&
+                (t.tagName === "INPUT" ||
+                    t.tagName === "TEXTAREA" ||
+                    t.tagName === "SELECT" ||
+                    t.isContentEditable)
+            )
+                return
+            nav()
+        }
+        document.addEventListener("keydown", onKey)
+        return () => document.removeEventListener("keydown", onKey)
+    }, [enabled, nav])
+}
 
 function ThemeToggle() {
     const [dark, setDark] = useState(
@@ -40,6 +67,7 @@ function SettingsButton() {
 }
 
 function Appheader(props) {
+    useEscapeBack(props.escToBack, props.nav)
     return (
         <div className="relative top-0 z-10 flex h-14 w-full flex-none flex-row items-center border-b border-tiilt-line bg-white">
             {props.leftText !== false ? (

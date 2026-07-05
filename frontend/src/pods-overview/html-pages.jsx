@@ -139,6 +139,7 @@ function PodsOverviewPages(props) {
                         props.openDialog("Passcode")
                     }}
                     nav={props.navigateToSessions}
+                    escToBack={true}
                 />
                 {props.sessionDevices === null || !props.initialized ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center">

@@ -18,6 +18,7 @@ function PodComponentSeesionPages(props) {
                     rightEnabled={true}
                     rightTextClick={() => props.openDialog("Options")}
                     nav={props.navigateToSession}
+                    escToBack={true}
                 />
                 <div className="toolbar-view-container">
                     {props.session ? (

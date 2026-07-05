@@ -16,6 +16,7 @@ function DiscussionPage(props){
         rightEnabled={true}
         rightTextClick={()=>{props.openForms("checkbox", props.selectedDevice)}}
         nav={props.navigateToSession}
+        escToBack={true}
         headerclass={"discussion-graph-header"}
       />
 <div className={style["page-container"]}>
