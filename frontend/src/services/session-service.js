@@ -106,6 +106,13 @@ class SessionService {
           credentials: "include",
         });
   }
+  stopPosthocQueue(sessionId) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/posthoc_queue/stop`,
+      "POST",
+      {},
+    );
+  }
   getPosthocQueue(sessionId) {
     return this.api.httpRequestCall(
       `api/v1/sessions/${sessionId}/posthoc_queue`,
