@@ -148,6 +148,10 @@ class ServerProtocol(WebSocketServerProtocol):
 
             if not self.audio_file:
                 self.send_json({'type': 'error', 'message': 'No audio captured for this group.'})
+            elif os.path.getsize(str(self.audio_file)) < 10000:
+                # Header-only stub recordings (e.g. 137 bytes) previously sailed
+                # through and produced a silent zero-transcript "analysis".
+                self.send_json({'type': 'error', 'message': 'Audio recording is empty ({0} bytes).'.format(os.path.getsize(str(self.audio_file)))})
             else:
                 self.audio_file = str(self.audio_file)
                 file_path_split = self.audio_file.split("(")
