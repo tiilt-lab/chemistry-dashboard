@@ -58,7 +58,7 @@ function Appheader(props) {
                     Back
                 </p>
             )}
-            <div className="w-full overflow-hidden text-center text-base font-semibold whitespace-nowrap text-tiilt-ink select-none">
+            <div className="min-w-0 flex-1 truncate px-2 text-center text-sm font-semibold text-tiilt-ink select-none sm:text-base">
                 {props.editMode ? (
                     <input
                         className="visible w-52 overflow-scroll border-0 text-center outline-none"

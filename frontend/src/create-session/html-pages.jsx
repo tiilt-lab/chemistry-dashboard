@@ -77,14 +77,14 @@ function CreateSessionPage(props) {
             <div className={style["button-side-container"]}>
               <button
                 className={dlgCancel}
-                style={{ width: "min(50%, 20rem)" }}
+                style={{ flex: "1 1 0", minWidth: 0 }}
                 onClick={props.navigateToSessions}
               >
                 Back
               </button>
               <button
                 className={dlgPrimary}
-                style={{ width: "min(50%, 20rem)" }}
+                style={{ flex: "1 1 0", minWidth: 0 }}
                 onClick={props.goToKeywords}
               >
                 Next
@@ -149,14 +149,14 @@ function CreateSessionPage(props) {
             <div className={style["button-side-container"]}>
               <button
                 className={dlgCancel}
-                style={{ width: "min(50%, 20rem)" }}
+                style={{ flex: "1 1 0", minWidth: 0 }}
                 onClick={props.goToSettings}
               >
                 Back
               </button>
               <button
                 className={dlgPrimary}
-                style={{ width: "min(50%, 20rem)" }}
+                style={{ flex: "1 1 0", minWidth: 0 }}
                 onClick={props.goToTopModels}
               >
                 Next

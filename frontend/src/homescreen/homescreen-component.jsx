@@ -129,17 +129,19 @@ function HomeScreen() {
                     <ThemeToggle />
                     <button
                         onClick={() => navigate("/settings")}
-                        className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
+                        title="Settings"
+                        className="flex flex-none items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold whitespace-nowrap text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
                     >
                         <img alt="" src={settings} className="h-4 w-4" />
-                        Settings
+                        <span className="hidden sm:inline">Settings</span>
                     </button>
                     <button
                         onClick={logout}
-                        className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
+                        title="Sign out"
+                        className="flex flex-none items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold whitespace-nowrap text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
                     >
                         <img alt="" src={logouticon} className="h-4 w-4" />
-                        Sign out
+                        <span className="hidden sm:inline">Sign out</span>
                     </button>
                 </div>
             </header>
