@@ -855,42 +855,27 @@ function DiscussionSessionPage(props) {
                             Add New Folder
                         </div>
                         <input
-                            placeholder="Enter new file name"
+                            placeholder="Enter new folder name"
                             id="txtName"
                             className={dlgInput}
                             maxLength="64"
                         />
-                        {!props.breadcrumbs.length > 0 ? (
-                            <div
-                                className={dlgPrimary}
-                                onClick={() =>
-                                    props.addFolder(
-                                        document.getElementById("txtName")
-                                            .value,
-                                        null,
-                                    )
-                                }
-                            >
-                                {" "}
-                                Confirm
-                            </div>
-                        ) : (
-                            <div
-                                className={dlgPrimary}
-                                onClick={() =>
-                                    props.addFolder(
-                                        document.getElementById("txtName")
-                                            .value,
-                                        props.breadcrumbs[
-                                            props.breadcrumbs.length - 1
-                                        ].id,
-                                    )
-                                }
-                            >
-                                {" "}
-                                Confirm
-                            </div>
-                        )}
+                        <button
+                            className={dlgPrimary}
+                            onClick={() =>
+                                props.addFolder(
+                                    document.getElementById("txtName").value,
+                                    props.breadcrumbs.length
+                                        ? props.breadcrumbs[
+                                              props.breadcrumbs.length - 1
+                                          ].id
+                                        : null,
+                                )
+                            }
+                        >
+                            {" "}
+                            Confirm
+                        </button>
 
                         <button
                             className={dlgCancel}
