@@ -20,6 +20,40 @@ function PodsOverviewComponent() {
   // straight from the devices endpoint — the shared in-memory source strips
   // these fields. Polled so the Analyzing badge updates live.
   const [enriched, setEnriched] = useState({});
+  const [selected, setSelected] = useState({});
+  const [queueState, setQueueState] = useState({});
+  const toggleSelect = (id) =>
+    setSelected((cur) => ({ ...cur, [id]: !cur[id] }));
+  const loadQueue = (sid) =>
+    new SessionService().getPosthocQueue(sid).then(
+      (r) => {
+        if (r.status === 200)
+          r.json().then((list) => {
+            const m = {};
+            for (const j of list) m[j.device_id] = j.state;
+            setQueueState(m);
+          });
+      },
+      () => {},
+    );
+  useEffect(() => {
+    if (session === null || !session.id) return;
+    loadQueue(session.id);
+    const t = setInterval(() => loadQueue(session.id), 15000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
+  const runSelected = () => {
+    const ids = Object.keys(selected).filter((k) => selected[k]);
+    if (!ids.length || session === null) return;
+    new SessionService().enqueuePosthoc(session.id, ids).then(
+      () => {
+        setSelected({});
+        loadQueue(session.id);
+      },
+      () => {},
+    );
+  };
   useEffect(() => {
     if (session === null || !session.id) return;
     let alive = true;
@@ -288,6 +322,10 @@ function PodsOverviewComponent() {
   return (
     <PodsOverviewPages
       enriched={enriched}
+      selected={selected}
+      toggleSelect={toggleSelect}
+      runSelected={runSelected}
+      queueState={queueState}
       righttext={getPasscode()}
       rightenabled={getRightEnabled()}
       session={session}
