@@ -64,7 +64,8 @@ function TranscriptComponentPage(props) {
                                                 (transcriptData, wIndex) =>
                                                     transcriptData.matchingKeywords !==
                                                     null ? (
-                                                        <span
+                                                        <button
+                                                            type="button"
                                                             key={wIndex}
                                                             style={{
                                                                 color: transcriptData.color,
@@ -74,11 +75,12 @@ function TranscriptComponentPage(props) {
                                                                     transcriptData.matchingKeywords,
                                                                 )
                                                             }
-                                                            className="cursor-pointer font-semibold underline decoration-dotted underline-offset-2"
+                                                            aria-label={`Keyword details for ${transcriptData.word}`}
+                                                            className="inline cursor-pointer p-0 text-left font-semibold underline decoration-dotted underline-offset-2"
                                                         >
                                                             {transcriptData.word +
                                                                 " "}
-                                                        </span>
+                                                        </button>
                                                     ) : (
                                                         <span key={wIndex}>
                                                             {transcriptData.word +

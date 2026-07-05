@@ -158,13 +158,18 @@ function CreateSessionPage(props) {
                 <></>
               )}
               {props.keywordLists.map((keywordList, index) => (
-                <div
+                <button
+                  type="button"
                   key={index}
-                  className={
+                  aria-pressed={
                     JSON.stringify(props.selectedKeywordList) ===
                     JSON.stringify(keywordList)
+                  }
+                  className={
+                    (JSON.stringify(props.selectedKeywordList) ===
+                    JSON.stringify(keywordList)
                       ? `${style["keywords-selected"]} ${style["keyword-list-button"]}`
-                      : style["keyword-list-button"]
+                      : style["keyword-list-button"]) + " w-full text-left"
                   }
                   onClick={() =>
                     props.setSelectedKeywordList(
@@ -184,7 +189,7 @@ function CreateSessionPage(props) {
                   <div className={style["keyword-list-keywords"]}>
                     {keywordList.keywordsText}
                   </div>
-                </div>
+                </button>
               ))}
               <button
                 className={dlgCancel + " w-full"}
@@ -226,13 +231,18 @@ function CreateSessionPage(props) {
                 <></>
               )}
               {props.topicModels.map((topicModel, index) => (
-                <div
+                <button
+                  type="button"
                   key={index}
-                  className={
+                  aria-pressed={
                     JSON.stringify(props.selectedTopicModel) ===
                     JSON.stringify(topicModel)
+                  }
+                  className={
+                    (JSON.stringify(props.selectedTopicModel) ===
+                    JSON.stringify(topicModel)
                       ? `${style["keywords-selected"]} ${style["keyword-list-button"]}`
-                      : style["keyword-list-button"]
+                      : style["keyword-list-button"]) + " w-full text-left"
                   }
                   onClick={() =>
                     props.setSelectedTopicModel(
@@ -252,7 +262,7 @@ function CreateSessionPage(props) {
                   <div className={style["keyword-list-keywords"]}>
                     {topicModel.summary}
                   </div>
-                </div>
+                </button>
               ))}
               <button
                 className={dlgCancel + " w-full"}
@@ -304,10 +314,12 @@ function CreateSessionPage(props) {
                       }
                       onClick={() => props.deviceSelected(device)}
                     >
-                      <img className={style["pod-icon"]} src={podIcon} />
+                      <img className={style["pod-icon"]} src={podIcon} alt="" />
                       <div className={style["pod-text"]}>{device.name}</div>
                       <div className={style["button-container"]}>
                         <button
+                          aria-label={`Blink light on ${device.name || "pod"}`}
+                          aria-pressed={!!device.blinking}
                           className={
                             device.blinking
                               ? style["selected-button"]

@@ -135,7 +135,7 @@ function UploadVideoButton() {
     return (
         <label
             className={
-                "flex items-center gap-1.5 rounded-lg border border-tiilt-line bg-white px-4 py-2 text-sm font-semibold text-tiilt-ink transition active:translate-y-px " +
+                "flex items-center gap-1.5 rounded-lg border border-tiilt-line bg-white px-4 py-2 text-sm font-semibold text-tiilt-ink transition focus-within:border-tiilt focus-within:ring-[3px] focus-within:ring-tiilt/30 active:translate-y-px " +
                 (busy ? "cursor-wait opacity-60" : "cursor-pointer hover:border-tiilt hover:bg-tiilt-soft")
             }
             title={note || "Upload a webm/mp4 recording to analyze"}
@@ -147,7 +147,8 @@ function UploadVideoButton() {
             {note && !busy ? (
                 <span className="max-w-56 truncate text-xs font-normal text-tiilt-danger">{note}</span>
             ) : null}
-            <input type="file" accept="video/webm,video/mp4" className="hidden" disabled={busy} onChange={onPick} />
+            {/* sr-only (not display:none) keeps the file input keyboard-focusable */}
+            <input type="file" accept="video/webm,video/mp4" className="sr-only" disabled={busy} onChange={onPick} />
         </label>
     )
 }
