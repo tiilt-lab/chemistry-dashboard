@@ -17,6 +17,7 @@ function TranscriptComponentPage(props) {
                     rightEnabled={props.isenabled}
                     rightTextClick={props.openOptionsDialog}
                     nav={props.navigateToSession}
+                    escToBack={true}
                 />
 
                 <div className="relative min-h-0 w-full grow overflow-y-auto">
