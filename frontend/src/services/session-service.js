@@ -94,6 +94,18 @@ class SessionService {
       {}
     );
   }
+  uploadVideo(name, file) {
+    const fd = new FormData();
+    fd.append("video", file);
+    fd.append("name", name);
+    return this.api.httpRequestUpload
+      ? this.api.httpRequestUpload("api/v1/sessions/upload_video", fd)
+      : fetch(this.api.getEndpoint() + "api/v1/sessions/upload_video", {
+          method: "POST",
+          body: fd,
+          credentials: "include",
+        });
+  }
   getPosthocQueue(sessionId) {
     return this.api.httpRequestCall(
       `api/v1/sessions/${sessionId}/posthoc_queue`,

@@ -554,6 +554,45 @@ def get_pod_dynamics(session_id, session_device_id, **kwargs):
     return json_response(database.get_conversation_dynamics(session_device_id))
 
 
+@api_routes.route('/api/v1/sessions/upload_video', methods=['POST'])
+@wrappers.verify_login(public=True)
+def upload_video_session(user, **kwargs):
+    # Analyze a user-provided recording: create a session + one pod, place the
+    # video (and an extracted 16k mono f32 wav) exactly where the post-hoc
+    # services look for pod recordings, then auto-queue the full analysis.
+    # No enrolled speakers, so diarization yields generic SPEAKER_NN labels.
+    import time as _time
+    f = request.files.get('video')
+    if f is None:
+        return json_response({'message': 'video file required'}, 400)
+    name = sanitize(request.form.get('name') or 'Uploaded video')[:60]
+    session_obj = session_handler.create_session(user['id'], name, [], None, None, True, True, False, None)
+    ok, device = database.create_session_device(session_obj.id, 'Uploaded')
+    if not ok:
+        return json_response({'message': str(device)}, 400)
+    key = device.processing_key
+    ctime = _time.ctime()
+    base = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '..')
+    vid_dir = os.path.join(base, 'video_processing', 'videorecordings')
+    aud_dir = os.path.join(base, 'audio_processing', 'recordings')
+    ext = (f.filename or '').rsplit('.', 1)[-1].lower()
+    ext = ext if ext in ('webm', 'mp4') else 'webm'
+    vid_path = os.path.join(vid_dir, '{0}_{1}_{2}_({3})_orig.{4}'.format(key, session_obj.id, device.id, ctime, ext))
+    f.save(vid_path)
+    wav_path = os.path.join(aud_dir, '{0}({1})_orig.wav'.format(key, ctime))
+    try:
+        subprocess.run(['ffmpeg', '-y', '-v', 'error', '-i', vid_path, '-vn',
+                        '-ar', '16000', '-ac', '1', '-acodec', 'pcm_f32le', wav_path],
+                       check=True, timeout=600)
+    except Exception as e:
+        return json_response({'message': 'audio extraction failed: %s' % e}, 400)
+    # close the session (uploads are not live) and queue the analysis
+    database.update_session_status(session_obj.id) if hasattr(database, 'update_session_status') else None
+    import posthoc_queue
+    posthoc_queue.enqueue(session_obj.id, [device.id])
+    return json_response({'session_id': session_obj.id, 'device_id': device.id, 'queued': True})
+
+
 @api_routes.route('/api/v1/sessions/<int:session_id>/posthoc_queue', methods=['POST'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access

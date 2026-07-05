@@ -6,6 +6,8 @@ import { AppRadarComponent } from "../../radar/radar-component"
 import { AppKeywordsComponent } from "../../keywords/keywords-component"
 import { AppIndividualFeaturesComponent } from "../individualmetrics/features-component"
 import { AppIndividualVideoFeaturesComponent } from "../individualVideometrics/video-features-component"
+import { VideoAnalyticsPanel } from "../video-analytics/video-analytics-panel"
+import { StudentLongitudinalPanel } from "../student-longitudinal/student-longitudinal-panel"
 
 import React from "react"
 
@@ -94,6 +96,16 @@ function AppInfographicsSessionComparison(props) {
                 </>
 
             )}
+            {props.userDetail && props.userDetail.username ? (
+                <AppSectionBoxComponent
+                    type={"w-full"}
+                    heading={"Participation across sessions"}
+                >
+                    <StudentLongitudinalPanel
+                        username={props.userDetail.username}
+                    />
+                </AppSectionBoxComponent>
+            ) : null}
             {props.showBoxes.length > 0 &&
                 props.showBoxes[0]["clicked"] && (
                     <AppSectionBoxComponent
@@ -181,7 +193,7 @@ function AppInfographicsSessionComparison(props) {
                         type={"medium-section"}
                         heading={`Visual Analytics`}
                     >
-                        <AppIndividualVideoFeaturesComponent
+                        <VideoAnalyticsPanel
                             session={props.session}
                             videometrics={props.session1VideoMetrics}
                             showFeatures={props.showFeatures}
@@ -196,7 +208,7 @@ function AppInfographicsSessionComparison(props) {
                         type={"medium-section"}
                         heading={`Visual Analytics`}
                     >
-                        <AppIndividualVideoFeaturesComponent
+                        <VideoAnalyticsPanel
                             session={props.session}
                             videometrics={props.session2VideoMetrics}
                             spkrId={props.selectedSessionId2}
