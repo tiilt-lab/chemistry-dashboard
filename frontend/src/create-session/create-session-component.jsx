@@ -28,7 +28,7 @@ function CreateSessionComponent(props) {
 
   //menus = Menus;
   const [currentMenu, setCurrentMenu] = useState(changedState ? prevState.currentMenu : 'Settings');
-  const [pageTitle, setPageTitle] = useState(changedState ? prevState.pageTitle : 'Create Session');
+  const [pageTitle, setPageTitle] = useState(changedState ? prevState.pageTitle : 'New session');
   //forms = Forms;
   const [currentForm, setCurrentForm] = useState("");
   const [displayText, setDisplayText] = useState('');
@@ -294,22 +294,22 @@ function CreateSessionComponent(props) {
 
   const goToKeywords = ()=> {
     setCurrentMenu("Keywords");
-    setPageTitle('Create Session: Keywords');
+    setPageTitle('New session');
   }
   
   const goToTopModels = ()=> {
     setCurrentMenu("TopModels");
-    setPageTitle('Create Session: Topic Models');
+    setPageTitle('New session');
   }
 
   const goToSettings = ()=> {
     setCurrentMenu("Settings");
-    setPageTitle('Create Session: Settings');
+    setPageTitle('New session');
   }
 
   const goToDevices = () =>{
     setCurrentMenu("Devices");
-    setPageTitle('Create Session: Devices');
+    setPageTitle('New session');
   }
 
   const navigateToSessions = ()=> {

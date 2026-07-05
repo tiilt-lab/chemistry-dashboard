@@ -9,10 +9,77 @@ import openFolderIcon from "../assets/img/open-folder.svg";
 import podIcon from "../assets/img/icon-pod.svg";
 import LightIcon from "@icons/Light";
 
+// Linear wizard steps (Devices is an out-of-band screen, not numbered).
+const STEPS = ["Settings", "Keywords", "TopModels"];
+const STEP_LABELS = {
+  Settings: "Session settings",
+  Keywords: "Keyword list",
+  TopModels: "Topic model",
+};
+
+const contentWrap =
+  "mx-auto flex w-full max-w-lg grow flex-col gap-4 overflow-y-auto px-4 py-6";
+const fieldLabel = "mb-1.5 block text-sm font-semibold text-tiilt-ink";
+const footerBar = "w-full flex-none border-t border-tiilt-line bg-white";
+const footerRow = "mx-auto flex w-full max-w-lg gap-3 px-4 py-4";
+
+function Toggle({ label, checked, onChange }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={onChange}
+      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-tiilt-soft/40"
+    >
+      <span className="text-sm font-medium text-tiilt-ink">{label}</span>
+      <span
+        className={`relative inline-flex h-6 w-11 flex-none items-center rounded-full transition ${checked ? "bg-tiilt" : "bg-tiilt-line"}`}
+      >
+        <span
+          className={`inline-block h-5 w-5 transform rounded-full bg-[#fff] shadow transition ${checked ? "translate-x-[22px]" : "translate-x-0.5"}`}
+        />
+      </span>
+    </button>
+  );
+}
+
+function StepIndicator({ current }) {
+  const idx = STEPS.indexOf(current);
+  if (idx < 0) return null;
+  return (
+    <div className="mx-auto w-full max-w-lg flex-none px-4 pt-4">
+      <div className="flex items-center justify-between text-xs font-semibold text-tiilt-muted">
+        <span>
+          Step {idx + 1} of {STEPS.length}
+        </span>
+        <span className="text-tiilt-ink">{STEP_LABELS[current]}</span>
+      </div>
+      <div className="mt-2 flex gap-1.5">
+        {STEPS.map((s, i) => (
+          <div
+            key={s}
+            className={`h-1.5 flex-1 rounded-full transition ${i <= idx ? "bg-tiilt" : "bg-tiilt-line"}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ title, subtitle }) {
+  return (
+    <div className="flex flex-col items-center gap-1.5 py-10 text-center">
+      <div className="text-lg font-semibold text-tiilt-ink">{title}</div>
+      <div className="max-w-xs text-sm text-tiilt-muted">{subtitle}</div>
+    </div>
+  );
+}
+
 function CreateSessionPage(props) {
   return (
     <>
-      <div className="main-container items-center">
+      <div className="main-container">
         <Appheader
           title={props.pageTitle}
           leftText={false}
@@ -20,86 +87,71 @@ function CreateSessionPage(props) {
           rightEnabled={false}
           nav={props.navigateToSessions}
         />
+        <StepIndicator current={props.currentMenu} />
+
         {props.currentMenu === "Settings" ? (
           <React.Fragment>
-            <div className="center-column-container text-center">
-              <div>Session name:</div>
-              <input
-                id="txtName"
-                className={dlgInput}
-                defaultValue={props.sessionName}
-                onKeyUp={(event) => props.setSessionName(event.target.value)}
-                maxLength="64"
-              />
-              <div>Folder: </div>
-              <div
-                className="flex flex-row w-full"
-              >
+            <div className={contentWrap}>
+              <div>
+                <label htmlFor="txtName" className={fieldLabel}>
+                  Session name
+                </label>
                 <input
-                  type="text"
-                  className={dlgInput + " grow"}
-                  name="Location"
-                  placeholder={props.folderPath}
-                  readOnly
-                />
-                <img
-                  src={openFolderIcon}
-                  id={style["open-folder-icon"]}
-                  onClick={() => props.openDialog("Folder", "test")}
+                  id="txtName"
+                  className={dlgInput}
+                  defaultValue={props.sessionName}
+                  onKeyUp={(event) => props.setSessionName(event.target.value)}
+                  maxLength="64"
+                  placeholder="Untitled session"
                 />
               </div>
-              <label className={style["dc-checkbox"]}>
-                Allow participant devices
-                <input
-                  type="checkbox"
+              <div>
+                <label className={fieldLabel}>Folder</label>
+                <button
+                  type="button"
+                  onClick={() => props.openDialog("Folder", "test")}
+                  className="flex h-11 w-full items-center justify-between gap-2 rounded-lg border border-tiilt-line bg-white px-3 text-left text-base text-tiilt-ink transition hover:border-tiilt"
+                >
+                  <span className="truncate">{props.folderPath || "Home"}</span>
+                  <img src={openFolderIcon} alt="" className="h-5 w-5 flex-none" />
+                </button>
+              </div>
+              <div className="divide-y divide-tiilt-line overflow-hidden rounded-lg border border-tiilt-line">
+                <Toggle
+                  label="Allow participant devices"
                   checked={props.byod}
-                  value={props.byod}
                   onChange={() => props.setByod(!props.byod)}
                 />
-                <span className={style.checkmark}></span>
-              </label>
-              <label className={style["dc-checkbox"]}>
-                Analyze session features
-                <input
-                  type="checkbox"
+                <Toggle
+                  label="Analyze session features"
                   checked={props.features}
-                  value={props.features}
                   onChange={() => props.setFeatures(!props.features)}
                 />
-                <span className={style.checkmark}></span>
-              </label>
+              </div>
             </div>
-            <div className={style["button-side-container"]}>
-              <button
-                className={dlgCancel}
-                style={{ flex: "1 1 0", minWidth: 0 }}
-                onClick={props.navigateToSessions}
-              >
-                Back
-              </button>
-              <button
-                className={dlgPrimary}
-                style={{ flex: "1 1 0", minWidth: 0 }}
-                onClick={props.goToKeywords}
-              >
-                Next
-              </button>
+            <div className={footerBar}>
+              <div className={footerRow}>
+                <button
+                  className={dlgPrimary + " w-full"}
+                  onClick={props.goToKeywords}
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </React.Fragment>
         ) : (
           <></>
         )}
+
         {props.currentMenu === "Keywords" ? (
           <React.Fragment>
-            <div className={style["list-container"]}>
+            <div className={contentWrap}>
               {props.keywordLists && props.keywordLists.length == 0 ? (
-                <div className={style["empty-keyword-list"]}>
-                  <div className={style["load-text"]}> No Keyword Lists </div>
-                  <div className={style["load-text-description"]}>
-                    {" "}
-                    Tap the button below to make your first keyword list.{" "}
-                  </div>
-                </div>
+                <EmptyState
+                  title="No keyword lists"
+                  subtitle="Create one below, or continue without keywords."
+                />
               ) : (
                 <></>
               )}
@@ -132,30 +184,28 @@ function CreateSessionPage(props) {
                   </div>
                 </div>
               ))}
+              <button
+                className={dlgCancel + " w-full"}
+                onClick={props.navigateToKeywordLists}
+              >
+                + Create keyword list
+              </button>
             </div>
-
-            <button
-              className={dlgPrimary}
-              style={{ width: "min(42rem, 100%)" }}
-              onClick={props.navigateToKeywordLists}
-            >
-              Create Keyword List
-            </button>
-            <div className={style["button-side-container"]}>
-              <button
-                className={dlgCancel}
-                style={{ flex: "1 1 0", minWidth: 0 }}
-                onClick={props.goToSettings}
-              >
-                Back
-              </button>
-              <button
-                className={dlgPrimary}
-                style={{ flex: "1 1 0", minWidth: 0 }}
-                onClick={props.goToTopModels}
-              >
-                Next
-              </button>
+            <div className={footerBar}>
+              <div className={footerRow}>
+                <button
+                  className={dlgCancel + " flex-1"}
+                  onClick={props.goToSettings}
+                >
+                  Previous
+                </button>
+                <button
+                  className={dlgPrimary + " flex-1"}
+                  onClick={props.goToTopModels}
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </React.Fragment>
         ) : (
@@ -164,15 +214,12 @@ function CreateSessionPage(props) {
 
         {props.currentMenu === "TopModels" ? (
           <React.Fragment>
-            <div className={style["list-container"]}>
+            <div className={contentWrap}>
               {props.topicModels && props.topicModels.length == 0 ? (
-                <div className={style["empty-keyword-list"]}>
-                  <div className={style["load-text"]}> No Topic Models </div>
-                  <div className={style["load-text-description"]}>
-                    {" "}
-                    Tap the button below to make your first topic model.{" "}
-                  </div>
-                </div>
+                <EmptyState
+                  title="No topic models"
+                  subtitle="Create one below, or continue without a topic model."
+                />
               ) : (
                 <></>
               )}
@@ -205,29 +252,29 @@ function CreateSessionPage(props) {
                   </div>
                 </div>
               ))}
+              <button
+                className={dlgCancel + " w-full"}
+                onClick={props.navigateToFileUpload}
+              >
+                + Create topic model
+              </button>
             </div>
-
-            <button
-              className={dlgPrimary}
-              style={{ width: "min(42rem, 100%)" }}
-              onClick={props.navigateToFileUpload}
-            >
-              Create Topic Model
-            </button>
-            <button
-              className={dlgCancel}
-              style={{ width: "min(42rem, 100%)" }}
-              onClick={props.goToKeywords}
-            >
-              Back
-            </button>
-            <button
-              className={dlgPrimary}
-              style={{ width: "min(42rem, 100%)" }}
-              onClick={props.createSession}
-            >
-              Start Session
-            </button>
+            <div className={footerBar}>
+              <div className={footerRow}>
+                <button
+                  className={dlgCancel + " flex-1"}
+                  onClick={props.goToKeywords}
+                >
+                  Previous
+                </button>
+                <button
+                  className={dlgPrimary + " flex-1"}
+                  onClick={props.createSession}
+                >
+                  Start session
+                </button>
+              </div>
+            </div>
           </React.Fragment>
         ) : (
           <></>
@@ -235,11 +282,12 @@ function CreateSessionPage(props) {
 
         {props.currentMenu === "Devices" ? (
           <React.Fragment>
-            <div className={style["list-container"]}>
+            <div className={contentWrap}>
               {props.devices.length === 0 ? (
-                <div className={style["empty-keyword-list"]}>
-                  <div className={style["load-text"]}> No Devices </div>
-                </div>
+                <EmptyState
+                  title="No devices"
+                  subtitle="No participant devices have joined yet."
+                />
               ) : (
                 <></>
               )}
@@ -283,27 +331,29 @@ function CreateSessionPage(props) {
               ) : (
                 <></>
               )}
+              <button
+                className={dlgCancel + " w-full"}
+                onClick={props.onClickSelectAll}
+              >
+                Select all
+              </button>
             </div>
-            <button
-              className={style["select-all"]}
-              onClick={props.onClickSelectAll}
-            >
-              Select All
-            </button>
-            <button
-              className={dlgCancel}
-              style={{ width: "min(42rem, 100%)" }}
-              onClick={props.goToTopModels}
-            >
-              Back
-            </button>
-            <button
-              className={dlgPrimary}
-              style={{ width: "min(42rem, 100%)" }}
-              onClick={props.createSession}
-            >
-              Start Session
-            </button>
+            <div className={footerBar}>
+              <div className={footerRow}>
+                <button
+                  className={dlgCancel + " flex-1"}
+                  onClick={props.goToTopModels}
+                >
+                  Previous
+                </button>
+                <button
+                  className={dlgPrimary + " flex-1"}
+                  onClick={props.createSession}
+                >
+                  Start session
+                </button>
+              </div>
+            </div>
           </React.Fragment>
         ) : (
           <></>
@@ -315,10 +365,7 @@ function CreateSessionPage(props) {
           <div className={style["add-dialog"]}>
             <div className={style2["dialog-heading"]}>Invalid Session</div>
             {props.displayText}
-            <button
-              className={dlgCancel}
-              onClick={props.closeDialog}
-            >
+            <button className={dlgCancel} onClick={props.closeDialog}>
               Close
             </button>
           </div>
@@ -334,7 +381,6 @@ function CreateSessionPage(props) {
               setFolderSelect={props.setFolderSelect}
               setBreadCrumbSelect={props.setBreadCrumbSelect}
             />
-            {/* <app-folder-select #folderSelect [folders]="folders" (itemSelected)="receiveEmmitedFolder($event)"></app-folder-select> */}
             {props.folderSelect ? (
               <button
                 className={dlgPrimary}
@@ -350,10 +396,7 @@ function CreateSessionPage(props) {
             ) : (
               <></>
             )}
-            <button
-              className={dlgCancel}
-              onClick={props.closeDialog}
-            >
+            <button className={dlgCancel} onClick={props.closeDialog}>
               Cancel
             </button>
           </div>
