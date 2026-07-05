@@ -288,35 +288,6 @@ sudo nginx -s reload
 
 ```
 
-## Setup with Vagrant VM (Alternative)
-
-If you prefer to use Vagrant instead of manual installation:
-
-### Software Requirements
-- Git, Node.js, Python 3, pip3
-- [VirtualBox](https://www.virtualbox.org/wiki/Downloads)
-- [Vagrant](https://www.vagrantup.com/downloads.html)
-- Ansible: `pip3 install ansible`
-
-### Setup Instructions
-
-Navigate to the project directory containing `Vagrantfile` and run:
-```
-vagrant up --provider virtualbox
-```
-
-For your first deployment, it will ask which network interface to use for the VM's bridged network.
-
-Once deployed, Vagrant will display the local IP address of your VM. The Discussion Capture web application will be available at that IP.
-
-You will need to create your first web application user:
-```
-vagrant ssh
-source /var/lib/chemistry-dashboard/server/venv/bin/activate
-python3 /var/lib/chemistry-dashboard/server/create_user.py
-deactivate
-```
-
 ## Developer Guide
 
 ### Manually Running Services
