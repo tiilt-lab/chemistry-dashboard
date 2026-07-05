@@ -249,6 +249,11 @@ class ServerProtocol(WebSocketServerProtocol):
             self.video_processor.start()
             self._run_active = True  # may now finish in the background if the client leaves
 
+        if data['type'] == 'query_posthoc_status':
+            sdid = str(data.get('sessiondeviceid', ''))
+            active = any(k.startswith(sdid + '-') for k in list(running_video_processes.keys()))
+            self.send_json({'type': 'posthoc_status', 'running': active})
+
         if data['type'] == 'heartbeat':
             auth_key = data.get('key', None)
             logging.info("Recieved Heartbeat from client with authkey {0}".format(auth_key))
