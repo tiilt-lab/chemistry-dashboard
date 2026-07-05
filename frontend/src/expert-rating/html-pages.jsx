@@ -11,7 +11,7 @@ import React from "react"
 import Select from "react-select"
 import { LikertRatingInterface } from "./left-pane"
 import { AppInfographicsSessionComparison } from "../components/infographics-view/infographics_session-comparison"
-import { CollaborationFeedbackDashboard } from "./reflection-interactive-dashboard-rating"
+import { CollaborationFeedbackDashboard } from "../components/reflection-dashboard-view/reflection-interactive-dashboard"
 import { TranscriptsComponentClient } from "../transcripts/transcripts-component_client"
 
 import MicIcon from "../Icons/Mic"
@@ -138,6 +138,7 @@ function ExpertRatingPage(props) {
                                                 {props.selectedSessionId1 !== -1 && (props.session1Transcripts.length >= 0 || props.session1VideoMetrics.length >= 0) ? (
 
                                                     <CollaborationFeedbackDashboard
+                                                        mode="rating"
                                                         sessionNameForReflecDashboard={props.sessionNameForReflecDashboard}
                                                         groupNameForReflecDashboard={props.groupNameForReflecDashboard}
                                                         llmSessionAnalysis={props.llmSessionAnalysis}

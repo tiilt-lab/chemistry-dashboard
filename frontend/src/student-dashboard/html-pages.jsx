@@ -10,7 +10,7 @@ import React from "react"
 import Select from "react-select"
 import { AppInfographicsSessionComparison } from "../components/infographics-view/infographics_session-comparison"
 import { TranscriptsComponentClient } from "../transcripts/transcripts-component_client"
-import { CollaborationFeedbackDashboard } from "../components/reflection-dashboard-view/reflection-interactive-dashboard-student"
+import { CollaborationFeedbackDashboard } from "../components/reflection-dashboard-view/reflection-interactive-dashboard"
 import {SurveyCompletion} from "./survey-question"
 
 import MicIcon from "../Icons/Mic"
@@ -243,6 +243,7 @@ function StudentSessionDashboardPages(props) {
                                                 {props.selectedSessionId1 !== -1 && (props.session1Transcripts.length >= 0 || props.session1VideoMetrics.length >= 0) ? (
 
                                                     <CollaborationFeedbackDashboard
+                                                        mode="student"
                                                         sessionNameForReflecDashboard={props.sessionNameForReflecDashboard}
                                                         groupNameForReflecDashboard={props.groupNameForReflecDashboard}
                                                         llmSessionAnalysis={props.selectedLLMAnalysis}
