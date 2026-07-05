@@ -65,6 +65,9 @@ class VideoProcessorPosthoc:
 
     def add_websocket_connection(self,web_socket):
         self.web_socket_connection = web_socket
+        # Replay the latest progress so a reconnecting client sees % immediately.
+        if getattr(self, '_last_progress', None):
+            self.send_json(self._last_progress)
 
     def setParticpantFacialEmbeddings(self,facialEmbeddings):
         self.facialEmbeddings = facialEmbeddings
@@ -132,9 +135,10 @@ class VideoProcessorPosthoc:
                     # Live progress to the trigger UI (position in the video).
                     try:
                         _pct = round(100.0 * start / max(1, _duration))
-                        self.send_json({'type': 'progress',
-                                        'message': 'Analyzing video {0}s / {1}s'.format(int(start), int(_duration)),
-                                        'percent': _pct})
+                        self._last_progress = {'type': 'progress',
+                                               'message': 'Analyzing video {0}s / {1}s'.format(int(start), int(_duration)),
+                                               'percent': _pct}
+                        self.send_json(self._last_progress)
                     except Exception:
                         pass
 

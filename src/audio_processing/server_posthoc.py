@@ -291,8 +291,18 @@ class ServerProtocol(WebSocketServerProtocol):
             # Is a run for this pod still active (possibly started by another
             # page/session)? Lets the UI restore progress after a refresh.
             sdid = str(data.get('sessiondeviceid', ''))
-            active = any(k.startswith(sdid + '-') for k in list(running_audio_processes.keys()))
-            self.send_json({'type': 'posthoc_status', 'running': active})
+            match = next((k for k in list(running_audio_processes.keys())
+                          if k.startswith(sdid + '-')), None)
+            self.send_json({'type': 'posthoc_status', 'running': match is not None})
+            if match is not None:
+                # Re-attach the running processor to THIS socket so live
+                # progress / completion stream to the reconnected client, and
+                # adopt the run so completion bookkeeping works from here.
+                proc = running_audio_processes.get(match)
+                if hasattr(proc, 'add_websocket_connection'):
+                    proc.add_websocket_connection(self)
+                    self.config = getattr(proc, 'config', None) or self.config
+                    self._run_active = True
 
         if data['type'] == 'heartbeat_from_posthoc_processing':
             auth_key = data.get('key', None)
@@ -400,6 +410,9 @@ class ServerProtocol(WebSocketServerProtocol):
         self.processor = AudioProcessorPosthoc(self.audio_buffer, self.asr_transcript_queue, diarization_model, get_semantic_model(getattr(self, 'embedder_choice', None)), self.config, scorer=getattr(self, 'scorer_choice', None))
         self.processor.start()
         self._run_active = True  # run may now finish in the background if the client leaves
+        # Store the processor (not just a flag) so a reconnecting client can
+        # re-attach to it and resume receiving progress.
+        running_audio_processes[self.config.auth_key] = self.processor
         batch_asr = getattr(self, 'asr_choice', None) in ('whisperx', 'qwen3')
         self.audioreader = AudioStreamReader(self.audio_buffer, self.asr_audio_queue, self.audio_file, self.queue_put_timeout,self.config,STOP_SIGNAL,running_audio_processes, realtime=not batch_asr)
         

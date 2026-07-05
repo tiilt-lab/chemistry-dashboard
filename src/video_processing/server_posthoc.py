@@ -248,11 +248,22 @@ class ServerProtocol(WebSocketServerProtocol):
             self.video_processor.add_websocket_connection(self)
             self.video_processor.start()
             self._run_active = True  # may now finish in the background if the client leaves
+            # Store the processor so a reconnecting client can re-attach.
+            running_video_processes[self.config.auth_key] = self.video_processor
 
         if data['type'] == 'query_posthoc_status':
             sdid = str(data.get('sessiondeviceid', ''))
-            active = any(k.startswith(sdid + '-') for k in list(running_video_processes.keys()))
-            self.send_json({'type': 'posthoc_status', 'running': active})
+            match = next((k for k in list(running_video_processes.keys())
+                          if k.startswith(sdid + '-')), None)
+            self.send_json({'type': 'posthoc_status', 'running': match is not None})
+            if match is not None:
+                # Re-attach the running processor to THIS socket (live progress
+                # resumes, incl. an immediate replay of the last percent).
+                proc = running_video_processes.get(match)
+                if hasattr(proc, 'add_websocket_connection'):
+                    proc.add_websocket_connection(self)
+                    self.config = getattr(proc, 'config', None) or self.config
+                    self._run_active = True
 
         if data['type'] == 'heartbeat':
             auth_key = data.get('key', None)

@@ -108,6 +108,9 @@ class AudioProcessorPosthoc:
 
     def add_websocket_connection(self, web_socket):
         self.web_socket_connection = web_socket
+        # Replay the latest progress so a reconnecting client sees it immediately.
+        if getattr(self, '_last_progress', None):
+            self.send_json(self._last_progress)
 
     def send_json(self, message):
         import json as _json
@@ -210,8 +213,9 @@ class AudioProcessorPosthoc:
                 self.utterances_seen = getattr(self, 'utterances_seen', 0) + 1
                 if self.utterances_seen % 5 == 0:
                     try:
-                        self.send_json({'type': 'progress',
-                                        'message': 'Processed {0} utterances'.format(self.utterances_seen)})
+                        self._last_progress = {'type': 'progress',
+                                               'message': 'Processed {0} utterances'.format(self.utterances_seen)}
+                        self.send_json(self._last_progress)
                     except Exception:
                         pass
         if self.running_processes == 0:
