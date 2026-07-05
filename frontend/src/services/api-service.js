@@ -1,4 +1,3 @@
-//import { Observable } from 'rxjs';
 export class ApiService {
     getWSSProtocol() {
         return window.location.protocol === "https:" ? "wss:" : "ws:"
@@ -7,7 +6,7 @@ export class ApiService {
     getEndpoint() {
         return window.location.protocol + "//" + window.location.host + "/"
     }
-  
+
     getVideoServerEndpoint() {
     return window.location.host;
   }
@@ -16,12 +15,11 @@ export class ApiService {
     return (
       this.getWSSProtocol() +
       "//" +
-      // window.location.host.split(":")[0] +
       window.location.host +
       "/audio_socket"
     );
   }
-  
+
     getVideoWebsocketEndpoint() {
     return (
          this.getWSSProtocol() +
@@ -46,7 +44,7 @@ export class ApiService {
         "Accept": "application/json"
       };
     }
-      
+
         let key = '';
         let val ='';
       for (const property in headers) {
@@ -54,102 +52,59 @@ export class ApiService {
           key = (typeof property === 'string')? property : JSON.stringify(property)
           val = (typeof headers[property] === 'string')? headers[property] : JSON.stringify(headers[property])
           h[key] = val;
-         // h[property] = headers[property];
         }
       }
       return h;
     }
 
+    // Single fetch wrapper — every verb helper below delegates here.
+    // FormData bodies are sent raw (and _generateHeaders skips the JSON
+    // content type for them); everything else is JSON-encoded.
+    _request(method, apipath, data, headers) {
+        const options = {
+            method,
+            mode: "cors",
+            credentials: "include",
+            headers: this._generateHeaders(headers || {}, data),
+            redirect: "follow",
+        }
+        if (data !== undefined && method !== "GET" && method !== "DELETE") {
+            options.body = data instanceof FormData ? data : JSON.stringify(data)
+        }
+        return fetch(this.getEndpoint() + apipath, options)
+    }
+
     get(apipath, headers) {
-        return fetch(this.getEndpoint() + apipath, {
-            method: "GET", // *GET, POST, PUT, DELETE, etc.
-            mode: "cors", // no-cors, *cors, same-origin
-            //cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-            credentials: "include", // include, *same-origin, omit
-            headers: this._generateHeaders(headers),
-            redirect: "follow", // manual, *follow, error
-            //referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-        })
+        return this._request("GET", apipath, undefined, headers)
     }
 
     delete(apipath, headers) {
-        return fetch(this.getEndpoint() + apipath, {
-            method: "DELETE", // *GET, POST, PUT, DELETE, etc.
-            mode: "cors", // no-cors, *cors, same-origin
-            //cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-            credentials: "include", // include, *same-origin, omit
-            headers: this._generateHeaders(headers),
-            redirect: "follow", // manual, *follow, error
-            //referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-        })
+        return this._request("DELETE", apipath, undefined, headers)
     }
 
     post(apipath, data, headers) {
-        return fetch(this.getEndpoint() + apipath, {
-            method: "POST", // *GET, POST, PUT, DELETE, etc.
-            mode: "cors", // no-cors, *cors, same-origin
-            //cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-            credentials: "include", // include, *same-origin, omit
-            headers: this._generateHeaders(headers, data),
-            redirect: "follow", // manual, *follow, error
-            //referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-            body: JSON.stringify(data), // body data type must match "Content-Type" header
-        })
+        return this._request("POST", apipath, data, headers)
     }
 
     postFiles(apipath, data) {
-        return fetch(this.getEndpoint() + apipath, {
-            method: "POST", // *GET, POST, PUT, DELETE, etc.
-            mode: "cors", // no-cors, *cors, same-origin
-            //cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-            credentials: "include", // include, *same-origin, omit
-            headers: this._generateHeaders({}, data),
-            redirect: "follow", // manual, *follow, error
-            //referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-            body: data, // body data type must match "Content-Type" header
-        })
+        return this._request("POST", apipath, data, {})
     }
 
     put(apipath, data, headers) {
-        return fetch(this.getEndpoint() + apipath, {
-            method: "PUT", // *GET, POST, PUT, DELETE, etc.
-            mode: "cors", // no-cors, *cors, same-origin
-            //cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-            credentials: "include", // include, *same-origin, omit
-            headers: this._generateHeaders(headers, data),
-            redirect: "follow", // manual, *follow, error
-            //referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-            body: JSON.stringify(data), // body data type must match "Content-Type" header
-        })
+        return this._request("PUT", apipath, data, headers)
     }
 
     httpRequestCall(apipath, type, data) {
-        // Default options are marked with *
-        let fetchcall = undefined
-        if (type === "POST") {
-            fetchcall = this.post(apipath, data, {})
-        } else if (type === "PUT") {
-            fetchcall = this.put(apipath, data, {})
-        } else if (type === "GET") {
-            fetchcall = this.get(apipath, {})
-        } else if (type === "DELETE") {
-            fetchcall = this.delete(apipath, {})
-        }
-        return fetchcall
+        return this.httpRequestCallWithHeader(apipath, type, data, {})
     }
 
     httpRequestCallWithHeader(apipath, type, data, headers) {
-        // Default options are marked with *
-        let fetchcall = undefined
-        if (type === "POST") {
-            fetchcall = this.post(apipath, data, headers)
-        } else if (type === "PUT") {
-            fetchcall = this.put(apipath, data, headers)
-        } else if (type === "GET") {
-            fetchcall = this.get(apipath, headers)
-        } else if (type === "DELETE") {
-            fetchcall = this.delete(apipath, headers)
+        if (type === "GET" || type === "DELETE") {
+            return this._request(type, apipath, undefined, headers)
         }
-        return fetchcall
+        if (type === "POST" || type === "PUT") {
+            return this._request(type, apipath, data, headers)
+        }
+        return undefined
     }
 }
