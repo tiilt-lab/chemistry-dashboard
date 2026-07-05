@@ -200,6 +200,17 @@ class VideoMetricAnalytics:
                             #if head gaze is focused on other object
                             pred_attention_level = self.AttentionTracking.track_person_level_of_attention(object_class_id,person_id)
                             pred_object_focused_on = object_class_name
+                            # #7 mutual gaze: a recognized head target carries the
+                            # looked-at person's alias in object_class_name (head
+                            # class == 1). Tag it as person:<alias> so the UI can
+                            # build a who-looks-at-whom network. Config-gated.
+                            try:
+                                import config as _cf
+                                if _cf.person_of_focus() and object_class_id == 1 \
+                                        and object_class_name and str(object_class_name) != 'head':
+                                    pred_object_focused_on = "person:" + str(object_class_name)
+                            except Exception:
+                                pass
                             # logging.info("For person_id: {0}, frame_index: {1}, predicted emotion is {2}, predicted attention level is {3} and predicted object focused on is {4}".format(person_id, frame_index, pred_emotion, pred_attention_level, pred_object_focused_on))
                             # frame_raw = cv2.circle(frame_raw, (gaze_x, gaze_y), int(frame_height/50.0), (255, 0, 0), 2) 
                             # cv2.arrowedLine(frame_raw,(int((h_bbox[0]+h_bbox[2])/2),int((h_bbox[1]+h_bbox[3])/2)),(gaze_x, gaze_y), (230,253,11),thickness=3)

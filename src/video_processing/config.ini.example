@@ -62,3 +62,7 @@ face_model=dlib
 ;                package — set head_weights; enables retiring vendored yolo_head/)
 head_model=yolov5
 head_weights=crowdhuman_yolov8m_head.pt
+; Person-of-focus / mutual gaze (#7): record 'person:<alias>' when a gaze target
+; is a recognized head, so a who-looks-at-whom network can be built. Off by
+; default (changes stored object_on_focus values); needs a re-run to populate.
+person_of_focus=false
