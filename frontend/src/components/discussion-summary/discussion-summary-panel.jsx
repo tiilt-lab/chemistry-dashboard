@@ -42,7 +42,8 @@ export function DiscussionSummaryPanel({ sessionId, sessionDeviceId }) {
                     </button>
                     {state === "error" ? (
                         <span className="text-xs text-tiilt-danger">
-                            Couldn't generate a summary.
+                            Couldn't generate a summary — check that a valid
+                            GOOGLE_API_KEY is configured.
                         </span>
                     ) : (
                         <span className="text-xs text-tiilt-muted">

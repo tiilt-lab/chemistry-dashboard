@@ -53,6 +53,17 @@ function PodCard({ device, onOpen }) {
                     analytics
                 </span>
             </span>
+            {device.posthoc_analyzed_date ? (
+                <span
+                    title={"Full analysis run " + device.posthoc_analyzed_date}
+                    className="flex flex-none items-center gap-1 rounded-full bg-tiilt-teal/15 px-2 py-0.5 text-xs font-semibold text-tiilt-teal"
+                >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M4 12a8 8 0 1 1 2.3 5.6M4 12H2m2 0V9" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                    </svg>
+                    Analyzed
+                </span>
+            ) : null}
             <span
                 aria-hidden="true"
                 className="flex-none text-tiilt-muted transition group-hover:text-tiilt"

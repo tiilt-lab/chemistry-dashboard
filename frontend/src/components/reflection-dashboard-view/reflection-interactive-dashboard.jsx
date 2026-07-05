@@ -16,13 +16,25 @@ import { AppSectionBoxComponent } from "../section-box/section-box-component"
 
 function CollaborationFeedbackDashboard(props) {
   const selectedParticipantId = props.currentParticipant;
-  const llmresponse_session_summary = props.llmSessionAnalysis.Session_summary
-  const llmresponse_session_metric_summary = llmresponse_session_summary.Session_metric_summary
-  const llmresponse_group_summary = props.llmSessionAnalysis.Group_summary
-  const llmresponse_window_summary = props.llmSessionAnalysis.Window_summary
-  const selectedParticipantData = props.selectedParticipantSynthesizedData
-  const window_length = selectedParticipantData.participant_level_metric.length
-  const [selectedMoment, setSelectedMoment] = useState(selectedParticipantData.participant_level_metric[0])
+  // The dashboard needs a fully-generated LLM analysis + synthesized participant
+  // data. When either is missing (no valid GOOGLE_API_KEY, or feedback not yet
+  // produced) we render a graceful fallback instead of crashing — but access is
+  // kept safe here so the hooks below still run (rules of hooks).
+  const _analysis = props.llmSessionAnalysis || {}
+  const selectedParticipantData = props.selectedParticipantSynthesizedData || {}
+  const _hasAnalysis = Boolean(
+    props.llmSessionAnalysis &&
+    _analysis.Session_summary &&
+    props.selectedParticipantSynthesizedData &&
+    selectedParticipantData.participant_level_metric,
+  )
+  const llmresponse_session_summary = _analysis.Session_summary || {}
+  const llmresponse_session_metric_summary = llmresponse_session_summary.Session_metric_summary || {}
+  const llmresponse_group_summary = _analysis.Group_summary || {}
+  const llmresponse_window_summary = _analysis.Window_summary || {}
+  const _participantMetrics = selectedParticipantData.participant_level_metric || []
+  const window_length = _participantMetrics.length
+  const [selectedMoment, setSelectedMoment] = useState(_participantMetrics[0])
   const [question, setQuestion] = useState([0, ""]);
   const scrollRef = useRef(null);
   const lastItemRef = useRef(null)
@@ -47,7 +59,8 @@ function CollaborationFeedbackDashboard(props) {
   }, [props.promptResponses[selectedParticipantId]?.length]);
 
   useEffect(() => {
-    setSelectedMoment(selectedParticipantData.participant_level_metric.find((m) => m.windowid === props.selectedMomentIdAndIndex[1]))
+    setSelectedMoment((selectedParticipantData.participant_level_metric || []).find((m) => m.windowid === props.selectedMomentIdAndIndex[1]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.selectedMomentIdAndIndex]);
 
   // useEffect(() => {
@@ -183,6 +196,15 @@ function CollaborationFeedbackDashboard(props) {
             </ul>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (!_hasAnalysis) {
+    return (
+      <div className="rounded-xl border border-tiilt-line bg-white p-6 text-center text-sm text-tiilt-muted">
+        AI collaboration analysis isn't available for this pod yet — it needs a
+        completed full re-run and a configured LLM (GOOGLE_API_KEY).
       </div>
     );
   }
