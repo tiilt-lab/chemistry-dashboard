@@ -71,24 +71,32 @@ function TranscriptPanel({
     }
     const playingKey = playingIndex >= 0 ? list[playingIndex].start_time : null
 
-    useEffect(() => {
-        if (selectedRef.current && scrollRef.current) {
-            selectedRef.current.scrollIntoView({
-                block: "nearest",
-                behavior: "smooth",
-            })
+    // Scroll ONLY the transcript's own container to reveal `el` — never the
+    // page. element.scrollIntoView() bubbles to every scrollable ancestor
+    // (including the window), which yanks the whole page while the video plays;
+    // adjusting container.scrollTop keeps the scroll local (and is a harmless
+    // no-op when the transcript isn't its own scroll box).
+    const revealInContainer = (el) => {
+        const container = scrollRef.current
+        if (!el || !container) return
+        const er = el.getBoundingClientRect()
+        const cr = container.getBoundingClientRect()
+        let delta = 0
+        if (er.top < cr.top) delta = er.top - cr.top - 8
+        else if (er.bottom > cr.bottom) delta = er.bottom - cr.bottom + 8
+        if (delta !== 0) {
+            container.scrollTo({ top: container.scrollTop + delta, behavior: "smooth" })
         }
+    }
+
+    useEffect(() => {
+        revealInContainer(selectedRef.current)
     }, [selectedTime])
 
     // Follow playback: scroll only when the active utterance changes so manual
     // scrolling between utterances isn't constantly fought.
     useEffect(() => {
-        if (playingRef.current && scrollRef.current) {
-            playingRef.current.scrollIntoView({
-                block: "nearest",
-                behavior: "smooth",
-            })
-        }
+        revealInContainer(playingRef.current)
     }, [playingKey])
 
     return (
