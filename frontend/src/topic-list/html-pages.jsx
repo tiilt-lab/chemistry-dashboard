@@ -1,5 +1,6 @@
 import React from 'react';
 import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel } from '../components/dialog-styles'
+import { pageShell, formCard } from '../components/layout-styles'
 import { Appheader } from '../header/header-component'
 import { AppContextMenu } from '../components/context-menu/context-menu-component';
 import { GenericDialogBox } from '../dialog/dialog-component';
@@ -35,6 +36,8 @@ function TopicListPage(props) {
           }}
         />
 
+        <div className={pageShell}>
+        <div className={formCard}>
         <div className="mx-auto flex w-full max-w-lg grow flex-col gap-2 overflow-y-auto px-4 py-6">
           {props.topicListStruct.length === 0 ? (
             <div className="flex flex-col items-center gap-1.5 py-10 text-center">
@@ -95,6 +98,8 @@ function TopicListPage(props) {
         ) : (
           <></>
         )}
+        </div>
+        </div>
       </div>
 
       <GenericDialogBox show={props.showDialog}>

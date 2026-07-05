@@ -1,5 +1,6 @@
 import React from "react";
 import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel } from "../components/dialog-styles"
+import { pageShell, formCard } from "../components/layout-styles"
 import { Appheader } from "../header/header-component";
 import { GenericDialogBox } from "../dialog/dialog-component";
 import { AppFolderSelectComponent } from "../components/folder-select/folder-select-component";
@@ -86,6 +87,8 @@ function CreateSessionPage(props) {
           rightEnabled={false}
           nav={props.navigateToSessions}
         />
+        <div className={pageShell}>
+        <div className={formCard}>
         <StepIndicator current={props.currentMenu} />
 
         {props.currentMenu === "Settings" ? (
@@ -357,6 +360,8 @@ function CreateSessionPage(props) {
         ) : (
           <></>
         )}
+        </div>
+        </div>
       </div>
 
       <GenericDialogBox show={props.currentForm !== ""}>

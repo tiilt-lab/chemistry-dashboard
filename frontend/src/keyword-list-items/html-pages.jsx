@@ -1,4 +1,5 @@
 import { dlgInput, dlgCancel } from '../components/dialog-styles';
+import { pageShell, formCard } from '../components/layout-styles';
 import { Appheader } from '../header/header-component';
 import removeicon from '../assets/img/remove.svg'
 import React from 'react';
@@ -14,6 +15,8 @@ function KeywordListPages(props) {
         rightTextClick={props.saveKeywordList}
         nav={props.navigate}
       />
+      <div className={pageShell}>
+      <div className={formCard}>
       {props.keywordList && props.keywordListItems ? (
         <div className="mx-auto flex w-full max-w-lg grow flex-col gap-3 overflow-y-auto px-4 py-6">
           <div>
@@ -89,6 +92,8 @@ function KeywordListPages(props) {
       ) : (
         <div className="py-10 text-center text-sm text-tiilt-muted">Loading…</div>
       )}
+      </div>
+      </div>
     </div>
   )
 }
