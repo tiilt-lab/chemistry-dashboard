@@ -79,6 +79,7 @@ export class SessionModel {
     model.has_posthoc = json['has_posthoc'] === true
     model.pod_count = json['pod_count'] != null ? json['pod_count'] : null
     model.participant_count = json['participant_count'] != null ? json['participant_count'] : null
+    model.analysis_running = json['analysis_running'] === true
     return model;
   }
 

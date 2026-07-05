@@ -1585,6 +1585,16 @@ def delete_pod_analysis(session_device_id, scope='audio'):
     db.session.commit()
 
 
+def get_session_ids_for_devices(device_ids):
+    # {session_id} owning any of the given session_device ids (for the
+    # "analysis running" flag on the sessions list).
+    if not device_ids:
+        return set()
+    rows = db.session.query(SessionDevice.session_id) \
+        .filter(SessionDevice.id.in_(list(device_ids))).distinct().all()
+    return {r[0] for r in rows}
+
+
 def mark_session_device_posthoc(session_device_id, models=None):
     device = get_session_devices(id=session_device_id)
     if device is None:
