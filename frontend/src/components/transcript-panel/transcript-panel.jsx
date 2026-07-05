@@ -102,11 +102,13 @@ function TranscriptPanel({
     return (
         <div className="w-full">
             <div className="mb-2 flex flex-col gap-1.5 text-xs text-tiilt-muted sm:flex-row sm:items-center sm:justify-between">
-                <span>
-                    Transcribed with{" "}
-                    {transcriptionLabel ||
-                        "Google Cloud Speech-to-Text (video model, en-US)"}
-                </span>
+                {(transcripts || []).length > 0 && transcriptionLabel ? (
+                    // Provenance describes the stored rows — say nothing when
+                    // there are none (or when provenance is unknown).
+                    <span>Transcribed with {transcriptionLabel}</span>
+                ) : (
+                    <span />
+                )}
                 {speakers.length > 0 ? (
                     <span className="flex flex-wrap gap-x-3 gap-y-1">
                         {speakers.map((tag) => (
