@@ -55,6 +55,7 @@ class VideoProcessorPosthoc:
        
     def start(self):
         self.running = True
+        self._started_at = time.time()  # epoch; sent to clients so elapsed survives refresh
         self.vid_pro_thread = threading.Thread(target=self.processing, name="video_posthoc_processing")
         self.vid_pro_thread.daemon = True
         self.vid_pro_thread.start()
@@ -154,7 +155,8 @@ class VideoProcessorPosthoc:
                         _pct = round(100.0 * start / max(1, _duration))
                         self._last_progress = {'type': 'progress',
                                                'message': 'Analyzing video {0}s / {1}s'.format(int(start), int(_duration)),
-                                               'percent': _pct}
+                                               'percent': _pct,
+                                               'started_at': getattr(self, '_started_at', None)}
                         self.send_json(self._last_progress)
                     except Exception:
                         pass

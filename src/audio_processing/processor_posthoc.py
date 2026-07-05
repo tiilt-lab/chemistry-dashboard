@@ -60,6 +60,7 @@ class AudioProcessorPosthoc:
         cf.initialize()
 
     def start(self):
+        self._started_at = time.time()  # epoch; sent to clients so elapsed survives refresh
         self.running = True
         self.asr_complete = False
         self.running_processes = 0
@@ -214,7 +215,8 @@ class AudioProcessorPosthoc:
                 if self.utterances_seen % 5 == 0:
                     try:
                         self._last_progress = {'type': 'progress',
-                                               'message': 'Processed {0} utterances'.format(self.utterances_seen)}
+                                               'message': 'Processed {0} utterances'.format(self.utterances_seen),
+                                               'started_at': getattr(self, '_started_at', None)}
                         self.send_json(self._last_progress)
                     except Exception:
                         pass
