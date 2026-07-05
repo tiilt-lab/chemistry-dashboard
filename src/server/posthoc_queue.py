@@ -16,7 +16,7 @@ import posthoc_state
 
 AUDIO_WS = "ws://127.0.0.1:%s" % os.getenv("DC_AUDIO_POSTHOC_WS_PORT", "9015")
 VIDEO_WS = "ws://127.0.0.1:%s" % os.getenv("DC_VIDEO_POSTHOC_WS_PORT", "9014")
-_POD_TIMEOUT = 45 * 60  # give a long recording plenty of room
+_POD_TIMEOUT = 150 * 60  # video-bound pods on long recordings can exceed an hour
 
 _lock = threading.Lock()
 _jobs = []  # {session_id, device_id, state: queued|running|done|error, error}
