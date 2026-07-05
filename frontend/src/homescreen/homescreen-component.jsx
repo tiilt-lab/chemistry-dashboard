@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom"
+import { ThemeToggle } from "../header/header-component"
 import { updateTime } from "../utilities/helper-functions"
 import { AuthService } from "../services/auth-service"
 import { TiiltLogo } from "../components/tiilt-logo"
@@ -134,6 +135,7 @@ function HomeScreen() {
                     </span>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
+                    <ThemeToggle />
                     <button
                         onClick={() => navigate("/settings")}
                         className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
