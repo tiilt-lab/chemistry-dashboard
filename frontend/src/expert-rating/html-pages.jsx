@@ -42,7 +42,7 @@ function ExpertRatingPage(props) {
                             title={props.pageTitle}
                             leftText={false}
                             rightText={""}
-                            ightEnabled={false}
+                            rightEnabled={false}
                             nav={() => props.navigateToLogin()}
                         />
 

@@ -276,12 +276,12 @@ function PodDurations({ sessionId }) {
                                     </span>
                                 ) : null}
                                 {pod.analysis_running ? (
-                                    <span className="flex flex-none items-center gap-1 rounded-full bg-tiilt-orange/15 px-1.5 py-0.5 font-semibold text-tiilt-orange">
+                                    <span className="flex flex-none items-center gap-1 rounded-full bg-tiilt-orange/15 px-1.5 py-0.5 font-semibold text-tiilt-orange-text">
                                         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-tiilt-orange" />
                                         Analyzing…
                                     </span>
                                 ) : pod.posthoc_analyzed_date ? (
-                                    <span className="flex-none rounded-full bg-tiilt-teal/15 px-1.5 py-0.5 font-semibold text-tiilt-teal">
+                                    <span className="flex-none rounded-full bg-tiilt-teal/15 px-1.5 py-0.5 font-semibold text-tiilt-teal-text">
                                         Analyzed
                                     </span>
                                 ) : null}
@@ -384,7 +384,7 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
                     {session.analysis_running ? (
                         <span
                             title="A full analysis is running right now"
-                            className="flex flex-none items-center gap-1 rounded-full bg-tiilt-orange/15 px-1.5 py-0.5 font-semibold whitespace-nowrap text-tiilt-orange"
+                            className="flex flex-none items-center gap-1 rounded-full bg-tiilt-orange/15 px-1.5 py-0.5 font-semibold whitespace-nowrap text-tiilt-orange-text"
                         >
                             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-tiilt-orange" />
                             Analyzing…
@@ -393,7 +393,7 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
                     {session.has_posthoc ? (
                         <span
                             title="Post-hoc analysis has been run for this session"
-                            className="flex flex-none items-center gap-1 rounded-full bg-tiilt-teal/15 px-1.5 py-0.5 font-semibold whitespace-nowrap text-tiilt-teal"
+                            className="flex flex-none items-center gap-1 rounded-full bg-tiilt-teal/15 px-1.5 py-0.5 font-semibold whitespace-nowrap text-tiilt-teal-text"
                         >
                             <svg
                                 width="12"
@@ -721,6 +721,7 @@ function DiscussionSessionPage(props) {
                         <input
                             id="txtName"
                             defaultValue={props.selectedSession.title}
+                            aria-label="Session name"
                             className={dlgInput}
                             maxLength="64"
                         />
@@ -763,6 +764,7 @@ function DiscussionSessionPage(props) {
                         <input
                             id="txtName"
                             defaultValue={props.selectedFolder.name}
+                            aria-label="Folder name"
                             className={dlgInput}
                             maxLength="64"
                         />
@@ -866,6 +868,7 @@ function DiscussionSessionPage(props) {
                         </div>
                         <input
                             placeholder="Enter new folder name"
+                            aria-label="New folder name"
                             id="txtName"
                             className={dlgInput}
                             maxLength="64"

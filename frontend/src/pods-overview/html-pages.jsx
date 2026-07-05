@@ -38,6 +38,7 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue, index }) {
             checked={!!checked}
             onChange={onToggle}
             title="Select for batch analysis"
+            aria-label={`Select ${name} for batch analysis`}
             className="h-4 w-4 flex-none cursor-pointer accent-tiilt"
         />
         <button
@@ -87,7 +88,7 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue, index }) {
                             Queued
                         </span>
                     ) : queue === "running" || e.analysis_running ? (
-                        <span className="flex items-center gap-1 rounded-full bg-tiilt-orange/15 px-2 py-0.5 font-semibold text-tiilt-orange">
+                        <span className="flex items-center gap-1 rounded-full bg-tiilt-orange/15 px-2 py-0.5 font-semibold text-tiilt-orange-text">
                             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-tiilt-orange" />
                             Running…
                         </span>
@@ -98,7 +99,7 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue, index }) {
                     ) : (device.posthoc_analyzed_date || e.posthoc_analyzed_date) ? (
                         <span
                             title={"Full analysis run " + (device.posthoc_analyzed_date || e.posthoc_analyzed_date)}
-                            className="flex items-center gap-1 rounded-full bg-tiilt-teal/15 px-2 py-0.5 font-semibold text-tiilt-teal"
+                            className="flex items-center gap-1 rounded-full bg-tiilt-teal/15 px-2 py-0.5 font-semibold text-tiilt-teal-text"
                         >
                             Analyzed
                         </span>
@@ -284,7 +285,7 @@ function PodsOverviewPages(props) {
                         <div className={dlgHeading}>Add pod to Session</div>
                         {props.devices.length > 0 ? (
                             <React.Fragment>
-                                <select id="ddDevice" className={dlgSelect}>
+                                <select id="ddDevice" aria-label="Pod to add" className={dlgSelect}>
                                     {props.devices.map((device, index) => (
                                         <option
                                             key={index}
@@ -329,12 +330,12 @@ function PodsOverviewPages(props) {
                             <div className={dlgHeading}>
                                 Select the Data to Download:
                             </div>
-                            <select id="format" className={dlgSelect}>
+                            <select id="format" aria-label="Download format" className={dlgSelect}>
                                 <option value="">Select format</option>
                                 <option value="csv">CSV</option>
                                 <option value="json">JSON</option>
                             </select>
-                            <select id="windowsize" className={dlgSelect}>
+                            <select id="windowsize" aria-label="Window size in seconds" className={dlgSelect}>
                                 <option value="">
                                     Select window size in secs
                                 </option>
@@ -346,7 +347,7 @@ function PodsOverviewPages(props) {
                                 <option value="50">50</option>
                                 <option value="60">60</option>
                             </select>
-                            <select id="datatype" className={dlgSelect}>
+                            <select id="datatype" aria-label="Data to download" className={dlgSelect}>
                                 <option value="">
                                     Select data to download
                                 </option>

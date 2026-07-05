@@ -403,7 +403,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                   : "—"
     const color = (s) =>
         s === "done"
-            ? "text-tiilt-teal"
+            ? "text-tiilt-teal-text"
             : s === "error"
               ? "text-tiilt-danger"
               : "text-tiilt-muted"
@@ -482,7 +482,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                     re-score the existing transcript only (no re-transcription).
                 </div>
                 {lastAnalyzed && !running ? (
-                    <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-tiilt-teal">
+                    <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-tiilt-teal-text">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                             <path d="M4 12a8 8 0 1 1 2.3 5.6M4 12H2m2 0V9" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
                         </svg>
