@@ -1,4 +1,5 @@
 import { GenericDialogBox, DialogBox } from "../dialog/dialog-component"
+import { dlgInput, dlgPrimary } from "../components/dialog-styles"
 import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { Appheader } from "../header/header-component"
@@ -46,40 +47,49 @@ function ExpertRatingPage(props) {
 
                         {props.nextPage === "reportoptionpage" && (
                             <React.Fragment>
-                                <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto text-center">
+                                <div className="mx-auto flex w-full max-w-md grow flex-col gap-4 overflow-y-auto px-4 py-6">
                                     <div>
-                                        <div>Evaluting As:</div>
+                                        <label htmlFor="evaluatortype" className="mb-1.5 block text-sm font-semibold text-tiilt-ink">
+                                            Evaluating as
+                                        </label>
                                         <select
                                             id="evaluatortype"
-                                            className="dropdown small-section"
+                                            className={dlgInput}
                                             value={props.evaluatorType}
                                             onChange={(e) =>
                                                 props.setEvaluatorType(e.target.value)
                                             }
                                         >
-                                            <option value="">Select</option>
+                                            <option value="">Select…</option>
                                             <option value="student">Student</option>
                                             <option value="expert">Expert</option>
                                         </select>
-
-                                        <div>Expert ID:</div>
+                                    </div>
+                                    <div>
+                                        <label htmlFor="expertid-alias" className="mb-1.5 block text-sm font-semibold text-tiilt-ink">
+                                            Expert ID
+                                        </label>
                                         <input
-                                            className="text-box small-section"
                                             id="expertid-alias"
-                                            placeholder="Alias/Expert Id"
+                                            className={dlgInput}
+                                            placeholder="Alias / Expert ID"
                                         />
                                     </div>
-                                    <button
-                                        className="wide-button"
-                                        onClick={() =>
-                                            props.getUserParameters(
-                                                document.getElementById("evaluatortype").value,
-                                                document.getElementById("expertid-alias").value.trim()
-                                            )
-                                        }
-                                    >
-                                        Continue
-                                    </button>
+                                </div>
+                                <div className="w-full flex-none border-t border-tiilt-line bg-white">
+                                    <div className="mx-auto w-full max-w-md px-4 py-4">
+                                        <button
+                                            className={dlgPrimary + " w-full"}
+                                            onClick={() =>
+                                                props.getUserParameters(
+                                                    document.getElementById("evaluatortype").value,
+                                                    document.getElementById("expertid-alias").value.trim()
+                                                )
+                                            }
+                                        >
+                                            Continue
+                                        </button>
+                                    </div>
                                 </div>
                             </React.Fragment>
                         )}
