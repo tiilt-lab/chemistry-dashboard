@@ -144,3 +144,27 @@ html {
 .text-box {
     @apply relative mx-3 flex rounded-lg border-2 border-solid border-tiilt-line py-2.5 text-center text-sm/relaxed outline-0 transition-colors focus:border-tiilt;
 }
+
+/* Dark mode: Tailwind v4 utilities reference these variables at use-time, so
+   overriding them under .dark restyles the whole app — including bg-white
+   (var(--color-white)), which becomes the card surface. Toggled by the
+   floating button (persisted in localStorage), default follows the system. */
+.dark {
+    color-scheme: dark;
+    --color-white: #241e33;
+    --color-tiilt: #8b6fc4;
+    --color-tiilt-deep: #a58cd6;
+    --color-tiilt-ink: #ece7f5;
+    --color-tiilt-muted: #a89fc0;
+    --color-tiilt-line: #3a3352;
+    --color-tiilt-ground: #1b1726;
+    --color-tiilt-soft: #2c2542;
+    --color-tiilt-lavender: #8b7fae;
+    --color-tiilt-orange: #fbb040;
+    --color-tiilt-teal: #2dbdb3;
+    --color-tiilt-pink: #f24aa8;
+    --color-tiilt-green: #8dc63f;
+    --color-tiilt-danger: #e5766f;
+    --color-tiilt-danger-soft: #3d1f1d;
+}
+.dark body, .dark html { background-color: #14101f; }
