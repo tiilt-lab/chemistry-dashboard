@@ -1,4 +1,5 @@
 import React from "react";
+import { dlgInput, dlgPrimary, dlgCancel } from "../components/dialog-styles"
 import { Appheader } from "../header/header-component";
 import { GenericDialogBox } from "../dialog/dialog-component";
 import { AppFolderSelectComponent } from "../components/folder-select/folder-select-component";
@@ -30,7 +31,7 @@ function CreateSessionPage(props) {
               <div>Session name:</div>
               <input
                 id="txtName"
-                className="text-box"
+                className={dlgInput}
                 defaultValue={props.sessionName}
                 onKeyUp={(event) => props.setSessionName(event.target.value)}
                 maxLength="64"
@@ -41,7 +42,7 @@ function CreateSessionPage(props) {
               >
                 <input
                   type="text"
-                  className="text-box flex-grow"
+                  className={dlgInput + " grow"}
                   name="Location"
                   placeholder={props.folderPath}
                   readOnly
@@ -75,14 +76,14 @@ function CreateSessionPage(props) {
             </div>
             <div className={style["button-side-container"]}>
               <button
-                className={style["footer-button"]}
+                className={dlgCancel}
                 style={{ width: "min(50%, 20rem)" }}
                 onClick={props.navigateToSessions}
               >
                 Back
               </button>
               <button
-                className={style["footer-button"]}
+                className={dlgPrimary}
                 style={{ width: "min(50%, 20rem)" }}
                 onClick={props.goToKeywords}
               >
@@ -139,7 +140,7 @@ function CreateSessionPage(props) {
             </div>
 
             <button
-              className={style["footer-button"]}
+              className={dlgPrimary}
               style={{ width: "min(42rem, 100%)" }}
               onClick={props.navigateToKeywordLists}
             >
@@ -147,14 +148,14 @@ function CreateSessionPage(props) {
             </button>
             <div className={style["button-side-container"]}>
               <button
-                className={style["footer-button"]}
+                className={dlgCancel}
                 style={{ width: "min(50%, 20rem)" }}
                 onClick={props.goToSettings}
               >
                 Back
               </button>
               <button
-                className={style["footer-button"]}
+                className={dlgPrimary}
                 style={{ width: "min(50%, 20rem)" }}
                 onClick={props.goToTopModels}
               >
@@ -212,21 +213,21 @@ function CreateSessionPage(props) {
             </div>
 
             <button
-              className={style["footer-button"]}
+              className={dlgPrimary}
               style={{ width: "min(42rem, 100%)" }}
               onClick={props.navigateToFileUpload}
             >
               Create Topic Model
             </button>
             <button
-              className={style["footer-button"]}
+              className={dlgCancel}
               style={{ width: "min(42rem, 100%)" }}
               onClick={props.goToKeywords}
             >
               Back
             </button>
             <button
-              className={style["footer-button"]}
+              className={dlgPrimary}
               style={{ width: "min(42rem, 100%)" }}
               onClick={props.createSession}
             >
@@ -295,14 +296,14 @@ function CreateSessionPage(props) {
               Select All
             </button>
             <button
-              className={style["footer-button"]}
+              className={dlgCancel}
               style={{ width: "min(42rem, 100%)" }}
               onClick={props.goToTopModels}
             >
               Back
             </button>
             <button
-              className={style["footer-button"]}
+              className={dlgPrimary}
               style={{ width: "min(42rem, 100%)" }}
               onClick={props.createSession}
             >
@@ -320,7 +321,7 @@ function CreateSessionPage(props) {
             <div className={style2["dialog-heading"]}>Invalid Session</div>
             {props.displayText}
             <button
-              className={style["cancel-button"]}
+              className={dlgCancel}
               onClick={props.closeDialog}
             >
               Close
@@ -334,13 +335,13 @@ function CreateSessionPage(props) {
           <div className={style["add-dialog"]}>
             {props.displayText}
             <button
-              className={style["dialog-button"]}
+              className={dlgPrimary}
               onClick={() => props.navigateToSessions()}
             >
               Go Back
             </button>
             <button
-              className={style["cancel-button"]}
+              className={dlgCancel}
               onClick={props.closeDialog}
             >
               Cancel
@@ -361,7 +362,7 @@ function CreateSessionPage(props) {
             {/* <app-folder-select #folderSelect [folders]="folders" (itemSelected)="receiveEmmitedFolder($event)"></app-folder-select> */}
             {props.folderSelect ? (
               <button
-                className={style["dialog-button"]}
+                className={dlgPrimary}
                 onClick={() =>
                   props.setFolderLocation(
                     props.folderSelect,
@@ -375,7 +376,7 @@ function CreateSessionPage(props) {
               <></>
             )}
             <button
-              className={style["cancel-button"]}
+              className={dlgCancel}
               onClick={props.closeDialog}
             >
               Cancel
