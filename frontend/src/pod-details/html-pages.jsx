@@ -131,7 +131,7 @@ function PodComponentPages(props) {
                     <></>
                 )}
             </div>
-            <GenericDialogBox
+            <GenericDialogBox onClose={props.closeDialog}
                 show={props.currentForm !== ""}
                 optionsCase={props.currentForm == "Options"}
             >

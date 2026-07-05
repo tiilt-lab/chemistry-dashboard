@@ -119,7 +119,7 @@ function PodComponentPage(props) {
         </div>
       </div>
 
-      <GenericDialogBox show={props.currentForm !== ""}>
+      <GenericDialogBox onClose={props.closeDialog} show={props.currentForm !== ""}>
         <div className={dlgWindow} style={{ minWidth: "min(20rem, 76vw)" }}>
           {props.currentForm === "Remove" ? (
             <React.Fragment>

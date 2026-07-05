@@ -72,8 +72,9 @@ function ManageTopicsPage(props) {
                                             </span>
                                         </button>
                                         <div className="flex-none">
-                                            <AppContextMenu>
-                                                <div
+                                            <AppContextMenu label={`Options for ${topicModel.name}`}>
+                                                <button
+                                                    role="menuitem"
                                                     className={`${style2["menu-item"]} ${style2["red"]}`}
                                                     onClick={() => {
                                                         props.deleteTopicModel(
@@ -82,7 +83,7 @@ function ManageTopicsPage(props) {
                                                     }}
                                                 >
                                                     Delete
-                                                </div>
+                                                </button>
                                             </AppContextMenu>
                                         </div>
                                     </li>

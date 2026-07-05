@@ -364,7 +364,7 @@ function CreateSessionPage(props) {
         </div>
       </div>
 
-      <GenericDialogBox show={props.currentForm !== ""}>
+      <GenericDialogBox onClose={props.closeDialog} show={props.currentForm !== ""}>
         {props.currentForm === "Error" ? (
           <div className={dlgWindow}>
             <div className={dlgHeading}>Invalid Session</div>

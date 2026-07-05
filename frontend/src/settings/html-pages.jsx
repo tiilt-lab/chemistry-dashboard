@@ -134,7 +134,7 @@ function SettingComponentPage(props) {
                 </div>
             </div>
 
-            <GenericDialogBox show={props.currentForm !== ""}>
+            <GenericDialogBox onClose={props.closeDialog} show={props.currentForm !== ""}>
                 {props.currentForm === "ChangePassword" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Change Password</div>

@@ -171,25 +171,28 @@ function FolderRow({ folder, count, onOpen, openFolderDialog }) {
                     ) : null}
                 </button>
                 <div className="flex-none">
-                    <AppContextMenu>
-                        <div
+                    <AppContextMenu label={`Options for folder ${folder.name}`}>
+                        <button
+                            role="menuitem"
                             className={menuItemClass}
                             onClick={() => openFolderDialog("RenameFolder", folder)}
                         >
                             Edit Name
-                        </div>
-                        <div
+                        </button>
+                        <button
+                            role="menuitem"
                             className={menuItemClass}
                             onClick={() => openFolderDialog("MoveFolder", folder)}
                         >
                             Move To...
-                        </div>
-                        <div
+                        </button>
+                        <button
+                            role="menuitem"
                             className={menuDangerClass}
                             onClick={() => openFolderDialog("DeleteFolder", folder)}
                         >
                             Delete
-                        </div>
+                        </button>
                     </AppContextMenu>
                 </div>
             </div>
@@ -456,39 +459,43 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
                 </button>
             ) : null}
             <div className="flex-none">
-                <AppContextMenu>
-                    <div
+                <AppContextMenu label={`Options for session ${session.title}`}>
+                    <button
+                        role="menuitem"
                         className={menuItemClass}
                         onClick={() =>
                             openSessionDialog("RenameSession", session)
                         }
                     >
                         Edit Name
-                    </div>
-                    <div
+                    </button>
+                    <button
+                        role="menuitem"
                         className={menuItemClass}
                         onClick={() =>
                             openSessionDialog("MoveSession", session)
                         }
                     >
                         Move To...
-                    </div>
+                    </button>
                     {!session.recording ? (
-                        <div
+                        <button
+                            role="menuitem"
                             className={menuDangerClass}
                             onClick={() =>
                                 openSessionDialog("DeleteSession", session)
                             }
                         >
                             Delete
-                        </div>
+                        </button>
                     ) : (
-                        <div
+                        <button
+                            role="menuitem"
                             className={menuDangerClass}
                             onClick={() => endSession(session)}
                         >
                             End
-                        </div>
+                        </button>
                     )}
                 </AppContextMenu>
             </div>
@@ -701,7 +708,7 @@ function DiscussionSessionPage(props) {
                 </div>
             </div>
 
-            <GenericDialogBox show={props.currentForm !== ""}>
+            <GenericDialogBox onClose={props.closeDialog} show={props.currentForm !== ""}>
                 {props.currentForm === "RenameSession" ? (
                     <div
                         className={dlgWindow}

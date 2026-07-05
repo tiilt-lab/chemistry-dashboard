@@ -95,7 +95,7 @@ function TranscriptComponentPage(props) {
                 </div>
             </div>
 
-            <GenericDialogBox show={props.currentForm !== ""}>
+            <GenericDialogBox onClose={props.closeDialog} show={props.currentForm !== ""}>
                 {props.currentForm == "Keyword" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Keyword Data</div>
