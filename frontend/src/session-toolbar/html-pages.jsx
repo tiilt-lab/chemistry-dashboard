@@ -2,13 +2,46 @@ import style from "./session-toolbar.module.css"
 import style2 from "../dialog/dialog.module.css"
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { AppSpinner } from "../spinner/spinner-component"
-import React from "react"
+import React, { useState } from "react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 function AppSessionPage(props) {
+    // Desktop-only: the sidebar can collapse to a slim rail (persisted).
+    // On mobile it stays the horizontal bottom bar and the toggle is hidden.
+    const [collapsed, setCollapsed] = useState(
+        localStorage.getItem("blinc-sidebar-collapsed") === "1",
+    )
+    const toggleCollapsed = () => {
+        const next = !collapsed
+        setCollapsed(next)
+        localStorage.setItem("blinc-sidebar-collapsed", next ? "1" : "0")
+    }
+    const Chevron = ({ left }) => (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+                d={left ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6"}
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    )
     return (
         <>
-            <div className="side_bar">
+            <div className={"side_bar" + (collapsed ? " sm:!w-11 sm:!py-2" : "")}>
+                <button
+                    onClick={toggleCollapsed}
+                    title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                    aria-expanded={!collapsed}
+                    className={
+                        "hidden flex-none cursor-pointer items-center justify-center rounded-md p-1.5 text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt sm:flex " +
+                        (collapsed ? "sm:mx-auto" : "sm:mr-3 sm:self-end")
+                    }
+                >
+                    <Chevron left={!collapsed} />
+                </button>
+                <div className={collapsed ? "contents sm:hidden" : "contents"}>
                 <div className="flex flex-none flex-col px-4 py-2 sm:w-full sm:items-start sm:px-6 sm:py-0">
                     <div className="font-sans text-2xl leading-none font-bold text-tiilt-ink tabular-nums sm:text-3xl">
                         {props.timeText}
@@ -82,6 +115,7 @@ function AppSessionPage(props) {
                     >
                         End
                     </button>
+                </div>
                 </div>
             </div>
 
