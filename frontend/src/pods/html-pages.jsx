@@ -1,17 +1,20 @@
-import style from './pods.module.css'
+import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel } from '../components/dialog-styles'
 import { AppContextMenu } from '../components/context-menu/context-menu-component'
 import { Appheader } from '../header/header-component'
 import { GenericDialogBox } from '../dialog/dialog-component'
 import IconPod from "../Icons/IconPod"
 import LightIcon from "../Icons/Light"
 import React from 'react'
-import { isLargeScreen } from '../myhooks/custom-hooks';
+
+const dlgDanger =
+  "mt-2 h-11 rounded-lg bg-tiilt-danger font-semibold text-white transition hover:opacity-90 active:translate-y-px"
 
 function PodComponentPage(props) {
+  const isAdmin = props.user.isAdmin || props.user.isSuper
 
   return (
     <>
-      <div className={style.container}>
+      <div className="main-container">
         <Appheader
           title={"Manage Pods"}
           leftText={false}
@@ -19,88 +22,180 @@ function PodComponentPage(props) {
           nav={props.navigateToHomescreen}
         />
 
-
-        <div className={style["list-container"]}>
-          <ul className={style.list}>
-            {
-              props.devices.map((device, index) => (
-                <li key={index} className={style["pod-item"]}>
-                  <svg x="0" y="0" width="20" height="18" viewBox="0 0 20 18" className={!device.connected ? `${style["pod-icon pod-connected"]}` `${style["pod-disconnected"]}` : style["pod-icon pod-connected"]}>
-                    <IconPod></IconPod>
-                  </svg>
-                  <div className={style["pod-text"]}>{device.name}</div>
-                  <div className={style["button-container"]}>
-                    {device.connected ?
-                      <button className={device.blinking ? `${style["pod-button"]}` `${style["selected-button"]}` : style["pod-button"]} onClick={() => props.blinkPod(device)} >
-                        <svg x="0" y="0" width="20" height="20" viewBox="0 0 512 512" className={style["light-svg"]}>
-                          <LightIcon></LightIcon>
-                        </svg>
-                      </button>
-                      : <></>
-                    }
-                    <AppContextMenu>
-                      <div className={style["menu-item"]} onClick={() => props.openDialog("Rename", device)}>Rename</div>
-                      {props.user.isAdmin || props.user.isSuper ? <div className={style["menu-item red"]} onClick={() => props.openDialog("Remove", device)}>Remove</div> : <></>}
-                    </AppContextMenu>
-                  </div>
-                </li>
-              ))
-            }
-
-          </ul>
-          {props.devices === undefined ? <div className={props.loading ? style.loading : style["load-text onload"]} >Loading...</div> : <></>}
-          {props.devices !== undefined && props.devices.length == 0 ?
-            <div className={style["empty-pod-list"]} >
-              <div className={style["load-text"]}>There are no pods.</div>
-              <div className={style["load-text-description"]}>Add pods by clicking the button below.</div>
+        <div className="mx-auto flex w-full max-w-lg grow flex-col gap-4 overflow-y-auto px-4 py-6">
+          {props.devices === undefined ? (
+            <div className="py-10 text-center text-sm text-tiilt-muted">
+              Loading…
             </div>
-            :
-            <></>
-          }
+          ) : props.devices.length === 0 ? (
+            <div className="flex flex-col items-center gap-1.5 py-10 text-center">
+              <div className="text-lg font-semibold text-tiilt-ink">
+                There are no pods
+              </div>
+              <div className="max-w-xs text-sm text-tiilt-muted">
+                Add a pod with the button below.
+              </div>
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {props.devices.map((device, index) => (
+                <li
+                  key={index}
+                  className="flex items-center gap-3 rounded-lg border border-tiilt-line bg-white px-4 py-3"
+                >
+                  <IconPod
+                    width={20}
+                    height={18}
+                    fill="currentColor"
+                    className={
+                      device.connected
+                        ? "flex-none text-tiilt-green"
+                        : "flex-none text-tiilt-muted"
+                    }
+                  />
+                  <div className="min-w-0 grow">
+                    <div className="truncate font-semibold text-tiilt-ink">
+                      {device.name}
+                    </div>
+                    <div
+                      className={`text-xs font-medium ${device.connected ? "text-tiilt-green" : "text-tiilt-muted"}`}
+                    >
+                      {device.connected ? "Online" : "Offline"}
+                    </div>
+                  </div>
+                  {device.connected ? (
+                    <button
+                      onClick={() => props.blinkPod(device)}
+                      title="Blink pod"
+                      className={`flex h-9 w-9 flex-none items-center justify-center rounded-lg border transition ${device.blinking ? "border-tiilt bg-tiilt-soft text-tiilt" : "border-tiilt-line text-tiilt-muted hover:border-tiilt hover:text-tiilt"}`}
+                    >
+                      <LightIcon width={20} height={20} fill="currentColor" />
+                    </button>
+                  ) : (
+                    <></>
+                  )}
+                  <AppContextMenu>
+                    <div
+                      className="cursor-pointer px-4 py-2 text-sm text-tiilt-ink transition hover:bg-tiilt-soft"
+                      onClick={() => props.openDialog("Rename", device)}
+                    >
+                      Rename
+                    </div>
+                    {isAdmin ? (
+                      <div
+                        className="cursor-pointer px-4 py-2 text-sm text-tiilt-danger transition hover:bg-tiilt-soft"
+                        onClick={() => props.openDialog("Remove", device)}
+                      >
+                        Remove
+                      </div>
+                    ) : (
+                      <></>
+                    )}
+                  </AppContextMenu>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-        {props.user.isAdmin || props.user.isSuper ? <div style={{ width: "100%", maxWidth: "26rem", padding: "0 1rem", boxSizing: "border-box" }}><button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={() => props.openDialog("Add")}>Add via MAC address</button></div> : <></>}
+
+        {isAdmin ? (
+          <div className="w-full flex-none border-t border-tiilt-line bg-white">
+            <div className="mx-auto w-full max-w-lg px-4 py-4">
+              <button
+                className={dlgPrimary + " w-full"}
+                onClick={() => props.openDialog("Add")}
+              >
+                Add via MAC address
+              </button>
+            </div>
+          </div>
+        ) : (
+          <></>
+        )}
       </div>
 
       <GenericDialogBox show={props.currentForm !== ""}>
-        <div className={style["dialog-window"]}>
-          {props.currentForm === "Remove" ?
+        <div className={dlgWindow} style={{ minWidth: "min(20rem, 76vw)" }}>
+          {props.currentForm === "Remove" ? (
             <React.Fragment>
-              <div className={style["dialog-heading"]}>Remove Pod</div>
-              <div className={style["dialog-body"]}>Are you sure you want to remove this pod?</div>
-              <button className={style["delete-button"]} onClick={props.removeDevice}>Remove</button>
-              <button className={style["cancel-button"]} onClick={props.closeDialog}>Cancel</button>
+              <div className={dlgHeading}>Remove pod</div>
+              <div className="text-sm text-tiilt-muted">
+                Are you sure you want to remove this pod?
+              </div>
+              <button className={dlgDanger} onClick={props.removeDevice}>
+                Remove
+              </button>
+              <button className={dlgCancel} onClick={props.closeDialog}>
+                Cancel
+              </button>
             </React.Fragment>
-            :
+          ) : (
             <></>
-          }
-          {props.currentForm === "Add" ?
+          )}
+          {props.currentForm === "Add" ? (
             <React.Fragment>
-              <div className={style["dialog-heading"]}>Pod MAC address:</div>
-              <input id='macInput' className={style["text-input"]} type="text"
-                onKeyDown={(event) => { if (event.key === 'Enter') { props.addDevice(document.getElementById('macInput').value) } }} />
-              <div className={style["input-status-text"]}>{props.statusText}</div>
-              <button className={style["basic-button"]} onClick={() => props.addDevice(document.getElementById('macInput').value)}>Add</button>
-              <button className={style["cancel-button"]} onClick={props.closeDialog}>Cancel</button>
+              <div className={dlgHeading}>Pod MAC address</div>
+              <input
+                id="macInput"
+                className={dlgInput}
+                type="text"
+                placeholder="00:00:00:00:00:00"
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    props.addDevice(document.getElementById("macInput").value)
+                  }
+                }}
+              />
+              <div className="text-sm text-tiilt-danger">{props.statusText}</div>
+              <button
+                className={dlgPrimary}
+                onClick={() =>
+                  props.addDevice(document.getElementById("macInput").value)
+                }
+              >
+                Add
+              </button>
+              <button className={dlgCancel} onClick={props.closeDialog}>
+                Cancel
+              </button>
             </React.Fragment>
-            :
+          ) : (
             <></>
-          }
-          {props.currentForm === "Rename" ?
+          )}
+          {props.currentForm === "Rename" ? (
             <React.Fragment>
-              <div className={style["dialog-heading"]}>Pod Name:</div>
-              <input id='nameInput' className={style["text-input"]} value={props.selectedDevice.name} type="text"
-                onKeyDown={(event) => { if (event.key === 'Enter') { props.renameDevice(document.getElementById('nameInput').value) } }} />
-              <div className={style["input-status-text"]}>{props.statusText}</div>
-              <button className={style["basic-button"]} onClick={() => props.renameDevice(document.getElementById('nameInput').value)}>Rename</button>
-              <button className={style["cancel-button"]} onClick={props.closeDialog}>Cancel</button>
+              <div className={dlgHeading}>Pod name</div>
+              <input
+                id="nameInput"
+                className={dlgInput}
+                defaultValue={props.selectedDevice.name}
+                type="text"
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    props.renameDevice(document.getElementById("nameInput").value)
+                  }
+                }}
+              />
+              <div className="text-sm text-tiilt-danger">{props.statusText}</div>
+              <button
+                className={dlgPrimary}
+                onClick={() =>
+                  props.renameDevice(document.getElementById("nameInput").value)
+                }
+              >
+                Rename
+              </button>
+              <button className={dlgCancel} onClick={props.closeDialog}>
+                Cancel
+              </button>
             </React.Fragment>
-            :
+          ) : (
             <></>
-          }
+          )}
         </div>
       </GenericDialogBox>
     </>
   )
 }
 
-export {PodComponentPage}
+export { PodComponentPage }
