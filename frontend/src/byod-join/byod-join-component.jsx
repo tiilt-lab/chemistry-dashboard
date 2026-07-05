@@ -442,7 +442,13 @@ function JoinPage() {
         const isMp4 = blob.type?.startsWith("video/mp4");
         if (!isMp4) return blob; // WebM/others pass-through
 
-        // if (!MP4Box) console.log("MP4Box not loaded yet");
+        // FIXME: this path is currently non-functional. It reads a global
+        // `window.MP4Box` (see below) that nothing ever loads — the `mp4box`
+        // npm package was never imported and no <script> loads it, so this
+        // rejects for every mp4 blob and the caller (line ~355) then never
+        // sends the chunk. Affects browsers that record video/mp4 (e.g. Safari).
+        // To fix: `import MP4Box from "mp4box"` and use it here (re-add the dep),
+        // or drop mp4 duration-fixing entirely.
 
         const ab = await blob.arrayBuffer();
         // MP4Box API expects `fileStart` on each appended buffer.
