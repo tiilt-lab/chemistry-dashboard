@@ -575,7 +575,7 @@ def get_face_thumbnail(session_id, session_device_id, alias, **kwargs):
     if not os.path.exists(path):
         return ('', 404)
     resp = make_response(send_file(path, mimetype='image/jpeg'))
-    resp.headers['Cache-Control'] = 'public, max-age=86400'
+    resp.headers['Cache-Control'] = 'public, max-age=300'
     return resp
 
 @api_routes.route('/api/v1/help_button', methods=['POST'])
