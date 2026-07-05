@@ -117,13 +117,14 @@ def add_transcript(**kwargs):
   certainty = features.get('certainty_value', 0)
   speaker_tag = content.get('speaker_tag', '')
   speaker_id = content.get('speaker_id', -1)
+  voice_features = content.get('voice_features', None)
   res = {}
 
   session_device = database.get_session_devices(processing_key=key)
   if session_device:
     logging.info('Transcript received for session device {0} on session {1}.'.format(session_device.id, session_device.session_id))
     # Add data to database.
-    transcript = database.add_transcript(session_device.id, start_time, end_time - start_time, transcript, len(questions) > 0, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id, speaker_tag, speaker_id)
+    transcript = database.add_transcript(session_device.id, start_time, end_time - start_time, transcript, len(questions) > 0, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id, speaker_tag, speaker_id, voice_features=voice_features)
     added_keywords = []
     for keyword in keywords:
       added_keywords.append(database.add_keyword_usage(transcript.id, keyword['word'], keyword['keyword'], keyword['similarity']))
@@ -178,7 +179,7 @@ def add_speaker_transcript_metrics(**kwargs):
   certainty = features.get('certainty_value', 0)
   speaker_tag = content.get('speaker_tag', '')
   speaker_id = content.get('speaker_id', -1)
-
+  voice_features = content.get('voice_features', None)
 
   speakers = content.get('speakers', [])
   participation_scores = content.get('participation_scores', [])
@@ -195,7 +196,7 @@ def add_speaker_transcript_metrics(**kwargs):
     logging.info("Speaker Metrics received for session device %s for session %s." %
                  (session_device.id, session_device.session_id))
 
-    transcript = database.add_transcript(session_device.id, start_time, end_time - start_time, transcript, len(questions) > 0, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id, speaker_tag, speaker_id)
+    transcript = database.add_transcript(session_device.id, start_time, end_time - start_time, transcript, len(questions) > 0, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id, speaker_tag, speaker_id, voice_features=voice_features)
     added_keywords = []
     for keyword in keywords:
       added_keywords.append(database.add_keyword_usage(transcript.id, keyword['word'], keyword['keyword'], keyword['similarity']))

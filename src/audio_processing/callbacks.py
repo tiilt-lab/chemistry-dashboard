@@ -5,12 +5,14 @@ from datetime import datetime
 import logging
 import base64
 
-def post_transcripts(source, start_time, end_time, transcript, doa, questions, keywords, features, topic_id, speaker_tag, speaker_id):
+def post_transcripts(source, start_time, end_time, transcript, doa, questions, keywords, features, topic_id, speaker_tag, speaker_id, voice_features=None):
     result = {
         'source': source,
         'start_time': start_time,
         'end_time': end_time
     }
+    if voice_features:
+        result['voice_features'] = voice_features
     if transcript:
         result['transcript'] = transcript
         result['questions'] = questions

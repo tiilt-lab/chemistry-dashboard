@@ -314,10 +314,28 @@ class AudioProcessorPosthoc:
                     
                     np.save(self.embeddings_file, np.array(self.embeddings))
                 
+                # Per-utterance voice features: prosody (#6) and/or vocal
+                # emotion (#5) from the segment audio, when enabled.
+                voice_features = None
+                if cf.prosody() or cf.vocal_emotion():
+                    vf = {}
+                    if cf.prosody():
+                        import prosody
+                        p = prosody.compute_prosody(audio_data)
+                        if p:
+                            vf['prosody'] = p
+                    if cf.vocal_emotion():
+                        import vocal_emotion
+                        ve = vocal_emotion.classify_vocal_emotion(
+                            audio_data, model_id=cf.vocal_emotion_model())
+                        if ve:
+                            vf['vocal_emotion'] = ve
+                    voice_features = vf or None
                 success, transcript_id = callbacks.post_transcripts(
                     self.config.auth_key, start_time, end_time,
                     transcript_text, doa, questions, keywords,
-                    features, topic_id, speaker_tag, speaker_id)
+                    features, topic_id, speaker_tag, speaker_id,
+                    voice_features=voice_features)
                 
                 processing_time = time.time() - processing_timer
 
