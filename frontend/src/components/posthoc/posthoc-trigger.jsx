@@ -126,6 +126,30 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                     } catch {
                         return
                     }
+                    // After a status match, the server re-attaches the running
+                    // processor to this socket, so live progress/completion
+                    // stream here too.
+                    if (msg.type === "progress") {
+                        updateMeta(label, {
+                            startedAt:
+                                (streamMetaRef.current[label] || {})
+                                    .startedAt || Date.now(),
+                            message: msg.message,
+                            percent: msg.percent,
+                        })
+                        return
+                    }
+                    if (msg.type === "process_completed") {
+                        setStream(label, "done")
+                        updateMeta(label, {
+                            endedAt: Date.now(),
+                            percent: 100,
+                            message: "Complete",
+                        })
+                        if (timer) clearInterval(timer)
+                        ws.close()
+                        return
+                    }
                     if (msg.type !== "posthoc_status") return
                     if (msg.running) {
                         if (streamsRef.current[label] !== "running") {
