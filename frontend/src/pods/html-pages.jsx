@@ -58,7 +58,7 @@ function PodComponentPage(props) {
             <></>
           }
         </div>
-        {props.user.isAdmin || props.user.isSuper ? <button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={() => props.openDialog("Add")}>Add via MAC address</button> : <></>}
+        {props.user.isAdmin || props.user.isSuper ? <div style={{ width: "100%", maxWidth: "26rem", padding: "0 1rem", boxSizing: "border-box" }}><button className={isLargeScreen() ? `${style["basic-button"]} ${style["medium-button"]}` : `${style["basic-button"]} ${style["small-button"]}`} onClick={() => props.openDialog("Add")}>Add via MAC address</button></div> : <></>}
       </div>
 
       <GenericDialogBox show={props.currentForm !== ""}>

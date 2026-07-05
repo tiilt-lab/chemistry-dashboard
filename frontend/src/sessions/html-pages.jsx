@@ -578,7 +578,7 @@ function DiscussionSessionPage(props) {
                                     <></>
                                 )}
                             </nav>
-                            <div className="flex flex-none gap-2">
+                            <div className="flex flex-wrap justify-end gap-2">
                                 <button
                                     className="flex items-center gap-1.5 rounded-lg border border-tiilt-line bg-white px-4 py-2 text-sm font-semibold text-tiilt-ink transition hover:border-tiilt hover:bg-tiilt-soft active:translate-y-px"
                                     onClick={() => props.openFolderDialog("NewFolder")}
