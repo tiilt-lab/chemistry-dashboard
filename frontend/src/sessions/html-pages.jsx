@@ -94,6 +94,62 @@ function SortControl({
     )
 }
 
+
+// Upload a recording to be analyzed: creates a session+pod server-side and
+// auto-queues the full analysis. Self-contained state so failures are VISIBLE
+// (the previous prompt-based flow could fail silently).
+function UploadVideoButton() {
+    const [busy, setBusy] = useState(false)
+    const [note, setNote] = useState("")
+    const onPick = (e) => {
+        const file = e.target.files && e.target.files[0]
+        e.target.value = ""
+        if (!file) return
+        setBusy(true)
+        setNote("Uploading " + file.name + "…")
+        const fd = new FormData()
+        fd.append("video", file)
+        fd.append("name", file.name.replace(/\.[^.]+$/, ""))
+        fetch("/api/v1/sessions/upload_video", {
+            method: "POST",
+            body: fd,
+            credentials: "include",
+        })
+            .then(async (r) => {
+                if (r.status === 200) {
+                    setNote("Uploaded — analysis queued. Reloading…")
+                    setTimeout(() => window.location.reload(), 900)
+                } else {
+                    const t = await r.text().catch(() => "")
+                    setBusy(false)
+                    setNote("Upload failed (" + r.status + "): " + t.slice(0, 120))
+                }
+            })
+            .catch((err) => {
+                setBusy(false)
+                setNote("Upload failed: " + err)
+            })
+    }
+    return (
+        <label
+            className={
+                "flex items-center gap-1.5 rounded-lg border border-tiilt-line bg-white px-4 py-2 text-sm font-semibold text-tiilt-ink transition active:translate-y-px " +
+                (busy ? "cursor-wait opacity-60" : "cursor-pointer hover:border-tiilt hover:bg-tiilt-soft")
+            }
+            title={note || "Upload a webm/mp4 recording to analyze"}
+        >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 16V4m0 0l-4 4m4-4l4 4M4 20h16" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {busy ? "Uploading…" : "Upload video"}
+            {note && !busy ? (
+                <span className="max-w-56 truncate text-xs font-normal text-tiilt-danger">{note}</span>
+            ) : null}
+            <input type="file" accept="video/webm,video/mp4" className="hidden" disabled={busy} onChange={onPick} />
+        </label>
+    )
+}
+
 function FolderRow({ folder, onOpen, openFolderDialog }) {
     return (
         <li className={rowClass}>
@@ -517,45 +573,20 @@ function DiscussionSessionPage(props) {
                             </nav>
                             <div className="flex flex-none gap-2">
                                 <button
-                                    className="rounded-lg border border-tiilt-line bg-white px-4 py-2 text-sm font-semibold text-tiilt-ink transition hover:border-tiilt hover:bg-tiilt-soft active:translate-y-px"
-                                    onClick={() =>
-                                        props.openFolderDialog("NewFolder")
-                                    }
+                                    className="flex items-center gap-1.5 rounded-lg border border-tiilt-line bg-white px-4 py-2 text-sm font-semibold text-tiilt-ink transition hover:border-tiilt hover:bg-tiilt-soft active:translate-y-px"
+                                    onClick={() => props.openFolderDialog("NewFolder")}
                                 >
+                                    <FolderIcon className="h-4 w-4" />
                                     New folder
                                 </button>
+                                <UploadVideoButton />
                                 <button
-                                    className="rounded-lg bg-tiilt px-4 py-2 text-sm font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
+                                    className="flex items-center gap-1.5 rounded-lg bg-tiilt px-4 py-2 text-sm font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
                                     onClick={props.newRecording}
                                 >
+                                    <span aria-hidden="true" className="text-base leading-none">+</span>
                                     New session
                                 </button>
-                                <label className="cursor-pointer rounded-lg border border-tiilt-line bg-white px-4 py-2 text-sm font-semibold text-tiilt-ink transition hover:bg-tiilt-soft active:translate-y-px">
-                                    Upload video
-                                    <input
-                                        type="file"
-                                        accept="video/webm,video/mp4"
-                                        className="hidden"
-                                        onChange={(e) => {
-                                            const file = e.target.files && e.target.files[0]
-                                            if (!file) return
-                                            const name = window.prompt(
-                                                "Session name for this video:",
-                                                file.name.replace(/\.[^.]+$/, ""),
-                                            )
-                                            if (name == null) return
-                                            new SessionService()
-                                                .uploadVideo(name || file.name, file)
-                                                .then((r) =>
-                                                    r.status === 200
-                                                        ? window.location.reload()
-                                                        : window.alert("Upload failed."),
-                                                )
-                                                .catch(() => window.alert("Upload failed."))
-                                            e.target.value = ""
-                                        }}
-                                    />
-                                </label>
                             </div>
                         </div>
 
