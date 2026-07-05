@@ -78,8 +78,8 @@ function Appheader(props) {
             >
                 {props.rightText}
             </div>
-            <SettingsButton />
             <ThemeToggle />
+            <SettingsButton />
         </div>
     )
 }
