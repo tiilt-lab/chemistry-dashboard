@@ -719,6 +719,22 @@ def remove_device_from_session(session_id, session_device_id, **kwargs):
         socketio_helper.remove_session_device(session_id, session_device_id)
     return json_response()
 
+
+# Shared tail for the three metrics-export endpoints: wrap the accumulated
+# CSV buffer / JSON dict in a download response.
+def _metrics_export_response(si, json_payload, format):
+    if format == 'csv':
+        output = make_response(si.getvalue())
+        output.headers["Content-Disposition"] = "attachment; filename=export.csv"
+        output.headers["Content-type"] = "text/csv"
+    elif format == 'json':
+        json_data = json.dumps(json_payload, indent=2)
+        output = make_response(json_data)
+        output.headers["Content-Disposition"] = "attachment; filename=export.json"
+        output.headers["Content-type"] = "application/json"
+    return output
+
+
 @api_routes.route('/api/v1/sessions/<int:session_id>/exporttranscriptmetrics/<int:windowsize>/<string:format>',methods=['GET'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access
@@ -778,16 +794,7 @@ def export_session_transcript_metrics(session_id,windowsize, format, **kwargs):
                     # All_particiapants_video_metrics.extend(speaker_data)
                         
 
-    if format == 'csv':
-        output = make_response(si.getvalue())
-        output.headers["Content-Disposition"] = "attachment; filename=export.csv"
-        output.headers["Content-type"] = "text/csv"
-    elif format == 'json':
-        json_data = json.dumps(All_particiapants_video_metrics, indent=2)
-        output = make_response(json_data)
-        output.headers["Content-Disposition"] = "attachment; filename=export.json"
-        output.headers["Content-type"] = "application/json"
-    return output
+    return _metrics_export_response(si, All_particiapants_video_metrics, format)
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/exportvideometrics/<int:windowsize>/<string:format>',methods=['GET'])
 @wrappers.verify_login(public=True)
@@ -826,16 +833,7 @@ def export_session_video_metrics(session_id, windowsize, format, **kwargs):
                 if format == 'json':
                     All_particiapants_video_metrics[speaker.alias] = [dict(zip(field_names, row)) for row in speaker_data]
                     # All_particiapants_video_metrics.extend(speaker_data)  
-    if format == 'csv':
-        output = make_response(si.getvalue())
-        output.headers["Content-Disposition"] = "attachment; filename=export.csv"
-        output.headers["Content-type"] = "text/csv"
-    elif format == 'json':
-        json_data = json.dumps(All_particiapants_video_metrics, indent=2)
-        output = make_response(json_data)
-        output.headers["Content-Disposition"] = "attachment; filename=export.json"
-        output.headers["Content-type"] = "application/json"
-    return output
+    return _metrics_export_response(si, All_particiapants_video_metrics, format)
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/exporttranscriptvideometrics/<int:windowsize>/<string:format>',methods=['GET'])
 @wrappers.verify_login(public=True)
@@ -901,16 +899,7 @@ def export_session_transcript_video_metrics(session_id,windowsize, format, **kwa
                     # All_particiapants_video_metrics.extend(speaker_data) 
                    
 
-    if format == 'csv':
-        output = make_response(si.getvalue())
-        output.headers["Content-Disposition"] = "attachment; filename=export.csv"
-        output.headers["Content-type"] = "text/csv"
-    elif format == 'json':  
-        json_data = json.dumps(All_particiapants_video_metrics, indent=2)
-        output = make_response(json_data)
-        output.headers["Content-Disposition"] = "attachment; filename=export.json"
-        output.headers["Content-type"] = "application/json"
-    return output
+    return _metrics_export_response(si, All_particiapants_video_metrics, format)
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/synthesized_feedback_metrics',methods=['GET'])
 # @wrappers.verify_login(public=True)

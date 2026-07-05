@@ -25,7 +25,11 @@ class GoogleASR():
     SAMPLE_RATE = 16000
     DEPTH = 2
 
-    def __init__(self, audio_queue, transcript_queue, config,mediatype,interval):
+    # STOP_SIGNAL: the posthoc server shares its own sentinel across
+    # components; the live server lets the connector make its own.
+    # blocking_get: live streaming polls with a short timeout so it can
+    # notice shutdown; posthoc replay blocks until data arrives.
+    def __init__(self, audio_queue, transcript_queue, config,mediatype,interval,STOP_SIGNAL=None,blocking_get=False):
         self.audio_queue = audio_queue
         self.transcript_queue = transcript_queue
         self.config = config
@@ -34,13 +38,16 @@ class GoogleASR():
         self.audio_interval = interval
         self.audio_file_duration = 0
         self.media_type = mediatype
-        self.STOP = object()  # sentinel
+        self.STOP = STOP_SIGNAL if STOP_SIGNAL is not None else object()  # sentinel
+        self.blocking_get = blocking_get
 
     def start(self):
         self.running = True
         if self.media_type == 'audio':
             self.asr_thread = threading.Thread(target=self.processing, name="google-cloud-speech")
-        elif self.media_type == 'video':
+        else:
+            # live passes 'video', posthoc passes 'wav' — both mean
+            # "transcribe the recorded wav" rather than the live stream.
             self.asr_thread = threading.Thread(target=self.processing_wav_audio, name="google-cloud-speech-wav-audio")
         self.asr_thread.daemon = True
         self.asr_thread.start()
@@ -53,9 +60,12 @@ class GoogleASR():
         while self.running and generator_time < GoogleASR.STREAM_LIMIT:
             first_chunk = None
             try:
-                # block briefly to avoid CPU spin; adjust timeout for latency needs
-                first_chunk = self.audio_queue.get(timeout=0.25)
-                
+                if self.blocking_get:
+                    first_chunk = self.audio_queue.get()
+                else:
+                    # block briefly to avoid CPU spin; adjust timeout for latency needs
+                    first_chunk = self.audio_queue.get(timeout=0.25)
+
             except Empty:
                 continue
 

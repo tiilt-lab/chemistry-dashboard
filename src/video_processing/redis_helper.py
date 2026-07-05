@@ -1,31 +1,11 @@
-import redis
-import config as cf
+# Shared implementation lives in src/common/redis_client.py (this file and
+# the video_processing copy were byte-identical). The shim inserts common/
+# on sys.path so the bare-name service imports keep working unchanged.
+import os
+import sys
 
-# Created lazily: this module is imported before cf.initialize() runs,
-# so config values are not available at import time.
-_r = None
+_COMMON = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "common"))
+if _COMMON not in sys.path:
+    sys.path.insert(0, _COMMON)
 
-def _redis():
-    global _r
-    if _r is None:
-        _r = redis.StrictRedis(host=cf.redis_host(), port=cf.redis_port(), db=cf.redis_db(), decode_responses=True)
-    return _r
-
-class RedisSessions:
-
-    @staticmethod
-    def make_config_redis_key(session_id):
-        return 'APS-Config-{0}'.format(session_id)
-
-    @staticmethod
-    def make_auth_redis_key(processing_key):
-        return 'APS-Auth-{0}'.format(processing_key)
-
-    @staticmethod
-    def get_session_config(redis_key):
-        return _redis().get(redis_key)
-
-    @staticmethod
-    def get_device_key(processing_key):
-        redis_key = RedisSessions.make_auth_redis_key(processing_key)
-        return _redis().get(redis_key)
+from redis_client import RedisSessions  # noqa: F401,E402
