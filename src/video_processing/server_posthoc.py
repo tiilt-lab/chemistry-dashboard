@@ -245,6 +245,8 @@ class ServerProtocol(WebSocketServerProtocol):
 
         if data['type'] == 'start_posthoc_video_processing':
             self.send_json({'type':'video posthoc analytics started','message':"Processing Video posthoc Analytics"})
+            # Full re-run REPLACES the pod's previous video metrics.
+            callbacks.post_posthoc_reset(self.config.auth_key, 'video')
             self.video_processor.add_websocket_connection(self)
             self.video_processor.start()
             self._run_active = True  # may now finish in the background if the client leaves

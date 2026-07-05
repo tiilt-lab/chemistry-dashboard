@@ -94,6 +94,15 @@ def post_video_metrics(source, video_metrics):
         return False
 
 
+def post_posthoc_reset(source, scope):
+    # Ask the server to wipe this pod's previous results before a full re-run.
+    try:
+        base = config.video_metrics_callback().rsplit('/', 1)[0]
+        requests.post(base + '/posthoc_reset', json={'source': source, 'scope': scope})
+    except Exception as e:
+        logging.warning('posthoc_reset callback failed: {0}'.format(e))
+
+
 def post_posthoc_completed(source, models=None):
     # Mark a pod's post-hoc run complete server-side, so it persists even if the
     # triggering browser disconnected. URL derived from the metrics callback base.

@@ -1569,6 +1569,22 @@ def get_conversation_dynamics(session_device_id):
     return compute_conversation_dynamics(rows)
 
 
+def delete_pod_analysis(session_device_id, scope='audio'):
+    # Wipe a pod's previous analysis before a full re-run so results REPLACE
+    # instead of accumulating (re-runs were stacking duplicate transcripts).
+    from sqlalchemy import text
+    if scope == 'video':
+        db.session.execute(text("DELETE FROM speaker_video_metrics WHERE session_device_id=:d"), {"d": session_device_id})
+    else:
+        # keyword_usage has no ON DELETE CASCADE; children with CASCADE
+        # (speaker_transcript_metrics, seven_cs_coded_segment) follow the parent.
+        db.session.execute(text("""DELETE ku FROM keyword_usage ku
+            JOIN transcript t ON ku.transcript_id = t.id
+            WHERE t.session_device_id = :d"""), {"d": session_device_id})
+        db.session.execute(text("DELETE FROM transcript WHERE session_device_id=:d"), {"d": session_device_id})
+    db.session.commit()
+
+
 def mark_session_device_posthoc(session_device_id, models=None):
     device = get_session_devices(id=session_device_id)
     if device is None:
