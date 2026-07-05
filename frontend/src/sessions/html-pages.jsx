@@ -164,6 +164,11 @@ function FolderRow({ folder, count, onOpen, openFolderDialog }) {
                     className="min-w-0 grow cursor-pointer truncate text-left text-base font-semibold text-tiilt-ink"
                 >
                     {folder.name}
+                    {count != null ? (
+                        <span className="ml-2 text-xs font-normal text-tiilt-muted">
+                            {count} {count === 1 ? "session" : "sessions"}
+                        </span>
+                    ) : null}
                 </button>
                 <div className="flex-none">
                     <AppContextMenu>
