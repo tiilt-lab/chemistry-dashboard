@@ -19,9 +19,16 @@ def _cosine(a, b):
 
 
 def _embed_int16(pcm_bytes, speaker_model):
-    # Match pyDiarization.embedSignal exactly: int16 tensor -> encode_batch.
-    sig = torch.tensor(np.frombuffer(pcm_bytes, dtype=np.int16))
+    # int16 PCM bytes -> float32 [-1,1] tensor. Embedding from an integer-read
+    # of a float32-wav degraded to noise (verified: sim -0.08 vs 0.39 float),
+    # so all reconciliation embedding happens in ECAPA's native float domain.
+    sig = torch.tensor(np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0)
     emb = speaker_model.encode_batch(sig)
+    return emb[0, 0].detach().cpu().numpy()
+
+
+def _embed_float(audio_f32, speaker_model):
+    emb = speaker_model.encode_batch(torch.tensor(np.ascontiguousarray(audio_f32)))
     return emb[0, 0].detach().cpu().numpy()
 
 
@@ -54,7 +61,7 @@ def build_cluster_to_enrolled_map(audio_file, turns, enrolled, speaker_model,
         return {}
 
     try:
-        audio, sr = sf.read(audio_file, dtype='int16', always_2d=False)
+        audio, sr = sf.read(audio_file, dtype='float32', always_2d=False)
     except Exception as e:
         logging.warning("cluster reconcile: could not read %s: %s", audio_file, e)
         return {}
@@ -71,7 +78,7 @@ def build_cluster_to_enrolled_map(audio_file, turns, enrolled, speaker_model,
     mapping = {}
     for label, segs in by_cluster.items():
         try:
-            emb = _embed_int16(np.concatenate(segs).tobytes(), speaker_model)
+            emb = _embed_float(np.concatenate(segs), speaker_model)
         except Exception as e:
             logging.warning("cluster reconcile: cluster embed failed for %s: %s", label, e)
             continue
