@@ -16,6 +16,7 @@ function AppSessionPage(props) {
         setCollapsed(next)
         localStorage.setItem("blinc-sidebar-collapsed", next ? "1" : "0")
     }
+    const [speakerFilter, setSpeakerFilter] = useState("")
     const Chevron = ({ left }) => (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path
@@ -59,15 +60,33 @@ function AppSessionPage(props) {
                                 ({props.speakers.length})
                             </span>
                         </div>
+                        {props.speakers.length > 8 ? (
+                            <input
+                                type="search"
+                                value={speakerFilter}
+                                onChange={(e) => setSpeakerFilter(e.target.value)}
+                                placeholder="Filter…"
+                                aria-label="Filter participants"
+                                className="mb-2 hidden h-8 w-full rounded-lg border border-tiilt-line bg-white px-2.5 text-sm text-tiilt-ink transition outline-none placeholder:text-tiilt-muted focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30 sm:block"
+                            />
+                        ) : null}
                         <ScrollArea className="max-h-[220px] pr-1 sm:max-h-none sm:min-h-0 sm:flex-1">
                             <div className="flex flex-row gap-2 sm:flex-col">
-                                {props.speakers.map((part, index) => (
+                                {props.speakers
+                                    .filter(
+                                        (part) =>
+                                            !speakerFilter.trim() ||
+                                            String(part.alias || "")
+                                                .toLowerCase()
+                                                .includes(speakerFilter.trim().toLowerCase()),
+                                    )
+                                    .map((part, index) => (
                                     <button
                                         className="rounded-lg border border-tiilt-line bg-white px-3 py-2 text-sm font-semibold text-tiilt-ink transition hover:border-tiilt hover:bg-tiilt-soft sm:w-full sm:text-left"
                                         onClick={part.action}
                                         key={index}
                                     >{`${part.alias}`}</button>
-                                ))}
+                                    ))}
                             </div>
                         </ScrollArea>
                     </div>

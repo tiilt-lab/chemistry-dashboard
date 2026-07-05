@@ -15,10 +15,13 @@ function PodComponentPages(props) {
             <div role="main" className="main-container">
                 <Appheader
                     title={
-                        props.details === "Group" ||
+                        (props.session && props.session.name
+                            ? props.session.name + " › "
+                            : "") +
+                        (props.details === "Group" ||
                         props.details === "Reflection Dashboard"
                             ? props.sessionDevice.name
-                            : props.selectedSpkralias
+                            : props.selectedSpkralias)
                     }
                     leftText={false}
                     rightText={"Options"}

@@ -12,7 +12,14 @@ function PodComponentSeesionPages(props) {
         <>
             <div role="main" className="main-container">
                 <Appheader
-                    title={props.details === "Group" ? props.sessionDevice.name : props.selectedSpkralias}
+                    title={
+                        (props.session && props.session.name
+                            ? props.session.name + " › "
+                            : "") +
+                        (props.details === "Group"
+                            ? props.sessionDevice.name
+                            : props.selectedSpkralias)
+                    }
                     leftText={false}
                     rightText={"Options"}
                     rightTextClick={() => props.openDialog("Options")}

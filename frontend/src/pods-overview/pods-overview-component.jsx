@@ -3,7 +3,7 @@ import { SessionModel } from "../models/session";
 import { DeviceService } from "../services/device-service";
 import { DeviceModel } from "../models/device";
 import { SpeakerModel } from "../models/speaker";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { PodsOverviewPages } from "./html-pages";
 
@@ -92,6 +92,36 @@ function PodsOverviewComponent() {
     };
   }, [session]);
   const [currentForm, setCurrentForm] = useState("");
+  // Toasts for analysis completion: diff the 15s enrichment polls and
+  // announce pods whose analysis_running flipped off (or hit an error).
+  const [toasts, setToasts] = useState([]);
+  const prevEnriched = useRef({});
+  useEffect(() => {
+    const prev = prevEnriched.current;
+    const notes = [];
+    for (const id of Object.keys(enriched)) {
+      const was = prev[id];
+      const now = enriched[id];
+      if (was && was.analysis_running && now && !now.analysis_running) {
+        const name = (now.name && String(now.name).trim()) || `Pod ${id}`;
+        notes.push(`${name}: analysis finished`);
+      }
+    }
+    if (notes.length) {
+      setToasts((t) => [
+        ...t,
+        ...notes.map((text, i) => ({ id: `${text}-${t.length + i}`, text })),
+      ]);
+    }
+    prevEnriched.current = enriched;
+  }, [enriched]);
+  useEffect(() => {
+    if (!toasts.length) return;
+    const t = setTimeout(() => setToasts((list) => list.slice(1)), 6000);
+    return () => clearTimeout(t);
+  }, [toasts]);
+  const dismissToast = (id) =>
+    setToasts((list) => list.filter((x) => x.id !== id));
   const [activeSessionService, setActiveSessionService] = useOutletContext();
   const navigate = useNavigate();
   const [trigger, setTrigger] = useState(0);
@@ -333,6 +363,8 @@ function PodsOverviewComponent() {
       runSelected={runSelected}
       stopRuns={stopRuns}
       queueState={queueState}
+      toasts={toasts}
+      dismissToast={dismissToast}
       righttext={getPasscode()}
       rightpill={getRightPill()}
       session={session}
