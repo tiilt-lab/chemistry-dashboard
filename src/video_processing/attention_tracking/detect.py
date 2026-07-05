@@ -565,8 +565,12 @@ class ImageObjectDetection:
                     face_img = face_img[y0:y1, x0:x1]
             os.makedirs(self._thumb_dir, exist_ok=True)
             path = os.path.join(self._thumb_dir, "{0}.jpg".format(os.path.basename(str(alias))))
-            # face_img is RGB (face_recognition/dlib convention); cv2 writes BGR.
-            cv2.imwrite(path, cv2.cvtColor(face_img, cv2.COLOR_RGB2BGR))
+            # Pipeline frames are BGR (moviepy yields RGB but the reader applies
+            # a BGR2RGB swap), so write directly — converting again inverted
+            # R/B in the saved thumbnails (verified vs an ffmpeg ground-truth
+            # frame). HSEmotion/face-rec are unaffected: their own conversions
+            # assume BGR input, so the pipeline is internally consistent.
+            cv2.imwrite(path, face_img)
             logging.info("saved face thumbnail for %s (dist %.3f)", alias, match_distance)
         except Exception as e:
             logging.warning("face thumbnail save failed for %s: %s", alias, e)
