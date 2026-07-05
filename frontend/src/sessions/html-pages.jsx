@@ -12,19 +12,11 @@ import breadcrumbIcon from "../assets/img/icon-back.svg"
 import FolderIcon from "../Icons/Folder"
 import MicIcon from "../Icons/Mic"
 import { AppSpinner } from "../spinner/spinner-component"
+import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel } from "../components/dialog-styles"
 
 // Row wrapper (border/bg/hover) is a column so the expandable pod panel can sit
 // below the horizontal row content.
 
-// Sleek dialog styling, matching the pods-overview dialogs.
-const dlgWindow = "flex min-w-[min(22rem,86vw)] flex-col gap-3"
-const dlgHeading = "mb-1 text-lg font-semibold text-tiilt-ink"
-const dlgInput =
-    "h-11 w-full rounded-lg border border-tiilt-line bg-white px-3 text-base text-tiilt-ink transition outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
-const dlgPrimary =
-    "mt-2 h-11 rounded-lg bg-tiilt font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
-const dlgCancel =
-    "h-11 rounded-lg border border-tiilt-line bg-white font-semibold text-tiilt-ink transition hover:bg-tiilt-soft active:translate-y-px"
 const rowClass =
     "group flex flex-col rounded-lg border border-tiilt-line bg-white transition hover:border-tiilt hover:shadow-[0_8px_20px_-16px_rgba(42,23,74,0.5)]"
 const rowInnerClass = "flex items-center gap-2.5 px-3 py-1.5"
@@ -160,7 +152,7 @@ function UploadVideoButton() {
     )
 }
 
-function FolderRow({ folder, onOpen, openFolderDialog }) {
+function FolderRow({ folder, count, onOpen, openFolderDialog }) {
     return (
         <li className={rowClass}>
             <div className={rowInnerClass}>
@@ -623,6 +615,7 @@ function DiscussionSessionPage(props) {
                                     <FolderRow
                                         key={index}
                                         folder={folder}
+                                        count={(props.sessions || []).filter((x) => x.folder === folder.id).length}
                                         onOpen={props.displayFolder}
                                         openFolderDialog={
                                             props.openFolderDialog
