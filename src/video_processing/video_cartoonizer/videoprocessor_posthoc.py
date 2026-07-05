@@ -70,8 +70,29 @@ class VideoProcessorPosthoc:
         self.facialEmbeddings = facialEmbeddings
 
     def send_json(self, message):
-        payload = json.dumps(message).encode('utf8')
-        self.web_socket_connection.sendMessage(payload, isBinary = False)
+        # Best-effort: the run may outlive the triggering client (background
+        # completion), in which case the socket is closed — never let a progress
+        # /completion send kill the processing thread.
+        try:
+            if self.web_socket_connection is None:
+                return
+            payload = json.dumps(message).encode('utf8')
+            self.web_socket_connection.sendMessage(payload, isBinary = False)
+        except Exception:
+            pass
+
+    def _probe_duration(self):
+        # Browser-captured webm files often carry no duration metadata, making
+        # moviepy report a bogus 86400s (24h). Ask ffprobe for the real one.
+        try:
+            out = subprocess.run(
+                ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                 "-of", "csv=p=0", self.video_file],
+                capture_output=True, timeout=30)
+            val = float(out.stdout.decode().strip())
+            return val if val > 0 else None
+        except Exception:
+            return None
         
 
     def adjust_time(self,frame_sec_mark):
@@ -91,6 +112,12 @@ class VideoProcessorPosthoc:
                 logging.info("temp dir is {0}".format(tmpdir))
                 warming_error_count  = 0 
                 vidclip = mp.VideoFileClip(self.video_file)
+                # Correct moviepy's 24h guess for duration-less webm captures.
+                _probed = self._probe_duration()
+                _duration = vidclip.duration
+                if _probed and (_duration is None or _duration >= 86000 or _duration > _probed * 1.5):
+                    logging.info("duration corrected: moviepy %s -> ffprobe %.1fs", _duration, _probed)
+                    _duration = _probed
 
                 current_dir = Path(__file__).resolve().parent
                 # Go up two level (parent)
@@ -99,14 +126,14 @@ class VideoProcessorPosthoc:
                 target_dir = parent_dir / "video_processing" / "videorecordings"
                 final_audio_file = os.path.join(target_dir, "{0} ({1})_audio.wav".format(self.config.auth_key, str(time.ctime())))
                 chunk_files = []
-                for start in range(0, int(vidclip.duration), self.video_interval):
-                    end = min(start + self.video_interval, vidclip.duration)
+                for start in range(0, int(_duration), self.video_interval):
+                    end = min(start + self.video_interval, _duration)
                     dur = end-start
                     # Live progress to the trigger UI (position in the video).
                     try:
-                        _pct = round(100.0 * start / max(1, vidclip.duration))
+                        _pct = round(100.0 * start / max(1, _duration))
                         self.send_json({'type': 'progress',
-                                        'message': 'Analyzing video {0}s / {1}s'.format(int(start), int(vidclip.duration)),
+                                        'message': 'Analyzing video {0}s / {1}s'.format(int(start), int(_duration)),
                                         'percent': _pct})
                     except Exception:
                         pass

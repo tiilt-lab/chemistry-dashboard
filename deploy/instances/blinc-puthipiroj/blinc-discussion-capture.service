@@ -11,6 +11,7 @@ Restart=always
 RestartSec=1
 LimitRTPRIO=99
 LimitRTTIME=infinity
+EnvironmentFile=-/etc/blinc/secrets.env
 Environment="DC_PORT=5001"
 Environment="DC_DEVICE_WS_PORT=9011"
 WorkingDirectory=/home/vlj9405/code/chemistry-dashboard/

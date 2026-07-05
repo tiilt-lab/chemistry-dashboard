@@ -287,6 +287,13 @@ class ServerProtocol(WebSocketServerProtocol):
             self.processorspeakermetric.add_websocket_connection(self)
             self.processorspeakermetric.start_transcript_metric_processing()    
 
+        if data['type'] == 'query_posthoc_status':
+            # Is a run for this pod still active (possibly started by another
+            # page/session)? Lets the UI restore progress after a refresh.
+            sdid = str(data.get('sessiondeviceid', ''))
+            active = any(k.startswith(sdid + '-') for k in list(running_audio_processes.keys()))
+            self.send_json({'type': 'posthoc_status', 'running': active})
+
         if data['type'] == 'heartbeat_from_posthoc_processing':
             auth_key = data.get('key', None)
             logging.info("Recieved Heartbeat from client with authkey {0}".format(auth_key))   

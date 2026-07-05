@@ -101,6 +101,76 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [running])
 
+    // On mount, ask each post-hoc service whether a run for this pod is already
+    // active (e.g. started before a page refresh — runs survive disconnects).
+    // If so, restore the card and poll until it completes.
+    useEffect(() => {
+        const api = new ApiService()
+        const probes = []
+        const probe = (endpoint, label) => {
+            try {
+                const ws = new WebSocket(endpoint)
+                const ask = () =>
+                    ws.send(
+                        JSON.stringify({
+                            type: "query_posthoc_status",
+                            sessiondeviceid: sessionDeviceId,
+                        }),
+                    )
+                let timer = null
+                ws.onopen = ask
+                ws.onmessage = (e) => {
+                    let msg
+                    try {
+                        msg = JSON.parse(e.data)
+                    } catch {
+                        return
+                    }
+                    if (msg.type !== "posthoc_status") return
+                    if (msg.running) {
+                        if (streamsRef.current[label] !== "running") {
+                            setAction("full")
+                            setStream(label, "running")
+                            updateMeta(label, {
+                                startedAt:
+                                    (streamMetaRef.current[label] || {})
+                                        .startedAt || Date.now(),
+                                message:
+                                    "Running in the background (started before this page load)",
+                            })
+                        }
+                        if (!timer) timer = setInterval(ask, 15000)
+                    } else if (streamsRef.current[label] === "running") {
+                        setStream(label, "done")
+                        updateMeta(label, {
+                            endedAt: Date.now(),
+                            message: "Complete",
+                        })
+                        if (timer) clearInterval(timer)
+                        ws.close()
+                    } else {
+                        ws.close()
+                    }
+                }
+                ws.onerror = () => {}
+                probes.push(() => {
+                    if (timer) clearInterval(timer)
+                    try {
+                        ws.close()
+                    } catch {
+                        /* already closed */
+                    }
+                })
+            } catch {
+                /* service unreachable */
+            }
+        }
+        probe(api.getAudioPosthocWebsocketEndpoint(), "Audio")
+        probe(api.getVideoPosthocWebsocketEndpoint(), "Video")
+        return () => probes.forEach((f) => f())
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sessionDeviceId])
+
     const speakerList = (speakers || []).map((sp) => ({
         id: sp.id,
         alias: sp.alias,
@@ -187,13 +257,18 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
             } else if (STARTED_ACKS.has(msg.type)) {
                 setStream(label, "running")
                 updateMeta(label, {
-                    startedAt: Date.now(),
+                    startedAt:
+                        (streamMetaRef.current[label] || {}).startedAt ||
+                        Date.now(),
                     message: msg.message || "Processing…",
                 })
             } else if (msg.type === "progress") {
                 if (streamsRef.current[label] !== "running")
                     setStream(label, "running")
                 updateMeta(label, {
+                    startedAt:
+                        (streamMetaRef.current[label] || {}).startedAt ||
+                        Date.now(),
                     message: msg.message,
                     percent: msg.percent,
                 })
