@@ -57,7 +57,7 @@ def _run_job(job):
         base = {
             "sessionid": job["session_id"],
             "sessiondeviceid": device_id,
-            "server_start": session.creation_date.strftime("%Y-%m-%d %H:%M:%S"),
+            "server_start": session.creation_date.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
             "keywords": (session.json() or {}).get("keywords") or [],
             "speakers": speakers,
         }

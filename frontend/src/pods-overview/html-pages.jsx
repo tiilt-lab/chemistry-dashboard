@@ -84,7 +84,7 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue }) {
                     <span className="flex-none rounded-full bg-tiilt-soft px-2 py-0.5 font-semibold text-tiilt">
                         Queued
                     </span>
-                ) : e.analysis_running ? (
+                ) : queue === "running" || e.analysis_running ? (
                     <span className="flex flex-none items-center gap-1 rounded-full bg-tiilt-orange/15 px-2 py-0.5 font-semibold text-tiilt-orange">
                         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-tiilt-orange" />
                         Running…
