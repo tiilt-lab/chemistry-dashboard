@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useRef, useState, useEffect } from "react"
 import { ApiService } from "../../services/api-service"
 import { SessionService } from "../../services/session-service"
 
@@ -62,8 +62,21 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     // ("Audio"/"Video"/"P&I style"/"E&T style"). idle|connecting|running|done|error
     const [streams, setStreams] = useState({})
     const streamsRef = useRef({})
+    // Per-stream detail: { message, percent, startedAt, endedAt } for the live
+    // progress view, keyed by the same labels as `streams`.
+    const [streamMeta, setStreamMeta] = useState({})
+    const streamMetaRef = useRef({})
+    const [, setTick] = useState(0) // re-render for the live elapsed timers
     const [action, setAction] = useState(null) // "full" | "pi" | "et" | null
     const [message, setMessage] = useState("")
+
+    const updateMeta = (label, patch) => {
+        streamMetaRef.current = {
+            ...streamMetaRef.current,
+            [label]: { ...(streamMetaRef.current[label] || {}), ...patch },
+        }
+        setStreamMeta(streamMetaRef.current)
+    }
     // Model choices for the next run; default to the active deployment config
     // once /api/v1/models arrives.
     const [asrChoice, setAsrChoice] = useState(null)
@@ -80,6 +93,13 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     const running = Object.values(streams).some(
         (s) => s === "connecting" || s === "running",
     )
+
+    useEffect(() => {
+        if (!running) return
+        const id = setInterval(() => setTick((t) => t + 1), 1000)
+        return () => clearInterval(id)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [running])
 
     const speakerList = (speakers || []).map((sp) => ({
         id: sp.id,
@@ -166,12 +186,31 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                 startHeartbeat()
             } else if (STARTED_ACKS.has(msg.type)) {
                 setStream(label, "running")
-                if (msg.message) setMessage(msg.message)
+                updateMeta(label, {
+                    startedAt: Date.now(),
+                    message: msg.message || "Processing…",
+                })
+            } else if (msg.type === "progress") {
+                if (streamsRef.current[label] !== "running")
+                    setStream(label, "running")
+                updateMeta(label, {
+                    message: msg.message,
+                    percent: msg.percent,
+                })
             } else if (msg.type === "process_completed") {
                 setStream(label, "done")
+                updateMeta(label, {
+                    endedAt: Date.now(),
+                    percent: 100,
+                    message: "Complete",
+                })
             } else if (msg.type === "error") {
                 setMessage(msg.message || "Analysis failed.")
                 setStream(label, "error")
+                updateMeta(label, {
+                    endedAt: Date.now(),
+                    message: msg.message || "Failed",
+                })
             }
         }
         ws.onclose = () => {
@@ -192,8 +231,10 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
         }
         sockets.current = []
         streamsRef.current = {}
+        streamMetaRef.current = {}
         marked.current = false
         setStreams({})
+        setStreamMeta({})
         setMessage("")
         setAction(kind)
         defs.forEach(openSocket)
@@ -265,6 +306,14 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
             : s === "error"
               ? "text-tiilt-danger"
               : "text-tiilt-muted"
+
+    const fmtElapsed = (meta) => {
+        if (!meta || !meta.startedAt) return null
+        const end = meta.endedAt || Date.now()
+        const s = Math.max(0, Math.floor((end - meta.startedAt) / 1000))
+        const m = Math.floor(s / 60)
+        return m > 0 ? `${m}m ${s % 60}s` : `${s}s`
+    }
 
     // Wall-clock estimate for a full re-run, measured on this instance:
     // a 5.5-min recording took ~6.3 min end-to-end (WhisperX transcribes in
@@ -449,28 +498,74 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
             </div>
 
             {action && Object.keys(streams).length > 0 ? (
-                <div className="flex flex-col gap-1 text-sm">
-                    {Object.entries(streams).map(([name, state]) => (
-                        <div key={name} className="flex gap-2">
-                            <span className="w-20 text-tiilt-ink">{name}</span>
-                            <span className={color(state)}>{label(state)}</span>
+                <div className="flex flex-col gap-2 text-sm">
+                    {Object.keys(streams).length > 1 ? (
+                        <div className="text-xs text-tiilt-muted">
+                            {Object.keys(streams).join(" and ")} run{" "}
+                            <span className="font-semibold">concurrently</span>.
                         </div>
-                    ))}
-                    {message ? (
-                        <div className="mt-1 text-xs text-tiilt-muted">
-                            {message}
-                        </div>
-                    ) : (
-                        <></>
-                    )}
+                    ) : null}
+                    {Object.entries(streams).map(([name, state]) => {
+                        const meta = streamMeta[name] || {}
+                        const elapsed = fmtElapsed(meta)
+                        return (
+                            <div
+                                key={name}
+                                className="rounded-lg border border-tiilt-line bg-white p-2.5"
+                            >
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold text-tiilt-ink">
+                                            {name}
+                                        </span>
+                                        <span className={"text-xs " + color(state)}>
+                                            {label(state)}
+                                        </span>
+                                    </div>
+                                    {elapsed ? (
+                                        <span className="font-ahamono text-xs tabular-nums text-tiilt-muted">
+                                            {elapsed}
+                                            {typeof meta.percent === "number"
+                                                ? ` · ${Math.round(meta.percent)}%`
+                                                : ""}
+                                        </span>
+                                    ) : null}
+                                </div>
+                                {typeof meta.percent === "number" ? (
+                                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-tiilt-ground">
+                                        <div
+                                            className={
+                                                "h-full rounded-full transition-all " +
+                                                (state === "error"
+                                                    ? "bg-tiilt-danger"
+                                                    : state === "done"
+                                                      ? "bg-tiilt-teal"
+                                                      : "bg-tiilt")
+                                            }
+                                            style={{
+                                                width: `${Math.max(2, Math.min(100, meta.percent))}%`,
+                                            }}
+                                        />
+                                    </div>
+                                ) : state === "running" ? (
+                                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-tiilt-ground">
+                                        <div className="h-full w-1/3 animate-pulse rounded-full bg-tiilt/60" />
+                                    </div>
+                                ) : null}
+                                {meta.message ? (
+                                    <div className="mt-1 text-xs text-tiilt-muted">
+                                        {meta.message}
+                                    </div>
+                                ) : null}
+                            </div>
+                        )
+                    })}
                     {Object.values(streams).length > 0 &&
                     Object.values(streams).every((s) => s === "done") ? (
-                        <div className="mt-1 text-xs text-tiilt-muted">
+                        <div className="text-xs text-tiilt-muted">
                             Reload the page to see the updated analytics.
                         </div>
-                    ) : (
-                        <></>
-                    )}
+                    ) : null}
                 </div>
             ) : (
                 <></>
