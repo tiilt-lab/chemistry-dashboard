@@ -71,6 +71,10 @@ def _run_job(job):
                      "start_posthoc_audio_processing")
     err_v = _trigger(VIDEO_WS, dict(base, type="Initialize_video_processing_analytics"),
                      "start_posthoc_video_processing")
+    if err_a:
+        logging.warning("posthoc queue: pod %s audio trigger: %s", job["device_id"], err_a)
+    if err_v:
+        logging.warning("posthoc queue: pod %s video trigger: %s", job["device_id"], err_v)
     if err_a and err_v:
         raise RuntimeError("audio: %s / video: %s" % (err_a, err_v))
     # Wait for completion: the reset callback marks the device running; the
@@ -82,6 +86,15 @@ def _run_job(job):
         if running:
             seen_running = True
         elif seen_running:
+            # Finished — verify the audio leg actually produced output. A silent
+            # failure (OOM, empty recording) completes with zero transcripts and
+            # must surface as an error, not "Analyzed".
+            if not err_a:
+                import app as A2
+                with A2.app.app_context():
+                    import database as db2
+                    if db2.get_pod_duration(device_id) is None:
+                        raise RuntimeError("audio produced no transcripts (empty recording or transcription failure)")
             return  # ran and finished
         time.sleep(10)
     raise RuntimeError("timed out waiting for pod %s to finish" % device_id)
