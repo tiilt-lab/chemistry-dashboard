@@ -16,6 +16,33 @@ function PodsOverviewComponent() {
   const [selectedSessionDevice, setSelectedSessionDevice] = useState(null);
   //const [subscriptions, setSubscriptions] = useState([]);
   const [devices, setDevices] = useState([]);
+  // Enriched per-pod info (duration, participants, has_data, analysis_running)
+  // straight from the devices endpoint — the shared in-memory source strips
+  // these fields. Polled so the Analyzing badge updates live.
+  const [enriched, setEnriched] = useState({});
+  useEffect(() => {
+    if (session === null || !session.id) return;
+    let alive = true;
+    const load = () =>
+      new SessionService().getSessionDevices(session.id).then(
+        (r) => {
+          if (r.status === 200)
+            r.json().then((list) => {
+              if (!alive) return;
+              const map = {};
+              for (const d of list) map[d.id] = d;
+              setEnriched(map);
+            });
+        },
+        () => {},
+      );
+    load();
+    const t = setInterval(load, 15000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [session]);
   const [currentForm, setCurrentForm] = useState("");
   const [activeSessionService, setActiveSessionService] = useOutletContext();
   const navigate = useNavigate();
@@ -260,6 +287,7 @@ function PodsOverviewComponent() {
 
   return (
     <PodsOverviewPages
+      enriched={enriched}
       righttext={getPasscode()}
       rightenabled={getRightEnabled()}
       session={session}
