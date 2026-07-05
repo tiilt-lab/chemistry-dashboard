@@ -354,20 +354,22 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
                 <span className="truncate text-base font-semibold text-tiilt-ink">
                     {session.title}
                 </span>
-                <span className="mt-0.5 flex items-center gap-2 text-xs text-tiilt-muted">
-                    {session.creation_date.toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                    })}
+                <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-tiilt-muted">
+                    <span className="whitespace-nowrap">
+                        {session.creation_date.toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                        })}
+                    </span>
                     <span aria-hidden="true">·</span>
-                    <span className="font-ahamono tabular-nums">
+                    <span className="font-ahamono tabular-nums whitespace-nowrap">
                         {session.lengthFormatted}
                     </span>
                     {session.participant_count > 0 ? (
                         <>
                             <span aria-hidden="true">·</span>
-                            <span>
+                            <span className="whitespace-nowrap">
                                 {session.participant_count}{" "}
                                 {session.participant_count === 1
                                     ? "participant"
@@ -378,7 +380,7 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
                     {session.analysis_running ? (
                         <span
                             title="A full analysis is running right now"
-                            className="flex items-center gap-1 rounded-full bg-tiilt-orange/15 px-1.5 py-0.5 font-semibold text-tiilt-orange"
+                            className="flex flex-none items-center gap-1 rounded-full bg-tiilt-orange/15 px-1.5 py-0.5 font-semibold whitespace-nowrap text-tiilt-orange"
                         >
                             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-tiilt-orange" />
                             Analyzing…
@@ -387,7 +389,7 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
                     {session.has_posthoc ? (
                         <span
                             title="Post-hoc analysis has been run for this session"
-                            className="flex items-center gap-1 rounded-full bg-tiilt-teal/15 px-1.5 py-0.5 font-semibold text-tiilt-teal"
+                            className="flex flex-none items-center gap-1 rounded-full bg-tiilt-teal/15 px-1.5 py-0.5 font-semibold whitespace-nowrap text-tiilt-teal"
                         >
                             <svg
                                 width="12"
@@ -411,7 +413,7 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
                     {hasPods ? (
                         <span
                             title="Pods (participant groups) recorded in this session"
-                            className="flex items-center gap-1 rounded-full bg-tiilt-soft px-1.5 py-0.5 font-semibold text-tiilt"
+                            className="flex flex-none items-center gap-1 rounded-full bg-tiilt-soft px-1.5 py-0.5 font-semibold whitespace-nowrap text-tiilt"
                         >
                             {session.pod_count}{" "}
                             {session.pod_count === 1 ? "pod" : "pods"}
