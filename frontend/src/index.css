@@ -9,8 +9,42 @@
     font-display: swap;
 }
 
+/* SST — the primary UI typeface. Registered here so BOTH the modern pages
+   (Tailwind `font-sans` via --font-sans below) and the older module CSS
+   (which already declares `font-family: 'SST', sans-serif`) resolve to the
+   same real font instead of silently falling back to the system sans. */
+@font-face {
+    font-family: "SST";
+    src: url("./assets/font/SSTUI/SSTUI-Roman.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "SST";
+    src: url("./assets/font/SSTUI/SSTUI-Light.ttf") format("truetype");
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "SST";
+    src: url("./assets/font/SSTUI/SSTUI-Medium.ttf") format("truetype");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "SST";
+    src: url("./assets/font/SSTUI/SSTUI-Bold.ttf") format("truetype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
 @theme {
     --font-ahamono: "AHAMONO", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --font-sans: "SST", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
     /* TIILT brand palette (tiilt.northwestern.edu logo tokens) */
     --color-tiilt: #3a2163;
