@@ -24,7 +24,7 @@ function ThemeToggle() {
 
 function Appheader(props) {
     return (
-        <div className="relative top-0 z-10 flex h-12 w-full flex-none flex-row items-center border-b border-tiilt-line bg-white">
+        <div className="relative top-0 z-10 flex h-14 w-full flex-none flex-row items-center border-b border-tiilt-line bg-white">
             {props.leftText !== false ? (
                 <div
                     onClick={props.nav}
@@ -41,10 +41,10 @@ function Appheader(props) {
                     Back
                 </p>
             )}
-            <div className="w-full overflow-hidden text-center text-base leading-12 font-semibold whitespace-nowrap text-tiilt-ink select-none">
+            <div className="w-full overflow-hidden text-center text-base font-semibold whitespace-nowrap text-tiilt-ink select-none">
                 {props.editMode ? (
                     <input
-                        className="visible w-52 overflow-scroll border-0 text-center leading-12 outline-none"
+                        className="visible w-52 overflow-scroll border-0 text-center outline-none"
                         type="text"
                         defaultValue={props.title}
                         onKeyUp={(event) =>
@@ -57,7 +57,7 @@ function Appheader(props) {
             </div>
             <div
                 onClick={props.rightTextClick}
-                className="w-max cursor-pointer px-4 text-center text-sm leading-12 font-semibold whitespace-nowrap text-tiilt transition hover:text-tiilt-deep"
+                className="w-max cursor-pointer px-4 text-center text-sm font-semibold whitespace-nowrap text-tiilt transition hover:text-tiilt-deep"
             >
                 {props.rightText}
             </div>
@@ -66,4 +66,4 @@ function Appheader(props) {
     )
 }
 
-export { Appheader }
+export { Appheader, ThemeToggle }
