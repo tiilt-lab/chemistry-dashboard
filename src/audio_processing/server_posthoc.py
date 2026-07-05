@@ -148,10 +148,11 @@ class ServerProtocol(WebSocketServerProtocol):
 
             if not self.audio_file:
                 self.send_json({'type': 'error', 'message': 'No audio captured for this group.'})
-            elif os.path.getsize(str(self.audio_file)) < 10000:
-                # Header-only stub recordings (e.g. 137 bytes) previously sailed
-                # through and produced a silent zero-transcript "analysis".
-                self.send_json({'type': 'error', 'message': 'Audio recording is empty ({0} bytes).'.format(os.path.getsize(str(self.audio_file)))})
+            elif os.path.getsize(str(self.audio_file)) < 10000 and not self._recover_audio_from_video():
+                # Header-only stub wav AND no recoverable audio track in the
+                # pod's video -> fail loudly (a silent zero-transcript
+                # "analysis" is worse than an error).
+                self.send_json({'type': 'error', 'message': 'Audio recording is empty ({0} bytes) and no audio track could be recovered from the video.'.format(os.path.getsize(str(self.audio_file)))})
             else:
                 self.audio_file = str(self.audio_file)
                 file_path_split = self.audio_file.split("(")
@@ -427,6 +428,30 @@ class ServerProtocol(WebSocketServerProtocol):
         batch_asr = getattr(self, 'asr_choice', None) in ('whisperx', 'qwen3')
         self.audioreader = AudioStreamReader(self.audio_buffer, self.asr_audio_queue, self.audio_file, self.queue_put_timeout,self.config,STOP_SIGNAL,running_audio_processes, realtime=not batch_asr)
         
+
+    def _recover_audio_from_video(self):
+        # The capture sometimes writes a header-only wav while the webm carries
+        # a perfectly good audio track (e.g. pod 648). Extract it over the stub
+        # in place so the run proceeds with real audio.
+        try:
+            import glob as _glob, subprocess as _sp
+            vid_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                   'video_processing', 'videorecordings')
+            vids = sorted(_glob.glob(os.path.join(vid_dir, '{0}-*_orig.webm'.format(self.session_device_id)))
+                          + _glob.glob(os.path.join(vid_dir, '{0}-*_orig.mp4'.format(self.session_device_id))),
+                          key=os.path.getsize, reverse=True)
+            if not vids:
+                return False
+            _sp.run(['ffmpeg', '-y', '-v', 'error', '-i', vids[0], '-vn',
+                     '-ar', '16000', '-ac', '1', '-acodec', 'pcm_f32le',
+                     str(self.audio_file)], check=True, timeout=600)
+            ok = os.path.getsize(str(self.audio_file)) >= 10000
+            logging.warning('Recovered audio for %s from video (%d bytes): %s',
+                            self.session_device_id, os.path.getsize(str(self.audio_file)), ok)
+            return ok
+        except Exception as e:
+            logging.warning('Audio recovery from video failed for %s: %s', self.session_device_id, e)
+            return False
 
     def signal_end(self):
         # If a full run is still processing, a disconnect / heartbeat timeout
