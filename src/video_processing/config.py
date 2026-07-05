@@ -100,6 +100,14 @@ def head_weights():
     return str(config.get('videoprocessing', 'head_weights',
                           fallback='crowdhuman_yolov8m_head.pt'))
 
+def person_of_focus():
+    # When a gaze target is a recognized head, record it as 'person:<alias>'
+    # (mutual-gaze / who-looks-at-whom) instead of a generic label. Off by
+    # default because it changes stored object_on_focus values; needs a re-run.
+    if 'config' not in globals():
+        initialize()
+    return str(config.get('videoprocessing', 'person_of_focus', fallback='false')) in ['true', 'True', 't', '1']
+
 def face_model():
     # Face detection + embedding backend: 'dlib' (face_recognition 128-D,
     # default) or 'insightface' (ArcFace buffalo_l 512-D, open SOTA). Switching
