@@ -1,10 +1,9 @@
 import React from "react";
-import { dlgInput, dlgPrimary, dlgCancel } from "../components/dialog-styles"
+import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel } from "../components/dialog-styles"
 import { Appheader } from "../header/header-component";
 import { GenericDialogBox } from "../dialog/dialog-component";
 import { AppFolderSelectComponent } from "../components/folder-select/folder-select-component";
 import style from "./create-session.module.css";
-import style2 from "../dialog/dialog.module.css";
 import openFolderIcon from "../assets/img/open-folder.svg";
 import podIcon from "../assets/img/icon-pod.svg";
 import LightIcon from "@icons/Light";
@@ -362,9 +361,9 @@ function CreateSessionPage(props) {
 
       <GenericDialogBox show={props.currentForm !== ""}>
         {props.currentForm === "Error" ? (
-          <div className={style["add-dialog"]}>
-            <div className={style2["dialog-heading"]}>Invalid Session</div>
-            {props.displayText}
+          <div className={dlgWindow}>
+            <div className={dlgHeading}>Invalid Session</div>
+            <div className="text-sm text-tiilt-ink">{props.displayText}</div>
             <button className={dlgCancel} onClick={props.closeDialog}>
               Close
             </button>
@@ -374,8 +373,8 @@ function CreateSessionPage(props) {
         )}
 
         {props.currentForm === "Folder" ? (
-          <div className={style["dialog-window"]}>
-            <div className={style2["dialog-heading"]}>Select Folder</div>
+          <div className={dlgWindow}>
+            <div className={dlgHeading}>Select folder</div>
             <AppFolderSelectComponent
               selectableFolders={props.folders}
               setFolderSelect={props.setFolderSelect}
