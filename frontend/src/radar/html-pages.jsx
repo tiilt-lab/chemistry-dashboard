@@ -1,7 +1,6 @@
 import { useD3, adjDim } from "../myhooks/custom-hooks";
 import React from "react";
 import * as d3 from "d3";
-import style from "./radar.module.css";
 
 function RadarPage(props) {
   //basic config

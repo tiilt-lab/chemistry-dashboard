@@ -59,11 +59,6 @@ export function similarityToRGB(similarity) {
   return 'rgb(' + color + ',' + color + ', 255)';
 }
 
-export function validateIpAddress(ip_address) {
-  // tslint:disable-next-line:max-line-length
-  return /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ip_address);
-}
-
 // Canonical per-speaker colors: alphabetical name order -> palette index, so
 // every panel (transcript, video analytics, dynamics) gives the same person
 // the same color regardless of each panel's data ordering. Presentation only.

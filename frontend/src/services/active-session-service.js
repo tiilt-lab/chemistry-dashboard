@@ -119,26 +119,6 @@ export class ActiveSessionService {
         // Handle room join.
         this.socket.on("room_joined", (e) => {
             this.initialized = true
-           /* 
-            this.sessionService
-                .getSessionSpeakerMetrics(this.sessionId)
-                .then((response) => response.json())
-                .then((json) => {
-                    const data = JSON.parse(json);
-                    const transcripts = []
-                    for (const transcript_metrics of data) {
-                        const speaker_metrics = SpeakerMetricsModel.fromJsonList(
-                            transcript_metrics["speaker_metrics"],
-                        )
-                        const transcript_model = TranscriptModel.fromJson(
-                            transcript_metrics["transcript"],
-                            speaker_metrics,
-                        )
-                        transcripts.push(transcript_model)
-                    }
-                    this.transcriptSource.next(transcripts)
-                })
-                    */
         })
 
         // Update transcripts and speaker metrics.

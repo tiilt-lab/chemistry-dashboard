@@ -56,27 +56,6 @@ function ManageTopicModelsComponent(props) {
     }
   }
 
-  /*
-  const createTopicModel = () => {
-    const fetchData = new TopicModelService().getTopics();
-    fetchData.then(
-      (response) => {
-        if (response.status === 200) {
-          setTopics(response.json())
-          for (const topic of topics) {
-            console.log("Topic: ", topic);
-          }
-        } else {
-          console.log('ManageTopicModelComponent error func : createTopicModel 1', response)
-        }
-      },
-      (apierror) => {
-        console.log('ManageTopicModelComponent error func : createTopicModel 2', apierror)
-      }
-    )
-  }
-  */
-
   const navigateToHomeScreen = () => {
     return navigate("/home");
   }

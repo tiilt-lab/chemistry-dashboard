@@ -11,7 +11,6 @@ import { AppSectionBoxComponent } from "../components/section-box/section-box-co
 import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { TranscriptsComponentClient } from "../transcripts/transcripts-component_client"
-// import SessionQRCode from "../feedback-form/session-qrcode";
 
 import style from "./byod-join.module.css"
 import style2 from "../pod-details/pod.module.css"
