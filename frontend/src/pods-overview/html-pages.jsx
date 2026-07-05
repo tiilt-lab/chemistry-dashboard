@@ -61,23 +61,46 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue }) {
                     <span className="absolute -top-1 -right-1 h-3 w-3 animate-ping rounded-full bg-tiilt-orange" />
                 ) : null}
             </span>
-            <span className="min-w-0 grow">
-                <span className="block truncate text-sm font-semibold text-tiilt-ink">
-                    {device.name}
-                </span>
-                <span
-                    className={
-                        "block text-xs font-semibold " +
-                        (device.connected
-                            ? "text-tiilt-danger"
-                            : "text-tiilt-muted")
-                    }
-                >
-                    {device.connected ? "Connected" : "Offline"} · View
-                    analytics
-                </span>
+            <span className="min-w-0 truncate text-sm font-semibold text-tiilt-ink">
+                {device.name}
             </span>
+            <span
+                className={
+                    "flex-none rounded-full px-1.5 py-0.5 text-[11px] font-semibold " +
+                    (device.connected
+                        ? "bg-tiilt-danger-soft text-tiilt-danger"
+                        : "bg-tiilt-line/40 text-tiilt-muted")
+                }
+            >
+                {device.connected ? "Online" : "Offline"}
+            </span>
+            <span className="grow" />
             <div className="flex flex-none items-center gap-2 text-xs text-tiilt-muted">
+                {queue === "error" ? (
+                    <span className="flex-none rounded-full bg-tiilt-danger-soft px-2 py-0.5 font-semibold text-tiilt-danger">
+                        Error
+                    </span>
+                ) : queue === "queued" ? (
+                    <span className="flex-none rounded-full bg-tiilt-soft px-2 py-0.5 font-semibold text-tiilt">
+                        Queued
+                    </span>
+                ) : e.analysis_running ? (
+                    <span className="flex flex-none items-center gap-1 rounded-full bg-tiilt-orange/15 px-2 py-0.5 font-semibold text-tiilt-orange">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-tiilt-orange" />
+                        Running…
+                    </span>
+                ) : e.has_data === false ? (
+                    <span className="flex-none rounded-full bg-tiilt-line/40 px-2 py-0.5 font-semibold text-tiilt-muted">
+                        No data
+                    </span>
+                ) : (device.posthoc_analyzed_date || e.posthoc_analyzed_date) ? (
+                    <span
+                        title={"Full analysis run " + (device.posthoc_analyzed_date || e.posthoc_analyzed_date)}
+                        className="flex flex-none items-center gap-1 rounded-full bg-tiilt-teal/15 px-2 py-0.5 font-semibold text-tiilt-teal"
+                    >
+                        Analyzed
+                    </span>
+                ) : null}
                 {e.speaker_count > 0 ? (
                     <span>
                         {e.speaker_count}{" "}
@@ -85,35 +108,8 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue }) {
                     </span>
                 ) : null}
                 {fmtDur(e.duration) ? (
-                    <>
-                        <span aria-hidden="true">·</span>
-                        <span className="font-ahamono tabular-nums">
-                            {fmtDur(e.duration)}
-                        </span>
-                    </>
-                ) : null}
-                {queue === "queued" ? (
-                    <span className="flex-none rounded-full bg-tiilt-soft px-2 py-0.5 font-semibold text-tiilt">
-                        Queued
-                    </span>
-                ) : e.analysis_running ? (
-                    <span className="flex flex-none items-center gap-1 rounded-full bg-tiilt-orange/15 px-2 py-0.5 font-semibold text-tiilt-orange">
-                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-tiilt-orange" />
-                        Analyzing…
-                    </span>
-                ) : e.has_data === false ? (
-                    <span className="flex-none rounded-full bg-tiilt-line/40 px-2 py-0.5 font-semibold text-tiilt-muted">
-                        No data recorded
-                    </span>
-                ) : (device.posthoc_analyzed_date || e.posthoc_analyzed_date) ? (
-                    <span
-                        title={"Full analysis run " + (device.posthoc_analyzed_date || e.posthoc_analyzed_date)}
-                        className="flex flex-none items-center gap-1 rounded-full bg-tiilt-teal/15 px-2 py-0.5 font-semibold text-tiilt-teal"
-                    >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <path d="M4 12a8 8 0 1 1 2.3 5.6M4 12H2m2 0V9" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                        </svg>
-                        Analyzed
+                    <span className="font-ahamono tabular-nums">
+                        {fmtDur(e.duration)}
                     </span>
                 ) : null}
             </div>
