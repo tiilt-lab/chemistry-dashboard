@@ -24,9 +24,17 @@ function fmtDur(seconds) {
     return h > 0 ? `${h}:${String(m % 60).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`
 }
 
-function PodCard({ device, enrich, onOpen }) {
+function PodCard({ device, enrich, onOpen, checked, onToggle, queue }) {
     const e = enrich || {}
     return (
+        <div className="flex w-full items-center gap-2">
+        <input
+            type="checkbox"
+            checked={!!checked}
+            onChange={onToggle}
+            title="Select for batch analysis"
+            className="h-4 w-4 flex-none cursor-pointer accent-tiilt"
+        />
         <button
             onClick={onOpen}
             className="group flex w-full items-center gap-3 rounded-xl border border-tiilt-line bg-white px-4 py-3 text-left transition hover:border-tiilt hover:shadow-[0_10px_24px_-16px_rgba(42,23,74,0.5)] active:translate-y-px"
@@ -84,7 +92,11 @@ function PodCard({ device, enrich, onOpen }) {
                         </span>
                     </>
                 ) : null}
-                {e.analysis_running ? (
+                {queue === "queued" ? (
+                    <span className="flex-none rounded-full bg-tiilt-soft px-2 py-0.5 font-semibold text-tiilt">
+                        Queued
+                    </span>
+                ) : e.analysis_running ? (
                     <span className="flex flex-none items-center gap-1 rounded-full bg-tiilt-orange/15 px-2 py-0.5 font-semibold text-tiilt-orange">
                         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-tiilt-orange" />
                         Analyzing…
@@ -112,6 +124,7 @@ function PodCard({ device, enrich, onOpen }) {
                 ›
             </span>
         </button>
+        </div>
     )
 }
 
@@ -182,8 +195,19 @@ function PodsOverviewPages(props) {
                                         <></>
                                     )}
                                 </h2>
-                                <span className="text-sm text-tiilt-muted">
-                                    Open a pod to view its analytics
+                                <span className="flex items-center gap-3 text-sm text-tiilt-muted">
+                                    {Object.values(props.selected || {}).filter(Boolean).length > 0 ? (
+                                        <button
+                                            onClick={props.runSelected}
+                                            className="rounded-lg bg-tiilt px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
+                                        >
+                                            Run full analysis on selected (
+                                            {Object.values(props.selected || {}).filter(Boolean).length}
+                                            )
+                                        </button>
+                                    ) : (
+                                        <span>Open a pod to view its analytics</span>
+                                    )}
                                 </span>
                             </div>
                             {props.sessionDevices !== null &&
@@ -210,6 +234,9 @@ function PodsOverviewPages(props) {
                                                 key={index}
                                                 device={device}
                                                 enrich={props.enriched && props.enriched[device.id]}
+                                                checked={props.selected && props.selected[device.id]}
+                                                onToggle={() => props.toggleSelect(device.id)}
+                                                queue={props.queueState && props.queueState[device.id]}
                                                 onOpen={() =>
                                                     props.goToDevice(device)
                                                 }

@@ -122,6 +122,8 @@ class ServerProtocol(WebSocketServerProtocol):
         # signal_end cleanup; post-hoc connections aren't live-key gated.
         self.running = False
         self.config = None
+        # Never-initialized connections (status probes) must not crash cleanup.
+        self.video_processor = None
         # True while a run is processing; keeps signal_end from killing it when
         # the client disconnects (the run finishes + marks itself complete).
         self._run_active = False

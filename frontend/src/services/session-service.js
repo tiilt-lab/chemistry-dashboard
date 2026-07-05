@@ -94,6 +94,20 @@ class SessionService {
       {}
     );
   }
+  getPosthocQueue(sessionId) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/posthoc_queue`,
+      "GET",
+      {},
+    );
+  }
+  enqueuePosthoc(sessionId, deviceIds) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/posthoc_queue`,
+      "POST",
+      { device_ids: deviceIds },
+    );
+  }
   getSessionDevices(sessionId) {
     return this.api.httpRequestCall(
       `api/v1/sessions/${sessionId}/devices`,

@@ -17,6 +17,7 @@ import wrappers
 import config as cf
 import socketio_helper
 import posthoc_state
+import posthoc_queue
 import string
 import csv
 import io
@@ -549,6 +550,26 @@ def get_pod_dynamics(session_id, session_device_id, **kwargs):
     # Conversation dynamics for a pod: per-speaker turns/speaking-share (equity)
     # + the who-follows-whom response network.
     return json_response(database.get_conversation_dynamics(session_device_id))
+
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/posthoc_queue', methods=['POST'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def enqueue_posthoc(session_id, **kwargs):
+    # Queue full analyses for several pods; they run one pod at a time.
+    body = request.get_json(silent=True) or {}
+    device_ids = body.get('device_ids') or []
+    if not device_ids:
+        return json_response({'message': 'device_ids required'}, 400)
+    added = posthoc_queue.enqueue(session_id, device_ids, models=body.get('models'))
+    return json_response({'queued': added, 'status': posthoc_queue.status(session_id)})
+
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/posthoc_queue', methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def posthoc_queue_status(session_id, **kwargs):
+    return json_response(posthoc_queue.status(session_id))
 
 
 @api_routes.route('/api/v1/students/<username>/longitudinal', methods=['GET'])
