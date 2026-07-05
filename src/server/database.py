@@ -1569,6 +1569,14 @@ def get_conversation_dynamics(session_device_id):
     return compute_conversation_dynamics(rows)
 
 
+def get_pod_duration(session_device_id):
+    # Single-pod activity span (same derivation as get_pod_durations).
+    from sqlalchemy import text
+    row = db.session.execute(text("""SELECT MAX(start_time + length) - MIN(start_time)
+        FROM transcript WHERE session_device_id = :d"""), {"d": session_device_id}).scalar()
+    return int(row) if row is not None else None
+
+
 def delete_pod_analysis(session_device_id, scope='audio'):
     # Wipe a pod's previous analysis before a full re-run so results REPLACE
     # instead of accumulating (re-runs were stacking duplicate transcripts).

@@ -535,6 +535,8 @@ def session_devices(session_id, **kwargs):
         for device in devices:
             data = device.json()
             data['duration'] = durations.get(device.id)
+            if data['duration'] is None:
+                data['duration'] = posthoc_state.last_duration(device.id)
             data['speaker_count'] = speaker_counts.get(device.id, 0)
             # True if the pod captured any usable data (transcript or video);
             # ~17% of pods recorded nothing and should be flagged, not analyzed.
