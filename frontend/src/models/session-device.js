@@ -6,6 +6,8 @@ export class SessionDeviceModel {
   name;
   connected;
   button_pressed;
+  posthoc_analyzed_date;
+  posthoc_models;
 
   static fromJson(json) {
     const model = new SessionDeviceModel();
@@ -15,6 +17,11 @@ export class SessionDeviceModel {
     model.name = json['name'];
     model.connected = json['connected'];
     model.button_pressed = json['button_pressed'];
+    // Post-hoc provenance: which run analyzed this pod and with which models.
+    // This model previously dropped these, which silently broke every consumer
+    // of per-run provenance (e.g. the "Transcribed with ..." label).
+    model.posthoc_analyzed_date = json['posthoc_analyzed_date'] ?? null;
+    model.posthoc_models = json['posthoc_models'] ?? null;
     return model;
   }
 
