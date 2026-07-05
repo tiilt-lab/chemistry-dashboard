@@ -171,7 +171,7 @@ function PodsOverviewPages(props) {
                         <></>
                     )}
                     <div className="min-h-0 grow overflow-y-auto">
-                        <div className="mx-auto w-full max-w-3xl px-4 py-8">
+                        <div className="mx-auto w-full max-w-6xl px-4 py-8 lg:px-8">
                             <div className="mb-4 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
                                 <div>
                                     <h2 className="text-lg font-semibold text-tiilt-ink">
@@ -244,7 +244,7 @@ function PodsOverviewPages(props) {
                             )}
                             {props.sessionDevices !== null &&
                             props.initialized ? (
-                                <div className="flex flex-col gap-1.5">
+                                <div className="grid grid-cols-1 gap-1.5 lg:grid-cols-2 lg:gap-x-4">
                                     {props.sessionDevices.map(
                                         (device, index) => (
                                             <PodCard
