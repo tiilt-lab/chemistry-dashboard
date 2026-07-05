@@ -131,9 +131,10 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                     // stream here too.
                     if (msg.type === "progress") {
                         updateMeta(label, {
-                            startedAt:
-                                (streamMetaRef.current[label] || {})
-                                    .startedAt || Date.now(),
+                            startedAt: msg.started_at
+                                ? msg.started_at * 1000
+                                : (streamMetaRef.current[label] || {})
+                                      .startedAt || Date.now(),
                             message: msg.message,
                             percent: msg.percent,
                         })
@@ -290,9 +291,10 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                 if (streamsRef.current[label] !== "running")
                     setStream(label, "running")
                 updateMeta(label, {
-                    startedAt:
-                        (streamMetaRef.current[label] || {}).startedAt ||
-                        Date.now(),
+                    startedAt: msg.started_at
+                        ? msg.started_at * 1000
+                        : (streamMetaRef.current[label] || {}).startedAt ||
+                          Date.now(),
                     message: msg.message,
                     percent: msg.percent,
                 })
@@ -412,6 +414,23 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
         const s = Math.max(0, Math.floor((end - meta.startedAt) / 1000))
         const m = Math.floor(s / 60)
         return m > 0 ? `${m}m ${s % 60}s` : `${s}s`
+    }
+
+    // tqdm-style remaining-time estimate from elapsed and percent complete.
+    const fmtEta = (meta) => {
+        if (
+            !meta ||
+            !meta.startedAt ||
+            meta.endedAt ||
+            typeof meta.percent !== "number" ||
+            meta.percent <= 2 ||
+            meta.percent >= 100
+        )
+            return null
+        const elapsed = (Date.now() - meta.startedAt) / 1000
+        const remaining = Math.round((elapsed * (100 - meta.percent)) / meta.percent)
+        const m = Math.floor(remaining / 60)
+        return m > 0 ? `~${m}m ${remaining % 60}s left` : `~${remaining}s left`
     }
 
     // Wall-clock estimate for a full re-run, measured on this instance:
@@ -634,6 +653,9 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                                             {elapsed}
                                             {typeof meta.percent === "number"
                                                 ? ` · ${Math.round(meta.percent)}%`
+                                                : ""}
+                                            {fmtEta(meta)
+                                                ? ` · ${fmtEta(meta)}`
                                                 : ""}
                                         </span>
                                     ) : null}
