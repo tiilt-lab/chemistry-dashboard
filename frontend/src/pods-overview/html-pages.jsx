@@ -128,6 +128,75 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue, index }) {
     )
 }
 
+// At-a-glance roll-up for the whole session (pods, analyzed, people, time).
+function SessionStats({ devices, enriched }) {
+    const en = enriched || {}
+    const list = devices || []
+    const analyzed = list.filter(
+        (d) => (en[d.id] && en[d.id].posthoc_analyzed_date) || d.posthoc_analyzed_date,
+    ).length
+    const participants = list.reduce(
+        (a, d) => a + ((en[d.id] && en[d.id].speaker_count) || 0),
+        0,
+    )
+    const totalDur = list.reduce(
+        (a, d) => a + ((en[d.id] && en[d.id].duration) || 0),
+        0,
+    )
+    const tiles = [
+        ["Pods", String(list.length)],
+        ["Analyzed", `${analyzed}/${list.length}`],
+        ["Participants", String(participants)],
+        ["Recorded", totalDur > 0 ? fmtDur(totalDur) : "—"],
+    ]
+    return (
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {tiles.map(([label, value]) => (
+                <div
+                    key={label}
+                    className="rounded-xl border border-tiilt-line bg-white px-4 py-3"
+                >
+                    <div className="font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
+                        {label}
+                    </div>
+                    <div className="mt-1 text-xl font-semibold text-tiilt-ink tabular-nums">
+                        {value}
+                    </div>
+                </div>
+            ))}
+        </div>
+    )
+}
+
+// Bottom-right notification stack (analysis completions).
+function ToastStack({ toasts, dismiss }) {
+    if (!toasts || !toasts.length) return null
+    return (
+        <div
+            role="status"
+            aria-live="polite"
+            className="fixed right-4 bottom-4 z-50 flex w-72 flex-col gap-2"
+        >
+            {toasts.map((t) => (
+                <div
+                    key={t.id}
+                    className="flex items-center gap-2 rounded-xl border border-tiilt-line bg-white px-3.5 py-2.5 text-sm text-tiilt-ink shadow-[0_12px_28px_-12px_rgba(42,23,74,0.45)]"
+                >
+                    <span className="h-2 w-2 flex-none rounded-full bg-tiilt-teal" />
+                    <span className="min-w-0 grow">{t.text}</span>
+                    <button
+                        onClick={() => dismiss(t.id)}
+                        aria-label="Dismiss notification"
+                        className="flex-none cursor-pointer rounded p-0.5 text-tiilt-muted transition hover:text-tiilt-ink"
+                    >
+                        ✕
+                    </button>
+                </div>
+            ))}
+        </div>
+    )
+}
+
 function PodsOverviewPages(props) {
     return (
         <>
@@ -184,6 +253,12 @@ function PodsOverviewPages(props) {
                     )}
                     <div className="min-h-0 grow overflow-y-auto">
                         <div className="mx-auto w-full max-w-6xl px-4 py-8 lg:px-8">
+                            {props.sessionDevices !== null && props.initialized ? (
+                                <SessionStats
+                                    devices={props.sessionDevices}
+                                    enriched={props.enriched}
+                                />
+                            ) : null}
                             <div className="mb-4 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
                                 <div>
                                     <h2 className="text-lg font-semibold text-tiilt-ink">
@@ -281,6 +356,8 @@ function PodsOverviewPages(props) {
                     </div>
                 </div>
             </div>
+
+            <ToastStack toasts={props.toasts} dismiss={props.dismissToast} />
 
             <GenericDialogBox onClose={props.closeDialog} show={props.currentForm !== ""}>
                 {(props.currentForm === "AddDevice" && (
