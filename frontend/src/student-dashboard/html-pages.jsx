@@ -3,6 +3,7 @@ import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { Appheader } from "../header/header-component"
 import { dlgInput, dlgPrimary } from "../components/dialog-styles"
+import { pageShell, formCard } from "../components/layout-styles"
 import style from "./student-dashboard.module.css"
 import style2 from "../pod-details/pod.module.css"
 import style5 from "../sessions/sessions.module.css"
@@ -48,6 +49,8 @@ function StudentSessionDashboardPages(props) {
 
                         {props.nextPage === "reportoptionpage" && (
                             <React.Fragment>
+                                <div className={pageShell}>
+                                <div className={formCard}>
                                 <div className="mx-auto flex w-full max-w-md grow flex-col gap-4 overflow-y-auto px-4 py-6">
                                     <div>
                                         <label htmlFor="preference" className="mb-1.5 block text-sm font-semibold text-tiilt-ink">
@@ -114,6 +117,8 @@ function StudentSessionDashboardPages(props) {
                                             Continue
                                         </button>
                                     </div>
+                                </div>
+                                </div>
                                 </div>
                             </React.Fragment>
                         )}
