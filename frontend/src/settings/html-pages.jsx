@@ -138,19 +138,19 @@ function SettingComponentPage(props) {
                 {props.currentForm === "ChangePassword" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Change Password</div>
-                        <div className={dlgLabel}>Current password</div>
+                        <label htmlFor="txtCurrent" className={dlgLabel}>Current password</label>
                         <input
                             id="txtCurrent"
                             className={dlgInput}
                             type="password"
                         />
-                        <div className={dlgLabel}>New password</div>
+                        <label htmlFor="txtNew" className={dlgLabel}>New password</label>
                         <input
                             id="txtNew"
                             className={dlgInput}
                             type="password"
                         />
-                        <div className={dlgLabel}>Confirm new password</div>
+                        <label htmlFor="txtConfirm" className={dlgLabel}>Confirm new password</label>
                         <input
                             id="txtConfirm"
                             className={dlgInput}
@@ -215,9 +215,9 @@ function SettingComponentPage(props) {
                 {props.currentForm === "AddUser" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Add User</div>
-                        <div className={dlgLabel}>Email</div>
+                        <label htmlFor="txtName" className={dlgLabel}>Email</label>
                         <input id="txtName" className={dlgInput} type="text" />
-                        <div className={dlgLabel}>Role</div>
+                        <label htmlFor="ddRole" className={dlgLabel}>Role</label>
                         <select id="ddRole" className={dlgSelect}>
                             <option value="user">User</option>
                             <option value="admin">Admin</option>
@@ -252,7 +252,7 @@ function SettingComponentPage(props) {
                 {props.currentForm === "DeleteUser" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Delete User</div>
-                        <div className={dlgLabel}>Select user</div>
+                        <label htmlFor="ddUser" className={dlgLabel}>Select user</label>
                         <select id="ddUser" className={dlgSelect}>
                             {props.users.map((u, index) => (
                                 <option key={index} value={u.id}>
@@ -313,7 +313,7 @@ function SettingComponentPage(props) {
                 {props.currentForm === "LockUser" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Lock User</div>
-                        <div className={dlgLabel}>Select user</div>
+                        <label htmlFor="ddUser" className={dlgLabel}>Select user</label>
                         <select id="ddUser" className={dlgSelect}>
                             {props.users.map((u, index) => (
                                 <option key={index} value={u.id}>
@@ -350,7 +350,7 @@ function SettingComponentPage(props) {
                 {props.currentForm === "UnlockUser" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Unlock User</div>
-                        <div className={dlgLabel}>Select user</div>
+                        <label htmlFor="ddUser" className={dlgLabel}>Select user</label>
                         <select id="ddUser" className={dlgSelect}>
                             {props.users.map((u, index) => (
                                 <option key={index} value={u.id}>
@@ -386,7 +386,7 @@ function SettingComponentPage(props) {
                 {props.currentForm === "UserRole" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Change Role</div>
-                        <div className={dlgLabel}>Select user</div>
+                        <label htmlFor="ddUser" className={dlgLabel}>Select user</label>
                         <select id="ddUser" className={dlgSelect}>
                             {props.users.map((u, index) => (
                                 <option key={index} value={u.id}>
@@ -394,7 +394,7 @@ function SettingComponentPage(props) {
                                 </option>
                             ))}
                         </select>
-                        <div className={dlgLabel}>Select role</div>
+                        <label htmlFor="ddRole" className={dlgLabel}>Select role</label>
                         <select id="ddRole" className={dlgSelect}>
                             <option value="user">User</option>
                             <option value="admin">Admin</option>
@@ -424,7 +424,7 @@ function SettingComponentPage(props) {
                 {props.currentForm === "ResetUser" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Reset User Password</div>
-                        <div className={dlgLabel}>User</div>
+                        <label htmlFor="ddUser" className={dlgLabel}>User</label>
                         <select id="ddUser" className={dlgSelect}>
                             {props.users.map((u, index) => (
                                 <option key={index} value={u.id}>
@@ -461,7 +461,7 @@ function SettingComponentPage(props) {
                 {props.currentForm === "ServerLogs" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Download Server Logs</div>
-                        <div className={dlgLabel}>Select service</div>
+                        <label htmlFor="ddService" className={dlgLabel}>Select service</label>
                         <select id="ddService" className={dlgSelect}>
                             <option value="dcs">
                                 Session Capture Server
@@ -494,7 +494,7 @@ function SettingComponentPage(props) {
                 {props.currentForm === "DeviceLogs" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Download Device Logs</div>
-                        <div className={dlgLabel}>Select device</div>
+                        <label htmlFor="ddDevice" className={dlgLabel}>Select device</label>
                         <select id="ddDevice" className={dlgSelect}>
                             {props.devices.map((u, index) => (
                                 <option key={index} value={u.id}>
@@ -526,7 +526,7 @@ function SettingComponentPage(props) {
                 {props.currentForm === "DeleteServerLogs" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Clear Server Logs</div>
-                        <div className={dlgLabel}>Select service</div>
+                        <label htmlFor="ddService" className={dlgLabel}>Select service</label>
                         <select id="ddService" className={dlgSelect}>
                             <option value="dcs">
                                 Session Capture Server
@@ -559,7 +559,7 @@ function SettingComponentPage(props) {
                 {props.currentForm === "DeleteDeviceLogs" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Clear Device Logs</div>
-                        <div className={dlgLabel}>Select device</div>
+                        <label htmlFor="ddDevice" className={dlgLabel}>Select device</label>
                         <select id="ddDevice" className={dlgSelect}>
                             {props.devices.map((u, index) => (
                                 <option key={index} value={u.id}>
@@ -591,7 +591,7 @@ function SettingComponentPage(props) {
                 {props.currentForm === "AllowAPI" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Allow API Access</div>
-                        <div className={dlgLabel}>Select user</div>
+                        <label htmlFor="ddUser" className={dlgLabel}>Select user</label>
                         <select id="ddUser" className={dlgSelect}>
                             {props.users.map((u, index) => (
                                 <option key={index} value={u.id}>
@@ -628,7 +628,7 @@ function SettingComponentPage(props) {
                 {props.currentForm === "RevokeAPI" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Revoke API Access</div>
-                        <div className={dlgLabel}>Select user</div>
+                        <label htmlFor="ddUser" className={dlgLabel}>Select user</label>
                         <select id="ddUser" className={dlgSelect}>
                             {props.users.map((u, index) => (
                                 <option key={index} value={u.id}>

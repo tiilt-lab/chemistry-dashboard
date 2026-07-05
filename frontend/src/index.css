@@ -58,6 +58,9 @@
     --color-tiilt-panel-text: #eae3f6;
     --color-tiilt-orange: #fbb040;
     --color-tiilt-teal: #00a79d;
+    /* AA-contrast text tones for the 15%-tinted status pill backgrounds */
+    --color-tiilt-orange-text: #8a5800;
+    --color-tiilt-teal-text: #067168;
     --color-tiilt-pink: #ec008c;
     --color-tiilt-green: #8dc63f;
     --color-tiilt-danger: #b3261e;
@@ -196,6 +199,8 @@ html {
     --color-tiilt-lavender: #8b7fae;
     --color-tiilt-orange: #fbb040;
     --color-tiilt-teal: #2dbdb3;
+    --color-tiilt-orange-text: #ffca75;
+    --color-tiilt-teal-text: #5fded4;
     --color-tiilt-pink: #f24aa8;
     --color-tiilt-green: #8dc63f;
     --color-tiilt-danger: #e5766f;

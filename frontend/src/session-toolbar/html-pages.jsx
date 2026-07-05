@@ -22,7 +22,7 @@ function AppSessionPage(props) {
                     <div className="flex min-w-0 flex-1 flex-col px-3 sm:min-h-0 sm:w-full sm:px-6">
                         <div className="mb-2 font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
                             Participants
-                            <span className="ml-1 text-tiilt-muted/70">
+                            <span className="ml-1 text-tiilt-muted">
                                 ({props.speakers.length})
                             </span>
                         </div>

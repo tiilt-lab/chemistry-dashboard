@@ -6,12 +6,13 @@ function DataTable({ columns, rows }) {
             <table className="w-full border-collapse text-left text-sm">
                 <thead>
                     <tr>
-                        {columns.map((c) => (
+                        {columns.map((c, i) => (
                             <th
-                                key={c}
+                                key={i}
                                 className="sticky top-0 bg-tiilt-soft px-3 py-2 font-semibold whitespace-nowrap text-tiilt-ink"
                             >
-                                {c}
+                                {/* Action columns pass "" — give AT a name anyway */}
+                                {c || <span className="sr-only">Actions</span>}
                             </th>
                         ))}
                     </tr>

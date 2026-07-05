@@ -74,13 +74,13 @@ function ByodJoinPage(props) {
                                         </div>
                                     </div>
                                     <div>
-                                        <div>Device Name:</div>
+                                        <label htmlFor="name" className="block">Device Name:</label>
                                         <input
                                             className="text-box small-section"
                                             id="name"
                                             placeholder="Name"
                                         />
-                                        <div>Numbers of Collaborators:</div>
+                                        <label htmlFor="collaborators" className="block">Numbers of Collaborators:</label>
                                         <select
                                             id="collaborators"
                                             className="dropdown small-section"
@@ -97,7 +97,7 @@ function ByodJoinPage(props) {
                                             <option value="7">7</option>
                                             <option value="8">8</option>
                                         </select>
-                                        <div>Passcode:</div>
+                                        <label htmlFor="passcode" className="block">Passcode:</label>
                                         <input
                                             className="text-box small-section"
                                             id="passcode"
@@ -110,7 +110,7 @@ function ByodJoinPage(props) {
                                         {props.wrongInput
                                             ? "Your password must be 4 characters long."
                                             : ""}
-                                        <div>Join With:</div>
+                                        <label htmlFor="joinwith" className="block">Join With:</label>
                                         <select
                                             id="joinwith"
                                             className="dropdown small-section"
@@ -225,7 +225,7 @@ function ByodJoinPage(props) {
                                                         {speaker.fingerprinted && (
                                                             <img
                                                                 className="h-8 w-8"
-                                                                alt="question"
+                                                                alt="Fingerprinted"
                                                                 src={Checkmark}
                                                             />
                                                         )}
@@ -383,7 +383,7 @@ function ByodJoinPage(props) {
                                                         {speaker.fingerprinted && (
                                                             <img
                                                                 className="h-8 w-8"
-                                                                alt="question"
+                                                                alt="Fingerprinted"
                                                                 src={Checkmark}
                                                             />
                                                         )}
@@ -648,6 +648,7 @@ function ByodJoinPage(props) {
                                                                 }}
                                                                 width="150"
                                                                 height="80"
+                                                                alt="Your cartoon avatar preview"
                                                                 src={
                                                                     props.cartoonImgUrl
                                                                 }
@@ -782,6 +783,7 @@ function ByodJoinPage(props) {
                                 Update Alias Name:
                             </div>
                             <input
+                                aria-label="Alias name"
                                 id="txtAlias"
                                 defaultValue={props.selectedSpeaker.alias}
                                 className={style5["field-input"]}
@@ -822,6 +824,7 @@ function ByodJoinPage(props) {
                                 Enter Username:
                             </div>
                             <input
+                                aria-label="Username"
                                 id="registeredusername"
                                 className={style5["field-input"]}
                                 maxLength="64"
