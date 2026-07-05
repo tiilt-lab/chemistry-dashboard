@@ -80,6 +80,16 @@ def update_transcript_features(**kwargs):
     return json_response({'updated': count})
 
 
+@api_routes.route('/api/v1/callback/enqueue_posthoc', methods=['POST'])
+@wrappers.verify_local
+def enqueue_posthoc_local(**kwargs):
+    # Localhost-only batch enqueue (ops/automation).
+    import posthoc_queue
+    body = request.get_json(silent=True) or {}
+    added = posthoc_queue.enqueue(body['session_id'], body['device_ids'], models=body.get('models'))
+    return json_response({'queued': added})
+
+
 @api_routes.route('/api/v1/callback/posthoc_reset', methods=['POST'])
 @wrappers.verify_local
 def posthoc_reset(**kwargs):

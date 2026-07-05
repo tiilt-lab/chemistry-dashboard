@@ -606,6 +606,33 @@ def enqueue_posthoc(session_id, **kwargs):
     return json_response({'queued': added, 'status': posthoc_queue.status(session_id)})
 
 
+@api_routes.route('/api/v1/sessions/<int:session_id>/posthoc_queue/stop', methods=['POST'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def stop_posthoc_queue(session_id, **kwargs):
+    # Cancel: drop queued jobs and tell the services to stop this session's
+    # running pods (best-effort; services also apply on their next restart).
+    import posthoc_queue, posthoc_state, json as _json, os as _os
+    cleared = posthoc_queue.clear_pending()
+    cancelled = 0
+    try:
+        import asyncio, websockets
+        async def _cancel(port, did):
+            async with websockets.connect('ws://127.0.0.1:%s' % port, open_timeout=5) as ws:
+                await ws.send(_json.dumps({'type': 'cancel_posthoc', 'sessiondeviceid': did}))
+                await asyncio.wait_for(ws.recv(), timeout=5)
+        for did in list(posthoc_state.running_device_ids()):
+            for port in (_os.getenv('DC_AUDIO_POSTHOC_WS_PORT', '9015'), _os.getenv('DC_VIDEO_POSTHOC_WS_PORT', '9014')):
+                try:
+                    asyncio.run(_cancel(port, did)); cancelled += 1
+                except Exception:
+                    pass
+            posthoc_state.mark_done(did)
+    except Exception as e:
+        logging.warning('stop_posthoc_queue cancel pass failed: %s', e)
+    return json_response({'cleared': cleared, 'cancel_signals': cancelled})
+
+
 @api_routes.route('/api/v1/sessions/<int:session_id>/posthoc_queue', methods=['GET'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access

@@ -135,6 +135,16 @@ def enqueue(session_id, device_ids, models=None):
     return added
 
 
+def clear_pending():
+    # Drop all queued jobs (running job finishes unless cancelled at the service).
+    with _lock:
+        n = 0
+        for j in _jobs:
+            if j["state"] == "queued":
+                j["state"] = "error"; j["error"] = "cancelled"; n += 1
+        return n
+
+
 def status(session_id=None):
     with _lock:
         return [{"device_id": j["device_id"], "state": j["state"],

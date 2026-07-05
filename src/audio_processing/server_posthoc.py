@@ -293,6 +293,18 @@ class ServerProtocol(WebSocketServerProtocol):
             self.processorspeakermetric.add_websocket_connection(self)
             self.processorspeakermetric.start_transcript_metric_processing()    
 
+        if data['type'] == 'cancel_posthoc':
+            sdid = str(data.get('sessiondeviceid', ''))
+            hits = [k for k in list(running_audio_processes.keys()) if k.startswith(sdid + '-')]
+            for k in hits:
+                proc = running_audio_processes.pop(k, None)
+                if hasattr(proc, 'stop'):
+                    try:
+                        proc.stop()
+                    except Exception:
+                        pass
+            self.send_json({'type': 'posthoc_cancelled', 'cancelled': len(hits)})
+
         if data['type'] == 'query_posthoc_status':
             # Is a run for this pod still active (possibly started by another
             # page/session)? Lets the UI restore progress after a refresh.

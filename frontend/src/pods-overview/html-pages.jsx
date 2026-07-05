@@ -192,6 +192,15 @@ function PodsOverviewPages(props) {
                                     )}
                                 </h2>
                                 <span className="flex items-center gap-3 text-sm text-tiilt-muted">
+                                    {Object.values(props.queueState || {}).some((v) => v === "queued" || v === "running") ||
+                                    Object.values(props.enriched || {}).some((e) => e && e.analysis_running) ? (
+                                        <button
+                                            onClick={props.stopRuns}
+                                            className="rounded-lg border border-tiilt-danger/40 bg-tiilt-danger-soft px-3 py-1.5 text-xs font-semibold text-tiilt-danger transition hover:border-tiilt-danger active:translate-y-px"
+                                        >
+                                            Stop runs
+                                        </button>
+                                    ) : null}
                                     <label className="flex cursor-pointer items-center gap-1.5 text-xs">
                                         <input
                                             type="checkbox"

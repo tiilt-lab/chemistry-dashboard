@@ -50,6 +50,13 @@ function PodsOverviewComponent() {
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
+  const stopRuns = () => {
+    if (session === null) return;
+    new SessionService().stopPosthocQueue(session.id).then(
+      () => loadQueue(session.id),
+      () => {},
+    );
+  };
   const runSelected = () => {
     const ids = Object.keys(selected).filter((k) => selected[k]);
     if (!ids.length || session === null) return;
@@ -333,6 +340,7 @@ function PodsOverviewComponent() {
       toggleSelect={toggleSelect}
       toggleSelectAll={toggleSelectAll}
       runSelected={runSelected}
+      stopRuns={stopRuns}
       queueState={queueState}
       righttext={getPasscode()}
       rightenabled={getRightEnabled()}

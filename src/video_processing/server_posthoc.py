@@ -255,6 +255,18 @@ class ServerProtocol(WebSocketServerProtocol):
             # Store the processor so a reconnecting client can re-attach.
             running_video_processes[self.config.auth_key] = self.video_processor
 
+        if data['type'] == 'cancel_posthoc':
+            sdid = str(data.get('sessiondeviceid', ''))
+            hits = [k for k in list(running_video_processes.keys()) if k.startswith(sdid + '-')]
+            for k in hits:
+                proc = running_video_processes.pop(k, None)
+                if hasattr(proc, 'stop'):
+                    try:
+                        proc.stop()
+                    except Exception:
+                        pass
+            self.send_json({'type': 'posthoc_cancelled', 'cancelled': len(hits)})
+
         if data['type'] == 'query_posthoc_status':
             sdid = str(data.get('sessiondeviceid', ''))
             match = next((k for k in list(running_video_processes.keys())
