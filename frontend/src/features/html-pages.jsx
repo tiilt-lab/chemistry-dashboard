@@ -135,11 +135,13 @@ function FeaturePage(props) {
 
     return (
         <div className="flex w-full flex-col gap-3">
-            <div className="text-xs text-tiilt-muted">
-                Scored from the transcript with{" "}
-                {props.scoringLabel ||
-                    "the LIWC & Harvard General Inquirer lexicons"}
-            </div>
+            {rows.length > 0 ? (
+                <div className="text-xs text-tiilt-muted">
+                    Scored from the transcript with{" "}
+                    {props.scoringLabel ||
+                        "the LIWC & Harvard General Inquirer lexicons"}
+                </div>
+            ) : null}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {props.features.length > 0 &&
                     rows.map((feature, index) => (
