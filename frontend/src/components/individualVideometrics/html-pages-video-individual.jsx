@@ -1,4 +1,3 @@
-import style from "./video-features.module.css"
 import { DialogBox } from "../../dialog/dialog-component"
 import questIcon from "../../assets/img/question.svg"
 import { Line } from "react-chartjs-2";
