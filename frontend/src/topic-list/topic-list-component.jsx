@@ -9,17 +9,19 @@ function TopicListComponent(props){
   const [user, setUser] = useState();
   const navigate = useNavigate();
   const location = useLocation();
+  // Guard against direct navigation (no router state) so the page doesn't crash.
+  const st = location.state || {};
   const [showDialog, setShowDialog] = useState(false);
   const [currentDialog, setCurrentDialog] = useState("");
   const [showedInd, setShowedInd] = useState(-1);
-  const [editMode, setEditMode] = useState(location.state.names === undefined);
-  const [viewTitle, setViewTitle] = useState(location.state.title);
+  const [editMode, setEditMode] = useState(st.names === undefined);
+  const [viewTitle, setViewTitle] = useState(st.title);
   
   //parses the inputted string for topic models into a data structure we can use
   const makeTopicListStruct = (topicStr) => {
     let topics = []
     let allTopics = topicStr.split(",");
-    let allNames = editMode ? [] : location.state.names.split(",");
+    let allNames = editMode ? [] : st.names.split(",");
     const SUBTOPICLEN = 10;  //right now this is a norm
     for (let i = 0; i < allTopics.length; i++) {
     	let l = i + 1;
@@ -47,7 +49,7 @@ function TopicListComponent(props){
     return topics;
   }
   
-  const [topicListStruct, setTopicListStruct] = useState(makeTopicListStruct(location.state.topics));
+  const [topicListStruct, setTopicListStruct] = useState(makeTopicListStruct(st.topics || ""));
   const [currInput, setCurrInput] = useState("");
   const [wrongInput, setWrongInput] = useState(false);
   const [changedName, setChangedName] = useState(false);
