@@ -26,11 +26,12 @@ audio processor reads them directly.
 1. **DNS**: create an A record `blinc.puthipiroj.com -> 129.105.44.121` at the DNS
    provider for puthipiroj.com. Verify with `dig +short blinc.puthipiroj.com`.
 
-2. **Python envs**: the server venv exists (`src/server/venv`). Audio and video need
-   their own (Python 3.9, see repo README for the CUDA/dlib steps for video):
+2. **Python env**: one unified venv (`src/venv-unified`) runs every component
+   (server, audio/video live + post-hoc, ASR worker). Build it per
+   [`src/requirements-unified.README.md`](../../../src/requirements-unified.txt):
    ```
-   cd src/audio_processing && python3.9 -m venv venv && venv/bin/pip install -r requirements.txt
-   cd src/video_processing && python3.9 -m venv venv && venv/bin/pip install -r requirements.txt
+   <python3.13> -m venv src/venv-unified
+   src/venv-unified/bin/pip install -r src/requirements-unified.txt
    ```
    Also download the model assets (Google News vectors, gaze/emotion checkpoints,
    Google Cloud ASR key at `src/audio_processing/asr_connectors/google-cloud-key.json`)

@@ -1,6 +1,0 @@
-pyLDAvis
-numpy
-pandas
-gensim
-spacy
-pyPDF2
