@@ -62,13 +62,14 @@ function TopicListPage(props) {
                   {testArr.tname}
                 </div>
                 {props.editMode ? (
-                  <AppContextMenu reverseToggle={() => props.toggleClicked(count)}>
-                    <div
-                      className="cursor-pointer px-4 py-2 text-sm text-tiilt-ink transition hover:bg-tiilt-soft"
+                  <AppContextMenu label={`Options for ${testArr.tname}`} reverseToggle={() => props.toggleClicked(count)}>
+                    <button
+                      role="menuitem"
+                      className="block w-full cursor-pointer px-4 py-2 text-left text-sm text-tiilt-ink transition hover:bg-tiilt-soft"
                       onClick={() => props.toggleDisplay(true, "rename", count)}
                     >
                       Rename
-                    </div>
+                    </button>
                   </AppContextMenu>
                 ) : (
                   <></>
@@ -102,7 +103,7 @@ function TopicListPage(props) {
         </div>
       </div>
 
-      <GenericDialogBox show={props.showDialog}>
+      <GenericDialogBox onClose={() => props.toggleDisplay(false, "", -1)} show={props.showDialog}>
         <div className={dlgWindow} style={{ minWidth: "min(20rem, 76vw)" }}>
           <div className={dlgHeading}>
             {DIALOG_HEADINGS[props.currentDialog] || ""}

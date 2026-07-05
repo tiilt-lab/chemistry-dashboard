@@ -584,7 +584,7 @@
 
 .dropdown-menu-container {
   position: absolute;
-  background-color: #FFFFFF;
+  background-color: var(--color-white, #FFFFFF);
   right: 0px;
   width: 200px;
   border-radius: 4px;
@@ -604,6 +604,18 @@
   display: block;
   cursor: pointer;
   direction: ltr;
+  /* button reset so menu items can be real <button>s */
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+}
+
+.dropdown-menu-container .menu-item:focus-visible {
+  outline: 2px solid #5b3a94;
+  outline-offset: -2px;
 }
 
 .dropdown-menu-container .menu-item:active {
@@ -621,9 +633,14 @@
 .menu-button {
   background-color: transparent;
   border: none;
-  outline: none;
   -webkit-box-sizing: border-box;
           box-sizing: border-box;
   cursor: pointer;
+  border-radius: 4px;
+}
+
+.menu-button:focus-visible {
+  outline: 2px solid #5b3a94;
+  outline-offset: 2px;
 }
 /*# sourceMappingURL=context-menu.module.css.map */

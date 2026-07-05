@@ -278,7 +278,7 @@ function PodsOverviewPages(props) {
                 </div>
             </div>
 
-            <GenericDialogBox show={props.currentForm !== ""}>
+            <GenericDialogBox onClose={props.closeDialog} show={props.currentForm !== ""}>
                 {(props.currentForm === "AddDevice" && (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Add pod to Session</div>

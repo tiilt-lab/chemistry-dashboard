@@ -67,7 +67,7 @@ function DiscussionPage(props){
 </div>
 </div>
 
- <GenericDialogBox show = {props.currentForm !== ""} checkBox = {props.currentForm} displayDevices = {props.displayDevices} changeCheck = {props.changeCheck} >
+ <GenericDialogBox onClose = {props.closeForm} show = {props.currentForm !== ""} checkBox = {props.currentForm} displayDevices = {props.displayDevices} changeCheck = {props.changeCheck} >
    
    {/* Keyword dialog */}
    {(props.currentForm === "keywords") ?

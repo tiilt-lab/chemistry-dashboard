@@ -243,13 +243,15 @@ function ByodJoinPage(props) {
                                                             </div>
                                                         </div>
                                                         <AppContextMenu
+                                                            label={`Options for ${speaker.alias}`}
                                                             className={
                                                                 style3[
                                                                 "keyword-list-options"
                                                                 ]
                                                             }
                                                         >
-                                                            <div
+                                                            <button
+                                                                role="menuitem"
                                                                 className={`${style4["menu-item"]} ${style4["black"]}`}
                                                                 onClick={() => {
                                                                     props.openForms(
@@ -260,8 +262,9 @@ function ByodJoinPage(props) {
                                                             >
                                                                 Record
                                                                 Fingerprint
-                                                            </div>
-                                                            <div
+                                                            </button>
+                                                            <button
+                                                                role="menuitem"
                                                                 className={`${style4["menu-item"]} ${style4["black"]}`}
                                                                 onClick={() => {
                                                                     props.openForms(
@@ -271,9 +274,10 @@ function ByodJoinPage(props) {
                                                                 }}
                                                             >
                                                                 Rename Alias
-                                                            </div>
+                                                            </button>
 
-                                                            <div
+                                                            <button
+                                                                role="menuitem"
                                                                 className={`${style4["menu-item"]} ${style4["black"]}`}
                                                                 onClick={() => {
                                                                     props.openForms(
@@ -282,8 +286,8 @@ function ByodJoinPage(props) {
                                                                     )
                                                                 }}
                                                             >
-                                                                Saved Fingerprrint
-                                                            </div>
+                                                                Saved Fingerprint
+                                                            </button>
                                                         </AppContextMenu>
                                                     </div>
                                                 ),
@@ -397,13 +401,15 @@ function ByodJoinPage(props) {
                                                             </div>
                                                         </div>
                                                         <AppContextMenu
+                                                            label={`Options for ${speaker.alias}`}
                                                             className={
                                                                 style3[
                                                                 "keyword-list-options"
                                                                 ]
                                                             }
                                                         >
-                                                            <div
+                                                            <button
+                                                                role="menuitem"
                                                                 className={`${style4["menu-item"]} ${style4["black"]}`}
                                                                 onClick={() => {
                                                                     props.openForms(
@@ -414,8 +420,9 @@ function ByodJoinPage(props) {
                                                             >
                                                                 Record
                                                                 Fingerprint
-                                                            </div>
-                                                            <div
+                                                            </button>
+                                                            <button
+                                                                role="menuitem"
                                                                 className={`${style4["menu-item"]} ${style4["black"]}`}
                                                                 onClick={() => {
                                                                     props.openForms(
@@ -425,9 +432,10 @@ function ByodJoinPage(props) {
                                                                 }}
                                                             >
                                                                 Rename Alias
-                                                            </div>
+                                                            </button>
 
-                                                            <div
+                                                            <button
+                                                                role="menuitem"
                                                                 className={`${style4["menu-item"]} ${style4["black"]}`}
                                                                 onClick={() => {
                                                                     props.openForms(
@@ -436,8 +444,8 @@ function ByodJoinPage(props) {
                                                                     )
                                                                 }}
                                                             >
-                                                                Saved Fingerprrint
-                                                            </div>
+                                                                Saved Fingerprint
+                                                            </button>
                                                         </AppContextMenu>
                                                     </div>
                                                 ),
@@ -683,7 +691,7 @@ function ByodJoinPage(props) {
                     </div>
                 )}
 
-            <GenericDialogBox
+            <GenericDialogBox onClose={props.closeDialog}
                 show={
                     props.currentForm !== "" &&
                     props.currentForm !== "gottoselectedtranscript" &&

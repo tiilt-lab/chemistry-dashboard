@@ -9,22 +9,28 @@ function AppKeywordsPage(props) {
         <>
             <div className="min-h-20 w-full">
                 <div className="mb-2 flex items-center justify-between">
-                    <img
+                    <button
                         onClick={() => props.toggleDisplay(true)}
-                        className="h-4 w-4 cursor-pointer opacity-70"
-                        alt="About keyword detection"
-                        src={questIcon}
-                    />
-                    <AppContextMenu setcallback={props.setCallbackFunc}>
-                        <div
-                            className="mt-2.5"
+                        className="cursor-pointer border-0 bg-transparent p-0"
+                        aria-label="About keyword detection"
+                    >
+                        <img
+                            className="h-4 w-4 opacity-70"
+                            alt=""
+                            src={questIcon}
+                        />
+                    </button>
+                    <AppContextMenu label="Keyword display options" setcallback={props.setCallbackFunc}>
+                        <button
+                            role="menuitem"
+                            className="mt-2.5 block w-full cursor-pointer px-2.5 text-left"
                             onClick={() => {
                                 props.toggleGraph()
                                 props.callbackfunc(false)
                             }}
                         >
                             {props.showGraph ? "Show Words" : "Show Timeline"}
-                        </div>
+                        </button>
                     </AppContextMenu>
                 </div>
                 {!props.showGraph ? (

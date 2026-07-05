@@ -73,8 +73,9 @@ function KeywordListPage(props) {
                                             </span>
                                         </button>
                                         <div className="flex-none">
-                                            <AppContextMenu>
-                                                <div
+                                            <AppContextMenu label={`Options for ${keywordList.name}`}>
+                                                <button
+                                                    role="menuitem"
                                                     className={`${style2["menu-item"]} ${style2["red"]}`}
                                                     onClick={() => {
                                                         props.deleteKeywordList(
@@ -83,7 +84,7 @@ function KeywordListPage(props) {
                                                     }}
                                                 >
                                                     Delete
-                                                </div>
+                                                </button>
                                             </AppContextMenu>
                                         </div>
                                     </li>

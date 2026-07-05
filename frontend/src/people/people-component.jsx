@@ -383,7 +383,7 @@ function PeopleComponent() {
                 </div>
             </div>
 
-            <GenericDialogBox show={currentForm !== ""}>
+            <GenericDialogBox onClose={closeDialog} show={currentForm !== ""}>
                 {currentForm === "AddStudent" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Add Student Profile</div>

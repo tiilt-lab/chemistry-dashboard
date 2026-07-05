@@ -205,7 +205,7 @@ function ExpertRatingPage(props) {
                 )}
 
 
-            <GenericDialogBox
+            <GenericDialogBox onClose={props.closeDialog}
                 show={
                     props.currentForm !== "" &&
                     props.currentForm !== "gottoselectedtranscript" &&
