@@ -41,7 +41,7 @@ function SettingsButton() {
 
 function Appheader(props) {
     return (
-        <header className="relative top-0 z-10 flex h-14 w-full flex-none flex-row items-center border-b border-tiilt-line bg-white">
+        <div className="relative top-0 z-10 flex h-14 w-full flex-none flex-row items-center border-b border-tiilt-line bg-white">
             {props.leftText !== false ? (
                 <button
                     onClick={props.nav}
@@ -85,7 +85,7 @@ function Appheader(props) {
             ) : null}
             <ThemeToggle />
             <SettingsButton />
-        </header>
+        </div>
     )
 }
 

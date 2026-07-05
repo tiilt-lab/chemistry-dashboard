@@ -14,9 +14,9 @@ function LandingPageComponent() {
 
     return (
         <BrandCard>
-            <h2 className="text-xl font-semibold text-tiilt-ink">
+            <h1 className="text-xl font-semibold text-tiilt-ink">
                 Good {timeOfDay}!
-            </h2>
+            </h1>
             <p className="mt-1 mb-6 text-sm text-tiilt-muted">
                 Welcome to the BLINC platform. Sign in to manage recordings, or
                 join a live session.
