@@ -408,6 +408,8 @@ class ServerProtocol(WebSocketServerProtocol):
             self.asr = GoogleASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data,self.interval,STOP_SIGNAL)
         self.asr.start()
         self.processor = AudioProcessorPosthoc(self.audio_buffer, self.asr_transcript_queue, diarization_model, get_semantic_model(getattr(self, 'embedder_choice', None)), self.config, scorer=getattr(self, 'scorer_choice', None))
+        # Full re-run REPLACES the pod's previous transcript-level results.
+        callbacks.post_posthoc_reset(self.config.auth_key, 'audio')
         self.processor.start()
         self._run_active = True  # run may now finish in the background if the client leaves
         # Store the processor (not just a flag) so a reconnecting client can

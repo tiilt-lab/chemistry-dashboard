@@ -79,6 +79,19 @@ def update_transcript_features(**kwargs):
     return json_response({'updated': count})
 
 
+@api_routes.route('/api/v1/callback/posthoc_reset', methods=['POST'])
+@wrappers.verify_local
+def posthoc_reset(**kwargs):
+    # A processing service is starting a FULL re-run: wipe the pod's previous
+    # results so the new run replaces them instead of stacking duplicates.
+    content = request.get_json() or {}
+    device = database.get_session_devices(processing_key=content.get('source', ''))
+    if device:
+        database.delete_pod_analysis(device.id, scope=content.get('scope', 'audio'))
+        logging.info('Post-hoc reset (%s) for device %d.', content.get('scope'), device.id)
+    return json_response()
+
+
 @api_routes.route('/api/v1/callback/posthoc_completed', methods=['POST'])
 @wrappers.verify_local
 def posthoc_completed(**kwargs):
