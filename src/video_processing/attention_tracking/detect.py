@@ -483,7 +483,7 @@ class ImageObjectDetection:
                                 if match != "Unknown":
                                     # plot_one_box(xyxy, im0, label=self.object_names_K_V.get(int_cls, None), color=[random.randint(0, 255) for _ in range(3)], line_thickness=3)
                                     # logging.info("Match: {0}, cos score: {1}, Euclid: {2}, Distance: {3}".format(match,cos_score,L2_score,dist_score))
-                                    self._save_face_thumbnail(match, quality_face, dist_score)
+                                    self._save_face_thumbnail(match, quality_face, dist_score, face_locations[0] if face_locations else None)
                                     self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_face",match,accumulator,time_marker,im0,int(p))
                                 else:
                                     pass
@@ -536,7 +536,7 @@ class ImageObjectDetection:
             f"norm={np.linalg.norm(v):.6f}, "
             f"nan?={np.isnan(v).any()}, inf?={np.isinf(v).any()}")
     
-    def _save_face_thumbnail(self, alias, face_img, match_distance):
+    def _save_face_thumbnail(self, alias, face_img, match_distance, face_box=None):
         # Persist the BEST face crop per recognized student (lowest match
         # distance), overwriting weaker earlier crops — "first match wins"
         # saved misidentified faces (a weak cross-match could claim the file
@@ -551,6 +551,18 @@ class ImageObjectDetection:
             if best is not None and best <= match_distance:
                 return
             self._saved_thumbs[alias] = match_distance
+            # Center the crop on the detected face (dlib box: top,right,bottom,
+            # left) with margin, squared — instead of the raw head crop, which
+            # often had the face off-center.
+            if face_box is not None:
+                top, right, bottom, left = face_box
+                cy, cx = (top + bottom) // 2, (left + right) // 2
+                half = int(max(bottom - top, right - left) * 0.75)
+                h, w = face_img.shape[:2]
+                y0, y1 = max(0, cy - half), min(h, cy + half)
+                x0, x1 = max(0, cx - half), min(w, cx + half)
+                if y1 > y0 and x1 > x0:
+                    face_img = face_img[y0:y1, x0:x1]
             os.makedirs(self._thumb_dir, exist_ok=True)
             path = os.path.join(self._thumb_dir, "{0}.jpg".format(os.path.basename(str(alias))))
             # face_img is RGB (face_recognition/dlib convention); cv2 writes BGR.

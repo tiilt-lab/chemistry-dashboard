@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { ApiService } from "../../services/api-service"
+import { speakerColorFor } from "../../globals"
 
 // Palette matches the transcript / video-analytics speaker colors.
 const COLORS = [
@@ -54,9 +55,8 @@ export function ConversationDynamicsPanel({ sessionId, sessionDeviceId }) {
             </div>
         )
 
-    const idx = {}
-    data.speakers.forEach((s, i) => (idx[s.name] = i))
-    const colorOf = (name) => COLORS[(idx[name] ?? 0) % COLORS.length]
+    const allNames = data.speakers.map((s) => s.name)
+    const colorOf = (name) => speakerColorFor(name, allNames)
     const balance =
         data.gini <= 0.2
             ? "well balanced"

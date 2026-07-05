@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Line } from "react-chartjs-2"
 import { Chart as ChartJS } from "chart.js/auto"
-import { formatSeconds } from "../../globals"
+import { formatSeconds, speakerColorFor } from "../../globals"
 import { ModelNote } from "../model-note/model-note"
 import { ApiService } from "../../services/api-service"
 
@@ -475,8 +475,7 @@ function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, o
             participants.push(m.student_username)
         }
     }
-    const speakerColor = (name) =>
-        SPEAKER_COLORS[participants.indexOf(name) % SPEAKER_COLORS.length]
+    const speakerColor = (name) => speakerColorFor(name, participants)
 
     // Time domain: the extent of the (already range-filtered) video metrics, so
     // the swimlanes and attention chart fill the width and stay aligned. Moving
@@ -618,7 +617,7 @@ function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, o
                 </label>
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap justify-center gap-4">
                 {participants.map((p) => (
                     <ParticipantCard
                         key={p}
