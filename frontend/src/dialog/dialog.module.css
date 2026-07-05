@@ -588,7 +588,7 @@
   top: 50%;
   -webkit-transform: translate(0, -50%);
           transform: translate(0, -50%);
-  background-color: #FFFFFF;
+  background-color: var(--color-white);
   border-radius: 12px;
   -webkit-box-sizing: border-box;
           box-sizing: border-box;
@@ -607,7 +607,7 @@
   top: 50%;
   -webkit-transform: translate(0, -50%);
           transform: translate(0, -50%);
-  background-color: #FFFFFF;
+  background-color: var(--color-white);
   border-radius: 8px;
   -webkit-box-sizing: border-box;
           box-sizing: border-box;

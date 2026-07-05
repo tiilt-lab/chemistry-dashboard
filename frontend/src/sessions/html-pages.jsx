@@ -703,7 +703,7 @@ function DiscussionSessionPage(props) {
                 {props.currentForm === "RenameSession" ? (
                     <div
                         className={dlgWindow}
-                        style={{ minWidth: "min(20rem, 90vw)" }}
+                        style={{ minWidth: "min(20rem, 76vw)" }}
                     >
                         <div className={dlgHeading}>
                             Update Session Name:
@@ -745,7 +745,7 @@ function DiscussionSessionPage(props) {
                 {props.currentForm === "RenameFolder" ? (
                     <div
                         className={dlgWindow}
-                        style={{ minWidth: "min(20rem, 90vw)" }}
+                        style={{ minWidth: "min(20rem, 76vw)" }}
                     >
                         <div className={dlgHeading}>
                             Update Folder Name:
@@ -787,7 +787,7 @@ function DiscussionSessionPage(props) {
                 {props.currentForm === "DeleteSession" ? (
                     <div
                         className={dlgWindow}
-                        style={{ minWidth: "min(20rem, 90vw)" }}
+                        style={{ minWidth: "min(20rem, 76vw)" }}
                     >
                         <div className={style["dialog-body"]}>
                             Are you sure you want to permanently delete this
@@ -815,7 +815,7 @@ function DiscussionSessionPage(props) {
                 {props.currentForm === "DeleteFolder" ? (
                     <div
                         className={dlgWindow}
-                        style={{ minWidth: "min(20rem, 90vw)" }}
+                        style={{ minWidth: "min(20rem, 76vw)" }}
                     >
                         <div className={dlgHeading}>
                             {" "}
@@ -848,7 +848,7 @@ function DiscussionSessionPage(props) {
                 {props.currentForm === "NewFolder" ? (
                     <div
                         className={dlgWindow}
-                        style={{ minWidth: "min(20rem, 90vw)" }}
+                        style={{ minWidth: "min(20rem, 76vw)" }}
                     >
                         <div className={dlgHeading}>
                             {" "}
@@ -892,7 +892,7 @@ function DiscussionSessionPage(props) {
                 {props.currentForm === "MoveFolder" ? (
                     <div
                         className={dlgWindow}
-                        style={{ minWidth: "min(20rem, 90vw)" }}
+                        style={{ minWidth: "min(20rem, 76vw)" }}
                     >
                         <div className={dlgHeading}>
                             Move Folder
@@ -931,7 +931,7 @@ function DiscussionSessionPage(props) {
                 {props.currentForm === "MoveSession" ? (
                     <div
                         className={dlgWindow}
-                        style={{ minWidth: "min(20rem, 90vw)" }}
+                        style={{ minWidth: "min(20rem, 76vw)" }}
                     >
                         <div className={dlgHeading}>
                             Move Session
@@ -970,7 +970,7 @@ function DiscussionSessionPage(props) {
                 {props.currentForm === "Loading" ? (
                     <div
                         className={dlgWindow}
-                        style={{ minWidth: "min(20rem, 90vw)" }}
+                        style={{ minWidth: "min(20rem, 76vw)" }}
                     >
                         <div className={dlgHeading}>
                             Loading...please wait...

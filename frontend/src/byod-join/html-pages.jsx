@@ -766,7 +766,7 @@ function ByodJoinPage(props) {
                     (props.currentForm === "renameAlias" && (
                         <div
                             className={style5["dialog-window"]}
-                            style={{ minWidth: "min(20rem, 90vw)" }}
+                            style={{ minWidth: "min(20rem, 76vw)" }}
                         >
                             <div className={style5["dialog-heading"]}>
                                 Update Alias Name:
@@ -806,7 +806,7 @@ function ByodJoinPage(props) {
                     (props.currentForm === "savedAudioVideoFingerprint" && (
                         <div
                             className={style5["dialog-window"]}
-                            style={{ minWidth: "min(20rem, 90vw)" }}
+                            style={{ minWidth: "min(20rem, 76vw)" }}
                         >
                             <div className={style5["dialog-heading"]}>
                                 Enter Username:
