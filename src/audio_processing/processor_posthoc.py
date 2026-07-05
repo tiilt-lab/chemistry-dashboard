@@ -98,6 +98,13 @@ class AudioProcessorPosthoc:
             # labels (carried pyannote), so serialize as strings either way.
             np.savetxt(os.path.join(_rd, "{}.txt".format(time.strftime("%Y%m%d-%H%M%S"))),
                        np.array(self.speakers, dtype=str), fmt='%s')
+        # Release the run + mark it complete server-side, so the result persists
+        # even if the browser that triggered it has since disconnected.
+        try:
+            if self.web_socket_connection is not None and hasattr(self.web_socket_connection, 'on_run_complete'):
+                self.web_socket_connection.on_run_complete()
+        except Exception as ex:
+            logging.warning("on_run_complete notify failed: %s", ex)
 
     def add_websocket_connection(self, web_socket):
         self.web_socket_connection = web_socket

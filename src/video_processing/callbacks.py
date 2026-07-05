@@ -92,3 +92,13 @@ def post_video_metrics(source, video_metrics):
     except Exception as e:
         logging.warning('video metric callback failed: {0}'.format(e))
         return False
+
+
+def post_posthoc_completed(source, models=None):
+    # Mark a pod's post-hoc run complete server-side, so it persists even if the
+    # triggering browser disconnected. URL derived from the metrics callback base.
+    try:
+        base = config.video_metrics_callback().rsplit('/', 1)[0]
+        requests.post(base + '/posthoc_completed', json={'source': source, 'models': models})
+    except Exception as e:
+        logging.warning('posthoc_completed callback failed: {0}'.format(e))

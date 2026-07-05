@@ -122,6 +122,9 @@ class ServerProtocol(WebSocketServerProtocol):
         # signal_end cleanup; post-hoc connections aren't live-key gated.
         self.running = False
         self.config = None
+        # True while a run is processing; keeps signal_end from killing it when
+        # the client disconnects (the run finishes + marks itself complete).
+        self._run_active = False
 
         cm.add(self)
         logging.info('New client connected...')
@@ -243,7 +246,8 @@ class ServerProtocol(WebSocketServerProtocol):
         if data['type'] == 'start_posthoc_video_processing':
             self.send_json({'type':'video posthoc analytics started','message':"Processing Video posthoc Analytics"})
             self.video_processor.add_websocket_connection(self)
-            self.video_processor.start()     
+            self.video_processor.start()
+            self._run_active = True  # may now finish in the background if the client leaves
 
         if data['type'] == 'heartbeat':
             auth_key = data.get('key', None)
@@ -291,8 +295,24 @@ class ServerProtocol(WebSocketServerProtocol):
         self.video_processor = VideoProcessorPosthoc(self.facial_emotion_detector,self.image_object_detection,self.attention_detection,self.video_metric_analytics,
                                                      self.video_file,self.config,running_video_processes,self.interval,self.batch_size,self.frame_dir,STOP_SIGNAL,save_gaze_annotation=True)
     def signal_end(self):
+        # Don't kill an in-flight run on a client disconnect / timeout — it
+        # finishes in the background and marks itself complete (on_run_complete).
+        if getattr(self, '_run_active', False):
+            logging.info("Client gone but video post-hoc run active — continuing in background.")
+            return
         if self.video_processor:
-            self.video_processor.stop()   
+            self.video_processor.stop()
+
+    def on_run_complete(self):
+        # Called by the processor when the run finishes: release the guard and
+        # mark the pod complete server-side (survives a disconnected client).
+        self._run_active = False
+        try:
+            if self.config:
+                running_video_processes.pop(self.config.auth_key, None)
+                callbacks.post_posthoc_completed(self.config.auth_key, getattr(self, 'model_choices', None))
+        except Exception as e:
+            logging.warning("video on_run_complete cleanup failed: %s", e)
 
 
 if __name__ == '__main__':

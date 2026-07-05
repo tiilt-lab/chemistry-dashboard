@@ -36,6 +36,17 @@ def post_transcripts(source, start_time, end_time, transcript, doa, questions, k
         logging.warning('Transcript callback failed: {0}'.format(e))
         return False, -1
 
+def post_posthoc_completed(source, models=None):
+    # Tell the server a pod's post-hoc run finished, so it's marked complete even
+    # if the triggering browser disconnected. URL derived from the transcript
+    # callback's base (.../api/v1/callback/).
+    try:
+        base = config.processing_callback().rsplit('/', 1)[0]
+        requests.post(base + '/posthoc_completed', json={'source': source, 'models': models})
+    except Exception as e:
+        logging.warning('posthoc_completed callback failed: {0}'.format(e))
+
+
 def post_tagging(source, tag, embeddingsFile):
     result = {
         'source': source,
