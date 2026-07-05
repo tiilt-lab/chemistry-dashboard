@@ -37,11 +37,11 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue }) {
         />
         <button
             onClick={onOpen}
-            className="group flex w-full items-center gap-3 rounded-xl border border-tiilt-line bg-white px-4 py-3 text-left transition hover:border-tiilt hover:shadow-[0_10px_24px_-16px_rgba(42,23,74,0.5)] active:translate-y-px"
+            className="group flex w-full items-center gap-2.5 rounded-lg border border-tiilt-line bg-white px-3 py-1.5 text-left transition hover:border-tiilt hover:shadow-[0_10px_24px_-16px_rgba(42,23,74,0.5)] active:translate-y-px"
         >
             <span
                 className={
-                    "relative flex h-11 w-11 flex-none items-center justify-center rounded-lg " +
+                    "relative flex h-8 w-8 flex-none items-center justify-center rounded-md " +
                     (device.connected
                         ? "bg-tiilt-danger-soft text-tiilt-danger"
                         : "bg-tiilt-soft text-tiilt-muted")
@@ -62,7 +62,7 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue }) {
                 ) : null}
             </span>
             <span className="min-w-0 grow">
-                <span className="block truncate text-base font-semibold text-tiilt-ink">
+                <span className="block truncate text-sm font-semibold text-tiilt-ink">
                     {device.name}
                 </span>
                 <span
@@ -196,6 +196,24 @@ function PodsOverviewPages(props) {
                                     )}
                                 </h2>
                                 <span className="flex items-center gap-3 text-sm text-tiilt-muted">
+                                    <label className="flex cursor-pointer items-center gap-1.5 text-xs">
+                                        <input
+                                            type="checkbox"
+                                            className="h-4 w-4 cursor-pointer accent-tiilt"
+                                            checked={
+                                                (props.sessionDevices || []).length > 0 &&
+                                                (props.sessionDevices || []).every(
+                                                    (d) => props.selected && props.selected[d.id],
+                                                )
+                                            }
+                                            onChange={() =>
+                                                props.toggleSelectAll(
+                                                    (props.sessionDevices || []).map((d) => d.id),
+                                                )
+                                            }
+                                        />
+                                        Select all
+                                    </label>
                                     {Object.values(props.selected || {}).filter(Boolean).length > 0 ? (
                                         <button
                                             onClick={props.runSelected}
@@ -227,7 +245,7 @@ function PodsOverviewPages(props) {
                             )}
                             {props.sessionDevices !== null &&
                             props.initialized ? (
-                                <div className="flex flex-col gap-3">
+                                <div className="flex flex-col gap-1.5">
                                     {props.sessionDevices.map(
                                         (device, index) => (
                                             <PodCard

@@ -17,7 +17,7 @@ import { AppSpinner } from "../spinner/spinner-component"
 // below the horizontal row content.
 const rowClass =
     "group flex flex-col rounded-lg border border-tiilt-line bg-white transition hover:border-tiilt hover:shadow-[0_8px_20px_-16px_rgba(42,23,74,0.5)]"
-const rowInnerClass = "flex items-center gap-2.5 px-3 py-2"
+const rowInnerClass = "flex items-center gap-2.5 px-3 py-1.5"
 const menuItemClass = style2["menu-item"]
 const menuDangerClass = `${style2["menu-item"]} ${style2["red"]}`
 
@@ -98,7 +98,7 @@ function FolderRow({ folder, onOpen, openFolderDialog }) {
     return (
         <li className={rowClass}>
             <div className={rowInnerClass}>
-                <span className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-tiilt-soft text-tiilt">
+                <span className="flex h-8 w-8 flex-none items-center justify-center rounded-md bg-tiilt-soft text-tiilt">
                     <FolderIcon />
                 </span>
                 <button
@@ -182,7 +182,7 @@ function PodDurations({ sessionId }) {
                         onClick={() =>
                             navigate(`/sessions/${sessionId}/pods/${pod.id}`)
                         }
-                        className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition hover:bg-tiilt-soft"
+                        className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-left text-xs transition hover:bg-tiilt-soft"
                     >
                         <span
                             className={
@@ -254,7 +254,7 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
             <div className={rowInnerClass}>
             <span
                 className={
-                    "flex h-9 w-9 flex-none items-center justify-center rounded-md " +
+                    "flex h-8 w-8 flex-none items-center justify-center rounded-md " +
                     (session.recording
                         ? "bg-tiilt-danger-soft text-tiilt-danger"
                         : "bg-tiilt-soft text-tiilt")

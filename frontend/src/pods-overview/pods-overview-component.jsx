@@ -24,6 +24,13 @@ function PodsOverviewComponent() {
   const [queueState, setQueueState] = useState({});
   const toggleSelect = (id) =>
     setSelected((cur) => ({ ...cur, [id]: !cur[id] }));
+  const toggleSelectAll = (ids) =>
+    setSelected((cur) => {
+      const allOn = ids.length > 0 && ids.every((id) => cur[id]);
+      const next = {};
+      for (const id of ids) next[id] = !allOn;
+      return next;
+    });
   const loadQueue = (sid) =>
     new SessionService().getPosthocQueue(sid).then(
       (r) => {
@@ -324,6 +331,7 @@ function PodsOverviewComponent() {
       enriched={enriched}
       selected={selected}
       toggleSelect={toggleSelect}
+      toggleSelectAll={toggleSelectAll}
       runSelected={runSelected}
       queueState={queueState}
       righttext={getPasscode()}
