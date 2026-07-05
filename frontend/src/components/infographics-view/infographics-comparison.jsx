@@ -485,6 +485,7 @@ function AppInfographicsComparison(props) {
                                 models={models}
                                 session={props.session}
                                 sessionDeviceId={props.sessionDevice.id}
+                                lastAnalyzed={props.sessionDevice.posthoc_analyzed_date}
                                 speakers={props.speakers}
                                 transcripts={props.displayTranscripts}
                             />

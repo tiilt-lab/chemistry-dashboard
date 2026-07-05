@@ -54,7 +54,7 @@ const SCORER_OPTIONS = [
     { id: "llm", label: "Google Gemini (LLM)" },
 ]
 
-function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, models }) {
+function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, models, lastAnalyzed }) {
     const api = new ApiService()
     const sockets = useRef([])
     const heartbeat = useRef(null)
@@ -438,6 +438,14 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                     the transcript and all metrics; the style re-computations
                     re-score the existing transcript only (no re-transcription).
                 </div>
+                {lastAnalyzed && !running ? (
+                    <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-tiilt-teal">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M4 12a8 8 0 1 1 2.3 5.6M4 12H2m2 0V9" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                        </svg>
+                        Last full analysis: {lastAnalyzed}
+                    </div>
+                ) : null}
             </div>
 
             <div className="flex flex-col gap-2 rounded-lg border border-tiilt-line bg-tiilt-ground/50 p-3">
