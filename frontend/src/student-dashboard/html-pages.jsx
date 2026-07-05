@@ -2,6 +2,7 @@ import { GenericDialogBox, DialogBox } from "../dialog/dialog-component"
 import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { Appheader } from "../header/header-component"
+import { dlgInput, dlgPrimary } from "../components/dialog-styles"
 import style from "./student-dashboard.module.css"
 import style2 from "../pod-details/pod.module.css"
 import style5 from "../sessions/sessions.module.css"
@@ -47,59 +48,72 @@ function StudentSessionDashboardPages(props) {
 
                         {props.nextPage === "reportoptionpage" && (
                             <React.Fragment>
-                                <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto text-center">
+                                <div className="mx-auto flex w-full max-w-md grow flex-col gap-4 overflow-y-auto px-4 py-6">
                                     <div>
-
-                                        <div>Session Preference:</div>
+                                        <label htmlFor="preference" className="mb-1.5 block text-sm font-semibold text-tiilt-ink">
+                                            Session preference
+                                        </label>
                                         <select
                                             id="preference"
-                                            className="dropdown small-section"
+                                            className={dlgInput}
                                             value={props.sessiontype}
                                             onChange={(e) =>
                                                 props.setSessiontype(e.target.value)
                                             }
                                         >
-                                            <option value="">Select Preference</option>
-                                            <option value="currentsession">Current Session</option>
-                                            <option value="previoussessions">Previous Sessions</option>
+                                            <option value="">Select preference…</option>
+                                            <option value="currentsession">Current session</option>
+                                            <option value="previoussessions">Previous sessions</option>
                                         </select>
-
-                                        <div>User Name:</div>
-                                        <input
-                                            className="text-box small-section"
-                                            id="username"
-                                            placeholder=""
-                                        />
-                                        {props.sessiontype === "currentsession" ? (
-                                            <>
-                                                <div>Passcode:</div>
-                                                <input
-                                                    className="text-box small-section"
-                                                    id="passcode"
-                                                    value={props.pcode}
-                                                    placeholder="Passcode (4 characters)"
-                                                    onInput={(event) => props.changeTouppercase(event)}
-                                                />
-                                                {props.wrongInput
-                                                    ? "Your password must be 4 characters long."
-                                                    : ""}
-                                            </>
-                                        ) : (
-                                            <></>
-                                        )}
-
                                     </div>
-                                    <button
-                                        className="wide-button"
-                                        onClick={() =>
-                                            props.loadDashboard(
-                                                document.getElementById("preference").value.trim(),
-                                                document.getElementById("username").value.trim()
-                                            )
-                                        }
-                                    >
-                                        Continue
-                                    </button>
+                                    <div>
+                                        <label htmlFor="username" className="mb-1.5 block text-sm font-semibold text-tiilt-ink">
+                                            User name
+                                        </label>
+                                        <input
+                                            id="username"
+                                            className={dlgInput}
+                                            placeholder="Your name"
+                                        />
+                                    </div>
+                                    {props.sessiontype === "currentsession" ? (
+                                        <div>
+                                            <label htmlFor="passcode" className="mb-1.5 block text-sm font-semibold text-tiilt-ink">
+                                                Passcode
+                                            </label>
+                                            <input
+                                                id="passcode"
+                                                className={dlgInput}
+                                                value={props.pcode}
+                                                placeholder="4 characters"
+                                                onInput={(event) => props.changeTouppercase(event)}
+                                            />
+                                            {props.wrongInput ? (
+                                                <div className="mt-1 text-sm text-tiilt-danger">
+                                                    Your passcode must be 4 characters long.
+                                                </div>
+                                            ) : (
+                                                <></>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <></>
+                                    )}
+                                </div>
+                                <div className="w-full flex-none border-t border-tiilt-line bg-white">
+                                    <div className="mx-auto w-full max-w-md px-4 py-4">
+                                        <button
+                                            className={dlgPrimary + " w-full"}
+                                            onClick={() =>
+                                                props.loadDashboard(
+                                                    document.getElementById("preference").value.trim(),
+                                                    document.getElementById("username").value.trim()
+                                                )
+                                            }
+                                        >
+                                            Continue
+                                        </button>
+                                    </div>
                                 </div>
                             </React.Fragment>
                         )}
