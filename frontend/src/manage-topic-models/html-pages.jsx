@@ -1,4 +1,5 @@
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
+import { pageShell, formCard } from "../components/layout-styles"
 import { DialogBoxTwoOption } from "../dialog/dialog-component"
 import { Appheader } from "../header/header-component"
 import style from "./manage-topic-models.module.css"
@@ -15,6 +16,8 @@ function ManageTopicsPage(props) {
                     rightEnabled={false}
                     nav={props.navigate}
                 />
+                <div className={pageShell}>
+                <div className={formCard}>
                 <div className="relative min-h-0 w-full grow overflow-y-auto">
                     <div className="mx-auto w-full max-w-2xl px-4 py-6">
                         {!props.topicModels ? (
@@ -95,6 +98,8 @@ function ManageTopicsPage(props) {
                     >
                         Create Topic Model
                     </button>
+                </div>
+                </div>
                 </div>
             </div>
 

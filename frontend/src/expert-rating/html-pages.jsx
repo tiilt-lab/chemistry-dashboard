@@ -1,5 +1,6 @@
 import { GenericDialogBox, DialogBox } from "../dialog/dialog-component"
 import { dlgInput, dlgPrimary } from "../components/dialog-styles"
+import { pageShell, formCard } from "../components/layout-styles"
 import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { Appheader } from "../header/header-component"
@@ -47,6 +48,8 @@ function ExpertRatingPage(props) {
 
                         {props.nextPage === "reportoptionpage" && (
                             <React.Fragment>
+                                <div className={pageShell}>
+                                <div className={formCard}>
                                 <div className="mx-auto flex w-full max-w-md grow flex-col gap-4 overflow-y-auto px-4 py-6">
                                     <div>
                                         <label htmlFor="evaluatortype" className="mb-1.5 block text-sm font-semibold text-tiilt-ink">
@@ -90,6 +93,8 @@ function ExpertRatingPage(props) {
                                             Continue
                                         </button>
                                     </div>
+                                </div>
+                                </div>
                                 </div>
                             </React.Fragment>
                         )}
