@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { formatHMS as formatSeconds } from "../globals";
 import { SessionService } from '../services/session-service';
 import { useNavigate, useOutletContext,useParams, useSearchParams } from 'react-router-dom';
-import { similarityToRGB } from '../globals';
 import {TranscriptComponentPage} from './html-pages'
+import { decorateTranscripts } from './transcript-utils'
 
 function TranscriptsComponentClient(props){
   const [transcripts, setTransripts] = useState([]);
@@ -73,36 +73,7 @@ const fetchTranscript = async (deviceid) => {
 }
 
 const createDisplayTranscripts = ()=> {
-    const accdisplaytrans = [];
-    for (const transcript of transcripts) {
-      const result = [];
-      const words = transcript.transcript.split(' ');
-      for (const word of words) {
-        const matchingKeywords = [];
-        let highestSimilarity = 0;
-        if (showKeywords) {
-          for (const keyword of transcript.keywords) {
-            if (word.toLowerCase().startsWith(keyword.word.toLowerCase())
-                && !matchingKeywords.find(item => item.keyword === keyword.keyword)) {
-              if (keyword.similarity > highestSimilarity) {
-                highestSimilarity = keyword.similarity;
-              }
-              matchingKeywords.push(keyword);
-            }
-          }
-        }
-        result.push({
-          'word': word,
-          'matchingKeywords': (matchingKeywords.length > 0) ? matchingKeywords : null,
-          'color': similarityToRGB(highestSimilarity)
-        });
-      }
-      transcript['words'] = result;
-      transcript['doaColor'] = showDoA ? angleToColor(transcript.direction) : angleToColor(-1);
-      accdisplaytrans.push(transcript);
-    }
-
-    setDisplayTranscripts(accdisplaytrans)
+    setDisplayTranscripts(decorateTranscripts(transcripts, showKeywords, showDoA, angleToColor))
   }
 
   const angleToColor = (angle)=> {
