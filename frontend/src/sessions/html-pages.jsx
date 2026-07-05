@@ -530,6 +530,32 @@ function DiscussionSessionPage(props) {
                                 >
                                     New session
                                 </button>
+                                <label className="cursor-pointer rounded-lg border border-tiilt-line bg-white px-4 py-2 text-sm font-semibold text-tiilt-ink transition hover:bg-tiilt-soft active:translate-y-px">
+                                    Upload video
+                                    <input
+                                        type="file"
+                                        accept="video/webm,video/mp4"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                            const file = e.target.files && e.target.files[0]
+                                            if (!file) return
+                                            const name = window.prompt(
+                                                "Session name for this video:",
+                                                file.name.replace(/\.[^.]+$/, ""),
+                                            )
+                                            if (name == null) return
+                                            new SessionService()
+                                                .uploadVideo(name || file.name, file)
+                                                .then((r) =>
+                                                    r.status === 200
+                                                        ? window.location.reload()
+                                                        : window.alert("Upload failed."),
+                                                )
+                                                .catch(() => window.alert("Upload failed."))
+                                            e.target.value = ""
+                                        }}
+                                    />
+                                </label>
                             </div>
                         </div>
 
