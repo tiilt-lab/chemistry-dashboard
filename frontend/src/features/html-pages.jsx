@@ -73,29 +73,23 @@ function FeatureCard({ feature, selectedTime, onSelectTime }) {
     }
 
     return (
-        <div className="rounded-xl border border-tiilt-line bg-white p-4">
-            <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                    <div className="text-base font-semibold text-tiilt-ink">
-                        {feature.name}
-                    </div>
-                    {FEATURE_DESCRIPTIONS[feature.name] ? (
-                        <div className="mt-0.5 text-sm text-tiilt-muted">
-                            {FEATURE_DESCRIPTIONS[feature.name]}
-                        </div>
-                    ) : (
-                        <></>
-                    )}
+        <div
+            className="rounded-lg border border-tiilt-line bg-white p-3"
+            title={FEATURE_DESCRIPTIONS[feature.name] || ""}
+        >
+            <div className="flex items-baseline justify-between gap-2">
+                <div className="truncate text-sm font-semibold text-tiilt-ink">
+                    {feature.name}
                 </div>
                 <div className="flex flex-none items-baseline gap-1">
                     {selectedValue !== null ? (
-                        <span className="mr-1 rounded-md bg-tiilt-pink/10 px-1.5 py-0.5 text-sm font-semibold text-tiilt-pink tabular-nums">
+                        <span className="mr-1 rounded-md bg-tiilt-pink/10 px-1.5 py-0.5 text-xs font-semibold text-tiilt-pink tabular-nums">
                             {selectedValue}
                         </span>
                     ) : (
                         <></>
                     )}
-                    <span className="text-2xl font-bold text-tiilt-ink tabular-nums">
+                    <span className="text-xl font-bold text-tiilt-ink tabular-nums">
                         {Math.round(feature.average)}
                     </span>
                     <span className={"text-xs " + trendClass(feature.trend)}>
@@ -103,10 +97,10 @@ function FeatureCard({ feature, selectedTime, onSelectTime }) {
                     </span>
                 </div>
             </div>
-            <div className="mt-3 h-28">
+            <div className="mt-2 h-16">
                 {feature.values.length === 0 ? (
-                    <div className="flex h-full items-center justify-center rounded-lg bg-tiilt-ground/60 text-sm text-tiilt-muted">
-                        No data for this time range
+                    <div className="flex h-full items-center justify-center rounded-lg bg-tiilt-ground/60 text-xs text-tiilt-muted">
+                        No data
                     </div>
                 ) : (
                     <Line
@@ -146,15 +140,17 @@ function FeaturePage(props) {
                 {props.scoringLabel ||
                     "the LIWC & Harvard General Inquirer lexicons"}
             </div>
-            {props.features.length > 0 &&
-                rows.map((feature, index) => (
-                    <FeatureCard
-                        key={index}
-                        feature={feature}
-                        selectedTime={props.selectedTime}
-                        onSelectTime={props.onSelectTime}
-                    />
-                ))}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {props.features.length > 0 &&
+                    rows.map((feature, index) => (
+                        <FeatureCard
+                            key={index}
+                            feature={feature}
+                            selectedTime={props.selectedTime}
+                            onSelectTime={props.onSelectTime}
+                        />
+                    ))}
+            </div>
         </div>
     )
 }
