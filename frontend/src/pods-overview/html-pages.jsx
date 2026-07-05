@@ -16,12 +16,22 @@ const dlgPrimary =
 const dlgCancel =
     "h-11 rounded-lg border border-tiilt-line bg-white font-semibold text-tiilt-ink transition hover:bg-tiilt-soft active:translate-y-px"
 
-function PodCard({ device, onOpen }) {
+function fmtDur(seconds) {
+    if (seconds == null || isNaN(seconds)) return null
+    const m = Math.floor(seconds / 60)
+    const s = Math.floor(seconds % 60)
+    const h = Math.floor(m / 60)
+    return h > 0 ? `${h}:${String(m % 60).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`
+}
+
+function PodCard({ device, enrich, onOpen }) {
+    const e = enrich || {}
     return (
         <button
             onClick={onOpen}
-            className="group flex w-full items-center gap-3 rounded-xl border border-tiilt-line bg-white px-4 py-3 text-left transition hover:border-tiilt hover:shadow-[0_10px_24px_-16px_rgba(42,23,74,0.5)] active:translate-y-px"
+            className="group flex w-64 flex-col gap-2 rounded-xl border border-tiilt-line bg-white px-4 py-3 text-left transition hover:border-tiilt hover:shadow-[0_10px_24px_-16px_rgba(42,23,74,0.5)] active:translate-y-px"
         >
+            <div className="flex w-full items-center gap-3">
             <span
                 className={
                     "relative flex h-11 w-11 flex-none items-center justify-center rounded-lg " +
@@ -53,23 +63,50 @@ function PodCard({ device, onOpen }) {
                     analytics
                 </span>
             </span>
-            {device.posthoc_analyzed_date ? (
-                <span
-                    title={"Full analysis run " + device.posthoc_analyzed_date}
-                    className="flex flex-none items-center gap-1 rounded-full bg-tiilt-teal/15 px-2 py-0.5 text-xs font-semibold text-tiilt-teal"
-                >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M4 12a8 8 0 1 1 2.3 5.6M4 12H2m2 0V9" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                    </svg>
-                    Analyzed
-                </span>
-            ) : null}
             <span
                 aria-hidden="true"
                 className="flex-none text-tiilt-muted transition group-hover:text-tiilt"
             >
                 ›
             </span>
+            </div>
+            <div className="flex w-full items-center gap-2 text-xs text-tiilt-muted">
+                {e.speaker_count > 0 ? (
+                    <span>
+                        {e.speaker_count}{" "}
+                        {e.speaker_count === 1 ? "participant" : "participants"}
+                    </span>
+                ) : null}
+                {fmtDur(e.duration) ? (
+                    <>
+                        <span aria-hidden="true">·</span>
+                        <span className="font-ahamono tabular-nums">
+                            {fmtDur(e.duration)}
+                        </span>
+                    </>
+                ) : null}
+                <span className="grow" />
+                {e.analysis_running ? (
+                    <span className="flex flex-none items-center gap-1 rounded-full bg-tiilt-orange/15 px-2 py-0.5 font-semibold text-tiilt-orange">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-tiilt-orange" />
+                        Analyzing…
+                    </span>
+                ) : e.has_data === false ? (
+                    <span className="flex-none rounded-full bg-tiilt-line/40 px-2 py-0.5 font-semibold text-tiilt-muted">
+                        No data recorded
+                    </span>
+                ) : (device.posthoc_analyzed_date || e.posthoc_analyzed_date) ? (
+                    <span
+                        title={"Full analysis run " + (device.posthoc_analyzed_date || e.posthoc_analyzed_date)}
+                        className="flex flex-none items-center gap-1 rounded-full bg-tiilt-teal/15 px-2 py-0.5 font-semibold text-tiilt-teal"
+                    >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M4 12a8 8 0 1 1 2.3 5.6M4 12H2m2 0V9" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                        </svg>
+                        Analyzed
+                    </span>
+                ) : null}
+            </div>
         </button>
     )
 }
@@ -162,12 +199,13 @@ function PodsOverviewPages(props) {
                             )}
                             {props.sessionDevices !== null &&
                             props.initialized ? (
-                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div className="flex flex-wrap justify-center gap-3">
                                     {props.sessionDevices.map(
                                         (device, index) => (
                                             <PodCard
                                                 key={index}
                                                 device={device}
+                                                enrich={props.enriched && props.enriched[device.id]}
                                                 onOpen={() =>
                                                     props.goToDevice(device)
                                                 }

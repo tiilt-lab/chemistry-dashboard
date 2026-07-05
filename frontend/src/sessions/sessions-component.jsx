@@ -28,6 +28,23 @@ function SessionsComponent(props) {
     const navigate = useNavigate()
     const [searchParam, setSearchParam] = useSearchParams()
 
+    // Poll the sessions list so live badges (Analyzing…) update without a
+    // manual refresh.
+    useEffect(() => {
+        const t = setInterval(() => {
+            new SessionService().getSessions().then(
+                (response) => {
+                    if (response.status === 200)
+                        response.json().then((data) =>
+                            setSessions(SessionModel.fromJsonList(data)),
+                        )
+                },
+                () => {},
+            )
+        }, 15000)
+        return () => clearInterval(t)
+    }, [])
+
     useEffect(() => {
         const fetchData = new SessionService().getSessions()
         fetchData.then(
