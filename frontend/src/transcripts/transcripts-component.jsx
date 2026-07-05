@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { formatHMS as formatSeconds } from "../globals";
 import { useNavigate, useOutletContext,useParams, useSearchParams } from 'react-router-dom';
 import { similarityToRGB } from '../globals';
 import {TranscriptComponentPage} from './html-pages'
@@ -147,10 +148,6 @@ const createDisplayTranscripts = ()=> {
     setCurrentForm("");
   }
 
-  const formatSeconds = (s)=> {
-    const date = new Date(1000 * Math.floor(s));
-    return date.toISOString().substr(11, 8);
-  }
 
   const navigateToSession = ()=> {
     navigate('/sessions/' + session.id + '/pods/' + sessionDeviceId);
@@ -210,7 +207,6 @@ const createDisplayTranscripts = ()=> {
       transcriptIndex = {transcriptIndex}
       createDisplayTranscripts = {createDisplayTranscripts}
       openOptionsDialog = {openOptionsDialog}
-      isenabled = {true}
       legendRef = {legendRef}
       showKeywords = {showKeywords}
       toggleKeywords = {toggleKeywords}

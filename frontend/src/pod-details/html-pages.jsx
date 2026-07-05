@@ -21,7 +21,6 @@ function PodComponentPages(props) {
                     }
                     leftText={false}
                     rightText={"Options"}
-                    rightEnabled={true}
                     rightTextClick={() => props.openDialog("Options")}
                     nav={props.navigateToSession}
                     escToBack={true}

@@ -46,8 +46,3 @@ class LLMQuestionAnswer(db.Model):
             creation_date=str(self.creation_date) + ' UTC'
         )
 
-    @staticmethod
-    def verify_fields(name=None):
-        message = None
-        # Not implemented
-        return message == None, message

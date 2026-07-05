@@ -1,4 +1,5 @@
 import { Appheader } from "../header/header-component"
+import { dlgHeading, dlgBody, dlgLabel, dlgInput, dlgSelect, dlgPrimary, dlgCancel, dlgError, dlgDanger } from "../components/dialog-styles"
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { DataTable } from "../components/data-table"
 
@@ -73,23 +74,8 @@ function OptionButton({ label, danger, onClick }) {
     )
 }
 
-const dlgHeading = "mb-3 text-lg font-semibold text-tiilt-ink"
 const dlgClose =
     "mt-4 w-full rounded-lg border border-tiilt-line bg-white py-2.5 text-sm font-semibold text-tiilt-ink transition hover:bg-tiilt-soft active:translate-y-px"
-const dlgBody = "flex min-w-[min(22rem,86vw)] flex-col gap-3"
-const dlgLabel = "text-sm font-semibold text-tiilt-ink"
-const dlgInput =
-    "h-11 w-full rounded-lg border border-tiilt-line bg-white px-3 text-base text-tiilt-ink transition outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
-const dlgSelect =
-    "h-11 w-full cursor-pointer rounded-lg border border-tiilt-line bg-white px-3 pr-8 text-base text-tiilt-ink transition outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
-const dlgPrimary =
-    "mt-2 h-11 rounded-lg bg-tiilt font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
-const dlgCancel =
-    "h-11 rounded-lg border border-tiilt-line bg-white font-semibold text-tiilt-ink transition hover:bg-tiilt-soft active:translate-y-px"
-const dlgError =
-    "rounded-md bg-tiilt-danger-soft px-3 py-2 text-sm text-tiilt-danger"
-const dlgDanger =
-    "mt-2 h-11 rounded-lg bg-tiilt-danger font-semibold text-white transition hover:brightness-90 active:translate-y-px"
 
 function SettingComponentPage(props) {
     return (
@@ -99,7 +85,6 @@ function SettingComponentPage(props) {
                     title={"Settings"}
                     leftText={false}
                     rightText={""}
-                    rightEnabled={false}
                     nav={props.navigateToHomescreen}
                 />
                 <div className="relative min-h-0 w-full grow overflow-y-auto">

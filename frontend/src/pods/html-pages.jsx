@@ -19,7 +19,6 @@ function PodComponentPage(props) {
         <Appheader
           title={"Manage Pods"}
           leftText={false}
-          rightEnabled={false}
           nav={props.navigateToHomescreen}
         />
 

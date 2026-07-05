@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react"
+import { ErrorDialog } from "../components/error-dialog"
 import { useNavigate } from "react-router-dom"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
-import { DialogBox, GenericDialogBox } from "../dialog/dialog-component"
+import { GenericDialogBox } from "../dialog/dialog-component"
 import { Appheader } from "../header/header-component"
 import { AppFolderSelectComponent } from "../components/folder-select/folder-select-component"
 import { SessionService } from "../services/session-service"
@@ -514,7 +515,6 @@ function DiscussionSessionPage(props) {
                     title={"Manage Sessions"}
                     leftText={false}
                     rightText={""}
-                    rightEnabled={false}
                     nav={props.navigateToHomescreen}
                 />
 
@@ -994,13 +994,7 @@ function DiscussionSessionPage(props) {
                 )}
             </GenericDialogBox>
 
-            <DialogBox
-                itsclass={"add-dialog"}
-                heading={"Error"}
-                message={props.alertMessage}
-                show={props.showAlert}
-                closedialog={props.closeAlert}
-            />
+            <ErrorDialog message={props.alertMessage} show={props.showAlert} onClose={props.closeAlert} />
         </>
     )
 }

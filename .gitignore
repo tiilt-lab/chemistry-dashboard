@@ -273,3 +273,6 @@ src/video_processing/facial_embeddings/thumbnails/
 *.itt
 *.srt
 development_data.zip
+
+# Service runtime logs (audio/video posthoc services write these in-tree)
+*.log

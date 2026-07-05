@@ -13,7 +13,6 @@ function KeywordListPage(props) {
                     title={"Manage Keyword Lists"}
                     leftText={false}
                     rightText={""}
-                    rightEnabled={false}
                     nav={props.navigate}
                 />
                 <div className={pageShell}>

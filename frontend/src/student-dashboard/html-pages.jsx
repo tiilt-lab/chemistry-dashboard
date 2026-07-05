@@ -42,7 +42,6 @@ function StudentSessionDashboardPages(props) {
                             title={props.pageTitle}
                             leftText={false}
                             rightText={""}
-                            rightEnabled={false}
                             nav={() => props.navigateToLogin()}
                         />
 

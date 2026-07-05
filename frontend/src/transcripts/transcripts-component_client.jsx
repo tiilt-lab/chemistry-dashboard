@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { formatHMS as formatSeconds } from "../globals";
 import { SessionService } from '../services/session-service';
 import { useNavigate, useOutletContext,useParams, useSearchParams } from 'react-router-dom';
 import { similarityToRGB } from '../globals';
@@ -125,10 +126,6 @@ const createDisplayTranscripts = ()=> {
     setCurrentForm("");
   }
 
-  const formatSeconds = (s)=> {
-    const date = new Date(1000 * Math.floor(s));
-    return date.toISOString().substr(11, 8);
-  }
 
   const navigateToSession = ()=> {
     props.setParentCurrentForm("")
@@ -148,7 +145,6 @@ const createDisplayTranscripts = ()=> {
       transcriptIndex = {props.transcriptIndex}
       createDisplayTranscripts = {createDisplayTranscripts}
       openOptionsDialog = {openOptionsDialog}
-      isenabled = {false}
     />
   )
 }

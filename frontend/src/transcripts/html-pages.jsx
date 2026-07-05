@@ -1,10 +1,7 @@
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { Appheader } from "../header/header-component"
 
-const dlgHeading = "mb-3 text-lg font-semibold text-tiilt-ink"
-const dlgBody = "flex min-w-[min(22rem,86vw)] flex-col gap-3"
-const dlgClose =
-    "mt-2 h-11 rounded-lg border border-tiilt-line bg-white font-semibold text-tiilt-ink transition hover:bg-tiilt-soft active:translate-y-px"
+import { dlgHeading, dlgBody, dlgCancel } from "../components/dialog-styles"
 
 function TranscriptComponentPage(props) {
     return (
@@ -14,7 +11,6 @@ function TranscriptComponentPage(props) {
                     title={"Transcripts · " + props.sessionDevice.name}
                     leftText={false}
                     rightText={"Options"}
-                    rightEnabled={props.isenabled}
                     rightTextClick={props.openOptionsDialog}
                     nav={props.navigateToSession}
                     escToBack={true}
@@ -127,7 +123,7 @@ function TranscriptComponentPage(props) {
                             ))}
                         </div>
                         <button
-                            className={dlgClose}
+                            className={dlgCancel + " mt-2"}
                             onClick={props.closeDialog}
                         >
                             Close
@@ -160,7 +156,7 @@ function TranscriptComponentPage(props) {
                             ></svg>
                         </div>
                         <button
-                            className={dlgClose}
+                            className={dlgCancel + " mt-2"}
                             onClick={props.closeDialog}
                         >
                             Close

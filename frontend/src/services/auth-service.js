@@ -251,10 +251,6 @@ class AuthService {
     return new ApiService().httpRequestCall("api/v1/admin/users/" + userId + "/api", 'DELETE', {});
   }
 
-  getuser(userId) {
-    return new ApiService().httpRequestCall("api/v1/admin/users/" + userId, 'GET', {});
-  }
-
 }
 
 export { AuthService }

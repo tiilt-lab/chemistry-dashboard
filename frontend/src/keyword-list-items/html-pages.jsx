@@ -11,7 +11,6 @@ function KeywordListPages(props) {
         title={"Manage Keyword Lists"}
         leftText={"Cancel"}
         rightText={"Save"}
-        rightEnabled={props.isValid}
         rightTextClick={props.saveKeywordList}
         nav={props.navigate}
       />

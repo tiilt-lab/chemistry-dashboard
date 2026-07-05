@@ -13,7 +13,6 @@ function DiscussionPage(props){
         title={"Session Graph"}
         leftText={false}
         rightText={"Options"}
-        rightEnabled={true}
         rightTextClick={()=>{props.openForms("checkbox", props.selectedDevice)}}
         nav={props.navigateToSession}
         escToBack={true}

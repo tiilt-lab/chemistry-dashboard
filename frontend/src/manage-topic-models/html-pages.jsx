@@ -13,7 +13,6 @@ function ManageTopicsPage(props) {
                     title={"Manage Topic Models"}
                     leftText={false}
                     rightText={""}
-                    rightEnabled={false}
                     nav={props.navigate}
                 />
                 <div className={pageShell}>

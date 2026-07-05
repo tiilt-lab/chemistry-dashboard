@@ -1,4 +1,5 @@
 import React from "react"
+import { ErrorDialog } from "../components/error-dialog"
 import { Appheader } from "../header/header-component"
 import { DialogBox, WaitingDialog } from "../dialog/dialog-component"
 import { BrandCard } from "../components/brand-panel"
@@ -105,7 +106,6 @@ function ProfileCreationPage(props) {
                         title={props.pageTitle}
                         leftText={false}
                         rightText={""}
-                        rightEnabled={false}
                         nav={() => props.navigateToLogin()}
                     />
                     <RecordingCoach
@@ -122,13 +122,7 @@ function ProfileCreationPage(props) {
                 </div>
             )}
 
-            <DialogBox
-                itsclass={"add-dialog"}
-                heading={"Error"}
-                message={props.alertMessage}
-                show={props.showAlert}
-                closedialog={props.closeAlert}
-            />
+            <ErrorDialog message={props.alertMessage} show={props.showAlert} onClose={props.closeAlert} />
 
             <DialogBox
                 itsclass={"add-dialog"}

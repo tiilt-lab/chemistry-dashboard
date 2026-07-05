@@ -77,3 +77,9 @@ export function speakerColorFor(name, allNames) {
     const i = Math.max(0, sorted.indexOf(name))
     return SPEAKER_PALETTE[i % SPEAKER_PALETTE.length]
 }
+
+// Clock-style HH:MM:SS from seconds (shared by transcripts + reflection dashboards).
+export function formatHMS(s) {
+  const date = new Date(1000 * Math.floor(s));
+  return date.toISOString().substr(11, 8);
+}
