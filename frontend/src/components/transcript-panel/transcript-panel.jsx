@@ -164,7 +164,7 @@ function TranscriptPanel({
                                     }
                                     style={{ borderLeftColor: color }}
                                     className={
-                                        "cursor-pointer rounded-r-lg border-l-[3px] py-2 pr-2 pl-3 transition " +
+                                        "cursor-pointer rounded-r-lg border-l-[3px] py-1 pr-2 pl-3 transition " +
                                         (isSelected
                                             ? "bg-tiilt-soft"
                                             : isPlaying
@@ -176,7 +176,7 @@ function TranscriptPanel({
                                         <span className="font-ahamono w-14 flex-none pt-0.5 text-xs text-tiilt-muted tabular-nums">
                                             {formatSeconds(t.start_time)}
                                         </span>
-                                        <span className="text-sm leading-relaxed text-tiilt-ink">
+                                        <span className="text-sm leading-snug text-tiilt-ink">
                                             {t.speaker_tag ? (
                                                 <span
                                                     className="font-semibold"
