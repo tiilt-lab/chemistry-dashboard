@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useRef, useLayoutEffect } from "react";
+import { formatHMS as formatSeconds } from "../globals";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,10 +57,6 @@ function CollaborationFeedbackDashboard(props) {
 
 
 
-  const formatSeconds = (s) => {
-    const date = new Date(1000 * Math.floor(s));
-    return date.toISOString().substr(11, 8);
-  }
 
   const defaultQuestion = [
     [0, "When did I contribute ideas most strongly?"],

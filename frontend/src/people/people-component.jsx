@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { dlgHeading, dlgBody, dlgLabel, dlgInput, dlgSelect, dlgPrimary, dlgDanger, dlgCancel, dlgError } from "../components/dialog-styles"
 import { useNavigate } from "react-router-dom"
 import { Appheader } from "../header/header-component"
 import { GenericDialogBox } from "../dialog/dialog-component"
@@ -9,21 +10,6 @@ import { ApiService } from "../services/api-service"
 import { StudentModel } from "../models/student"
 import { RaterModel } from "../models/rater"
 
-const dlgHeading = "mb-3 text-lg font-semibold text-tiilt-ink"
-const dlgBody = "flex min-w-[min(22rem,86vw)] flex-col gap-3"
-const dlgLabel = "text-sm font-semibold text-tiilt-ink"
-const dlgInput =
-    "h-11 w-full rounded-lg border border-tiilt-line bg-white px-3 text-base text-tiilt-ink transition outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
-const dlgSelect =
-    "h-11 w-full cursor-pointer rounded-lg border border-tiilt-line bg-white px-3 pr-8 text-base text-tiilt-ink transition outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
-const dlgPrimary =
-    "mt-2 h-11 rounded-lg bg-tiilt font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
-const dlgDanger =
-    "mt-2 h-11 rounded-lg bg-tiilt-danger font-semibold text-white transition hover:brightness-90 active:translate-y-px"
-const dlgCancel =
-    "h-11 rounded-lg border border-tiilt-line bg-white font-semibold text-tiilt-ink transition hover:bg-tiilt-soft active:translate-y-px"
-const dlgError =
-    "rounded-md bg-tiilt-danger-soft px-3 py-2 text-sm text-tiilt-danger"
 
 const rowDeleteClass =
     "rounded-md px-2 py-1 text-xs font-semibold text-tiilt-danger transition hover:bg-tiilt-danger-soft"
@@ -241,7 +227,6 @@ function PeopleComponent() {
                     title={"Students & Raters"}
                     leftText={false}
                     rightText={""}
-                    rightEnabled={false}
                     nav={() => navigate("/home")}
                 />
                 <div className="relative min-h-0 w-full grow overflow-y-auto">

@@ -294,18 +294,6 @@ function PodsOverviewComponent() {
     navigate("/sessions/" + session.id + "/graph");
   };
 
-  const getRightEnabled = () => {
-    if (session === null) {
-      return false;
-    } else if (session !== null) {
-      if (session.recording === undefined) {
-        return false;
-      } else {
-        return session.recording;
-      }
-    }
-  };
-
   const getSessionSpeakers = (sessionID) => {
     const fetchData = new SessionService().getSessionSpeakers(sessionID);
     fetchData.then(
@@ -343,7 +331,6 @@ function PodsOverviewComponent() {
       stopRuns={stopRuns}
       queueState={queueState}
       righttext={getPasscode()}
-      rightenabled={getRightEnabled()}
       session={session}
       openDialog={openDialog}
       navigateToSessions={navigateToSessions}

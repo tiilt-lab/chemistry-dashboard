@@ -10,7 +10,6 @@ function FileUploadPage(props) {
           title={"Upload Files"}
           leftText={false}
           rightText={""}
-          rightEnabled={false}
           nav={props.navTopicModels}
         />
         <div className={pageShell}>

@@ -1,4 +1,5 @@
-import { GenericDialogBox, DialogBox } from "../dialog/dialog-component"
+import { GenericDialogBox } from "../dialog/dialog-component"
+import { ErrorDialog } from "../components/error-dialog"
 import { dlgInput, dlgPrimary } from "../components/dialog-styles"
 import { pageShell, formCard } from "../components/layout-styles"
 import { AppSpinner } from "../spinner/spinner-component"
@@ -42,7 +43,6 @@ function ExpertRatingPage(props) {
                             title={props.pageTitle}
                             leftText={false}
                             rightText={""}
-                            rightEnabled={false}
                             nav={() => props.navigateToLogin()}
                         />
 
@@ -262,13 +262,7 @@ function ExpertRatingPage(props) {
                         </div>
                     )}
             </GenericDialogBox>
-            <DialogBox
-                itsclass={"add-dialog"}
-                heading={"Error"}
-                message={props.alertMessage}
-                show={props.showAlert}
-                closedialog={props.closeAlert}
-            />
+            <ErrorDialog message={props.alertMessage} show={props.showAlert} onClose={props.closeAlert} />
         </>
     )
 }

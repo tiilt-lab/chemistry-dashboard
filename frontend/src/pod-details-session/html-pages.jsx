@@ -15,7 +15,6 @@ function PodComponentSeesionPages(props) {
                     title={props.details === "Group" ? props.sessionDevice.name : props.selectedSpkralias}
                     leftText={false}
                     rightText={"Options"}
-                    rightEnabled={true}
                     rightTextClick={() => props.openDialog("Options")}
                     nav={props.navigateToSession}
                     escToBack={true}

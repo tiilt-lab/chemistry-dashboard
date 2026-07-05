@@ -51,7 +51,3 @@ class Rater(db.Model):
 
    
 
-    @staticmethod
-    def verify_fields(email=None, role=None):
-        message = None
-       

@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+import { ErrorDialog } from "../components/error-dialog"
 import { Appheader } from "../header/header-component"
 import { VoiceRecorder } from "react-voice-recorder-player"
 import {
@@ -45,12 +46,6 @@ function ByodJoinPage(props) {
                             title={props.pageTitle}
                             leftText={false}
                             rightText={"Option"}
-                            rightEnabled={
-                                props.joinwith === "Video" ||
-                                    props.joinwith === "Videocartoonify"
-                                    ? true
-                                    : false
-                            }
                             rightTextClick={() =>
                                 props.joinwith === "Video" ||
                                     props.joinwith === "Videocartoonify"
@@ -909,13 +904,7 @@ function ByodJoinPage(props) {
                 show={props.currentForm === "processing"}
             />
 
-            <DialogBox
-                itsclass={"add-dialog"}
-                heading={"Error"}
-                message={props.alertMessage}
-                show={props.showAlert}
-                closedialog={props.closeAlert}
-            />
+            <ErrorDialog message={props.alertMessage} show={props.showAlert} onClose={props.closeAlert} />
         </>
     )
 }

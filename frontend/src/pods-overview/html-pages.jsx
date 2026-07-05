@@ -1,4 +1,6 @@
 import React from "react"
+import { SessionModel } from "../models/session"
+import { dlgHeading, dlgBody, dlgLabel, dlgSelect, dlgPrimary, dlgCancel } from "../components/dialog-styles"
 import { Appheader } from "../header/header-component"
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
@@ -6,22 +8,11 @@ import { AppSpinner } from "../spinner/spinner-component"
 
 import MicIcon from "../Icons/Mic"
 
-const dlgHeading = "mb-3 text-lg font-semibold text-tiilt-ink"
-const dlgBody = "flex min-w-[min(22rem,86vw)] flex-col gap-3"
-const dlgLabel = "text-sm font-semibold text-tiilt-ink"
-const dlgSelect =
-    "h-11 w-full cursor-pointer rounded-lg border border-tiilt-line bg-white px-3 pr-8 text-base text-tiilt-ink transition outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
-const dlgPrimary =
-    "mt-2 h-11 rounded-lg bg-tiilt font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
-const dlgCancel =
-    "h-11 rounded-lg border border-tiilt-line bg-white font-semibold text-tiilt-ink transition hover:bg-tiilt-soft active:translate-y-px"
 
+// null (hide) for missing durations, else SessionModel's shared H:MM:SS.
 function fmtDur(seconds) {
     if (seconds == null || isNaN(seconds)) return null
-    const m = Math.floor(seconds / 60)
-    const s = Math.floor(seconds % 60)
-    const h = Math.floor(m / 60)
-    return h > 0 ? `${h}:${String(m % 60).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`
+    return SessionModel.formatDuration(seconds)
 }
 
 function PodCard({ device, enrich, onOpen, checked, onToggle, queue, index }) {
@@ -134,7 +125,6 @@ function PodsOverviewPages(props) {
                     title={"Overview"}
                     leftText={false}
                     rightText={props.righttext}
-                    rightEnabled={props.rightenabled}
                     rightTextClick={() => {
                         props.openDialog("Passcode")
                     }}

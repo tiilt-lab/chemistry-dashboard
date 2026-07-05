@@ -2,7 +2,6 @@ from flask import Blueprint, Response, jsonify, request, abort, session
 from utility import sanitize, json_response
 from tables.keyword_list import KeywordList
 from tables.keyword_list_item import KeywordListItem
-import topic_modeling.topicmodeling as topicmodeling
 import logging
 import database
 import wrappers

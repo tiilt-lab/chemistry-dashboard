@@ -23,7 +23,6 @@ function TopicListPage(props) {
           title={props.editMode ? "Topic List" : props.viewTitle}
           leftText={false}
           rightText={props.editMode ? "Tips" : ""}
-          rightEnabled={props.editMode}
           rightTextClick={
             props.editMode ? () => props.toggleDisplay(true, "tips", -1) : null
           }

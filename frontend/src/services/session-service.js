@@ -237,49 +237,6 @@ class SessionService {
     );
   }
 
-  getSpeakerIdTranscripts(deviceId, speakerId) {
-    return this.api.httpRequestCall(
-      `api/v1/sessions/devices/${deviceId}>/speakers/${speakerId}/transcripts`,
-      "GET",
-      {}
-    );
-  }
-
-  getSessionDeviceSpeakerMetrics(sessionDeviceId) {
-    return this.api.httpRequestCall(
-      `api/v1/devices/${sessionDeviceId}/transcripts/speaker_metrics`,
-      "GET",
-      {}
-    );
-  }
-
-  getSessionSpeakerMetrics(sessionId) {
-    const body = {
-      sessionId: sessionId,
-    };
-    return this.api.httpRequestCall(
-      `api/v1/sessions/${sessionId}/transcripts/speaker_metrics`,
-      "POST",
-      body
-    );
-  }
-
-  getTranscriptSpeakerMetrics(transcriptId) {
-    return this.api.httpRequestCall(
-      `api/v1/transcripts/${transcriptId}/speaker_metrics`,
-      "GET",
-      {}
-    );
-  }
-
-  getSpeakerIdTranscriptsForClient(deviceId, speakerId) {
-    return this.api.httpRequestCall(
-      `api/v1/sessions/devices/${deviceId}>/speakers/${speakerId}/transcripts/client`,
-      "GET",
-      {}
-    );
-  }
-
   setDeviceButton(sessionDeviceId, pressed, key) {
     const body = {
       id: sessionDeviceId,
