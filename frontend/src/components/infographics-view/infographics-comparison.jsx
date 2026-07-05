@@ -288,11 +288,13 @@ function AppInfographicsComparison(props) {
                                 type={"w-full"}
                                 heading={`Visual Analytics`}
                             >
-                                <div className="mb-2 flex flex-col gap-0.5">
+                                {(props.spkr1VideoMetrics || []).length > 0 && (
+<div className="mb-2 flex flex-col gap-0.5">
                                     <ModelNote label={models && models.attention && models.attention.label} fallback="Gaze-LLE (DINOv2, open SOTA) + YOLOv5m head detector" />
                                     <ModelNote label={models && models.emotion && models.emotion.label} fallback="HSEmotion EfficientNet-B2 (AffectNet-8)" />
                                     <ModelNote label={models && models.objects && models.objects.label} fallback="YOLO11m object detector (COCO)" />
                                 </div>
+)}
                                 <AppIndividualVideoFeaturesComponent
                                     session={props.session}
                                     videometrics={props.spkr1VideoMetrics}
@@ -311,11 +313,13 @@ function AppInfographicsComparison(props) {
                                 type={"w-full"}
                                 heading={`Visual Analytics`}
                             >
-                                <div className="mb-2 flex flex-col gap-0.5">
+                                {(props.spkr2VideoMetrics || []).length > 0 && (
+<div className="mb-2 flex flex-col gap-0.5">
                                     <ModelNote label={models && models.attention && models.attention.label} fallback="Gaze-LLE (DINOv2, open SOTA) + YOLOv5m head detector" />
                                     <ModelNote label={models && models.emotion && models.emotion.label} fallback="HSEmotion EfficientNet-B2 (AffectNet-8)" />
                                     <ModelNote label={models && models.objects && models.objects.label} fallback="YOLO11m object detector (COCO)" />
                                 </div>
+)}
                                 <AppIndividualVideoFeaturesComponent
                                     session={props.session}
                                     videometrics={props.spkr2VideoMetrics}
@@ -334,9 +338,11 @@ function AppInfographicsComparison(props) {
                                 type={"w-full"}
                                 heading={`Participation and Impact Style`}
                             >
-                                <div className="mb-2">
+                                {(props.spkr1Transcripts || []).length > 0 && (
+<div className="mb-2">
                                     <ModelNote label={models && models.participation && models.participation.label} fallback="sentence-transformer semantic cohesion (all-mpnet-base-v2)" />
                                 </div>
+)}
                                 <AppIndividualFeaturesComponent
                                     session={props.session}
                                     transcripts={props.spkr1Transcripts}
@@ -353,9 +359,11 @@ function AppInfographicsComparison(props) {
                                 type={"w-full"}
                                 heading={`Participation and Impact Style`}
                             >
-                                <div className="mb-2">
+                                {(props.spkr2Transcripts || []).length > 0 && (
+<div className="mb-2">
                                     <ModelNote label={models && models.participation && models.participation.label} fallback="sentence-transformer semantic cohesion (all-mpnet-base-v2)" />
                                 </div>
+)}
                                 <AppIndividualFeaturesComponent
                                     session={props.session}
                                     transcripts={props.spkr2Transcripts}
@@ -410,9 +418,11 @@ function AppInfographicsComparison(props) {
                                 type={"w-full"}
                                 heading={"Radar chart"}
                             >
-                                <div className="mb-2">
+                                {((props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts) || []).length > 0 && (
+<div className="mb-2">
                                     <ModelNote prefix="Scored from the transcript with" label={models && models.scoring && models.scoring.label} fallback="the LIWC & Harvard General Inquirer lexicons" />
                                 </div>
+)}
                                 <AppRadarComponent
                                     session={props.session}
                                     transcripts={
@@ -435,9 +445,11 @@ function AppInfographicsComparison(props) {
                                 type={"w-full"}
                                 heading={"Radar chart"}
                             >
-                                <div className="mb-2">
+                                {(props.spkr2Transcripts || []).length > 0 && (
+<div className="mb-2">
                                     <ModelNote prefix="Scored from the transcript with" label={models && models.scoring && models.scoring.label} fallback="the LIWC & Harvard General Inquirer lexicons" />
                                 </div>
+)}
                                 <AppRadarComponent
                                     session={props.session}
                                     transcripts={props.spkr2Transcripts}
@@ -454,9 +466,11 @@ function AppInfographicsComparison(props) {
                                 type={"w-full"}
                                 heading={"Keyword detection"}
                             >
-                                <div className="mb-2">
+                                {((props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts) || []).length > 0 && (
+<div className="mb-2">
                                     <ModelNote prefix="Matched with" label={models && models.keywords && models.keywords.label} fallback="word2vec semantic matching (GoogleNews-300)" />
                                 </div>
+)}
                                 <AppKeywordsComponent
                                     session={props.session}
                                     sessionDevice={props.sessionDevice}
@@ -479,9 +493,11 @@ function AppInfographicsComparison(props) {
                                 type={"w-full"}
                                 heading={"Keyword detection"}
                             >
-                                <div className="mb-2">
+                                {(props.spkr2Transcripts || []).length > 0 && (
+<div className="mb-2">
                                     <ModelNote prefix="Matched with" label={models && models.keywords && models.keywords.label} fallback="word2vec semantic matching (GoogleNews-300)" />
                                 </div>
+)}
                                 <AppKeywordsComponent
                                     session={props.session}
                                     sessionDevice={props.sessionDevice}
