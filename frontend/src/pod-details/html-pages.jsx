@@ -1,4 +1,5 @@
 import { GenericDialogBox, WaitingDialog } from "../dialog/dialog-component"
+import { ErrorDialog } from "../components/error-dialog"
 import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { Appheader } from "../header/header-component"
@@ -284,6 +285,12 @@ function PodComponentPages(props) {
                 heading={"Processing..."}
                 message={"Please wait..."}
                 show={props.currentForm === "awaitingllmresponse"}
+            />
+
+            <ErrorDialog
+                message={props.llmError}
+                show={!!props.llmError}
+                onClose={props.clearLlmError}
             />
         </>
     )
