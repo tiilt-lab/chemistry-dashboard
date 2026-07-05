@@ -98,15 +98,6 @@ function HomeScreen() {
     const timeOfDay = updateTime()
     const navigate = useNavigate()
 
-    const navigateToHelp = () => {
-        window.open(
-            window.location.protocol +
-                "//" +
-                window.location.hostname +
-                "/help/Default.htm",
-        )
-    }
-
     const logout = () => {
         const ret = new AuthService().logout()
         ret.then(
@@ -142,13 +133,6 @@ function HomeScreen() {
                     >
                         <img alt="" src={settings} className="h-4 w-4" />
                         Settings
-                    </button>
-                    <button
-                        onClick={navigateToHelp}
-                        className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
-                    >
-                        <img alt="" src={question} className="h-4 w-4" />
-                        Help
                     </button>
                     <button
                         onClick={logout}
