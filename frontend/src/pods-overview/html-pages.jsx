@@ -24,8 +24,13 @@ function fmtDur(seconds) {
     return h > 0 ? `${h}:${String(m % 60).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`
 }
 
-function PodCard({ device, enrich, onOpen, checked, onToggle, queue }) {
+function PodCard({ device, enrich, onOpen, checked, onToggle, queue, index }) {
     const e = enrich || {}
+    const name =
+        device.name && String(device.name).trim()
+            ? device.name
+            : `Pod ${index + 1}`
+    const dur = fmtDur(e.duration)
     return (
         <div className="flex w-full items-center gap-2">
         <input
@@ -37,11 +42,11 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue }) {
         />
         <button
             onClick={onOpen}
-            className="group flex w-full items-center gap-2.5 rounded-lg border border-tiilt-line bg-white px-3 py-1.5 text-left transition hover:border-tiilt hover:shadow-[0_10px_24px_-16px_rgba(42,23,74,0.5)] active:translate-y-px"
+            className="group flex w-full items-center gap-2.5 rounded-lg border border-tiilt-line bg-white px-3 py-2 text-left transition hover:border-tiilt hover:shadow-[0_10px_24px_-16px_rgba(42,23,74,0.5)] active:translate-y-px"
         >
             <span
                 className={
-                    "relative flex h-8 w-8 flex-none items-center justify-center rounded-md " +
+                    "relative flex h-9 w-9 flex-none items-center justify-center rounded-md " +
                     (device.connected
                         ? "bg-tiilt-danger-soft text-tiilt-danger"
                         : "bg-tiilt-soft text-tiilt-muted")
@@ -61,57 +66,53 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue }) {
                     <span className="absolute -top-1 -right-1 h-3 w-3 animate-ping rounded-full bg-tiilt-orange" />
                 ) : null}
             </span>
-            <span className="min-w-0 truncate text-sm font-semibold text-tiilt-ink">
-                {device.name}
-            </span>
-            <span
-                className={
-                    "flex-none rounded-full px-1.5 py-0.5 text-[11px] font-semibold " +
-                    (device.connected
-                        ? "bg-tiilt-danger-soft text-tiilt-danger"
-                        : "bg-tiilt-line/40 text-tiilt-muted")
-                }
-            >
-                {device.connected ? "Online" : "Offline"}
-            </span>
-            <span className="grow" />
-            <div className="flex flex-none items-center gap-2 text-xs text-tiilt-muted">
-                {queue === "error" ? (
-                    <span className="flex-none rounded-full bg-tiilt-danger-soft px-2 py-0.5 font-semibold text-tiilt-danger">
-                        Error
+            <div className="min-w-0 grow">
+                <div className="flex items-center gap-2">
+                    <span className="min-w-0 truncate text-sm font-semibold text-tiilt-ink">
+                        {name}
                     </span>
-                ) : queue === "queued" ? (
-                    <span className="flex-none rounded-full bg-tiilt-soft px-2 py-0.5 font-semibold text-tiilt">
-                        Queued
-                    </span>
-                ) : queue === "running" || e.analysis_running ? (
-                    <span className="flex flex-none items-center gap-1 rounded-full bg-tiilt-orange/15 px-2 py-0.5 font-semibold text-tiilt-orange">
-                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-tiilt-orange" />
-                        Running…
-                    </span>
-                ) : e.has_data === false ? (
-                    <span className="flex-none rounded-full bg-tiilt-line/40 px-2 py-0.5 font-semibold text-tiilt-muted">
-                        No data
-                    </span>
-                ) : (device.posthoc_analyzed_date || e.posthoc_analyzed_date) ? (
-                    <span
-                        title={"Full analysis run " + (device.posthoc_analyzed_date || e.posthoc_analyzed_date)}
-                        className="flex flex-none items-center gap-1 rounded-full bg-tiilt-teal/15 px-2 py-0.5 font-semibold text-tiilt-teal"
-                    >
-                        Analyzed
-                    </span>
-                ) : null}
-                {e.speaker_count > 0 ? (
-                    <span>
-                        {e.speaker_count}{" "}
-                        {e.speaker_count === 1 ? "participant" : "participants"}
-                    </span>
-                ) : null}
-                {fmtDur(e.duration) ? (
-                    <span className="font-ahamono tabular-nums">
-                        {fmtDur(e.duration)}
-                    </span>
-                ) : null}
+                    {device.connected ? (
+                        <span className="flex-none rounded-full bg-tiilt-danger-soft px-1.5 py-0.5 text-[11px] font-semibold text-tiilt-danger">
+                            Online
+                        </span>
+                    ) : null}
+                </div>
+                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-tiilt-muted">
+                    {queue === "error" ? (
+                        <span className="rounded-full bg-tiilt-danger-soft px-2 py-0.5 font-semibold text-tiilt-danger">
+                            Error
+                        </span>
+                    ) : queue === "queued" ? (
+                        <span className="rounded-full bg-tiilt-soft px-2 py-0.5 font-semibold text-tiilt">
+                            Queued
+                        </span>
+                    ) : queue === "running" || e.analysis_running ? (
+                        <span className="flex items-center gap-1 rounded-full bg-tiilt-orange/15 px-2 py-0.5 font-semibold text-tiilt-orange">
+                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-tiilt-orange" />
+                            Running…
+                        </span>
+                    ) : e.has_data === false ? (
+                        <span className="rounded-full bg-tiilt-line/40 px-2 py-0.5 font-semibold text-tiilt-muted">
+                            No data
+                        </span>
+                    ) : (device.posthoc_analyzed_date || e.posthoc_analyzed_date) ? (
+                        <span
+                            title={"Full analysis run " + (device.posthoc_analyzed_date || e.posthoc_analyzed_date)}
+                            className="flex items-center gap-1 rounded-full bg-tiilt-teal/15 px-2 py-0.5 font-semibold text-tiilt-teal"
+                        >
+                            Analyzed
+                        </span>
+                    ) : null}
+                    {e.speaker_count > 0 ? (
+                        <span>
+                            {e.speaker_count}{" "}
+                            {e.speaker_count === 1 ? "participant" : "participants"}
+                        </span>
+                    ) : null}
+                    {dur ? (
+                        <span className="font-ahamono tabular-nums">{dur}</span>
+                    ) : null}
+                </div>
             </div>
             <span
                 aria-hidden="true"
@@ -179,19 +180,24 @@ function PodsOverviewPages(props) {
                     )}
                     <div className="min-h-0 grow overflow-y-auto">
                         <div className="mx-auto w-full max-w-3xl px-4 py-8">
-                            <div className="mb-4 flex items-baseline justify-between gap-3">
-                                <h2 className="text-lg font-semibold text-tiilt-ink">
-                                    Pods
-                                    {props.sessionDevices !== null &&
-                                    props.initialized ? (
-                                        <span className="ml-1.5 font-normal text-tiilt-muted">
-                                            ({props.sessionDevices.length})
-                                        </span>
-                                    ) : (
-                                        <></>
-                                    )}
-                                </h2>
-                                <span className="flex items-center gap-3 text-sm text-tiilt-muted">
+                            <div className="mb-4 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-tiilt-ink">
+                                        Pods
+                                        {props.sessionDevices !== null &&
+                                        props.initialized ? (
+                                            <span className="ml-1.5 font-normal text-tiilt-muted">
+                                                ({props.sessionDevices.length})
+                                            </span>
+                                        ) : (
+                                            <></>
+                                        )}
+                                    </h2>
+                                    <div className="mt-0.5 text-xs text-tiilt-muted">
+                                        Open a pod to view its analytics
+                                    </div>
+                                </div>
+                                <span className="flex flex-none items-center gap-3 text-sm text-tiilt-muted">
                                     {Object.values(props.queueState || {}).some((v) => v === "queued" || v === "running") ||
                                     Object.values(props.enriched || {}).some((e) => e && e.analysis_running) ? (
                                         <button
@@ -201,7 +207,7 @@ function PodsOverviewPages(props) {
                                             Stop runs
                                         </button>
                                     ) : null}
-                                    <label className="flex cursor-pointer items-center gap-1.5 text-xs">
+                                    <label className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-xs">
                                         <input
                                             type="checkbox"
                                             className="h-4 w-4 cursor-pointer accent-tiilt"
@@ -222,15 +228,11 @@ function PodsOverviewPages(props) {
                                     {Object.values(props.selected || {}).filter(Boolean).length > 0 ? (
                                         <button
                                             onClick={props.runSelected}
-                                            className="rounded-lg bg-tiilt px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
+                                            className="rounded-lg bg-tiilt px-3 py-1.5 text-xs font-semibold whitespace-nowrap text-white transition hover:bg-tiilt-deep active:translate-y-px"
                                         >
-                                            Run full analysis on selected (
-                                            {Object.values(props.selected || {}).filter(Boolean).length}
-                                            )
+                                            Run analysis ({Object.values(props.selected || {}).filter(Boolean).length})
                                         </button>
-                                    ) : (
-                                        <span>Open a pod to view its analytics</span>
-                                    )}
+                                    ) : null}
                                 </span>
                             </div>
                             {props.sessionDevices !== null &&
@@ -255,6 +257,7 @@ function PodsOverviewPages(props) {
                                         (device, index) => (
                                             <PodCard
                                                 key={index}
+                                                index={index}
                                                 device={device}
                                                 enrich={props.enriched && props.enriched[device.id]}
                                                 checked={props.selected && props.selected[device.id]}
