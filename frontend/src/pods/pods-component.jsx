@@ -21,7 +21,7 @@ function PodsComponent(props){
     const fetchData = new DeviceService().getDevices(false, null, null, true)
     fetchData.then(
       response => {
-        if (response == 200) {
+        if (response.status === 200) {
           const resp2 = response.json()
           resp2.then(
             respdevices => {
