@@ -16,6 +16,7 @@ from handlers import session_handler
 import wrappers
 import config as cf
 import socketio_helper
+import posthoc_state
 import string
 import csv
 import io
@@ -34,6 +35,7 @@ def get_sessions(user, **kwargs):
     posthoc_ids = database.get_session_ids_with_posthoc(owner_id=user['id'])
     pod_counts = database.get_session_device_counts(owner_id=user['id'])
     participant_counts = database.get_session_participant_counts(owner_id=user['id'])
+    running_session_ids = database.get_session_ids_for_devices(posthoc_state.running_device_ids())
     result = []
     for session in sessions:
         data = session.json()
@@ -41,6 +43,7 @@ def get_sessions(user, **kwargs):
         data['has_posthoc'] = session.id in posthoc_ids
         data['pod_count'] = pod_counts.get(session.id, 0)
         data['participant_count'] = participant_counts.get(session.id, 0)
+        data['analysis_running'] = session.id in running_session_ids
         result.append(data)
     return json_response(result)
 
@@ -535,6 +538,7 @@ def session_devices(session_id, **kwargs):
             # True if the pod captured any usable data (transcript or video);
             # ~17% of pods recorded nothing and should be flagged, not analyzed.
             data['has_data'] = (durations.get(device.id) is not None) or (device.id in video_pods)
+            data['analysis_running'] = posthoc_state.is_running(device.id)
             result.append(data)
         return json_response(result)
 

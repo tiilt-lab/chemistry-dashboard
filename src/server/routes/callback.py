@@ -11,6 +11,7 @@ import wrappers
 import config as cf
 import requests
 from handlers import callback_handlers
+import posthoc_state
 
 api_routes = Blueprint('callback', __name__)
 
@@ -88,6 +89,7 @@ def posthoc_reset(**kwargs):
     device = database.get_session_devices(processing_key=content.get('source', ''))
     if device:
         database.delete_pod_analysis(device.id, scope=content.get('scope', 'audio'))
+        posthoc_state.mark_running(device.id, content.get('scope', 'audio'))
         logging.info('Post-hoc reset (%s) for device %d.', content.get('scope'), device.id)
     return json_response()
 
@@ -104,6 +106,7 @@ def posthoc_completed(**kwargs):
     device = database.get_session_devices(processing_key=key)
     if device:
         database.mark_session_device_posthoc(device.id, models=models)
+        posthoc_state.mark_done(device.id, content.get('scope'))
         logging.info('Post-hoc marked complete for device %d (server-side).', device.id)
     return json_response()
 

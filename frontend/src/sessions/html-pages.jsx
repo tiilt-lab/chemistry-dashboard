@@ -208,7 +208,12 @@ function PodDurations({ sessionId }) {
                                             : "participants"}
                                     </span>
                                 ) : null}
-                                {pod.posthoc_analyzed_date ? (
+                                {pod.analysis_running ? (
+                                    <span className="flex flex-none items-center gap-1 rounded-full bg-tiilt-orange/15 px-1.5 py-0.5 font-semibold text-tiilt-orange">
+                                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-tiilt-orange" />
+                                        Analyzing…
+                                    </span>
+                                ) : pod.posthoc_analyzed_date ? (
                                     <span className="flex-none rounded-full bg-tiilt-teal/15 px-1.5 py-0.5 font-semibold text-tiilt-teal">
                                         Analyzed
                                     </span>
@@ -306,6 +311,15 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
                                     : "participants"}
                             </span>
                         </>
+                    ) : null}
+                    {session.analysis_running ? (
+                        <span
+                            title="A full analysis is running right now"
+                            className="flex items-center gap-1 rounded-full bg-tiilt-orange/15 px-1.5 py-0.5 font-semibold text-tiilt-orange"
+                        >
+                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-tiilt-orange" />
+                            Analyzing…
+                        </span>
                     ) : null}
                     {session.has_posthoc ? (
                         <span

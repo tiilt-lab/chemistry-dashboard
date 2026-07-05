@@ -45,13 +45,13 @@ def post_posthoc_reset(source, scope):
         logging.warning('posthoc_reset callback failed: {0}'.format(e))
 
 
-def post_posthoc_completed(source, models=None):
+def post_posthoc_completed(source, models=None, scope='audio'):
     # Tell the server a pod's post-hoc run finished, so it's marked complete even
     # if the triggering browser disconnected. URL derived from the transcript
     # callback's base (.../api/v1/callback/).
     try:
         base = config.processing_callback().rsplit('/', 1)[0]
-        requests.post(base + '/posthoc_completed', json={'source': source, 'models': models})
+        requests.post(base + '/posthoc_completed', json={'source': source, 'models': models, 'scope': scope})
     except Exception as e:
         logging.warning('posthoc_completed callback failed: {0}'.format(e))
 
