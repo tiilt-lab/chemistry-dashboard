@@ -102,6 +102,14 @@ class VideoProcessorPosthoc:
                 for start in range(0, int(vidclip.duration), self.video_interval):
                     end = min(start + self.video_interval, vidclip.duration)
                     dur = end-start
+                    # Live progress to the trigger UI (position in the video).
+                    try:
+                        _pct = round(100.0 * start / max(1, vidclip.duration))
+                        self.send_json({'type': 'progress',
+                                        'message': 'Analyzing video {0}s / {1}s'.format(int(start), int(vidclip.duration)),
+                                        'percent': _pct})
+                    except Exception:
+                        pass
 
                     if self.running == False:
                         logging.info("Video processor posthoc thread stop initiated")

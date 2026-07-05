@@ -199,6 +199,14 @@ class AudioProcessorPosthoc:
                     transcript_data, transcript_audio_data, start_time, end_time))
                 transcript_thread.daemon = True
                 transcript_thread.start()
+                # Live progress to the trigger UI (utterance count).
+                self.utterances_seen = getattr(self, 'utterances_seen', 0) + 1
+                if self.utterances_seen % 5 == 0:
+                    try:
+                        self.send_json({'type': 'progress',
+                                        'message': 'Processed {0} utterances'.format(self.utterances_seen)})
+                    except Exception:
+                        pass
         if self.running_processes == 0:
             self.__complete_callback()
         logging.info('Processing thread stopped for {0}.'.format(
