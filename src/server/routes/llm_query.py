@@ -15,6 +15,16 @@ api_routes = Blueprint('llmquery', __name__)
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
+# Fail loudly at startup instead of 400ing every LLM request at runtime:
+# real Google API keys are 39 chars starting with "AIza".
+if not GOOGLE_API_KEY or len(GOOGLE_API_KEY) < 30 or not GOOGLE_API_KEY.startswith("AIza"):
+    logging.warning(
+        "GOOGLE_API_KEY is missing or looks like a placeholder (len=%s) — "
+        "LLM (Gemini) features (reflection dashboards, Q&A, summaries) will "
+        "fail until a real key is set in src/server/.env",
+        len(GOOGLE_API_KEY or ""),
+    )
+
 client = genai.Client(api_key=GOOGLE_API_KEY)
 
 @api_routes.route('/api/v1/llmqueries/generate_llm_feedback_based_on_metrics', methods=['POST'])

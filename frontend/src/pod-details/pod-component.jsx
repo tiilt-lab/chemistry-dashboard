@@ -22,6 +22,9 @@ function PodComponent() {
   const [displayVideoMetrics, setDisplayVideoMetrics] = useState([])
   const [currentTranscript, setCurrentTranscript] = useState({});
   const [currentForm, setCurrentForm] = useState("");
+  // Human-visible reason when the AI reflection can't load (LLM/api errors
+  // used to fail silently — the toolbar button just did nothing).
+  const [llmError, setLlmError] = useState("");
   const [sessionClosing, setSessionClosing] = useState(false);
   const [subscriptions, setSubscriptions] = useState([]);
   const [deleteDeviceToggle, setDeleteDeviceToggle] = useState(false);
@@ -505,16 +508,18 @@ function PodComponent() {
         setSelectedMomentIdAndIndex([0, selectedParticipantSynthesizedData.current.participant_level_metric[0].windowid])
         setCurrentForm("");
         return true
-      } else if (response.status === 400) {
-        console.log("LLM api response", response.message)
+      } else {
+        const errObj = await response.json().catch(() => ({}))
         setCurrentForm("")
+        setLlmError(
+          "Couldn't generate the AI reflection: " +
+          (errObj.message || ("server returned " + response.status)),
+        )
         return false
       }
     } catch (error) {
-      console.log(
-        "podcomponent loadReflectiondashboard",
-        error,
-      )
+      setCurrentForm("")
+      setLlmError("Couldn't generate the AI reflection: " + error)
       return false
     }
   }
@@ -538,6 +543,12 @@ function PodComponent() {
   }
 
   const loadReflectiondashboard = async (view) => {
+    if (participants.current.length === 0) {
+      setLlmError(
+        "No synthesized participant data for this pod yet — run a full analysis first.",
+      )
+      return
+    }
     if (participants.current.length > 0) {
       let actionstatus = await extractParticipantData(participants.current[0])
       if (actionstatus) {
@@ -608,6 +619,8 @@ function PodComponent() {
       loading={loading}
       onSessionClosing={onSessionClosing}
       currentForm={currentForm}
+      llmError={llmError}
+      clearLlmError={() => setLlmError("")}
       currentTranscript={currentTranscript}
       closeDialog={closeDialog}
       seeAllTranscripts={seeAllTranscripts}
