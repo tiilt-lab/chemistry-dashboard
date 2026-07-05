@@ -56,9 +56,19 @@ function SortControl({
     setVideoFilter,
     videoCount,
     audioCount,
+    searchQuery,
+    setSearchQuery,
 }) {
     return (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search sessions…"
+                aria-label="Search sessions by name"
+                className="h-9 w-full rounded-lg border border-tiilt-line bg-white px-3 text-sm text-tiilt-ink transition outline-none placeholder:text-tiilt-muted focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30 sm:order-last sm:w-56"
+            />
             <div className="flex items-center gap-1 rounded-lg border border-tiilt-line bg-tiilt-ground p-1">
                 <FilterTab
                     active={videoFilter === "all"}
@@ -314,12 +324,19 @@ function PodDurations({ sessionId }) {
     )
 }
 
-function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
+function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, onToggle }) {
     const [expanded, setExpanded] = useState(false)
     const hasPods = session.pod_count != null && session.pod_count > 0
     return (
         <li className={rowClass}>
             <div className={rowInnerClass}>
+            <input
+                type="checkbox"
+                checked={!!checked}
+                onChange={onToggle}
+                aria-label={`Select session ${session.title}`}
+                className="h-4 w-4 flex-none cursor-pointer accent-tiilt"
+            />
             <span
                 className={
                     "flex h-8 w-8 flex-none items-center justify-center rounded-md " +
@@ -356,7 +373,10 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
                 onClick={() => onOpen(session)}
                 className="flex min-w-0 grow cursor-pointer flex-col text-left"
             >
-                <span className="truncate text-base font-semibold text-tiilt-ink">
+                <span
+                    title={session.title}
+                    className="truncate text-base font-semibold text-tiilt-ink"
+                >
                     {session.title}
                 </span>
                 <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-tiilt-muted">
@@ -648,12 +668,39 @@ function DiscussionSessionPage(props) {
                                 <SortControl
                                     value={props.sortBy}
                                     onChange={props.setSortBy}
+                                    searchQuery={props.searchQuery}
+                                    setSearchQuery={props.setSearchQuery}
                                     count={props.videoCount + props.audioCount}
                                     videoFilter={props.videoFilter}
                                     setVideoFilter={props.setVideoFilter}
                                     videoCount={props.videoCount}
                                     audioCount={props.audioCount}
                                 />
+                                {props.selectedCount > 0 ? (
+                                    <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-tiilt-line bg-tiilt-soft/50 px-3.5 py-2 text-sm">
+                                        <span className="font-semibold text-tiilt-ink">
+                                            {props.selectedCount} selected
+                                        </span>
+                                        <button
+                                            onClick={() => props.openBulkDialog("MoveSessions")}
+                                            className="rounded-lg border border-tiilt-line bg-white px-3 py-1.5 text-xs font-semibold text-tiilt-ink transition hover:border-tiilt hover:bg-tiilt-soft active:translate-y-px"
+                                        >
+                                            Move to…
+                                        </button>
+                                        <button
+                                            onClick={() => props.openBulkDialog("DeleteSessions")}
+                                            className="rounded-lg border border-tiilt-danger/40 bg-tiilt-danger-soft px-3 py-1.5 text-xs font-semibold text-tiilt-danger transition hover:border-tiilt-danger active:translate-y-px"
+                                        >
+                                            Delete…
+                                        </button>
+                                        <button
+                                            onClick={props.clearSelected}
+                                            className="ml-auto text-xs font-semibold text-tiilt-muted transition hover:text-tiilt"
+                                        >
+                                            Clear
+                                        </button>
+                                    </div>
+                                ) : null}
                                 {props.displayedSessions.length > 0 ? (
                                     <ul className="flex flex-col gap-1.5">
                                         {props.displayedSessions.map(
@@ -661,6 +708,8 @@ function DiscussionSessionPage(props) {
                                                 <SessionRow
                                                     key={index}
                                                     session={session}
+                                                    checked={props.selectedIds[session.id]}
+                                                    onToggle={() => props.toggleSelected(session.id)}
                                                     onOpen={props.goToSession}
                                                     openSessionDialog={
                                                         props.openSessionDialog
@@ -973,6 +1022,72 @@ function DiscussionSessionPage(props) {
                             onClick={props.closeDialog}
                         >
                             {" "}
+                            Cancel
+                        </button>
+                    </div>
+                ) : (
+                    <></>
+                )}
+
+                {props.currentForm === "MoveSessions" ? (
+                    <div
+                        className={dlgWindow}
+                        style={{ minWidth: "min(20rem, 76vw)" }}
+                    >
+                        <div className={dlgHeading}>
+                            Move {props.selectedCount} session{props.selectedCount === 1 ? "" : "s"}
+                        </div>
+                        <AppFolderSelectComponent
+                            selectableFolders={props.selectableFolders}
+                            setFolderSelect={props.setFolderSelect}
+                            breadcrumbs={props.breadcrumbs}
+                        />
+                        {props.folderSelect !== null ? (
+                            <button
+                                className={dlgPrimary}
+                                onClick={() =>
+                                    props.bulkMoveSessions(props.folderSelect)
+                                }
+                            >
+                                Move
+                            </button>
+                        ) : (
+                            <></>
+                        )}
+                        <button
+                            className={dlgCancel}
+                            onClick={props.closeDialog}
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                ) : (
+                    <></>
+                )}
+
+                {props.currentForm === "DeleteSessions" ? (
+                    <div
+                        className={dlgWindow}
+                        style={{ minWidth: "min(20rem, 76vw)" }}
+                    >
+                        <div className={dlgHeading}>
+                            Delete {props.selectedCount} session{props.selectedCount === 1 ? "" : "s"}
+                        </div>
+                        <div className={style["dialog-body"]}>
+                            This permanently deletes the selected sessions and
+                            all of their recordings and analyses. This cannot
+                            be undone.
+                        </div>
+                        <button
+                            className={style["delete-button"]}
+                            onClick={props.bulkDeleteSessions}
+                        >
+                            Delete {props.selectedCount}
+                        </button>
+                        <button
+                            className={dlgCancel}
+                            onClick={props.closeDialog}
+                        >
                             Cancel
                         </button>
                     </div>

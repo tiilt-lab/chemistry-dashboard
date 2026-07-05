@@ -15,9 +15,17 @@ function AppContextMenu(props) {
     if(props.setcallback!=undefined){
     props.setcallback(toggle)
     }
-    document.body.addEventListener("click", onClickOutside);
-    return () => document.removeEventListener("click", onClickOutside);
   }, [])
+
+  // Close on outside click — listener exists only while the menu is open.
+  // (It used to be registered permanently per menu instance and called
+  // preventDefault on every click, which cancelled native default actions
+  // like checkbox toggles anywhere on the page.)
+  useEffect(() => {
+    if (isOpen) return;
+    document.body.addEventListener("click", onClickOutside);
+    return () => document.body.removeEventListener("click", onClickOutside);
+  }, [isOpen])
 
   // Escape closes the open menu and returns focus to the trigger.
   useEffect(() => {
@@ -35,8 +43,6 @@ function AppContextMenu(props) {
   const onClickOutside = (e) => {
       const element = e.target;
       if (ref.current && !ref.current.contains(element)) {
-        e.preventDefault();
-        e.stopPropagation();
         setIsopen(true);
       }
   };

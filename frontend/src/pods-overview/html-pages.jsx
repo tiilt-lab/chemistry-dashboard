@@ -33,8 +33,19 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue, index }) {
             className="h-4 w-4 flex-none cursor-pointer accent-tiilt"
         />
         <button
-            onClick={onOpen}
-            className="group flex w-full items-center gap-2.5 rounded-lg border border-tiilt-line bg-white px-3 py-2 text-left transition hover:border-tiilt hover:shadow-[0_10px_24px_-16px_rgba(42,23,74,0.5)] active:translate-y-px"
+            onClick={e.has_data === false ? undefined : onOpen}
+            disabled={e.has_data === false}
+            title={
+                e.has_data === false
+                    ? "No data was recorded for this pod — there is nothing to view"
+                    : undefined
+            }
+            className={
+                "group flex w-full items-center gap-2.5 rounded-lg border border-tiilt-line bg-white px-3 py-2 text-left transition " +
+                (e.has_data === false
+                    ? "cursor-not-allowed opacity-60"
+                    : "hover:border-tiilt hover:shadow-[0_10px_24px_-16px_rgba(42,23,74,0.5)] active:translate-y-px")
+            }
         >
             <span
                 className={
@@ -125,6 +136,7 @@ function PodsOverviewPages(props) {
                     title={"Overview"}
                     leftText={false}
                     rightText={props.righttext}
+                    rightPill={props.rightpill}
                     rightTextClick={() => {
                         props.openDialog("Passcode")
                     }}

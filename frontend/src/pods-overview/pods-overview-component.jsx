@@ -179,16 +179,19 @@ function PodsOverviewComponent() {
     }
   };
 
+  // Status (closed/locked) renders as a non-clickable pill; only a live
+  // passcode stays a clickable header action (opens the Passcode dialog).
+  const getRightPill = () => {
+    if (session !== null && session.end_date) return "Closed";
+    if (session !== null && session.passcode == null) return "Locked";
+    return null;
+  };
+
   const getPasscode = () => {
-    if (session !== null && session.end_date) {
-      return "CLOSED";
-    } else if (session !== null && session.passcode == null) {
-      return "LOCKED";
-    } else if (session !== null) {
+    if (session !== null && !session.end_date && session.passcode != null) {
       return session.passcode;
-    } else {
-      return "None";
     }
+    return "";
   };
 
   const addPodToSession = (deviceId) => {
@@ -331,6 +334,7 @@ function PodsOverviewComponent() {
       stopRuns={stopRuns}
       queueState={queueState}
       righttext={getPasscode()}
+      rightpill={getRightPill()}
       session={session}
       openDialog={openDialog}
       navigateToSessions={navigateToSessions}
