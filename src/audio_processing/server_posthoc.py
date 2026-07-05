@@ -5,6 +5,7 @@ import logging
 import wave
 import scipy.signal
 import config as cf
+import callbacks
 import numpy as np
 import soundfile as sf
 import traceback
@@ -364,8 +365,12 @@ class ServerProtocol(WebSocketServerProtocol):
             return in_data    
 
     def send_json(self, message):
-        payload = json.dumps(message).encode('utf8')
-        self.sendMessage(payload, isBinary = False)
+        # Best-effort: probes/idle closes mean the socket may already be gone.
+        try:
+            payload = json.dumps(message).encode('utf8')
+            self.sendMessage(payload, isBinary = False)
+        except Exception:
+            pass
 
     def send_close(self, message):
         self.send_json({'type': 'end', 'message': message})

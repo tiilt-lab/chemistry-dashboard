@@ -306,8 +306,12 @@ class ServerProtocol(WebSocketServerProtocol):
 
 
     def send_json(self, message):
-        payload = json.dumps(message).encode('utf8')
-        self.sendMessage(payload, isBinary = False)
+        # Best-effort: probes/idle closes mean the socket may already be gone.
+        try:
+            payload = json.dumps(message).encode('utf8')
+            self.sendMessage(payload, isBinary = False)
+        except Exception:
+            pass
 
     def signal_start(self):
         self.video_processor = VideoProcessorPosthoc(self.facial_emotion_detector,self.image_object_detection,self.attention_detection,self.video_metric_analytics,
