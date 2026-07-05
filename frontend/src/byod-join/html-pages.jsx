@@ -235,7 +235,7 @@ function ByodJoinPage(props) {
                                                                 "click-mask"
                                                                 ]
                                                             }
-                                                            onClick={() => { }}
+                                                            aria-hidden="true"
                                                         ></div>
                                                         <div className="flew-row flex grow text-center">
                                                             <div className="grow font-sans text-lg/loose font-bold text-tiilt-ink">
@@ -393,7 +393,7 @@ function ByodJoinPage(props) {
                                                                 "click-mask"
                                                                 ]
                                                             }
-                                                            onClick={() => { }}
+                                                            aria-hidden="true"
                                                         ></div>
                                                         <div className="flew-row flex grow text-center">
                                                             <div className="grow font-sans text-lg/loose font-bold text-tiilt-ink">
@@ -504,7 +504,9 @@ function ByodJoinPage(props) {
                                                 <AppSectionBoxComponent
                                                     heading={"Audio control:"}
                                                 >
-                                                    <div
+                                                    <button
+                                                        type="button"
+                                                        aria-label="Request help"
                                                         className={
                                                             style[
                                                             "pod-overview-button"
@@ -578,7 +580,7 @@ function ByodJoinPage(props) {
                                                         >
                                                             Help
                                                         </div>
-                                                    </div>
+                                                    </button>
                                                 </AppSectionBoxComponent>
                                             )}
 

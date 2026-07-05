@@ -202,3 +202,27 @@ html {
     --color-tiilt-danger-soft: #3d1f1d;
 }
 .dark body, .dark html { background-color: #14101f; }
+
+/* ---------- Accessibility ---------- */
+
+/* Visible keyboard focus everywhere. The legacy module CSS strips outlines
+   (`outline: 0/none` on :focus in ~20 files); this :focus-visible rule wins
+   over all of them, and only fires for keyboard focus — mouse clicks stay
+   ring-free. */
+*:focus-visible {
+    outline: 2px solid var(--color-tiilt) !important;
+    outline-offset: 2px;
+}
+
+/* Respect the user's reduced-motion preference: collapse animations and
+   transitions (animate-pulse/ping/spin, svgpulse, hover transitions). */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

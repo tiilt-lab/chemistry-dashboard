@@ -78,14 +78,15 @@ function AppFolderPage(props) {
         {/* Select the current (root) level as the target */}
         {atRoot ? (
           <li>
-            <div
-              className={rowClass(props.selectedFolder === -1) + " cursor-pointer"}
+            <button
+              type="button"
+              className={rowClass(props.selectedFolder === -1) + " w-full cursor-pointer"}
               onClick={() => props.setSelectedFolderEvent(-1)}
             >
               <span className="flex-none text-tiilt-muted">
                 <IconHome />
               </span>
-              <span className="min-w-0 grow truncate font-medium text-tiilt-ink">
+              <span className="min-w-0 grow truncate text-left font-medium text-tiilt-ink">
                 Home
               </span>
               {props.selectedFolder === -1 ? (
@@ -93,7 +94,7 @@ function AppFolderPage(props) {
                   <IconCheck />
                 </span>
               ) : null}
-            </div>
+            </button>
           </li>
         ) : null}
 

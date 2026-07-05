@@ -23,7 +23,7 @@ function DiscussionPage(props){
     <span className={style["header-spacer"]}></span>
     {
       props.checkedDevices().map((device, index)=>(
-        <div  key={index} className={style["header-text"]} onClick={()=> props.openForms("stats", device)}>{ device.name }</div>
+        <button type="button" key={index} className={style["header-text"]} onClick={()=> props.openForms("stats", device)}>{ device.name }</button>
       ))
     } 
   </div>
@@ -43,12 +43,12 @@ function DiscussionPage(props){
             device.transcripts.map((transcript,index)=>(
               <div key={index} className={style.transcript} style={{marginTop: `${transcript.start_time * 20}`+"px" , height: `${transcript.length * 20}`+"px"}} >
                   <div className={style["transcript-text"]}>
-                      {transcript.question ? <div className={style["question-mark"]} onClick={()=> props.highlightQuestions(transcript)}>?</div> : <></>}
+                      {transcript.question ? <button type="button" aria-label="Highlight this question" className={style["question-mark"]} onClick={()=> props.highlightQuestions(transcript)}>?</button> : <></>}
                       {transcript.speaker_tag ?  <span className={style["speaker-tag"]}>{transcript.speaker_tag}: </span> : <></> }
                         { transcript.transcript.map((transcriptData, index)=>(
                           
                           <React.Fragment key={index}>
-                            {(transcriptData.matchingKeywords !== null) ? <span className={transcriptData.highlight ? `${style["keyword-text"]} ${style["question-highlight"]}` : style["keyword-text"]} style={{color: `${transcriptData.color}`}} onClick={()=> props.openForms("keywords", transcriptData.matchingKeywords)}>{transcriptData.word}</span> 
+                            {(transcriptData.matchingKeywords !== null) ? <button type="button" aria-label={`Keyword details for ${transcriptData.word}`} className={(transcriptData.highlight ? `${style["keyword-text"]} ${style["question-highlight"]}` : style["keyword-text"]) + " inline cursor-pointer p-0 text-left"} style={{color: `${transcriptData.color}`}} onClick={()=> props.openForms("keywords", transcriptData.matchingKeywords)}>{transcriptData.word}</button>
                             : 
                             <span className={transcriptData.highlight? style["question-highlight"] : ""}> {transcriptData.word} </span> }
       
@@ -92,16 +92,16 @@ function DiscussionPage(props){
     { props.currentForm === "stats" ?
       <div>
           <div className={style2["dialog-heading"]}> Statistics for {props.selectedDevice !== undefined ? props.selectedDevice.name : "" } </div>
-          <div className={style["basic-button"]} onClick={()=> props.toggleGraph(!props.showGraph, props.selectedDevice)}> Contributions: {props.contributions}</div>
+          <button type="button" className={style["basic-button"]} aria-expanded={!!props.showGraph} onClick={()=> props.toggleGraph(!props.showGraph, props.selectedDevice)}> Contributions: {props.contributions}</button>
           <br></br>
           {props.showGraph ?
               <React.Fragment>
                 <div className={style["graph-box"]}>
                   <svg viewBox="-1 -1 2 2" style={{transform: "rotate(-90deg)"}} className={style["pie-chart"]}>
                     {props.checkedDevices().map((device, index)=>(
-                      <path d= {device.path} fill={device.color}  className={style["pie-piece"]} onClick={()=> props.toggleGraph(true, device)} stroke="transparent" ></path>
+                      <path key={index} d= {device.path} fill={device.color}  className={style["pie-piece"]} role="button" tabIndex={0} aria-label={`Show ${device.name}'s share`} onClick={()=> props.toggleGraph(true, device)} onKeyDown={(e)=> { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); props.toggleGraph(true, device) } }} stroke="transparent" ></path>
                     ))
-                    } 
+                    }
                   </svg>
                   <span className={style["pie-piece-text"]}> { props.selectedPercent}% </span>
                 </div> 
@@ -123,7 +123,7 @@ function DiscussionPage(props){
               <></>
             }
 
-          <div className={style["basic-button"]} onClick={props.toggleQuestions}> Questions: { props.displayQuestions.length } </div>
+          <button type="button" className={style["basic-button"]} aria-expanded={!!props.showQuestions} onClick={props.toggleQuestions}> Questions: { props.displayQuestions.length } </button>
           <br></br>
           {props.showQuestions ?
               <div className={style["question-container"]}>
@@ -162,7 +162,7 @@ function DiscussionPage(props){
       :
         <></>
     }     
-   <div className={style["delete-button"]} onClick={props.closeForm}>Close</div>
+   <button type="button" className={style["delete-button"]} onClick={props.closeForm}>Close</button>
  </GenericDialogBox>
   </>
 )
