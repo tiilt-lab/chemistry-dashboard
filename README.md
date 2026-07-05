@@ -1,5 +1,14 @@
 # Chemistry Dashboard
 
+> ⚠️ **The setup instructions below are superseded.** Production now runs from a
+> single unified virtualenv (`src/venv-unified`) that serves every component —
+> see [`src/requirements-unified.README.md`](src/requirements-unified.txt) for how
+> to build it, and [`deploy/instances/blinc-puthipiroj/README.md`](deploy/instances/blinc-puthipiroj/README.md)
+> for the current systemd/nginx deployment. The pyenv + per-component-venv +
+> `deploy/install.sh` method documented below (and its `deploy/*.service` files
+> and per-component `requirements.txt`) has been retired. The CUDA / dlib / model-
+> download steps in the middle are still relevant regardless of venv method.
+
 ## Installing Dependencies
 
 ### Please do not run the following commands/setups on the glamdring.cs.northwestern.edu server ###

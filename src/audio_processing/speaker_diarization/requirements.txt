@@ -1,8 +1,0 @@
-numpy
-scipy
-scikit-learn
-hmmlearn
-simplejson
-eyed3
-pydub
-pyAudioAnalysis
