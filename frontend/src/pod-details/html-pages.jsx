@@ -20,7 +20,7 @@ function PodComponentPages(props) {
                             : props.selectedSpkralias
                     }
                     leftText={false}
-                    rightText={"Option"}
+                    rightText={"Options"}
                     rightEnabled={true}
                     rightTextClick={() => props.openDialog("Options")}
                     nav={props.navigateToSession}
