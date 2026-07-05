@@ -25,6 +25,9 @@ function SessionsComponent(props) {
     const [invalidName, setInvalidName] = useState(false)
     const [sortBy, setSortBy] = useState("date-desc")
     const [videoFilter, setVideoFilter] = useState("all")
+    const [searchQuery, setSearchQuery] = useState("")
+    // Bulk selection over session rows (Move to… / Delete N at once).
+    const [selectedIds, setSelectedIds] = useState({})
     const navigate = useNavigate()
     const [searchParam, setSearchParam] = useSearchParams()
 
@@ -518,6 +521,40 @@ function SessionsComponent(props) {
         setShowAlert(false)
     }
 
+    const toggleSelected = (id) =>
+        setSelectedIds((m) => ({ ...m, [id]: !m[id] }))
+    const clearSelected = () => setSelectedIds({})
+    const selectedCount = Object.values(selectedIds).filter(Boolean).length
+    const selectedList = () =>
+        Object.keys(selectedIds).filter((id) => selectedIds[id])
+
+    // Sequential on purpose: keeps server load sane and failures isolated.
+    const bulkMoveSessions = async (newParentId) => {
+        setCurrentForm("Loading")
+        const svc = new SessionService()
+        for (const id of selectedList()) {
+            try {
+                await svc.updateSessionFolder(id, newParentId)
+            } catch (e) {
+                console.log("bulk move failed for session", id, e)
+            }
+        }
+        window.location.reload()
+    }
+
+    const bulkDeleteSessions = async () => {
+        setCurrentForm("Loading")
+        const svc = new SessionService()
+        for (const id of selectedList()) {
+            try {
+                await svc.deleteSession(id)
+            } catch (e) {
+                console.log("bulk delete failed for session", id, e)
+            }
+        }
+        window.location.reload()
+    }
+
     const SESSION_SORTERS = {
         "date-desc": (a, b) => b.creation_date - a.creation_date,
         "date-asc": (a, b) => a.creation_date - b.creation_date,
@@ -525,12 +562,15 @@ function SessionsComponent(props) {
         "length-asc": (a, b) => a.length - b.length,
         "name-asc": (a, b) => a.title.localeCompare(b.title),
     }
-    const filteredSessions = displayedSessions.filter((s) =>
-        videoFilter === "video"
-            ? s.has_video
-            : videoFilter === "audio"
-              ? !s.has_video
-              : true,
+    const query = searchQuery.trim().toLowerCase()
+    const filteredSessions = displayedSessions.filter(
+        (s) =>
+            (videoFilter === "video"
+                ? s.has_video
+                : videoFilter === "audio"
+                  ? !s.has_video
+                  : true) &&
+            (query === "" || (s.title || "").toLowerCase().includes(query)),
     )
     const sortedSessions = [...filteredSessions].sort(
         SESSION_SORTERS[sortBy] || SESSION_SORTERS["date-desc"],
@@ -543,6 +583,15 @@ function SessionsComponent(props) {
         <DiscussionSessionPage
             sortBy={sortBy}
             setSortBy={setSortBy}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            selectedIds={selectedIds}
+            toggleSelected={toggleSelected}
+            clearSelected={clearSelected}
+            selectedCount={selectedCount}
+            openBulkDialog={(form) => setCurrentForm(form)}
+            bulkMoveSessions={bulkMoveSessions}
+            bulkDeleteSessions={bulkDeleteSessions}
             videoFilter={videoFilter}
             setVideoFilter={setVideoFilter}
             videoCount={videoCount}

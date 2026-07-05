@@ -103,6 +103,11 @@ function Appheader(props) {
                     </h1>
                 )}
             </div>
+            {props.rightPill ? (
+                <span className="mr-1 flex-none rounded-full bg-tiilt-line/40 px-2.5 py-1 text-xs font-semibold tracking-wide text-tiilt-muted uppercase">
+                    {props.rightPill}
+                </span>
+            ) : null}
             {props.rightText ? (
                 <button
                     onClick={props.rightTextClick}
