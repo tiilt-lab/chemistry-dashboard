@@ -6,7 +6,7 @@ import React from 'react';
 
 function KeywordListPages(props) {
   return (
-    <div className="main-container">
+    <div role="main" className="main-container">
       <Appheader
         title={"Manage Keyword Lists"}
         leftText={"Cancel"}

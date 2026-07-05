@@ -8,7 +8,7 @@ import style2 from "../components/context-menu/context-menu.module.css"
 function ManageTopicsPage(props) {
     return (
         <>
-            <div className="main-container">
+            <div role="main" className="main-container">
                 <Appheader
                     title={"Manage Topic Models"}
                     leftText={false}

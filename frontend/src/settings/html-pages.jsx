@@ -94,7 +94,7 @@ const dlgDanger =
 function SettingComponentPage(props) {
     return (
         <>
-            <div className="main-container">
+            <div role="main" className="main-container">
                 <Appheader
                     title={"Settings"}
                     leftText={false}

@@ -236,7 +236,7 @@ function PeopleComponent() {
 
     return (
         <>
-            <div className="main-container">
+            <div role="main" className="main-container">
                 <Appheader
                     title={"Students & Raters"}
                     leftText={false}

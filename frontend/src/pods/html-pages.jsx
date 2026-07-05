@@ -15,7 +15,7 @@ function PodComponentPage(props) {
 
   return (
     <>
-      <div className="main-container">
+      <div role="main" className="main-container">
         <Appheader
           title={"Manage Pods"}
           leftText={false}

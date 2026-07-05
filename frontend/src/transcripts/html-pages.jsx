@@ -9,7 +9,7 @@ const dlgClose =
 function TranscriptComponentPage(props) {
     return (
         <>
-            <div className="main-container">
+            <div role="main" className="main-container">
                 <Appheader
                     title={"Transcripts · " + props.sessionDevice.name}
                     leftText={false}
@@ -45,6 +45,13 @@ function TranscriptComponentPage(props) {
                                                 }}
                                                 aria-hidden="true"
                                             />
+                                            {/* doaColor is color-only; expose the direction to AT too */}
+                                            {transcript.direction != null &&
+                                            transcript.direction >= 0 ? (
+                                                <span className="sr-only">
+                                                    {`Speaker direction ${Math.round(transcript.direction)} degrees.`}
+                                                </span>
+                                            ) : null}
                                             <span className="w-14 font-ahamono text-xs text-tiilt-muted tabular-nums">
                                                 {props.formatSeconds(
                                                     transcript.start_time,

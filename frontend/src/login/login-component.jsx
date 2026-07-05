@@ -58,7 +58,7 @@ function LoginPage() {
             >
                 &larr; Back
             </Link>
-            <h2 className="text-xl font-semibold text-tiilt-ink">Sign in</h2>
+            <h1 className="text-xl font-semibold text-tiilt-ink">Sign in</h1>
             <p className="mt-1 mb-6 text-sm text-tiilt-muted">
                 Use your instructor or researcher account.
             </p>

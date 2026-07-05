@@ -8,7 +8,7 @@ function DiscussionPage(props){
   
   return(
   <>
-    <div className="main-container">
+    <div role="main" className="main-container">
     <Appheader
         title={"Session Graph"}
         leftText={false}
