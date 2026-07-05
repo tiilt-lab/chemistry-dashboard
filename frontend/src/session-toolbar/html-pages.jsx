@@ -63,11 +63,11 @@ function AppSessionPage(props) {
                     <></>
                 )}
 
-                <div className="flex flex-row items-center gap-2 px-3 sm:mt-auto sm:w-full sm:flex-col sm:px-6">
+                <div className="flex min-w-0 flex-row items-center gap-2 overflow-x-auto px-3 sm:mt-auto sm:w-full sm:flex-col sm:overflow-x-visible sm:px-6">
                     {props.menus && props.menus.length ? (
                         props.menus.map((menu, index) => (
                             <button
-                                className="rounded-lg bg-tiilt px-4 py-2 text-sm font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px sm:w-full"
+                                className="flex-none rounded-lg bg-tiilt px-4 py-2 text-sm font-semibold whitespace-nowrap text-white transition hover:bg-tiilt-deep active:translate-y-px sm:w-full"
                                 onClick={menu.action}
                                 key={index}
                             >{`${menu.title}`}</button>
@@ -76,7 +76,7 @@ function AppSessionPage(props) {
                         <></>
                     )}
                     <button
-                        className="rounded-lg bg-tiilt-danger px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 active:translate-y-px disabled:hidden sm:w-full"
+                        className="flex-none rounded-lg bg-tiilt-danger px-4 py-2 text-sm font-semibold whitespace-nowrap text-white transition hover:brightness-90 active:translate-y-px disabled:hidden sm:w-full"
                         onClick={props.onEndSession}
                         disabled={!props.session.recording || props.fromClient}
                     >
