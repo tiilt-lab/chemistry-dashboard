@@ -18,12 +18,7 @@ function CreateSessionPage(props) {
           leftText={false}
           rightText={""}
           rightEnabled={false}
-          nav={() =>
-            props.openDialog(
-              "Back",
-              "Are you sure you want to go back to the session list?"
-            )
-          }
+          nav={props.navigateToSessions}
         />
         {props.currentMenu === "Settings" ? (
           <React.Fragment>
@@ -325,26 +320,6 @@ function CreateSessionPage(props) {
               onClick={props.closeDialog}
             >
               Close
-            </button>
-          </div>
-        ) : (
-          <></>
-        )}
-
-        {props.currentForm === "Back" ? (
-          <div className={style["add-dialog"]}>
-            {props.displayText}
-            <button
-              className={dlgPrimary}
-              onClick={() => props.navigateToSessions()}
-            >
-              Go Back
-            </button>
-            <button
-              className={dlgCancel}
-              onClick={props.closeDialog}
-            >
-              Cancel
             </button>
           </div>
         ) : (
