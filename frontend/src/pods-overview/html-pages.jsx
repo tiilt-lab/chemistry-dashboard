@@ -29,9 +29,8 @@ function PodCard({ device, enrich, onOpen }) {
     return (
         <button
             onClick={onOpen}
-            className="group flex w-64 flex-col gap-2 rounded-xl border border-tiilt-line bg-white px-4 py-3 text-left transition hover:border-tiilt hover:shadow-[0_10px_24px_-16px_rgba(42,23,74,0.5)] active:translate-y-px"
+            className="group flex w-full items-center gap-3 rounded-xl border border-tiilt-line bg-white px-4 py-3 text-left transition hover:border-tiilt hover:shadow-[0_10px_24px_-16px_rgba(42,23,74,0.5)] active:translate-y-px"
         >
-            <div className="flex w-full items-center gap-3">
             <span
                 className={
                     "relative flex h-11 w-11 flex-none items-center justify-center rounded-lg " +
@@ -40,9 +39,16 @@ function PodCard({ device, enrich, onOpen }) {
                         : "bg-tiilt-soft text-tiilt-muted")
                 }
             >
-                <svg width="18" height="28" viewBox="0 0 17 27">
-                    <MicIcon fill="currentColor" />
-                </svg>
+                {e.has_video ? (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <rect x="2.5" y="6" width="12" height="12" rx="2.5" fill="currentColor" />
+                        <path d="M16 10l5-3v10l-5-3z" fill="currentColor" />
+                    </svg>
+                ) : (
+                    <svg width="18" height="28" viewBox="0 0 17 27">
+                        <MicIcon fill="currentColor" />
+                    </svg>
+                )}
                 {device.button_pressed ? (
                     <span className="absolute -top-1 -right-1 h-3 w-3 animate-ping rounded-full bg-tiilt-orange" />
                 ) : null}
@@ -63,14 +69,7 @@ function PodCard({ device, enrich, onOpen }) {
                     analytics
                 </span>
             </span>
-            <span
-                aria-hidden="true"
-                className="flex-none text-tiilt-muted transition group-hover:text-tiilt"
-            >
-                ›
-            </span>
-            </div>
-            <div className="flex w-full items-center gap-2 text-xs text-tiilt-muted">
+            <div className="flex flex-none items-center gap-2 text-xs text-tiilt-muted">
                 {e.speaker_count > 0 ? (
                     <span>
                         {e.speaker_count}{" "}
@@ -85,7 +84,6 @@ function PodCard({ device, enrich, onOpen }) {
                         </span>
                     </>
                 ) : null}
-                <span className="grow" />
                 {e.analysis_running ? (
                     <span className="flex flex-none items-center gap-1 rounded-full bg-tiilt-orange/15 px-2 py-0.5 font-semibold text-tiilt-orange">
                         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-tiilt-orange" />
@@ -107,6 +105,12 @@ function PodCard({ device, enrich, onOpen }) {
                     </span>
                 ) : null}
             </div>
+            <span
+                aria-hidden="true"
+                className="flex-none text-tiilt-muted transition group-hover:text-tiilt"
+            >
+                ›
+            </span>
         </button>
     )
 }
@@ -199,7 +203,7 @@ function PodsOverviewPages(props) {
                             )}
                             {props.sessionDevices !== null &&
                             props.initialized ? (
-                                <div className="flex flex-wrap justify-center gap-3">
+                                <div className="flex flex-col gap-3">
                                     {props.sessionDevices.map(
                                         (device, index) => (
                                             <PodCard
