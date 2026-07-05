@@ -509,7 +509,7 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession }) {
 function DiscussionSessionPage(props) {
     return (
         <>
-            <div className="main-container">
+            <div role="main" className="main-container">
                 <Appheader
                     title={"Manage Sessions"}
                     leftText={false}

@@ -100,7 +100,7 @@ function ProfileCreationPage(props) {
             )}
 
             {props.nextPage === "video_audio_capture_page" && (
-                <div className="main-container">
+                <div role="main" className="main-container">
                     <Appheader
                         title={props.pageTitle}
                         leftText={false}

@@ -147,9 +147,9 @@ function HomeScreen() {
             </header>
 
             <main className="mx-auto w-full max-w-3xl px-4 py-8">
-                <h2 className="text-2xl font-semibold tracking-tight text-tiilt-ink">
+                <h1 className="text-2xl font-semibold tracking-tight text-tiilt-ink">
                     Good {timeOfDay}!
-                </h2>
+                </h1>
                 <p className="mt-1 mb-6 max-w-[60ch] text-sm text-tiilt-muted">
                     Welcome to the BLINC dashboard. Start gathering analytic
                     data by recording a new session.

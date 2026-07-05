@@ -129,7 +129,7 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue, index }) {
 function PodsOverviewPages(props) {
     return (
         <>
-            <div className="main-container">
+            <div role="main" className="main-container">
                 <Appheader
                     title={"Overview"}
                     leftText={false}

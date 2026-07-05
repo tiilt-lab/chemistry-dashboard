@@ -38,7 +38,7 @@ function StudentSessionDashboardPages(props) {
                         setParentCurrentForm={props.setCurrentForm}
                     />
                 )) || (
-                    <div className="main-container">
+                    <div role="main" className="main-container">
                         <Appheader
                             title={props.pageTitle}
                             leftText={false}

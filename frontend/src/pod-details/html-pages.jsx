@@ -11,7 +11,7 @@ import { CollaborationFeedbackDashboard } from "../components/reflection-dashboa
 function PodComponentPages(props) {
     return (
         <>
-            <div className="main-container">
+            <div role="main" className="main-container">
                 <Appheader
                     title={
                         props.details === "Group" ||

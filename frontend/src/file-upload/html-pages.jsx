@@ -5,7 +5,7 @@ import { Appheader } from '../header/header-component'
 function FileUploadPage(props) {
   return (
     <>
-      <div className="main-container">
+      <div role="main" className="main-container">
         <Appheader
           title={"Upload Files"}
           leftText={false}

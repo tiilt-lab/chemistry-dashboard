@@ -10,7 +10,7 @@ import { AppInfographicsComparison } from "../components/infographics-view/infog
 function PodComponentSeesionPages(props) {
     return (
         <>
-            <div className="main-container">
+            <div role="main" className="main-container">
                 <Appheader
                     title={props.details === "Group" ? props.sessionDevice.name : props.selectedSpkralias}
                     leftText={false}

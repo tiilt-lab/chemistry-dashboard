@@ -18,7 +18,7 @@ function TopicListPage(props) {
 
   return (
     <>
-      <div className="main-container">
+      <div role="main" className="main-container">
         <Appheader
           title={props.editMode ? "Topic List" : props.viewTitle}
           leftText={false}
