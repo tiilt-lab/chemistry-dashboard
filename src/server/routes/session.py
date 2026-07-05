@@ -538,6 +538,7 @@ def session_devices(session_id, **kwargs):
             # True if the pod captured any usable data (transcript or video);
             # ~17% of pods recorded nothing and should be flagged, not analyzed.
             data['has_data'] = (durations.get(device.id) is not None) or (device.id in video_pods)
+            data['has_video'] = device.id in video_pods
             data['analysis_running'] = posthoc_state.is_running(device.id)
             result.append(data)
         return json_response(result)
