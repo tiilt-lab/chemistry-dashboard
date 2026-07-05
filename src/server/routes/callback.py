@@ -79,6 +79,22 @@ def update_transcript_features(**kwargs):
     return json_response({'updated': count})
 
 
+@api_routes.route('/api/v1/callback/posthoc_completed', methods=['POST'])
+@wrappers.verify_local
+def posthoc_completed(**kwargs):
+    # A processing service reports that a pod's post-hoc run finished. Lets a
+    # run be marked complete even if the browser that triggered it disconnected.
+    # Authenticated by processing key ('source'), like the other callbacks.
+    content = request.get_json() or {}
+    key = content.get('source', '')
+    models = content.get('models')
+    device = database.get_session_devices(processing_key=key)
+    if device:
+        database.mark_session_device_posthoc(device.id, models=models)
+        logging.info('Post-hoc marked complete for device %d (server-side).', device.id)
+    return json_response()
+
+
 @api_routes.route('/api/v1/callback/transcript', methods=['POST'])
 @wrappers.verify_local
 def add_transcript(**kwargs):

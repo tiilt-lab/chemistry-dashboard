@@ -205,7 +205,14 @@ class VideoProcessorPosthoc:
                     self.video_metric_analytics.worker_posthoc(accumulator_load)
                     
                     logging.info('Video Processor Posthoc  stopped for {0}.'.format(self.config.auth_key))
-                    self.send_json({'type': 'process_completed', 'message': "Video posthoc analytics completed"})  
+                    self.send_json({'type': 'process_completed', 'message': "Video posthoc analytics completed"})
+                    # Mark complete server-side so it persists even if the
+                    # triggering browser disconnected.
+                    try:
+                        if self.web_socket_connection is not None and hasattr(self.web_socket_connection, 'on_run_complete'):
+                            self.web_socket_connection.on_run_complete()
+                    except Exception as ex:
+                        logging.warning("video on_run_complete notify failed: %s", ex)
                 except Full:
-                    pass    
+                    pass
         

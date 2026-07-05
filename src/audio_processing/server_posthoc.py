@@ -72,6 +72,10 @@ class ServerProtocol(WebSocketServerProtocol):
         # Consulted by the connection manager's periodic key check; posthoc
         # connections aren't live-key gated, so leave it false.
         self.running = False
+        # True while a full-audio run is processing. When set, signal_end (from
+        # a client disconnect or heartbeat timeout) leaves the processors running
+        # so the run finishes in the background and marks itself complete.
+        self._run_active = False
 
         cm.add(self)
         logging.info('New client connected...')
@@ -388,11 +392,18 @@ class ServerProtocol(WebSocketServerProtocol):
         self.asr.start()
         self.processor = AudioProcessorPosthoc(self.audio_buffer, self.asr_transcript_queue, diarization_model, get_semantic_model(getattr(self, 'embedder_choice', None)), self.config, scorer=getattr(self, 'scorer_choice', None))
         self.processor.start()
+        self._run_active = True  # run may now finish in the background if the client leaves
         batch_asr = getattr(self, 'asr_choice', None) in ('whisperx', 'qwen3')
         self.audioreader = AudioStreamReader(self.audio_buffer, self.asr_audio_queue, self.audio_file, self.queue_put_timeout,self.config,STOP_SIGNAL,running_audio_processes, realtime=not batch_asr)
         
 
     def signal_end(self):
+        # If a full run is still processing, a disconnect / heartbeat timeout
+        # must NOT kill it — let it finish in the background and mark itself
+        # complete (on_run_complete). Only tear down when nothing is running.
+        if getattr(self, '_run_active', False):
+            logging.info("Client gone but audio post-hoc run active — continuing in background.")
+            return
         if self.asr:
             self.asr.stop()
         if self.processor:
@@ -404,6 +415,19 @@ class ServerProtocol(WebSocketServerProtocol):
 
         if self.config:
             cm.remove(self, self.config.session_key, self.config.auth_key)
+
+    def on_run_complete(self):
+        # Called by the processor when a full run finishes. Clears the run guard,
+        # marks the pod complete server-side (survives a disconnected client),
+        # and detaches from the connection manager.
+        self._run_active = False
+        try:
+            if self.config:
+                running_audio_processes.pop(self.config.auth_key, None)
+                callbacks.post_posthoc_completed(self.config.auth_key, getattr(self, 'model_choices', None))
+                cm.remove(self, self.config.session_key, self.config.auth_key)
+        except Exception as e:
+            logging.warning("on_run_complete cleanup failed: %s", e)
 
        
         else:
