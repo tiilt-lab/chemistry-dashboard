@@ -5,6 +5,36 @@ import { formatSeconds } from "../../globals"
 import { ModelNote } from "../model-note/model-note"
 import { ApiService } from "../../services/api-service"
 
+// Large face card for the participants strip (photo with initials fallback).
+function ParticipantCard({ name, color, imgUrl }) {
+    const [failed, setFailed] = useState(false)
+    return (
+        <div className="flex w-20 flex-col items-center gap-1.5">
+            <span
+                className="relative flex h-16 w-16 flex-none items-center justify-center overflow-hidden rounded-xl text-lg font-bold text-white"
+                style={{ backgroundColor: color }}
+                aria-hidden="true"
+            >
+                {initials(name)}
+                {imgUrl && !failed ? (
+                    <img
+                        src={imgUrl}
+                        alt={name}
+                        onError={() => setFailed(true)}
+                        className="absolute inset-0 h-full w-full object-cover"
+                    />
+                ) : null}
+            </span>
+            <span
+                className="w-full truncate text-center text-xs font-semibold text-tiilt-ink"
+                title={name}
+            >
+                {name}
+            </span>
+        </div>
+    )
+}
+
 // Identity avatar: the person's real face crop (saved by the video pipeline)
 // overlaid on an initials-in-color chip that shows until/unless the image loads.
 function TrackAvatar({ initials, color, imgUrl }) {
@@ -586,6 +616,17 @@ function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, o
                         ))}
                     </select>
                 </label>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+                {participants.map((p) => (
+                    <ParticipantCard
+                        key={p}
+                        name={p}
+                        color={speakerColor(p)}
+                        imgUrl={thumbUrl(p)}
+                    />
+                ))}
             </div>
 
             <div>

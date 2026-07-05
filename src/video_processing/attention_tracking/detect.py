@@ -109,7 +109,7 @@ class ImageObjectDetection:
         # One representative face crop per recognized student, so the UI can show
         # a real face thumbnail (keyed by alias, first good match per run wins).
         self._thumb_dir = os.path.join(_cf.facial_embedding_folder(), 'thumbnails')
-        self._saved_thumbs = set()
+        self._saved_thumbs = {}  # alias -> best (lowest) match distance this run
         # Head detector is config-selected: the vendored yolo_head CrowdHuman
         # YOLOv5m pickle (default) or an ultralytics YOLO11/YOLOv8 head model.
         # Moving to 'ultralytics' is the path to retiring the vendored yolo_head/.
@@ -483,7 +483,7 @@ class ImageObjectDetection:
                                 if match != "Unknown":
                                     # plot_one_box(xyxy, im0, label=self.object_names_K_V.get(int_cls, None), color=[random.randint(0, 255) for _ in range(3)], line_thickness=3)
                                     # logging.info("Match: {0}, cos score: {1}, Euclid: {2}, Distance: {3}".format(match,cos_score,L2_score,dist_score))
-                                    self._save_face_thumbnail(match, quality_face)
+                                    self._save_face_thumbnail(match, quality_face, dist_score)
                                     self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_face",match,accumulator,time_marker,im0,int(p))
                                 else:
                                     pass
@@ -536,21 +536,26 @@ class ImageObjectDetection:
             f"norm={np.linalg.norm(v):.6f}, "
             f"nan?={np.isnan(v).any()}, inf?={np.isinf(v).any()}")
     
-    def _save_face_thumbnail(self, alias, face_img):
-        # Persist one representative face crop per recognized student so the UI
-        # can show a real thumbnail. First good match per run wins; never
-        # overwrites an existing file, and never breaks the pipeline on error.
+    def _save_face_thumbnail(self, alias, face_img, match_distance):
+        # Persist the BEST face crop per recognized student (lowest match
+        # distance), overwriting weaker earlier crops — "first match wins"
+        # saved misidentified faces (a weak cross-match could claim the file
+        # before a confident one arrived). A quality floor keeps marginal
+        # matches from ever becoming someone's picture. Never breaks the run.
         try:
-            if not alias or alias in self._saved_thumbs:
+            if not alias or match_distance is None:
                 return
-            self._saved_thumbs.add(alias)
+            if match_distance > 0.45:  # only confident matches become thumbnails
+                return
+            best = self._saved_thumbs.get(alias)
+            if best is not None and best <= match_distance:
+                return
+            self._saved_thumbs[alias] = match_distance
             os.makedirs(self._thumb_dir, exist_ok=True)
             path = os.path.join(self._thumb_dir, "{0}.jpg".format(os.path.basename(str(alias))))
-            if os.path.exists(path):
-                return
             # face_img is RGB (face_recognition/dlib convention); cv2 writes BGR.
             cv2.imwrite(path, cv2.cvtColor(face_img, cv2.COLOR_RGB2BGR))
-            logging.info("saved face thumbnail for %s", alias)
+            logging.info("saved face thumbnail for %s (dist %.3f)", alias, match_distance)
         except Exception as e:
             logging.warning("face thumbnail save failed for %s: %s", alias, e)
 
