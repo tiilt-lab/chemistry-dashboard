@@ -88,6 +88,9 @@ def posthoc_reset(**kwargs):
     content = request.get_json() or {}
     device = database.get_session_devices(processing_key=content.get('source', ''))
     if device:
+        # Keep serving the last-known duration while the wipe+re-run is in
+        # flight (it is derived from the transcripts being deleted).
+        posthoc_state.remember_duration(device.id, database.get_pod_duration(device.id))
         database.delete_pod_analysis(device.id, scope=content.get('scope', 'audio'))
         posthoc_state.mark_running(device.id, content.get('scope', 'audio'))
         logging.info('Post-hoc reset (%s) for device %d.', content.get('scope'), device.id)

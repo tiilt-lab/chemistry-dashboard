@@ -44,3 +44,15 @@ def running_device_ids():
     with _lock:
         _prune()
         return {d for d, _ in _running}
+
+
+_durations = {}  # device_id -> last-known duration, held across a run's wipe
+
+
+def remember_duration(device_id, seconds):
+    if seconds is not None:
+        _durations[int(device_id)] = int(seconds)
+
+
+def last_duration(device_id):
+    return _durations.get(int(device_id))
