@@ -1,4 +1,5 @@
 import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel } from '../components/dialog-styles'
+import { pageShell, formCard } from '../components/layout-styles'
 import { AppContextMenu } from '../components/context-menu/context-menu-component'
 import { Appheader } from '../header/header-component'
 import { GenericDialogBox } from '../dialog/dialog-component'
@@ -22,6 +23,8 @@ function PodComponentPage(props) {
           nav={props.navigateToHomescreen}
         />
 
+        <div className={pageShell}>
+        <div className={formCard}>
         <div className="mx-auto flex w-full max-w-lg grow flex-col gap-4 overflow-y-auto px-4 py-6">
           {props.devices === undefined ? (
             <div className="py-10 text-center text-sm text-tiilt-muted">
@@ -112,6 +115,8 @@ function PodComponentPage(props) {
         ) : (
           <></>
         )}
+        </div>
+        </div>
       </div>
 
       <GenericDialogBox show={props.currentForm !== ""}>

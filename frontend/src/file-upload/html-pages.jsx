@@ -1,4 +1,5 @@
 import { dlgPrimary, dlgCancel } from '../components/dialog-styles'
+import { pageShell, formCard } from '../components/layout-styles'
 import { Appheader } from '../header/header-component'
 
 function FileUploadPage(props) {
@@ -12,6 +13,8 @@ function FileUploadPage(props) {
           rightEnabled={false}
           nav={props.navTopicModels}
         />
+        <div className={pageShell}>
+        <div className={formCard}>
         <div className="mx-auto flex w-full max-w-md grow flex-col gap-4 overflow-y-auto px-4 py-8">
           <div className="text-center">
             <div className="text-lg font-semibold text-tiilt-ink">
@@ -75,6 +78,8 @@ function FileUploadPage(props) {
           ) : (
             <></>
           )}
+        </div>
+        </div>
         </div>
       </div>
     </>
