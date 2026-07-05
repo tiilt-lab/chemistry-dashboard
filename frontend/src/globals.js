@@ -63,3 +63,22 @@ export function validateIpAddress(ip_address) {
   // tslint:disable-next-line:max-line-length
   return /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ip_address);
 }
+
+// Canonical per-speaker colors: alphabetical name order -> palette index, so
+// every panel (transcript, video analytics, dynamics) gives the same person
+// the same color regardless of each panel's data ordering. Presentation only.
+export const SPEAKER_PALETTE = [
+    "#3a2163",
+    "#00a79d",
+    "#c0007a",
+    "#b26a00",
+    "#4d7c1f",
+    "#2e3192",
+    "#b3261e",
+    "#6d28d9",
+]
+export function speakerColorFor(name, allNames) {
+    const sorted = [...new Set(allNames || [])].sort()
+    const i = Math.max(0, sorted.indexOf(name))
+    return SPEAKER_PALETTE[i % SPEAKER_PALETTE.length]
+}

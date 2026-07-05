@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react"
-import { formatSeconds } from "../../globals"
+import { formatSeconds, speakerColorFor } from "../../globals"
 
 const FEATURE_FIELDS = [
     ["Emotional tone", "emotional_tone_value"],
@@ -22,15 +22,9 @@ const SPEAKER_COLORS = [
 ]
 
 function buildSpeakerColors(transcripts) {
+    const tags = [...new Set((transcripts || []).map((t) => t.speaker_tag).filter(Boolean))]
     const map = {}
-    let next = 0
-    for (const t of transcripts || []) {
-        const tag = t.speaker_tag
-        if (tag && !(tag in map)) {
-            map[tag] = SPEAKER_COLORS[next % SPEAKER_COLORS.length]
-            next += 1
-        }
-    }
+    for (const tag of tags) map[tag] = speakerColorFor(tag, tags)
     return map
 }
 
