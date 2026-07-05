@@ -18,6 +18,9 @@ class Transcript(db.Model):
     topic_id = db.Column(db.Integer)
     speaker_tag = db.Column(db.String(64))
     speaker_id = db.Column(db.Integer)
+    # JSON blob of per-utterance voice features (prosody #6 + vocal emotion #5),
+    # nullable. Requires migration; older rows read as None.
+    voice_features = db.Column(db.Text, nullable=True)
 
     keywords = db.relationship("KeywordUsage", lazy='joined', uselist=True)
     metrics = db.relationship("SpeakerTranscriptMetrics", back_populates="transcript", cascade="all, delete",passive_deletes=True)
@@ -25,7 +28,7 @@ class Transcript(db.Model):
     def __hash__(self):
         return hash((self.id))
 
-    def __init__(self, session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id, speaker_tag, speaker_id):
+    def __init__(self, session_device_id, start_time, length, transcript, question, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id, speaker_tag, speaker_id, voice_features=None):
         self.session_device_id = session_device_id
         self.start_time = start_time
         self.length = length
@@ -42,7 +45,19 @@ class Transcript(db.Model):
         self.topic_id = topic_id
         self.speaker_tag = speaker_tag
         self.speaker_id = speaker_id
+        import json as _json
+        self.voice_features = _json.dumps(voice_features) if voice_features else None
 
+
+    def _voice_features_json(self):
+        import json as _json
+        raw = getattr(self, 'voice_features', None)
+        if not raw:
+            return None
+        try:
+            return _json.loads(raw)
+        except Exception:
+            return None
 
     def json(self):
         return dict(
@@ -62,6 +77,7 @@ class Transcript(db.Model):
             topic_id=self.topic_id,
             speaker_tag=self.speaker_tag,
             speaker_id=self.speaker_id,
+            voice_features=self._voice_features_json(),
             keywords=[keyword.json(suppress=['transcript_id']) for keyword in self.keywords]
         )
 
