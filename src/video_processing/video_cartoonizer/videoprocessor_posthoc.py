@@ -85,17 +85,34 @@ class VideoProcessorPosthoc:
             pass
 
     def _probe_duration(self):
-        # Browser-captured webm files often carry no duration metadata, making
-        # moviepy report a bogus 86400s (24h). Ask ffprobe for the real one.
+        # Browser-captured webm files often carry no duration metadata; both
+        # moviepy AND ffprobe then report a bogus 86400s (24h) placeholder.
         try:
             out = subprocess.run(
                 ["ffprobe", "-v", "error", "-show_entries", "format=duration",
                  "-of", "csv=p=0", self.video_file],
                 capture_output=True, timeout=30)
             val = float(out.stdout.decode().strip())
-            return val if val > 0 else None
+            if 0 < val < 86000:  # 86400 is the "unknown" placeholder — distrust it
+                return val
         except Exception:
-            return None
+            pass
+        # Authoritative fallback: demux (no decode) and read the last packet
+        # timestamp from ffmpeg's progress output. Fast even for long files.
+        try:
+            import re
+            out = subprocess.run(
+                ["ffmpeg", "-v", "info", "-i", self.video_file,
+                 "-c", "copy", "-f", "null", "-"],
+                capture_output=True, timeout=180)
+            times = re.findall(rb"time=(\d+):(\d+):(\d+(?:\.\d+)?)", out.stderr)
+            if times:
+                h, m, s = times[-1]
+                val = int(h) * 3600 + int(m) * 60 + float(s)
+                return val if val > 0 else None
+        except Exception:
+            pass
+        return None
         
 
     def adjust_time(self,frame_sec_mark):
