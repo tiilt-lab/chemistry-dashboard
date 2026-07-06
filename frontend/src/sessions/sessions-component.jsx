@@ -547,6 +547,15 @@ function SessionsComponent(props) {
     const toggleSelected = (id) =>
         setSelectedIds((m) => ({ ...m, [id]: !m[id] }))
     const clearSelected = () => setSelectedIds({})
+    // Header select-all over the rows currently displayed (respects search,
+    // filters, and the open folder).
+    const toggleSelectAll = (ids) =>
+        setSelectedIds((m) => {
+            const all = ids.length > 0 && ids.every((id) => m[id])
+            const next = { ...m }
+            ids.forEach((id) => (next[id] = !all))
+            return next
+        })
     const selectedCount = Object.values(selectedIds).filter(Boolean).length
     const selectedList = () =>
         Object.keys(selectedIds).filter((id) => selectedIds[id])
@@ -623,6 +632,7 @@ function SessionsComponent(props) {
             setSearchQuery={setSearchQuery}
             selectedIds={selectedIds}
             toggleSelected={toggleSelected}
+            toggleSelectAll={toggleSelectAll}
             clearSelected={clearSelected}
             selectedCount={selectedCount}
             openBulkDialog={(form) => {

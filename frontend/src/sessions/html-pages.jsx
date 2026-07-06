@@ -302,7 +302,7 @@ function PodDurations({ sessionId }) {
     )
 }
 
-function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, onToggle, renameInline, folderHint }) {
+function SessionRow({ session, rowIndex, onOpen, openSessionDialog, endSession, checked, onToggle, renameInline, folderHint }) {
     const [expanded, setExpanded] = useState(false)
     const [editing, setEditing] = useState(false)
     const hasPods = session.pod_count != null && session.pod_count > 0
@@ -317,42 +317,48 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
                 title={`Open ${session.title}`}
                 className="group cursor-pointer border-t border-tiilt-line bg-white transition first:border-t-0 hover:bg-tiilt-soft/50"
             >
-                <td className="py-2 pr-1 pl-4">
+                <td
+                    className="py-2 pr-1 pl-3 text-center"
+                    onClick={(e) => e.stopPropagation()}
+                >
                     <button
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            onToggle()
-                        }}
+                        onClick={onToggle}
                         role="checkbox"
                         aria-checked={!!checked}
                         aria-label={`Select session ${session.title}`}
-                        title={
-                            (session.has_video
-                                ? "Video session"
-                                : "Audio-only session") +
-                            (checked
-                                ? " — click to deselect"
-                                : " — click to select for bulk actions")
-                        }
+                        title={checked ? "Deselect" : "Select for bulk actions"}
                         className={
-                            "flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-md transition " +
+                            "flex h-7 w-8 flex-none cursor-pointer items-center justify-center rounded-md font-ahamono text-xs tabular-nums transition " +
                             (checked
-                                ? "bg-tiilt text-white ring-2 ring-tiilt/40"
-                                : session.recording
-                                  ? "bg-tiilt-danger-soft text-tiilt-danger hover:ring-2 hover:ring-tiilt/30"
-                                  : "bg-tiilt-soft text-tiilt hover:ring-2 hover:ring-tiilt/30")
+                                ? "bg-tiilt font-bold text-white ring-2 ring-tiilt/40"
+                                : "text-tiilt-muted hover:bg-tiilt-soft hover:text-tiilt")
                         }
                     >
-                        {checked ? (
-                            "\u2713"
-                        ) : session.has_video ? (
+                        {checked ? "\u2713" : rowIndex + 1}
+                    </button>
+                </td>
+                <td className="px-3 py-2">
+                    <span
+                        title={
+                            session.has_video
+                                ? "Video session"
+                                : "Audio-only session"
+                        }
+                        className={
+                            "flex h-9 w-9 flex-none items-center justify-center rounded-md " +
+                            (session.recording
+                                ? "bg-tiilt-danger-soft text-tiilt-danger"
+                                : "bg-tiilt-soft text-tiilt")
+                        }
+                    >
+                        {session.has_video ? (
                             <Camera />
                         ) : (
                             <svg width="20" height="20" viewBox="0 0 20 30">
                                 <MicIcon fill="currentColor" />
                             </svg>
                         )}
-                    </button>
+                    </span>
                 </td>
                 <td className="max-w-0 px-3 py-2" style={{ width: "38%" }}>
                     {editing ? (
@@ -499,7 +505,7 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
             </tr>
             {expanded ? (
                 <tr className="border-t border-tiilt-line bg-tiilt-ground/40">
-                    <td colSpan={7} className="px-3 py-1">
+                    <td colSpan={8} className="px-3 py-1">
                         <PodDurations sessionId={session.id} />
                     </td>
                 </tr>
@@ -701,6 +707,23 @@ function DiscussionSessionPage(props) {
                                         <table className="w-full border-collapse text-left text-sm">
                                             <thead>
                                                 <tr className="border-b border-tiilt-line">
+                                                    <th className="sticky top-0 bg-tiilt-ground py-2.5 pr-1 pl-3 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            title="Select all displayed sessions"
+                                                            aria-label="Select all displayed sessions"
+                                                            className="h-4 w-4 cursor-pointer accent-tiilt"
+                                                            checked={
+                                                                props.displayedSessions.length > 0 &&
+                                                                props.displayedSessions.every((s) => props.selectedIds[s.id])
+                                                            }
+                                                            onChange={() =>
+                                                                props.toggleSelectAll(
+                                                                    props.displayedSessions.map((s) => s.id),
+                                                                )
+                                                            }
+                                                        />
+                                                    </th>
                                                     <SortableTh
                                                         label="Type"
                                                         sortKey="type"
@@ -750,9 +773,10 @@ function DiscussionSessionPage(props) {
                                             </thead>
                                             <tbody>
                                                 {props.displayedSessions.map(
-                                                    (session) => (
+                                                    (session, rowIndex) => (
                                                         <SessionRow
                                                             key={session.id}
+                                                            rowIndex={rowIndex}
                                                             session={session}
                                                             checked={props.selectedIds[session.id]}
                                                             onToggle={() => props.toggleSelected(session.id)}
