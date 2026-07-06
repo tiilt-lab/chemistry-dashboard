@@ -1,12 +1,11 @@
 import { useNavigate } from "react-router-dom"
-import { ThemeToggle } from "../header/header-component"
+import { ThemeToggle, GearIcon } from "../header/header-component"
 import { updateTime } from "../utilities/helper-functions"
 import { TiiltLogo } from "../components/tiilt-logo"
 
 import recordicon from "../assets/img/icon-record.svg"
 import wordlist from "../assets/img/icon-wordlist.svg"
 import pod from "../assets/img/icon-pod.svg"
-import settings from "../assets/img/settings.svg"
 import question from "../assets/img/question.svg"
 
 const GROUPS = [
@@ -122,7 +121,7 @@ function HomeScreen() {
                         title="Settings"
                         className="flex flex-none items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold whitespace-nowrap text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
                     >
-                        <img alt="" src={settings} className="h-4 w-4" />
+                        <GearIcon />
                         <span className="hidden sm:inline">Settings</span>
                     </button>
                 </div>
