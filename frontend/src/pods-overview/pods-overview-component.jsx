@@ -269,6 +269,14 @@ function PodsOverviewComponent() {
     navigator.clipboard.writeText(pwd);
   };
 
+  // Shareable yellkey-style join link for the current passcode.
+  const getJoinLink = () =>
+    getPasscode() ? window.location.origin + "/join/" + getPasscode() : "";
+
+  const copyJoinLink = () => {
+    navigator.clipboard.writeText(getJoinLink());
+  };
+
   const exportSessionMetricsData = (type,windowsize,format) => {
     let fetchData = null;
     if (type == "audiometrics") {
@@ -377,6 +385,9 @@ function PodsOverviewComponent() {
       closeDialog={closeDialog}
       setPasscodeState={setPasscodeState}
       copyPasscode={copyPasscode}
+      passcode={getPasscode()}
+      joinLink={getJoinLink()}
+      copyJoinLink={copyJoinLink}
       onSessionClosing={onSessionClosing}
       initialized={activeSessionService.initialized}
       sessionSpeaker={sessionSpeaker}

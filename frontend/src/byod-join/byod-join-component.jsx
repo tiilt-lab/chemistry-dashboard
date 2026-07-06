@@ -77,6 +77,15 @@ function JoinPage() {
     const [pageTitle, setPageTitle] = useState("Join Session")
     const [prevSessionId, setPrevSessionId] = useState(-1)
     const [pcode, setPcode] = useState("")
+    // Yellkey-style join links: /join/CODE (or /join?code=CODE) prefills the
+    // passcode so instructors can share a single URL.
+    const { joinCode } = useParams()
+    useEffect(() => {
+        const fromQuery = new URLSearchParams(window.location.search).get("code")
+        const code = joinCode || fromQuery
+        if (code) setPcode(code.toUpperCase().slice(0, 4))
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [joinCode])
     const [constraintObj, setConstraintObj] = useState(null)
     const [mimetype, setMimeType] = useState(null)
     const [mimeExtension, setMimeExtension] = useState(null);

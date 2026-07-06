@@ -48,6 +48,7 @@ function PageRouter() {
                 <Route path="/login" element={<LoginPage  />} />
                 <Route path="/signup" element={<SignupPage />} />
                 <Route path="/join" element={<JoinPage />} />
+                <Route path="/join/:joinCode" element={<JoinPage />} />
                 <Route path="/student/dashboard" element={<StudentSessionDashboard />} />
                 <Route path="/student/survey" element={<StudentSessionDashboard />} />
                 <Route path="/expert/rating" element={<ExpertRatingComponent />} />
