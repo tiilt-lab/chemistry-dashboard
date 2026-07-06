@@ -178,8 +178,12 @@ function MicChannelProbe() {
                     </div>
                     <div className="text-xs font-semibold text-tiilt-ink">
                         {channels === 1
-                            ? "1 channel — speakers will be identified by voice"
-                            : `${channels} channels detected — one mic per person is possible on this setup`}
+                            ? "1 channel (mono) — speakers will be identified by voice"
+                            : duplicated === null && !deadChannels
+                              ? `${channels} channels reported — testing whether this is true stereo or mono…`
+                              : duplicated === false && deadChannels && deadChannels.length === 0
+                                ? `${channels} channels — true stereo, one mic per person will work`
+                                : `${channels} channels reported — but effectively mono`}
                     </div>
                     {channels > 1 && deadChannels && deadChannels.length > 0 ? (
                         <div className="rounded-md bg-tiilt-orange/15 px-3 py-2 text-xs leading-relaxed text-tiilt-orange-text">
