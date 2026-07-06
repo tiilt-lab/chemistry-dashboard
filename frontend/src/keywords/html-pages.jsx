@@ -2,7 +2,7 @@ import React from "react"
 import style from "./keywords.module.css"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { DialogBox } from "../dialog/dialog-component"
-import questIcon from "../assets/img/question.svg"
+import Question from "../Icons/Question"
 
 function AppKeywordsPage(props) {
     return (
@@ -14,10 +14,11 @@ function AppKeywordsPage(props) {
                         className="cursor-pointer border-0 bg-transparent p-0"
                         aria-label="About keyword detection"
                     >
-                        <img
-                            className="h-4 w-4 opacity-70"
-                            alt=""
-                            src={questIcon}
+                        <Question
+                            width={16}
+                            height={16}
+                            className="opacity-70"
+                            aria-hidden="true"
                         />
                     </button>
                     <AppContextMenu label="Keyword display options" setcallback={props.setCallbackFunc}>

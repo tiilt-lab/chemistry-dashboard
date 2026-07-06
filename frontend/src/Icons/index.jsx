@@ -1,6 +1,13 @@
+export { default as Camera } from "./Camera";
+export { default as Check } from "./Check";
+export { default as Chevron } from "./Chevron";
 export { default as Folder } from "./Folder";
+export { default as Home } from "./Home";
 export { default as IconKebab } from "./IconKebab";
 export { default as IconPod } from "./IconPod";
 export { default as Light } from "./Light";
 export { default as Mic } from "./Mic";
 export { default as Question } from "./Question";
+export { default as Refresh } from "./Refresh";
+export { default as Settings } from "./Settings";
+export { default as Upload } from "./Upload";

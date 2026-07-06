@@ -1,4 +1,5 @@
 import style from "./session-toolbar.module.css"
+import { Chevron } from "@/Icons"
 import style2 from "../dialog/dialog.module.css"
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { AppSpinner } from "../spinner/spinner-component"
@@ -17,17 +18,6 @@ function AppSessionPage(props) {
         localStorage.setItem("blinc-sidebar-collapsed", next ? "1" : "0")
     }
     const [speakerFilter, setSpeakerFilter] = useState("")
-    const Chevron = ({ left }) => (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-                d={left ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6"}
-                stroke="currentColor"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-        </svg>
-    )
     return (
         <>
             <div className={"side_bar" + (collapsed ? " sm:!w-11 sm:!py-2" : "")}>
@@ -40,7 +30,7 @@ function AppSessionPage(props) {
                         (collapsed ? "sm:mx-auto" : "sm:mr-3 sm:self-end")
                     }
                 >
-                    <Chevron left={!collapsed} />
+                    <Chevron direction={collapsed ? "right" : "left"} />
                 </button>
                 <div className={collapsed ? "contents sm:hidden" : "contents"}>
                 <div className="flex flex-none flex-col px-4 py-2 sm:w-full sm:items-start sm:px-6 sm:py-0">

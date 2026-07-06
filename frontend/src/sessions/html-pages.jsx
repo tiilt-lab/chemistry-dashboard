@@ -12,6 +12,7 @@ import style2 from "../components/context-menu/context-menu.module.css"
 import breadcrumbIcon from "../assets/img/icon-back.svg"
 import FolderIcon from "../Icons/Folder"
 import MicIcon from "../Icons/Mic"
+import { Camera, Chevron, Refresh, Upload } from "@/Icons"
 import { SkeletonRows } from "../components/skeleton"
 import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel } from "../components/dialog-styles"
 
@@ -151,9 +152,7 @@ function UploadVideoButton() {
             }
             title={note || "Upload a webm/mp4 recording to analyze"}
         >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 16V4m0 0l-4 4m4-4l4 4M4 20h16" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <Upload />
             {busy ? "Uploading…" : "Upload video"}
             {note && !busy ? (
                 <span className="max-w-56 truncate text-xs font-normal text-tiilt-danger">{note}</span>
@@ -301,22 +300,7 @@ function PodDurations({ sessionId }) {
                                 </span>
                             </>
                         )}
-                        <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            aria-hidden="true"
-                            className="flex-none text-tiilt-muted"
-                        >
-                            <path
-                                d="M9 6l6 6-6 6"
-                                stroke="currentColor"
-                                strokeWidth="2.4"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                        </svg>
+                        <Chevron size={12} className="flex-none text-tiilt-muted" />
                     </button>
                 </li>
             ))}
@@ -346,23 +330,7 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
                 }
             >
                 {session.has_video ? (
-                    <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        aria-hidden="true"
-                    >
-                        <rect
-                            x="2.5"
-                            y="6"
-                            width="12"
-                            height="12"
-                            rx="2.5"
-                            fill="currentColor"
-                        />
-                        <path d="M16 10l5-3v10l-5-3z" fill="currentColor" />
-                    </svg>
+                    <Camera />
                 ) : (
                     <svg width="20" height="20" viewBox="0 0 20 30">
                         <MicIcon fill="currentColor" />
@@ -416,22 +384,7 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
                             title="Post-hoc analysis has been run for this session"
                             className="flex flex-none items-center gap-1 rounded-full bg-tiilt-teal/15 px-1.5 py-0.5 font-semibold whitespace-nowrap text-tiilt-teal-text"
                         >
-                            <svg
-                                width="12"
-                                height="12"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                aria-hidden="true"
-                            >
-                                <path
-                                    d="M4 12a8 8 0 1 1 2.3 5.6M4 12H2m2 0V9"
-                                    stroke="currentColor"
-                                    strokeWidth="2.4"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    fill="none"
-                                />
-                            </svg>
+                            <Refresh />
                             Re-analyzed
                         </span>
                     ) : null}
@@ -459,25 +412,13 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
                     aria-expanded={expanded}
                     className="flex h-7 w-7 flex-none items-center justify-center rounded-md text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
                 >
-                    <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        aria-hidden="true"
+                    <Chevron
+                        direction="down"
                         style={{
                             transform: expanded ? "rotate(180deg)" : "none",
                             transition: "transform 0.15s",
                         }}
-                    >
-                        <path
-                            d="M6 9l6 6 6-6"
-                            stroke="currentColor"
-                            strokeWidth="2.4"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                        />
-                    </svg>
+                    />
                 </button>
             ) : null}
             <div className="flex-none">
