@@ -12,7 +12,7 @@ import style2 from "../components/context-menu/context-menu.module.css"
 import breadcrumbIcon from "../assets/img/icon-back.svg"
 import FolderIcon from "../Icons/Folder"
 import MicIcon from "../Icons/Mic"
-import { AppSpinner } from "../spinner/spinner-component"
+import { SkeletonRows } from "../components/skeleton"
 import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel } from "../components/dialog-styles"
 
 // Row wrapper (border/bg/hover) is a column so the expandable pod panel can sit
@@ -541,12 +541,7 @@ function DiscussionSessionPage(props) {
                 <div className="relative min-h-0 w-full grow overflow-y-auto">
                     <div className="mx-auto w-full max-w-3xl px-4 py-8">
                         {props.isLoading ? (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <div className={style["load-text"]}>
-                                    Loading...
-                                </div>
-                                <AppSpinner />
-                            </div>
+                            <SkeletonRows rows={8} className="mt-14" />
                         ) : (
                             <></>
                         )}

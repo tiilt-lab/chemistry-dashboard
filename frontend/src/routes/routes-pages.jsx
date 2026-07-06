@@ -1,36 +1,51 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, BrowserRouter, Navigate } from 'react-router-dom'
 import LandingPageComponent from '../landing-page/landing-page-components';
 import { LoginPage } from '../login/login-component'
 import {HomeScreen} from '../homescreen/homescreen-component'
-import {JoinPage} from '../byod-join/byod-join-component';
 import {SignupPage} from '../profile-creation/profile-creation-component';
-import {StudentSessionDashboard} from '../student-dashboard/student-dashboard-component'
-import {ExpertRatingComponent} from '../expert-rating/expert-rating-component'
-import {ManageKeywordListsComponent} from '../manage-keyword-lists/manage-keyword-lists-component';
-import {KeywordListItemsComponent} from '../keyword-list-items/keyword-list-items-component';
 import {SessionsComponent} from '../sessions/sessions-component'
-import {CreateSessionComponent} from '../create-session/create-session-component'
-import {PodsOverviewComponent} from '../pods-overview/pods-overview-component'
 import {SessionManagerComponent} from '../session-manager/session-manager-component';
-import {DiscussionGraphComponent} from '../discussion-graph/discussion-graph-component'
-import {FileUploadComponent} from '../file-upload/file-upload-component'
-import { SettingsComponent } from '../settings/settings-component';
-import { PodComponent } from '../pod-details/pod-component';
-import {PodComponentSession} from '../pod-details-session/pod-component-session'
-import {TranscriptsComponent} from '../transcripts/transcripts-component'
-import {TopicListComponent} from '../topic-list/topic-list-component'
-import {ManageTopicModelsComponent} from '../manage-topic-models/manage-topic-models-component'
-import {PodsComponent} from '../pods/pods-component'
-import {PeopleComponent} from '../people/people-component'
+import { AppSpinner } from '../spinner/spinner-component'
 import {ProtectedRoute} from './protected-route'
 
+// Heavy dashboards (chart.js / d3 / framer-motion / shadcn) are code-split so
+// the landing/login/join first load stays small. Each lazy chunk shows the
+// shared spinner while it streams in.
+const JoinPage = lazy(() => import('../byod-join/byod-join-component').then(m => ({ default: m.JoinPage })))
+const StudentSessionDashboard = lazy(() => import('../student-dashboard/student-dashboard-component').then(m => ({ default: m.StudentSessionDashboard })))
+const ExpertRatingComponent = lazy(() => import('../expert-rating/expert-rating-component').then(m => ({ default: m.ExpertRatingComponent })))
+const ManageKeywordListsComponent = lazy(() => import('../manage-keyword-lists/manage-keyword-lists-component').then(m => ({ default: m.ManageKeywordListsComponent })))
+const KeywordListItemsComponent = lazy(() => import('../keyword-list-items/keyword-list-items-component').then(m => ({ default: m.KeywordListItemsComponent })))
+const CreateSessionComponent = lazy(() => import('../create-session/create-session-component').then(m => ({ default: m.CreateSessionComponent })))
+const PodsOverviewComponent = lazy(() => import('../pods-overview/pods-overview-component').then(m => ({ default: m.PodsOverviewComponent })))
+const DiscussionGraphComponent = lazy(() => import('../discussion-graph/discussion-graph-component').then(m => ({ default: m.DiscussionGraphComponent })))
+const FileUploadComponent = lazy(() => import('../file-upload/file-upload-component').then(m => ({ default: m.FileUploadComponent })))
+const SettingsComponent = lazy(() => import('../settings/settings-component').then(m => ({ default: m.SettingsComponent })))
+const PodComponent = lazy(() => import('../pod-details/pod-component').then(m => ({ default: m.PodComponent })))
+const PodComponentSession = lazy(() => import('../pod-details-session/pod-component-session').then(m => ({ default: m.PodComponentSession })))
+const TranscriptsComponent = lazy(() => import('../transcripts/transcripts-component').then(m => ({ default: m.TranscriptsComponent })))
+const TopicListComponent = lazy(() => import('../topic-list/topic-list-component').then(m => ({ default: m.TopicListComponent })))
+const ManageTopicModelsComponent = lazy(() => import('../manage-topic-models/manage-topic-models-component').then(m => ({ default: m.ManageTopicModelsComponent })))
+const PodsComponent = lazy(() => import('../pods/pods-component').then(m => ({ default: m.PodsComponent })))
+const PeopleComponent = lazy(() => import('../people/people-component').then(m => ({ default: m.PeopleComponent })))
+
+function RouteFallback() {
+    return (
+        <div className="flex h-full w-full grow items-center justify-center py-24">
+            <AppSpinner />
+        </div>
+    )
+}
+
 function PageRouter() {
-    
+
     return (
         <BrowserRouter>
+            <Suspense fallback={<RouteFallback />}>
             <Routes>
                 <Route path="/" element={<LandingPageComponent />} />
-                <Route path="/login" element={<LoginPage  />} /> 
+                <Route path="/login" element={<LoginPage  />} />
                 <Route path="/signup" element={<SignupPage />} />
                 <Route path="/join" element={<JoinPage />} />
                 <Route path="/student/dashboard" element={<StudentSessionDashboard />} />
@@ -50,7 +65,7 @@ function PageRouter() {
                     <Route path='pods/:sessionDeviceId' element={<ProtectedRoute component={PodComponent}/>} />
                     <Route path='pods_session/:speakerId' element={<ProtectedRoute component={PodComponentSession}/>} />
                     <Route path='pods/:sessionDeviceId/transcripts' element={<ProtectedRoute component={TranscriptsComponent}/>} />
-                </Route> 
+                </Route>
                 <Route path='/topic-models' element={<ProtectedRoute component={ManageTopicModelsComponent}/>} />
                 <Route path='/file_upload' element={<ProtectedRoute component={FileUploadComponent}/>} />
                 <Route path='/file_upload/new-session' element={<ProtectedRoute component={FileUploadComponent}/>} />
@@ -60,6 +75,7 @@ function PageRouter() {
                 <Route path='/people' element={<ProtectedRoute component={PeopleComponent}/> } />
                 <Route path='/settings' element={<ProtectedRoute component={SettingsComponent}/> } />
             </Routes>
+            </Suspense>
         </BrowserRouter>
     )
 }
