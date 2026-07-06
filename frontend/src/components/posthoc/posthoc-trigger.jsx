@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from "react"
+import { Refresh } from "@/Icons"
 import { ApiService } from "../../services/api-service"
 import { SessionService } from "../../services/session-service"
 
@@ -483,9 +484,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                 </div>
                 {lastAnalyzed && !running ? (
                     <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-tiilt-teal-text">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <path d="M4 12a8 8 0 1 1 2.3 5.6M4 12H2m2 0V9" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                        </svg>
+                        <Refresh />
                         Last full analysis: {lastAnalyzed}
                     </div>
                 ) : null}

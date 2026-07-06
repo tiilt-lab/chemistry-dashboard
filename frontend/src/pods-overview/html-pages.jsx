@@ -7,6 +7,7 @@ import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { SkeletonRows } from "../components/skeleton"
 
 import MicIcon from "../Icons/Mic"
+import { Camera, Chevron } from "@/Icons"
 
 
 // null (hide) for missing durations, else SessionModel's shared H:MM:SS.
@@ -56,10 +57,7 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue, index }) {
                 }
             >
                 {e.has_video ? (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <rect x="2.5" y="6" width="12" height="12" rx="2.5" fill="currentColor" />
-                        <path d="M16 10l5-3v10l-5-3z" fill="currentColor" />
-                    </svg>
+                    <Camera />
                 ) : (
                     <svg width="18" height="28" viewBox="0 0 17 27">
                         <MicIcon fill="currentColor" />
@@ -124,7 +122,7 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue, index }) {
                 aria-hidden="true"
                 className="flex-none text-tiilt-muted transition group-hover:text-tiilt"
             >
-                ›
+                <Chevron size={12} />
             </span>
         </button>
         </div>

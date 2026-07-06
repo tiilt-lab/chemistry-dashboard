@@ -75,7 +75,7 @@ function AppContextMenu(props) {
         aria-haspopup="menu"
         aria-expanded={!isOpen}
       >
-        <svg x="0" y="0" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
           <OptionIcon></OptionIcon>
         </svg>
       </button>

@@ -1,12 +1,12 @@
 import { useNavigate } from "react-router-dom"
-import { ThemeToggle, GearIcon } from "../header/header-component"
+import { ThemeToggle } from "../header/header-component"
+import GearIcon from "../Icons/Settings"
 import { updateTime } from "../utilities/helper-functions"
 import { TiiltLogo } from "../components/tiilt-logo"
 
 import recordicon from "../assets/img/icon-record.svg"
 import wordlist from "../assets/img/icon-wordlist.svg"
 import pod from "../assets/img/icon-pod.svg"
-import question from "../assets/img/question.svg"
 
 const GROUPS = [
     {

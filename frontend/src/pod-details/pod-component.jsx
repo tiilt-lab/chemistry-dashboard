@@ -10,7 +10,6 @@ import { SpeakerModel } from "../models/speaker";
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { PodComponentPages } from "./html-pages";
-import { Question } from "@/Icons";
 
 function PodComponent() {
   const [sessionDevice, setSessionDevice] = useState({});
