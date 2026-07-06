@@ -5,6 +5,10 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 
 
+// Only one context menu may be open at a time, app-wide: opening a menu
+// closes whichever one was open before it.
+let closeOpenMenu = null;
+
 function AppContextMenu(props) {
   // Legacy inverted state: true = menu CLOSED, false = menu OPEN.
   const [isOpen, setIsopen] = useState(true);
@@ -13,12 +17,19 @@ function AppContextMenu(props) {
   const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
   let location = useLocation();
   const ref = React.useRef(null);
+  // When this menu opened. Auto-close handlers (outside click, scroll) ignore
+  // events in the first moment after opening — otherwise closing a sibling
+  // menu and this one opening in the same click can immediately re-close it.
+  const openedAt = React.useRef(0);
+  const settledRecently = () => Date.now() - openedAt.current < 250;
 
   // A fixed-position menu doesn't follow its trigger when an ancestor
   // scrolls — close it instead of letting it float away.
   useEffect(() => {
     if (isOpen) return;
-    const close = () => setIsopen(true);
+    const close = () => {
+      if (!settledRecently()) setIsopen(true);
+    };
     window.addEventListener("scroll", close, true);
     window.addEventListener("resize", close);
     return () => {
@@ -37,10 +48,17 @@ function AppContextMenu(props) {
   // (It used to be registered permanently per menu instance and called
   // preventDefault on every click, which cancelled native default actions
   // like checkbox toggles anywhere on the page.)
+  // Attach on the next tick so the very click that opened this menu (still
+  // bubbling to the body) doesn't immediately close it.
   useEffect(() => {
     if (isOpen) return;
-    document.body.addEventListener("click", onClickOutside);
-    return () => document.body.removeEventListener("click", onClickOutside);
+    const id = setTimeout(() => {
+      document.body.addEventListener("click", onClickOutside);
+    }, 0);
+    return () => {
+      clearTimeout(id);
+      document.body.removeEventListener("click", onClickOutside);
+    };
   }, [isOpen])
 
   // Escape closes the open menu and returns focus to the trigger.
@@ -57,6 +75,7 @@ function AppContextMenu(props) {
   }, [isOpen])
 
   const onClickOutside = (e) => {
+      if (settledRecently()) return;
       const element = e.target;
       if (ref.current && !ref.current.contains(element)) {
         setIsopen(true);
@@ -66,6 +85,10 @@ function AppContextMenu(props) {
 
   const toggle = (state) => {
     if (state && ref.current) {
+      // Close any other open menu first, then register ours.
+      if (closeOpenMenu) closeOpenMenu();
+      closeOpenMenu = () => setIsopen(true);
+      openedAt.current = Date.now();
       // Opening: anchor the fixed dropdown under the trigger's right edge,
       // or above it when the viewport bottom would cut the menu off.
       const rect = ref.current.getBoundingClientRect();

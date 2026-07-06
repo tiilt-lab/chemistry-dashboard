@@ -618,6 +618,33 @@ function StudentsComponent(props) {
                                 <table className="w-full border-collapse text-left text-sm">
                                     <thead>
                                         <tr className="border-b border-tiilt-line">
+                                            {canManage ? (
+                                                <th className="sticky top-0 bg-tiilt-ground py-2.5 pr-1 pl-3 text-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        title="Select all displayed students"
+                                                        aria-label="Select all displayed students"
+                                                        className="h-4 w-4 cursor-pointer accent-tiilt"
+                                                        checked={
+                                                            (visible || []).length > 0 &&
+                                                            visible.every((s) => selected.has(s.id))
+                                                        }
+                                                        onChange={() =>
+                                                            setSelected((prev) => {
+                                                                const all = visible.every((s) => prev.has(s.id))
+                                                                const next = new Set(prev)
+                                                                visible.forEach((s) =>
+                                                                    all ? next.delete(s.id) : next.add(s.id),
+                                                                )
+                                                                return next
+                                                            })
+                                                        }
+                                                    />
+                                                </th>
+                                            ) : null}
+                                            <th className="sticky top-0 bg-tiilt-ground px-2 py-2.5">
+                                                <span className="sr-only">Avatar</span>
+                                            </th>
                                             {sortHeader("name", "Student")}
                                             <th className="sticky top-0 bg-tiilt-ground px-4 py-2.5 text-left font-semibold whitespace-nowrap text-tiilt-ink">
                                                 Enrolled
@@ -640,67 +667,50 @@ function StudentsComponent(props) {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {visible.map((s) => (
+                                        {visible.map((s, rowIndex) => (
                                             <tr
                                                 key={s.id}
                                                 onClick={() => openActivity(s)}
                                                 title={`View ${s.firstname}'s session history`}
                                                 className="cursor-pointer border-t border-tiilt-line bg-white transition first:border-t-0 hover:bg-tiilt-soft/50"
                                             >
+                                                {canManage ? (
+                                                    <td
+                                                        className="py-2.5 pr-1 pl-3 text-center"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <button
+                                                            onClick={() => toggleSelected(s.id)}
+                                                            role="checkbox"
+                                                            aria-checked={selected.has(s.id)}
+                                                            aria-label={`Select ${s.firstname} ${s.lastname}`}
+                                                            title={selected.has(s.id) ? "Deselect" : "Select for bulk actions"}
+                                                            className={
+                                                                "flex h-7 w-8 flex-none cursor-pointer items-center justify-center rounded-md font-ahamono text-xs tabular-nums transition " +
+                                                                (selected.has(s.id)
+                                                                    ? "bg-tiilt font-bold text-white ring-2 ring-tiilt/40"
+                                                                    : "text-tiilt-muted hover:bg-tiilt-soft hover:text-tiilt")
+                                                            }
+                                                        >
+                                                            {selected.has(s.id) ? "\u2713" : rowIndex + 1}
+                                                        </button>
+                                                    </td>
+                                                ) : null}
+                                                <td className="px-2 py-2.5">
+                                                    <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-tiilt-soft text-xs font-bold text-tiilt">
+                                                        {initials(s)}
+                                                    </span>
+                                                </td>
                                                 <td className="px-4 py-2.5">
-                                                    <div className="flex items-center gap-3">
-                                                        {canManage ? (
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation()
-                                                                    toggleSelected(
-                                                                        s.id,
-                                                                    )
-                                                                }}
-                                                                role="checkbox"
-                                                                aria-checked={selected.has(
-                                                                    s.id,
-                                                                )}
-                                                                aria-label={`Select ${s.firstname} ${s.lastname}`}
-                                                                title={
-                                                                    selected.has(
-                                                                        s.id,
-                                                                    )
-                                                                        ? "Deselect"
-                                                                        : "Select for bulk actions"
-                                                                }
-                                                                className={
-                                                                    "flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-full text-xs font-bold transition " +
-                                                                    (selected.has(
-                                                                        s.id,
-                                                                    )
-                                                                        ? "bg-tiilt text-white ring-2 ring-tiilt/40"
-                                                                        : "bg-tiilt-soft text-tiilt hover:ring-2 hover:ring-tiilt/30")
-                                                                }
-                                                            >
-                                                                {selected.has(
-                                                                    s.id,
-                                                                )
-                                                                    ? "✓"
-                                                                    : initials(
-                                                                          s,
-                                                                      )}
-                                                            </button>
-                                                        ) : (
-                                                            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-tiilt-soft text-xs font-bold text-tiilt">
-                                                                {initials(s)}
-                                                            </span>
-                                                        )}
-                                                        <span className="min-w-0">
-                                                            <span className="block truncate font-semibold text-tiilt-ink">
-                                                                {s.firstname}{" "}
-                                                                {s.lastname}
-                                                            </span>
-                                                            <span className="block truncate font-ahamono text-xs text-tiilt-muted">
-                                                                {s.username}
-                                                            </span>
+                                                    <span className="min-w-0">
+                                                        <span className="block truncate font-semibold text-tiilt-ink">
+                                                            {s.firstname}{" "}
+                                                            {s.lastname}
                                                         </span>
-                                                    </div>
+                                                        <span className="block truncate font-ahamono text-xs text-tiilt-muted">
+                                                            {s.username}
+                                                        </span>
+                                                    </span>
                                                 </td>
                                                 <td className="px-4 py-2.5">
                                                     {s.biometric_captured ===

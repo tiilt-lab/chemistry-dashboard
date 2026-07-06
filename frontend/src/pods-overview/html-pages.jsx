@@ -19,62 +19,103 @@ function fmtDur(seconds) {
     return SessionModel.formatDuration(seconds)
 }
 
-function PodCard({ device, enrich, onOpen, checked, onToggle, queue, index, lastSpoke }) {
+function PodStatus({ device, enrich, queue }) {
+    const e = enrich || {}
+    if (queue === "error") return <StatusPill tone="danger">Error</StatusPill>
+    if (queue === "queued") return <StatusPill tone="brand">Queued</StatusPill>
+    if (queue === "running" || e.analysis_running)
+        return (
+            <StatusPill tone="orange" pulse>
+                Running…
+            </StatusPill>
+        )
+    if (e.has_data === false)
+        return <StatusPill tone="neutral">No data</StatusPill>
+    if (device.posthoc_analyzed_date || e.posthoc_analyzed_date)
+        return (
+            <StatusPill
+                tone="teal"
+                title={
+                    "Full analysis run " +
+                    (device.posthoc_analyzed_date || e.posthoc_analyzed_date)
+                }
+            >
+                Analyzed
+            </StatusPill>
+        )
+    return <span className="text-xs text-tiilt-muted">—</span>
+}
+
+function PodRow({ device, enrich, onOpen, checked, onToggle, queue, index, lastSpoke }) {
     const e = enrich || {}
     const name =
         device.name && String(device.name).trim()
             ? device.name
             : `Pod ${index + 1}`
     const dur = fmtDur(e.duration)
+    const noData = e.has_data === false
     return (
-        <div className="flex w-full items-center gap-2">
-        <input
-            type="checkbox"
-            checked={!!checked}
-            onChange={onToggle}
-            title="Select for batch analysis"
-            aria-label={`Select ${name} for batch analysis`}
-            className="h-4 w-4 flex-none cursor-pointer accent-tiilt"
-        />
-        <button
-            onClick={e.has_data === false ? undefined : onOpen}
-            disabled={e.has_data === false}
+        <tr
+            onClick={noData ? undefined : onOpen}
             title={
-                e.has_data === false
+                noData
                     ? "No data was recorded for this pod — there is nothing to view"
-                    : undefined
+                    : `Open ${name}`
             }
             className={
-                "group flex w-full items-center gap-2.5 rounded-lg border border-tiilt-line bg-white px-3 py-2 text-left transition " +
-                (e.has_data === false
+                "border-t border-tiilt-line bg-white transition first:border-t-0 " +
+                (noData
                     ? "cursor-not-allowed opacity-60"
-                    : "hover:border-tiilt hover:shadow-card-hover active:translate-y-px")
+                    : "cursor-pointer hover:bg-tiilt-soft/50")
             }
         >
-            <span
-                className={
-                    "relative flex h-9 w-9 flex-none items-center justify-center rounded-md " +
-                    (device.connected
-                        ? "bg-tiilt-danger-soft text-tiilt-danger"
-                        : "bg-tiilt-soft text-tiilt-muted")
-                }
+            <td
+                className="py-2 pr-1 pl-3 text-center"
+                onClick={(ev) => ev.stopPropagation()}
             >
-                {e.has_video ? (
-                    <Camera />
-                ) : (
-                    <svg width="18" height="28" viewBox="0 0 17 27">
-                        <MicIcon fill="currentColor" />
-                    </svg>
-                )}
-                {device.button_pressed ? (
-                    <span className="absolute -top-1 -right-1 h-3 w-3 animate-ping rounded-full bg-tiilt-orange" />
-                ) : null}
-            </span>
-            <div className="min-w-0 grow">
-                <div className="flex items-center gap-2">
+                <button
+                    onClick={onToggle}
+                    role="checkbox"
+                    aria-checked={!!checked}
+                    aria-label={`Select ${name} for batch analysis`}
+                    title={checked ? "Deselect" : "Select for batch analysis"}
+                    className={
+                        "flex h-7 w-8 flex-none cursor-pointer items-center justify-center rounded-md font-ahamono text-xs tabular-nums transition " +
+                        (checked
+                            ? "bg-tiilt font-bold text-white ring-2 ring-tiilt/40"
+                            : "text-tiilt-muted hover:bg-tiilt-soft hover:text-tiilt")
+                    }
+                >
+                    {checked ? "✓" : index + 1}
+                </button>
+            </td>
+            <td className="px-3 py-2">
+                <span
+                    title={e.has_video ? "Video pod" : "Audio-only pod"}
+                    className={
+                        "relative flex h-9 w-9 flex-none items-center justify-center rounded-md " +
+                        (device.connected
+                            ? "bg-tiilt-danger-soft text-tiilt-danger"
+                            : "bg-tiilt-soft text-tiilt-muted")
+                    }
+                >
+                    {e.has_video ? (
+                        <Camera />
+                    ) : (
+                        <svg width="18" height="28" viewBox="0 0 17 27">
+                            <MicIcon fill="currentColor" />
+                        </svg>
+                    )}
+                    {device.button_pressed ? (
+                        <span className="absolute -top-1 -right-1 h-3 w-3 animate-ping rounded-full bg-tiilt-orange" />
+                    ) : null}
+                </span>
+            </td>
+            <td className="px-3 py-2">
+                <span className="flex items-center gap-2">
                     <span
                         title={name}
-                        className="min-w-0 truncate text-sm font-semibold text-tiilt-ink"
+                        className="min-w-0 truncate font-semibold text-tiilt-ink"
                     >
                         {name}
                     </span>
@@ -89,45 +130,28 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue, index, last
                             </StatusPill>
                         )
                     ) : null}
-                </div>
-                <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-tiilt-muted">
-                    {queue === "error" ? (
-                        <StatusPill tone="danger">Error</StatusPill>
-                    ) : queue === "queued" ? (
-                        <StatusPill tone="brand">Queued</StatusPill>
-                    ) : queue === "running" || e.analysis_running ? (
-                        <StatusPill tone="orange" pulse>
-                            Running…
-                        </StatusPill>
-                    ) : e.has_data === false ? (
-                        <StatusPill tone="neutral">No data</StatusPill>
-                    ) : (device.posthoc_analyzed_date || e.posthoc_analyzed_date) ? (
-                        <StatusPill
-                            tone="teal"
-                            title={"Full analysis run " + (device.posthoc_analyzed_date || e.posthoc_analyzed_date)}
-                        >
-                            Analyzed
-                        </StatusPill>
-                    ) : null}
-                    {e.speaker_count > 0 ? (
-                        <span>
-                            {e.speaker_count}{" "}
-                            {e.speaker_count === 1 ? "participant" : "participants"}
-                        </span>
-                    ) : null}
-                    {dur ? (
-                        <span className="font-ahamono tabular-nums">{dur}</span>
-                    ) : null}
-                </div>
-            </div>
-            <span
-                aria-hidden="true"
-                className="flex-none text-tiilt-muted transition group-hover:text-tiilt"
-            >
-                <Chevron size={12} />
-            </span>
-        </button>
-        </div>
+                </span>
+            </td>
+            <td className="px-3 py-2 whitespace-nowrap">
+                <PodStatus device={device} enrich={enrich} queue={queue} />
+            </td>
+            <td className="px-3 py-2 text-right font-ahamono tabular-nums whitespace-nowrap text-tiilt-ink">
+                {e.speaker_count > 0 ? (
+                    e.speaker_count
+                ) : (
+                    <span className="text-tiilt-muted">—</span>
+                )}
+            </td>
+            <td className="px-3 py-2 text-right font-ahamono tabular-nums whitespace-nowrap text-tiilt-ink">
+                {dur || <span className="text-tiilt-muted">—</span>}
+            </td>
+            <td className="py-2 pr-3 pl-1 text-right">
+                <Chevron
+                    size={12}
+                    className={noData ? "text-transparent" : "text-tiilt-muted"}
+                />
+            </td>
+        </tr>
     )
 }
 
@@ -402,24 +426,6 @@ function PodsOverviewPages(props) {
                                             Stop runs
                                         </button>
                                     ) : null}
-                                    <label className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-xs">
-                                        <input
-                                            type="checkbox"
-                                            className="h-4 w-4 cursor-pointer accent-tiilt"
-                                            checked={
-                                                (props.sessionDevices || []).length > 0 &&
-                                                (props.sessionDevices || []).every(
-                                                    (d) => props.selected && props.selected[d.id],
-                                                )
-                                            }
-                                            onChange={() =>
-                                                props.toggleSelectAll(
-                                                    (props.sessionDevices || []).map((d) => d.id),
-                                                )
-                                            }
-                                        />
-                                        Select all
-                                    </label>
                                     {Object.values(props.selected || {}).filter(Boolean).length > 0 ? (
                                         <button
                                             onClick={props.runSelected}
@@ -471,25 +477,69 @@ function PodsOverviewPages(props) {
                                 <></>
                             )}
                             {props.sessionDevices !== null &&
-                            props.initialized ? (
-                                <div className="grid grid-cols-1 gap-1.5 lg:grid-cols-2 lg:gap-x-4">
-                                    {props.sessionDevices.map(
-                                        (device, index) => (
-                                            <PodCard
-                                                key={index}
-                                                index={index}
-                                                lastSpoke={props.lastActivity && props.lastActivity[device.id]}
-                                                device={device}
-                                                enrich={props.enriched && props.enriched[device.id]}
-                                                checked={props.selected && props.selected[device.id]}
-                                                onToggle={() => props.toggleSelect(device.id)}
-                                                queue={props.queueState && props.queueState[device.id]}
-                                                onOpen={() =>
-                                                    props.goToDevice(device)
-                                                }
-                                            />
-                                        ),
-                                    )}
+                            props.initialized &&
+                            props.sessionDevices.length > 0 ? (
+                                <div className="overflow-x-auto rounded-xl border border-tiilt-line bg-white">
+                                    <table className="w-full border-collapse text-left text-sm">
+                                        <thead>
+                                            <tr className="border-b border-tiilt-line">
+                                                <th className="sticky top-0 bg-tiilt-ground py-2.5 pr-1 pl-3 text-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        title="Select all pods for batch analysis"
+                                                        aria-label="Select all pods"
+                                                        className="h-4 w-4 cursor-pointer accent-tiilt"
+                                                        checked={
+                                                            props.sessionDevices.length > 0 &&
+                                                            props.sessionDevices.every(
+                                                                (d) => props.selected && props.selected[d.id],
+                                                            )
+                                                        }
+                                                        onChange={() =>
+                                                            props.toggleSelectAll(
+                                                                props.sessionDevices.map((d) => d.id),
+                                                            )
+                                                        }
+                                                    />
+                                                </th>
+                                                <th className="sticky top-0 bg-tiilt-ground px-3 py-2.5">
+                                                    <span className="sr-only">Type</span>
+                                                </th>
+                                                <th className="sticky top-0 bg-tiilt-ground px-3 py-2.5 text-left text-sm font-semibold whitespace-nowrap text-tiilt-ink">
+                                                    Group
+                                                </th>
+                                                <th className="sticky top-0 bg-tiilt-ground px-3 py-2.5 text-left text-sm font-semibold whitespace-nowrap text-tiilt-ink">
+                                                    Status
+                                                </th>
+                                                <th className="sticky top-0 bg-tiilt-ground px-3 py-2.5 text-right text-sm font-semibold whitespace-nowrap text-tiilt-ink">
+                                                    People
+                                                </th>
+                                                <th className="sticky top-0 bg-tiilt-ground px-3 py-2.5 text-right text-sm font-semibold whitespace-nowrap text-tiilt-ink">
+                                                    Recorded
+                                                </th>
+                                                <th className="sticky top-0 bg-tiilt-ground py-2.5 pr-3 pl-1" />
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {props.sessionDevices.map(
+                                                (device, index) => (
+                                                    <PodRow
+                                                        key={device.id}
+                                                        index={index}
+                                                        lastSpoke={props.lastActivity && props.lastActivity[device.id]}
+                                                        device={device}
+                                                        enrich={props.enriched && props.enriched[device.id]}
+                                                        checked={props.selected && props.selected[device.id]}
+                                                        onToggle={() => props.toggleSelect(device.id)}
+                                                        queue={props.queueState && props.queueState[device.id]}
+                                                        onOpen={() =>
+                                                            props.goToDevice(device)
+                                                        }
+                                                    />
+                                                ),
+                                            )}
+                                        </tbody>
+                                    </table>
                                 </div>
                             ) : (
                                 <></>
