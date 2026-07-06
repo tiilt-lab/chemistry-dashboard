@@ -94,7 +94,7 @@ function BrandPanel({ pitch = true }) {
 function BrandCard({ children }) {
     return (
         <main className="main-container items-center justify-center overflow-y-auto bg-tiilt-ground px-4 py-6">
-            <div className="grid w-full max-w-4xl overflow-hidden rounded-xl border border-tiilt-line bg-white shadow-[0_18px_40px_-18px_rgba(42,23,74,0.28)] md:min-h-[480px] md:grid-cols-[5fr_6fr]">
+            <div className="grid w-full max-w-4xl overflow-hidden rounded-xl border border-tiilt-line bg-white shadow-modal md:min-h-[480px] md:grid-cols-[5fr_6fr]">
                 <BrandPanel />
                 <section className="flex flex-col justify-center p-6 md:p-10">
                     {children}

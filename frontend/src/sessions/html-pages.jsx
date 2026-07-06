@@ -21,7 +21,7 @@ import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel, btnPrimary, btn
 // below the horizontal row content.
 
 const rowClass =
-    "group flex flex-col rounded-lg border border-tiilt-line bg-white transition hover:border-tiilt hover:shadow-[0_8px_20px_-16px_rgba(42,23,74,0.5)]"
+    "group flex flex-col rounded-lg border border-tiilt-line bg-white transition hover:border-tiilt hover:shadow-card-hover"
 const rowInnerClass = "flex items-center gap-2.5 px-3 py-1.5"
 const menuItemClass = style2["menu-item"]
 const menuDangerClass = `${style2["menu-item"]} ${style2["red"]}`
@@ -41,7 +41,7 @@ function FilterTab({ active, onClick, children }) {
             className={
                 "cursor-pointer rounded-md px-3 py-1 text-sm font-semibold transition " +
                 (active
-                    ? "bg-white text-tiilt shadow-[0_1px_3px_-1px_rgba(42,23,74,0.35)]"
+                    ? "bg-white text-tiilt shadow-card"
                     : "text-tiilt-muted hover:text-tiilt-ink")
             }
         >

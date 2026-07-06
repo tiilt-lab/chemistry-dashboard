@@ -11,4 +11,4 @@ export const pageShell =
   "flex grow flex-col overflow-y-auto md:items-center md:justify-center md:p-6"
 
 export const formCard =
-  "flex w-full grow flex-col md:grow-0 md:max-h-[calc(100dvh-6rem)] md:max-w-xl md:overflow-hidden md:rounded-2xl md:border md:border-tiilt-line md:bg-white md:shadow-[0_24px_56px_-28px_rgba(42,23,74,0.4)]"
+  "flex w-full grow flex-col md:grow-0 md:max-h-[calc(100dvh-6rem)] md:max-w-xl md:overflow-hidden md:rounded-2xl md:border md:border-tiilt-line md:bg-white md:shadow-modal"
