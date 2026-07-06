@@ -124,7 +124,7 @@
   font-weight: 500;
   font-size: 22px;
   line-height: 32px;
-  color: #221a33;
+  color: var(--color-tiilt-ink);
 }
 
 .dialog-container .dialog-body {
@@ -134,7 +134,7 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #221a33;
+  color: var(--color-tiilt-ink);
 }
 
 .dialog-heading {
@@ -146,7 +146,7 @@
   font-weight: 700;
   font-size: 17px;
   line-height: 24px;
-  color: #221a33;
+  color: var(--color-tiilt-ink);
 }
 
 .dialog-body {
@@ -156,5 +156,5 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #221a33;
+  color: var(--color-tiilt-ink);
 }
