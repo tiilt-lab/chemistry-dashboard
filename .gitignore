@@ -276,3 +276,4 @@ development_data.zip
 
 # Service runtime logs (audio/video posthoc services write these in-tree)
 *.log
+src/video_processing/video_cartoonizer/checkpoint/
