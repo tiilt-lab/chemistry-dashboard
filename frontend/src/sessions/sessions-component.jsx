@@ -356,14 +356,14 @@ function SessionsComponent(props) {
             .then(
                 (response) => {
                     if (response.status === 200) {
-                        const endedSession = SessionModel.fromJson(
-                            response.json(),
-                        )
-                        const sessionIndex = sessions.findIndex(
-                            (s) => s.id === endedSession.id,
-                        )
-                        sessions[sessionIndex] = endedSession
-                        displayFolder(endedSession.folder)
+                        response.json().then((json) => {
+                            const endedSession = SessionModel.fromJson(json)
+                            const sessionIndex = sessions.findIndex(
+                                (s) => s.id === endedSession.id,
+                            )
+                            sessions[sessionIndex] = endedSession
+                            displayFolder(endedSession.folder)
+                        })
                     } else {
                         setShowAlert(true)
                         setAlertMessage(response.json()["message"])
@@ -393,21 +393,16 @@ function SessionsComponent(props) {
         fetchData.then(
             (response) => {
                 if (response.status === 200) {
-                    console.log("CHANGING NAME")
-                    console.log(response)
-                    console.log(response.json())
-                    const session = SessionModel.fromJson(response.json())
-                    console.log(session)
-                    const sessionIndex = sessions.findIndex(
-                        (s) => s.id === session.id,
-                    )
-                    if (sessionIndex > -1) {
-                        sessions[sessionIndex] = session
-                        displayFolder(session.folder)
-                    } else {
-                        setShowAlert(true)
-                        setAlertMessage(response.json()["message"])
-                    }
+                    response.json().then((json) => {
+                        const session = SessionModel.fromJson(json)
+                        const sessionIndex = sessions.findIndex(
+                            (s) => s.id === session.id,
+                        )
+                        if (sessionIndex > -1) {
+                            sessions[sessionIndex] = session
+                            displayFolder(session.folder)
+                        }
+                    })
                 }
             },
             (apierror) => {
@@ -429,14 +424,14 @@ function SessionsComponent(props) {
             .then(
                 (response) => {
                     if (response.status === 200) {
-                        const updatedSession = SessionModel.fromJson(
-                            response.json(),
-                        )
-                        const index = sessions.findIndex(
-                            (s) => s.id === updatedSession.id,
-                        )
-                        sessions[index] = updatedSession
-                        displayFolder(updatedSession.folder)
+                        response.json().then((json) => {
+                            const updatedSession = SessionModel.fromJson(json)
+                            const index = sessions.findIndex(
+                                (s) => s.id === updatedSession.id,
+                            )
+                            sessions[index] = updatedSession
+                            displayFolder(updatedSession.folder)
+                        })
                     } else {
                         setShowAlert(true)
                         setAlertMessage(response.json()["message"])

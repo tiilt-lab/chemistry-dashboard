@@ -68,6 +68,13 @@ class SessionService {
     );
   }
 
+  updateSessionAnalysisConfig(sessionId, keywordListId, topicModelId) {
+    return this.api.httpRequestCall(`api/v1/sessions/${sessionId}`, "PUT", {
+      keywordListId: keywordListId,
+      topicModelId: topicModelId,
+    });
+  }
+
   updateSessionFolder(sessionId, folder) {
     const body = {
       folder: folder,

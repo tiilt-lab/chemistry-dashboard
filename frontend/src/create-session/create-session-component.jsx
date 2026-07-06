@@ -193,14 +193,21 @@ function CreateSessionComponent(props) {
   }
 
   const createSession = ()=> {
-    if (!sessionName && sessionName.trim() === '') {
-      openDialog("Error", 'Invalid Session Name');
-      setCurrentMenu("Settings");
-    } else {
+    {
+      // Name is optional: default to a date-stamped one (chars limited to
+      // the backend's allowed set — letters/digits/space/colon).
+      const trimmed = (sessionName || "").trim()
+      const now = new Date()
+      const autoName =
+        "Session " +
+        now.toLocaleString("en-US", { month: "short", day: "numeric" }) +
+        " " +
+        now.toTimeString().slice(0, 5)
+      const finalName = trimmed !== "" ? trimmed : autoName.replace(",", "")
       const deviceIds = selectedDevices.map(d => d.id);
       const keywordListId = (selectedKeywordList) ? selectedKeywordList.id : null;
       const topicModelId = (selectedTopicModel) ? selectedTopicModel.id : null;
-      const fetchData = new SessionService().createNewSession(sessionName, deviceIds, keywordListId, topicModelId, byod, features, doa, folder)
+      const fetchData = new SessionService().createNewSession(finalName, deviceIds, keywordListId, topicModelId, byod, features, doa, folder)
       fetchData.then(
         response=>{
           if(response.status === 200){
