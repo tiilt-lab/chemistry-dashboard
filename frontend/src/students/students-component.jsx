@@ -50,6 +50,7 @@ function StudentsComponent(props) {
     const [statusTitle, setStatusTitle] = useState("")
     const [toDelete, setToDelete] = useState(null)
     const [syncEnabled, setSyncEnabled] = useState(false)
+    const [activity, setActivity] = useState(null) // drill-down payload
 
     const loadStudents = async () => {
         try {
@@ -109,6 +110,32 @@ function StudentsComponent(props) {
         setStatus("")
         setCurrentForm("")
         setToDelete(null)
+        setActivity(null)
+    }
+
+    // Tier C: click a student -> their session history (scoped server-side
+    // exactly like the roster).
+    const openActivity = async (student) => {
+        setCurrentForm("Loading")
+        try {
+            const response = await new AuthService().getStudentActivity(
+                student.id,
+            )
+            if (response.status === 200) {
+                setActivity(await response.json())
+                setCurrentForm("Activity")
+            } else {
+                showStatus(
+                    "Couldn't load activity",
+                    "The student's session history could not be loaded.",
+                )
+            }
+        } catch {
+            showStatus(
+                "Couldn't load activity",
+                "The server could not be reached.",
+            )
+        }
     }
 
     const addStudent = async (firstname, lastname, username) => {
@@ -262,7 +289,14 @@ function StudentsComponent(props) {
                                 columns={columns}
                                 rows={visible.map((s) => {
                                     const row = [
-                                        `${s.firstname} ${s.lastname}`,
+                                        <button
+                                            key="name"
+                                            onClick={() => openActivity(s)}
+                                            title={`View ${s.firstname}'s session history`}
+                                            className="cursor-pointer font-semibold text-tiilt transition hover:text-tiilt-deep hover:underline"
+                                        >
+                                            {s.firstname} {s.lastname}
+                                        </button>,
                                         s.username,
                                         s.biometric_captured === "yes" ? (
                                             <StatusPill
@@ -366,6 +400,74 @@ function StudentsComponent(props) {
                         </button>
                         <button className={dlgCancel} onClick={closeDialog}>
                             Cancel
+                        </button>
+                    </div>
+                ) : null}
+
+                {currentForm === "Activity" && activity ? (
+                    <div className="flex min-w-[min(33rem,86vw)] flex-col gap-3">
+                        <div className={dlgHeading}>
+                            {activity.student.firstname}{" "}
+                            {activity.student.lastname}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-tiilt-muted">
+                            <span className="font-ahamono">
+                                {activity.student.username}
+                            </span>
+                            <span>
+                                {activity.sessions.length}{" "}
+                                {activity.sessions.length === 1
+                                    ? "session"
+                                    : "sessions"}
+                            </span>
+                            {activity.llm_reports > 0 ? (
+                                <span>
+                                    {activity.llm_reports} LLM feedback{" "}
+                                    {activity.llm_reports === 1
+                                        ? "report"
+                                        : "reports"}
+                                </span>
+                            ) : null}
+                        </div>
+                        {activity.sessions.length === 0 ? (
+                            <div className="rounded-lg bg-tiilt-soft/60 px-4 py-6 text-center text-sm text-tiilt-muted">
+                                No session participation yet — they'll appear
+                                here once they enroll a fingerprint in a
+                                session.
+                            </div>
+                        ) : (
+                            <DataTable
+                                columns={["Session", "Date", "Group", ""]}
+                                rows={activity.sessions.map((s) => [
+                                    s.session_name,
+                                    fmtDate(s.creation_date),
+                                    s.group_name,
+                                    s.owned ? (
+                                        <button
+                                            key="open"
+                                            className="rounded-md px-2 py-1 text-xs font-semibold text-tiilt transition hover:bg-tiilt-soft"
+                                            onClick={() =>
+                                                navigate(
+                                                    `/sessions/${s.session_id}/pods/${s.session_device_id}`,
+                                                )
+                                            }
+                                        >
+                                            Open ›
+                                        </button>
+                                    ) : (
+                                        <span
+                                            key="open"
+                                            className="text-xs text-tiilt-muted"
+                                            title="Owned by another user"
+                                        >
+                                            —
+                                        </span>
+                                    ),
+                                ])}
+                            />
+                        )}
+                        <button className={dlgCancel} onClick={closeDialog}>
+                            Close
                         </button>
                     </div>
                 ) : null}
