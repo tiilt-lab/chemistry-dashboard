@@ -1,3 +1,4 @@
+import { useIsDark } from "../myhooks/custom-hooks";
 import { applyChartTheme } from "../components/chart-theme"
 import { Line } from "react-chartjs-2"
 import { brandColor } from "../globals"
@@ -27,6 +28,7 @@ const trendGlyph = (trend) => (trend === 1 ? "▲" : trend === -1 ? "▼" : "—
 
 function FeatureCard({ feature, selectedTime, onSelectTime }) {
     applyChartTheme()
+    const __dark = useIsDark()
     const selectedIndex = feature.time.indexOf(selectedTime)
     const pointRadius = feature.time.map((_, i) =>
         i === selectedIndex ? 5 : 0,
@@ -106,7 +108,7 @@ function FeatureCard({ feature, selectedTime, onSelectTime }) {
                         No data
                     </div>
                 ) : (
-                    <Line
+                    <Line key={__dark ? "d" : "l"}
                         data={{
                             labels: feature.time,
                             datasets: [

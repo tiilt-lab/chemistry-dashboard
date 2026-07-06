@@ -4,11 +4,15 @@
 }
 
 .dropdown-menu-container {
-  position: absolute;
+  /* Fixed so the menu escapes overflow/scroll containers (tables, dialogs);
+     the component sets top/right inline from the trigger's rect. */
+  position: fixed;
   background-color: var(--color-white, #FFFFFF);
-  right: 0px;
   width: 200px;
-  border-radius: 4px;
+  border-radius: 6px;
+  /* Border, not just shadow: in dark mode the menu background matches the
+     row background and shadows are invisible. */
+  border: 1px solid var(--color-tiilt-line, #ded7ea);
   -webkit-box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.2), 0 8px 8px -4px rgba(42, 23, 74, 0.2);
           box-shadow: 0 0 2px 0 rgba(42, 23, 74, 0.2), 0 8px 8px -4px rgba(42, 23, 74, 0.2);
   z-index: 99;

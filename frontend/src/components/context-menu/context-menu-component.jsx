@@ -8,8 +8,24 @@ import { useLocation } from 'react-router-dom';
 function AppContextMenu(props) {
   // Legacy inverted state: true = menu CLOSED, false = menu OPEN.
   const [isOpen, setIsopen] = useState(true);
+  // Viewport coords for the fixed-position dropdown (escapes overflow
+  // containers like the table wrappers).
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
   let location = useLocation();
   const ref = React.useRef(null);
+
+  // A fixed-position menu doesn't follow its trigger when an ancestor
+  // scrolls — close it instead of letting it float away.
+  useEffect(() => {
+    if (isOpen) return;
+    const close = () => setIsopen(true);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if(props.setcallback!=undefined){
@@ -49,6 +65,14 @@ function AppContextMenu(props) {
 
 
   const toggle = (state) => {
+    if (state && ref.current) {
+      // Opening: anchor the fixed dropdown under the trigger's right edge.
+      const rect = ref.current.getBoundingClientRect();
+      setMenuPos({
+        top: rect.bottom + 4,
+        right: Math.max(8, window.innerWidth - rect.right),
+      });
+    }
     setIsopen(!state);
     //prevent triggering click interaction
     if (location.pathname == "/topic-list" || location.pathname == "/topic-list/new-session") {
@@ -59,7 +83,11 @@ function AppContextMenu(props) {
   const dynamicInnerChild = () => {
     if (!isOpen) {
       return (
-        <div className={style["dropdown-menu-container"]} role="menu">
+        <div
+          className={style["dropdown-menu-container"]}
+          style={{ top: menuPos.top, right: menuPos.right }}
+          role="menu"
+        >
           {props.children}
         </div>)
     }

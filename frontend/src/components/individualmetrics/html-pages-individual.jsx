@@ -1,3 +1,4 @@
+import { useIsDark } from "../../myhooks/custom-hooks";
 import { applyChartTheme } from "../chart-theme"
 import { Line } from "react-chartjs-2"
 import { brandColor } from "../../globals"
@@ -36,6 +37,7 @@ const CHART_OPTIONS = {
 
 function FeatureCard({ feature }) {
     applyChartTheme()
+    const __dark = useIsDark()
     return (
         <div
             className="rounded-lg border border-tiilt-line bg-white p-3"
@@ -60,7 +62,7 @@ function FeatureCard({ feature }) {
                         No data
                     </div>
                 ) : (
-                    <Line
+                    <Line key={__dark ? "d" : "l"}
                         data={{
                             labels: feature.time,
                             datasets: [

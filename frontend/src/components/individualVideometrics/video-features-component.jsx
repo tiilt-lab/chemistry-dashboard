@@ -1,3 +1,4 @@
+import { useIsDark } from "../../myhooks/custom-hooks";
 import { applyChartTheme } from "../chart-theme";
 import { useCallback, useEffect, useState } from "react";
 import { IndividualVideoMetricPage } from "./html-pages-video-individual";
@@ -17,6 +18,7 @@ Chart.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, L
 
 function AppIndividualVideoFeaturesComponent(props) {
     applyChartTheme()
+    const __dark = useIsDark()
   //  console.log("session1 video metrics AppIndividualVideoFeaturesComponent");
   // @Input('session') session: SessionModel;
 
@@ -175,7 +177,7 @@ function AppIndividualVideoFeaturesComponent(props) {
 
     return (
       <div>
-        <Line data={data} options={options} height={height} width={width} />
+        <Line key={__dark ? "d" : "l"} data={data} options={options} height={height} width={width} />
       </div>
     );
   }
