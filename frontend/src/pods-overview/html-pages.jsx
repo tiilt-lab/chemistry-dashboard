@@ -46,7 +46,7 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue, index }) {
                 "group flex w-full items-center gap-2.5 rounded-lg border border-tiilt-line bg-white px-3 py-2 text-left transition " +
                 (e.has_data === false
                     ? "cursor-not-allowed opacity-60"
-                    : "hover:border-tiilt hover:shadow-[0_10px_24px_-16px_rgba(42,23,74,0.5)] active:translate-y-px")
+                    : "hover:border-tiilt hover:shadow-card-hover active:translate-y-px")
             }
         >
             <span
@@ -175,7 +175,7 @@ function ToastStack({ toasts, dismiss }) {
             {toasts.map((t) => (
                 <div
                     key={t.id}
-                    className="flex items-center gap-2 rounded-xl border border-tiilt-line bg-white px-3.5 py-2.5 text-sm text-tiilt-ink shadow-[0_12px_28px_-12px_rgba(42,23,74,0.45)]"
+                    className="flex items-center gap-2 rounded-xl border border-tiilt-line bg-white px-3.5 py-2.5 text-sm text-tiilt-ink shadow-pop"
                 >
                     <span className="h-2 w-2 flex-none rounded-full bg-tiilt-teal" />
                     <span className="min-w-0 grow">{t.text}</span>

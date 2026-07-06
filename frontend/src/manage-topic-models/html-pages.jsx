@@ -41,7 +41,7 @@ function ManageTopicsPage(props) {
                                 (topicModel, count) => (
                                     <li
                                         key={"topic" + count}
-                                        className="flex items-center gap-3 rounded-xl border border-tiilt-line bg-white px-4 py-3 transition hover:border-tiilt hover:shadow-[0_10px_24px_-16px_rgba(42,23,74,0.5)]"
+                                        className="flex items-center gap-3 rounded-xl border border-tiilt-line bg-white px-4 py-3 transition hover:border-tiilt hover:shadow-card-hover"
                                     >
                                         <button
                                             onClick={() =>

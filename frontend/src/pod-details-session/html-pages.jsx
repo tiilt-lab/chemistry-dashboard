@@ -196,11 +196,11 @@ function PodComponentSeesionPages(props) {
                         ) : (
                             <></>
                         )}
-                        <label className={style["dc-checkbox"]}>
-                            Delete device
+                        <label className="flex cursor-pointer items-center gap-2 py-1 text-sm text-tiilt-ink">
                             <input
                                 id="cbxDelete"
                                 type="checkbox"
+                                className="h-4 w-4 cursor-pointer accent-tiilt"
                                 checked={props.deleteDeviceToggle}
                                 value={props.deleteDeviceToggle}
                                 onChange={() =>
@@ -209,7 +209,7 @@ function PodComponentSeesionPages(props) {
                                     )
                                 }
                             />
-                            <span className={style["checkmark"]}></span>
+                            Delete device
                         </label>
                         <div className={style["dialog-button-container"]}>
                             <button

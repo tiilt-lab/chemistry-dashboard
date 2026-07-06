@@ -59,55 +59,6 @@
   outline: 0;
 }
 
-.dc-checkbox {
-  display: block;
-  position: relative;
-  margin-bottom: 12px;
-  cursor: pointer;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-.dc-checkbox input {
-  position: absolute;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.checkmark {
-  position: absolute;
-  right: 0;
-  height: 25px;
-  width: 25px;
-  background-color: #eee;
-  border-radius: 50%;
-}
-
-.dc-checkbox input:checked ~ .checkmark {
-  background-color: #3a2163;
-}
-
-.checkmark:after {
-  content: "";
-  position: absolute;
-  display: none;
-}
-
-.dc-checkbox input:checked ~ .checkmark:after {
-  display: block;
-}
-
-.dc-checkbox .checkmark:after {
-  top: 9px;
-  left: 9px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: white;
-}
-
 .dialog-heading {
   text-align: center;
   -webkit-box-align: center;

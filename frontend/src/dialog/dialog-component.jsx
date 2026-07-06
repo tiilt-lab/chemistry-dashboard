@@ -128,9 +128,9 @@ function GenericDialogBox(props) {
     return (
       <ModalShell onClose={props.onClose} label={props.label || "Dialog"} containerClass={style["dialog-container-expanded"]}>
         {props.displayDevices.map((device, index) => (
-          <label className={style["dc-checkbox"]}>{device.name}
-              <input type="checkbox" checked={device.checked} value={device.checked} onChange={() => props.changeCheck(index)}  />
-              <span className={style.checkmark}></span>
+          <label key={index} className="flex cursor-pointer items-center gap-2 py-1 text-sm text-tiilt-ink">
+              <input type="checkbox" className="h-4 w-4 cursor-pointer accent-tiilt" checked={device.checked} value={device.checked} onChange={() => props.changeCheck(index)} />
+              {device.name}
           </label>))}
         {props.children}
       </ModalShell>

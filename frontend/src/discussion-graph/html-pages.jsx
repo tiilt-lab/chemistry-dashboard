@@ -149,9 +149,9 @@ function DiscussionPage(props){
           <div className={style2["dialog-heading"]}>Display devices</div>
           {props.sessionDevices!== undefined ?
             props.sessionDevices.map((device, index)=>(
-              <label key={index} className={style["dc-checkbox"]}> { device.name }
-                  <input type="checkbox" defaultValue={device.visible} onChange={props.updateGraph}/>
-                  <span className={style["checkmark"]}></span>
+              <label key={index} className="flex cursor-pointer items-center gap-2 py-1 text-sm text-tiilt-ink">
+                  <input type="checkbox" className="h-4 w-4 cursor-pointer accent-tiilt" defaultValue={device.visible} onChange={props.updateGraph}/>
+                  { device.name }
              </label>
             ))
             :
