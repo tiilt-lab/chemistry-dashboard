@@ -111,6 +111,47 @@ function SortControl({
 }
 
 
+// Small stat cards over ALL sessions (not just the open folder), matching
+// the Students page pattern.
+function SessionStats({ sessions }) {
+    const all = sessions || []
+    const live = all.filter((s) => s.recording).length
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+    const thisWeek = all.filter(
+        (s) => s.creation_date && s.creation_date.getTime() > weekAgo,
+    ).length
+    const card = (label, value) => (
+        <div className="flex-1 rounded-xl border border-tiilt-line bg-white px-4 py-3">
+            <div className="font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
+                {label}
+            </div>
+            <div className="mt-0.5 text-2xl font-bold text-tiilt-ink">
+                {value}
+            </div>
+        </div>
+    )
+    return (
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+            {card("Sessions", all.length)}
+            {card(
+                "Live now",
+                live > 0 ? (
+                    <span className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-tiilt-danger" />
+                        {live}
+                    </span>
+                ) : (
+                    0
+                ),
+            )}
+            {card("This week", thisWeek)}
+        </div>
+    )
+}
+
+const PODS_EXPLAINER =
+    "A session is one recorded session. Each pod is a participant group (device) within that session — a session can have several pods running at once. Expand a session to see its pods, and click any pod to open its analysis."
+
 // Upload a recording to be analyzed: creates a session+pod server-side and
 // auto-queues the full analysis. Self-contained state so failures are VISIBLE
 // (the previous prompt-based flow could fail silently).
@@ -165,51 +206,49 @@ function UploadVideoButton() {
     )
 }
 
-function FolderRow({ folder, count, onOpen, openFolderDialog }) {
+// Folders are navigation, not content: one wrapping row of compact chips
+// instead of a full-width row per folder.
+function FolderChip({ folder, count, onOpen, openFolderDialog }) {
     return (
-        <li className={rowClass}>
-            <div className={rowInnerClass}>
-                <span className="flex h-8 w-8 flex-none items-center justify-center rounded-md bg-tiilt-soft text-tiilt">
-                    <FolderIcon />
+        <span className="flex items-center gap-0.5 rounded-full border border-tiilt-line bg-white py-1 pr-1 pl-3 transition hover:border-tiilt">
+            <button
+                onClick={() => onOpen(folder.id)}
+                className="flex min-w-0 cursor-pointer items-center gap-1.5 text-sm font-semibold text-tiilt-ink transition hover:text-tiilt"
+            >
+                <span className="flex-none text-tiilt">
+                    <FolderIcon className="h-4 w-4" />
                 </span>
+                <span className="max-w-40 truncate">{folder.name}</span>
+                {count != null ? (
+                    <span className="font-normal text-tiilt-muted">
+                        {count}
+                    </span>
+                ) : null}
+            </button>
+            <AppContextMenu label={`Options for folder ${folder.name}`}>
                 <button
-                    onClick={() => onOpen(folder.id)}
-                    className="min-w-0 grow cursor-pointer truncate text-left text-base font-semibold text-tiilt-ink"
+                    role="menuitem"
+                    className={menuItemClass}
+                    onClick={() => openFolderDialog("RenameFolder", folder)}
                 >
-                    {folder.name}
-                    {count != null ? (
-                        <span className="ml-2 text-xs font-normal text-tiilt-muted">
-                            {count} {count === 1 ? "session" : "sessions"}
-                        </span>
-                    ) : null}
+                    Edit Name
                 </button>
-                <div className="flex-none">
-                    <AppContextMenu label={`Options for folder ${folder.name}`}>
-                        <button
-                            role="menuitem"
-                            className={menuItemClass}
-                            onClick={() => openFolderDialog("RenameFolder", folder)}
-                        >
-                            Edit Name
-                        </button>
-                        <button
-                            role="menuitem"
-                            className={menuItemClass}
-                            onClick={() => openFolderDialog("MoveFolder", folder)}
-                        >
-                            Move To...
-                        </button>
-                        <button
-                            role="menuitem"
-                            className={menuDangerClass}
-                            onClick={() => openFolderDialog("DeleteFolder", folder)}
-                        >
-                            Delete
-                        </button>
-                    </AppContextMenu>
-                </div>
-            </div>
-        </li>
+                <button
+                    role="menuitem"
+                    className={menuItemClass}
+                    onClick={() => openFolderDialog("MoveFolder", folder)}
+                >
+                    Move To...
+                </button>
+                <button
+                    role="menuitem"
+                    className={menuDangerClass}
+                    onClick={() => openFolderDialog("DeleteFolder", folder)}
+                >
+                    Delete
+                </button>
+            </AppContextMenu>
+        </span>
     )
 }
 
@@ -309,11 +348,16 @@ function PodDurations({ sessionId }) {
     )
 }
 
-function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, onToggle }) {
+function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, onToggle, renameInline, folderHint }) {
     const [expanded, setExpanded] = useState(false)
+    const [editing, setEditing] = useState(false)
     const hasPods = session.pod_count != null && session.pod_count > 0
+    const commitRename = (value) => {
+        setEditing(false)
+        if (renameInline) renameInline(session, value)
+    }
     return (
-        <li className={rowClass}>
+        <li className={rowClass + " group"}>
             <div className={rowInnerClass}>
             <input
                 type="checkbox"
@@ -338,6 +382,22 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
                     </svg>
                 )}
             </span>
+            {editing ? (
+                <div className="flex min-w-0 grow flex-col">
+                    <input
+                        autoFocus
+                        defaultValue={session.title}
+                        aria-label="Session name"
+                        maxLength={64}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") commitRename(e.target.value)
+                            if (e.key === "Escape") setEditing(false)
+                        }}
+                        onBlur={(e) => commitRename(e.target.value)}
+                        className="w-full max-w-sm rounded-md border border-tiilt bg-white px-2 py-0.5 text-base font-semibold text-tiilt-ink outline-none focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
+                    />
+                </div>
+            ) : (
             <button
                 onClick={() => onOpen(session)}
                 className="flex min-w-0 grow cursor-pointer flex-col text-left"
@@ -349,6 +409,15 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
                     {session.title}
                 </span>
                 <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-tiilt-muted">
+                    {folderHint ? (
+                        <span
+                            title={`In folder ${folderHint}`}
+                            className="flex flex-none items-center gap-1 rounded-full bg-tiilt-line/40 px-1.5 py-0.5 font-semibold whitespace-nowrap text-tiilt-muted"
+                        >
+                            <FolderIcon className="h-3 w-3" />
+                            {folderHint}
+                        </span>
+                    ) : null}
                     <span className="whitespace-nowrap">
                         {formatDate(session.creation_date)}
                     </span>
@@ -396,6 +465,17 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
                     ) : null}
                 </span>
             </button>
+            )}
+            {!editing ? (
+                <button
+                    onClick={() => setEditing(true)}
+                    aria-label={`Rename ${session.title}`}
+                    title="Rename"
+                    className="flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-md text-sm text-tiilt-muted opacity-0 transition group-hover:opacity-100 hover:bg-tiilt-soft hover:text-tiilt focus-visible:opacity-100"
+                >
+                    ✎
+                </button>
+            ) : null}
             {session.recording ? (
                 <StatusPill tone="danger" dot className="text-xs">
                     Live
@@ -528,6 +608,15 @@ function DiscussionSessionPage(props) {
                                 ) : (
                                     <></>
                                 )}
+                                <span
+                                    tabIndex={0}
+                                    role="note"
+                                    title={PODS_EXPLAINER}
+                                    aria-label={PODS_EXPLAINER}
+                                    className="flex h-5 w-5 flex-none cursor-help items-center justify-center rounded-full bg-tiilt-line/40 text-[11px] font-bold text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
+                                >
+                                    ?
+                                </span>
                             </nav>
                             <div className="flex flex-wrap justify-end gap-2">
                                 <UploadVideoButton />
@@ -542,38 +631,13 @@ function DiscussionSessionPage(props) {
                         </div>
 
                         {!props.isLoading ? (
-                            <div className="mb-4 rounded-lg border border-tiilt-line bg-tiilt-soft/40 px-3.5 py-2.5 text-xs leading-relaxed text-tiilt-muted">
-                                <span className="font-semibold text-tiilt-ink">
-                                    Sessions vs. pods:
-                                </span>{" "}
-                                A{" "}
-                                <span className="font-semibold">session</span> is
-                                one recorded session. Each{" "}
-                                <span className="font-semibold">pod</span> is a
-                                participant group (device) within that session — a
-                                session can have several pods running at once.
-                                Expand a session to see its pods, and click any
-                                pod to open its analysis.
-                            </div>
+                            <SessionStats sessions={props.sessions} />
                         ) : null}
 
                         {!props.isLoading ? (
-                            <div className="mb-3">
-                                <button
-                                    className={btnSecondary + " flex items-center gap-1.5"}
-                                    onClick={() => props.openFolderDialog("NewFolder")}
-                                >
-                                    <FolderIcon className="h-4 w-4" />
-                                    New folder
-                                </button>
-                            </div>
-                        ) : null}
-
-                        {!props.isLoading &&
-                        props.displayedFolders.length > 0 ? (
-                            <ul className="flex flex-col gap-1.5">
+                            <div className="mb-4 flex flex-wrap items-center gap-2">
                                 {props.displayedFolders.map((folder, index) => (
-                                    <FolderRow
+                                    <FolderChip
                                         key={index}
                                         folder={folder}
                                         count={(props.sessions || []).filter((x) => x.folder === folder.id).length}
@@ -583,13 +647,19 @@ function DiscussionSessionPage(props) {
                                         }
                                     />
                                 ))}
-                            </ul>
-                        ) : (
-                            <></>
-                        )}
+                                <button
+                                    onClick={() => props.openFolderDialog("NewFolder")}
+                                    className="flex cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-tiilt-line px-3 py-1.5 text-sm font-semibold text-tiilt-muted transition hover:border-tiilt hover:text-tiilt"
+                                >
+                                    <span aria-hidden="true">+</span>
+                                    New folder
+                                </button>
+                            </div>
+                        ) : null}
 
                         {!props.isLoading &&
-                        props.videoCount + props.audioCount > 0 ? (
+                        (props.videoCount + props.audioCount > 0 ||
+                            props.searchingAll) ? (
                             <div className="mt-4">
                                 <SortControl
                                     value={props.sortBy}
@@ -637,6 +707,12 @@ function DiscussionSessionPage(props) {
                                                     checked={props.selectedIds[session.id]}
                                                     onToggle={() => props.toggleSelected(session.id)}
                                                     onOpen={props.goToSession}
+                                                    renameInline={props.renameSessionInline}
+                                                    folderHint={
+                                                        props.searchingAll
+                                                            ? (props.folders.find((f) => f.id === session.folder) || {}).name || "Home"
+                                                            : null
+                                                    }
                                                     openSessionDialog={
                                                         props.openSessionDialog
                                                     }
@@ -649,11 +725,11 @@ function DiscussionSessionPage(props) {
                                     </ul>
                                 ) : (
                                     <div className="py-8 text-center text-sm text-tiilt-muted">
-                                        No{" "}
-                                        {props.videoFilter === "video"
-                                            ? "sessions with video"
-                                            : "audio-only sessions"}
-                                        .
+                                        {props.searchingAll
+                                            ? "No sessions match your search (searched every folder)."
+                                            : props.videoFilter === "video"
+                                              ? "No sessions with video."
+                                              : "No audio-only sessions."}
                                     </div>
                                 )}
                             </div>

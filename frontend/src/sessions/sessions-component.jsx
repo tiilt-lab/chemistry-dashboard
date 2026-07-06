@@ -415,6 +415,34 @@ function SessionsComponent(props) {
         closeDialog()
     }
 
+    // Inline rename from the row pencil — no dialog, no loading form.
+    const renameSessionInline = (session, newName) => {
+        const trimmed = (newName || "").trim()
+        if (!trimmed || trimmed === session.title) return
+        new SessionService().updateSession(session.id, trimmed).then(
+            (response) => {
+                if (response.status === 200) {
+                    response.json().then((json) => {
+                        const updated = SessionModel.fromJson(json)
+                        const i = sessions.findIndex(
+                            (s) => s.id === updated.id,
+                        )
+                        if (i > -1) {
+                            sessions[i] = updated
+                            displayFolder(updated.folder)
+                        }
+                    })
+                }
+            },
+            (apierror) => {
+                console.log(
+                    "sessions-components func: renameSessionInline ",
+                    apierror,
+                )
+            },
+        )
+    }
+
     const moveSession = (newParentId) => {
         const fetchData = new SessionService().updateSessionFolder(
             selectedSession.id,
@@ -558,7 +586,11 @@ function SessionsComponent(props) {
         "name-asc": (a, b) => a.title.localeCompare(b.title),
     }
     const query = searchQuery.trim().toLowerCase()
-    const filteredSessions = displayedSessions.filter(
+    // A non-empty search spans EVERY folder (results carry a folder hint);
+    // browsing stays scoped to the open folder.
+    const searchingAll = query !== ""
+    const baseSessions = searchingAll ? sessions : displayedSessions
+    const filteredSessions = baseSessions.filter(
         (s) =>
             (videoFilter === "video"
                 ? s.has_video
@@ -609,6 +641,8 @@ function SessionsComponent(props) {
             displayFolder={displayFolder}
             displayedFolders={displayedFolders}
             displayedSessions={sortedSessions}
+            searchingAll={searchingAll}
+            renameSessionInline={renameSessionInline}
             goToSession={goToSession}
             openSessionDialog={openSessionDialog}
             endSession={endSession}
