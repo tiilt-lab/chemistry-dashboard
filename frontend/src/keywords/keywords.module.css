@@ -1,6 +1,6 @@
 .keyword {
   opacity: .75;
-  color: #3a2163;
+  color: var(--color-tiilt);
   font-weight: bold;
   cursor: pointer;
 }
@@ -35,7 +35,7 @@
   width: 60px;
   line-height: 30px;
   font-size: 15px;
-  color: #675e7d;
+  color: var(--color-tiilt-muted);
 }
 
 .timeline-container .keyword-timeline .keyword-graph {

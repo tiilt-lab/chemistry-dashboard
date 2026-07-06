@@ -1,4 +1,5 @@
 import { GenericDialogBox, DialogBox } from "../dialog/dialog-component"
+import { PodMicRing } from "../components/pod-mic-ring"
 import { POD_ON_COLOR, POD_OFF_COLOR, GLOW_COLOR } from "../components/pod-colors"
 import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
@@ -168,56 +169,12 @@ function StudentSessionDashboardPages(props) {
                                                     onClick={() => props.loadSelectedSessionDeviceMetrics(device.id)}
                                                     className={style["pod-overview-button"]}
                                                 >
-                                                    <svg
+                                                    <PodMicRing
                                                         className={style["pod-overview-icon"]}
-                                                        width="80px"
-                                                        height="80px"
-                                                        viewBox="-40 -40 80 80"
-                                                    >
-                                                        <svg
-                                                            x="-8.5"
-                                                            y="-13.5"
-                                                            width="17"
-                                                            height="27"
-                                                            viewBox="0 0 17 27"
-                                                        >
-                                                            <MicIcon
-                                                                fill={
-                                                                    device.connected
-                                                                        ? POD_ON_COLOR
-                                                                        : POD_OFF_COLOR
-                                                                }
-                                                            ></MicIcon>
-                                                        </svg>
-                                                        {device.button_pressed ? (
-                                                            <svg>
-                                                                <circle
-                                                                    className={style.svgpulse}
-                                                                    x="0"
-                                                                    y="0"
-                                                                    r="33.5"
-                                                                    fill-opacity="0"
-                                                                    stroke={GLOW_COLOR}
-                                                                ></circle>{" "}
-                                                            </svg>
-                                                        ) : (
-                                                            <></>
-                                                        )}
-                                                        <svg>
-                                                            <circle
-                                                                x="0"
-                                                                y="0"
-                                                                r="30.5"
-                                                                fillOpacity="0"
-                                                                strokeWidth="3"
-                                                                stroke={
-                                                                    device.connected
-                                                                        ? POD_ON_COLOR
-                                                                        : POD_OFF_COLOR
-                                                                }
-                                                            ></circle>
-                                                        </svg>
-                                                    </svg>
+                                                        color={device.connected ? POD_ON_COLOR : POD_OFF_COLOR}
+                                                        pulsing={!!device.button_pressed}
+                                                        pulseClassName={style.svgpulse}
+                                                    />
                                                     <div>{device.name}</div>
                                                 </div>
                                             ))

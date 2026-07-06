@@ -58,17 +58,6 @@ function TrackAvatar({ initials, color, imgUrl }) {
     )
 }
 
-// Per-participant line colors, matching the transcript panel palette.
-const SPEAKER_COLORS = [
-    "#3a2163",
-    "#00a79d",
-    "#c0007a",
-    "#b26a00",
-    "#4d7c1f",
-    "#2e3192",
-    "#b3261e",
-    "#6d28d9",
-]
 
 // Recognizable colors per facial-emotion label.
 const EMOTION_COLORS = {

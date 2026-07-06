@@ -18,7 +18,7 @@
   font-size: 16px;
   line-height: 24px;
   color: #ffffff;
-  background: #3a2163;
+  background: var(--color-tiilt);
 }
 
 .basic-button:focus {
@@ -52,7 +52,7 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #5b3a94;
+  color: var(--color-tiilt);
 }
 
 .cancel-button:focus {
@@ -100,7 +100,7 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #5b3a94;
+  color: var(--color-tiilt);
 }
 
 .dialog-button:focus {
