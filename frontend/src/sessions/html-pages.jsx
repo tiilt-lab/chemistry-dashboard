@@ -18,42 +18,11 @@ import { StatusPill } from "../components/status-pill"
 import { SkeletonRows } from "../components/skeleton"
 import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel, btnPrimary, btnSecondary, btnSecondarySm, btnDangerOutlineSm } from "../components/dialog-styles"
 
-// Row wrapper (border/bg/hover) is a column so the expandable pod panel can sit
-// below the horizontal row content.
-
-const rowClass =
-    "group flex flex-col rounded-lg border border-tiilt-line bg-white transition hover:border-tiilt hover:shadow-card-hover"
-const rowInnerClass = "flex items-center gap-2.5 px-3 py-1.5"
 const menuItemClass = style2["menu-item"]
 const menuDangerClass = `${style2["menu-item"]} ${style2["red"]}`
 
-const SORT_OPTIONS = [
-    { value: "date-desc", label: "Newest first" },
-    { value: "date-asc", label: "Oldest first" },
-    { value: "length-desc", label: "Longest first" },
-    { value: "length-asc", label: "Shortest first" },
-    { value: "name-asc", label: "Name (A–Z)" },
-]
-
-function FilterTab({ active, onClick, children }) {
-    return (
-        <button
-            onClick={onClick}
-            className={
-                "cursor-pointer rounded-md px-3 py-1 text-sm font-semibold transition " +
-                (active
-                    ? "bg-white text-tiilt shadow-card"
-                    : "text-tiilt-muted hover:text-tiilt-ink")
-            }
-        >
-            {children}
-        </button>
-    )
-}
-
+// Search + filter chips; sorting moved into the table's column headers.
 function SortControl({
-    value,
-    onChange,
     count,
     videoFilter,
     setVideoFilter,
@@ -62,50 +31,35 @@ function SortControl({
     searchQuery,
     setSearchQuery,
 }) {
+    const chip = (value, label) => (
+        <button
+            onClick={() => setVideoFilter(value)}
+            aria-pressed={videoFilter === value}
+            className={
+                "cursor-pointer rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap transition " +
+                (videoFilter === value
+                    ? "bg-tiilt text-white"
+                    : "bg-tiilt-line/40 text-tiilt-muted hover:bg-tiilt-soft hover:text-tiilt")
+            }
+        >
+            {label}
+        </button>
+    )
     return (
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-3 flex flex-wrap items-center gap-3">
             <input
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search sessions…"
-                aria-label="Search sessions by name"
-                className="h-9 w-full rounded-lg border border-tiilt-line bg-white px-3 text-sm text-tiilt-ink transition outline-none placeholder:text-tiilt-muted focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30 sm:order-last sm:w-56"
+                placeholder="Search all sessions…"
+                aria-label="Search sessions by name, across all folders"
+                className="h-10 w-full max-w-60 rounded-lg border border-tiilt-line bg-white px-3 text-sm text-tiilt-ink transition outline-none placeholder:text-tiilt-muted focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
             />
-            <div className="flex items-center gap-1 rounded-lg border border-tiilt-line bg-tiilt-ground p-1">
-                <FilterTab
-                    active={videoFilter === "all"}
-                    onClick={() => setVideoFilter("all")}
-                >
-                    All {count}
-                </FilterTab>
-                <FilterTab
-                    active={videoFilter === "video"}
-                    onClick={() => setVideoFilter("video")}
-                >
-                    Video {videoCount}
-                </FilterTab>
-                <FilterTab
-                    active={videoFilter === "audio"}
-                    onClick={() => setVideoFilter("audio")}
-                >
-                    Audio only {audioCount}
-                </FilterTab>
+            <div className="flex items-center gap-1.5">
+                {chip("all", `All ${count}`)}
+                {chip("video", `Video ${videoCount}`)}
+                {chip("audio", `Audio only ${audioCount}`)}
             </div>
-            <label className="flex items-center gap-2 text-sm text-tiilt-muted">
-                Sort by
-                <select
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    className="cursor-pointer rounded-lg border border-tiilt-line bg-white py-1.5 pr-8 pl-3 text-sm font-semibold text-tiilt-ink transition outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
-                >
-                    {SORT_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                            {o.label}
-                        </option>
-                    ))}
-                </select>
-            </label>
         </div>
     )
 }
@@ -357,95 +311,122 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
         if (renameInline) renameInline(session, value)
     }
     return (
-        <li className={rowClass + " group"}>
-            <div className={rowInnerClass}>
-            <input
-                type="checkbox"
-                checked={!!checked}
-                onChange={onToggle}
-                aria-label={`Select session ${session.title}`}
-                className="h-4 w-4 flex-none cursor-pointer accent-tiilt"
-            />
-            <span
-                className={
-                    "flex h-8 w-8 flex-none items-center justify-center rounded-md " +
-                    (session.recording
-                        ? "bg-tiilt-danger-soft text-tiilt-danger"
-                        : "bg-tiilt-soft text-tiilt")
-                }
-            >
-                {session.has_video ? (
-                    <Camera />
-                ) : (
-                    <svg width="20" height="20" viewBox="0 0 20 30">
-                        <MicIcon fill="currentColor" />
-                    </svg>
-                )}
-            </span>
-            {editing ? (
-                <div className="flex min-w-0 grow flex-col">
-                    <input
-                        autoFocus
-                        defaultValue={session.title}
-                        aria-label="Session name"
-                        maxLength={64}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") commitRename(e.target.value)
-                            if (e.key === "Escape") setEditing(false)
-                        }}
-                        onBlur={(e) => commitRename(e.target.value)}
-                        className="w-full max-w-sm rounded-md border border-tiilt bg-white px-2 py-0.5 text-base font-semibold text-tiilt-ink outline-none focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
-                    />
-                </div>
-            ) : (
-            <button
+        <>
+            <tr
                 onClick={() => onOpen(session)}
-                className="flex min-w-0 grow cursor-pointer flex-col text-left"
+                title={`Open ${session.title}`}
+                className="group cursor-pointer border-t border-tiilt-line bg-white transition first:border-t-0 hover:bg-tiilt-soft/50"
             >
-                <span
-                    title={session.title}
-                    className="truncate text-base font-semibold text-tiilt-ink"
-                >
-                    {session.title}
-                </span>
-                <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-tiilt-muted">
+                <td className="py-2 pr-1 pl-4">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            onToggle()
+                        }}
+                        role="checkbox"
+                        aria-checked={!!checked}
+                        aria-label={`Select session ${session.title}`}
+                        title={checked ? "Deselect" : "Select for bulk actions"}
+                        className={
+                            "flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-md transition " +
+                            (checked
+                                ? "bg-tiilt text-white ring-2 ring-tiilt/40"
+                                : session.recording
+                                  ? "bg-tiilt-danger-soft text-tiilt-danger hover:ring-2 hover:ring-tiilt/30"
+                                  : "bg-tiilt-soft text-tiilt hover:ring-2 hover:ring-tiilt/30")
+                        }
+                    >
+                        {checked ? (
+                            "\u2713"
+                        ) : session.has_video ? (
+                            <Camera />
+                        ) : (
+                            <svg width="20" height="20" viewBox="0 0 20 30">
+                                <MicIcon fill="currentColor" />
+                            </svg>
+                        )}
+                    </button>
+                </td>
+                <td className="max-w-0 px-3 py-2" style={{ width: "38%" }}>
+                    {editing ? (
+                        <input
+                            autoFocus
+                            defaultValue={session.title}
+                            aria-label="Session name"
+                            maxLength={64}
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") commitRename(e.target.value)
+                                if (e.key === "Escape") setEditing(false)
+                            }}
+                            onBlur={(e) => commitRename(e.target.value)}
+                            className="w-full rounded-md border border-tiilt bg-white px-2 py-0.5 text-sm font-semibold text-tiilt-ink outline-none focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
+                        />
+                    ) : (
+                        <span className="flex min-w-0 items-center gap-1">
+                            <span
+                                title={session.title}
+                                className="truncate font-semibold text-tiilt-ink"
+                            >
+                                {session.title}
+                            </span>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    setEditing(true)
+                                }}
+                                aria-label={`Rename ${session.title}`}
+                                title="Rename"
+                                className="flex h-6 w-6 flex-none cursor-pointer items-center justify-center rounded text-xs text-tiilt-muted opacity-0 transition group-hover:opacity-100 hover:bg-tiilt-soft hover:text-tiilt focus-visible:opacity-100"
+                            >
+                                {"\u270E"}
+                            </button>
+                        </span>
+                    )}
                     {folderHint ? (
                         <span
                             title={`In folder ${folderHint}`}
-                            className="flex flex-none items-center gap-1 rounded-full bg-tiilt-line/40 px-1.5 py-0.5 font-semibold whitespace-nowrap text-tiilt-muted"
+                            className="mt-0.5 flex w-fit flex-none items-center gap-1 rounded-full bg-tiilt-line/40 px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap text-tiilt-muted"
                         >
                             <FolderIcon className="h-3 w-3" />
                             {folderHint}
                         </span>
                     ) : null}
-                    <span className="whitespace-nowrap">
-                        {formatDate(session.creation_date)}
-                    </span>
-                    <span aria-hidden="true">·</span>
-                    <span className="font-ahamono tabular-nums whitespace-nowrap">
-                        {session.lengthFormatted}
-                    </span>
+                </td>
+                <td className="px-3 py-2 whitespace-nowrap text-tiilt-ink">
+                    {formatDate(session.creation_date)}
+                </td>
+                <td className="px-3 py-2 text-right font-ahamono text-xs tabular-nums whitespace-nowrap text-tiilt-ink">
+                    {session.lengthFormatted}
+                </td>
+                <td className="px-3 py-2 text-right font-ahamono tabular-nums whitespace-nowrap text-tiilt-ink">
                     {session.participant_count > 0 ? (
-                        <>
-                            <span aria-hidden="true">·</span>
-                            <span className="whitespace-nowrap">
-                                {session.participant_count}{" "}
-                                {session.participant_count === 1
-                                    ? "participant"
-                                    : "participants"}
-                            </span>
-                        </>
-                    ) : null}
-                    {session.analysis_running ? (
+                        session.participant_count
+                    ) : (
+                        <span className="text-tiilt-muted">{"\u2014"}</span>
+                    )}
+                </td>
+                <td className="px-3 py-2 text-right font-ahamono tabular-nums whitespace-nowrap text-tiilt-ink">
+                    {hasPods ? (
+                        session.pod_count
+                    ) : (
+                        <span className="text-tiilt-muted">{"\u2014"}</span>
+                    )}
+                </td>
+                <td className="px-3 py-2 whitespace-nowrap">
+                    {session.recording ? (
+                        <StatusPill tone="danger" dot pulse>
+                            Live
+                        </StatusPill>
+                    ) : session.analysis_running ? (
                         <StatusPill
                             tone="orange"
                             pulse
                             title="A full analysis is running right now"
                         >
-                            Analyzing…
+                            Analyzing{"\u2026"}
                         </StatusPill>
-                    ) : null}
-                    {session.has_posthoc ? (
+                    ) : session.has_posthoc ? (
                         <StatusPill
                             tone="teal"
                             title="Post-hoc analysis has been run for this session"
@@ -453,94 +434,118 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
                             <Refresh />
                             Re-analyzed
                         </StatusPill>
-                    ) : null}
-                    {hasPods ? (
-                        <span
-                            title="Pods (participant groups) recorded in this session"
-                            className="flex flex-none items-center gap-1 rounded-full bg-tiilt-soft px-1.5 py-0.5 font-semibold whitespace-nowrap text-tiilt"
-                        >
-                            {session.pod_count}{" "}
-                            {session.pod_count === 1 ? "pod" : "pods"}
-                        </span>
-                    ) : null}
+                    ) : (
+                        <span className="text-xs text-tiilt-muted">{"\u2014"}</span>
+                    )}
+                </td>
+                <td
+                    className="py-2 pr-3 pl-1 text-right whitespace-nowrap"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <span className="flex items-center justify-end gap-0.5">
+                        {hasPods ? (
+                            <button
+                                onClick={() => setExpanded((v) => !v)}
+                                title={expanded ? "Hide pods" : "Show pods"}
+                                aria-expanded={expanded}
+                                className="flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-md text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
+                            >
+                                <Chevron
+                                    direction="down"
+                                    style={{
+                                        transform: expanded ? "rotate(180deg)" : "none",
+                                        transition: "transform 0.15s",
+                                    }}
+                                />
+                            </button>
+                        ) : null}
+                        <AppContextMenu label={`Options for session ${session.title}`}>
+                            <button
+                                role="menuitem"
+                                className={menuItemClass}
+                                onClick={() =>
+                                    openSessionDialog("RenameSession", session)
+                                }
+                            >
+                                Edit Name
+                            </button>
+                            <button
+                                role="menuitem"
+                                className={menuItemClass}
+                                onClick={() =>
+                                    openSessionDialog("MoveSession", session)
+                                }
+                            >
+                                Move To...
+                            </button>
+                            {!session.recording ? (
+                                <button
+                                    role="menuitem"
+                                    className={menuDangerClass}
+                                    onClick={() =>
+                                        openSessionDialog("DeleteSession", session)
+                                    }
+                                >
+                                    Delete
+                                </button>
+                            ) : (
+                                <button
+                                    role="menuitem"
+                                    className={menuDangerClass}
+                                    onClick={() => endSession(session)}
+                                >
+                                    End
+                                </button>
+                            )}
+                        </AppContextMenu>
+                    </span>
+                </td>
+            </tr>
+            {expanded ? (
+                <tr className="border-t border-tiilt-line bg-tiilt-ground/40">
+                    <td colSpan={8} className="px-3 py-1">
+                        <PodDurations sessionId={session.id} />
+                    </td>
+                </tr>
+            ) : null}
+        </>
+    )
+}
+
+// Clickable, aria-sorted column header driving the shared sortBy state
+// ("date-desc" style keys).
+function SortableTh({ label, sortKey, sortBy, setSortBy, alignRight, defaultDir = "desc" }) {
+    const active = sortBy.startsWith(sortKey + "-")
+    const dir = active ? sortBy.slice(sortKey.length + 1) : null
+    const next = active
+        ? `${sortKey}-${dir === "asc" ? "desc" : "asc"}`
+        : `${sortKey}-${defaultDir}`
+    return (
+        <th
+            aria-sort={
+                active ? (dir === "asc" ? "ascending" : "descending") : undefined
+            }
+            className={
+                "sticky top-0 bg-tiilt-ground px-3 py-2.5 whitespace-nowrap " +
+                (alignRight ? "text-right" : "text-left")
+            }
+        >
+            <button
+                onClick={() => setSortBy(next)}
+                className="cursor-pointer text-sm font-semibold text-tiilt-ink transition hover:text-tiilt"
+            >
+                {label}
+                <span
+                    aria-hidden="true"
+                    className={
+                        "ml-1 inline-block text-[10px] " +
+                        (active ? "text-tiilt" : "text-tiilt-line")
+                    }
+                >
+                    {active && dir === "asc" ? "\u25B2" : "\u25BC"}
                 </span>
             </button>
-            )}
-            {!editing ? (
-                <button
-                    onClick={() => setEditing(true)}
-                    aria-label={`Rename ${session.title}`}
-                    title="Rename"
-                    className="flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-md text-sm text-tiilt-muted opacity-0 transition group-hover:opacity-100 hover:bg-tiilt-soft hover:text-tiilt focus-visible:opacity-100"
-                >
-                    ✎
-                </button>
-            ) : null}
-            {session.recording ? (
-                <StatusPill tone="danger" dot className="text-xs">
-                    Live
-                </StatusPill>
-            ) : null}
-            {hasPods ? (
-                <button
-                    onClick={() => setExpanded((v) => !v)}
-                    title={expanded ? "Hide pods" : "Show pod durations"}
-                    aria-expanded={expanded}
-                    className="flex h-7 w-7 flex-none items-center justify-center rounded-md text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
-                >
-                    <Chevron
-                        direction="down"
-                        style={{
-                            transform: expanded ? "rotate(180deg)" : "none",
-                            transition: "transform 0.15s",
-                        }}
-                    />
-                </button>
-            ) : null}
-            <div className="flex-none">
-                <AppContextMenu label={`Options for session ${session.title}`}>
-                    <button
-                        role="menuitem"
-                        className={menuItemClass}
-                        onClick={() =>
-                            openSessionDialog("RenameSession", session)
-                        }
-                    >
-                        Edit Name
-                    </button>
-                    <button
-                        role="menuitem"
-                        className={menuItemClass}
-                        onClick={() =>
-                            openSessionDialog("MoveSession", session)
-                        }
-                    >
-                        Move To...
-                    </button>
-                    {!session.recording ? (
-                        <button
-                            role="menuitem"
-                            className={menuDangerClass}
-                            onClick={() =>
-                                openSessionDialog("DeleteSession", session)
-                            }
-                        >
-                            Delete
-                        </button>
-                    ) : (
-                        <button
-                            role="menuitem"
-                            className={menuDangerClass}
-                            onClick={() => endSession(session)}
-                        >
-                            End
-                        </button>
-                    )}
-                </AppContextMenu>
-            </div>
-            </div>
-            {expanded ? <PodDurations sessionId={session.id} /> : null}
-        </li>
+        </th>
     )
 }
 
@@ -556,7 +561,7 @@ function DiscussionSessionPage(props) {
                 />
 
                 <div className="relative min-h-0 w-full grow overflow-y-auto">
-                    <div className="mx-auto w-full max-w-3xl px-4 py-8">
+                    <div className="mx-auto w-full max-w-4xl px-4 py-8">
                         {props.isLoading ? (
                             <SkeletonRows rows={8} className="mt-14" />
                         ) : (
@@ -662,8 +667,6 @@ function DiscussionSessionPage(props) {
                             props.searchingAll) ? (
                             <div className="mt-4">
                                 <SortControl
-                                    value={props.sortBy}
-                                    onChange={props.setSortBy}
                                     searchQuery={props.searchQuery}
                                     setSearchQuery={props.setSearchQuery}
                                     count={props.videoCount + props.audioCount}
@@ -698,31 +701,86 @@ function DiscussionSessionPage(props) {
                                     </div>
                                 ) : null}
                                 {props.displayedSessions.length > 0 ? (
-                                    <ul className="flex flex-col gap-1.5">
-                                        {props.displayedSessions.map(
-                                            (session, index) => (
-                                                <SessionRow
-                                                    key={index}
-                                                    session={session}
-                                                    checked={props.selectedIds[session.id]}
-                                                    onToggle={() => props.toggleSelected(session.id)}
-                                                    onOpen={props.goToSession}
-                                                    renameInline={props.renameSessionInline}
-                                                    folderHint={
-                                                        props.searchingAll
-                                                            ? (props.folders.find((f) => f.id === session.folder) || {}).name || "Home"
-                                                            : null
-                                                    }
-                                                    openSessionDialog={
-                                                        props.openSessionDialog
-                                                    }
-                                                    endSession={
-                                                        props.endSession
-                                                    }
-                                                />
-                                            ),
-                                        )}
-                                    </ul>
+                                    <div className="overflow-x-auto rounded-xl border border-tiilt-line bg-white">
+                                        <table className="w-full border-collapse text-left text-sm">
+                                            <thead>
+                                                <tr className="border-b border-tiilt-line">
+                                                    <th className="sticky top-0 bg-tiilt-ground py-2.5 pr-1 pl-4">
+                                                        <span className="sr-only">
+                                                            Select
+                                                        </span>
+                                                    </th>
+                                                    <SortableTh
+                                                        label="Session"
+                                                        sortKey="name"
+                                                        defaultDir="asc"
+                                                        sortBy={props.sortBy}
+                                                        setSortBy={props.setSortBy}
+                                                    />
+                                                    <SortableTh
+                                                        label="Date"
+                                                        sortKey="date"
+                                                        sortBy={props.sortBy}
+                                                        setSortBy={props.setSortBy}
+                                                    />
+                                                    <SortableTh
+                                                        label="Duration"
+                                                        sortKey="length"
+                                                        alignRight
+                                                        sortBy={props.sortBy}
+                                                        setSortBy={props.setSortBy}
+                                                    />
+                                                    <SortableTh
+                                                        label="People"
+                                                        sortKey="participants"
+                                                        alignRight
+                                                        sortBy={props.sortBy}
+                                                        setSortBy={props.setSortBy}
+                                                    />
+                                                    <SortableTh
+                                                        label="Pods"
+                                                        sortKey="pods"
+                                                        alignRight
+                                                        sortBy={props.sortBy}
+                                                        setSortBy={props.setSortBy}
+                                                    />
+                                                    <th className="sticky top-0 bg-tiilt-ground px-3 py-2.5 text-left text-sm font-semibold whitespace-nowrap text-tiilt-ink">
+                                                        Status
+                                                    </th>
+                                                    <th className="sticky top-0 bg-tiilt-ground py-2.5 pr-3 pl-1">
+                                                        <span className="sr-only">
+                                                            Actions
+                                                        </span>
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {props.displayedSessions.map(
+                                                    (session) => (
+                                                        <SessionRow
+                                                            key={session.id}
+                                                            session={session}
+                                                            checked={props.selectedIds[session.id]}
+                                                            onToggle={() => props.toggleSelected(session.id)}
+                                                            onOpen={props.goToSession}
+                                                            renameInline={props.renameSessionInline}
+                                                            folderHint={
+                                                                props.searchingAll
+                                                                    ? (props.folders.find((f) => f.id === session.folder) || {}).name || "Home"
+                                                                    : null
+                                                            }
+                                                            openSessionDialog={
+                                                                props.openSessionDialog
+                                                            }
+                                                            endSession={
+                                                                props.endSession
+                                                            }
+                                                        />
+                                                    ),
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 ) : (
                                     <div className="py-8 text-center text-sm text-tiilt-muted">
                                         {props.searchingAll

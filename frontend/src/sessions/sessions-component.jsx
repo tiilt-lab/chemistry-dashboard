@@ -584,6 +584,13 @@ function SessionsComponent(props) {
         "length-desc": (a, b) => b.length - a.length,
         "length-asc": (a, b) => a.length - b.length,
         "name-asc": (a, b) => a.title.localeCompare(b.title),
+        "name-desc": (a, b) => b.title.localeCompare(a.title),
+        "participants-desc": (a, b) =>
+            (b.participant_count || 0) - (a.participant_count || 0),
+        "participants-asc": (a, b) =>
+            (a.participant_count || 0) - (b.participant_count || 0),
+        "pods-desc": (a, b) => (b.pod_count || 0) - (a.pod_count || 0),
+        "pods-asc": (a, b) => (a.pod_count || 0) - (b.pod_count || 0),
     }
     const query = searchQuery.trim().toLowerCase()
     // A non-empty search spans EVERY folder (results carry a folder hint);
