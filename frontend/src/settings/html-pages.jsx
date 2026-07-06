@@ -14,23 +14,6 @@ const SECTIONS = [
         ],
     },
     {
-        title: "Manage Accounts",
-        show: (u) => u.isAdmin || u.isSuper,
-        items: [
-            { label: "View Users", dialog: ["ViewUsers", true] },
-            { label: "Add User", dialog: ["AddUser"] },
-            {
-                label: "Delete User",
-                dialog: ["DeleteUser", true],
-                danger: true,
-            },
-            { label: "Change User Role", dialog: ["UserRole", true] },
-            { label: "Lock User", dialog: ["LockUser", true] },
-            { label: "Unlock User", dialog: ["UnlockUser", true] },
-            { label: "Reset User Password", dialog: ["ResetUser", true] },
-        ],
-    },
-    {
         title: "Manage Server",
         show: (u) => u.isSuper,
         items: [
@@ -47,12 +30,6 @@ const SECTIONS = [
             {
                 label: "Clear Device Logs",
                 dialog: ["DeleteDeviceLogs", false, true],
-                danger: true,
-            },
-            { label: "Allow API Access", dialog: ["AllowAPI", true] },
-            {
-                label: "Revoke API Access",
-                dialog: ["RevokeAPI", true],
                 danger: true,
             },
         ],

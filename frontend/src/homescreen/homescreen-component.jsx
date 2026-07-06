@@ -54,6 +54,20 @@ const GROUPS = [
     },
 ]
 
+// Admin/super-only card, appended to GROUPS when the signed-in user can manage
+// accounts. Kept separate so the base groups stay visible to everyone.
+const ADMIN_GROUP = {
+    icon: pod,
+    name: "Administration",
+    links: [
+        {
+            label: "Users",
+            desc: "Dashboard accounts, roles, and access",
+            path: "/users",
+        },
+    ],
+}
+
 function GroupCard({ icon, name, links, navigate }) {
     return (
         <div className="overflow-hidden rounded-xl border border-tiilt-line bg-white shadow-[0_1px_2px_rgba(42,23,74,0.05)]">
@@ -91,9 +105,12 @@ function GroupCard({ icon, name, links, navigate }) {
     )
 }
 
-function HomeScreen() {
+function HomeScreen(props) {
     const timeOfDay = updateTime()
     const navigate = useNavigate()
+    const user = props.userdata
+    const canManageUsers = user && (user.isAdmin || user.isSuper)
+    const groups = canManageUsers ? [...GROUPS, ADMIN_GROUP] : GROUPS
 
     return (
         <div className="main-container overflow-y-auto bg-tiilt-ground">
@@ -137,7 +154,7 @@ function HomeScreen() {
                 </p>
 
                 <div className="flex flex-col gap-3">
-                    {GROUPS.map((g) => (
+                    {groups.map((g) => (
                         <GroupCard
                             key={g.name}
                             icon={g.icon}

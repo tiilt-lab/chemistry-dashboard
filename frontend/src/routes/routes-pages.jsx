@@ -29,6 +29,7 @@ const TopicListComponent = lazy(() => import('../topic-list/topic-list-component
 const ManageTopicModelsComponent = lazy(() => import('../manage-topic-models/manage-topic-models-component').then(m => ({ default: m.ManageTopicModelsComponent })))
 const PodsComponent = lazy(() => import('../pods/pods-component').then(m => ({ default: m.PodsComponent })))
 const PeopleComponent = lazy(() => import('../people/people-component').then(m => ({ default: m.PeopleComponent })))
+const UsersComponent = lazy(() => import('../users/users-component').then(m => ({ default: m.UsersComponent })))
 
 function RouteFallback() {
     return (
@@ -74,6 +75,7 @@ function PageRouter() {
                 <Route path='/topic-list/new-session' element={<ProtectedRoute component={TopicListComponent}/>} />
                 <Route path='/pods' element={<ProtectedRoute component={PodsComponent}/> } />
                 <Route path='/people' element={<ProtectedRoute component={PeopleComponent}/> } />
+                <Route path='/users' element={<ProtectedRoute component={UsersComponent}/> } />
                 <Route path='/settings' element={<ProtectedRoute component={SettingsComponent}/> } />
             </Routes>
             </Suspense>
