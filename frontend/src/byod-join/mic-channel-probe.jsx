@@ -15,6 +15,10 @@ function MicChannelProbe() {
     const [deviceLabel, setDeviceLabel] = useState("")
     const [channels, setChannels] = useState(0)
     const [levels, setLevels] = useState([])
+    // null = not enough signal yet; true = channels carry the same signal
+    // (mono duplicated onto both); false = genuinely distinct channels.
+    const [duplicated, setDuplicated] = useState(null)
+    const statsRef = useRef(null)
     const cleanupRef = useRef(null)
 
     const stop = () => {
@@ -24,6 +28,7 @@ function MicChannelProbe() {
         }
         setState("idle")
         setLevels([])
+        setDuplicated(null)
     }
 
     useEffect(() => () => cleanupRef.current && cleanupRef.current(), [])
@@ -61,15 +66,39 @@ function MicChannelProbe() {
             setState("running")
 
             let raf = null
-            const buf = new Float32Array(512)
+            const bufs = analysers.map(() => new Float32Array(512))
+            statsRef.current = { frames: 0, a: 0, b: 0, d: 0 }
             const tick = () => {
-                const next = analysers.map((an) => {
-                    an.getFloatTimeDomainData(buf)
+                const next = analysers.map((an, i) => {
+                    an.getFloatTimeDomainData(bufs[i])
                     let sum = 0
-                    for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i]
-                    return Math.sqrt(sum / buf.length)
+                    for (let k = 0; k < bufs[i].length; k++)
+                        sum += bufs[i][k] * bufs[i][k]
+                    return Math.sqrt(sum / bufs[i].length)
                 })
                 setLevels(next)
+                // Duplicate-channel detection: accumulate the energy of the
+                // (ch1 - ch2) difference while there is actual signal. A
+                // receiver in mono mode mirrors one mix onto both channels,
+                // which looks like "2 channels" but gives no separation.
+                if (n >= 2 && Math.max(next[0], next[1]) > 0.02) {
+                    const s = statsRef.current
+                    let d = 0
+                    for (let k = 0; k < bufs[0].length; k++) {
+                        const diff = bufs[0][k] - bufs[1][k]
+                        d += diff * diff
+                    }
+                    s.a += next[0] * next[0] * bufs[0].length
+                    s.b += next[1] * next[1] * bufs[1].length
+                    s.d += d
+                    s.frames += 1
+                    if (s.frames >= 40) {
+                        const ratio = Math.sqrt(
+                            s.d / (Math.max(s.a, s.b) + 1e-9),
+                        )
+                        setDuplicated(ratio < 0.2)
+                    }
+                }
                 raf = requestAnimationFrame(tick)
             }
             tick()
@@ -138,6 +167,26 @@ function MicChannelProbe() {
                             ? "1 channel — speakers will be identified by voice"
                             : `${channels} channels detected — one mic per person is possible on this setup`}
                     </div>
+                    {channels > 1 && duplicated === true ? (
+                        <div className="rounded-md bg-tiilt-orange/15 px-3 py-2 text-xs leading-relaxed text-tiilt-orange-text">
+                            Both channels are carrying the same signal, so this
+                            behaves like a single mic. If your receiver has a
+                            mono/stereo (track) switch, set it to stereo and
+                            check again.
+                        </div>
+                    ) : null}
+                    {channels > 1 && duplicated === false ? (
+                        <div className="rounded-md bg-tiilt-teal/15 px-3 py-2 text-xs leading-relaxed text-tiilt-teal-text">
+                            Channels are carrying distinct signals — per-mic
+                            attribution will work on this setup.
+                        </div>
+                    ) : null}
+                    {channels > 1 && duplicated === null ? (
+                        <div className="text-[11px] text-tiilt-muted">
+                            Speak or tap a mic for a moment to test whether the
+                            channels are really separate…
+                        </div>
+                    ) : null}
                     {levels.map((lvl, i) => (
                         <div key={i} className="flex items-center gap-2">
                             <span className="w-16 flex-none font-ahamono text-[11px] text-tiilt-muted">
