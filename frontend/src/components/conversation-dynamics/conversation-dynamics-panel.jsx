@@ -8,7 +8,7 @@ import { useIsDark } from "../../myhooks/custom-hooks"
 // Directed response network: speakers on a circle, curved arrows weighted by
 // how often the source speaker follows the target. Pure SVG; colors resolve
 // from the theme-aware speaker palette and CSS vars.
-function ResponseGraph({ transitions, colorOf }) {
+function ResponseGraph({ transitions, colorOf, sharesByName }) {
     const shown = transitions
         .filter((t) => t.from !== t.to)
         .slice(0, 12)
@@ -20,7 +20,13 @@ function ResponseGraph({ transitions, colorOf }) {
     const cx = W / 2
     const cy = H / 2
     const R = Math.min(W, H) / 2 - 52
-    const nodeR = 13
+    // Node size encodes speaking-time share (relative to the loudest shown).
+    const maxShare = Math.max(
+        ...names.map((n) => (sharesByName && sharesByName[n]) || 0),
+        0.0001,
+    )
+    const radiusOf = (n) =>
+        9 + 11 * (((sharesByName && sharesByName[n]) || 0) / maxShare)
     const pos = {}
     names.forEach((n, i) => {
         const a = (2 * Math.PI * i) / names.length - Math.PI / 2
@@ -39,10 +45,12 @@ function ResponseGraph({ transitions, colorOf }) {
         const px = -uy // perpendicular, left of travel: A->B and B->A bow apart
         const py = ux
         const bow = Math.min(36, len * 0.22)
-        const sx = p0.x + ux * (nodeR + 3)
-        const sy = p0.y + uy * (nodeR + 3)
-        const ex = p1.x - ux * (nodeR + 8)
-        const ey = p1.y - uy * (nodeR + 8)
+        const r0 = radiusOf(t.from)
+        const r1 = radiusOf(t.to)
+        const sx = p0.x + ux * (r0 + 3)
+        const sy = p0.y + uy * (r0 + 3)
+        const ex = p1.x - ux * (r1 + 8)
+        const ey = p1.y - uy * (r1 + 8)
         const mx = (sx + ex) / 2 + px * bow
         const my = (sy + ey) / 2 + py * bow
         // Arrowhead aligned with the curve's direction at its end.
@@ -72,8 +80,9 @@ function ResponseGraph({ transitions, colorOf }) {
 
     const labelFor = (n) => {
         const p = pos[n]
-        const lx = cx + (R + 24) * Math.cos(p.a)
-        const ly = cy + (R + 24) * Math.sin(p.a)
+        const off = R + radiusOf(n) + 12
+        const lx = cx + off * Math.cos(p.a)
+        const ly = cy + off * Math.sin(p.a)
         const anchor =
             Math.cos(p.a) > 0.25 ? "start" : Math.cos(p.a) < -0.25 ? "end" : "middle"
         return { lx, ly, anchor }
@@ -121,11 +130,15 @@ function ResponseGraph({ transitions, colorOf }) {
             ))}
             {names.map((n) => (
                 <g key={n}>
-                    <title>{n}</title>
+                    <title>
+                        {sharesByName && sharesByName[n] != null
+                            ? `${n} \u2014 ${Math.round(sharesByName[n] * 100)}% of speaking time`
+                            : n}
+                    </title>
                     <circle
                         cx={pos[n].x}
                         cy={pos[n].y}
-                        r={nodeR}
+                        r={radiusOf(n)}
                         fill={colorOf(n)}
                         stroke="var(--color-white)"
                         strokeWidth="2.5"
@@ -253,11 +266,14 @@ export function ConversationDynamicsPanel({ sessionId, sessionDeviceId }) {
                         <ResponseGraph
                             transitions={data.transitions}
                             colorOf={colorOf}
+                            sharesByName={Object.fromEntries(
+                                data.speakers.map((s) => [s.name, s.share]),
+                            )}
                         />
                         <div className="mt-1 text-[11px] text-tiilt-muted">
                             Arrows point from a speaker to the person they
-                            respond to; thicker arrows and larger counts mean
-                            more responses.
+                            respond to; thicker arrows mean more responses,
+                            and larger circles mean more speaking time.
                             {data.transitions.filter((t) => t.from !== t.to).length > 12
                                 ? ` Showing the top 12 of ${data.transitions.filter((t) => t.from !== t.to).length} response pairs.`
                                 : ""}
