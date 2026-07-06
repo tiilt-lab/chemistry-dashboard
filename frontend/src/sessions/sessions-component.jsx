@@ -616,6 +616,7 @@ function SessionsComponent(props) {
             displayedSessions={sortedSessions}
             goToSession={goToSession}
             openSessionDialog={openSessionDialog}
+            endSession={endSession}
             alertMessage={alertMessage}
             showAlert={showAlert}
             closeAlert={closeAlert}

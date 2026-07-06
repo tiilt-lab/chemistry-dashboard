@@ -93,7 +93,7 @@ function CreateSessionPage(props) {
                   id="txtName"
                   className={dlgInput}
                   defaultValue={props.sessionName}
-                  onKeyUp={(event) => props.setSessionName(event.target.value)}
+                  onInput={(event) => props.setSessionName(event.target.value)}
                   maxLength="64"
                   placeholder="Untitled session"
                 />
