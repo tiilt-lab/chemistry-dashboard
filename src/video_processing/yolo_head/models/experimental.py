@@ -116,7 +116,13 @@ def attempt_load(weights, map_location=None):
     for w in weights if isinstance(weights, list) else [weights]:
         #attempt_download(w)
         print('weight is : ',w)
-        model.append(torch.load(w, map_location=map_location)['model'].float().fuse().eval())  # load FP32 model
+        # weights_only=False: torch>=2.6 defaults to True, but YOLO checkpoints
+        # are full pickled models (trusted, shipped with the repo).
+        try:
+            ckpt = torch.load(w, map_location=map_location, weights_only=False)
+        except TypeError:  # torch<1.13 has no weights_only kwarg
+            ckpt = torch.load(w, map_location=map_location)
+        model.append(ckpt['model'].float().fuse().eval())  # load FP32 model
 
     # Compatibility updates
     for m in model.modules():
