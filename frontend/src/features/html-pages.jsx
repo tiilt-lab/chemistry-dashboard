@@ -1,3 +1,4 @@
+import { applyChartTheme } from "../components/chart-theme"
 import { Line } from "react-chartjs-2"
 import { brandColor } from "../globals"
 import { Chart as ChartJS } from "chart.js/auto"
@@ -25,6 +26,7 @@ const trendClass = (trend) =>
 const trendGlyph = (trend) => (trend === 1 ? "▲" : trend === -1 ? "▼" : "—")
 
 function FeatureCard({ feature, selectedTime, onSelectTime }) {
+    applyChartTheme()
     const selectedIndex = feature.time.indexOf(selectedTime)
     const pointRadius = feature.time.map((_, i) =>
         i === selectedIndex ? 5 : 0,

@@ -1,8 +1,15 @@
 import { useD3, adjDim } from "../myhooks/custom-hooks";
 import React from "react";
 import * as d3 from "d3";
+import { isDarkTheme } from "../globals";
 
 function RadarPage(props) {
+  // d3 draws with resolved colors, so pick the theme's inks up front.
+  const dark = isDarkTheme();
+  const inkColor = dark ? "#ece7f5" : "#221a33";
+  const mutedColor = dark ? "#a89fc0" : "#737373";
+  const gridColor = dark ? "#4a4166" : "#CDCDCD";
+  const separatorColor = dark ? "#241e33" : "white";
   //basic config
   const width = adjDim(340);
   const height = adjDim(200);
@@ -70,8 +77,8 @@ function RadarPage(props) {
         .append("circle")
         .attr("class", "gridCircle")
         .attr("r", (d, i) => (radius / axisCircles) * d)
-        .style("fill", "#CDCDCD")
-        .style("stroke", "#CDCDCD")
+        .style("fill", gridColor)
+        .style("stroke", gridColor)
         .style("fill-opacity", 0.1);
 
       axisGrid
@@ -83,7 +90,7 @@ function RadarPage(props) {
         .attr("y", (d) => (-d * radius) / axisCircles)
         .attr("dy", "0.4em")
         .style("font-size", "10px")
-        .attr("fill", "#737373")
+        .attr("fill", mutedColor)
         .text((d) => format(10 * d));
 
       const axis = axisGrid
@@ -108,7 +115,7 @@ function RadarPage(props) {
             rScale(graphMax * 1.1) * Math.sin(angleSlice * i - Math.PI / 2)
         )
         .attr("class", "line")
-        .style("stroke", "white")
+        .style("stroke", separatorColor)
         .style("stroke-width", "2px");
 
       axis
@@ -117,6 +124,7 @@ function RadarPage(props) {
         .style("font-size", "11px")
         .attr("text-anchor", "middle")
         .attr("font-family", "monospace")
+        .attr("fill", inkColor)
         .attr("dy", "0.35em")
         .attr(
           "x",

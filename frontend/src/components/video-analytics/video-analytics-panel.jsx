@@ -1,3 +1,4 @@
+import { applyChartTheme } from "../chart-theme"
 import { useState, useRef, useEffect } from "react"
 import { Line } from "react-chartjs-2"
 import { Chart as ChartJS } from "chart.js/auto"
@@ -373,6 +374,7 @@ function SectionHeader({ children }) {
 }
 
 function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, onSeek, sessionId, sessionDeviceId }) {
+    applyChartTheme()
     const [selected, setSelected] = useState(ALL)
     const [zoom, setZoom] = useState(1)
     const thumbUrl = (alias) =>
