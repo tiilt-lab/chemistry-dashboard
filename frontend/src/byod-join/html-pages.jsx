@@ -107,15 +107,16 @@ function ByodJoinPage(props) {
                                             className={dlgInput}
                                             id="passcode"
                                             value={props.pcode}
-                                            placeholder="Passcode (4 characters)"
+                                            placeholder="Session word (e.g. MAPLE)"
                                             onInput={(event) =>
                                                 props.changeTouppercase(event)
                                             }
                                         />
                                         {props.wrongInput ? (
                                             <div className={dlgError + " mt-2"}>
-                                                Your passcode must be 4
-                                                characters long.
+                                                That passcode looks too
+                                                long — it should be one
+                                                short word.
                                             </div>
                                         ) : null}
                                     </div>

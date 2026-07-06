@@ -83,7 +83,7 @@ function JoinPage() {
     useEffect(() => {
         const fromQuery = new URLSearchParams(window.location.search).get("code")
         const code = joinCode || fromQuery
-        if (code) setPcode(code.toUpperCase().slice(0, 4))
+        if (code) setPcode(code.toUpperCase().slice(0, 16))
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [joinCode])
     const [constraintObj, setConstraintObj] = useState(null)
@@ -1328,12 +1328,9 @@ function JoinPage() {
     }
 
     const changeTouppercase = (e) => {
+        // Passcodes are single memorable words now (formerly 4 random chars).
         let val = e.target.value.toUpperCase()
-        if (val.length <= 4) {
-            setWrongInput(false)
-        } else {
-            setWrongInput(true)
-        }
+        setWrongInput(val.length > 16)
         setPcode(val)
     }
 

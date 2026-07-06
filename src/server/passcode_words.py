@@ -1,0 +1,26 @@
+# Memorable session passcodes (yellkey-style): one common, easy-to-spell,
+# easy-to-say word instead of a random consonant string. Stored/matched
+# uppercase because the join form uppercases input.
+WORDS = [
+    'APPLE', 'BANJO', 'BEACH', 'BERRY', 'BIRCH', 'BISON', 'BLOOM', 'BRAVE',
+    'BREAD', 'BRICK', 'BROOK', 'CABIN', 'CANDY', 'CANOE', 'CEDAR', 'CHALK',
+    'CHESS', 'CHILI', 'CLOUD', 'CLOVER', 'COAST', 'COCOA', 'COMET', 'CORAL',
+    'CRANE', 'CREEK', 'CROWN', 'DAISY', 'DELTA', 'DENIM', 'DERBY', 'DIVER',
+    'DONUT', 'DREAM', 'DRIFT', 'EAGLE', 'EMBER', 'FABLE', 'FALCON', 'FERRY',
+    'FIELD', 'FLAME', 'FLASH', 'FLOAT', 'FLUTE', 'FOREST', 'FROST', 'GARDEN',
+    'GECKO', 'GLADE', 'GLOBE', 'GOOSE', 'GRAPE', 'GROVE', 'HARBOR', 'HAWK',
+    'HAZEL', 'HERON', 'HONEY', 'HOTEL', 'HOUSE', 'IGLOO', 'ISLAND', 'IVORY',
+    'JELLY', 'JUMBO', 'JUNGLE', 'KAYAK', 'KOALA', 'LAGOON', 'LANTERN', 'LEMON',
+    'LILAC', 'LLAMA', 'LOTUS', 'LUCKY', 'MANGO', 'MAPLE', 'MARBLE', 'MEADOW',
+    'MELON', 'METEOR', 'MINT', 'MOOSE', 'MOUNTAIN', 'MUSIC', 'NORTH', 'NOVEL',
+    'OASIS', 'OCEAN', 'OLIVE', 'ONION', 'OPERA', 'ORBIT', 'OTTER', 'PANDA',
+    'PAPER', 'PEACH', 'PEARL', 'PEBBLE', 'PENGUIN', 'PIANO', 'PILOT', 'PINE',
+    'PLANET', 'PLAZA', 'POLAR', 'POND', 'POPPY', 'PRISM', 'PUMA', 'QUILT',
+    'RADIO', 'RAVEN', 'RIVER', 'ROBIN', 'ROCKET', 'ROSE', 'SAILOR', 'SALMON',
+    'SAND', 'SEAL', 'SHEEP', 'SHELL', 'SIERRA', 'SILVER', 'SKATE', 'SLOTH',
+    'SNOW', 'SOLAR', 'SPARK', 'SPICE', 'SPRING', 'SPRUCE', 'STAR', 'STONE',
+    'STORM', 'STORY', 'SUGAR', 'SUMMIT', 'SUNNY', 'SWAN', 'TANGO', 'TEMPO',
+    'TIGER', 'TOAST', 'TOPAZ', 'TORCH', 'TRAIL', 'TRAIN', 'TULIP', 'TUNDRA',
+    'TURTLE', 'VIOLET', 'VOYAGE', 'WAFFLE', 'WAGON', 'WALNUT', 'WHALE', 'WHEAT',
+    'WILLOW', 'WINTER', 'WOLF', 'YACHT', 'ZEBRA', 'ZESTY',
+]

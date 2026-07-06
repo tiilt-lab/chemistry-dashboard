@@ -10,6 +10,7 @@ import MicIcon from "../Icons/Mic"
 import { Camera, Chevron } from "@/Icons"
 import { StatusPill } from "../components/status-pill"
 import { ToastStack } from "../components/toast"
+import { QrCode } from "../components/qr-code"
 
 
 // null (hide) for missing durations, else SessionModel's shared H:MM:SS.
@@ -439,6 +440,7 @@ function PodsOverviewPages(props) {
                                             {props.passcode}
                                         </div>
                                     </div>
+                                    <QrCode value={props.joinLink} />
                                     <div className="rounded-lg border border-tiilt-line bg-white px-3 py-2 text-center font-ahamono text-sm break-all text-tiilt-muted">
                                         {props.joinLink}
                                     </div>
