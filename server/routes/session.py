@@ -644,9 +644,12 @@ def getSynthesizedSessionAnalytics(session_id,session_name,datatype, **kwargs):
                     "Shared Task Focus","Analytic Thinking",'Authenticity', 'Certainty','Clout','Internal Cohesion','Social Impact','Newness', 'Participation Score', 'Responsivity', 'Word Count']
     elif datatype == 'group-analytics':   
         field_names = ['Session ID','Session Name', 'Device ID', 'Device Name','Num of Particpants','Verbal Share (Balanced)','Participation(turntaking) Balance',"Shared Task Focus","Group Trajectory",'Group Engagement', 'Group Cohesion'] 
-    
+    elif datatype == 'LIWC-summary':   
+        field_names = ['Session ID','Session Name', 'Device ID', 'Device Name','Transcript']
+
     fwrite = csv.DictWriter(si, fieldnames = field_names)
     fwrite.writeheader()
+    transcript_texts = []
     for session_device in session_devices:
         combine_metric_level = {'group_id': session_device.id, 'group_name': session_device.name, 'window_level':{}, 'participants_level':{}, 'session_level':{},'session_all_metrics':{},'group_level':{}}
 
@@ -661,6 +664,7 @@ def getSynthesizedSessionAnalytics(session_id,session_name,datatype, **kwargs):
         transcriptSpeakerMetric=[]
         transcripts = database.get_transcripts(session_device_id=session_device.id)
         for transcript in transcripts:
+            transcript_texts.append(transcript.transcript)
             speaker_metrics = database.get_speaker_transcript_metrics(transcript_id=transcript.id)
             transcriptSpeakerMetric.append({'transcript' : transcript,
                                                 'speaker_metrics' : [speaker_metric for speaker_metric in speaker_metrics]})
@@ -714,7 +718,14 @@ def getSynthesizedSessionAnalytics(session_id,session_name,datatype, **kwargs):
                     'Group Engagement': metrics.get('engagement', 0),
                     'Group Cohesion': metrics.get('groupcohesion', 0),
                     })
-    
+        elif datatype == 'LIWC-summary':
+            for trscpt in transcript_texts:
+                fwrite.writerow({'Session ID': session_id,
+                        'Session Name': session_name,
+                        'Device ID':session_device.id,
+                        'Device Name':session_device.name,
+                        'Transcript': trscpt}) 
+
     output = make_response(si.getvalue())
     output.headers["Content-Disposition"] = "attachment; filename=export.csv"
     output.headers["Content-type"] = "text/csv"

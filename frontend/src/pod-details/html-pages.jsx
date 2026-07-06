@@ -50,6 +50,10 @@ function PodComponentPages(props) {
                                 {
                                     title: "Re-compute P&I Style",
                                     action: () => props.connecttoaudioservice("compute participation and impact style"),
+                                },
+                                {
+                                    title: "Re-compute E&T Style",
+                                    action: () => props.connecttoaudioservice("compute expression and thinking style"),
                                 }
                             ]}
                             participants={props.speakers.map((speaker, index) => (

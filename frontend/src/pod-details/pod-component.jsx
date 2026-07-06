@@ -313,6 +313,16 @@ function PodComponent() {
           speakers: speakers.map((sp) => { return { id: sp.id, alias: sp.alias } }),
           transcript: simplifiedTranscript
         }
+      }else if(audioProcessingOperation!== "" && audioProcessingOperation === "compute E&T style"){
+        message = {
+          type: "Initialize_expressing_and_thinking_style_computation",
+          sessionid: sessionId,
+          server_start: session.creation_date,
+          keywords: session.keywords,
+          sessiondeviceid: sessionDeviceId,
+          speakers: speakers.map((sp) => { return { id: sp.id, alias: sp.alias } }),
+          transcript: simplifiedTranscript
+        }
       }
       console.log("sending message")
       audiowebsocket.current.send(JSON.stringify(message))
@@ -336,6 +346,8 @@ function PodComponent() {
       audiowebsocket.current.send(JSON.stringify({ type: "start_posthoc_audio_processing" }));
       }else if(audioProcessingOperation!== "" && audioProcessingOperation === "compute P&I style"){
         audiowebsocket.current.send(JSON.stringify({ type: "start_speaker_transcript_processing" }));
+      }else if(audioProcessingOperation!== "" && audioProcessingOperation === "compute E&T style"){
+        audiowebsocket.current.send(JSON.stringify({ type: "start_transcript_metric_processing" }));
       }
     } else if (state.videoSocketReady) {
       videowebsocket.current.send(JSON.stringify({ type: "start_posthoc_video_processing" }));
@@ -832,6 +844,9 @@ function PodComponent() {
       }else if(operation === "compute participation and impact style"){
         console.log("checking transcript ",simplifiedTranscript)
         setAudioProcessingOperation("compute P&I style")
+      }else if(operation === "compute expression and thinking style"){
+        console.log("checking transcript ",simplifiedTranscript)
+        setAudioProcessingOperation("compute E&T style")
       }
       connect_audio_posthoc_processor_service()
     }
@@ -856,7 +871,8 @@ function PodComponent() {
     audiowebsocket.current.onmessage = (e) => {
       if (typeof e.data === 'string') {
         const message = JSON.parse(e.data);
-        if (message['type'] === 'init posthoc analytics completed' || message['type'] === "init participation and impact style completed" ) {
+        if (message['type'] === 'init posthoc analytics completed' || message['type'] === "init participation and impact style completed" 
+           || message['type'] === "init expression and thinking style completed" ) {
           dispatch({ type: "AUDIO_SOCKET_READY", payload: true })
         } else if (message['type'] === 'audio posthoc analytics started') {
           setDisplayText(message['message'])
