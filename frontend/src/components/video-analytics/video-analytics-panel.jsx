@@ -1,3 +1,4 @@
+import { useIsDark } from "../../myhooks/custom-hooks";
 import { applyChartTheme } from "../chart-theme"
 import { useState, useRef, useEffect } from "react"
 import { Line } from "react-chartjs-2"
@@ -375,6 +376,7 @@ function SectionHeader({ children }) {
 
 function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, onSeek, sessionId, sessionDeviceId }) {
     applyChartTheme()
+    const __dark = useIsDark()
     const [selected, setSelected] = useState(ALL)
     const [zoom, setZoom] = useState(1)
     const thumbUrl = (alias) =>
@@ -561,7 +563,7 @@ function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, o
                     />
                 </div>
                 <div className="h-40">
-                    <Line
+                    <Line key={__dark ? "d" : "l"}
                         data={attentionData}
                         options={attentionOptions}
                         plugins={[

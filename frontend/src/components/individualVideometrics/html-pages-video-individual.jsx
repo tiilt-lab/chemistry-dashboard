@@ -1,3 +1,4 @@
+import { useIsDark } from "../../myhooks/custom-hooks";
 import { applyChartTheme } from "../chart-theme";
 import { DialogBox } from "../../dialog/dialog-component"
 import { Line } from "react-chartjs-2";
@@ -9,6 +10,7 @@ import React from "react"
 
 function IndividualVideoMetricPage(props) {
     applyChartTheme()
+    const __dark = useIsDark()
     ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
     const emotionMap = {
         angry: 0,
@@ -54,7 +56,7 @@ function IndividualVideoMetricPage(props) {
                     {props.features.length >= 2 ? (
                         <div className="w-full max-w-5xl mx-auto">
                             <h3 className="text-base font-semibold mb-2">{props.features[1].name} Over Time</h3>
-                            <Line
+                            <Line key={__dark ? "d" : "l"}
                                         data={{
                                             labels: props.features[1].time,
                                             datasets: [{

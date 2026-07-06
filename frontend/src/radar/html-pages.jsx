@@ -1,11 +1,11 @@
-import { useD3, adjDim } from "../myhooks/custom-hooks";
+import { useD3, adjDim, useIsDark } from "../myhooks/custom-hooks";
 import React from "react";
 import * as d3 from "d3";
-import { isDarkTheme } from "../globals";
 
 function RadarPage(props) {
-  // d3 draws with resolved colors, so pick the theme's inks up front.
-  const dark = isDarkTheme();
+  // d3 draws with resolved colors; useIsDark re-renders (and the redraw
+  // deps below re-run) when the theme toggles, so no stale palette.
+  const dark = useIsDark();
   const inkColor = dark ? "#ece7f5" : "#221a33";
   const mutedColor = dark ? "#a89fc0" : "#737373";
   const gridColor = dark ? "#4a4166" : "#CDCDCD";
@@ -157,7 +157,7 @@ function RadarPage(props) {
         .attr("stroke", (d, i) => color(i))
         .attr("stroke-width", 2);
     },
-    [data]
+    [data, dark]
   );
 
   return (

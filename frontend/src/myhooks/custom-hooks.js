@@ -19,6 +19,25 @@ const adjDim = (n) => {
     return isLargeScreen() ? n : (window.innerWidth * n / 400);
 }
 
+// Live theme flag: re-renders when the .dark class on <html> changes, so
+// canvas/SVG charts (which resolve colors at draw time) can repaint on the
+// theme toggle instead of keeping stale colors until navigation.
+const useIsDark = () => {
+    const get = () =>
+        typeof document !== "undefined" &&
+        document.documentElement.classList.contains("dark")
+    const [dark, setDark] = React.useState(get)
+    React.useEffect(() => {
+        const observer = new MutationObserver(() => setDark(get()))
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ["class"],
+        })
+        return () => observer.disconnect()
+    }, [])
+    return dark
+}
+
 // parses topic models as they currently are
 const unpackTopModels = (topModels) => {
     for (let i = 0; i < topModels.length; i++) {
@@ -33,4 +52,4 @@ const unpackTopModels = (topModels) => {
     return topModels
 }
 
-export {useD3, isLargeScreen, adjDim, unpackTopModels}
+export {useD3, isLargeScreen, adjDim, unpackTopModels, useIsDark}
