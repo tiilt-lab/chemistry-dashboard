@@ -80,7 +80,7 @@ function PodRow({ device, enrich, onOpen, checked, onToggle, queue, index, lastS
                     aria-label={`Select ${name} for batch analysis`}
                     title={checked ? "Deselect" : "Select for batch analysis"}
                     className={
-                        "flex h-7 w-8 flex-none cursor-pointer items-center justify-center rounded-md font-ahamono text-xs tabular-nums transition " +
+                        "mx-auto flex h-7 w-8 flex-none cursor-pointer items-center justify-center rounded-md font-ahamono text-xs tabular-nums transition " +
                         (checked
                             ? "bg-tiilt font-bold text-white ring-2 ring-tiilt/40"
                             : "text-tiilt-muted hover:bg-tiilt-soft hover:text-tiilt")
