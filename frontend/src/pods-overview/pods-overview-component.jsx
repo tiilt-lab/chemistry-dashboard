@@ -278,8 +278,9 @@ function PodsOverviewComponent() {
     }
   };
 
-  // Status (closed/locked) renders as a non-clickable pill; only a live
-  // passcode stays a clickable header action (opens the Passcode dialog).
+  // Status renders as a header pill: "Closed" is static, "Locked" opens the
+  // share dialog (so a locked session can be unlocked); a live passcode is a
+  // clickable header action (opens the same dialog).
   const getRightPill = () => {
     if (session !== null && session.end_date) return "Closed";
     if (session !== null && session.passcode == null) return "Locked";
