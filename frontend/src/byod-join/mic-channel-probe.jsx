@@ -18,6 +18,9 @@ function MicChannelProbe() {
     // null = not enough signal yet; true = channels carry the same signal
     // (mono duplicated onto both); false = genuinely distinct channels.
     const [duplicated, setDuplicated] = useState(null)
+    // Channels that never carried signal while others did (mono link
+    // advertised as stereo): [indexes], or null while unknown.
+    const [deadChannels, setDeadChannels] = useState(null)
     const statsRef = useRef(null)
     const cleanupRef = useRef(null)
 
@@ -29,6 +32,7 @@ function MicChannelProbe() {
         setState("idle")
         setLevels([])
         setDuplicated(null)
+        setDeadChannels(null)
     }
 
     useEffect(() => () => cleanupRef.current && cleanupRef.current(), [])
@@ -67,7 +71,7 @@ function MicChannelProbe() {
 
             let raf = null
             const bufs = analysers.map(() => new Float32Array(512))
-            statsRef.current = { frames: 0, a: 0, b: 0, d: 0 }
+            statsRef.current = { frames: 0, a: 0, b: 0, d: 0, peaks: new Array(n).fill(0) }
             const tick = () => {
                 const next = analysers.map((an, i) => {
                     an.getFloatTimeDomainData(bufs[i])
@@ -81,7 +85,7 @@ function MicChannelProbe() {
                 // (ch1 - ch2) difference while there is actual signal. A
                 // receiver in mono mode mirrors one mix onto both channels,
                 // which looks like "2 channels" but gives no separation.
-                if (n >= 2 && Math.max(next[0], next[1]) > 0.02) {
+                if (n >= 2 && Math.max(...next) > 0.02) {
                     const s = statsRef.current
                     let d = 0
                     for (let k = 0; k < bufs[0].length; k++) {
@@ -91,12 +95,22 @@ function MicChannelProbe() {
                     s.a += next[0] * next[0] * bufs[0].length
                     s.b += next[1] * next[1] * bufs[1].length
                     s.d += d
+                    next.forEach((v, i) => {
+                        if (v > s.peaks[i]) s.peaks[i] = v
+                    })
                     s.frames += 1
                     if (s.frames >= 40) {
+                        const loudest = Math.max(...s.peaks)
+                        const dead = s.peaks
+                            .map((p, i) => (p < Math.max(0.01, loudest * 0.05) ? i : -1))
+                            .filter((i) => i >= 0)
+                        setDeadChannels(dead)
                         const ratio = Math.sqrt(
                             s.d / (Math.max(s.a, s.b) + 1e-9),
                         )
-                        setDuplicated(ratio < 0.2)
+                        // A dead channel also makes the channels "different";
+                        // only call it duplicated when both actually carry audio.
+                        setDuplicated(dead.length === 0 && ratio < 0.2)
                     }
                 }
                 raf = requestAnimationFrame(tick)
@@ -167,6 +181,18 @@ function MicChannelProbe() {
                             ? "1 channel — speakers will be identified by voice"
                             : `${channels} channels detected — one mic per person is possible on this setup`}
                     </div>
+                    {channels > 1 && deadChannels && deadChannels.length > 0 ? (
+                        <div className="rounded-md bg-tiilt-orange/15 px-3 py-2 text-xs leading-relaxed text-tiilt-orange-text">
+                            Only{" "}
+                            {channels - deadChannels.length === 1
+                                ? "one channel is"
+                                : `${channels - deadChannels.length} channels are`}{" "}
+                            carrying audio — the rest stayed silent, so this
+                            connection is effectively mono. Both mics are being
+                            mixed onto one channel by the receiver; per-mic
+                            attribution won't work over this link.
+                        </div>
+                    ) : null}
                     {channels > 1 && duplicated === true ? (
                         <div className="rounded-md bg-tiilt-orange/15 px-3 py-2 text-xs leading-relaxed text-tiilt-orange-text">
                             Both channels are carrying the same signal, so this
@@ -175,13 +201,13 @@ function MicChannelProbe() {
                             check again.
                         </div>
                     ) : null}
-                    {channels > 1 && duplicated === false ? (
+                    {channels > 1 && duplicated === false && deadChannels && deadChannels.length === 0 ? (
                         <div className="rounded-md bg-tiilt-teal/15 px-3 py-2 text-xs leading-relaxed text-tiilt-teal-text">
                             Channels are carrying distinct signals — per-mic
                             attribution will work on this setup.
                         </div>
                     ) : null}
-                    {channels > 1 && duplicated === null ? (
+                    {channels > 1 && duplicated === null && !deadChannels ? (
                         <div className="text-[11px] text-tiilt-muted">
                             Speak or tap a mic for a moment to test whether the
                             channels are really separate…
