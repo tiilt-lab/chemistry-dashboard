@@ -1,4 +1,6 @@
 import React, { useState } from "react"
+import { btnPrimary, btnPrimaryTall } from "../components/dialog-styles"
+import { PodMicRing } from "../components/pod-mic-ring"
 import { ErrorDialog } from "../components/error-dialog"
 import { Appheader } from "../header/header-component"
 import { VoiceRecorder } from "react-voice-recorder-player"
@@ -115,7 +117,7 @@ function ByodJoinPage(props) {
                                         </select>
                                     </div>
                                     <button
-                                        className="wide-button"
+                                        className={btnPrimaryTall + " m-0.5 w-60 @sm:m-3 @sm:w-80"}
                                         onClick={() =>
                                             props.verifyInputAndAudio(
                                                 document
@@ -291,7 +293,7 @@ function ByodJoinPage(props) {
                                         </div>
                                         <div>
                                             <button
-                                                className="wide-button"
+                                                className={btnPrimaryTall + " m-0.5 w-60 @sm:m-3 @sm:w-80"}
                                                 onClick={props.confirmSpeakers}
                                             >
                                                 Join Session
@@ -451,7 +453,7 @@ function ByodJoinPage(props) {
                                         </div>
                                         <div>
                                             <button
-                                                className="wide-button"
+                                                className={btnPrimaryTall + " m-0.5 w-60 @sm:m-3 @sm:w-80"}
                                                 onClick={props.confirmSpeakers}
                                             >
                                                 Join Session
@@ -517,59 +519,12 @@ function ByodJoinPage(props) {
                                                             props.requestHelp
                                                         }
                                                     >
-                                                        <svg
-                                                            width="80px"
-                                                            height="80px"
-                                                            style={{
-                                                                marginTop:
-                                                                    "22px",
-                                                            }}
-                                                            viewBox="-40 -40 80 80"
-                                                        >
-                                                            <svg
-                                                                x="-8.5"
-                                                                y="-13.5"
-                                                                width="17"
-                                                                height="27"
-                                                                viewBox="0 0 17 27"
-                                                            >
-                                                                <MicIcon
-                                                                    fill={
-                                                                        props.POD_COLOR
-                                                                    }
-                                                                ></MicIcon>
-                                                            </svg>
-                                                            {props.button_pressed ? (
-                                                                <svg>
-                                                                    <circle
-                                                                        className={
-                                                                            style.svgpulse
-                                                                        }
-                                                                        x="0"
-                                                                        y="0"
-                                                                        r="33.5"
-                                                                        fill-opacity="0"
-                                                                        stroke={
-                                                                            props.GLOW_COLOR
-                                                                        }
-                                                                    />
-                                                                </svg>
-                                                            ) : (
-                                                                <></>
-                                                            )}
-                                                            <svg>
-                                                                <circle
-                                                                    x="0"
-                                                                    y="0"
-                                                                    r="30.5"
-                                                                    fill-opacity="0"
-                                                                    stroke-width="3"
-                                                                    stroke={
-                                                                        props.POD_COLOR
-                                                                    }
-                                                                />
-                                                            </svg>
-                                                        </svg>
+                                                        <PodMicRing
+                                                            style={{ marginTop: "22px" }}
+                                                            color={props.POD_COLOR}
+                                                            pulsing={!!props.button_pressed}
+                                                            pulseClassName={style.svgpulse}
+                                                        />
                                                         <div
                                                             style={{
                                                                 marginTop:
@@ -759,7 +714,7 @@ function ByodJoinPage(props) {
                                 controllerContainerStyle={{ height: "3rem" }}
                             />
                             <button
-                                className="toolbar-button z-40"
+                                className={btnPrimary + " z-40"}
                                 onClick={props.addSpeakerFingerprint}
                             >
                                 Confirm

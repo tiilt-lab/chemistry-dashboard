@@ -1,7 +1,7 @@
 .pod-button {
   border-radius: 18px;
   border: none;
-  fill: #3a2163;
+  fill: var(--color-tiilt);
   background: transparent;
   -webkit-box-sizing: border-box;
           box-sizing: border-box;
@@ -15,7 +15,7 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #5b3a94;
+  color: var(--color-tiilt);
 }
 
 .pod-button:focus {
@@ -29,7 +29,7 @@
 .pod-button {
   border-radius: 18px;
   border: none;
-  fill: #3a2163;
+  fill: var(--color-tiilt);
   background: transparent;
   -webkit-box-sizing: border-box;
           box-sizing: border-box;
@@ -43,7 +43,7 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #5b3a94;
+  color: var(--color-tiilt);
 }
 
 .pod-button:focus {
@@ -119,7 +119,7 @@
   font-weight: 400;
   font-size: 12px;
   line-height: 20px;
-  color: #675e7d;
+  color: var(--color-tiilt-muted);
   white-space: nowrap;
 }
 
@@ -131,7 +131,7 @@
   font-weight: 400;
   font-size: 12px;
   line-height: 20px;
-  color: #675e7d;
+  color: var(--color-tiilt-muted);
   margin-top: 8px;
   width: 100%;
   display: -webkit-box;
@@ -142,16 +142,16 @@
 }
 
 .keywords-selected {
-  border-color: #3a2163;
+  border-color: var(--color-tiilt);
   border-width: medium;
 }
 
 .selected-button {
-  fill: #b3261e;
+  fill: var(--color-tiilt-danger);
 }
 
 .selected-pod {
-  border-color: #3a2163 !important;
+  border-color: var(--color-tiilt) !important;
   border-width: medium;
 }
 

@@ -148,14 +148,6 @@ html {
     @apply @container relative flex max-w-full grow flex-row flex-wrap justify-center;
 }
 
-.toolbar-button {
-    @apply m-0.5 box-border w-19 cursor-pointer rounded-lg border border-transparent bg-tiilt px-1 py-2 text-center font-sans text-xs/normal font-semibold text-white transition hover:bg-tiilt-deep focus:ring-[3px] focus:ring-tiilt/30 focus:outline-none active:translate-y-px sm:my-2 sm:w-30 md:w-40 md:text-sm/normal;
-}
-
-.wide-button {
-    @apply m-0.5 box-border w-60 cursor-pointer rounded-lg border border-transparent bg-tiilt px-1 py-2 text-center font-sans text-base/relaxed font-semibold text-white transition hover:bg-tiilt-deep focus:ring-[3px] focus:ring-tiilt/30 focus:outline-none active:translate-y-px @sm:m-3 @sm:w-80 @sm:text-lg/loose;
-}
-
 .section-box {
     @apply relative box-border flex flex-row;
 }

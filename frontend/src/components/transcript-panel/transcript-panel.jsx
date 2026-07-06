@@ -9,17 +9,6 @@ const FEATURE_FIELDS = [
     ["Certainty", "certainty_value"],
 ]
 
-// Distinct, legible-on-white colors assigned per speaker by first appearance.
-const SPEAKER_COLORS = [
-    "#3a2163",
-    "#00a79d",
-    "#c0007a",
-    "#b26a00",
-    "#4d7c1f",
-    "#2e3192",
-    "#b3261e",
-    "#6d28d9",
-]
 
 function buildSpeakerColors(transcripts) {
     const tags = [...new Set((transcripts || []).map((t) => t.speaker_tag).filter(Boolean))]

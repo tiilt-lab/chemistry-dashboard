@@ -2,16 +2,6 @@ import { useState, useEffect } from "react"
 import { ApiService } from "../../services/api-service"
 import { speakerColorFor } from "../../globals"
 
-// Palette matches the transcript / video-analytics speaker colors.
-const COLORS = [
-    "#3a2163",
-    "#00a79d",
-    "#c0007a",
-    "#b26a00",
-    "#4d7c1f",
-    "#2e3192",
-    "#b3261e",
-]
 
 // Per-speaker speaking-time equity + a who-follows-whom response network,
 // derived from the pod's diarized transcript.

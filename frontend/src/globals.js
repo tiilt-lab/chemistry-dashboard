@@ -60,6 +60,14 @@ export function similarityToRGB(similarity) {
 // Canonical per-speaker colors: alphabetical name order -> palette index, so
 // every panel (transcript, video analytics, dynamics) gives the same person
 // the same color regardless of each panel's data ordering. Presentation only.
+// Brand hexes for canvas/chart configs (CSS vars don't resolve in canvas).
+export const BRAND = {
+  purple: "#3a2163",
+  pink: "#ec008c",
+  danger: "#b3261e",
+  muted: "#675e7d",
+}
+
 export const SPEAKER_PALETTE = [
     "#3a2163",
     "#00a79d",
