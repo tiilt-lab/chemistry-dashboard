@@ -11,6 +11,7 @@ from app import socketio
 import logging
 import database
 import json
+import watchers
 from datetime import datetime, timedelta
 from handlers import session_handler
 import wrappers
@@ -531,6 +532,9 @@ def session_device(session_id, session_device_id, processing_key, **kwargs):
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access
 def session_devices(session_id, **kwargs):
+        # The overview polls this every 2s while open; the auto-close task
+        # treats a recently-watched session as active.
+        watchers.mark_watched(session_id)
         devices = database.get_session_devices(session_id=session_id)
         # Per-pod duration (seconds, derived from transcript timestamps since
         # session_device stores no start/end) + participant count.
