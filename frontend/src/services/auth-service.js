@@ -138,6 +138,14 @@ class AuthService {
     return new ApiService().httpRequestCall("api/v1/students/" + studentId + "/activity", 'GET', {});
   }
 
+  mergeStudents(duplicateId, targetId) {
+    return new ApiService().httpRequestCall(
+      "api/v1/admin/students/" + duplicateId + "/merge",
+      'POST',
+      { targetId: targetId },
+    );
+  }
+
   getRaters() {
     return new ApiService().httpRequestCall("api/v1/admin/raters", 'GET', {});
   }

@@ -116,6 +116,37 @@ def delete_user(user_id, **kwargs):
     else:
         return json_response({'User not found.'}, 400)
     
+# Merge duplicate student profiles (students self-register during joining,
+# so the same person often ends up with several usernames). Moves all
+# username-keyed data to the target and deletes the duplicate; the
+# duplicate's biometric recording is renamed to the target when the target
+# has none, so their saved fingerprint keeps working.
+@api_routes.route('/api/v1/admin/students/<int:student_id>/merge', methods=['POST'])
+@wrappers.verify_login(roles=['admin', 'super'])
+def merge_student(student_id, **kwargs):
+    target_id = request.json.get('targetId', None)
+    if not target_id:
+        return json_response({'message': 'Must supply targetId.'}, 400)
+    if int(target_id) == student_id:
+        return json_response({'message': 'Cannot merge a student into itself.'}, 400)
+    target = database.get_students(id=int(target_id))
+    moved = database.merge_students(student_id, int(target_id))
+    if moved is None:
+        return json_response({'message': 'Student not found.'}, 404)
+    bio_dir = os.path.join(cf.root_dir(), "chemistry-dashboard/audio_processing/audiovideobiometrics")
+    dup_file = os.path.join(bio_dir, "{0}.webm".format(moved['duplicate_username']))
+    target_file = os.path.join(bio_dir, "{0}.webm".format(target.username))
+    try:
+        if os.path.isfile(dup_file):
+            if os.path.isfile(target_file):
+                os.remove(dup_file)
+            else:
+                os.rename(dup_file, target_file)
+    except Exception as e:
+        logging.info('Unable to move biometric file during merge: {0}'.format(e))
+    return json_response({'moved': moved, 'target': target.json()})
+
+
 @api_routes.route('/api/v1/admin/students/<int:student_id>', methods=['DELETE'])
 @wrappers.verify_login(roles=['admin', 'super'])
 def delete_student(student_id, **kwargs):
