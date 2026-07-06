@@ -56,7 +56,7 @@ function SettingsButton() {
         <button
             onClick={() => navigate("/settings")}
             title="Settings"
-            className="flex h-8 w-8 flex-none cursor-pointer items-center justify-center rounded-full text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
+            className="mr-3 flex h-8 w-8 flex-none cursor-pointer items-center justify-center rounded-full text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
         >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="currentColor" strokeWidth="1.8" />
