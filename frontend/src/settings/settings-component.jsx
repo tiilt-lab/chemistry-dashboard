@@ -3,7 +3,6 @@ import { ApiService } from '../services/api-service';
 import { DeviceService } from '../services/device-service';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserModel } from '../models/user';
 import { StudentModel } from '../models/student';
 import { RaterModel } from '../models/rater';
 import { DeviceModel } from '../models/device'
@@ -12,10 +11,8 @@ import { SettingComponentPage } from './html-pages'
 function SettingsComponent(props) {
 
   const user = props.userdata // The currently logged in user.
-  const [users, setUsers] = useState()
   const [students, setStudents] = useState()
   const [raters, setRaters] = useState()
-  const [userToDelete, setUserToDelete] = useState();
   const [studentToDelete, setStudentToDelete] = useState();
   const [raterToDelete, setRaterToDelete] = useState();
   const [devices, setDevices] = useState();
@@ -38,27 +35,7 @@ function SettingsComponent(props) {
   }
 
   const openDialog = (newForm, loadUsers = false, loadDevices = false) => {
-    if (loadUsers && ["ViewUsers", "DeleteUser", "UserRole", "LockUser", "UnlockUser", "ResetUser"].includes(newForm)) {
-      setCurrentForm("Loading");
-      const fetchData = new AuthService().getUsers()
-      fetchData.then(
-        response => {
-          if (response.status === 200) {
-            const respJson = response.json()
-            respJson.then(
-              userJson => {
-                const userObj = UserModel.fromJsonList(userJson)
-                setUsers(userObj.filter(u => u.id !== user.id));
-                setCurrentForm(newForm);
-              }
-            )
-          }
-        },
-        apierror => {
-          console.log("settingcomponent func : opendialog ", apierror)
-        }
-      )
-    } else if (loadUsers && ["ViewStudentProfile", "DeleteStudentProfile"].includes(newForm)) {
+    if (loadUsers && ["ViewStudentProfile", "DeleteStudentProfile"].includes(newForm)) {
       setCurrentForm("Loading");
       const fetchData = new AuthService().getStudentProfiles()
       fetchData.then(
@@ -222,31 +199,6 @@ function SettingsComponent(props) {
     )
   }
 
-  const createUser = (email, role) => {
-    const fetchData = new AuthService().createUser(email, role)
-    fetchData.then(
-      response => {
-        if (response.status === 200) {
-          const respJson = response.json()
-          respJson.then(
-            result => {
-              setStatusTitle('User Created');
-              setStatus('User has been given the password...\n' + result['password']);
-            }, error => {
-              setStatusTitle('Failed to Create User')
-              setStatus(error.json()['message']);
-            }
-          )
-        }
-      },
-      apierror => {
-        console.log("settingcomponent func : createuser", apierror)
-      }
-    ).finally(
-      () => setCurrentForm("Status")
-    )
-  }
-
   const createRater = (sessionid, sessiondeviceid, speakerid, speakertag, raterid, type, evaluationcategory) => {
     const fetchData = new AuthService().createRater(sessionid, sessiondeviceid, speakerid, speakertag, raterid, type, evaluationcategory)
     fetchData.then(
@@ -272,12 +224,6 @@ function SettingsComponent(props) {
     )
   }
 
-  const confirmDeleteUser = (userId) => {
-    userId = +userId;
-    setUserToDelete(users.find(u => u.id === userId));
-    setCurrentForm("ConfirmDeleteUser");
-  }
-
   const confirmDeleteStudent = (studentId) => {
     studentId = +studentId;
     setStudentToDelete(students.find(s => s.id === studentId));
@@ -288,31 +234,6 @@ function SettingsComponent(props) {
     id = +id;
     setRaterToDelete(raters.find(r => r.id === id));
     setCurrentForm("ConfirmDeleteRater");
-  }
-
-  const deleteSelectedUser = () => {
-    const fetchData = new AuthService().deleteUser(userToDelete.id)
-    fetchData.then(
-      response => {
-        if (response.status === 200) {
-          const respJson = response.json()
-          respJson.then(
-            result => {
-              setStatusTitle('User Deleted');
-              setStatus(userToDelete.email + ' has been deleted.');
-            }, error => {
-              setStatusTitle('Failed to Delete User')
-              setStatus(userToDelete.email + ' could not be deleted.');
-            }
-          )
-        }
-      },
-      apierror => {
-        console.log("settingcomponent func : confirmDeleteUser", apierror)
-      }
-    ).finally(
-      () => setCurrentForm("Status")
-    )
   }
 
   const deleteSelectedStudent = () => {
@@ -359,117 +280,6 @@ function SettingsComponent(props) {
       },
       apierror => {
         console.log("settingcomponent func : confirmDeleteUser", apierror)
-      }
-    ).finally(
-      () => setCurrentForm("Status")
-    )
-  }
-  const lockUser = (userId) => {
-    userId = +userId;
-    const fetchData = new AuthService().lockUser(userId)
-    fetchData.then(
-      response => {
-        if (response.status === 200) {
-          const respJson = response.json()
-          respJson.then(
-            result => {
-              const user = users.find(u => u.id === userId);
-              setStatusTitle('User Locked');
-              setStatus(user.email + ' has been locked out.');
-            }, error => {
-              const user = users.find(u => u.id === userId);
-              setStatusTitle('Failed to Lock User')
-              setStatus(user.email + ' could not be locked out.');
-            }
-          )
-        }
-      },
-      apierror => {
-        console.log("settingcomponent func : lockUser", apierror)
-      }
-    ).finally(
-      () => setCurrentForm("Status")
-    )
-  }
-
-  const unlockUser = (userId) => {
-    userId = +userId;
-    const fetchData = new AuthService().unlockUser(userId)
-    fetchData.then(
-      response => {
-        if (response.status === 200) {
-          const respJson = response.json()
-          respJson.then(
-            result => {
-              const user = users.find(u => u.id === userId);
-              setStatusTitle('User Unlocked');
-              setStatus(user.email + '  has been unlocked and can now login.');
-            }, error => {
-              const user = users.find(u => u.id === userId);
-              setStatusTitle('Failed to Unlock User')
-              setStatus(user.email + ' could not be unlocked.');
-            }
-          )
-        }
-      },
-      apierror => {
-        console.log("settingcomponent func : unlockUser", apierror)
-      }
-    ).finally(
-      () => setCurrentForm("Status")
-    )
-  }
-
-  const changeUserRole = (userId, role) => {
-    userId = +userId;
-    const fetchData = new AuthService().changeUserRole(userId, role)
-    fetchData.then(
-      response => {
-        if (response.status === 200) {
-          const respJson = response.json()
-          respJson.then(
-            result => {
-              const user = users.find(u => u.id === userId);
-              setStatusTitle('User Role Updated');
-              setStatus(user.email + '\'s role is now "' + role + '".');
-            }, error => {
-              const user = users.find(u => u.id === userId);
-              setStatusTitle('Failed to Update Role')
-              setStatus(user.email + '\'s role could not be updated.');
-            }
-          )
-        }
-      },
-      apierror => {
-        console.log("settingcomponent func : changeUserRole", apierror)
-      }
-    ).finally(
-      () => setCurrentForm("Status")
-    )
-  }
-
-  const resetUserPassword = (userId) => {
-    userId = +userId;
-    const fetchData = new AuthService().resetUserPassword(userId)
-    fetchData.then(
-      response => {
-        if (response.status === 200) {
-          const respJson = response.json()
-          respJson.then(
-            result => {
-              const user = users.find(u => u.id === userId);
-              setStatusTitle('User\'s Password Reset');
-              setStatus(user.email + '\s new password is...\n' + result['password']);
-            }, error => {
-              const user = users.find(u => u.id === userId);
-              setStatusTitle('Failed to Reset User\'s Password')
-              setStatus(user.email + '\'s password could not be reset.');
-            }
-          )
-        }
-      },
-      apierror => {
-        console.log("settingcomponent func : resetuserpassword", apierror)
       }
     ).finally(
       () => setCurrentForm("Status")
@@ -582,65 +392,6 @@ function SettingsComponent(props) {
 
   }
 
-  const allowAPIAccess = (userId) => {
-    userId = +userId;
-    setCurrentForm("Loading");
-    const fetchData = new AuthService().allowAPIAccess(userId)
-    fetchData.then(
-      response => {
-        if (response.status === 200) {
-          const respJson = response.json()
-          respJson.then(
-            result => {
-              const user = users.find(u => u.id === userId);
-              setStatusTitle('User Updated');
-              setStatus(user.email + ' can now access the API publicly...\n\nClient ID: \n'
-                + result['api_client']['client_id'] + '\n\nClient Secret: \n' + result['client_secret']);
-            }, error => {
-              const user = users.find(u => u.id === userId);
-              setStatusTitle('Failed to Update User')
-              setStatus('Failed to grant API access to user.');
-            }
-          )
-        }
-      },
-      apierror => {
-        console.log("settingcomponent func : resetuserpassword", apierror)
-      }
-    ).finally(
-      () => setCurrentForm("Status")
-    )
-  }
-
-  const revokeAPIAccess = (userId) => {
-    userId = +userId;
-    setCurrentForm("Loading");
-    const fetchData = new AuthService().revokeAPIAccess(userId)
-    fetchData.then(
-      response => {
-        if (response.status === 200) {
-          const respJson = response.json()
-          respJson.then(
-            result => {
-              const user = users.find(u => u.id === userId);
-              setStatusTitle('User Updated');
-              setStatus(user.email + ' can no longer access the API publicly.');
-            }, error => {
-              const user = users.find(u => u.id === userId);
-              setStatusTitle('Failed to Update User')
-              setStatus('Failed to revoke API access.');
-            }
-          )
-        }
-      },
-      apierror => {
-        console.log("settingcomponent func : revokeApiAccess", apierror)
-      }
-    ).finally(
-      () => setCurrentForm("Status")
-    )
-  }
-
   return (
     <SettingComponentPage
       navigateToHomescreen={navigateToHomescreen}
@@ -653,30 +404,19 @@ function SettingsComponent(props) {
       statusTitle={statusTitle}
       changePassword={changePassword}
       changeEmail={changeEmail}
-      users={users}
       students={students}
       raters={raters}
       devices={devices}
-      confirmDeleteUser={confirmDeleteUser}
       confirmDeleteStudent={confirmDeleteStudent}
       confirmDeleteRater={confirmDeleteRater}
-      userToDelete={userToDelete}
       studentToDelete={studentToDelete}
       raterToDelete={raterToDelete}
-      deleteSelectedUser={deleteSelectedUser}
       deleteSelectedStudent={deleteSelectedStudent}
       deleteSelectedRater={deleteSelectedRater}
-      revokeAPIAccess={revokeAPIAccess}
-      allowAPIAccess={allowAPIAccess}
       deleteDeviceLogs={deleteDeviceLogs}
       deleteServerLogs={deleteServerLogs}
       downloadDeviceLogs={downloadDeviceLogs}
       downloadServerLogs={downloadServerLogs}
-      changeUserRole={changeUserRole}
-      resetUserPassword={resetUserPassword}
-      unlockUser={unlockUser}
-      lockUser={lockUser}
-      createUser={createUser}
       createRater={createRater}
       closeDialog={closeDialog}
     />
