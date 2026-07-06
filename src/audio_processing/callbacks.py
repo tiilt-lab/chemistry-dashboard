@@ -56,6 +56,16 @@ def post_posthoc_completed(source, models=None, scope='audio'):
         logging.warning('posthoc_completed callback failed: {0}'.format(e))
 
 
+def post_service_restarted(scope='audio'):
+    # Announce a service (re)start so the server clears stale running flags
+    # from runs that died with the previous process.
+    try:
+        base = config.processing_callback().rsplit('/', 1)[0]
+        requests.post(base + '/posthoc_service_restarted', json={'scope': scope})
+    except Exception as e:
+        logging.warning('service_restarted callback failed: {0}'.format(e))
+
+
 def post_tagging(source, tag, embeddingsFile):
     result = {
         'source': source,

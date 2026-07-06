@@ -39,6 +39,16 @@ def get_redis_session_config(session_key):
         logging.info('get_redis_session_config callback  failed: {0}'.format(e))
         return None  
     
+def post_service_restarted(scope='video'):
+    # Announce a service (re)start so the server clears stale running flags
+    # from runs that died with the previous process.
+    try:
+        base = config.processing_callback().rsplit('/', 1)[0]
+        requests.post(base + '/posthoc_service_restarted', json={'scope': scope})
+    except Exception as e:
+        logging.warning('service_restarted callback failed: {0}'.format(e))
+
+
 def post_connect(source):
     connection = {
         'source': source,

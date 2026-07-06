@@ -539,5 +539,6 @@ if __name__ == '__main__':
     factory.protocol = ServerProtocol
     reactor.listenTCP(int(os.environ.get("DC_AUDIO_POSTHOC_WS_PORT", 9005)), factory)
     logging.info('Audio Posthoc Processing Service started.')
+    callbacks.post_service_restarted('audio')
     reactor.run()
     logging.info('Audio Posthoc Processing Service ended.')

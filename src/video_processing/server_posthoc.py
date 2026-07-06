@@ -388,6 +388,7 @@ if __name__ == '__main__':
 
     # Run Server
     logging.info('Starting Video Posthoc Processing Service...')
+    callbacks.post_service_restarted('video')
     poll_connections = task.LoopingCall(cm.check_connections)
     poll_connections.start(10.0)
     auth_connections = task.LoopingCall(cm.check_connection_authentication)
