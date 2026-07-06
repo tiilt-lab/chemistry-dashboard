@@ -62,7 +62,7 @@ function SurveyCompletion(props) {
                                       type="button"
                                       onClick={() => props.handleRate(question[0], value)}
                                       className={`rounded-xl border px-3 py-3 text-sm font-medium transition-all ${active
-                                        ? "border-slate-900 bg-slate-900 text-white shadow"
+                                        ? "border-transparent bg-tiilt text-white shadow"
                                         : "border-slate-200 bg-white hover:border-slate-400"
                                         }`}
                                       aria-pressed={active}

@@ -7,7 +7,7 @@ function CategoryDistributionPage(props) {
       <> 
     <div className="w-full max-w-5xl mx-auto">
       <h3 className="text-base font-semibold mb-2">{props.title} Distribution</h3>
-      <div className="text-xs text-gray-500 mb-3">Total duration: {props.formatSeconds(props.duration)}</div>
+      <div className="text-xs text-tiilt-muted mb-3">Total duration: {props.formatSeconds(props.duration)}</div>
       <svg viewBox={`0 0 ${props.width} ${props.height}`} className="w-full">
         {/* X-axis ticks */}
         {Array.from({ length: 6 }).map((_, i) => {

@@ -287,7 +287,7 @@
 }
 
 .question-container .question-item {
-  background-color: #f7f8fc;
+  background-color: var(--color-tiilt-ground);
   -webkit-box-shadow: 5px 5px 10px #888888;
           box-shadow: 5px 5px 10px #888888;
   border-radius: 5px;

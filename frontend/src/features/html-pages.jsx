@@ -1,5 +1,5 @@
 import { Line } from "react-chartjs-2"
-import { BRAND } from "../globals"
+import { brandColor } from "../globals"
 import { Chart as ChartJS } from "chart.js/auto"
 import { formatSeconds } from "../globals"
 
@@ -30,7 +30,7 @@ function FeatureCard({ feature, selectedTime, onSelectTime }) {
         i === selectedIndex ? 5 : 0,
     )
     const pointColor = feature.time.map((_, i) =>
-        i === selectedIndex ? BRAND.pink : BRAND.purple,
+        i === selectedIndex ? brandColor("pink") : brandColor("purple"),
     )
     const selectedValue =
         selectedIndex >= 0 ? Math.round(feature.values[selectedIndex]) : null
@@ -110,8 +110,8 @@ function FeatureCard({ feature, selectedTime, onSelectTime }) {
                             datasets: [
                                 {
                                     data: feature.values,
-                                    borderColor: BRAND.purple,
-                                    backgroundColor: "rgba(58,33,99,0.08)",
+                                    borderColor: brandColor("purple"),
+                                    backgroundColor: "rgba(139,111,196,0.12)",
                                     fill: true,
                                     borderWidth: 2,
                                     pointRadius: pointRadius,
