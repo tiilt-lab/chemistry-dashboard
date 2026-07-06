@@ -13,7 +13,7 @@ import style from "./sessions.module.css"
 import style2 from "../components/context-menu/context-menu.module.css"
 import FolderIcon from "../Icons/Folder"
 import MicIcon from "../Icons/Mic"
-import { Camera, Chevron, Refresh, Upload } from "@/Icons"
+import { Camera, Chevron, Upload } from "@/Icons"
 import { StatusPill } from "../components/status-pill"
 import { SkeletonRows } from "../components/skeleton"
 import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel, btnPrimary, btnSecondary, btnSecondarySm, btnDangerOutlineSm } from "../components/dialog-styles"
@@ -272,14 +272,6 @@ function PodDurations({ sessionId }) {
                             </StatusPill>
                         ) : (
                             <>
-                                {pod.speaker_count > 0 ? (
-                                    <span className="flex-none text-tiilt-muted">
-                                        {pod.speaker_count}{" "}
-                                        {pod.speaker_count === 1
-                                            ? "participant"
-                                            : "participants"}
-                                    </span>
-                                ) : null}
                                 {pod.analysis_running ? (
                                     <StatusPill tone="orange" pulse>
                                         Analyzing…
@@ -288,6 +280,14 @@ function PodDurations({ sessionId }) {
                                     <StatusPill tone="teal">
                                         Analyzed
                                     </StatusPill>
+                                ) : null}
+                                {pod.speaker_count > 0 ? (
+                                    <span className="flex-none text-tiilt-muted">
+                                        {pod.speaker_count}{" "}
+                                        {pod.speaker_count === 1
+                                            ? "participant"
+                                            : "participants"}
+                                    </span>
                                 ) : null}
                                 <span className="flex-none font-ahamono tabular-nums text-tiilt-muted">
                                     {SessionModel.formatDuration(pod.duration)}
@@ -326,7 +326,14 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
                         role="checkbox"
                         aria-checked={!!checked}
                         aria-label={`Select session ${session.title}`}
-                        title={checked ? "Deselect" : "Select for bulk actions"}
+                        title={
+                            (session.has_video
+                                ? "Video session"
+                                : "Audio-only session") +
+                            (checked
+                                ? " — click to deselect"
+                                : " — click to select for bulk actions")
+                        }
                         className={
                             "flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-md transition " +
                             (checked
@@ -370,6 +377,20 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
                             >
                                 {session.title}
                             </span>
+                            {session.recording ? (
+                                <StatusPill tone="danger" dot pulse className="text-xs">
+                                    Live
+                                </StatusPill>
+                            ) : session.analysis_running ? (
+                                <StatusPill
+                                    tone="orange"
+                                    pulse
+                                    className="text-xs"
+                                    title="A full analysis is running right now"
+                                >
+                                    Analyzing{"\u2026"}
+                                </StatusPill>
+                            ) : null}
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation()
@@ -393,18 +414,6 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
                         </span>
                     ) : null}
                 </td>
-                <td className="px-3 py-2 whitespace-nowrap">
-                    {session.has_video ? (
-                        <StatusPill tone="brand" title="Video and audio were recorded">
-                            <Camera />
-                            Video
-                        </StatusPill>
-                    ) : (
-                        <StatusPill tone="neutral" title="Audio only — no video recorded">
-                            Audio only
-                        </StatusPill>
-                    )}
-                </td>
                 <td className="px-3 py-2 whitespace-nowrap text-tiilt-ink">
                     {formatDate(session.creation_date)}
                 </td>
@@ -423,31 +432,6 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
                         session.pod_count
                     ) : (
                         <span className="text-tiilt-muted">{"\u2014"}</span>
-                    )}
-                </td>
-                <td className="px-3 py-2 whitespace-nowrap">
-                    {session.recording ? (
-                        <StatusPill tone="danger" dot pulse>
-                            Live
-                        </StatusPill>
-                    ) : session.analysis_running ? (
-                        <StatusPill
-                            tone="orange"
-                            pulse
-                            title="A full analysis is running right now"
-                        >
-                            Analyzing{"\u2026"}
-                        </StatusPill>
-                    ) : session.has_posthoc ? (
-                        <StatusPill
-                            tone="teal"
-                            title="Post-hoc analysis has been run for this session"
-                        >
-                            <Refresh />
-                            Re-analyzed
-                        </StatusPill>
-                    ) : (
-                        <span className="text-xs text-tiilt-muted">{"\u2014"}</span>
                     )}
                 </td>
                 <td
@@ -515,7 +499,7 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
             </tr>
             {expanded ? (
                 <tr className="border-t border-tiilt-line bg-tiilt-ground/40">
-                    <td colSpan={9} className="px-3 py-1">
+                    <td colSpan={7} className="px-3 py-1">
                         <PodDurations sessionId={session.id} />
                     </td>
                 </tr>
@@ -717,21 +701,16 @@ function DiscussionSessionPage(props) {
                                         <table className="w-full border-collapse text-left text-sm">
                                             <thead>
                                                 <tr className="border-b border-tiilt-line">
-                                                    <th className="sticky top-0 bg-tiilt-ground py-2.5 pr-1 pl-4">
-                                                        <span className="sr-only">
-                                                            Select
-                                                        </span>
-                                                    </th>
                                                     <SortableTh
-                                                        label="Session"
-                                                        sortKey="name"
-                                                        defaultDir="asc"
+                                                        label="Type"
+                                                        sortKey="type"
                                                         sortBy={props.sortBy}
                                                         setSortBy={props.setSortBy}
                                                     />
                                                     <SortableTh
-                                                        label="Type"
-                                                        sortKey="type"
+                                                        label="Session"
+                                                        sortKey="name"
+                                                        defaultDir="asc"
                                                         sortBy={props.sortBy}
                                                         setSortBy={props.setSortBy}
                                                     />
@@ -762,9 +741,6 @@ function DiscussionSessionPage(props) {
                                                         sortBy={props.sortBy}
                                                         setSortBy={props.setSortBy}
                                                     />
-                                                    <th className="sticky top-0 bg-tiilt-ground px-3 py-2.5 text-left text-sm font-semibold whitespace-nowrap text-tiilt-ink">
-                                                        Status
-                                                    </th>
                                                     <th className="sticky top-0 bg-tiilt-ground py-2.5 pr-3 pl-1">
                                                         <span className="sr-only">
                                                             Actions
