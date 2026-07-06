@@ -947,16 +947,28 @@ function JoinPage() {
         audiows.current.onclose = (e) => {
             console.log("[Disconnected]", ending.current)
             if (!ending.current) {
-                if (reconnectCounter <= 5) {
+                // Retry a few times, then surface a real error. (Previously
+                // this compared the ref object to 5 — always true — and then
+                // fell through to the give-up branch anyway, cancelling the
+                // retry it had just scheduled and showing nothing at all
+                // when the socket never opened, e.g. a 502 from nginx.)
+                if (reconnectCounter.current < 5 && state.audioSocketOpen) {
                     setCurrentForm("Connecting")
                     disconnect()
                     reconnectCounter.current = reconnectCounter.current + 1
                     console.log("reconnecting ....")
                     setTimeout(handleStream, 2000)
+                } else if (!state.audioSocketOpen) {
+                    setDisplayText(
+                        "Couldn't reach the session server. Please try again, or ask your instructor to check that recording is running.",
+                    )
+                    setCurrentForm("ClosedSession")
+                    disconnect(true)
+                } else {
+                    setDisplayText("Connection to the session has been lost.")
+                    setCurrentForm("ClosedSession")
+                    disconnect(true)
                 }
-                setDisplayText("Connection to the session has been lost.")
-                setCurrentForm("ClosedSession")
-                disconnect(true)
             } else {
                 console.log("ending ...")
             }
