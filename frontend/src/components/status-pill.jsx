@@ -22,7 +22,9 @@ function StatusPill({ tone = "neutral", pulse = false, dot = false, title, class
         <span
             title={title}
             className={
-                "flex flex-none items-center gap-1 rounded-full px-2 py-0.5 font-semibold whitespace-nowrap " +
+                // inline-flex: in a bare table cell a block-level flex pill
+                // stretches to the full column width.
+                "inline-flex flex-none items-center gap-1 rounded-full px-2 py-0.5 font-semibold whitespace-nowrap " +
                 (TONES[tone] || TONES.neutral) +
                 (className ? " " + className : "")
             }
