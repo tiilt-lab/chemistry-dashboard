@@ -31,9 +31,10 @@ const fieldLabel = "mb-1.5 block text-left text-sm font-semibold text-tiilt-ink"
 
 function ByodJoinPage(props) {
     // Join-form niceties: prefer the prefilled code (link/QR) as a compact
-    // chip, and tuck rarely-changed options behind an Advanced disclosure.
+    // chip; the Advanced disclosure starts open so the source/camera options
+    // and mic check are visible without an extra tap.
     const [editCode, setEditCode] = useState(false)
-    const [showAdvanced, setShowAdvanced] = useState(false)
+    const [showAdvanced, setShowAdvanced] = useState(true)
     return (
         <>
             {(props.currentForm === "gottoselectedtranscript" &&
