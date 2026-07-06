@@ -176,6 +176,22 @@ html {
     @apply relative mx-3 flex rounded-lg border-2 border-solid border-tiilt-line py-2.5 text-center text-sm/relaxed outline-0 transition-colors focus:border-tiilt;
 }
 
+/* Custom chevron for styled <select>s (dlgSelect): the native arrow can't be
+   given a right margin and jams against the border, so we hide it and draw
+   our own with real padding. Theme-aware — muted in both light and dark. */
+.app-select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23675e7d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 16px;
+}
+.dark .app-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a89fc0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+
 /* Dark mode: Tailwind v4 utilities reference these variables at use-time, so
    overriding them under .dark restyles the whole app — including bg-white
    (var(--color-white)), which becomes the card surface. Toggled by the
