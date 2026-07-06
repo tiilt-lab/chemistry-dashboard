@@ -7,7 +7,10 @@ const SECTIONS = [
     {
         title: "Account",
         show: () => true,
-        items: [{ label: "Change Password", dialog: ["ChangePassword"] }],
+        items: [
+            { label: "Change Password", dialog: ["ChangePassword"] },
+            { label: "Sign Out", signOut: true, danger: true },
+        ],
     },
     {
         title: "Manage Accounts",
@@ -105,9 +108,11 @@ function SettingComponentPage(props) {
                                                 label={item.label}
                                                 danger={item.danger}
                                                 onClick={() =>
-                                                    props.openDialog(
-                                                        ...item.dialog,
-                                                    )
+                                                    item.signOut
+                                                        ? props.signOut()
+                                                        : props.openDialog(
+                                                              ...item.dialog,
+                                                          )
                                                 }
                                             />
                                         ))}

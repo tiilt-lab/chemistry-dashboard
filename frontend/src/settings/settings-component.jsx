@@ -30,6 +30,13 @@ function SettingsComponent(props) {
     navigate('/home');
   }
 
+  const signOut = () => {
+    new AuthService().logout().then(
+      () => navigate('/login'),
+      () => navigate('/login'),
+    )
+  }
+
   const openDialog = (newForm, loadUsers = false, loadDevices = false) => {
     if (loadUsers && ["ViewUsers", "DeleteUser", "UserRole", "LockUser", "UnlockUser", "ResetUser"].includes(newForm)) {
       setCurrentForm("Loading");
@@ -620,6 +627,7 @@ function SettingsComponent(props) {
   return (
     <SettingComponentPage
       navigateToHomescreen={navigateToHomescreen}
+      signOut={signOut}
       openDialog={openDialog}
       addStudentProfile={addStudentProfile}
       user={user}
