@@ -349,6 +349,20 @@ class ServerProtocol(WebSocketServerProtocol):
                 callbacks.post_posthoc_completed(self.config.auth_key, getattr(self, 'model_choices', None))
         except Exception as e:
             logging.warning("video on_run_complete cleanup failed: %s", e)
+        # Per-pod CUDA cleanup: batch runs grew this process ~1.5 GiB per pod
+        # until whisperx in the AUDIO service could no longer load (shared
+        # card) - same class of leak fixed in whisperx_asr.
+        try:
+            import gc
+            import torch
+            self.video_processor = None
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                logging.info("video posthoc: released CUDA cache (%.1f GiB still reserved)",
+                             torch.cuda.memory_reserved() / 2**30)
+        except Exception as e:
+            logging.warning("video posthoc CUDA cleanup failed: %s", e)
 
 
 if __name__ == '__main__':
