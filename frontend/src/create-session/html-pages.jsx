@@ -7,7 +7,7 @@ import { GenericDialogBox } from "../dialog/dialog-component";
 import { AppFolderSelectComponent } from "../components/folder-select/folder-select-component";
 import style from "./create-session.module.css";
 import openFolderIcon from "../assets/img/open-folder.svg";
-import podIcon from "../assets/img/icon-pod.svg";
+import IconPod from "@icons/IconPod";
 import LightIcon from "@icons/Light";
 
 // Linear wizard steps (Devices is an out-of-band screen, not numbered).
@@ -305,7 +305,7 @@ function CreateSessionPage(props) {
                       }
                       onClick={() => props.deviceSelected(device)}
                     >
-                      <img className={style["pod-icon"]} src={podIcon} alt="" />
+                      <IconPod className={style["pod-icon"]} aria-hidden="true" />
                       <div className={style["pod-text"]}>{device.name}</div>
                       <div className={style["button-container"]}>
                         <button

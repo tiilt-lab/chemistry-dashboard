@@ -31,3 +31,7 @@ export const btnSecondarySm =
     "rounded-lg border border-tiilt-line bg-white px-3 py-1.5 text-xs font-semibold text-tiilt-ink transition hover:border-tiilt hover:bg-tiilt-soft active:translate-y-px"
 export const btnSecondaryTall =
     "flex h-12 items-center justify-center rounded-lg border border-tiilt-line bg-white text-base font-semibold text-tiilt transition hover:border-tiilt hover:bg-tiilt-soft active:translate-y-px"
+export const btnDanger =
+    "rounded-lg bg-tiilt-danger px-4 py-2 text-sm font-semibold text-white transition hover:brightness-90 active:translate-y-px"
+export const btnDangerOutlineSm =
+    "rounded-lg border border-tiilt-danger/40 bg-tiilt-danger-soft px-3 py-1.5 text-xs font-semibold text-tiilt-danger transition hover:border-tiilt-danger active:translate-y-px"

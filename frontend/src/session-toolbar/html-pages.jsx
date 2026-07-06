@@ -1,5 +1,5 @@
 import style from "./session-toolbar.module.css"
-import { btnPrimary } from "../components/dialog-styles"
+import { btnPrimary, btnSecondary, btnDanger } from "../components/dialog-styles"
 import { Chevron } from "@/Icons"
 import style2 from "../dialog/dialog.module.css"
 import { GenericDialogBox } from "../dialog/dialog-component"
@@ -73,7 +73,7 @@ function AppSessionPage(props) {
                                     )
                                     .map((part, index) => (
                                     <button
-                                        className="rounded-lg border border-tiilt-line bg-white px-3 py-2 text-sm font-semibold text-tiilt-ink transition hover:border-tiilt hover:bg-tiilt-soft sm:w-full sm:text-left"
+                                        className={btnSecondary + " sm:w-full sm:text-left"}
                                         onClick={part.action}
                                         key={index}
                                     >{`${part.alias}`}</button>
@@ -94,7 +94,7 @@ function AppSessionPage(props) {
                             <div className="flex flex-row gap-2 sm:flex-col">
                                 {props.seesions.map((part, index) => (
                                     <button
-                                        className="rounded-lg border border-tiilt-line bg-white px-3 py-2 text-sm font-semibold text-tiilt-ink transition hover:border-tiilt hover:bg-tiilt-soft sm:w-full sm:text-left"
+                                        className={btnSecondary + " sm:w-full sm:text-left"}
                                         onClick={part.action}
                                         key={index}
                                     >{`${part.title}`}</button>
@@ -119,7 +119,7 @@ function AppSessionPage(props) {
                         <></>
                     )}
                     <button
-                        className="flex-none rounded-lg bg-tiilt-danger px-4 py-2 text-sm font-semibold whitespace-nowrap text-white transition hover:brightness-90 active:translate-y-px disabled:hidden sm:w-full"
+                        className={btnDanger + " flex-none whitespace-nowrap disabled:hidden sm:w-full"}
                         onClick={props.onEndSession}
                         disabled={!props.session.recording || props.fromClient}
                     >

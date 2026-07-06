@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-import backicon from "../assets/img/icon-back.svg"
+import Chevron from "../Icons/Chevron"
 import GearIcon from "../Icons/Settings"
 
 // Opt-in (escToBack prop): Escape triggers the header Back action, so the
@@ -80,7 +80,7 @@ function Appheader(props) {
                     className="flex w-max cursor-pointer items-center gap-1 p-4 text-sm font-semibold text-tiilt-muted transition hover:text-tiilt"
                     onClick={props.nav}
                 >
-                    <img alt="" className="h-4 w-4" src={backicon} />
+                    <Chevron direction="left" size={16} />
                     Back
                 </button>
             )}

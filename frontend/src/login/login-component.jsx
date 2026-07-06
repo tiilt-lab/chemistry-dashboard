@@ -1,4 +1,5 @@
 import { useNavigate, Link } from "react-router-dom"
+import { InlineSpinner } from "../components/inline-spinner"
 import { btnPrimaryTall } from "../components/dialog-styles"
 import { useEffect, useState } from "react"
 import { AuthService } from "../services/auth-service"
@@ -151,7 +152,7 @@ function LoginPage() {
                 >
                     {loading ? (
                         <>
-                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                            <InlineSpinner />
                             Signing in…
                         </>
                     ) : (

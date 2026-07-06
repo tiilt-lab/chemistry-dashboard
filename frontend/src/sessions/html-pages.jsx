@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { EmptyState } from "../components/empty-state"
 import { formatDate } from "../globals"
 import { ErrorDialog } from "../components/error-dialog"
 import { useNavigate } from "react-router-dom"
@@ -10,13 +11,12 @@ import { SessionService } from "../services/session-service"
 import { SessionModel } from "../models/session"
 import style from "./sessions.module.css"
 import style2 from "../components/context-menu/context-menu.module.css"
-import breadcrumbIcon from "../assets/img/icon-back.svg"
 import FolderIcon from "../Icons/Folder"
 import MicIcon from "../Icons/Mic"
 import { Camera, Chevron, Refresh, Upload } from "@/Icons"
 import { StatusPill } from "../components/status-pill"
 import { SkeletonRows } from "../components/skeleton"
-import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel, btnPrimary, btnSecondary, btnSecondarySm } from "../components/dialog-styles"
+import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel, btnPrimary, btnSecondary, btnSecondarySm, btnDangerOutlineSm } from "../components/dialog-styles"
 
 // Row wrapper (border/bg/hover) is a column so the expandable pod panel can sit
 // below the horizontal row content.
@@ -485,17 +485,10 @@ function DiscussionSessionPage(props) {
                         {!props.isLoading &&
                         props.sessions.length === 0 &&
                         props.folders.length === 0 ? (
-                            <div className={style["empty-session-list"]}>
-                                <div className={style["load-text"]}>
-                                    {" "}
-                                    No Sessions or Folders{" "}
-                                </div>
-                                <div className={style["load-text-description"]}>
-                                    {" "}
-                                    Tap the buttons below to record your first
-                                    session or create your first folder.{" "}
-                                </div>
-                            </div>
+                            <EmptyState
+                                title="No sessions or folders"
+                                subtitle="Record your first session or create a folder with the buttons above."
+                            />
                         ) : (
                             <></>
                         )}
@@ -507,11 +500,7 @@ function DiscussionSessionPage(props) {
                                         onClick={props.goBackToPrevious}
                                         className="flex items-center gap-2 font-semibold text-tiilt hover:underline"
                                     >
-                                        <img
-                                            alt=""
-                                            src={breadcrumbIcon}
-                                            className="h-4 w-4"
-                                        />
+<Chevron direction="left" size={16} />
                                         Home
                                     </button>
                                 ) : (
@@ -621,7 +610,7 @@ function DiscussionSessionPage(props) {
                                         </button>
                                         <button
                                             onClick={() => props.openBulkDialog("DeleteSessions")}
-                                            className="rounded-lg border border-tiilt-danger/40 bg-tiilt-danger-soft px-3 py-1.5 text-xs font-semibold text-tiilt-danger transition hover:border-tiilt-danger active:translate-y-px"
+                                            className={btnDangerOutlineSm}
                                         >
                                             Delete…
                                         </button>
@@ -673,12 +662,10 @@ function DiscussionSessionPage(props) {
                             <div>
                                 {props.displayedFolders.length === 0 &&
                                 props.displayedSessions.length === 0 ? (
-                                    <div>
-                                        <div className={style["folder-empty"]}>
-                                            {" "}
-                                            Folder Empty{" "}
-                                        </div>
-                                    </div>
+                                    <EmptyState
+                                        title="This folder is empty"
+                                        subtitle="Move sessions here or record a new one."
+                                    />
                                 ) : (
                                     <></>
                                 )}
