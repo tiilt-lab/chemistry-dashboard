@@ -107,6 +107,7 @@ def _worker_loop():
             if job is None:
                 return  # drain and exit; next enqueue restarts the worker
             job["state"] = "running"
+            job["started_at"] = time.time()
         try:
             _run_job(job)
             job["state"] = "done"
@@ -114,6 +115,8 @@ def _worker_loop():
             logging.warning("posthoc queue: pod %s failed: %s", job["device_id"], e)
             job["state"] = "error"
             job["error"] = str(e)
+        finally:
+            job["finished_at"] = time.time()
 
 
 def enqueue(session_id, device_ids, models=None):
@@ -126,7 +129,9 @@ def enqueue(session_id, device_ids, models=None):
             if int(d) in queued_or_running:
                 continue
             _jobs.append({"session_id": int(session_id), "device_id": int(d),
-                          "state": "queued", "models": models, "error": None})
+                          "state": "queued", "models": models, "error": None,
+                          "queued_at": time.time(),
+                          "started_at": None, "finished_at": None})
             added.append(int(d))
         if _worker is None or not _worker.is_alive():
             _worker = threading.Thread(target=_worker_loop,
@@ -147,7 +152,9 @@ def clear_pending():
 
 def status(session_id=None):
     with _lock:
-        return [{"device_id": j["device_id"], "state": j["state"],
-                 "error": j["error"]}
+        return [{"session_id": j["session_id"], "device_id": j["device_id"],
+                 "state": j["state"], "error": j["error"],
+                 "started_at": j.get("started_at"),
+                 "finished_at": j.get("finished_at")}
                 for j in _jobs
                 if session_id is None or j["session_id"] == int(session_id)]
