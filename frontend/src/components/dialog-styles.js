@@ -11,7 +11,7 @@ export const dlgCancel =
 export const dlgBody = "flex min-w-[min(22rem,86vw)] flex-col gap-3"
 export const dlgLabel = "text-sm font-semibold text-tiilt-ink"
 export const dlgSelect =
-    "h-11 w-full cursor-pointer rounded-lg border border-tiilt-line bg-white px-3 pr-8 text-base text-tiilt-ink transition outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
+    "app-select h-11 w-full cursor-pointer rounded-lg border border-tiilt-line bg-white px-3 pr-10 text-base text-tiilt-ink transition outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
 export const dlgError =
     "rounded-md bg-tiilt-danger-soft px-3 py-2 text-sm text-tiilt-danger"
 export const dlgDanger =
