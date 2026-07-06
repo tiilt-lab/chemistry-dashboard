@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react"
 import { SessionModel } from "../models/session"
-import { dlgHeading, dlgBody, dlgLabel, dlgSelect, dlgPrimary, dlgCancel, dlgDanger, btnPrimarySm, btnDangerOutlineSm, btnSecondary } from "../components/dialog-styles"
+import { dlgHeading, dlgBody, dlgLabel, dlgSelect, dlgPrimary, dlgCancel, dlgDanger, btnPrimary, btnPrimarySm, btnDangerOutlineSm, btnSecondary } from "../components/dialog-styles"
 import { Appheader } from "../header/header-component"
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
@@ -282,7 +282,7 @@ function LobbyHero({ passcode, joinLink, copyJoinLink, onLock }) {
                 {joinLink}
             </div>
             <div className="flex flex-wrap justify-center gap-2">
-                <button className={dlgPrimary + " px-5"} onClick={copyJoinLink}>
+                <button className={btnPrimary} onClick={copyJoinLink}>
                     Copy join link
                 </button>
                 <button className={btnSecondary} onClick={() => setProjecting(true)}>
@@ -450,7 +450,7 @@ function PodsOverviewPages(props) {
                                             let groups join this session.
                                         </div>
                                         <button
-                                            className={dlgPrimary + " px-5"}
+                                            className={btnPrimary}
                                             onClick={() => props.setPasscodeState("unlock")}
                                         >
                                             Unlock joining
