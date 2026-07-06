@@ -107,6 +107,21 @@ def posthoc_reset(**kwargs):
     return json_response()
 
 
+@api_routes.route('/api/v1/callback/posthoc_service_restarted', methods=['POST'])
+@wrappers.verify_local
+def posthoc_service_restarted(**kwargs):
+    # A posthoc service announces a (re)start: clear its scope's running
+    # flags. Any in-flight run died with the old process (observed: a system
+    # OOM-kill mid-run left the queue waiting out the full 150-minute pod
+    # timeout on a flag nobody would ever clear).
+    content = request.get_json() or {}
+    scope = content.get('scope', 'audio')
+    cleared = posthoc_state.clear_scope(scope)
+    if cleared:
+        logging.info('Posthoc %s service restarted: cleared %d stale running flag(s).', scope, cleared)
+    return json_response({'cleared': cleared})
+
+
 @api_routes.route('/api/v1/callback/posthoc_completed', methods=['POST'])
 @wrappers.verify_local
 def posthoc_completed(**kwargs):

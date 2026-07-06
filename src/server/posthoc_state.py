@@ -34,6 +34,17 @@ def mark_done(device_id, scope=None):
                 _running.pop((int(device_id), s), None)
 
 
+def clear_scope(scope):
+    # A processing service (re)started: any run it had in flight died with
+    # the old process. Clearing its scope lets waiting queue jobs fail fast
+    # instead of sitting out the full pod timeout.
+    with _lock:
+        stale = [k for k in _running if k[1] == scope]
+        for k in stale:
+            _running.pop(k, None)
+        return len(stale)
+
+
 def is_running(device_id):
     with _lock:
         _prune()
