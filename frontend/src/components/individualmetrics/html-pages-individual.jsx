@@ -1,3 +1,4 @@
+import { applyChartTheme } from "../chart-theme"
 import { Line } from "react-chartjs-2"
 import { brandColor } from "../../globals"
 import { Chart as ChartJS } from "chart.js/auto"
@@ -34,6 +35,7 @@ const CHART_OPTIONS = {
 }
 
 function FeatureCard({ feature }) {
+    applyChartTheme()
     return (
         <div
             className="rounded-lg border border-tiilt-line bg-white p-3"

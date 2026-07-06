@@ -1,3 +1,4 @@
+import { applyChartTheme } from "../chart-theme";
 import { useCallback, useEffect, useState } from "react";
 import { IndividualVideoMetricPage } from "./html-pages-video-individual";
 import { Line } from "react-chartjs-2";
@@ -15,6 +16,7 @@ import {
 Chart.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend, Title);
 
 function AppIndividualVideoFeaturesComponent(props) {
+    applyChartTheme()
   //  console.log("session1 video metrics AppIndividualVideoFeaturesComponent");
   // @Input('session') session: SessionModel;
 

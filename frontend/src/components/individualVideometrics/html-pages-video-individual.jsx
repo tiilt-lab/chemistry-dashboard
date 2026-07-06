@@ -1,3 +1,4 @@
+import { applyChartTheme } from "../chart-theme";
 import { DialogBox } from "../../dialog/dialog-component"
 import { Line } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from "chart.js/auto";
@@ -7,6 +8,7 @@ import React from "react"
 
 
 function IndividualVideoMetricPage(props) {
+    applyChartTheme()
     ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
     const emotionMap = {
         angry: 0,
