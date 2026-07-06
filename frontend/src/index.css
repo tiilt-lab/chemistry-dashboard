@@ -201,6 +201,26 @@ html {
     --color-tiilt-green: #8dc63f;
     --color-tiilt-danger: #e5766f;
     --color-tiilt-danger-soft: #3d1f1d;
+
+    /* shadcn tokens (Card/muted/border/…) — without these the data-viz
+       dashboards kept white cards in dark mode. */
+    --background: #14101f;
+    --foreground: #ece7f5;
+    --card: #241e33;
+    --card-foreground: #ece7f5;
+    --popover: #241e33;
+    --popover-foreground: #ece7f5;
+    --primary: #8b6fc4;
+    --primary-foreground: #14101f;
+    --secondary: #2c2542;
+    --secondary-foreground: #ece7f5;
+    --muted: #2c2542;
+    --muted-foreground: #a89fc0;
+    --accent: #2c2542;
+    --accent-foreground: #ece7f5;
+    --border: #3a3352;
+    --input: #3a3352;
+    --ring: #8b6fc4;
 }
 .dark body, .dark html { background-color: #14101f; }
 

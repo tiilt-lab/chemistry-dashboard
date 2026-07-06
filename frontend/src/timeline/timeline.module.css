@@ -54,7 +54,7 @@
   font-weight: 500;
   font-size: 12px;
   line-height: 20px;
-  color: #221a33;
+  color: var(--color-tiilt-ink, #221a33);
   text-align: left;
   margin-right: 16px;
   -webkit-box-align: start;

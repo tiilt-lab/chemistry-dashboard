@@ -4,7 +4,7 @@ import { dlgHeading, dlgBody, dlgLabel, dlgSelect, dlgPrimary, dlgCancel } from 
 import { Appheader } from "../header/header-component"
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
-import { AppSpinner } from "../spinner/spinner-component"
+import { SkeletonRows } from "../components/skeleton"
 
 import MicIcon from "../Icons/Mic"
 
@@ -71,7 +71,10 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue, index }) {
             </span>
             <div className="min-w-0 grow">
                 <div className="flex items-center gap-2">
-                    <span className="min-w-0 truncate text-sm font-semibold text-tiilt-ink">
+                    <span
+                        title={name}
+                        className="min-w-0 truncate text-sm font-semibold text-tiilt-ink"
+                    >
                         {name}
                     </span>
                     {device.connected ? (
@@ -212,16 +215,7 @@ function PodsOverviewPages(props) {
                     nav={props.navigateToSessions}
                     escToBack={true}
                 />
-                {props.sessionDevices === null || !props.initialized ? (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <div className="mb-3 text-base text-tiilt-muted">
-                            Loading session data…
-                        </div>
-                        <AppSpinner />
-                    </div>
-                ) : (
-                    <></>
-                )}
+
                 <div className="toolbar-view-container">
                     {props.session !== null ? (
                         <AppSessionToolbar
@@ -258,7 +252,9 @@ function PodsOverviewPages(props) {
                                     devices={props.sessionDevices}
                                     enriched={props.enriched}
                                 />
-                            ) : null}
+                            ) : (
+                                <SkeletonRows rows={6} className="mt-2" />
+                            )}
                             <div className="mb-4 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
                                 <div>
                                     <h2 className="text-lg font-semibold text-tiilt-ink">

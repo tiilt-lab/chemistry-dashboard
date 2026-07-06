@@ -313,7 +313,11 @@ def add_tagging(**kwargs):
     session_device.embeddings = embeddingsFile
   return json_response()
 
+# Alias kept because older peers post to the /callback/-prefixed path; the
+# outbound URL below uses the canonical one. Without the alias the two-instance
+# student sync 404'd on every push.
 @api_routes.route('/api/v1/processsyncstudentdata', methods=['POST'])
+@api_routes.route('/api/v1/callback/processsyncstudentdata', methods=['POST'])
 def process_sync_student_data(**kwargs):
   # Inbound: a configured peer pushes its roster here. Reject unless syncing
   # is enabled on this instance and the shared token matches.
@@ -473,7 +477,7 @@ def get_models(**kwargs):
 def sync_student_table(**kwargs):
     if not cf.sync_enabled():
         return json_response({"message": "Student syncing is not configured for this instance."}, 400)
-    url = cf.sync_peer_url() + "/api/v1/callback/processsyncstudentdata"
+    url = cf.sync_peer_url() + "/api/v1/processsyncstudentdata"
     try:
         students = database.get_students()
         result = {"Students_data": [student.json() for student in students]}
