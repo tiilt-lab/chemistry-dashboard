@@ -640,6 +640,16 @@ def enqueue_posthoc(session_id, **kwargs):
     device_ids = body.get('device_ids') or []
     if not device_ids:
         return json_response({'message': 'device_ids required'}, 400)
+    # Only pods that actually belong to this session: the run context
+    # (transcript time anchoring, keywords) comes from the session, so a
+    # cross-session enqueue silently mis-processes the pod.
+    valid = {d.id for d in database.get_session_devices(session_id=session_id)}
+    rejected = [int(d) for d in device_ids if int(d) not in valid]
+    device_ids = [int(d) for d in device_ids if int(d) in valid]
+    if rejected:
+        logging.warning('posthoc enqueue: rejected devices %s not in session %s', rejected, session_id)
+    if not device_ids:
+        return json_response({'message': 'No device_ids belong to this session.'}, 400)
     added = posthoc_queue.enqueue(session_id, device_ids, models=body.get('models'))
     return json_response({'queued': added, 'status': posthoc_queue.status(session_id)})
 
