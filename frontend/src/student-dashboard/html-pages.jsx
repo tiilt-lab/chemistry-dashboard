@@ -1,4 +1,5 @@
 import { GenericDialogBox, DialogBox } from "../dialog/dialog-component"
+import { POD_ON_COLOR, POD_OFF_COLOR, GLOW_COLOR } from "../components/pod-colors"
 import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { Appheader } from "../header/header-component"
@@ -16,9 +17,6 @@ import {SurveyCompletion} from "./survey-question"
 import MicIcon from "../Icons/Mic"
 
 function StudentSessionDashboardPages(props) {
-    const POD_ON_COLOR = "#FF6655"
-    const POD_OFF_COLOR = "#D0D0D0"
-    const GLOW_COLOR = "#ffc3bd"
 
     return (
         <>

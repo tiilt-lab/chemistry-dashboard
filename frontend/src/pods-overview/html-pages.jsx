@@ -8,6 +8,7 @@ import { SkeletonRows } from "../components/skeleton"
 
 import MicIcon from "../Icons/Mic"
 import { Camera, Chevron } from "@/Icons"
+import { StatusPill } from "../components/status-pill"
 
 
 // null (hide) for missing durations, else SessionModel's shared H:MM:SS.
@@ -76,36 +77,29 @@ function PodCard({ device, enrich, onOpen, checked, onToggle, queue, index }) {
                         {name}
                     </span>
                     {device.connected ? (
-                        <span className="flex-none rounded-full bg-tiilt-danger-soft px-1.5 py-0.5 text-[11px] font-semibold text-tiilt-danger">
+                        <StatusPill tone="teal" dot className="text-[11px]">
                             Online
-                        </span>
+                        </StatusPill>
                     ) : null}
                 </div>
                 <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-tiilt-muted">
                     {queue === "error" ? (
-                        <span className="rounded-full bg-tiilt-danger-soft px-2 py-0.5 font-semibold text-tiilt-danger">
-                            Error
-                        </span>
+                        <StatusPill tone="danger">Error</StatusPill>
                     ) : queue === "queued" ? (
-                        <span className="rounded-full bg-tiilt-soft px-2 py-0.5 font-semibold text-tiilt">
-                            Queued
-                        </span>
+                        <StatusPill tone="brand">Queued</StatusPill>
                     ) : queue === "running" || e.analysis_running ? (
-                        <span className="flex items-center gap-1 rounded-full bg-tiilt-orange/15 px-2 py-0.5 font-semibold text-tiilt-orange-text">
-                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-tiilt-orange" />
+                        <StatusPill tone="orange" pulse>
                             Running…
-                        </span>
+                        </StatusPill>
                     ) : e.has_data === false ? (
-                        <span className="rounded-full bg-tiilt-line/40 px-2 py-0.5 font-semibold text-tiilt-muted">
-                            No data
-                        </span>
+                        <StatusPill tone="neutral">No data</StatusPill>
                     ) : (device.posthoc_analyzed_date || e.posthoc_analyzed_date) ? (
-                        <span
+                        <StatusPill
+                            tone="teal"
                             title={"Full analysis run " + (device.posthoc_analyzed_date || e.posthoc_analyzed_date)}
-                            className="flex items-center gap-1 rounded-full bg-tiilt-teal/15 px-2 py-0.5 font-semibold text-tiilt-teal-text"
                         >
                             Analyzed
-                        </span>
+                        </StatusPill>
                     ) : null}
                     {e.speaker_count > 0 ? (
                         <span>

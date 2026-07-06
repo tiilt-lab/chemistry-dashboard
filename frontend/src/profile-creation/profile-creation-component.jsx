@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react"
+import { POD_ON_COLOR as POD_COLOR, GLOW_COLOR } from "../components/pod-colors"
 import { ProfileCreationPage } from "./html-pages"
 import { AuthService } from '../services/auth-service';
 import { ApiService } from "../services/api-service"
@@ -38,8 +39,6 @@ function SignupPage() {
     const navigate = useNavigate()
 
     const apiService = new ApiService()
-    const POD_COLOR = "#FF6655"
-    const GLOW_COLOR = "#ffc3bd"
     const interval = 10000
 
     let wakeLock = null

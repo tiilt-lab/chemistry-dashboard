@@ -35,20 +35,20 @@
 }
 
 .dropdown-menu-container .menu-item:focus-visible {
-  outline: 2px solid #5b3a94;
+  outline: 2px solid var(--color-tiilt);
   outline-offset: -2px;
 }
 
 .dropdown-menu-container .menu-item:active {
-  background-color: #5b3a94;
+  background-color: var(--color-tiilt);
 }
 
 .dropdown-menu-container .menu-item:hover {
-  background-color: #CACACE;
+  background-color: var(--color-tiilt-soft);
 }
 
 .dropdown-menu-container .red {
-  color: #DC2929;
+  color: var(--color-tiilt-danger);
 }
 
 .menu-button {
@@ -61,6 +61,6 @@
 }
 
 .menu-button:focus-visible {
-  outline: 2px solid #5b3a94;
+  outline: 2px solid var(--color-tiilt);
   outline-offset: 2px;
 }

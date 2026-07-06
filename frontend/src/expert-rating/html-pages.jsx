@@ -1,4 +1,5 @@
 import { GenericDialogBox } from "../dialog/dialog-component"
+import { POD_ON_COLOR, POD_OFF_COLOR, GLOW_COLOR } from "../components/pod-colors"
 import { ErrorDialog } from "../components/error-dialog"
 import { dlgInput, dlgPrimary } from "../components/dialog-styles"
 import { pageShell, formCard } from "../components/layout-styles"
@@ -17,9 +18,6 @@ import { TranscriptsComponentClient } from "../transcripts/transcripts-component
 import MicIcon from "../Icons/Mic"
 
 function ExpertRatingPage(props) {
-    const POD_ON_COLOR = "#FF6655"
-    const POD_OFF_COLOR = "#D0D0D0"
-    const GLOW_COLOR = "#ffc3bd"
 
     return (
         <>
