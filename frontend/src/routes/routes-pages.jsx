@@ -28,7 +28,8 @@ const TranscriptsComponent = lazy(() => import('../transcripts/transcripts-compo
 const TopicListComponent = lazy(() => import('../topic-list/topic-list-component').then(m => ({ default: m.TopicListComponent })))
 const ManageTopicModelsComponent = lazy(() => import('../manage-topic-models/manage-topic-models-component').then(m => ({ default: m.ManageTopicModelsComponent })))
 const PodsComponent = lazy(() => import('../pods/pods-component').then(m => ({ default: m.PodsComponent })))
-const PeopleComponent = lazy(() => import('../people/people-component').then(m => ({ default: m.PeopleComponent })))
+const StudentsComponent = lazy(() => import('../students/students-component').then(m => ({ default: m.StudentsComponent })))
+const RatersComponent = lazy(() => import('../raters/raters-component').then(m => ({ default: m.RatersComponent })))
 const UsersComponent = lazy(() => import('../users/users-component').then(m => ({ default: m.UsersComponent })))
 
 function RouteFallback() {
@@ -74,7 +75,9 @@ function PageRouter() {
                 <Route path='/topic-list' element={<ProtectedRoute component={TopicListComponent}/>} />
                 <Route path='/topic-list/new-session' element={<ProtectedRoute component={TopicListComponent}/>} />
                 <Route path='/pods' element={<ProtectedRoute component={PodsComponent}/> } />
-                <Route path='/people' element={<ProtectedRoute component={PeopleComponent}/> } />
+                <Route path='/students' element={<ProtectedRoute component={StudentsComponent}/> } />
+                <Route path='/raters' element={<ProtectedRoute component={RatersComponent}/> } />
+                <Route path='/people' element={<Navigate replace to="/students" />} />
                 <Route path='/users' element={<ProtectedRoute component={UsersComponent}/> } />
                 <Route path='/settings' element={<ProtectedRoute component={SettingsComponent}/> } />
             </Routes>

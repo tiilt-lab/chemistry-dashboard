@@ -43,12 +43,12 @@ const GROUPS = [
     },
     {
         icon: pod,
-        name: "Students & Raters",
+        name: "Students",
         links: [
             {
-                label: "Manage people",
-                desc: "Student profiles and dashboard raters",
-                path: "/people",
+                label: "Students",
+                desc: "Who's enrolled and how often they participate",
+                path: "/students",
             },
         ],
     },
@@ -64,6 +64,11 @@ const ADMIN_GROUP = {
             label: "Users",
             desc: "Dashboard accounts, roles, and access",
             path: "/users",
+        },
+        {
+            label: "Raters",
+            desc: "Expert raters assigned to session dashboards",
+            path: "/raters",
         },
     ],
 }

@@ -128,6 +128,12 @@ class AuthService {
     return new ApiService().httpRequestCall("api/v1/admin/students", 'GET', {});
   }
 
+  // Roster + participation stats; the server scopes it to the caller's own
+  // sessions unless they're an admin.
+  getStudentsOverview() {
+    return new ApiService().httpRequestCall("api/v1/students/overview", 'GET', {});
+  }
+
   getRaters() {
     return new ApiService().httpRequestCall("api/v1/admin/raters", 'GET', {});
   }
