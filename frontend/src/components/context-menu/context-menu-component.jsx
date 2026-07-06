@@ -66,10 +66,17 @@ function AppContextMenu(props) {
 
   const toggle = (state) => {
     if (state && ref.current) {
-      // Opening: anchor the fixed dropdown under the trigger's right edge.
+      // Opening: anchor the fixed dropdown under the trigger's right edge,
+      // or above it when the viewport bottom would cut the menu off.
       const rect = ref.current.getBoundingClientRect();
+      const estimatedHeight =
+        React.Children.count(props.children) * 40 + 10;
+      const openUp =
+        window.innerHeight - rect.bottom < estimatedHeight &&
+        rect.top > estimatedHeight;
       setMenuPos({
-        top: rect.bottom + 4,
+        top: openUp ? undefined : rect.bottom + 4,
+        bottom: openUp ? window.innerHeight - rect.top + 4 : undefined,
         right: Math.max(8, window.innerWidth - rect.right),
       });
     }
@@ -85,7 +92,7 @@ function AppContextMenu(props) {
       return (
         <div
           className={style["dropdown-menu-container"]}
-          style={{ top: menuPos.top, right: menuPos.right }}
+          style={{ top: menuPos.top, bottom: menuPos.bottom, right: menuPos.right }}
           role="menu"
         >
           {props.children}
