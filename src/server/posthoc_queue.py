@@ -94,6 +94,10 @@ def _run_job(job):
                 with A2.app.app_context():
                     import database as db2
                     if db2.get_pod_duration(device_id) is None:
+                        # The completion callback already stamped the pod
+                        # analyzed; undo that so the failure stays visible
+                        # and retries don't skip it.
+                        db2.clear_session_device_posthoc(device_id)
                         raise RuntimeError("audio produced no transcripts (empty recording or transcription failure)")
             return  # ran and finished
         time.sleep(10)

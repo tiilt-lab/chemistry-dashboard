@@ -1487,6 +1487,18 @@ def get_session_ids_for_devices(device_ids):
     return {r[0] for r in rows}
 
 
+def clear_session_device_posthoc(session_device_id):
+    # Un-stamp a pod whose "completion" produced no output (e.g. the ASR
+    # crashed): leaving the date set makes the failure look Analyzed and
+    # excludes the pod from survey-based retries.
+    device = get_session_devices(id=session_device_id)
+    if device is None:
+        return False
+    device.posthoc_analyzed_date = None
+    db.session.commit()
+    return True
+
+
 def mark_session_device_posthoc(session_device_id, models=None):
     device = get_session_devices(id=session_device_id)
     if device is None:
