@@ -93,6 +93,17 @@ function StudentsComponent(props) {
     const [target, setTarget] = useState(null) // student a dialog acts on
     const [activity, setActivity] = useState(null) // drill-down payload
     const [syncEnabled, setSyncEnabled] = useState(false)
+    // Bulk selection (admins): toggled by clicking the initials avatar.
+    const [selected, setSelected] = useState(() => new Set())
+
+    const toggleSelected = (id) =>
+        setSelected((prev) => {
+            const next = new Set(prev)
+            if (next.has(id)) next.delete(id)
+            else next.add(id)
+            return next
+        })
+    const clearSelected = () => setSelected(new Set())
 
     const loadStudents = async () => {
         try {
@@ -302,6 +313,64 @@ function StudentsComponent(props) {
         }
     }
 
+    // Merge every selected duplicate into the chosen survivor, one call per
+    // duplicate (the endpoint is single-pair).
+    const bulkMerge = async (survivorId) => {
+        if (!survivorId) {
+            setStatus("Pick which student to keep.")
+            return
+        }
+        const dups = [...selected].filter((id) => id !== +survivorId)
+        setCurrentForm("Loading")
+        let movedTotal = 0
+        let failed = 0
+        for (const dupId of dups) {
+            try {
+                const response = await new AuthService().mergeStudents(
+                    dupId,
+                    +survivorId,
+                )
+                if (response.status === 200) {
+                    const body = await response.json()
+                    movedTotal += body.moved.speakers || 0
+                } else {
+                    failed++
+                }
+            } catch {
+                failed++
+            }
+        }
+        clearSelected()
+        await loadStudents()
+        showStatus(
+            failed ? "Merge partly failed" : "Students merged",
+            `${dups.length - failed} ${dups.length - failed === 1 ? "profile" : "profiles"} merged, ` +
+                `${movedTotal} session ${movedTotal === 1 ? "appearance" : "appearances"} moved.` +
+                (failed ? ` ${failed} failed.` : ""),
+        )
+    }
+
+    const bulkDelete = async () => {
+        const ids = [...selected]
+        setCurrentForm("Loading")
+        let failed = 0
+        for (const id of ids) {
+            try {
+                const response = await new AuthService().deleteStudent(id)
+                if (response.status !== 200) failed++
+            } catch {
+                failed++
+            }
+        }
+        clearSelected()
+        await loadStudents()
+        showStatus(
+            failed ? "Delete partly failed" : "Students deleted",
+            `${ids.length - failed} ${ids.length - failed === 1 ? "profile" : "profiles"} deleted.` +
+                (failed ? ` ${failed} failed.` : ""),
+        )
+    }
+
     const deleteStudent = async () => {
         setCurrentForm("Loading")
         try {
@@ -493,6 +562,42 @@ function StudentsComponent(props) {
                             </div>
                         </div>
 
+                        {selected.size > 0 ? (
+                            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-tiilt/40 bg-tiilt-soft/60 px-4 py-2.5">
+                                <span className="text-sm font-semibold text-tiilt-ink">
+                                    {selected.size} selected
+                                </span>
+                                <button
+                                    className={btnSecondary + " disabled:cursor-not-allowed disabled:opacity-50"}
+                                    disabled={selected.size < 2}
+                                    title={
+                                        selected.size < 2
+                                            ? "Select at least two students to merge"
+                                            : "Merge the selected profiles into one"
+                                    }
+                                    onClick={() =>
+                                        setCurrentForm("MergeSelected")
+                                    }
+                                >
+                                    Merge…
+                                </button>
+                                <button
+                                    className={btnSecondary + " text-tiilt-danger hover:border-tiilt-danger hover:bg-tiilt-danger-soft"}
+                                    onClick={() =>
+                                        setCurrentForm("ConfirmBulkDelete")
+                                    }
+                                >
+                                    Delete
+                                </button>
+                                <button
+                                    className="ml-auto cursor-pointer text-sm font-semibold text-tiilt-muted transition hover:text-tiilt"
+                                    onClick={clearSelected}
+                                >
+                                    Clear
+                                </button>
+                            </div>
+                        ) : null}
+
                         {students === null ? (
                             <div className="flex justify-center py-10">
                                 <AppSpinner />
@@ -544,9 +649,48 @@ function StudentsComponent(props) {
                                             >
                                                 <td className="px-4 py-2.5">
                                                     <div className="flex items-center gap-3">
-                                                        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-tiilt-soft text-xs font-bold text-tiilt">
-                                                            {initials(s)}
-                                                        </span>
+                                                        {canManage ? (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    toggleSelected(
+                                                                        s.id,
+                                                                    )
+                                                                }}
+                                                                role="checkbox"
+                                                                aria-checked={selected.has(
+                                                                    s.id,
+                                                                )}
+                                                                aria-label={`Select ${s.firstname} ${s.lastname}`}
+                                                                title={
+                                                                    selected.has(
+                                                                        s.id,
+                                                                    )
+                                                                        ? "Deselect"
+                                                                        : "Select for bulk actions"
+                                                                }
+                                                                className={
+                                                                    "flex h-9 w-9 flex-none cursor-pointer items-center justify-center rounded-full text-xs font-bold transition " +
+                                                                    (selected.has(
+                                                                        s.id,
+                                                                    )
+                                                                        ? "bg-tiilt text-white ring-2 ring-tiilt/40"
+                                                                        : "bg-tiilt-soft text-tiilt hover:ring-2 hover:ring-tiilt/30")
+                                                                }
+                                                            >
+                                                                {selected.has(
+                                                                    s.id,
+                                                                )
+                                                                    ? "✓"
+                                                                    : initials(
+                                                                          s,
+                                                                      )}
+                                                            </button>
+                                                        ) : (
+                                                            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-tiilt-soft text-xs font-bold text-tiilt">
+                                                                {initials(s)}
+                                                            </span>
+                                                        )}
                                                         <span className="min-w-0">
                                                             <span className="block truncate font-semibold text-tiilt-ink">
                                                                 {s.firstname}{" "}
@@ -842,6 +986,86 @@ function StudentsComponent(props) {
                         )}
                         <button className={dlgCancel} onClick={closeDialog}>
                             Close
+                        </button>
+                    </div>
+                ) : null}
+
+                {currentForm === "MergeSelected" && selected.size > 1 ? (
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>
+                            Merge {selected.size} students
+                        </div>
+                        <div className="text-sm text-tiilt-muted">
+                            Pick which profile to keep. Everything from the
+                            others — session appearances, metrics, AI
+                            feedback, survey responses — moves to it, and
+                            their profiles are deleted. This can't be undone.
+                        </div>
+                        <div
+                            role="radiogroup"
+                            aria-label="Profile to keep"
+                            className="flex max-h-60 flex-col gap-1 overflow-y-auto"
+                        >
+                            {(students || [])
+                                .filter((s) => selected.has(s.id))
+                                .map((s) => (
+                                    <label
+                                        key={s.id}
+                                        className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-tiilt-line px-3 py-2 transition hover:border-tiilt hover:bg-tiilt-soft/50"
+                                    >
+                                        <input
+                                            type="radio"
+                                            name="mergeSurvivor"
+                                            value={s.id}
+                                            className="h-4 w-4 cursor-pointer accent-tiilt"
+                                        />
+                                        <span className="text-sm font-semibold text-tiilt-ink">
+                                            {s.firstname} {s.lastname}
+                                        </span>
+                                        <span className="font-ahamono text-xs text-tiilt-muted">
+                                            {s.username} ·{" "}
+                                            {s.session_count || 0} sessions
+                                        </span>
+                                    </label>
+                                ))}
+                        </div>
+                        {status ? (
+                            <div className={dlgError}>{status}</div>
+                        ) : null}
+                        <button
+                            className={dlgPrimary}
+                            onClick={() =>
+                                bulkMerge(
+                                    document.querySelector(
+                                        'input[name="mergeSurvivor"]:checked',
+                                    )?.value,
+                                )
+                            }
+                        >
+                            Merge into selected
+                        </button>
+                        <button className={dlgCancel} onClick={closeDialog}>
+                            Cancel
+                        </button>
+                    </div>
+                ) : null}
+
+                {currentForm === "ConfirmBulkDelete" && selected.size > 0 ? (
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>
+                            Delete {selected.size}{" "}
+                            {selected.size === 1 ? "student" : "students"}?
+                        </div>
+                        <div className="text-sm text-tiilt-muted">
+                            This removes the selected profiles and their
+                            enrolled biometrics. This can't be undone.
+                        </div>
+                        <button className={dlgDanger} onClick={bulkDelete}>
+                            Delete {selected.size}{" "}
+                            {selected.size === 1 ? "student" : "students"}
+                        </button>
+                        <button className={dlgCancel} onClick={closeDialog}>
+                            Cancel
                         </button>
                     </div>
                 ) : null}
