@@ -23,6 +23,7 @@ import style5 from "../sessions/sessions.module.css"
 import MicIcon from "@icons/Mic"
 import Check from "@icons/Check"
 import Chevron from "@icons/Chevron"
+import { MicChannelProbe } from "./mic-channel-probe"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
 
@@ -172,6 +173,7 @@ function ByodJoinPage(props) {
                                                     <option value="8">8</option>
                                                 </select>
                                             </div>
+                                            <MicChannelProbe />
                                         </div>
                                     </div>
                                 </div>
