@@ -12,6 +12,7 @@
     "fix-webm-duration": "^1.0.5",
     "framer-motion": "^12.38.0",
     "lucide-react": "^0.577.0",
+    "qrcode": "^1.5.4",
     "radix-ui": "^1.4.3",
     "react": "^18.2.0",
     "react-chartjs-2": "^5.3.0",

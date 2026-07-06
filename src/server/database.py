@@ -7,6 +7,7 @@ import requests
 from utility import sanitize
 from datetime import datetime, timedelta
 import random
+import passcode_words
 import string
 import logging
 
@@ -666,14 +667,19 @@ def update_session(session_id, name=None, folder_id=None):
     return None
 
 def generate_session_passcode(session_id):
+    # Memorable single-word passcodes (see passcode_words.py); falls back to
+    # word+digits if every word is in use by an active session.
     session = get_sessions(id=session_id)
-    collision = True
-    while collision:
-        characters = re.sub('[AEIOU]', '', string.ascii_uppercase + string.digits)
-        passcode = ''.join(random.choice(characters) for _ in range(4))
-        sessions = get_sessions(active=True, passcode=passcode)
-        if not sessions:
-            collision = False
+    passcode = None
+    for _ in range(60):
+        candidate = random.choice(passcode_words.WORDS)
+        if not get_sessions(active=True, passcode=candidate):
+            passcode = candidate
+            break
+    while passcode is None:
+        candidate = random.choice(passcode_words.WORDS) + str(random.randint(10, 99))
+        if not get_sessions(active=True, passcode=candidate):
+            passcode = candidate
     session.passcode = passcode
     db.session.commit()
     return session
