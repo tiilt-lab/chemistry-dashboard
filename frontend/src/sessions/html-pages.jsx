@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { formatDate } from "../globals"
 import { ErrorDialog } from "../components/error-dialog"
 import { useNavigate } from "react-router-dom"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
@@ -349,11 +350,7 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
                 </span>
                 <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-tiilt-muted">
                     <span className="whitespace-nowrap">
-                        {session.creation_date.toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                        })}
+                        {formatDate(session.creation_date)}
                     </span>
                     <span aria-hidden="true">·</span>
                     <span className="font-ahamono tabular-nums whitespace-nowrap">

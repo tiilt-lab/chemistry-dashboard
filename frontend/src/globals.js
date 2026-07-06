@@ -12,15 +12,13 @@ export function stringToDate(dateString) {
   return date;
 }
 
+// One date format app-wide ("Jul 5, 2026") — there used to be three.
 export function formatDate(date) {
-  const monthNames = [
-    'January', 'February', 'March',
-    'April', 'May', 'June', 'July',
-    'August', 'September', 'October',
-    'November', 'December'
-  ];
-
-  return date.getDate() + ' ' + monthNames[date.getMonth()] + ' ' + date.getFullYear();
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 export function degrees_to_radians(degrees) {

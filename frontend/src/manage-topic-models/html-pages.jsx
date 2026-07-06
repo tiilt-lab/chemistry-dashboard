@@ -1,4 +1,5 @@
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
+import { SkeletonRows } from "../components/skeleton"
 import { EmptyState } from "../components/empty-state"
 import { btnPrimary } from "../components/dialog-styles"
 import { pageShell, formCard } from "../components/layout-styles"
@@ -22,9 +23,7 @@ function ManageTopicsPage(props) {
                 <div className="relative min-h-0 w-full grow overflow-y-auto">
                     <div className="mx-auto w-full max-w-2xl px-4 py-6">
                         {!props.topicModels ? (
-                            <div className="py-16 text-center text-tiilt-muted">
-                                Loading…
-                            </div>
+                            <SkeletonRows rows={5} />
                         ) : (
                             <></>
                         )}

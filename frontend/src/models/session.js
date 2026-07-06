@@ -55,13 +55,6 @@ export class SessionModel {
     return result;
   }
 
-  get formattedDate() {
-    const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: 'numeric' };
-    let dateString = this.creation_date.toLocaleDateString('en-US', options);
-    dateString += ' (' + this.lengthFormatted + ')';
-    return dateString;
-  }
-
   static fromJson(json){
     const model = new SessionModel();
     model.id = json['id'];
