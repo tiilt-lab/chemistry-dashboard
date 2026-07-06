@@ -1,6 +1,6 @@
 import React from "react"
 import { SessionModel } from "../models/session"
-import { dlgHeading, dlgBody, dlgLabel, dlgSelect, dlgPrimary, dlgCancel, btnPrimarySm, btnDangerOutlineSm } from "../components/dialog-styles"
+import { dlgHeading, dlgBody, dlgLabel, dlgSelect, dlgPrimary, dlgCancel, btnPrimarySm, btnDangerOutlineSm, btnSecondary } from "../components/dialog-styles"
 import { Appheader } from "../header/header-component"
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
@@ -428,38 +428,66 @@ function PodsOverviewPages(props) {
                     )) ||
                     (props.currentForm === "Passcode" && (
                         <div className={dlgBody}>
-                            <div className={dlgHeading}>Passcode Settings</div>
-                            <button
-                                className={dlgPrimary}
-                                onClick={() => props.copyPasscode()}
-                            >
-                                Copy
-                            </button>
-                            <button
-                                className={dlgPrimary}
-                                onClick={() => props.setPasscodeState("lock")}
-                            >
-                                Lock
-                            </button>
-                            <button
-                                className={dlgPrimary}
-                                onClick={() => props.setPasscodeState("unlock")}
-                            >
-                                Unlock
-                            </button>
-                            <button
-                                className={dlgPrimary}
-                                onClick={() =>
-                                    props.setPasscodeState("refresh")
-                                }
-                            >
-                                Refresh
-                            </button>
+                            <div className={dlgHeading}>Share this session</div>
+                            {props.passcode ? (
+                                <>
+                                    <div className="rounded-xl border border-tiilt-line bg-tiilt-soft/50 px-4 py-3 text-center">
+                                        <div className="font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
+                                            Passcode
+                                        </div>
+                                        <div className="mt-1 font-ahamono text-3xl font-bold tracking-[0.3em] text-tiilt-ink">
+                                            {props.passcode}
+                                        </div>
+                                    </div>
+                                    <div className="rounded-lg border border-tiilt-line bg-white px-3 py-2 text-center font-ahamono text-sm break-all text-tiilt-muted">
+                                        {props.joinLink}
+                                    </div>
+                                    <button
+                                        className={dlgPrimary}
+                                        onClick={() => props.copyJoinLink()}
+                                    >
+                                        Copy join link
+                                    </button>
+                                    <button
+                                        className={dlgCancel}
+                                        onClick={() => props.copyPasscode()}
+                                    >
+                                        Copy code only
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="text-sm text-tiilt-muted">
+                                    The session is locked — unlock it to get a
+                                    passcode participants can join with.
+                                </div>
+                            )}
+                            <div className="flex gap-2">
+                                <button
+                                    className={btnSecondary + " flex-1"}
+                                    onClick={() => props.setPasscodeState("lock")}
+                                >
+                                    Lock
+                                </button>
+                                <button
+                                    className={btnSecondary + " flex-1"}
+                                    onClick={() => props.setPasscodeState("unlock")}
+                                >
+                                    Unlock
+                                </button>
+                                <button
+                                    className={btnSecondary + " flex-1"}
+                                    onClick={() =>
+                                        props.setPasscodeState("refresh")
+                                    }
+                                >
+                                    Refresh
+                                </button>
+                            </div>
                             <button
                                 className={dlgCancel}
                                 onClick={props.closeDialog}
                             >
-                                Cancel
+                                Close
                             </button>
                         </div>
                     ))}
