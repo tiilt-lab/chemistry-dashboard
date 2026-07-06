@@ -72,6 +72,21 @@ function JoinPage() {
     const [spkr2VideoMetrics, setSpkr2VideoMetrics] = useState([])
     const [details, setDetails] = useState("Group")
     const [currentForm, setCurrentForm] = useState("")
+    // Watchdog: "Connecting..." must never spin forever. If the join hasn't
+    // progressed (socket handshake, permissions, anything) within 30s, fail
+    // visibly instead of leaving the user staring at the spinner.
+    useEffect(() => {
+        if (currentForm !== "Connecting") return
+        const t = setTimeout(() => {
+            setDisplayText(
+                "Couldn't connect to the session. Check your internet connection and microphone permission, then try again.",
+            )
+            setCurrentForm("JoinError")
+            disconnect(true)
+        }, 30000)
+        return () => clearTimeout(t)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentForm])
     const [displayText, setDisplayText] = useState("")
     const [pageTitle, setPageTitle] = useState("Join Session")
     const [prevSessionId, setPrevSessionId] = useState(-1)
@@ -765,6 +780,11 @@ function JoinPage() {
                 streamReference.current = stream
                 //keep this here for now to enable to capturing of audio finger printing
                 const context = new AudioContext({ sampleRate: 16000 })
+                // iOS creates contexts suspended when constructed this far
+                // after the tap gesture; resume so audio actually flows.
+                if (context.state === "suspended") {
+                    context.resume().catch(() => {})
+                }
                 source.current = context.createMediaStreamSource(stream)
                 audioContext.current = context
                 if (joinwith.current === "Audio") {
@@ -805,7 +825,19 @@ function JoinPage() {
             }
         } catch (ex) {
             console.log(ex)
-            setDisplayText("Failed to get user audio source.")
+            // Say why, not just that it failed — on phones this is almost
+            // always a permission or in-app-browser problem the user can fix.
+            let msg = "Failed to get user audio source."
+            if (ex && (ex.name === "NotAllowedError" || ex.name === "PermissionDeniedError" || ex.name === "SecurityError")) {
+                msg = "Microphone access was blocked. Allow microphone access for this site in your browser settings, then try again."
+            } else if (ex && (ex.name === "NotFoundError" || ex.name === "DevicesNotFoundError")) {
+                msg = "No microphone was found on this device."
+            } else if (ex && (ex.name === "NotReadableError" || ex.name === "TrackStartError")) {
+                msg = "The microphone is in use by another app. Close it and try again."
+            } else if (ex && /not implemented|mediaDevices/i.test(ex.message || "")) {
+                msg = "This browser can't record audio. Open the link in Safari or Chrome instead of the in-app browser."
+            }
+            setDisplayText(msg)
             setCurrentForm("JoinError")
             disconnect(true)
         }
@@ -836,7 +868,7 @@ function JoinPage() {
             constraint.audio = true
             constraint.video = false
         }
-        const mediaType = await pickMimeType(constraint)
+        const mediaType = pickMimeType(constraint)
         const mediaExt = (mediaType !== "" && mediaType.indexOf("webm") !== -1) ? "webm" : (mediaType !== "" && mediaType.indexOf("mp4") !== -1) ? "mp4" : ""
         sessionService.joinByodSession(names, passcode, collaborators).then(
             (response) => {
@@ -878,9 +910,12 @@ function JoinPage() {
         )
     }
 
-    const pickMimeType = async (constraintObj) => {
-        const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
-        const hasAudio = stream.getAudioTracks().length > 0;
+    // No getUserMedia probe here: it double-prompted for the microphone,
+    // leaked the probe stream's tracks, and — worst — a permission denial
+    // rejected with no catch, leaving the "Connecting..." dialog up forever.
+    // Whether audio is wanted is already known from the constraints.
+    const pickMimeType = (constraintObj) => {
+        const hasAudio = !!constraintObj.audio;
 
         // Try best-to-widest support order.
         const candidates = [
