@@ -589,7 +589,15 @@ function SessionsComponent(props) {
             toggleSelected={toggleSelected}
             clearSelected={clearSelected}
             selectedCount={selectedCount}
-            openBulkDialog={(form) => setCurrentForm(form)}
+            openBulkDialog={(form) => {
+                // Same prep as the single-session Move dialog: without this
+                // the folder picker rendered an empty list (Home only).
+                if (form === "MoveSessions") {
+                    setSelectableFolders(folders)
+                    setFolderSelect(null)
+                }
+                setCurrentForm(form)
+            }}
             bulkMoveSessions={bulkMoveSessions}
             bulkDeleteSessions={bulkDeleteSessions}
             videoFilter={videoFilter}
