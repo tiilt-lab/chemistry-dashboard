@@ -141,12 +141,13 @@ def enqueue(session_id, device_ids, models=None):
 
 
 def clear_pending():
-    # Drop all queued jobs (running job finishes unless cancelled at the service).
+    # Drop all queued jobs (running job finishes unless cancelled at the
+    # service). Cancelled jobs are REMOVED, not marked error: a stop+requeue
+    # cycle used to leave hundreds of phantom "cancelled" errors inflating
+    # the queue panel's counts forever.
     with _lock:
-        n = 0
-        for j in _jobs:
-            if j["state"] == "queued":
-                j["state"] = "error"; j["error"] = "cancelled"; n += 1
+        n = sum(1 for j in _jobs if j["state"] == "queued")
+        _jobs[:] = [j for j in _jobs if j["state"] != "queued"]
         return n
 
 
