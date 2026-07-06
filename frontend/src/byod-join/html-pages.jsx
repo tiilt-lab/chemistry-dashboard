@@ -22,12 +22,17 @@ import style4 from "../components/context-menu/context-menu.module.css"
 import style5 from "../sessions/sessions.module.css"
 import MicIcon from "@icons/Mic"
 import Check from "@icons/Check"
+import Chevron from "@icons/Chevron"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
 
 const fieldLabel = "mb-1.5 block text-left text-sm font-semibold text-tiilt-ink"
 
 function ByodJoinPage(props) {
+    // Join-form niceties: prefer the prefilled code (link/QR) as a compact
+    // chip, and tuck rarely-changed options behind an Advanced disclosure.
+    const [editCode, setEditCode] = useState(false)
+    const [showAdvanced, setShowAdvanced] = useState(false)
     return (
         <>
             {(props.currentForm === "gottoselectedtranscript" &&
@@ -69,48 +74,48 @@ function ByodJoinPage(props) {
                                     </div>
                                     <div>
                                         <label htmlFor="name" className={fieldLabel}>
-                                            Device name
+                                            Group name
                                         </label>
                                         <input
                                             className={dlgInput}
                                             id="name"
-                                            placeholder="Name"
+                                            placeholder="e.g. Table 3"
                                         />
                                     </div>
-                                    <div>
-                                        <label htmlFor="collaborators" className={fieldLabel}>
-                                            Number of collaborators
-                                        </label>
-                                        <select
-                                            id="collaborators"
-                                            className={dlgSelect}
-                                        >
-                                            <option value="0">
-                                                0 (automatic)
-                                            </option>
-                                            <option value="1">1</option>
-                                            <option value="2">2</option>
-                                            <option value="3">3</option>
-                                            <option value="4">4</option>
-                                            <option value="5">5</option>
-                                            <option value="6">6</option>
-                                            <option value="7">7</option>
-                                            <option value="8">8</option>
-                                        </select>
-                                    </div>
+
                                     <div>
                                         <label htmlFor="passcode" className={fieldLabel}>
                                             Passcode
                                         </label>
-                                        <input
-                                            className={dlgInput}
-                                            id="passcode"
-                                            value={props.pcode}
-                                            placeholder="Session word (e.g. MAPLE)"
-                                            onInput={(event) =>
-                                                props.changeTouppercase(event)
-                                            }
-                                        />
+                                        {props.pcode && !editCode ? (
+                                            <div className="flex items-center justify-between rounded-xl border border-tiilt-line bg-tiilt-ground px-4 py-3">
+                                                <span className="font-mono text-lg font-bold tracking-[0.2em] text-tiilt-ink">
+                                                    {props.pcode}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEditCode(true)}
+                                                    className="cursor-pointer text-sm font-semibold text-tiilt transition hover:text-tiilt-deep"
+                                                >
+                                                    Change
+                                                </button>
+                                                <input
+                                                    type="hidden"
+                                                    id="passcode"
+                                                    value={props.pcode}
+                                                />
+                                            </div>
+                                        ) : (
+                                            <input
+                                                className={dlgInput}
+                                                id="passcode"
+                                                value={props.pcode}
+                                                placeholder="Session word (e.g. MAPLE)"
+                                                onInput={(event) =>
+                                                    props.changeTouppercase(event)
+                                                }
+                                            />
+                                        )}
                                         {props.wrongInput ? (
                                             <div className={dlgError + " mt-2"}>
                                                 That passcode looks too
@@ -120,17 +125,54 @@ function ByodJoinPage(props) {
                                         ) : null}
                                     </div>
                                     <div>
-                                        <label htmlFor="joinwith" className={fieldLabel}>
-                                            Join with
-                                        </label>
-                                        <select
-                                            id="joinwith"
-                                            className={dlgSelect}
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowAdvanced(!showAdvanced)}
+                                            aria-expanded={showAdvanced}
+                                            className="flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-tiilt transition hover:text-tiilt-deep"
                                         >
-                                            <option value="Audio">Audio</option>
-                                            <option value="Video">Video</option>
-                                            <option value="Videocartoonify">Video (cartoon)</option>
-                                        </select>
+                                            <Chevron
+                                                direction={showAdvanced ? "down" : "right"}
+                                                size={12}
+                                            />
+                                            Advanced options
+                                        </button>
+                                        <div className={showAdvanced ? "mt-3 flex flex-col gap-4" : "hidden"}>
+                                            <div>
+                                                <label htmlFor="joinwith" className={fieldLabel}>
+                                                    Join with
+                                                </label>
+                                                <select
+                                                    id="joinwith"
+                                                    className={dlgSelect}
+                                                >
+                                                    <option value="Audio">Audio</option>
+                                                    <option value="Video">Video</option>
+                                                    <option value="Videocartoonify">Video (cartoon)</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label htmlFor="collaborators" className={fieldLabel}>
+                                                    Number of people in your group
+                                                </label>
+                                                <select
+                                                    id="collaborators"
+                                                    className={dlgSelect}
+                                                >
+                                                    <option value="0">
+                                                        Detect automatically
+                                                    </option>
+                                                    <option value="1">1</option>
+                                                    <option value="2">2</option>
+                                                    <option value="3">3</option>
+                                                    <option value="4">4</option>
+                                                    <option value="5">5</option>
+                                                    <option value="6">6</option>
+                                                    <option value="7">7</option>
+                                                    <option value="8">8</option>
+                                                </select>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="w-full flex-none border-t border-tiilt-line bg-white">
