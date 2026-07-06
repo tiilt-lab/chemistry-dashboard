@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom"
 import { ThemeToggle } from "../header/header-component"
 import { updateTime } from "../utilities/helper-functions"
-import { AuthService } from "../services/auth-service"
 import { TiiltLogo } from "../components/tiilt-logo"
 
 import recordicon from "../assets/img/icon-record.svg"
@@ -9,7 +8,6 @@ import wordlist from "../assets/img/icon-wordlist.svg"
 import pod from "../assets/img/icon-pod.svg"
 import settings from "../assets/img/settings.svg"
 import question from "../assets/img/question.svg"
-import logouticon from "../assets/img/logout.svg"
 
 const GROUPS = [
     {
@@ -98,14 +96,6 @@ function HomeScreen() {
     const timeOfDay = updateTime()
     const navigate = useNavigate()
 
-    const logout = () => {
-        const ret = new AuthService().logout()
-        ret.then(
-            () => navigate("/login"),
-            () => navigate("/login"),
-        )
-    }
-
     return (
         <div className="main-container overflow-y-auto bg-tiilt-ground">
             <header className="flex h-14 w-full flex-none items-center gap-3 border-b border-tiilt-line bg-white px-4 md:px-8">
@@ -134,14 +124,6 @@ function HomeScreen() {
                     >
                         <img alt="" src={settings} className="h-4 w-4" />
                         <span className="hidden sm:inline">Settings</span>
-                    </button>
-                    <button
-                        onClick={logout}
-                        title="Sign out"
-                        className="flex flex-none items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold whitespace-nowrap text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
-                    >
-                        <img alt="" src={logouticon} className="h-4 w-4" />
-                        <span className="hidden sm:inline">Sign out</span>
                     </button>
                 </div>
             </header>
