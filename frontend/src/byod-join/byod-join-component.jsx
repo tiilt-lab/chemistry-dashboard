@@ -566,6 +566,27 @@ function JoinPage() {
         }
     }
 
+    // Add a speaker slot after joining (needed when the group joined with
+    // "detect automatically", i.e. zero pre-created slots).
+    const [, setSpeakerListTick] = useState(0)
+    const addSpeakerSlot = () => {
+        if (!sessionDevice) return
+        sessionService.addSpeaker(sessionDevice.id).then(
+            (response) => {
+                if (response.status === 200) {
+                    response.json().then((jsonObj) => {
+                        const speaker = SpeakerModel.fromJson(jsonObj)
+                        speakers.current = [...(speakers.current || []), speaker]
+                        setSpeakerListTick((x) => x + 1)
+                    })
+                }
+            },
+            (apierror) => {
+                console.log("byod-join-component func: addSpeakerSlot ", apierror)
+            },
+        )
+    }
+
     const confirmSpeakers = () => {
         console.log(speakers.current)
         if (speakers.current.every((s) => s.fingerprinted)) {
@@ -1463,6 +1484,7 @@ function JoinPage() {
             showFeatures={showFeatures}
             videoApiEndpoint={apiService.getVideoServerEndpoint()}
             speakers={speakers.current}
+            addSpeakerSlot={addSpeakerSlot}
             openForms={openForms}
             selectedSpkrId1={selectedSpkrId1}
             setSelectedSpkrId1={setSelectedSpkrId1}

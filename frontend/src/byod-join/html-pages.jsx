@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { btnPrimary, btnPrimaryTall, dlgInput, dlgSelect, dlgPrimary, dlgError } from "../components/dialog-styles"
+import { btnPrimary, btnPrimaryTall, btnSecondaryTall, dlgInput, dlgSelect, dlgPrimary, dlgError } from "../components/dialog-styles"
 import { pageShell, formCard } from "../components/layout-styles"
 import { PodMicRing } from "../components/pod-mic-ring"
 import { Appheader } from "../header/header-component"
@@ -266,12 +266,13 @@ function ByodJoinPage(props) {
                                                             }
                                                         >
                                                             {" "}
-                                                            Tap the button below
-                                                            to add a speaker or
-                                                            other button to join
-                                                            automatically detect
-                                                            speakers(less
-                                                            accurate){" "}
+                                                            Tap Add speaker to
+                                                            enroll each group
+                                                            member, or Join
+                                                            Session to detect
+                                                            speakers
+                                                            automatically (less
+                                                            accurate).{" "}
                                                         </div>
                                                     </div>
                                                 )}
@@ -354,7 +355,13 @@ function ByodJoinPage(props) {
                                                 ),
                                             )}
                                         </div>
-                                        <div>
+                                        <div className="flex flex-col items-center">
+                                            <button
+                                                className={btnSecondaryTall + " m-0.5 w-60 @sm:m-3 @sm:w-80"}
+                                                onClick={props.addSpeakerSlot}
+                                            >
+                                                + Add speaker
+                                            </button>
                                             <button
                                                 className={btnPrimaryTall + " m-0.5 w-60 @sm:m-3 @sm:w-80"}
                                                 onClick={props.confirmSpeakers}
@@ -426,12 +433,13 @@ function ByodJoinPage(props) {
                                                             }
                                                         >
                                                             {" "}
-                                                            Tap the button below
-                                                            to add a speaker or
-                                                            other button to join
-                                                            automatically detect
-                                                            speakers(less
-                                                            accurate){" "}
+                                                            Tap Add speaker to
+                                                            enroll each group
+                                                            member, or Join
+                                                            Session to detect
+                                                            speakers
+                                                            automatically (less
+                                                            accurate).{" "}
                                                         </div>
                                                     </div>
                                                 )}
@@ -514,7 +522,13 @@ function ByodJoinPage(props) {
                                                 ),
                                             )}
                                         </div>
-                                        <div>
+                                        <div className="flex flex-col items-center">
+                                            <button
+                                                className={btnSecondaryTall + " m-0.5 w-60 @sm:m-3 @sm:w-80"}
+                                                onClick={props.addSpeakerSlot}
+                                            >
+                                                + Add speaker
+                                            </button>
                                             <button
                                                 className={btnPrimaryTall + " m-0.5 w-60 @sm:m-3 @sm:w-80"}
                                                 onClick={props.confirmSpeakers}

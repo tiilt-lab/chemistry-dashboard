@@ -281,6 +281,14 @@ class SessionService {
     return this.api.httpRequestCall("api/v1/sessions/byod", "POST", body);
   }
 
+  addSpeaker(sessionDeviceId) {
+    return this.api.httpRequestCall(
+      `api/v1/devices/${sessionDeviceId}/speakers`,
+      "POST",
+      {}
+    );
+  }
+
   updateCollaborator(speakerId, alias) {
     const body = {
       alias: alias,
