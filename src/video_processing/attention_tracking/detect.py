@@ -587,6 +587,10 @@ class ImageObjectDetection:
         best_cos_score = -1  # cosine similarity ranges -1 to 1
         best_L2_score = 1
         best_distance = 1
+        # Nearest candidate regardless of the cutoff, so rejected faces can be
+        # logged with how close they came (otherwise near-misses are invisible).
+        nearest_student = None
+        nearest_distance = None
         # Backend-appropriate acceptance cutoff (dlib: L2<0.5; ArcFace: cos-dist).
         max_distance = self.face_backend.match_params()["max_distance"]
         for person in store_facial_embeddings:
@@ -602,6 +606,9 @@ class ImageObjectDetection:
             score = float(np.dot(u, v)) #self.cosine_similarity(face_embedding, stored_embedding)
             Euc_dist = float(np.linalg.norm(u - v))
             # logging.info(f"score are Euclidean: {Euc_dist} and cos simillarity: {score} and distance: {distance}")
+            if nearest_distance is None or distance < nearest_distance:
+                nearest_student = student
+                nearest_distance = distance
             # Select by the backend's own distance metric under its calibrated
             # cutoff. The previous compound gate also required Euc_dist < 1
             # (i.e. cos > 0.5), a dlib-tuned bound that rejected valid ArcFace
@@ -612,6 +619,15 @@ class ImageObjectDetection:
                 best_L2_score = Euc_dist
                 best_match = student
                 best_distance = distance
+        if best_match == "Unknown" and nearest_student is not None:
+            # Sampled so a face that never matches shows up in the logs with
+            # its nearest enrolled candidate, instead of disappearing silently.
+            self._unmatched_count = getattr(self, "_unmatched_count", 0) + 1
+            if self._unmatched_count % 25 == 1:
+                logging.info(
+                    "Unmatched face #%d (frame %s): nearest enrolled is '%s' at distance %.3f (cutoff %.2f)",
+                    self._unmatched_count, frame_index, nearest_student,
+                    nearest_distance, max_distance)
         # if best_distance < 0.5:
         #     logging.info("distance for all embedding are {0}, but matched {1} at cos score {2} and euclid : {3} in frame {4}".format(best_distance,best_match,best_cos_score,best_L2_score,frame_index))    
         # if best_cos_score >= cos_threshold and best_L2_score <= L2_threshold:
