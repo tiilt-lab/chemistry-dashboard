@@ -172,7 +172,7 @@ function SessionStats({ devices, enriched }) {
 }
 
 // Sticky status strip while recording: elapsed time, group count, code, End.
-function RecordingBanner({ session, deviceCount, passcode, onEnd }) {
+function RecordingBanner({ session, deviceCount, passcode, onShare, onEnd }) {
     const [, setTick] = useState(0)
     useEffect(() => {
         const t = setInterval(() => setTick((x) => x + 1), 1000)
@@ -196,10 +196,21 @@ function RecordingBanner({ session, deviceCount, passcode, onEnd }) {
                 {deviceCount} {deviceCount === 1 ? "group" : "groups"}
             </span>
             {passcode ? (
-                <span className="font-ahamono font-bold tracking-[0.2em] text-tiilt-ink">
+                <button
+                    onClick={onShare}
+                    title="Share join code"
+                    className="cursor-pointer rounded-lg px-1.5 py-0.5 font-ahamono font-bold tracking-[0.2em] text-tiilt-ink transition hover:bg-white"
+                >
                     {passcode}
-                </span>
-            ) : null}
+                </button>
+            ) : (
+                <button
+                    onClick={onShare}
+                    className="cursor-pointer rounded-lg px-1.5 py-0.5 text-xs font-semibold text-tiilt-muted underline decoration-dotted underline-offset-2 transition hover:text-tiilt-ink"
+                >
+                    Locked — unlock to let more groups join
+                </button>
+            )}
             <button
                 onClick={onEnd}
                 className="ml-auto cursor-pointer rounded-lg border border-tiilt-danger/40 bg-white px-3 py-1 text-xs font-semibold text-tiilt-danger transition hover:border-tiilt-danger active:translate-y-px"
@@ -304,6 +315,11 @@ function PodsOverviewPages(props) {
                     leftText={false}
                     rightText={props.righttext}
                     rightPill={props.rightpill}
+                    rightPillClick={
+                        props.rightpill === "Locked"
+                            ? () => props.openDialog("Passcode")
+                            : undefined
+                    }
                     rightTextClick={() => {
                         props.openDialog("Passcode")
                     }}
@@ -316,6 +332,7 @@ function PodsOverviewPages(props) {
                         session={props.session}
                         deviceCount={(props.sessionDevices || []).length}
                         passcode={props.passcode}
+                        onShare={() => props.openDialog("Passcode")}
                         onEnd={() => props.openDialog("ConfirmEnd")}
                     />
                 ) : null}
@@ -423,6 +440,22 @@ function PodsOverviewPages(props) {
                                         copyJoinLink={props.copyJoinLink}
                                         onLock={() => props.setPasscodeState("lock")}
                                     />
+                                ) : props.session && !props.session.end_date ? (
+                                    <div className="mx-auto flex max-w-xl flex-col items-center gap-4 rounded-2xl border border-tiilt-line bg-white px-6 py-10 text-center shadow-pop">
+                                        <div className="text-base font-semibold text-tiilt-ink">
+                                            Joining is locked
+                                        </div>
+                                        <div className="text-sm text-tiilt-muted">
+                                            Unlock to get a fresh passcode and
+                                            let groups join this session.
+                                        </div>
+                                        <button
+                                            className={dlgPrimary + " px-5"}
+                                            onClick={() => props.setPasscodeState("unlock")}
+                                        >
+                                            Unlock joining
+                                        </button>
+                                    </div>
                                 ) : (
                                     <div className="rounded-xl border border-dashed border-tiilt-line py-16 text-center">
                                         <div className="text-base font-semibold text-tiilt-ink">
