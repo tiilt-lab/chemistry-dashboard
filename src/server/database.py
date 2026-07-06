@@ -66,6 +66,26 @@ def update_speaker(speaker_id, alias = None):
         return speaker
     return None
 
+# Roster with participation stats. A student is linked to a session when a
+# speaker in it carries their username as alias (the fingerprint-enrollment
+# flow sets this). owner_id=None -> all students, zero-session ones included
+# (admin view); owner_id set -> only students seen in that user's sessions,
+# with stats scoped to those sessions.
+def get_students_overview(owner_id=None):
+    query = db.session.query(
+        Student,
+        func.count(func.distinct(Session.id)),
+        func.max(Session.creation_date),
+    ).outerjoin(Speaker, Speaker.alias == Student.username) \
+     .outerjoin(SessionDevice, Speaker.session_device_id == SessionDevice.id) \
+     .outerjoin(Session, SessionDevice.session_id == Session.id)
+    if owner_id is not None:
+        # Filtering on the joined table makes this effectively an inner join:
+        # exactly the "only their students" semantics we want.
+        query = query.filter(Session.owner_id == owner_id)
+    query = query.group_by(Student.id)
+    return query.all()
+
 def create_speaker(session_device_id, alias=''):
     session_device = get_session_devices(id=session_device_id)
     if not session_device:
