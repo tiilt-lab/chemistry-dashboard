@@ -136,5 +136,37 @@ class WhisperXASR:
         except Exception as e:
             logging.error("WhisperX transcription failed: %s", e, exc_info=True)
         finally:
+            # Models are loaded fresh per pod inside a long-lived service;
+            # without an explicit release the CUDA allocations accumulate
+            # until a later pod's model load dies with CUDA OOM (observed
+            # mid-batch after ~5 pods with two instances sharing the card).
+            try:
+                import gc
+                import torch
+                # locals()-based deletion is a no-op in CPython; drop each
+                # reference explicitly so gc can actually free the models.
+                try:
+                    del model
+                except NameError:
+                    pass
+                try:
+                    del align_model, metadata
+                except NameError:
+                    pass
+                try:
+                    del diarizer, diarize_segments
+                except NameError:
+                    pass
+                try:
+                    del audio, result
+                except NameError:
+                    pass
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                    logging.info("WhisperX: released CUDA cache (%.1f GiB still reserved)",
+                                 torch.cuda.memory_reserved() / 2**30)
+            except Exception:
+                pass
             self.running = False
             self.transcript_queue.put(None)
