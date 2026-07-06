@@ -101,7 +101,7 @@
   font-weight: 500;
   font-size: 22px;
   line-height: 32px;
-  color: #221a33;
+  color: var(--color-tiilt-ink);
   width: auto;
   margin-bottom: 32px;
 }
@@ -111,7 +111,7 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #221a33;
+  color: var(--color-tiilt-ink);
 }
 
 .empty-session-list {
@@ -132,7 +132,7 @@
   font-weight: 400;
   font-size: 16px;
   line-height: 24px;
-  color: #221a33;
+  color: var(--color-tiilt-ink);
   width: 100%;
   border: 1px solid rgba(42, 23, 74, 0.2);
   border-radius: 4px;

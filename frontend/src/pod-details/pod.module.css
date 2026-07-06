@@ -68,7 +68,7 @@
   font-weight: 700;
   font-size: 17px;
   line-height: 24px;
-  color: #221a33;
+  color: var(--color-tiilt-ink);
 }
 
 .dialog-body {

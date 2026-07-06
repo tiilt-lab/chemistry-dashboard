@@ -41,7 +41,7 @@
 }
 
 .silence {
-  background-color: #f5f3f9;
+  background-color: var(--color-tiilt-ground);
   border: 1px solid rgba(42, 23, 74, 0.2);
   border-radius: 2px;
 }
@@ -54,7 +54,7 @@
   font-weight: 500;
   font-size: 12px;
   line-height: 20px;
-  color: var(--color-tiilt-ink, #221a33);
+  color: var(--color-tiilt-ink, var(--color-tiilt-ink));
   text-align: left;
   margin-right: 16px;
   -webkit-box-align: start;
@@ -69,7 +69,7 @@
   margin-top: 16px;
   display: flex;
   width: 100%;
-  background-color: #f5f3f9;
+  background-color: var(--color-tiilt-ground);
   -ms-flex-item-align: start;
       align-self: flex-start;
 }
@@ -105,6 +105,6 @@
   font-weight: 400;
   font-size: 12px;
   line-height: 20px;
-  color: #221a33;
+  color: var(--color-tiilt-ink);
   opacity: 0.5;
 }

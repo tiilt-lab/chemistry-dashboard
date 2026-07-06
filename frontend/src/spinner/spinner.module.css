@@ -13,11 +13,11 @@
   width: 25.5px;
   height: 25.5px;
   margin: 3px;
-  border: 3px solid #221a33;
+  border: 3px solid var(--color-tiilt-ink);
   border-radius: 50%;
   -webkit-animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
           animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-  border-color: #221a33 transparent transparent transparent;
+  border-color: var(--color-tiilt-ink) transparent transparent transparent;
 }
 
 .lds-ring div:nth-child(1) {
