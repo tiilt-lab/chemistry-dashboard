@@ -19,7 +19,7 @@ import style3 from "../manage-keyword-lists/manage-keyword-lists.module.css"
 import style4 from "../components/context-menu/context-menu.module.css"
 import style5 from "../sessions/sessions.module.css"
 import MicIcon from "@icons/Mic"
-import Checkmark from "@assets/img/checkmark.svg"
+import Check from "@icons/Check"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
 
@@ -217,11 +217,13 @@ function ByodJoinPage(props) {
                                                         className="my-3 flex flex-row items-center justify-between rounded-md border px-2 py-2"
                                                     >
                                                         {speaker.fingerprinted && (
-                                                            <img
-                                                                className="h-8 w-8"
-                                                                alt="Fingerprinted"
-                                                                src={Checkmark}
-                                                            />
+                                                            <span
+                                                                role="img"
+                                                                aria-label="Fingerprinted"
+                                                                className="text-tiilt-teal"
+                                                            >
+                                                                <Check size={32} />
+                                                            </span>
                                                         )}
                                                         <div
                                                             className={
@@ -375,11 +377,13 @@ function ByodJoinPage(props) {
                                                         className="my-3 flex flex-row items-center justify-between rounded-md border px-2 py-2"
                                                     >
                                                         {speaker.fingerprinted && (
-                                                            <img
-                                                                className="h-8 w-8"
-                                                                alt="Fingerprinted"
-                                                                src={Checkmark}
-                                                            />
+                                                            <span
+                                                                role="img"
+                                                                aria-label="Fingerprinted"
+                                                                className="text-tiilt-teal"
+                                                            >
+                                                                <Check size={32} />
+                                                            </span>
                                                         )}
                                                         <div
                                                             className={

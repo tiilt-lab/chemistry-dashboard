@@ -1,6 +1,6 @@
 import React from "react"
 import { SessionModel } from "../models/session"
-import { dlgHeading, dlgBody, dlgLabel, dlgSelect, dlgPrimary, dlgCancel, btnPrimarySm } from "../components/dialog-styles"
+import { dlgHeading, dlgBody, dlgLabel, dlgSelect, dlgPrimary, dlgCancel, btnPrimarySm, btnDangerOutlineSm } from "../components/dialog-styles"
 import { Appheader } from "../header/header-component"
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
@@ -269,7 +269,7 @@ function PodsOverviewPages(props) {
                                     Object.values(props.enriched || {}).some((e) => e && e.analysis_running) ? (
                                         <button
                                             onClick={props.stopRuns}
-                                            className="rounded-lg border border-tiilt-danger/40 bg-tiilt-danger-soft px-3 py-1.5 text-xs font-semibold text-tiilt-danger transition hover:border-tiilt-danger active:translate-y-px"
+                                            className={btnDangerOutlineSm}
                                         >
                                             Stop runs
                                         </button>
