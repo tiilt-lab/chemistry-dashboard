@@ -13,6 +13,7 @@ import breadcrumbIcon from "../assets/img/icon-back.svg"
 import FolderIcon from "../Icons/Folder"
 import MicIcon from "../Icons/Mic"
 import { Camera, Chevron, Refresh, Upload } from "@/Icons"
+import { StatusPill } from "../components/status-pill"
 import { SkeletonRows } from "../components/skeleton"
 import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel } from "../components/dialog-styles"
 
@@ -272,9 +273,9 @@ function PodDurations({ sessionId }) {
                             {pod.name || `Pod ${pod.id}`}
                         </span>
                         {pod.has_data === false ? (
-                            <span className="flex-none rounded-full bg-tiilt-line/40 px-1.5 py-0.5 font-semibold text-tiilt-muted">
+                            <StatusPill tone="neutral">
                                 No data recorded
-                            </span>
+                            </StatusPill>
                         ) : (
                             <>
                                 {pod.speaker_count > 0 ? (
@@ -286,14 +287,13 @@ function PodDurations({ sessionId }) {
                                     </span>
                                 ) : null}
                                 {pod.analysis_running ? (
-                                    <span className="flex flex-none items-center gap-1 rounded-full bg-tiilt-orange/15 px-1.5 py-0.5 font-semibold text-tiilt-orange-text">
-                                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-tiilt-orange" />
+                                    <StatusPill tone="orange" pulse>
                                         Analyzing…
-                                    </span>
+                                    </StatusPill>
                                 ) : pod.posthoc_analyzed_date ? (
-                                    <span className="flex-none rounded-full bg-tiilt-teal/15 px-1.5 py-0.5 font-semibold text-tiilt-teal-text">
+                                    <StatusPill tone="teal">
                                         Analyzed
-                                    </span>
+                                    </StatusPill>
                                 ) : null}
                                 <span className="flex-none font-ahamono tabular-nums text-tiilt-muted">
                                     {SessionModel.formatDuration(pod.duration)}
@@ -371,22 +371,22 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
                         </>
                     ) : null}
                     {session.analysis_running ? (
-                        <span
+                        <StatusPill
+                            tone="orange"
+                            pulse
                             title="A full analysis is running right now"
-                            className="flex flex-none items-center gap-1 rounded-full bg-tiilt-orange/15 px-1.5 py-0.5 font-semibold whitespace-nowrap text-tiilt-orange-text"
                         >
-                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-tiilt-orange" />
                             Analyzing…
-                        </span>
+                        </StatusPill>
                     ) : null}
                     {session.has_posthoc ? (
-                        <span
+                        <StatusPill
+                            tone="teal"
                             title="Post-hoc analysis has been run for this session"
-                            className="flex flex-none items-center gap-1 rounded-full bg-tiilt-teal/15 px-1.5 py-0.5 font-semibold whitespace-nowrap text-tiilt-teal-text"
                         >
                             <Refresh />
                             Re-analyzed
-                        </span>
+                        </StatusPill>
                     ) : null}
                     {hasPods ? (
                         <span
@@ -400,10 +400,9 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
                 </span>
             </button>
             {session.recording ? (
-                <span className="flex flex-none items-center gap-1.5 rounded-full bg-tiilt-danger-soft px-2.5 py-1 text-xs font-semibold text-tiilt-danger">
-                    <span className="h-1.5 w-1.5 rounded-full bg-tiilt-danger" />
+                <StatusPill tone="danger" dot className="text-xs">
                     Live
-                </span>
+                </StatusPill>
             ) : null}
             {hasPods ? (
                 <button

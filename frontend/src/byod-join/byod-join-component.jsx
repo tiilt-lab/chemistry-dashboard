@@ -1,4 +1,5 @@
 import { useReducer, useEffect, useState, useRef, useCallback, act } from "react"
+import { POD_ON_COLOR as POD_COLOR, GLOW_COLOR } from "../components/pod-colors"
 import { useNavigate, useParams } from "react-router-dom"
 import { SessionService } from "../services/session-service"
 import { ByodJoinPage } from "./html-pages"
@@ -130,8 +131,6 @@ function JoinPage() {
     }
     const [state, dispatch] = useReducer(reducer, initialState);
 
-    const POD_COLOR = "#FF6655"
-    const GLOW_COLOR = "#ffc3bd"
     const interval = 10000
 
     let wakeLock = null
