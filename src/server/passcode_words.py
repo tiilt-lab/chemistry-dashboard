@@ -1,26 +1,36 @@
-# Memorable session passcodes (yellkey-style): one common, easy-to-spell,
-# easy-to-say word instead of a random consonant string. Stored/matched
-# uppercase because the join form uppercases input.
+# Memorable session passcodes (yellkey-style): one short word instead of a
+# random string. Curated for international audiences — biased toward
+# "internationalisms" (words near-identical across many languages: PIZZA,
+# TAXI, HOTEL, PIANO...) plus CEFR-A1 / Basic-English concrete nouns.
+# Rules: 4-7 letters, spelled the way it sounds (no silent letters, no
+# GH/PH), concrete and picturable.
 WORDS = [
-    'APPLE', 'BANJO', 'BEACH', 'BERRY', 'BIRCH', 'BISON', 'BLOOM', 'BRAVE',
-    'BREAD', 'BRICK', 'BROOK', 'CABIN', 'CANDY', 'CANOE', 'CEDAR', 'CHALK',
-    'CHESS', 'CHILI', 'CLOUD', 'CLOVER', 'COAST', 'COCOA', 'COMET', 'CORAL',
-    'CRANE', 'CREEK', 'CROWN', 'DAISY', 'DELTA', 'DENIM', 'DERBY', 'DIVER',
-    'DONUT', 'DREAM', 'DRIFT', 'EAGLE', 'EMBER', 'FABLE', 'FALCON', 'FERRY',
-    'FIELD', 'FLAME', 'FLASH', 'FLOAT', 'FLUTE', 'FOREST', 'FROST', 'GARDEN',
-    'GECKO', 'GLADE', 'GLOBE', 'GOOSE', 'GRAPE', 'GROVE', 'HARBOR', 'HAWK',
-    'HAZEL', 'HERON', 'HONEY', 'HOTEL', 'HOUSE', 'IGLOO', 'ISLAND', 'IVORY',
-    'JELLY', 'JUMBO', 'JUNGLE', 'KAYAK', 'KOALA', 'LAGOON', 'LANTERN', 'LEMON',
-    'LILAC', 'LLAMA', 'LOTUS', 'LUCKY', 'MANGO', 'MAPLE', 'MARBLE', 'MEADOW',
-    'MELON', 'METEOR', 'MINT', 'MOOSE', 'MOUNTAIN', 'MUSIC', 'NORTH', 'NOVEL',
-    'OASIS', 'OCEAN', 'OLIVE', 'ONION', 'OPERA', 'ORBIT', 'OTTER', 'PANDA',
-    'PAPER', 'PEACH', 'PEARL', 'PEBBLE', 'PENGUIN', 'PIANO', 'PILOT', 'PINE',
-    'PLANET', 'PLAZA', 'POLAR', 'POND', 'POPPY', 'PRISM', 'PUMA', 'QUILT',
-    'RADIO', 'RAVEN', 'RIVER', 'ROBIN', 'ROCKET', 'ROSE', 'SAILOR', 'SALMON',
-    'SAND', 'SEAL', 'SHEEP', 'SHELL', 'SIERRA', 'SILVER', 'SKATE', 'SLOTH',
-    'SNOW', 'SOLAR', 'SPARK', 'SPICE', 'SPRING', 'SPRUCE', 'STAR', 'STONE',
-    'STORM', 'STORY', 'SUGAR', 'SUMMIT', 'SUNNY', 'SWAN', 'TANGO', 'TEMPO',
-    'TIGER', 'TOAST', 'TOPAZ', 'TORCH', 'TRAIL', 'TRAIN', 'TULIP', 'TUNDRA',
-    'TURTLE', 'VIOLET', 'VOYAGE', 'WAFFLE', 'WAGON', 'WALNUT', 'WHALE', 'WHEAT',
-    'WILLOW', 'WINTER', 'WOLF', 'YACHT', 'ZEBRA', 'ZESTY',
+    # internationalisms
+    'BANANA', 'BINGO', 'BONUS', 'BUS', 'CACAO', 'CIRCUS', 'COLA', 'DISCO',
+    'GORILLA', 'HOTEL', 'JUDO', 'KARATE', 'KIWI', 'KOALA', 'LASER', 'LAVA',
+    'LEMON', 'MANGO', 'MENU', 'METRO', 'MOTOR', 'MUSIC', 'OPERA', 'PANDA',
+    'PASTA', 'PIANO', 'PICNIC', 'PILOT', 'PIZZA', 'RADIO', 'ROBOT', 'SAFARI',
+    'SALAD', 'SALSA', 'SAUNA', 'SOFA', 'SUSHI', 'TACO', 'TANGO', 'TAXI',
+    'TEMPO', 'TENNIS', 'TIGER', 'TOMATO', 'VILLA', 'VIOLIN', 'VISA', 'YOGA',
+    'ZEBRA', 'ZERO',
+    # animals (A1, easy spelling)
+    'BEAR', 'BIRD', 'CAMEL', 'DUCK', 'FISH', 'FROG', 'GOAT', 'HORSE',
+    'LION', 'MOUSE', 'PONY', 'RABBIT', 'SHARK', 'SNAKE', 'SWAN', 'TURTLE',
+    'WHALE', 'WOLF',
+    # food & drink
+    'APPLE', 'BERRY', 'BREAD', 'CAKE', 'CANDY', 'CORN', 'CURRY', 'HONEY',
+    'MELON', 'MILK', 'MINT', 'OLIVE', 'ONION', 'POTATO', 'RICE', 'SOUP',
+    'SUGAR',
+    # nature
+    'CLOUD', 'COMET', 'FIRE', 'FLOWER', 'GARDEN', 'GOLD', 'HILL', 'LAKE',
+    'MOON', 'PLANET', 'RAIN', 'RIVER', 'ROCK', 'ROSE', 'SAND', 'SNOW',
+    'STAR', 'STONE', 'STORM', 'TREE', 'WATER', 'WIND', 'WINTER',
+    # objects & places
+    'BALL', 'BELL', 'BOAT', 'BOOK', 'BRICK', 'CANDLE', 'CLOCK', 'DOOR',
+    'DRUM', 'GLASS', 'GUITAR', 'HAMMER', 'HOUSE', 'KITE', 'LAMP', 'MAGNET',
+    'MARKET', 'MIRROR', 'PAPER', 'PARK', 'PENCIL', 'POCKET', 'RING',
+    'ROCKET', 'SHIP', 'SPOON', 'TABLE', 'TENT', 'TICKET', 'TRAIN', 'WAGON',
+    'WINDOW',
+    # simple & positive
+    'BLUE', 'GREEN', 'HAPPY', 'LUCKY', 'PINK', 'SMILE', 'SUNNY',
 ]
