@@ -134,6 +134,10 @@ class AuthService {
     return new ApiService().httpRequestCall("api/v1/students/overview", 'GET', {});
   }
 
+  getStudentActivity(studentId) {
+    return new ApiService().httpRequestCall("api/v1/students/" + studentId + "/activity", 'GET', {});
+  }
+
   getRaters() {
     return new ApiService().httpRequestCall("api/v1/admin/raters", 'GET', {});
   }

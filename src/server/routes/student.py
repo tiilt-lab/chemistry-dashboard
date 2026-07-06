@@ -27,6 +27,37 @@ def students_overview(**kwargs):
     return json_response(result)
 
 
+# Drill-down for one student: the sessions/groups they appeared in (scoped
+# like the overview) plus their LLM feedback count. `owned` marks sessions
+# the caller owns — only those can be opened in the dashboard.
+@api_routes.route('/api/v1/students/<int:student_id>/activity', methods=['GET'])
+@wrappers.verify_login()
+def student_activity(student_id, **kwargs):
+    user = kwargs['user']
+    student = database.get_students(id=student_id)
+    if not student:
+        return json_response({'message': 'Student not found.'}, 404)
+    is_admin = user.get('role') in ['admin', 'super']
+    owner_id = None if is_admin else user['id']
+    rows = database.get_student_activity(student.username, owner_id=owner_id)
+    sessions = []
+    for session_model, session_device in rows:
+        sessions.append({
+            'session_id': session_model.id,
+            'session_name': session_model.name,
+            'creation_date': str(session_model.creation_date) + ' UTC',
+            'ended': session_model.end_date is not None,
+            'session_device_id': session_device.id,
+            'group_name': session_device.name,
+            'owned': session_model.owner_id == user['id'],
+        })
+    return json_response({
+        'student': student.json(),
+        'sessions': sessions,
+        'llm_reports': database.get_student_llm_report_count(student.username, owner_id=owner_id),
+    })
+
+
 @api_routes.route('/api/v1/student/getstudentbyid/<string:user_name>', methods=['GET'])
 def get_students(user_name, **kwargs):
     student = database.get_students(username=user_name)

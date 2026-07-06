@@ -86,6 +86,26 @@ def get_students_overview(owner_id=None):
     query = query.group_by(Student.id)
     return query.all()
 
+# Every (session, group) a student appeared in, newest first; owner_id
+# scopes to that user's sessions (same linkage as get_students_overview).
+def get_student_activity(username, owner_id=None):
+    query = db.session.query(Session, SessionDevice) \
+        .join(SessionDevice, SessionDevice.session_id == Session.id) \
+        .join(Speaker, Speaker.session_device_id == SessionDevice.id) \
+        .filter(Speaker.alias == username)
+    if owner_id is not None:
+        query = query.filter(Session.owner_id == owner_id)
+    query = query.distinct().order_by(Session.creation_date.desc())
+    return query.all()
+
+def get_student_llm_report_count(username, owner_id=None):
+    query = db.session.query(func.count(LLMFeedbackReport.id)) \
+        .filter(LLMFeedbackReport.speaker_username == username)
+    if owner_id is not None:
+        query = query.join(Session, LLMFeedbackReport.session_id == Session.id) \
+            .filter(Session.owner_id == owner_id)
+    return query.scalar() or 0
+
 def create_speaker(session_device_id, alias=''):
     session_device = get_session_devices(id=session_device_id)
     if not session_device:
