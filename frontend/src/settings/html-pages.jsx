@@ -9,6 +9,7 @@ const SECTIONS = [
         show: () => true,
         items: [
             { label: "Change Password", dialog: ["ChangePassword"] },
+            { label: "Change Email", dialog: ["ChangeEmail"] },
             { label: "Sign Out", signOut: true, danger: true },
         ],
     },
@@ -162,6 +163,49 @@ function SettingComponentPage(props) {
                             }
                         >
                             Change Password
+                        </button>
+                        <button
+                            className={dlgCancel}
+                            onClick={props.closeDialog}
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                ) : (
+                    <></>
+                )}
+
+                {props.currentForm === "ChangeEmail" ? (
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>Change Email</div>
+                        <label htmlFor="txtNewEmail" className={dlgLabel}>New email</label>
+                        <input
+                            id="txtNewEmail"
+                            className={dlgInput}
+                            type="email"
+                            autoComplete="email"
+                        />
+                        <label htmlFor="txtEmailPass" className={dlgLabel}>Current password</label>
+                        <input
+                            id="txtEmailPass"
+                            className={dlgInput}
+                            type="password"
+                        />
+                        {props.status ? (
+                            <div className={dlgError}>{props.status}</div>
+                        ) : (
+                            <></>
+                        )}
+                        <button
+                            className={dlgPrimary}
+                            onClick={() =>
+                                props.changeEmail(
+                                    document.getElementById("txtEmailPass").value,
+                                    document.getElementById("txtNewEmail").value,
+                                )
+                            }
+                        >
+                            Change Email
                         </button>
                         <button
                             className={dlgCancel}

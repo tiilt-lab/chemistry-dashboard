@@ -530,13 +530,6 @@ function DiscussionSessionPage(props) {
                                 )}
                             </nav>
                             <div className="flex flex-wrap justify-end gap-2">
-                                <button
-                                    className={btnSecondary + " flex items-center gap-1.5"}
-                                    onClick={() => props.openFolderDialog("NewFolder")}
-                                >
-                                    <FolderIcon className="h-4 w-4" />
-                                    New folder
-                                </button>
                                 <UploadVideoButton />
                                 <button
                                     className={btnPrimary + " flex items-center gap-1.5"}
@@ -561,6 +554,18 @@ function DiscussionSessionPage(props) {
                                 session can have several pods running at once.
                                 Expand a session to see its pods, and click any
                                 pod to open its analysis.
+                            </div>
+                        ) : null}
+
+                        {!props.isLoading ? (
+                            <div className="mb-3">
+                                <button
+                                    className={btnSecondary + " flex items-center gap-1.5"}
+                                    onClick={() => props.openFolderDialog("NewFolder")}
+                                >
+                                    <FolderIcon className="h-4 w-4" />
+                                    New folder
+                                </button>
                             </div>
                         ) : null}
 

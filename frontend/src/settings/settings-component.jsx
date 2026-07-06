@@ -180,6 +180,23 @@ function SettingsComponent(props) {
     setCurrentForm("");
   }
 
+  const changeEmail = (password, newEmail) => {
+    const fetchData = new AuthService().changeEmail(password, newEmail)
+    fetchData.then(
+      response => {
+        if (response.status === 200) {
+          setStatusTitle('Email Changed');
+          setStatus('Your email has been changed successfully. Use it the next time you sign in.');
+        } else if (response.status === 400) {
+          response.json().then(error => setStatus(error['message']))
+        }
+      },
+      apierror => {
+        console.log("settingcomponent func : changeemail", apierror)
+      }
+    )
+  }
+
   const changePassword = (password, newPassword, confirmPassword) => {
     const fetchData = new AuthService().changePassword(password, newPassword, confirmPassword)
     fetchData.then(
@@ -635,6 +652,7 @@ function SettingsComponent(props) {
       status={status}
       statusTitle={statusTitle}
       changePassword={changePassword}
+      changeEmail={changeEmail}
       users={users}
       students={students}
       raters={raters}

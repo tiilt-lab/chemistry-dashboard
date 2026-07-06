@@ -6,6 +6,7 @@ import json
 import logging
 import database
 import wrappers
+from tables.user import User
 import utility
 from redis_helper import RedisLogin
 
@@ -90,6 +91,32 @@ def change_password(**kwargs):
         if user and user.verify_password(current_password):
             success, message = user.set_password(new_password)
             if success:
+                session['user'] = user.json()
+                database.save_changes()
+                return json_response()
+        else:
+            message = 'Password was not correct.'
+    return json_response({'message': message}, 400)
+
+@api_routes.route('/api/v1/email', methods=['POST'])
+@wrappers.verify_login()
+def change_email(**kwargs):
+    # Mirrors change_password: requires the current password, validates the
+    # new address, and rejects duplicates.
+    content = request.json
+    current_password = content.get('password', None)
+    new_email = (content.get('email', None) or '').strip()
+    message = ''
+    session_user = session.get('user', None)
+    valid, message = User.verify_fields(email=new_email)
+    if valid and session_user:
+        user = database.get_users(id=session_user['id'])
+        if user and user.verify_password(current_password):
+            existing = database.get_users(email=new_email)
+            if existing and existing.id != user.id:
+                message = 'That email is already in use.'
+            else:
+                user.email = new_email
                 session['user'] = user.json()
                 database.save_changes()
                 return json_response()

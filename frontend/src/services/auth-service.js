@@ -153,6 +153,14 @@ class AuthService {
       })
   }
 
+  changeEmail(currentPassword, newEmail) {
+    const body = {
+      password: currentPassword,
+      email: newEmail,
+    };
+    return new ApiService().httpRequestCall("api/v1/email", 'POST', body);
+  }
+
   changePassword(currentPassword, newPassword, confirmPassword) {
     const body = {
       password: currentPassword,
