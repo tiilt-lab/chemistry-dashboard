@@ -103,6 +103,230 @@ function SessionStats({ sessions }) {
     )
 }
 
+// Global analysis-queue panel: appears whenever the post-hoc queue has jobs.
+// Polls every 5s; shows progress, the running pod with elapsed time, an ETA
+// projected from completed-job durations, and any errors.
+function fmtEta(seconds) {
+    if (seconds == null || !isFinite(seconds) || seconds <= 0) return null
+    const h = Math.floor(seconds / 3600)
+    const m = Math.round((seconds % 3600) / 60)
+    if (h > 0) return `~${h}h ${m}m`
+    if (m >= 1) return `~${m}m`
+    return "under a minute"
+}
+
+function AnalysisQueuePanel() {
+    const navigate = useNavigate()
+    const [jobs, setJobs] = useState(null)
+    const [expanded, setExpanded] = useState(false)
+    const [, setTick] = useState(0) // re-render so elapsed/ETA move
+    useEffect(() => {
+        let alive = true
+        const load = () =>
+            new SessionService().getGlobalPosthocQueue().then(
+                (r) =>
+                    r.status === 200 &&
+                    r.json().then((list) => {
+                        if (alive) setJobs(list)
+                    }),
+                () => {},
+            )
+        load()
+        const poll = setInterval(load, 5000)
+        const tick = setInterval(() => setTick((x) => x + 1), 1000)
+        return () => {
+            alive = false
+            clearInterval(poll)
+            clearInterval(tick)
+        }
+    }, [])
+
+    if (!jobs || jobs.length === 0) return null
+
+    const byState = (s) => jobs.filter((j) => j.state === s)
+    const done = byState("done")
+    const running = byState("running")
+    const queued = byState("queued")
+    const errors = byState("error")
+    const finished = done.length + errors.length
+    const total = jobs.length
+    const active = running.length + queued.length
+
+    // ETA: average duration of completed jobs x remaining work. Before the
+    // first job completes there is nothing sound to project from.
+    const durations = done
+        .filter((j) => j.started_at && j.finished_at)
+        .map((j) => j.finished_at - j.started_at)
+    const avg = durations.length
+        ? durations.reduce((a, b) => a + b, 0) / durations.length
+        : null
+    const now = Date.now() / 1000
+    const runElapsed = running.length && running[0].started_at ? now - running[0].started_at : 0
+    const eta =
+        avg != null && active > 0
+            ? Math.max(avg - runElapsed, 30) + queued.length * avg
+            : null
+
+    // Group by session, preserving queue order.
+    const groups = []
+    for (const j of jobs) {
+        let g = groups.find((x) => x.id === j.session_id)
+        if (!g) {
+            g = { id: j.session_id, name: j.session_name, jobs: [] }
+            groups.push(g)
+        }
+        g.jobs.push(j)
+    }
+
+    const stateChip = (j) =>
+        j.state === "running" ? (
+            <StatusPill tone="orange" pulse className="text-[11px]">
+                {j.device_name}
+            </StatusPill>
+        ) : j.state === "done" ? (
+            <StatusPill tone="teal" className="text-[11px]">
+                {j.device_name}
+            </StatusPill>
+        ) : j.state === "error" ? (
+            <StatusPill
+                tone="danger"
+                className="text-[11px]"
+                title={j.error || "Failed"}
+            >
+                {j.device_name}
+            </StatusPill>
+        ) : (
+            <StatusPill tone="neutral" className="text-[11px]">
+                {j.device_name}
+            </StatusPill>
+        )
+
+    const pct = total ? Math.round((finished / total) * 100) : 0
+    const countChip = (n, label, cls) =>
+        n > 0 ? (
+            <span className={"flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold " + cls}>
+                {n} {label}
+            </span>
+        ) : null
+
+    return (
+        <div className="mb-4 overflow-hidden rounded-xl border border-tiilt-line bg-white">
+            <button
+                onClick={() => setExpanded((v) => !v)}
+                aria-expanded={expanded}
+                className="w-full cursor-pointer px-4 py-3 text-left transition hover:bg-tiilt-soft/30"
+            >
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                    <span className="flex items-center gap-2 text-sm font-semibold text-tiilt-ink">
+                        {active > 0 ? (
+                            <span className="h-2 w-2 animate-pulse rounded-full bg-tiilt-orange" />
+                        ) : errors.length > 0 ? (
+                            <span className="h-2 w-2 rounded-full bg-tiilt-danger" />
+                        ) : (
+                            <span className="h-2 w-2 rounded-full bg-tiilt-teal" />
+                        )}
+                        Analysis queue
+                    </span>
+                    {countChip(done.length, "done", "bg-tiilt-teal/15 text-tiilt-teal-text")}
+                    {countChip(running.length, "running", "bg-tiilt-orange/15 text-tiilt-orange-text")}
+                    {countChip(queued.length, "queued", "bg-tiilt-line/40 text-tiilt-muted")}
+                    {countChip(errors.length, errors.length === 1 ? "error" : "errors", "bg-tiilt-danger-soft text-tiilt-danger")}
+                    <span className="ml-auto flex items-center gap-2 text-sm whitespace-nowrap text-tiilt-muted">
+                        {active > 0 ? (
+                            eta != null ? (
+                                <span title="Projected from the average duration of completed pods">
+                                    {fmtEta(eta)} left
+                                </span>
+                            ) : (
+                                <span>estimating…</span>
+                            )
+                        ) : (
+                            <span className="font-semibold text-tiilt-teal-text">
+                                Finished
+                            </span>
+                        )}
+                        <Chevron
+                            direction="down"
+                            size={14}
+                            style={{
+                                transform: expanded ? "rotate(180deg)" : "none",
+                                transition: "transform 0.15s",
+                            }}
+                        />
+                    </span>
+                </span>
+                <span className="mt-2.5 flex items-center gap-3">
+                    <span className="h-2 grow overflow-hidden rounded-full bg-tiilt-line/40">
+                        <span
+                            className="block h-full rounded-full bg-tiilt transition-all duration-700"
+                            style={{ width: `${pct}%` }}
+                        />
+                    </span>
+                    <span className="flex-none font-ahamono text-xs font-semibold text-tiilt-ink tabular-nums">
+                        {finished}/{total}
+                    </span>
+                </span>
+                {running.length > 0 ? (
+                    <span className="mt-1.5 block text-xs text-tiilt-muted">
+                        Now running{" "}
+                        <span className="font-semibold text-tiilt-ink">
+                            {running[0].session_name} › {running[0].device_name}
+                        </span>
+                        {runElapsed > 0 ? (
+                            <span className="font-ahamono tabular-nums">
+                                {" "}
+                                · {Math.floor(runElapsed / 60)}:{String(Math.floor(runElapsed % 60)).padStart(2, "0")}
+                            </span>
+                        ) : null}
+                    </span>
+                ) : null}
+            </button>
+            {expanded ? (
+                <div className="flex max-h-80 flex-col gap-3 overflow-y-auto border-t border-tiilt-line bg-tiilt-ground/40 px-4 py-3">
+                    {errors.length > 0 ? (
+                        <div className="rounded-lg bg-tiilt-danger-soft px-3 py-2 text-xs leading-relaxed text-tiilt-danger">
+                            {errors.map((j) => (
+                                <div key={j.device_id}>
+                                    <span className="font-semibold">
+                                        {j.session_name} › {j.device_name}:
+                                    </span>{" "}
+                                    {j.error || "failed"}
+                                </div>
+                            ))}
+                        </div>
+                    ) : null}
+                    {groups.map((g) => {
+                        const gDone = g.jobs.filter((j) => j.state === "done").length
+                        return (
+                            <div
+                                key={g.id}
+                                className="rounded-lg border border-tiilt-line bg-white px-3 py-2"
+                            >
+                                <div className="flex items-baseline justify-between gap-2">
+                                    <button
+                                        onClick={() => navigate(`/sessions/${g.id}/overview`)}
+                                        className="cursor-pointer text-xs font-semibold text-tiilt hover:underline"
+                                    >
+                                        {g.name} ›
+                                    </button>
+                                    <span className="font-ahamono text-[11px] text-tiilt-muted tabular-nums">
+                                        {gDone}/{g.jobs.length}
+                                    </span>
+                                </div>
+                                <div className="mt-1.5 flex flex-wrap gap-1">
+                                    {g.jobs.map((j) => (
+                                        <span key={j.device_id}>{stateChip(j)}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            ) : null}
+        </div>
+    )
+}
+
 const PODS_EXPLAINER =
     "A session is one recorded session. Each pod is a participant group (device) within that session — a session can have several pods running at once. Expand a session to see its pods, and click any pod to open its analysis."
 
@@ -640,6 +864,8 @@ function DiscussionSessionPage(props) {
                         {!props.isLoading ? (
                             <SessionStats sessions={props.sessions} />
                         ) : null}
+
+                        {!props.isLoading ? <AnalysisQueuePanel /> : null}
 
                         {!props.isLoading ? (
                             <div className="mb-4 flex flex-wrap items-center gap-2">

@@ -603,6 +603,34 @@ def upload_video_session(user, **kwargs):
     return json_response({'session_id': session_obj.id, 'device_id': device.id, 'queued': True})
 
 
+# Global analysis-queue view (the queue itself is one worker across all
+# sessions). Jobs are scoped to sessions the caller owns unless they're an
+# admin; names are joined in so the UI needs no extra requests.
+@api_routes.route('/api/v1/posthoc_queue', methods=['GET'])
+@wrappers.verify_login()
+def global_posthoc_queue(**kwargs):
+    user = kwargs['user']
+    is_admin = user.get('role') in ['admin', 'super']
+    jobs = posthoc_queue.status()
+    session_cache = {}
+    result = []
+    for job in jobs:
+        sid = job['session_id']
+        if sid not in session_cache:
+            session_cache[sid] = database.get_sessions(id=sid)
+        session = session_cache[sid]
+        if not session:
+            continue
+        if not is_admin and session.owner_id != user['id']:
+            continue
+        device = database.get_session_devices(id=job['device_id'])
+        entry = dict(job)
+        entry['session_name'] = session.name
+        entry['device_name'] = (device.name if device and device.name else 'Pod {0}'.format(job['device_id']))
+        result.append(entry)
+    return json_response(result)
+
+
 @api_routes.route('/api/v1/sessions/<int:session_id>/posthoc_queue', methods=['POST'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access

@@ -108,6 +108,9 @@ class SessionService {
       {},
     );
   }
+  getGlobalPosthocQueue() {
+    return this.api.httpRequestCall(`api/v1/posthoc_queue`, "GET", {});
+  }
   getPosthocQueue(sessionId) {
     return this.api.httpRequestCall(
       `api/v1/sessions/${sessionId}/posthoc_queue`,
