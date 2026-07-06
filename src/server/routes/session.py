@@ -101,6 +101,12 @@ def update_session(session_id, user, **kwargs):
         if not owned_folder:
             return json_response({'message': 'Either the folder does not exist or invalid access'}, 404)
     session = database.update_session(session_id, name, folder)
+    # Analysis-time settings (applied by the next posthoc run).
+    keyword_list_id = sanitize(request.json.get('keywordListId', None))
+    topic_model_id = sanitize(request.json.get('topicModelId', None))
+    if keyword_list_id is not None or topic_model_id is not None:
+        session = database.set_session_analysis_config(
+            session_id, user['id'], keyword_list_id, topic_model_id)
     return json_response(session.json())
 
 @api_routes.route('/api/v1/sessions/<int:session_id>', methods=['DELETE'])

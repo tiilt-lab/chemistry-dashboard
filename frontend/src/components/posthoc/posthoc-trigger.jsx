@@ -2,6 +2,8 @@ import { useRef, useState, useEffect } from "react"
 import { Refresh } from "@/Icons"
 import { ApiService } from "../../services/api-service"
 import { SessionService } from "../../services/session-service"
+import { KeywordService } from "../../services/keyword-service"
+import { TopicModelService } from "../../services/topic-model-service"
 
 // Post-hoc re-analysis actions, faithfully ported from the videodev
 // pod-component's dual-socket protocol. Three operations:
@@ -70,6 +72,41 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     const [, setTick] = useState(0) // re-render for the live elapsed timers
     const [action, setAction] = useState(null) // "full" | "pi" | "et" | null
     const [message, setMessage] = useState("")
+    // Analysis-time settings: keyword list / topic model applied by the next
+    // full re-run (session creation no longer asks for these).
+    const [kwLists, setKwLists] = useState([])
+    const [topModels, setTopModels] = useState([])
+    const [kwSel, setKwSel] = useState("")
+    const [tmSel, setTmSel] = useState("")
+    const [cfgMsg, setCfgMsg] = useState("")
+    useEffect(() => {
+        new KeywordService().getKeywordLists().then(
+            (r) => r.status === 200 && r.json().then((d) => setKwLists(d || [])),
+            () => {},
+        )
+        new TopicModelService().getTopicModels().then(
+            (r) => r.status === 200 && r.json().then((d) => setTopModels(d || [])),
+            () => {},
+        )
+    }, [])
+    const applyAnalysisConfig = () => {
+        setCfgMsg("Saving…")
+        new SessionService()
+            .updateSessionAnalysisConfig(
+                session.id,
+                kwSel === "" ? null : parseInt(kwSel, 10),
+                tmSel === "" ? null : parseInt(tmSel, 10),
+            )
+            .then(
+                (r) =>
+                    setCfgMsg(
+                        r.status === 200
+                            ? "Saved — applies to the next full re-run."
+                            : "Couldn't save the analysis settings.",
+                    ),
+                () => setCfgMsg("Couldn't save the analysis settings."),
+            )
+    }
 
     const updateMeta = (label, patch) => {
         streamMetaRef.current = {
@@ -579,6 +616,65 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                 <div className="text-xs text-tiilt-muted">
                     Greyed-out modules have a single implementation; dropdowns
                     apply to the next run you start below.
+                </div>
+            </div>
+
+            <div className="flex flex-col gap-2 rounded-xl border border-tiilt-line bg-white p-3">
+                <div className="text-sm font-semibold text-tiilt-ink">
+                    Keywords &amp; topic model
+                </div>
+                <div className="grid grid-cols-1 items-center gap-1 sm:grid-cols-[11rem_1fr_10rem] sm:gap-3">
+                    <span className="text-sm font-semibold text-tiilt-ink">Keyword list</span>
+                    <span className="text-xs text-tiilt-muted">
+                        Terms to detect in the transcript
+                        {session.keywords && session.keywords.length
+                            ? ` (current: ${session.keywords.length} keywords)`
+                            : " (none set)"}
+                    </span>
+                    <select
+                        className={selectCls}
+                        value={kwSel}
+                        onChange={(e) => setKwSel(e.target.value)}
+                        aria-label="Keyword list for analysis"
+                    >
+                        <option value="">Keep current</option>
+                        <option value="-1">None</option>
+                        {kwLists.map((l) => (
+                            <option key={l.id} value={l.id}>
+                                {l.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div className="grid grid-cols-1 items-center gap-1 sm:grid-cols-[11rem_1fr_10rem] sm:gap-3">
+                    <span className="text-sm font-semibold text-tiilt-ink">Topic model</span>
+                    <span className="text-xs text-tiilt-muted">
+                        Tags what each utterance is about
+                    </span>
+                    <select
+                        className={selectCls}
+                        value={tmSel}
+                        onChange={(e) => setTmSel(e.target.value)}
+                        aria-label="Topic model for analysis"
+                    >
+                        <option value="">Keep current</option>
+                        <option value="-1">None</option>
+                        {topModels.map((t) => (
+                            <option key={t.id} value={t.id}>
+                                {t.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={applyAnalysisConfig}
+                        disabled={kwSel === "" && tmSel === ""}
+                        className={btn + " border border-tiilt-line bg-white text-tiilt-ink hover:border-tiilt hover:bg-tiilt-soft"}
+                    >
+                        Apply
+                    </button>
+                    <span className="text-xs text-tiilt-muted">{cfgMsg}</span>
                 </div>
             </div>
 

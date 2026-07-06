@@ -10,13 +10,8 @@ import openFolderIcon from "../assets/img/open-folder.svg";
 import IconPod from "@icons/IconPod";
 import LightIcon from "@icons/Light";
 
-// Linear wizard steps (Devices is an out-of-band screen, not numbered).
-const STEPS = ["Settings", "Keywords", "TopModels"];
-const STEP_LABELS = {
-  Settings: "Session settings",
-  Keywords: "Keyword list",
-  TopModels: "Topic model",
-};
+// Single-step creation: name/folder/toggles, then Start session.
+// (Keyword lists and topic models moved to post-hoc analysis.)
 
 const contentWrap =
   "mx-auto flex w-full max-w-lg grow flex-col gap-4 overflow-y-auto px-4 py-6";
@@ -45,29 +40,6 @@ function Toggle({ label, checked, onChange }) {
   );
 }
 
-function StepIndicator({ current }) {
-  const idx = STEPS.indexOf(current);
-  if (idx < 0) return null;
-  return (
-    <div className="mx-auto w-full max-w-lg flex-none px-4 pt-4">
-      <div className="flex items-center justify-between text-xs font-semibold text-tiilt-muted">
-        <span>
-          Step {idx + 1} of {STEPS.length}
-        </span>
-        <span className="text-tiilt-ink">{STEP_LABELS[current]}</span>
-      </div>
-      <div className="mt-2 flex gap-1.5">
-        {STEPS.map((s, i) => (
-          <div
-            key={s}
-            className={`h-1.5 flex-1 rounded-full transition ${i <= idx ? "bg-tiilt" : "bg-tiilt-line"}`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function CreateSessionPage(props) {
   return (
     <>
@@ -80,7 +52,6 @@ function CreateSessionPage(props) {
         />
         <div className={pageShell}>
         <div className={formCard}>
-        <StepIndicator current={props.currentMenu} />
 
         {props.currentMenu === "Settings" ? (
           <React.Fragment>
@@ -126,157 +97,15 @@ function CreateSessionPage(props) {
               <div className={footerRow}>
                 <button
                   className={dlgPrimary + " w-full"}
-                  onClick={props.goToKeywords}
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          </React.Fragment>
-        ) : (
-          <></>
-        )}
-
-        {props.currentMenu === "Keywords" ? (
-          <React.Fragment>
-            <div className={contentWrap}>
-              {props.keywordLists && props.keywordLists.length == 0 ? (
-                <EmptyState
-                  title="No keyword lists"
-                  subtitle="Create one below, or continue without keywords."
-                />
-              ) : (
-                <></>
-              )}
-              {props.keywordLists.map((keywordList, index) => (
-                <button
-                  type="button"
-                  key={index}
-                  aria-pressed={
-                    JSON.stringify(props.selectedKeywordList) ===
-                    JSON.stringify(keywordList)
-                  }
-                  className={
-                    (JSON.stringify(props.selectedKeywordList) ===
-                    JSON.stringify(keywordList)
-                      ? `${style["keywords-selected"]} ${style["keyword-list-button"]}`
-                      : style["keyword-list-button"]) + " w-full text-left"
-                  }
-                  onClick={() =>
-                    props.setSelectedKeywordList(
-                      props.selectedKeywordList === keywordList
-                        ? null
-                        : keywordList
-                    )
-                  }
-                >
-                  <div className={style["keyword-list-header"]}>
-                    <span className={style.title}>{keywordList.name}</span>
-                    <span className={style.date}>
-                      {" "}
-                      - {props.formatKeywordDate(keywordList.creation_date)}
-                    </span>
-                  </div>
-                  <div className={style["keyword-list-keywords"]}>
-                    {keywordList.keywordsText}
-                  </div>
-                </button>
-              ))}
-              <button
-                className={dlgCancel + " w-full"}
-                onClick={props.navigateToKeywordLists}
-              >
-                + Create keyword list
-              </button>
-            </div>
-            <div className={footerBar}>
-              <div className={footerRow}>
-                <button
-                  className={dlgCancel + " flex-1"}
-                  onClick={props.goToSettings}
-                >
-                  Previous
-                </button>
-                <button
-                  className={dlgPrimary + " flex-1"}
-                  onClick={props.goToTopModels}
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          </React.Fragment>
-        ) : (
-          <></>
-        )}
-
-        {props.currentMenu === "TopModels" ? (
-          <React.Fragment>
-            <div className={contentWrap}>
-              {props.topicModels && props.topicModels.length == 0 ? (
-                <EmptyState
-                  title="No topic models"
-                  subtitle="Create one below, or continue without a topic model."
-                />
-              ) : (
-                <></>
-              )}
-              {props.topicModels.map((topicModel, index) => (
-                <button
-                  type="button"
-                  key={index}
-                  aria-pressed={
-                    JSON.stringify(props.selectedTopicModel) ===
-                    JSON.stringify(topicModel)
-                  }
-                  className={
-                    (JSON.stringify(props.selectedTopicModel) ===
-                    JSON.stringify(topicModel)
-                      ? `${style["keywords-selected"]} ${style["keyword-list-button"]}`
-                      : style["keyword-list-button"]) + " w-full text-left"
-                  }
-                  onClick={() =>
-                    props.setSelectedTopicModel(
-                      props.selectedTopicModel === topicModel
-                        ? null
-                        : topicModel
-                    )
-                  }
-                >
-                  <div className={style["keyword-list-header"]}>
-                    <span className={style.title}>{topicModel.name}</span>
-                    <span className={style.date}>
-                      {" "}
-                      - {props.formatKeywordDate(topicModel.creation_date)}
-                    </span>
-                  </div>
-                  <div className={style["keyword-list-keywords"]}>
-                    {topicModel.summary}
-                  </div>
-                </button>
-              ))}
-              <button
-                className={dlgCancel + " w-full"}
-                onClick={props.navigateToFileUpload}
-              >
-                + Create topic model
-              </button>
-            </div>
-            <div className={footerBar}>
-              <div className={footerRow}>
-                <button
-                  className={dlgCancel + " flex-1"}
-                  onClick={props.goToKeywords}
-                >
-                  Previous
-                </button>
-                <button
-                  className={dlgPrimary + " flex-1"}
                   onClick={props.createSession}
                 >
                   Start session
                 </button>
               </div>
+            </div>
+            <div className="mx-auto w-full max-w-lg flex-none px-4 pb-4 text-center text-xs text-tiilt-muted">
+              Keywords and topic models are chosen later, as part of
+              post-hoc analysis on each pod.
             </div>
           </React.Fragment>
         ) : (
@@ -347,7 +176,7 @@ function CreateSessionPage(props) {
               <div className={footerRow}>
                 <button
                   className={dlgCancel + " flex-1"}
-                  onClick={props.goToTopModels}
+                  onClick={props.goToSettings}
                 >
                   Previous
                 </button>

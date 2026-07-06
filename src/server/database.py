@@ -666,6 +666,23 @@ def update_session(session_id, name=None, folder_id=None):
         return session
     return None
 
+def set_session_analysis_config(session_id, owner_id, keyword_list_id=None, topic_model_id=None):
+    # Keywords/topic model are analysis-time settings: the posthoc queue reads
+    # the session's keywords fresh for every run, so they can be chosen or
+    # changed after creation (pass -1 to clear).
+    session = get_sessions(id=session_id)
+    if not session:
+        return None
+    if keyword_list_id is not None:
+        db.session.query(Keyword).filter(Keyword.session_id == session_id).delete()
+        if keyword_list_id != -1:
+            for keyword_list_item in get_keyword_list_items(keyword_list_id, owner_id=owner_id):
+                db.session.add(Keyword(session.id, keyword_list_item.keyword))
+    if topic_model_id is not None:
+        session.topic_model_id = None if topic_model_id == -1 else topic_model_id
+    db.session.commit()
+    return session
+
 def generate_session_passcode(session_id):
     # Memorable single-word passcodes (see passcode_words.py); falls back to
     # word+digits if every word is in use by an active session.
