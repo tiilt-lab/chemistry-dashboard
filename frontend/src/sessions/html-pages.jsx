@@ -393,6 +393,18 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
                         </span>
                     ) : null}
                 </td>
+                <td className="px-3 py-2 whitespace-nowrap">
+                    {session.has_video ? (
+                        <StatusPill tone="brand" title="Video and audio were recorded">
+                            <Camera />
+                            Video
+                        </StatusPill>
+                    ) : (
+                        <StatusPill tone="neutral" title="Audio only — no video recorded">
+                            Audio only
+                        </StatusPill>
+                    )}
+                </td>
                 <td className="px-3 py-2 whitespace-nowrap text-tiilt-ink">
                     {formatDate(session.creation_date)}
                 </td>
@@ -503,7 +515,7 @@ function SessionRow({ session, onOpen, openSessionDialog, endSession, checked, o
             </tr>
             {expanded ? (
                 <tr className="border-t border-tiilt-line bg-tiilt-ground/40">
-                    <td colSpan={8} className="px-3 py-1">
+                    <td colSpan={9} className="px-3 py-1">
                         <PodDurations sessionId={session.id} />
                     </td>
                 </tr>
@@ -714,6 +726,12 @@ function DiscussionSessionPage(props) {
                                                         label="Session"
                                                         sortKey="name"
                                                         defaultDir="asc"
+                                                        sortBy={props.sortBy}
+                                                        setSortBy={props.setSortBy}
+                                                    />
+                                                    <SortableTh
+                                                        label="Type"
+                                                        sortKey="type"
                                                         sortBy={props.sortBy}
                                                         setSortBy={props.setSortBy}
                                                     />

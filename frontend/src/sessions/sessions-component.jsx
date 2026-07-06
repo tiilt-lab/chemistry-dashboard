@@ -591,6 +591,8 @@ function SessionsComponent(props) {
             (a.participant_count || 0) - (b.participant_count || 0),
         "pods-desc": (a, b) => (b.pod_count || 0) - (a.pod_count || 0),
         "pods-asc": (a, b) => (a.pod_count || 0) - (b.pod_count || 0),
+        "type-desc": (a, b) => (b.has_video ? 1 : 0) - (a.has_video ? 1 : 0),
+        "type-asc": (a, b) => (a.has_video ? 1 : 0) - (b.has_video ? 1 : 0),
     }
     const query = searchQuery.trim().toLowerCase()
     // A non-empty search spans EVERY folder (results carry a folder hint);
