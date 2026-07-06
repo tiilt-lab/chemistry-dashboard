@@ -26,7 +26,14 @@ import face_recognition
 from recorder import VidRecorder
 from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager
-from video_cartoonizer.videoprocessor import VideoProcessor
+# Cartoonify is optional (and disabled in this instance's config); its
+# vendored tree still uses the moviepy 1.x import path, so don't let it
+# take down the whole live video service.
+try:
+    from video_cartoonizer.videoprocessor import VideoProcessor
+except Exception as _vc_err:
+    VideoProcessor = None
+    print("video_cartoonizer unavailable ({}) - cartoonify disabled".format(_vc_err))
 from datetime import datetime
 from twisted.internet import reactor, task
 from autobahn.twisted.websocket import WebSocketServerFactory

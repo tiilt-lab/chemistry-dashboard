@@ -9,7 +9,10 @@ import torch.nn.functional as F
 from tqdm import tqdm
 from .model.encoder.align_all_parallel import align_face
 from .util import  get_video_crop_parameter,get_facial_shape,tensor2cv2
-from moviepy.editor import *
+try:
+    from moviepy.editor import *  # moviepy 1.x
+except ModuleNotFoundError:
+    from moviepy import *  # moviepy 2.x moved the public API to the package root
 from scipy.io import wavfile
 import logging
 import copy
