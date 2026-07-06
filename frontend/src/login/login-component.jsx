@@ -1,4 +1,5 @@
 import { useNavigate, Link } from "react-router-dom"
+import { btnPrimaryTall } from "../components/dialog-styles"
 import { useEffect, useState } from "react"
 import { AuthService } from "../services/auth-service"
 import { BrandCard } from "../components/brand-panel"
@@ -146,7 +147,7 @@ function LoginPage() {
                 <button
                     type="submit"
                     disabled={loading}
-                    className="flex h-12 items-center justify-center gap-2.5 rounded-lg bg-tiilt text-base font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px disabled:opacity-70"
+                    className={btnPrimaryTall + " gap-2.5 disabled:opacity-70"}
                 >
                     {loading ? (
                         <>

@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { btnPrimary } from "../dialog-styles"
 import { ApiService } from "../../services/api-service"
 
 // On-demand LLM summary of a pod's discussion (overview, key moments,
@@ -34,7 +35,7 @@ export function DiscussionSummaryPanel({ sessionId, sessionDeviceId }) {
                     <button
                         onClick={generate}
                         disabled={state === "loading"}
-                        className="rounded-lg bg-tiilt px-4 py-2 text-sm font-semibold text-white transition hover:bg-tiilt-deep disabled:opacity-50"
+                        className={btnPrimary + " disabled:opacity-50"}
                     >
                         {state === "loading"
                             ? "Generating…"

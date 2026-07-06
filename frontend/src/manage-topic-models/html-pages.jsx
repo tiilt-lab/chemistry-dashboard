@@ -1,4 +1,6 @@
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
+import { EmptyState } from "../components/empty-state"
+import { btnPrimary } from "../components/dialog-styles"
 import { pageShell, formCard } from "../components/layout-styles"
 import { DialogBoxTwoOption } from "../dialog/dialog-component"
 import { Appheader } from "../header/header-component"
@@ -27,15 +29,10 @@ function ManageTopicsPage(props) {
                             <></>
                         )}
                         {props.topicModels && props.topicModels.length === 0 ? (
-                            <div className="py-16 text-center">
-                                <div className="text-base font-semibold text-tiilt-ink">
-                                    No topic models
-                                </div>
-                                <div className="mt-1 text-sm text-tiilt-muted">
-                                    Tap the button below to make your first
-                                    topic model.
-                                </div>
-                            </div>
+                            <EmptyState
+                                title="No topic models"
+                                subtitle="Tap the button below to make your first topic model."
+                            />
                         ) : (
                             <></>
                         )}
@@ -93,7 +90,7 @@ function ManageTopicsPage(props) {
                 </div>
                 <div className="flex w-full flex-none items-center justify-center border-t border-tiilt-line bg-white px-4 py-3">
                     <button
-                        className="h-11 w-full max-w-55 cursor-pointer rounded-lg bg-tiilt font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
+                        className={btnPrimary + " h-11 w-full max-w-55 cursor-pointer"}
                         onClick={props.navFileUpload}
                     >
                         Create Topic Model

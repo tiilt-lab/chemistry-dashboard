@@ -1,4 +1,5 @@
 import React from "react"
+import { btnPrimaryTall } from "../components/dialog-styles"
 import { ErrorDialog } from "../components/error-dialog"
 import { Appheader } from "../header/header-component"
 import { DialogBox, WaitingDialog } from "../dialog/dialog-component"
@@ -79,7 +80,7 @@ function ProfileCreationPage(props) {
                         </div>
 
                         <button
-                            className="flex h-12 items-center justify-center rounded-lg bg-tiilt text-base font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
+                            className={btnPrimaryTall}
                             onClick={() =>
                                 props.verifyUserProfileInput(
                                     document

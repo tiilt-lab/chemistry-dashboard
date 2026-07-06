@@ -2,12 +2,9 @@ import { useNavigate } from "react-router-dom"
 import { updateTime } from "../utilities/helper-functions"
 import { BrandCard } from "../components/brand-panel"
 
-const timeOfDay = updateTime()
+import { btnPrimaryTall as primaryClass, btnSecondaryTall as secondaryClass } from "../components/dialog-styles"
 
-const primaryClass =
-    "flex h-12 items-center justify-center rounded-lg bg-tiilt text-base font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
-const secondaryClass =
-    "flex h-12 items-center justify-center rounded-lg border border-tiilt-line bg-white text-base font-semibold text-tiilt transition hover:border-tiilt hover:bg-tiilt-soft active:translate-y-px"
+const timeOfDay = updateTime()
 
 function LandingPageComponent() {
     const navigate = useNavigate()

@@ -1,4 +1,6 @@
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
+import { EmptyState } from "../components/empty-state"
+import { btnPrimary, btnSecondary } from "../components/dialog-styles"
 import { pageShell, formCard } from "../components/layout-styles"
 import { DialogBoxTwoOption } from "../dialog/dialog-component"
 import { Appheader } from "../header/header-component"
@@ -28,15 +30,10 @@ function KeywordListPage(props) {
                         )}
                         {props.keywordLists &&
                         props.keywordLists.length === 0 ? (
-                            <div className="py-16 text-center">
-                                <div className="text-base font-semibold text-tiilt-ink">
-                                    No keyword lists
-                                </div>
-                                <div className="mt-1 text-sm text-tiilt-muted">
-                                    Tap the button below to make your first
-                                    keyword list.
-                                </div>
-                            </div>
+                            <EmptyState
+                                title="No keyword lists"
+                                subtitle="Tap the button below to make your first keyword list."
+                            />
                         ) : (
                             <></>
                         )}
@@ -94,13 +91,13 @@ function KeywordListPage(props) {
                 </div>
                 <div className="flex w-full flex-none flex-wrap items-center justify-center gap-3 border-t border-tiilt-line bg-white px-4 py-3">
                     <button
-                        className="h-11 w-full max-w-55 cursor-pointer rounded-lg bg-tiilt font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
+                        className={btnPrimary + " h-11 w-full max-w-55 cursor-pointer"}
                         onClick={props.openNewKeywordList}
                     >
                         New Keyword List
                     </button>
                     <button
-                        className="h-11 w-full max-w-55 cursor-pointer rounded-lg border border-tiilt-line bg-white font-semibold text-tiilt transition hover:border-tiilt hover:bg-tiilt-soft active:translate-y-px"
+                        className={btnSecondary + " h-11 w-full max-w-55 cursor-pointer text-tiilt"}
                         onClick={props.createTopicModel}
                     >
                         Create Topic Model

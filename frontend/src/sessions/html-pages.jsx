@@ -15,7 +15,7 @@ import MicIcon from "../Icons/Mic"
 import { Camera, Chevron, Refresh, Upload } from "@/Icons"
 import { StatusPill } from "../components/status-pill"
 import { SkeletonRows } from "../components/skeleton"
-import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel } from "../components/dialog-styles"
+import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel, btnPrimary, btnSecondary, btnSecondarySm } from "../components/dialog-styles"
 
 // Row wrapper (border/bg/hover) is a column so the expandable pod panel can sit
 // below the horizontal row content.
@@ -545,7 +545,7 @@ function DiscussionSessionPage(props) {
                             </nav>
                             <div className="flex flex-wrap justify-end gap-2">
                                 <button
-                                    className="flex items-center gap-1.5 rounded-lg border border-tiilt-line bg-white px-4 py-2 text-sm font-semibold text-tiilt-ink transition hover:border-tiilt hover:bg-tiilt-soft active:translate-y-px"
+                                    className={btnSecondary + " flex items-center gap-1.5"}
                                     onClick={() => props.openFolderDialog("NewFolder")}
                                 >
                                     <FolderIcon className="h-4 w-4" />
@@ -553,7 +553,7 @@ function DiscussionSessionPage(props) {
                                 </button>
                                 <UploadVideoButton />
                                 <button
-                                    className="flex items-center gap-1.5 rounded-lg bg-tiilt px-4 py-2 text-sm font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
+                                    className={btnPrimary + " flex items-center gap-1.5"}
                                     onClick={props.newRecording}
                                 >
                                     <span aria-hidden="true" className="text-base leading-none">+</span>
@@ -618,7 +618,7 @@ function DiscussionSessionPage(props) {
                                         </span>
                                         <button
                                             onClick={() => props.openBulkDialog("MoveSessions")}
-                                            className="rounded-lg border border-tiilt-line bg-white px-3 py-1.5 text-xs font-semibold text-tiilt-ink transition hover:border-tiilt hover:bg-tiilt-soft active:translate-y-px"
+                                            className={btnSecondarySm}
                                         >
                                             Move to…
                                         </button>

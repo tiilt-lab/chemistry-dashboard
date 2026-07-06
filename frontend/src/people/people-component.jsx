@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { dlgHeading, dlgBody, dlgLabel, dlgInput, dlgSelect, dlgPrimary, dlgDanger, dlgCancel, dlgError } from "../components/dialog-styles"
+import { dlgHeading, dlgBody, dlgLabel, dlgInput, dlgSelect, dlgPrimary, dlgDanger, dlgCancel, dlgError, btnPrimary, btnSecondary } from "../components/dialog-styles"
 import { useNavigate } from "react-router-dom"
 import { Appheader } from "../header/header-component"
 import { GenericDialogBox } from "../dialog/dialog-component"
@@ -13,10 +13,6 @@ import { RaterModel } from "../models/rater"
 
 const rowDeleteClass =
     "rounded-md px-2 py-1 text-xs font-semibold text-tiilt-danger transition hover:bg-tiilt-danger-soft"
-const primaryBtn =
-    "rounded-lg bg-tiilt px-4 py-2 text-sm font-semibold text-white transition hover:bg-tiilt-deep active:translate-y-px"
-const secondaryBtn =
-    "rounded-lg border border-tiilt-line bg-white px-4 py-2 text-sm font-semibold text-tiilt-ink transition hover:border-tiilt hover:bg-tiilt-soft active:translate-y-px"
 
 function PeopleComponent() {
     const navigate = useNavigate()
@@ -257,7 +253,7 @@ function PeopleComponent() {
                                     <div className="flex gap-2">
                                         {syncEnabled ? (
                                             <button
-                                                className={secondaryBtn}
+                                                className={btnSecondary}
                                                 onClick={syncStudents}
                                                 title="Push this instance's student roster to the configured peer deployment"
                                             >
@@ -267,7 +263,7 @@ function PeopleComponent() {
                                             <></>
                                         )}
                                         <button
-                                            className={primaryBtn}
+                                            className={btnPrimary}
                                             onClick={() =>
                                                 setCurrentForm("AddStudent")
                                             }
@@ -317,7 +313,7 @@ function PeopleComponent() {
                                             : `${raters.length} ${raters.length === 1 ? "rater" : "raters"}`}
                                     </span>
                                     <button
-                                        className={primaryBtn}
+                                        className={btnPrimary}
                                         onClick={() =>
                                             setCurrentForm("AddRater")
                                         }

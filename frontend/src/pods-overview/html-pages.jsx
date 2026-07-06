@@ -1,6 +1,6 @@
 import React from "react"
 import { SessionModel } from "../models/session"
-import { dlgHeading, dlgBody, dlgLabel, dlgSelect, dlgPrimary, dlgCancel } from "../components/dialog-styles"
+import { dlgHeading, dlgBody, dlgLabel, dlgSelect, dlgPrimary, dlgCancel, btnPrimarySm } from "../components/dialog-styles"
 import { Appheader } from "../header/header-component"
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
@@ -295,7 +295,7 @@ function PodsOverviewPages(props) {
                                     {Object.values(props.selected || {}).filter(Boolean).length > 0 ? (
                                         <button
                                             onClick={props.runSelected}
-                                            className="rounded-lg bg-tiilt px-3 py-1.5 text-xs font-semibold whitespace-nowrap text-white transition hover:bg-tiilt-deep active:translate-y-px"
+                                            className={btnPrimarySm + " whitespace-nowrap"}
                                         >
                                             Run analysis ({Object.values(props.selected || {}).filter(Boolean).length})
                                         </button>
