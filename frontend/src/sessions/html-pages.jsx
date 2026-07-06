@@ -328,7 +328,7 @@ function SessionRow({ session, rowIndex, onOpen, openSessionDialog, endSession, 
                         aria-label={`Select session ${session.title}`}
                         title={checked ? "Deselect" : "Select for bulk actions"}
                         className={
-                            "flex h-7 w-8 flex-none cursor-pointer items-center justify-center rounded-md font-ahamono text-xs tabular-nums transition " +
+                            "mx-auto flex h-7 w-8 flex-none cursor-pointer items-center justify-center rounded-md font-ahamono text-xs tabular-nums transition " +
                             (checked
                                 ? "bg-tiilt font-bold text-white ring-2 ring-tiilt/40"
                                 : "text-tiilt-muted hover:bg-tiilt-soft hover:text-tiilt")

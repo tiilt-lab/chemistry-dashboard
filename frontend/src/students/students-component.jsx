@@ -43,9 +43,6 @@ const fmtDate = (s) => {
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
-const initials = (s) =>
-    `${(s.firstname || "?").slice(0, 1)}${(s.lastname || "?").slice(0, 1)}`.toUpperCase()
-
 function StatCard({ label, value, hint }) {
     return (
         <div className="flex-1 rounded-xl border border-tiilt-line bg-white px-4 py-3">
@@ -93,7 +90,7 @@ function StudentsComponent(props) {
     const [target, setTarget] = useState(null) // student a dialog acts on
     const [activity, setActivity] = useState(null) // drill-down payload
     const [syncEnabled, setSyncEnabled] = useState(false)
-    // Bulk selection (admins): toggled by clicking the initials avatar.
+    // Bulk selection (admins): toggled from the row's index/select cell.
     const [selected, setSelected] = useState(() => new Set())
 
     const toggleSelected = (id) =>
@@ -642,9 +639,6 @@ function StudentsComponent(props) {
                                                     />
                                                 </th>
                                             ) : null}
-                                            <th className="sticky top-0 bg-tiilt-ground px-2 py-2.5">
-                                                <span className="sr-only">Avatar</span>
-                                            </th>
                                             {sortHeader("name", "Student")}
                                             <th className="sticky top-0 bg-tiilt-ground px-4 py-2.5 text-left font-semibold whitespace-nowrap text-tiilt-ink">
                                                 Enrolled
@@ -686,7 +680,7 @@ function StudentsComponent(props) {
                                                             aria-label={`Select ${s.firstname} ${s.lastname}`}
                                                             title={selected.has(s.id) ? "Deselect" : "Select for bulk actions"}
                                                             className={
-                                                                "flex h-7 w-8 flex-none cursor-pointer items-center justify-center rounded-md font-ahamono text-xs tabular-nums transition " +
+                                                                "mx-auto flex h-7 w-8 flex-none cursor-pointer items-center justify-center rounded-md font-ahamono text-xs tabular-nums transition " +
                                                                 (selected.has(s.id)
                                                                     ? "bg-tiilt font-bold text-white ring-2 ring-tiilt/40"
                                                                     : "text-tiilt-muted hover:bg-tiilt-soft hover:text-tiilt")
@@ -696,11 +690,6 @@ function StudentsComponent(props) {
                                                         </button>
                                                     </td>
                                                 ) : null}
-                                                <td className="px-2 py-2.5">
-                                                    <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-tiilt-soft text-xs font-bold text-tiilt">
-                                                        {initials(s)}
-                                                    </span>
-                                                </td>
                                                 <td className="px-4 py-2.5">
                                                     <span className="min-w-0">
                                                         <span className="block truncate font-semibold text-tiilt-ink">
