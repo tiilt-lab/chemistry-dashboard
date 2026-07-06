@@ -13,7 +13,7 @@
 }
 
 .line {
-  background-color: #E3E5F1;
+  background-color: var(--color-tiilt-line);
   min-height: 1px;
   width: 100%;
 }

@@ -1,5 +1,5 @@
 import { Line } from "react-chartjs-2"
-import { BRAND } from "../../globals"
+import { brandColor } from "../../globals"
 import { Chart as ChartJS } from "chart.js/auto"
 
 // Inline classifier explanations (previously behind a ? dialog).
@@ -64,8 +64,8 @@ function FeatureCard({ feature }) {
                             datasets: [
                                 {
                                     data: feature.values,
-                                    borderColor: BRAND.purple,
-                                    backgroundColor: "rgba(58,33,99,0.08)",
+                                    borderColor: brandColor("purple"),
+                                    backgroundColor: "rgba(139,111,196,0.12)",
                                     fill: true,
                                     borderWidth: 2,
                                     pointRadius: 0,

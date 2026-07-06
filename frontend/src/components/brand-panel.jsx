@@ -52,13 +52,13 @@ function Waveform() {
 // The purple identity panel shared by the public pages (login, signup, landing).
 function BrandPanel({ pitch = true }) {
     return (
-        <aside className="flex flex-col gap-2 bg-tiilt p-5 text-tiilt-panel-text md:gap-4 md:p-10">
+        <aside className="flex flex-col gap-2 bg-[#3a2163] p-5 text-[#eae3f6] md:gap-4 md:p-10">
             <div className="flex items-center gap-4">
                 <TiiltLogo className="h-13 w-13 flex-none md:h-[74px] md:w-[74px]" />
                 <div>
                     <div className="text-2xl leading-tight font-extrabold md:text-3xl">
                         BLINC{" "}
-                        <span className="font-ahamono text-base font-normal text-tiilt-lavender">
+                        <span className="font-ahamono text-base font-normal text-[#a794c9]">
                             (by&nbsp;
                             <a
                                 href="https://tiilt.northwestern.edu"
@@ -74,7 +74,7 @@ function BrandPanel({ pitch = true }) {
                     <div className="mt-1 font-ahamono text-[11px] tracking-wide uppercase">
                         Building Literacy in N&#8209;person Collaborations
                     </div>
-                    <div className="hidden font-ahamono text-[10.5px] tracking-wider text-tiilt-lavender uppercase md:block">
+                    <div className="hidden font-ahamono text-[10.5px] tracking-wider text-[#a794c9] uppercase md:block">
                         TIILT Lab · Northwestern University
                     </div>
                 </div>

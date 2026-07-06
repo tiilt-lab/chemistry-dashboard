@@ -367,7 +367,7 @@ function RecordingCoach({
         <div className="mx-auto max-w-5xl p-6 space-y-6 overflow-y-auto h-screen">
             <header className="flex items-center justify-between">
                 <h1 className="text-2xl font-semibold">Recording Guide</h1>
-                <div className="text-sm text-gray-500">Optimized for face+voice capture</div>
+                <div className="text-sm text-tiilt-muted">Optimized for face+voice capture</div>
             </header>
 
             {/* Preflight checklist */}
@@ -384,8 +384,8 @@ function RecordingCoach({
                 </div>
 
 
-                <div className="rounded-2xl border p-4 shadow-sm text-sm text-gray-600">
-                    <div className="font-medium text-gray-800">Capture Tips (FR + Diarization)</div>
+                <div className="rounded-2xl border p-4 shadow-sm text-sm text-tiilt-muted">
+                    <div className="font-medium text-tiilt-ink">Capture Tips (FR + Diarization)</div>
                     <ul className="mt-1 list-inside list-disc">
                         <li>Keep head upright, look at camera; avoid extreme angles & occlusions.</li>
                         <li>Maintain neutral to mild expressions for FR enrollment; smile only if consistent with target set.</li>
@@ -410,7 +410,7 @@ function RecordingCoach({
                         </label>
                     </div>
                     <div className="mt-3 flex gap-2">
-                        <button className="rounded-xl bg-black px-4 py-2 text-white shadow" onClick={startPreview} disabled={isPreviewing}>Start Preview</button>
+                        <button className="rounded-xl bg-tiilt px-4 py-2 text-white shadow" onClick={startPreview} disabled={isPreviewing}>Start Preview</button>
                         <button className="rounded-xl border px-4 py-2" onClick={stopEverything}>Stop</button>
                     </div>
                 </div>
@@ -418,7 +418,7 @@ function RecordingCoach({
                 <div className="rounded-2xl border p-4 shadow-sm">
                     <h3 className="mb-2 font-medium">Mic Levels</h3>
                     <LevelMeter rmsDb={rmsDb} peakDb={peakDb} clipping={clipping} />
-                    <div className="mt-1 text-xs text-gray-500">Target RMS: −35 to −18 dBFS (green zone)</div>
+                    <div className="mt-1 text-xs text-tiilt-muted">Target RMS: −35 to −18 dBFS (green zone)</div>
                 </div>
             </section>
 
@@ -453,7 +453,7 @@ function RecordingCoach({
                     {showScript && (
                         <div className="rounded-2xl border p-4 shadow-sm">
                             <h3 className="mb-2 font-medium">Script</h3>
-                            <div className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-xl bg-gray-50 p-3 text-sm leading-relaxed">
+                            <div className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-xl bg-tiilt-ground p-3 text-sm leading-relaxed">
                                 {scriptText}
                             </div>
                         </div>
@@ -475,9 +475,9 @@ function RecordingCoach({
                                 // startSaveRecording
                             )}
                             {countdown !== null && <span className="ml-2 text-lg font-semibold">{countdown}</span>}
-                            <span className="ml-auto text-sm text-gray-600">{elapsed}s / {maxDurationSec}s</span>
+                            <span className="ml-auto text-sm text-tiilt-muted">{elapsed}s / {maxDurationSec}s</span>
                         </div>
-                        <div className="mt-2 text-xs text-gray-500">Recommended duration ≥ {minDurationSec}s.</div>
+                        <div className="mt-2 text-xs text-tiilt-muted">Recommended duration ≥ {minDurationSec}s.</div>
                     </div>
                 </div>
             </section>
@@ -514,11 +514,11 @@ function LevelMeter({ rmsDb, peakDb, clipping }) {
     const peakPct = norm(peakDb);
     return (
         <div>
-            <div className="relative h-3 w-full rounded bg-gray-200">
+            <div className="relative h-3 w-full rounded bg-tiilt-line/60">
                 <div className="absolute left-0 top-0 h-3 rounded bg-green-500" style={{ width: `${rmsPct}%` }} />
                 <div className="absolute left-0 top-0 h-3 rounded bg-black/30" style={{ width: `${peakPct}%` }} />
             </div>
-            <div className="mt-1 flex items-center justify-between text-xs text-gray-600">
+            <div className="mt-1 flex items-center justify-between text-xs text-tiilt-muted">
                 <span>RMS {Number.isFinite(rmsDb) ? rmsDb.toFixed(1) : '…'} dBFS</span>
                 <span>Peak {Number.isFinite(peakDb) ? peakDb.toFixed(1) : '…'} dBFS {clipping && <strong className="text-red-600">(CLIP)</strong>}</span>
             </div>

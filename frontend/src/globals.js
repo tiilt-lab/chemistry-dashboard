@@ -67,6 +67,17 @@ export const BRAND = {
   danger: "#b3261e",
   muted: "#675e7d",
 }
+// Dark-surface equivalents; canvas charts can't read CSS vars, so chart
+// configs should resolve through brandColor() at render time.
+export const BRAND_DARK = {
+  purple: "#a58cd6",
+  pink: "#f24aa8",
+  danger: "#e5766f",
+  muted: "#a89fc0",
+}
+export function brandColor(key) {
+  return (isDarkTheme() ? BRAND_DARK : BRAND)[key]
+}
 
 export const SPEAKER_PALETTE = [
     "#3a2163",
@@ -78,10 +89,29 @@ export const SPEAKER_PALETTE = [
     "#b3261e",
     "#6d28d9",
 ]
+// Same hues lightened for dark surfaces — the light palette is deep
+// ink-on-white colors that all but vanish on a dark background.
+export const SPEAKER_PALETTE_DARK = [
+    "#b39ddb",
+    "#2dbdb3",
+    "#f06eb5",
+    "#e8a13c",
+    "#9ccc65",
+    "#8f96e8",
+    "#e5766f",
+    "#b794f6",
+]
+export function isDarkTheme() {
+    return (
+        typeof document !== "undefined" &&
+        document.documentElement.classList.contains("dark")
+    )
+}
 export function speakerColorFor(name, allNames) {
+    const palette = isDarkTheme() ? SPEAKER_PALETTE_DARK : SPEAKER_PALETTE
     const sorted = [...new Set(allNames || [])].sort()
     const i = Math.max(0, sorted.indexOf(name))
-    return SPEAKER_PALETTE[i % SPEAKER_PALETTE.length]
+    return palette[i % palette.length]
 }
 
 // Clock-style HH:MM:SS from seconds (shared by transcripts + reflection dashboards).
