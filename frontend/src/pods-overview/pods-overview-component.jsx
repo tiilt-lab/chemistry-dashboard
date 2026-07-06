@@ -120,9 +120,76 @@ function PodsOverviewComponent() {
     const t = setTimeout(() => setToasts((list) => list.slice(1)), 6000);
     return () => clearTimeout(t);
   }, [toasts]);
+
   const dismissToast = (id) =>
     setToasts((list) => list.filter((x) => x.id !== id));
   const [activeSessionService, setActiveSessionService] = useOutletContext();
+  // Join/leave toasts from the fast (2s) socket-backed device feed.
+  const prevConnected = useRef(null); // null until the first real feed snapshot
+  useEffect(() => {
+    if (sessionDevices == null) return; // feed hasn't delivered yet
+    const firstSnapshot = prevConnected.current === null;
+    const prev = prevConnected.current || {};
+    const notes = [];
+    const nextMap = {};
+    for (const d of sessionDevices) {
+      nextMap[d.id] = !!d.connected;
+      if (prev[d.id] === undefined) {
+        // Toast arrivals after the baseline snapshot; devices already present
+        // when the page loaded stay silent.
+        if (d.connected && !firstSnapshot) {
+          notes.push(`${d.name || "A group"} joined`);
+        }
+      } else if (!prev[d.id] && d.connected) {
+        notes.push(`${d.name || "A group"} joined`);
+      } else if (prev[d.id] && !d.connected) {
+        notes.push(`${d.name || "A group"} disconnected`);
+      }
+    }
+    if (notes.length) {
+      setToasts((t) => [
+        ...t,
+        ...notes.map((text, i) => ({ id: `${text}-${Date.now()}-${i}`, text })),
+      ]);
+    }
+    prevConnected.current = nextMap;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionDevices]);
+
+  // "Speaking recently" per pod: watch the live transcript stream and stamp
+  // each device's latest utterance; cards pulse while < 30s old.
+  const [lastActivity, setLastActivity] = useState({});
+  useEffect(() => {
+    if (activeSessionService === null) return;
+    const sub = activeSessionService.transcriptSource.subscribe((list) => {
+      if (!list || !list.length) return;
+      const latest = list[list.length - 1];
+      if (latest && latest.session_device_id) {
+        setLastActivity((m) => ({
+          ...m,
+          [latest.session_device_id]: Date.now(),
+        }));
+      }
+    });
+    return () => sub.unsubscribe && sub.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSessionService]);
+  // tick so the pulse expires without new data
+  const [, setActivityTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setActivityTick((x) => x + 1), 5000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Banner End flow (confirm dialog + end + refresh).
+  const endThisSession = () => {
+    if (session === null) return;
+    new SessionService().endSession(session.id).then(
+      () => window.location.reload(),
+      () => window.location.reload(),
+    );
+  };
+
   const navigate = useNavigate();
   const [trigger, setTrigger] = useState(0);
   const interval = 2000;
@@ -205,6 +272,8 @@ function PodsOverviewComponent() {
         }
       );
     } else if (form === "Passcode" && session.end_date == null) {
+      setCurrentForm(form);
+    } else if (form === "ConfirmEnd") {
       setCurrentForm(form);
     }
   };
@@ -373,6 +442,8 @@ function PodsOverviewComponent() {
       queueState={queueState}
       toasts={toasts}
       dismissToast={dismissToast}
+      lastActivity={lastActivity}
+      endThisSession={endThisSession}
       righttext={getPasscode()}
       rightpill={getRightPill()}
       session={session}
