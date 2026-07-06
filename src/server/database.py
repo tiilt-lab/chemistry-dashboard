@@ -66,6 +66,19 @@ def update_speaker(speaker_id, alias = None):
         return speaker
     return None
 
+def create_speaker(session_device_id, alias=''):
+    session_device = get_session_devices(id=session_device_id)
+    if not session_device:
+        return None
+    if not alias:
+        # Friendly per-device default ("Speaker 3"), not the global row id.
+        existing = get_speakers(session_device_id=session_device_id)
+        alias = 'Speaker {0}'.format(len(existing) + 1)
+    speaker = Speaker(session_device_id, alias)
+    db.session.add(speaker)
+    db.session.commit()
+    return speaker
+
 # -------------------------
 # Speaker Transcript Metrics
 # -------------------------

@@ -9,6 +9,22 @@ from tables.speaker_transcript_metrics import SpeakerTranscriptMetrics
 
 api_routes = Blueprint('speaker', __name__)
 
+# Create a speaker slot on a device after joining. Byod clients can join with
+# a collaborator count of 0 ("detect automatically"), so the fingerprint
+# screen needs a way to add slots; same open trust level as the rename route.
+@api_routes.route('/api/v1/devices/<int:session_device_id>/speakers', methods=['POST'])
+def create_speaker(session_device_id, **kwargs):
+    alias = (request.json or {}).get('alias', '') or ''
+    if alias:
+        valid, message = Speaker.verify_fields(alias=alias)
+        if not valid:
+            return json_response({'message': message}, 400)
+    speaker = database.create_speaker(session_device_id, alias)
+    if speaker is None:
+        return json_response({'message': 'Session device not found.'}, 404)
+    return json_response(speaker.json())
+
+
 @api_routes.route('/api/speakers/<int:speaker_id>', methods=['POST'])
 def update_speaker(speaker_id, **kwargs):
     alias = request.json.get('alias', None)
