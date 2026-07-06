@@ -1,4 +1,5 @@
 import React from "react";
+import { EmptyState } from "../components/empty-state";
 import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel } from "../components/dialog-styles"
 import { pageShell, formCard } from "../components/layout-styles"
 import { Appheader } from "../header/header-component";
@@ -63,15 +64,6 @@ function StepIndicator({ current }) {
           />
         ))}
       </div>
-    </div>
-  );
-}
-
-function EmptyState({ title, subtitle }) {
-  return (
-    <div className="flex flex-col items-center gap-1.5 py-10 text-center">
-      <div className="text-lg font-semibold text-tiilt-ink">{title}</div>
-      <div className="max-w-xs text-sm text-tiilt-muted">{subtitle}</div>
     </div>
   );
 }

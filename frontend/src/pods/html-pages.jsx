@@ -1,4 +1,5 @@
 import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel } from '../components/dialog-styles'
+import { EmptyState } from "../components/empty-state";
 import { pageShell, formCard } from '../components/layout-styles'
 import { AppContextMenu } from '../components/context-menu/context-menu-component'
 import { Appheader } from '../header/header-component'
@@ -30,14 +31,10 @@ function PodComponentPage(props) {
               Loading…
             </div>
           ) : props.devices.length === 0 ? (
-            <div className="flex flex-col items-center gap-1.5 py-10 text-center">
-              <div className="text-lg font-semibold text-tiilt-ink">
-                There are no pods
-              </div>
-              <div className="max-w-xs text-sm text-tiilt-muted">
-                Add a pod with the button below.
-              </div>
-            </div>
+            <EmptyState
+              title="There are no pods"
+              subtitle="Add a pod with the button below."
+            />
           ) : (
             <ul className="flex flex-col gap-2">
               {props.devices.map((device, index) => (

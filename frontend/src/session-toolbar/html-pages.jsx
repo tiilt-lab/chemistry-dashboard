@@ -1,4 +1,5 @@
 import style from "./session-toolbar.module.css"
+import { btnPrimary } from "../components/dialog-styles"
 import { Chevron } from "@/Icons"
 import style2 from "../dialog/dialog.module.css"
 import { GenericDialogBox } from "../dialog/dialog-component"
@@ -109,7 +110,7 @@ function AppSessionPage(props) {
                     {props.menus && props.menus.length ? (
                         props.menus.map((menu, index) => (
                             <button
-                                className="flex-none rounded-lg bg-tiilt px-4 py-2 text-sm font-semibold whitespace-nowrap text-white transition hover:bg-tiilt-deep active:translate-y-px sm:w-full"
+                                className={btnPrimary + " flex-none whitespace-nowrap sm:w-full"}
                                 onClick={menu.action}
                                 key={index}
                             >{`${menu.title}`}</button>
