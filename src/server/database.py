@@ -1015,6 +1015,38 @@ def sync_student(lastname, firstname, username,biometric_captured):
     db.session.commit()
     return True, student
 
+# Merge one student profile into another: every username-keyed reference
+# (session speakers, video metrics, LLM reports/answers, survey responses)
+# moves to the target, then the duplicate row is deleted. Returns per-table
+# moved counts, or None if either id is missing or they're the same row.
+def merge_students(duplicate_id, target_id):
+    duplicate = get_students(id=duplicate_id)
+    target = get_students(id=target_id)
+    if not duplicate or not target or duplicate.id == target.id:
+        return None
+    moved = {}
+    moved['speakers'] = db.session.query(Speaker) \
+        .filter(Speaker.alias == duplicate.username) \
+        .update({'alias': target.username})
+    moved['video_metrics'] = db.session.query(SpeakerVideoMetrics) \
+        .filter(SpeakerVideoMetrics.student_username == duplicate.username) \
+        .update({'student_username': target.username})
+    moved['llm_reports'] = db.session.query(LLMFeedbackReport) \
+        .filter(LLMFeedbackReport.speaker_username == duplicate.username) \
+        .update({'speaker_username': target.username})
+    moved['llm_answers'] = db.session.query(LLMQuestionAnswer) \
+        .filter(LLMQuestionAnswer.speaker_username == duplicate.username) \
+        .update({'speaker_username': target.username})
+    moved['surveys'] = db.session.query(SurveyResponse) \
+        .filter(SurveyResponse.username == duplicate.username) \
+        .update({'username': target.username})
+    if duplicate.biometric_captured == 'yes' and target.biometric_captured != 'yes':
+        target.biometric_captured = 'yes'
+    moved['duplicate_username'] = duplicate.username
+    db.session.delete(duplicate)
+    db.session.commit()
+    return moved
+
 def delete_student(id):
     student = get_students(id=id)
     if student:

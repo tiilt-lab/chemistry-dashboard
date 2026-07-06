@@ -5,6 +5,7 @@ import {
     dlgBody,
     dlgLabel,
     dlgInput,
+    dlgSelect,
     dlgPrimary,
     dlgDanger,
     dlgCancel,
@@ -264,6 +265,40 @@ function StudentsComponent(props) {
             }
         } catch {
             showStatus("Failed to update", "The server could not be reached.")
+        }
+    }
+
+    const mergeStudent = async (targetId) => {
+        if (!targetId) {
+            setStatus("Pick the student to merge into.")
+            return
+        }
+        setCurrentForm("Loading")
+        try {
+            const response = await new AuthService().mergeStudents(
+                target.id,
+                +targetId,
+            )
+            if (response.status === 200) {
+                const body = await response.json()
+                await loadStudents()
+                showStatus(
+                    "Students merged",
+                    `${target.username} was merged into ${body.target.username}. ` +
+                        `${body.moved.speakers} session ${body.moved.speakers === 1 ? "appearance" : "appearances"} moved.`,
+                )
+            } else {
+                let message = `${target.username} could not be merged.`
+                try {
+                    const err = await response.json()
+                    if (err["message"]) message = err["message"]
+                } catch {
+                    /* non-JSON error body */
+                }
+                showStatus("Failed to merge", message)
+            }
+        } catch {
+            showStatus("Failed to merge", "The server could not be reached.")
         }
     }
 
@@ -599,6 +634,24 @@ function StudentsComponent(props) {
                                                         {canManage ? (
                                                             <button
                                                                 role="menuitem"
+                                                                className={
+                                                                    contextStyle[
+                                                                        "menu-item"
+                                                                    ]
+                                                                }
+                                                                onClick={() => {
+                                                                    setTarget(s)
+                                                                    setCurrentForm(
+                                                                        "MergeStudent",
+                                                                    )
+                                                                }}
+                                                            >
+                                                                Merge into…
+                                                            </button>
+                                                        ) : null}
+                                                        {canManage ? (
+                                                            <button
+                                                                role="menuitem"
                                                                 className={`${contextStyle["menu-item"]} ${contextStyle["red"]}`}
                                                                 onClick={() => {
                                                                     setTarget(s)
@@ -789,6 +842,63 @@ function StudentsComponent(props) {
                         )}
                         <button className={dlgCancel} onClick={closeDialog}>
                             Close
+                        </button>
+                    </div>
+                ) : null}
+
+                {currentForm === "MergeStudent" && target ? (
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>
+                            Merge {target.username}
+                        </div>
+                        <div className="text-sm text-tiilt-muted">
+                            All of {target.firstname} {target.lastname}'s
+                            session appearances, metrics, AI feedback, and
+                            survey responses move to the student you pick,
+                            and the {target.username} profile is deleted.
+                            This can't be undone.
+                        </div>
+                        <label htmlFor="mergeTarget" className={dlgLabel}>
+                            Merge into
+                        </label>
+                        <select
+                            id="mergeTarget"
+                            className={dlgSelect}
+                            defaultValue=""
+                        >
+                            <option value="" disabled>
+                                Choose a student…
+                            </option>
+                            {(students || [])
+                                .filter((s) => s.id !== target.id)
+                                .sort((a, b) =>
+                                    `${a.lastname}${a.firstname}`.localeCompare(
+                                        `${b.lastname}${b.firstname}`,
+                                    ),
+                                )
+                                .map((s) => (
+                                    <option key={s.id} value={s.id}>
+                                        {s.firstname} {s.lastname} (
+                                        {s.username})
+                                    </option>
+                                ))}
+                        </select>
+                        {status ? (
+                            <div className={dlgError}>{status}</div>
+                        ) : null}
+                        <button
+                            className={dlgPrimary}
+                            onClick={() =>
+                                mergeStudent(
+                                    document.getElementById("mergeTarget")
+                                        .value,
+                                )
+                            }
+                        >
+                            Merge students
+                        </button>
+                        <button className={dlgCancel} onClick={closeDialog}>
+                            Cancel
                         </button>
                     </div>
                 ) : null}
