@@ -1,5 +1,5 @@
-import { useReducer, useEffect, useState, useRef, useCallback, act } from "react"
-import { POD_ON_COLOR as POD_COLOR, GLOW_COLOR } from "../components/pod-colors"
+import { useReducer, useEffect, useState, useRef, useCallback } from "react"
+import { POD_ON_COLOR as POD_COLOR } from "../components/pod-colors"
 import { useNavigate, useParams } from "react-router-dom"
 import { SessionService } from "../services/session-service"
 import { ByodJoinPage } from "./html-pages"
@@ -70,7 +70,6 @@ function JoinPage() {
     const [spkr2Transcripts, setSpkr2Transcripts] = useState([])
     const [spkr1VideoMetrics, setSpkr1VideoMetrics] = useState([])
     const [spkr2VideoMetrics, setSpkr2VideoMetrics] = useState([])
-    const [selectedSpkralias, setSelectedSpkralias] = useState("");
     const [details, setDetails] = useState("Group")
     const [currentForm, setCurrentForm] = useState("")
     const [displayText, setDisplayText] = useState("")
@@ -96,7 +95,6 @@ function JoinPage() {
     const [showBoxes, setShowBoxes] = useState([])
     const [selectedSpeaker, setSelectedSpeaker] = useState(null)
     const [invalidName, setInvalidName] = useState(false)
-    const [reload, setReload] = useState(false)
 
     // const [sessionClosing, setSessionClosing] = useState(false)
 
@@ -498,10 +496,6 @@ function JoinPage() {
         if (form === "fingerprintAudio" || form === "renameAlias" || form === "savedAudioVideoFingerprint") {
             setSelectedSpeaker(speaker)
         }
-    }
-
-    const closeForm = () => {
-        setCurrentForm("")
     }
 
     // Disconnects from websocket server and audio stream.
@@ -924,7 +918,6 @@ function JoinPage() {
             dispatch({ type: "AUDIO_SOCKET_OPEN", payload: true })
             reconnectCounter.current = 0
             setPageTitle(name.current)
-            setReload(true)
 
         };
 
@@ -1312,11 +1305,6 @@ function JoinPage() {
         setCurrentTranscript(transcript)
     }
 
-    const onClickedKeyword = (transcript) => {
-        setCurrentTranscript(transcript)
-        setCurrentForm("gottoselectedtranscript")
-    }
-
     const openDialog = (form) => {
         setCurrentForm(form)
     }
@@ -1337,10 +1325,6 @@ function JoinPage() {
     const togglePreview = () => {
         setCurrentForm("")
         setPreview(!preview)
-    }
-
-    const onSessionClosing = (isClosing) => {
-        // setSessionClosing(isClosing) 
     }
 
     const acquireWakeLock = async () => {
@@ -1394,10 +1378,6 @@ function JoinPage() {
         setDetails("Comparison")
     }
 
-    const viewIndividual = () => {
-        setDetails("Individual")
-    }
-
     const viewGroup = () => {
         setDetails("Group")
     }
@@ -1407,7 +1387,6 @@ function JoinPage() {
 
     const loadSpeakerMetrics = (speakerId, speakrAlias) => {
         setSelectedSpkrId1(speakerId)
-        setSelectedSpkralias(speakrAlias)
         setPageTitle(speakrAlias)
         setDetails("Individual");
     }
@@ -1415,19 +1394,16 @@ function JoinPage() {
     return (
         <ByodJoinPage
             state={state}
-            GLOW_COLOR={GLOW_COLOR}
             POD_COLOR={POD_COLOR}
             button_pressed={sessionDevBtnPressed}
             verifyInputAndAudio={verifyInputAndAudio}
             closeDialog={closeDialog}
             currentForm={currentForm}
             displayText={displayText}
-            navigate={navigate}
             navigateToLogin={navigateToLogin}
             pageTitle={pageTitle}
             requestHelp={requestHelp}
             pcode={pcode}
-            setPcode={setPcode}
             wrongInput={wrongInput}
             changeTouppercase={changeTouppercase}
             joinwith={joinwith.current}
@@ -1438,14 +1414,12 @@ function JoinPage() {
             sessionDevice={sessionDevice}
             setRange={ResetTimeRange}
             onClickedTimeline={onClickedTimeline}
-            onClickedKeyword={onClickedKeyword}
             session={session}
             displayTranscripts={displayTranscripts}
             displayVideoMetrics={displayVideoMetrics}
             startTime={startTime}
             endTime={endTime}
             loading={loading}
-            onSessionClosing={onSessionClosing}
             currentTranscript={currentTranscript}
             seeAllTranscripts={seeAllTranscripts}
             openDialog={openDialog}
@@ -1455,7 +1429,6 @@ function JoinPage() {
             videoApiEndpoint={apiService.getVideoServerEndpoint()}
             speakers={speakers.current}
             openForms={openForms}
-            closeForm={closeForm}
             selectedSpkrId1={selectedSpkrId1}
             setSelectedSpkrId1={setSelectedSpkrId1}
             selectedSpkrId2={selectedSpkrId2}
@@ -1466,21 +1439,17 @@ function JoinPage() {
             selectedSpeaker={selectedSpeaker}
             spkr1VideoMetrics={spkr1VideoMetrics}
             spkr2VideoMetrics={spkr2VideoMetrics}
-            setSelectedSpeaker={setSelectedSpeaker}
             saveAudioFingerprint={saveAudioFingerprint}
             addSpeakerFingerprint={addSpeakerFingerprint}
             confirmSpeakers={confirmSpeakers}
             changeAliasName={changeAliasName}
             details={details}
-            setDetails={setDetails}
-            viewIndividual={viewIndividual}
             viewComparison={viewComparison}
             viewGroup={viewGroup}
             cartoonImgUrl={cartoonImgUrl}
             invalidName={invalidName}
             startProcessingSavedSpeakerFingerprint={startProcessingSavedSpeakerFingerprint}
             loadSpeakerMetrics={loadSpeakerMetrics}
-            selectedSpkralias={selectedSpkralias}
             prevSessionId={prevSessionId}
         />
     )

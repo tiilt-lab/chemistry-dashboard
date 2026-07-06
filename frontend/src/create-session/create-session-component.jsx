@@ -1,14 +1,9 @@
 import { DeviceService } from '../services/device-service';
 import { SessionService } from '../services/session-service';
-import { KeywordService } from '../services/keyword-service';
-import { TopicModelService } from "../services/topic-model-service";
 import { formatDate } from '../globals';
 import { DeviceModel } from '../models/device'
-import { KeywordListModel } from '../models/keyword-list'
 import { SessionModel } from '../models/session'
 import { FolderModel } from '../models/folder';
-import { TopicModelModel } from '../models/topic-model';
-import { unpackTopModels } from '../myhooks/custom-hooks';
 import { useEffect, useState } from 'react';
 import {CreateSessionPage} from './html-pages'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
@@ -23,8 +18,6 @@ function CreateSessionComponent(props) {
   // Page Data
   const [user, setUser] = useState(null);
   const [devices, setDevices] = useState([]);
-  const [keywordLists, setKeywordLists] = useState([]);
-  const [topicModels, setTopicModels] = useState([]);
 
   //menus = Menus;
   const [currentMenu, setCurrentMenu] = useState(changedState ? prevState.currentMenu : 'Settings');
@@ -77,28 +70,6 @@ function CreateSessionComponent(props) {
       }
     )
 
-    const fetchData2 = new KeywordService().getKeywordLists();
-    fetchData2.then(
-      response => {
-        if (response.status === 200) {
-          const resp2 = response.json()
-          resp2.then(
-            respkeyword => {
-              
-              const keywordLists = KeywordListModel.fromJsonList(respkeyword)
-              setKeywordLists(keywordLists);
-              for (const keywordList of keywordLists) {
-                keywordList['keywordsText'] = keywordList.keywords.join(', ');
-              }
-            }
-          )
-        }
-      },
-      apierror => {
-        console.log("create-session-components func: useEffect 2 ", apierror)
-      }
-    )
-
     const fetchData3 = new SessionService().getFolders()
     fetchData3.then(
       response => {
@@ -125,27 +96,6 @@ function CreateSessionComponent(props) {
       }
     )
     
-    const fetchData4 = new TopicModelService().getTopicModels();
-    fetchData4.then(
-      (response) => {
-        if (response.status === 200) {
-          const resp = response.json()
-          resp.then(
-            (result) => {
-              const topModels = TopicModelModel.fromJsonList(result);
-              setTopicModels(unpackTopModels(topModels));
-            },
-            (err) => { console.log('CreateSessionComponent error func : useeffect 122' ,err) })
-
-        } else {
-          console.log('CreateSessionComponent error func : useeffect 1', response)
-        }
-      },
-      (apierror) => {
-        console.log('CreateSessionComponent error func : useeffect 2', apierror)
-      }
-    )
-
     if (!changedState) {
       goToSettings();
     }
@@ -235,10 +185,6 @@ function CreateSessionComponent(props) {
   // Keyword Menu
   // ---------------------
 
-  const formatKeywordDate = (date)=> {
-    return formatDate(date);
-  }
-
   // ---------------------
   // Device Menu
   // ---------------------
@@ -299,16 +245,7 @@ function CreateSessionComponent(props) {
   // Navigation and Dialog
   // ---------------------
 
-  const goToKeywords = ()=> {
-    setCurrentMenu("Keywords");
-    setPageTitle('New session');
-  }
   
-  const goToTopModels = ()=> {
-    setCurrentMenu("TopModels");
-    setPageTitle('New session');
-  }
-
   const goToSettings = ()=> {
     setCurrentMenu("Settings");
     setPageTitle('New session');
@@ -323,13 +260,7 @@ function CreateSessionComponent(props) {
     navigate('/sessions');
   }
   
-  const navigateToKeywordLists = () =>{
-    navigate('/keyword-lists/new-session', getStateInfo());
-  }
   
-  const navigateToFileUpload = () => {
-    navigate('/file_upload/new-session', getStateInfo());
-  }
   
   const getStateInfo = () => {
     return {state: {sessionName: sessionName, byod: byod, features: features, doa: doa, folder: folder, folderPath: folderPath, currentMenu: currentMenu, pageTitle: pageTitle, selectedKeywordList: selectedKeywordList, selectedTopicModel: selectedTopicModel}};
@@ -354,20 +285,8 @@ function CreateSessionComponent(props) {
     folderPath = {folderPath}
     setByod = {setByod}
     byod = {byod}
-    doa = {doa}
-    setDoa = {setDoa}
     features = {features}
     setFeatures = {setFeatures}
-    goToKeywords = {goToKeywords}
-    keywordLists = {keywordLists}
-    selectedKeywordList = {selectedKeywordList}
-    setSelectedKeywordList = {setSelectedKeywordList}
-    topicModels = {topicModels}
-    selectedTopicModel = {selectedTopicModel}
-    setSelectedTopicModel = {setSelectedTopicModel}
-    formatKeywordDate = {formatKeywordDate}
-    navigateToKeywordLists = {navigateToKeywordLists}
-    navigateToFileUpload = {navigateToFileUpload}
     goToSettings = {goToSettings}
     goToDevices = {goToDevices}
     devices = {devices}
@@ -386,7 +305,6 @@ function CreateSessionComponent(props) {
     setFolderSelect = {setFolderSelect}
     breadCrumbSelect = {breadCrumbSelect}
     setBreadCrumbSelect = {setBreadCrumbSelect}
-    goToTopModels = {goToTopModels}
     />
   )
 }

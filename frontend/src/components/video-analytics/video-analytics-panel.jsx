@@ -124,74 +124,7 @@ function dominant(counts) {
 }
 
 // One participant's state over time: each slot colored by its dominant value.
-function Swimlane({ name, bins, colorFor, t0, t1 }) {
-    const n = bins.length
-    return (
-        <div className="flex items-center gap-2">
-            <span
-                className="w-20 flex-none truncate text-xs text-tiilt-ink"
-                title={name}
-            >
-                {name}
-            </span>
-            <div className="flex h-4 grow overflow-hidden rounded border border-tiilt-line/60">
-                {bins.map((b, i) => {
-                    const d = dominant(b.counts)
-                    const t = t0 + ((t1 - t0) * (i + 0.5)) / n
-                    return (
-                        <span
-                            key={i}
-                            className="h-full flex-1"
-                            title={d ? `${formatSeconds(t)} · ${d}` : ""}
-                            style={{
-                                backgroundColor: d ? colorFor(d) : "transparent",
-                            }}
-                        />
-                    )
-                })}
-            </div>
-        </div>
-    )
-}
-
 // One category's intensity over time for the selected participant.
-function HeatStrip({ label, category, bins, color, t0, t1 }) {
-    const n = bins.length
-    return (
-        <div className="flex items-center gap-2">
-            <span
-                className="w-20 flex-none truncate text-xs text-tiilt-ink"
-                title={label}
-            >
-                {label}
-            </span>
-            <div className="flex h-3.5 grow overflow-hidden rounded border border-tiilt-line/60">
-                {bins.map((b, i) => {
-                    const p = b.total ? (b.counts[category] || 0) / b.total : 0
-                    const t = t0 + ((t1 - t0) * (i + 0.5)) / n
-                    return (
-                        <span
-                            key={i}
-                            className="h-full flex-1"
-                            title={
-                                p > 0
-                                    ? `${formatSeconds(t)} · ${Math.round(
-                                          p * 100,
-                                      )}% ${category}`
-                                    : ""
-                            }
-                            style={{
-                                backgroundColor: color,
-                                opacity: p === 0 ? 0.06 : 0.2 + 0.8 * p,
-                            }}
-                        />
-                    )
-                })}
-            </div>
-        </div>
-    )
-}
-
 function Axis({ t0, t1 }) {
     return (
         <div className="mt-1 flex gap-2">

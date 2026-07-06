@@ -53,8 +53,4 @@ export class TranscriptModel {
     }
     return transcripts;
   }
-
-  static tracker(index, transcript) {
-    return transcript.id;
-  }
 }

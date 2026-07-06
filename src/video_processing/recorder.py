@@ -39,23 +39,6 @@ class VidRecorder:
         except Exception as e:
             print('Unable to write data to file: {0}'.format(e))
 
-    def read_temp_wav(self,filename):
-        try:
-            with open(filename, "rb") as f:
-                byteAudio = f.read()
-                return byteAudio
-        except Exception as e:
-            print('Unable to read temp audio data to file: {0}'.format(e))  
-
-    def convert_dat_to_wav(self):
-        with open(self.dat_filename, "rb") as f:
-            all_data = f.read()
-            all_data = np.frombuffer(all_data, np.float32 if self.depth == 4 else np.int16, -1)
-            chunk_length = int(len(all_data) / self.channels)
-            all_data = np.reshape(all_data, (chunk_length, self.channels))
-        wavfile.write(self.wav_filename, self.sample_rate, all_data)
-        os.remove(self.dat_filename)
-
     def close(self,path):
         if not self.closed:
             try:

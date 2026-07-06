@@ -21,7 +21,6 @@ def speaker_tagging(signal):
 		signal_2, sr1 = librosa.load(signal, sr=44100, mono=False)
 	except Exception as e:
 		return('error while loading file: ', e)
-		exit(0)
 
 	signal1 = signal_1[0]
 	signal2 = signal_2[1]

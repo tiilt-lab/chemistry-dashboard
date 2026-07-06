@@ -38,10 +38,6 @@ export class DeviceService {
     return this.api.httpRequestCall(`api/v1/devices/${deviceId}/blink`,'POST', body);
   }
 
-  getDevice(deviceId){
-    return this.api.httpRequestCall(`api/v1/devices/${deviceId}`,'GET',{});
-  }
-
   setDevice(deviceId, data) {
     return this.api.httpRequestCall(`api/v1/devices/${deviceId}`,'PUT', data);
   }
