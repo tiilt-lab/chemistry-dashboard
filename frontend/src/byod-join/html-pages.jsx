@@ -1,5 +1,6 @@
 import React, { useState } from "react"
-import { btnPrimary, btnPrimaryTall } from "../components/dialog-styles"
+import { btnPrimary, btnPrimaryTall, dlgInput, dlgSelect, dlgPrimary, dlgError } from "../components/dialog-styles"
+import { pageShell, formCard } from "../components/layout-styles"
 import { PodMicRing } from "../components/pod-mic-ring"
 import { ErrorDialog } from "../components/error-dialog"
 import { Appheader } from "../header/header-component"
@@ -25,6 +26,8 @@ import Check from "@icons/Check"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
 
+const fieldLabel = "mb-1.5 block text-left text-sm font-semibold text-tiilt-ink"
+
 function ByodJoinPage(props) {
     return (
         <>
@@ -47,7 +50,7 @@ function ByodJoinPage(props) {
                         <Appheader
                             title={props.pageTitle}
                             leftText={false}
-                            rightText={"Option"}
+                            rightText={"Options"}
                             rightTextClick={() =>
                                 props.joinwith === "Video" ||
                                     props.joinwith === "Videocartoonify"
@@ -57,32 +60,34 @@ function ByodJoinPage(props) {
                             nav={() => props.navigateToLogin()}
                         />
                         {(!props.state.audioSocketOpen) && (
-                            <React.Fragment>
-                                <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto text-center">
-                                    <div>
-                                        <div className="my-1.5 font-sans text-base leading-5 font-normal text-tiilt-muted">
-                                            Please type your name and passcode
-                                            to join a session.
-                                        </div>
-                                        <div className="my-1.5 font-sans text-xs leading-5 font-normal text-tiilt-muted">
-                                            If rejoining a session, type the
-                                            same name you used previously.
-                                        </div>
+                            <div className={pageShell}>
+                            <div className={formCard}>
+                                <div className="mx-auto flex w-full max-w-md grow flex-col gap-4 overflow-y-auto px-4 py-6">
+                                    <div className="text-sm leading-6 text-tiilt-muted">
+                                        Type your name and passcode to join a
+                                        session. If rejoining, use the same
+                                        name as before.
                                     </div>
                                     <div>
-                                        <label htmlFor="name" className="block">Device Name:</label>
+                                        <label htmlFor="name" className={fieldLabel}>
+                                            Device name
+                                        </label>
                                         <input
-                                            className="text-box small-section"
+                                            className={dlgInput}
                                             id="name"
                                             placeholder="Name"
                                         />
-                                        <label htmlFor="collaborators" className="block">Numbers of Collaborators:</label>
+                                    </div>
+                                    <div>
+                                        <label htmlFor="collaborators" className={fieldLabel}>
+                                            Number of collaborators
+                                        </label>
                                         <select
                                             id="collaborators"
-                                            className="dropdown small-section"
+                                            className={dlgSelect}
                                         >
                                             <option value="0">
-                                                0(Automatic)
+                                                0 (automatic)
                                             </option>
                                             <option value="1">1</option>
                                             <option value="2">2</option>
@@ -93,9 +98,13 @@ function ByodJoinPage(props) {
                                             <option value="7">7</option>
                                             <option value="8">8</option>
                                         </select>
-                                        <label htmlFor="passcode" className="block">Passcode:</label>
+                                    </div>
+                                    <div>
+                                        <label htmlFor="passcode" className={fieldLabel}>
+                                            Passcode
+                                        </label>
                                         <input
-                                            className="text-box small-section"
+                                            className={dlgInput}
                                             id="passcode"
                                             value={props.pcode}
                                             placeholder="Passcode (4 characters)"
@@ -103,46 +112,58 @@ function ByodJoinPage(props) {
                                                 props.changeTouppercase(event)
                                             }
                                         />
-                                        {props.wrongInput
-                                            ? "Your password must be 4 characters long."
-                                            : ""}
-                                        <label htmlFor="joinwith" className="block">Join With:</label>
+                                        {props.wrongInput ? (
+                                            <div className={dlgError + " mt-2"}>
+                                                Your passcode must be 4
+                                                characters long.
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                    <div>
+                                        <label htmlFor="joinwith" className={fieldLabel}>
+                                            Join with
+                                        </label>
                                         <select
                                             id="joinwith"
-                                            className="dropdown small-section"
+                                            className={dlgSelect}
                                         >
                                             <option value="Audio">Audio</option>
                                             <option value="Video">Video</option>
-                                            <option value="Videocartoonify">Video(Cartoon)</option>
+                                            <option value="Videocartoonify">Video (cartoon)</option>
                                         </select>
                                     </div>
-                                    <button
-                                        className={btnPrimaryTall + " m-0.5 w-60 @sm:m-3 @sm:w-80"}
-                                        onClick={() =>
-                                            props.verifyInputAndAudio(
-                                                document
-                                                    .getElementById("name")
-                                                    .value.trim(),
-                                                document
-                                                    .getElementById("passcode")
-                                                    .value.trim(),
-                                                document
-                                                    .getElementById("joinwith")
-                                                    .value.trim(),
-                                                parseInt(
-                                                    document
-                                                        .getElementById(
-                                                            "collaborators",
-                                                        )
-                                                        .value.trim(),
-                                                ),
-                                            )
-                                        }
-                                    >
-                                        Connect to Server
-                                    </button>
                                 </div>
-                            </React.Fragment>
+                                <div className="w-full flex-none border-t border-tiilt-line bg-white">
+                                    <div className="mx-auto w-full max-w-md px-4 py-4">
+                                        <button
+                                            className={dlgPrimary + " w-full"}
+                                            onClick={() =>
+                                                props.verifyInputAndAudio(
+                                                    document
+                                                        .getElementById("name")
+                                                        .value.trim(),
+                                                    document
+                                                        .getElementById("passcode")
+                                                        .value.trim(),
+                                                    document
+                                                        .getElementById("joinwith")
+                                                        .value.trim(),
+                                                    parseInt(
+                                                        document
+                                                            .getElementById(
+                                                                "collaborators",
+                                                            )
+                                                            .value.trim(),
+                                                    ),
+                                                )
+                                            }
+                                        >
+                                            Connect to server
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            </div>
                         )}
                         {props.state.audioSocketOpen && props.joinwith === "Audio" &&
                             props.state.audioReady &&
