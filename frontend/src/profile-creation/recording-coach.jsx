@@ -19,9 +19,11 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
  *
  */
 
+// Long enough that reading it aloud yields ~15+ seconds of net speech (the
+// server verifies this and asks for a re-record if the clip is mostly silence).
 const DEFAULT_SCRIPT = `Please read the following passage in a clear, natural voice:
 
-“Today I am recording a short sample so my face and voice can be matched accurately. I am looking straight at the camera  and Will turn my head to the Right, Left, Up and Down. I will speak at a consistent pace and volume.”`;
+“Today I am recording a short sample so my face and voice can be matched accurately during group discussions. I will speak at my normal pace and volume, the way I usually talk with my group. While reading this, I will keep my face toward the camera, and then slowly turn my head to the right, to the left, up, and down. Clear recordings like this one help the system tell every voice in the room apart, so each person's ideas are counted correctly.”`;
 
 function RecordingCoach({
     maxDurationSec = 60,
@@ -304,6 +306,10 @@ function RecordingCoach({
             if (mode === 'full' && sec >= maxDurationSec) {
                 rec.stop();
                 setIsRecording(false);
+                // Hitting the cap must still surface the Save button —
+                // previously only a manual Stop did.
+                setIsRecordingStopped(true);
+                setActualTimeElapsed(sec);
                 return;
             }
             requestAnimationFrame(tick);
@@ -325,7 +331,7 @@ function RecordingCoach({
     };
 
     const startSaveRecording = () => {
-        if (videoBlobData !== null && actualTimeElapsed !== 0) {
+        if (videoBlobData !== null && actualTimeElapsed >= minDurationSec) {
             saveRecording(videoBlobData, actualTimeElapsed)
         }
     }
@@ -470,14 +476,23 @@ function RecordingCoach({
                                 <button className="rounded-xl bg-red-600 px-4 py-2 text-white" onClick={stopRecording}>Stop</button>
                             )}
 
-                            {isRecordingStopped && (
-                                <button className="rounded-xl bg-red-600 px-4 py-2 text-white" onClick={startSaveRecording}>Save</button>
-                                // startSaveRecording
+                            {isRecordingStopped && actualTimeElapsed >= minDurationSec && (
+                                <button className="rounded-xl bg-emerald-600 px-4 py-2 text-white shadow" onClick={startSaveRecording}>Save</button>
                             )}
                             {countdown !== null && <span className="ml-2 text-lg font-semibold">{countdown}</span>}
                             <span className="ml-auto text-sm text-tiilt-muted">{elapsed}s / {maxDurationSec}s</span>
                         </div>
-                        <div className="mt-2 text-xs text-tiilt-muted">Recommended duration ≥ {minDurationSec}s.</div>
+                        {isRecordingStopped && actualTimeElapsed < minDurationSec ? (
+                            <div className="mt-2 text-xs font-semibold text-amber-600">
+                                That was only {actualTimeElapsed}s — please record again and
+                                read the whole script (at least {minDurationSec}s).
+                            </div>
+                        ) : (
+                            <div className="mt-2 text-xs text-tiilt-muted">
+                                Read the whole script — at least {minDurationSec}s. The recording
+                                is checked automatically and you may be asked to re-record.
+                            </div>
+                        )}
                     </div>
                 </div>
             </section>

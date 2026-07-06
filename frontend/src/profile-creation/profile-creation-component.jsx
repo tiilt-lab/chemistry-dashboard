@@ -36,6 +36,9 @@ function SignupPage() {
     // const [userProfileDetails, setUserProfileDetail] = useState(null)
     const audiows = useRef(null)
     const videows = useRef(null)
+    // Consecutive voice-quality failures; after 3 the next save is accepted
+    // as-is so an unusual voice or setup can never lock a student out.
+    const qualityFails = useRef(0)
     const navigate = useNavigate()
 
     const apiService = new ApiService()
@@ -213,6 +216,9 @@ function SignupPage() {
         if (videoBlob) {
             if (mimetype.startsWith('video/webm')) {
                 const fixedBlob = await fixWebmDuration(videoBlob, duration*1000);
+                if (qualityFails.current >= 3 && audiows.current?.readyState === WebSocket.OPEN) {
+                    audiows.current.send(JSON.stringify({ type: "fingerprint-force" }))
+                }
                 videows.current.send(fixedBlob)
                 audiows.current.send(fixedBlob)
                 setCurrentForm("processing")
@@ -465,6 +471,16 @@ function SignupPage() {
                     setAlertMessage(message['message']);
                     setShowAlert(true);
 
+                }
+                else if (message['type'] === 'quality_failed') {
+                    qualityFails.current += 1
+                    setCurrentForm("")
+                    setAlertMessage(
+                        (message['message'] || "The recording did not pass the voice-quality check.") +
+                        " Please record again." +
+                        (qualityFails.current >= 3 ? " (Your next recording will be accepted as-is.)" : "")
+                    )
+                    setShowAlert(true)
                 }
                 else if (message['type'] === 'saved') {
                     setAudioSaved(true)

@@ -6,6 +6,7 @@ import queue
 import shutil
 import logging
 import callbacks
+import enrollment_check
 import threading
 import weakref
 import wave
@@ -69,6 +70,9 @@ class ServerProtocol(WebSocketServerProtocol):
         self.currSpeaker = None
         self.currStudent = None
         self.currAlias = None
+        # Escape hatch: after repeated quality-gate failures the client can
+        # ask for the recording to be accepted anyway (verdict still logged).
+        self.fingerprint_force = False
 
         logging.info('Loaded Diarization Model and Semantic Model...')
 
@@ -128,6 +132,10 @@ class ServerProtocol(WebSocketServerProtocol):
                     
             logging.info('save-audio-video-fingerprinting: Audio process connected')
             self.send_json({'type':'saveaudiovideo'})
+
+        if data['type'] == 'fingerprint-force':
+            self.fingerprint_force = True
+            logging.info('fingerprint quality gate disabled for %s after repeated failures', self.currAlias)
 
         if data['type'] == 'add-saved-fingerprint':
             currSpeaker = data['id']
@@ -209,8 +217,11 @@ class ServerProtocol(WebSocketServerProtocol):
             audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}.{1}".format(self.currAlias,"wav"))
 
             with mp.VideoFileClip(src, audio=True) as clip:
-                # keep subclip within the media duration
-                end = min(float(self.interval), float(clip.duration or 0))
+                # Keep the subclip within the media duration. Cap at 60s (the
+                # RecordingCoach max), NOT self.interval — that 10s cap is the
+                # live-ASR chunk size and used to silently truncate every
+                # coached enrollment to its first ten seconds.
+                end = min(60.0, float(clip.duration or 0))
                 if end <= 0:
                     err = "Clip has zero/unknown duration"
                 else:
@@ -230,10 +241,28 @@ class ServerProtocol(WebSocketServerProtocol):
                 os.remove(src)
 
             if err!="":
-                self.send_json({'type': 'error', 'message': err})  
+                self.send_json({'type': 'error', 'message': err})
             else:
-                logging.info('Audio biometrics saved')
-                self.send_json({'type': 'saved', 'message': "Biometric data captured successfully"})           
+                # Quality gate: a fingerprint that can't verify against itself
+                # or is ambiguous vs another enrollment is worse than none.
+                # Checker crashes never block enrollment.
+                verdict = None
+                try:
+                    verdict = enrollment_check.check_enrollment(
+                        audio_fingerprint_file, self.currAlias, diarization_model)
+                except Exception as e:
+                    logging.warning('enrollment quality check failed to run: {0}'.format(e))
+                if verdict is not None and not verdict['ok'] and not self.fingerprint_force:
+                    if os.path.isfile(audio_fingerprint_file):
+                        os.remove(audio_fingerprint_file)
+                    self.send_json({'type': 'quality_failed',
+                                    'message': verdict['message'],
+                                    'detail': verdict})
+                else:
+                    logging.info('Audio biometrics saved')
+                    self.send_json({'type': 'saved',
+                                    'message': "Biometric data captured successfully",
+                                    'quality': verdict})
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 

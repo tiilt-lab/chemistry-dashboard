@@ -111,7 +111,7 @@ function ProfileCreationPage(props) {
                     />
                     <RecordingCoach
                         maxDurationSec={60}
-                        minDurationSec={15}
+                        minDurationSec={20}
                         onTestClip={(blob, diag) =>
                             console.log("test", blob, diag)
                         }
