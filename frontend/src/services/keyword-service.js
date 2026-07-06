@@ -33,7 +33,4 @@ export class KeywordService {
       .httpRequestCall("api/v1/keyword_lists/" + keywordListID,'DELETE',{});
   }
 
-  getKeywordListItems(keywordListID) {
-    return this.api.httpRequestCall("api/v1/keyword_lists/" + keywordListID + "/keywords",'GET',{});
-  }
 }

@@ -2,7 +2,6 @@ import React, { useState } from "react"
 import { btnPrimary, btnPrimaryTall, dlgInput, dlgSelect, dlgPrimary, dlgError } from "../components/dialog-styles"
 import { pageShell, formCard } from "../components/layout-styles"
 import { PodMicRing } from "../components/pod-mic-ring"
-import { ErrorDialog } from "../components/error-dialog"
 import { Appheader } from "../header/header-component"
 import { VoiceRecorder } from "react-voice-recorder-player"
 import {
@@ -885,7 +884,6 @@ function ByodJoinPage(props) {
                 show={props.currentForm === "processing"}
             />
 
-            <ErrorDialog message={props.alertMessage} show={props.showAlert} onClose={props.closeAlert} />
         </>
     )
 }

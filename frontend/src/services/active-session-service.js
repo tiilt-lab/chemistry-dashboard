@@ -227,22 +227,6 @@ export class ActiveSessionService {
         return this.transcriptSource
     }
 
-    getSessionDeviceVideoMetrics(sessionDeviceId, setState) {
-        this.videoMetricSource.subscribe((e) => {
-            if (Object.keys(e).length !== 0) {
-                const data = e
-                    .filter(
-                        (v) =>
-                            v.session_device_id ===
-                            parseInt(sessionDeviceId, 10),
-                    )
-                    .sort((a, b) => (a.time_stamp > b.time_stamp ? 1 : -1))
-                setState(data)
-            }
-        })
-
-        return this.videoMetricSource
-    }
 
     getVideoMetrics() {
         return this.videoMetricSource

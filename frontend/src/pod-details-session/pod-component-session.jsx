@@ -438,7 +438,6 @@ function PodComponentSession() {
       spkr2VideoMetrics={spkr2VideoMetrics}
       getSpeakerAliasFromID={getSpeakerAliasFromID}
       details={details}
-      setDetails={setDetails}
       viewIndividual={viewIndividual}
       viewComparison={viewComparison}
       viewGroup={viewGroup}

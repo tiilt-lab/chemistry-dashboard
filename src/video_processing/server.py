@@ -241,26 +241,6 @@ class ServerProtocol(WebSocketServerProtocol):
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 
     
-    def remux_mp4(self,src, dst):
-        (
-            ffmpeg
-            .input(src)
-            .output(dst, c='copy', movflags='+faststart')  # no re-encode
-            .global_args('-fflags', '+genpts')             # generate PTS if missing
-            .overwrite_output()
-            .run(quiet=True)
-        )
-
-    def remux_webm(self,src, dst):
-        (
-            ffmpeg
-            .input(src)
-            .output(dst, c='copy')
-            .global_args('-fflags', '+genpts')
-            .overwrite_output()
-            .run(quiet=True)
-        )
-
     def enqueue_latest_video_chunk(self, chunk, timeout=0.05):
         """
         Keep only the most recent chunk in the queue.
@@ -344,21 +324,6 @@ class ServerProtocol(WebSocketServerProtocol):
         # Begin Post Processing
         if cf.video_record_original() and self.stream_data == 'video':
             self.orig_vid_recorder.close(self.filename)
-
-def _create_detector():
-    det = ImageObjectDetection()
-    det.init_model(cartoon_model.batch_size)  # load weights, allocate GPU
-    return det
-
-def _create_gaze_predictor():
-    attention_detection = AttentionDetection()
-    attention_detection.init_model(cartoon_model.batch_size)  
-    return attention_detection
-
-def _create_emotion_predictor():
-    emotion = EmotionDetectionModelV1()
-    emotion.load_model()  
-    return emotion
 
 if __name__ == '__main__':
     cf.initialize()

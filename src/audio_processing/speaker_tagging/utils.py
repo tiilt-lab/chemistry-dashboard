@@ -96,7 +96,6 @@ def cross_correlation(signal1, signal2, sr, mode):
 			count += 1
 		except Exception as e:
 			return e
-			pass
 	return td
 
 
@@ -161,7 +160,6 @@ def calibration(signal1):
 		# signal2, sr1 = librosa.load(signal2, sr=44100)
 	except Exception as e:
 		return('[Calibration] error while loading audio signals: ', e)
-		exit(0)
 
 	signal1 = signal[0]
 	signal2 = signal[1]
