@@ -3,11 +3,49 @@ from tables.user import User
 from app import base_dir
 import json
 import logging
+import os
 import database
 import wrappers
 from utility import json_response
 
 api_routes = Blueprint('student', __name__)
+
+# Enrollment artifacts live with the processing services, not the web app:
+# voice prints as audiobiometrics/<username>.wav (+ .check.json quality
+# sidecar written by enrollment_check) and face embeddings as
+# facial_embeddings/<username>.npy.
+_SRC_DIR = os.path.abspath(os.path.join(base_dir, '..'))
+_VOICE_DIR = os.path.join(_SRC_DIR, 'audio_processing', 'audiobiometrics')
+_FACE_DIR = os.path.join(_SRC_DIR, 'video_processing', 'facial_embeddings')
+
+
+def _voice_paths(username):
+    base = os.path.join(_VOICE_DIR, username)
+    return base + '.wav', base + '.check.json'
+
+
+def _enrollment_fields(username):
+    wav, check = _voice_paths(username)
+    fields = {
+        'voice_enrolled': os.path.isfile(wav),
+        'voice_check': None,
+        'face_enrolled': os.path.isfile(os.path.join(_FACE_DIR, username + '.npy')),
+    }
+    if fields['voice_enrolled'] and os.path.isfile(check):
+        try:
+            with open(check) as f:
+                fields['voice_check'] = json.load(f)
+        except Exception:
+            pass
+    return fields
+
+
+def _student_in_scope(user, username):
+    # Admins see everyone; users only students who appeared in their sessions
+    # (same linkage the Students page overview uses).
+    if user.get('role') in ['admin', 'super']:
+        return True
+    return len(database.get_student_activity(username, owner_id=user['id'])) > 0
 
 # Roster + participation stats for the Students page. Admins see every
 # student; regular users see only students who have appeared in their own
@@ -23,8 +61,26 @@ def students_overview(**kwargs):
         entry = student.json()
         entry['session_count'] = int(session_count or 0)
         entry['last_active'] = (str(last_active) + ' UTC') if last_active else None
+        entry.update(_enrollment_fields(student.username))
         result.append(entry)
     return json_response(result)
+
+
+# Stream a student's voice-fingerprint recording so its quality can be
+# checked by ear. Scoped like everything else on the Students page.
+@api_routes.route('/api/v1/students/<int:student_id>/fingerprint_audio', methods=['GET'])
+@wrappers.verify_login()
+def student_fingerprint_audio(student_id, **kwargs):
+    user = kwargs['user']
+    student = database.get_students(id=student_id)
+    if not student:
+        return json_response({'message': 'Student not found.'}, 404)
+    if not _student_in_scope(user, student.username):
+        return json_response({'message': 'Not authorized for this student.'}, 403)
+    wav, _ = _voice_paths(student.username)
+    if not os.path.isfile(wav):
+        return json_response({'message': 'No voice enrollment on file.'}, 404)
+    return send_file(wav, mimetype='audio/wav', conditional=True)
 
 
 # Drill-down for one student: the sessions/groups they appeared in (scoped

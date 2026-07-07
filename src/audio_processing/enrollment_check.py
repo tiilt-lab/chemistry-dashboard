@@ -21,6 +21,7 @@ Run `python enrollment_check.py --warm` (from this directory, service venv) to
 pre-compute the cache for existing enrollments.
 """
 
+import json
 import logging
 import os
 import wave
@@ -169,25 +170,30 @@ def check_enrollment(wav_path, alias, model, biometric_dir=None):
 
     ok = not reasons
     cache = os.path.splitext(wav_path)[0] + _CACHE_SUFFIX
-    if ok and full_emb is not None:
+    if full_emb is not None:
+        # Cache regardless of verdict: whatever WAV survives on disk IS the
+        # enrollment other students get cross-matched against. When the gate
+        # rejects, server.py deletes the WAV and its sidecars together.
         try:
             np.save(cache, full_emb)
         except Exception as e:
             logging.warning("enrollment check: could not cache %s: %s", cache, e)
-    elif not ok and os.path.isfile(cache):
-        # Never leave a cached embedding for a WAV that is about to be deleted.
-        try:
-            os.remove(cache)
-        except Exception:
-            pass
 
     verdict = {
         "ok": ok,
         "message": " ".join(reasons),
+        "duration_seconds": round(len(x) / float(sr), 1),
         "net_speech_seconds": round(speech_seconds, 1),
         "self_similarity": None if self_sim is None else round(self_sim, 3),
         "nearest_other_similarity": None if nearest_sim is None else round(nearest_sim, 3),
     }
+    # Sidecar verdict so the web app can show enrollment quality without
+    # loading ECAPA (the Students page reads these).
+    try:
+        with open(os.path.splitext(wav_path)[0] + ".check.json", "w") as f:
+            json.dump(verdict, f)
+    except Exception as e:
+        logging.warning("enrollment check: could not write sidecar for %s: %s", alias, e)
     logging.info("enrollment check for %s: %s", alias, verdict)
     return verdict
 
@@ -201,17 +207,27 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--warm", action="store_true",
                         help="pre-compute embedding cache for all enrollments")
+    parser.add_argument("--survey", action="store_true",
+                        help="write <alias>.check.json quality sidecars for all "
+                             "enrollments (no WAV is modified or deleted)")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
-    if args.warm:
+    if args.warm or args.survey:
         model = SpeakerRecognition.from_hparams(
             source="speechbrain/spkrec-ecapa-voxceleb",
             savedir="pretrained_models/pretrained_ecapa")
         folder = cf.biometric_folder()
         wavs = [f for f in sorted(os.listdir(folder)) if f.endswith(".wav")]
         for i, name in enumerate(wavs, 1):
+            path = os.path.join(folder, name)
+            alias = os.path.splitext(name)[0]
             try:
-                _cached_embedding(os.path.join(folder, name), model)
-                print("[{0}/{1}] {2}".format(i, len(wavs), name))
+                if args.survey:
+                    v = check_enrollment(path, alias, model, folder)
+                    print("[{0}/{1}] {2}: {3}".format(
+                        i, len(wavs), name, "ok" if v["ok"] else v["message"][:80]))
+                else:
+                    _cached_embedding(path, model)
+                    print("[{0}/{1}] {2}".format(i, len(wavs), name))
             except Exception as e:
                 print("[{0}/{1}] {2} FAILED: {3}".format(i, len(wavs), name, e))

@@ -253,8 +253,13 @@ class ServerProtocol(WebSocketServerProtocol):
                 except Exception as e:
                     logging.warning('enrollment quality check failed to run: {0}'.format(e))
                 if verdict is not None and not verdict['ok'] and not self.fingerprint_force:
-                    if os.path.isfile(audio_fingerprint_file):
-                        os.remove(audio_fingerprint_file)
+                    # Remove the WAV and its sidecars (embedding cache +
+                    # verdict) together — a rejected recording must not linger
+                    # as an enrollment or as a stale quality report.
+                    base = os.path.splitext(audio_fingerprint_file)[0]
+                    for p in (audio_fingerprint_file, base + '.emb.npy', base + '.check.json'):
+                        if os.path.isfile(p):
+                            os.remove(p)
                     self.send_json({'type': 'quality_failed',
                                     'message': verdict['message'],
                                     'detail': verdict})

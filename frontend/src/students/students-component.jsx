@@ -72,6 +72,38 @@ const SORTS = {
         (parseDate(b.creation_date)?.getTime() || 0),
 }
 
+// Voice-print state from the overview's enrollment fields (the .check.json
+// verdict the audio service writes at capture time / via the survey run).
+// Three grades: weak = genuinely broken (near-silent, doesn't match itself,
+// or confusable with another enrolled voice); short = only fails the newer
+// 12s net-speech bar (every recording from the old 10s-cap era does — usable,
+// but worth redoing eventually); ok = passes everything.
+function voiceState(s) {
+    if (!s.voice_enrolled) return { label: "No voice", tone: "orange" }
+    const c = s.voice_check
+    if (!c) return { label: "Voice ✓", tone: "neutral" } // not yet checked
+    const ambiguous =
+        c.nearest_other_similarity != null &&
+        (c.nearest_other_similarity >= 0.5 ||
+            (c.self_similarity != null &&
+                c.nearest_other_similarity >= c.self_similarity))
+    const broken =
+        (c.net_speech_seconds ?? 0) < 5 ||
+        (c.self_similarity != null && c.self_similarity < 0.45) ||
+        ambiguous
+    if (broken) return { label: "Voice: weak", tone: "orange" }
+    if (c.ok === false) return { label: "Voice: short", tone: "neutral" }
+    return { label: "Voice ✓", tone: "teal" }
+}
+
+function enrollmentNeedsAttention(s) {
+    return (
+        !s.voice_enrolled ||
+        !s.face_enrolled ||
+        voiceState(s).label === "Voice: weak"
+    )
+}
+
 // Student roster with participation stats. Every signed-in user can view it;
 // the server scopes regular users to students seen in their own sessions.
 // Add / sync / edit / delete are admin-only.
@@ -82,7 +114,7 @@ function StudentsComponent(props) {
 
     const [students, setStudents] = useState(null)
     const [search, setSearch] = useState("")
-    const [filter, setFilter] = useState("all") // all | enrolled | not
+    const [filter, setFilter] = useState("all") // all | enrolled | not | attention
     const [sort, setSort] = useState({ key: "last_active", dir: "desc" })
     const [currentForm, setCurrentForm] = useState("")
     const [status, setStatus] = useState("")
@@ -144,6 +176,8 @@ function StudentsComponent(props) {
             list = list.filter((s) => s.biometric_captured === "yes")
         if (filter === "not")
             list = list.filter((s) => s.biometric_captured !== "yes")
+        if (filter === "attention")
+            list = list.filter((s) => enrollmentNeedsAttention(s))
         if (q)
             list = list.filter((s) =>
                 `${s.firstname} ${s.lastname} ${s.username}`
@@ -389,6 +423,30 @@ function StudentsComponent(props) {
         }
     }
 
+    // Sign-up refuses an existing username once biometric_captured is "yes",
+    // so a broken enrollment is otherwise stuck. Resetting the flag re-opens
+    // the same-username sign-up path (old files are replaced on re-record).
+    const allowReenrollment = async () => {
+        try {
+            const response = await new ApiService().httpRequestCall(
+                "api/v1/student/updatestudent",
+                "POST",
+                { id: target.id, biometric_captured: "no" },
+            )
+            if (response.status === 200) {
+                await loadStudents()
+                showStatus(
+                    "Re-enrollment enabled",
+                    `${target.username} can now redo the sign-up recording with the same username.`,
+                )
+            } else {
+                showStatus("Failed", "Could not enable re-enrollment.")
+            }
+        } catch {
+            showStatus("Failed", "The server could not be reached.")
+        }
+    }
+
     const syncStudents = async () => {
         setCurrentForm("Loading")
         try {
@@ -407,13 +465,14 @@ function StudentsComponent(props) {
     const exportCsv = () => {
         const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`
         const lines = [
-            "First name,Last name,Username,Enrolled,Sessions,Last active,Created",
+            "First name,Last name,Username,Voice,Face,Sessions,Last active,Created",
             ...(visible || []).map((s) =>
                 [
                     esc(s.firstname),
                     esc(s.lastname),
                     esc(s.username),
-                    s.biometric_captured === "yes" ? "yes" : "no",
+                    esc(voiceState(s).label),
+                    s.face_enrolled ? "yes" : "no",
                     s.session_count || 0,
                     s.last_active || "",
                     s.creation_date || "",
@@ -528,6 +587,7 @@ function StudentsComponent(props) {
                                 {filterChip("all", "All")}
                                 {filterChip("enrolled", "Enrolled")}
                                 {filterChip("not", "Not enrolled")}
+                                {filterChip("attention", "Needs attention")}
                             </div>
                             <div className="ml-auto flex gap-2">
                                 <button
@@ -701,23 +761,29 @@ function StudentsComponent(props) {
                                                         </span>
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-2.5">
-                                                    {s.biometric_captured ===
-                                                    "yes" ? (
+                                                <td
+                                                    className="px-4 py-2.5"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        setTarget(s)
+                                                        setCurrentForm("Enrollment")
+                                                    }}
+                                                    title="View enrollment details"
+                                                >
+                                                    <span className="flex flex-wrap gap-1">
                                                         <StatusPill
-                                                            tone="teal"
+                                                            tone={voiceState(s).tone}
                                                             dot
                                                         >
-                                                            Enrolled
+                                                            {voiceState(s).label}
                                                         </StatusPill>
-                                                    ) : (
                                                         <StatusPill
-                                                            tone="orange"
+                                                            tone={s.face_enrolled ? "teal" : "orange"}
                                                             dot
                                                         >
-                                                            Not enrolled
+                                                            {s.face_enrolled ? "Face ✓" : "No face"}
                                                         </StatusPill>
-                                                    )}
+                                                    </span>
                                                 </td>
                                                 <td className="px-4 py-2.5 text-right font-ahamono tabular-nums text-tiilt-ink">
                                                     {s.session_count > 0 ? (
@@ -755,6 +821,22 @@ function StudentsComponent(props) {
                                                             }
                                                         >
                                                             View activity
+                                                        </button>
+                                                        <button
+                                                            role="menuitem"
+                                                            className={
+                                                                contextStyle[
+                                                                    "menu-item"
+                                                                ]
+                                                            }
+                                                            onClick={() => {
+                                                                setTarget(s)
+                                                                setCurrentForm(
+                                                                    "Enrollment",
+                                                                )
+                                                            }}
+                                                        >
+                                                            Enrollment details
                                                         </button>
                                                         {canManage ? (
                                                             <button
@@ -819,6 +901,93 @@ function StudentsComponent(props) {
             </div>
 
             <GenericDialogBox onClose={closeDialog} show={currentForm !== ""}>
+                {currentForm === "Enrollment" && target ? (
+                    <div className={dlgBody}>
+                        <div className={dlgHeading}>
+                            Enrollment — {target.firstname} {target.lastname}
+                        </div>
+                        <div className="mb-1 text-sm font-semibold text-tiilt-ink">
+                            Voice fingerprint
+                        </div>
+                        {target.voice_enrolled ? (
+                            <>
+                                <audio
+                                    controls
+                                    preload="none"
+                                    className="mb-3 w-full"
+                                    src={`/api/v1/students/${target.id}/fingerprint_audio`}
+                                />
+                                {target.voice_check ? (
+                                    <div className="mb-3 flex flex-col gap-1.5 rounded-lg bg-tiilt-ground/60 px-3 py-2 text-xs text-tiilt-ink">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span>Clear speech in the recording</span>
+                                            <span className={"font-ahamono font-semibold " + ((target.voice_check.net_speech_seconds ?? 0) >= 12 ? "text-tiilt-teal-text" : "text-tiilt-orange-text")}>
+                                                {target.voice_check.net_speech_seconds ?? "?"}s
+                                                <span className="font-normal text-tiilt-muted"> / 12s needed</span>
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3" title="How well the two halves of the recording match each other. Low values mean noise or too little speech.">
+                                            <span>Matches itself</span>
+                                            <span className={"font-ahamono font-semibold " + ((target.voice_check.self_similarity ?? 0) >= 0.45 ? "text-tiilt-teal-text" : "text-tiilt-orange-text")}>
+                                                {target.voice_check.self_similarity ?? "—"}
+                                                <span className="font-normal text-tiilt-muted"> / 0.45 needed</span>
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3" title="Similarity to the closest OTHER enrolled voice. High values mean this student's speech can be confused with someone else's.">
+                                            <span>Confusable with another voice</span>
+                                            <span className={"font-ahamono font-semibold " + ((target.voice_check.nearest_other_similarity ?? 0) < 0.5 ? "text-tiilt-teal-text" : "text-tiilt-orange-text")}>
+                                                {target.voice_check.nearest_other_similarity ?? "—"}
+                                                <span className="font-normal text-tiilt-muted"> (0.50 = too close)</span>
+                                            </span>
+                                        </div>
+                                        {target.voice_check.ok === false ? (
+                                            <div className="mt-1 rounded-md bg-tiilt-orange/15 px-2.5 py-1.5 leading-relaxed text-tiilt-orange-text">
+                                                {target.voice_check.message ||
+                                                    "This recording failed the quality check."}
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                ) : (
+                                    <div className="mb-3 text-xs text-tiilt-muted">
+                                        No quality report yet for this recording.
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <div className="mb-3 rounded-md bg-tiilt-orange/15 px-3 py-2 text-xs text-tiilt-orange-text">
+                                No voice recording on file — this student's speech
+                                can only be attributed by diarization clustering.
+                            </div>
+                        )}
+                        <div className="mb-1 text-sm font-semibold text-tiilt-ink">
+                            Face enrollment
+                        </div>
+                        <div className="mb-3 text-xs text-tiilt-muted">
+                            {target.face_enrolled
+                                ? "A face embedding is on file. If this student is regularly reported as an unmatched face in video analysis, the embedding is poor — re-enrollment fixes it."
+                                : "No face embedding on file — this student cannot be identified in video."}
+                        </div>
+                        <div className="mb-3 rounded-lg bg-tiilt-soft px-3 py-2 text-xs leading-relaxed text-tiilt">
+                            To redo an enrollment, enable re-enrollment below,
+                            then have the student go through the sign-up
+                            recording again with the same username. New
+                            recordings are quality-checked automatically before
+                            they are accepted.
+                        </div>
+                        {target.biometric_captured === "yes" ? (
+                            <button
+                                className={dlgPrimary}
+                                onClick={allowReenrollment}
+                            >
+                                Allow re-enrollment
+                            </button>
+                        ) : null}
+                        <button className={dlgCancel} onClick={closeDialog}>
+                            Close
+                        </button>
+                    </div>
+                ) : null}
+
                 {currentForm === "AddStudent" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Add student</div>
