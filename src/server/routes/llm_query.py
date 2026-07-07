@@ -33,7 +33,14 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
     raw = ""
     if not metricObj:
         return json_response({'message': 'Missing data.'}, 400)
-    
+    # Missing fields must be a clean 400, not a KeyError 500 — the student
+    # dashboard sends incomplete payloads when a username has no metrics.
+    missing = [k for k in ('participant_name', 'sessionid', 'sessiondeviceid',
+                           'participant_level_metric')
+               if not metricObj.get(k)]
+    if missing:
+        return json_response({'message': 'Missing fields: %s' % ', '.join(missing)}, 400)
+
     exisiting_feedback = database.get_speaker_session_device_llm_report(username=metricObj['participant_name'], sessionId=metricObj['sessionid'], sessionDeviceId = metricObj['sessiondeviceid'])
     
     if exisiting_feedback and metricObj['retrieve_existing_report'] == 'true':

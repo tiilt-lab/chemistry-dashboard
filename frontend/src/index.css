@@ -160,12 +160,16 @@ html {
   @apply w-xs @sm:w-sm @3xl:w-2xl @6xl:w-2xl;
 }
 
+/* The stepped widths can exceed the actual container in the bands between
+   breakpoints (e.g. large-section goes 80rem wide once the container passes
+   72rem), which bled content off the right edge of the reflection dashboard.
+   max-w-full caps every step at the space that actually exists. */
 .wide-section {
-    @apply w-xs @sm:w-sm @3xl:w-3xl @6xl:w-6xl @7xl:w-7xl;
+    @apply w-xs max-w-full @sm:w-sm @3xl:w-3xl @6xl:w-6xl @7xl:w-7xl;
 }
 
 .large-section {
-  @apply w-xs @sm:w-sm @3xl:w-4xl @6xl:w-7xl @7xl:w-[95rem];
+  @apply w-xs max-w-full @sm:w-sm @3xl:w-4xl @6xl:w-7xl @7xl:w-[95rem];
 }
 
 .dropdown {

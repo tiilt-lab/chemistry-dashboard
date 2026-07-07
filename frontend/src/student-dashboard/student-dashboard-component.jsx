@@ -736,15 +736,27 @@ function StudentSessionDashboard() {
       setAlertMessage("Please select a session and a group to load the reflection dashboard ");
       setShowAlert(true);
     } else {
+      const priorPage = nextPage
       setNextPage(view);
       setReflectionDashboardDoneLoading(false)
-      let actionstatus = await extractParticipantData(selectedSessionDeviceId1)
+      // Every failure path must leave the loading state — a thrown error or
+      // false status used to strand the page on "Processing…" forever.
+      let actionstatus = false
+      try {
+        actionstatus = await extractParticipantData(selectedSessionDeviceId1)
+      } catch (error) {
+        console.log("loadReflectiondashboard", error)
+      }
       if (actionstatus) {
         const sess = previousSessions.current.find((ses) => ses.id === selectedSessionId1);
         const group = sessionDevices.find((dev) => dev.id === selectedSessionDeviceId1);
         setSessionNameForReflecDashboard(sess?.name + ": " + new Date(sess?.creation_date).toDateString())
         setGroupNameForReflecDashboard(group?.name)
         setReflectionDashboardDoneLoading(true)
+      } else {
+        setNextPage(priorPage)
+        setAlertMessage("The reflection dashboard couldn't be generated for this group — no analysis data was found for your username in it.");
+        setShowAlert(true);
       }
     }
 
@@ -753,14 +765,24 @@ function StudentSessionDashboard() {
   const loadReflectionDashboardForNewSelection = async (newSessionDeviceID) => {
     setdeviceIDRefectionDashboard(newSessionDeviceID)
     setReflectionDashboardDoneLoading(false)
-    let actionstatus = await extractParticipantData(newSessionDeviceID)
+    let actionstatus = false
+    try {
+      actionstatus = await extractParticipantData(newSessionDeviceID)
+    } catch (error) {
+      console.log("loadReflectionDashboardForNewSelection", error)
+    }
     if (actionstatus) {
       const sess = previousSessions.current.find((ses) => ses.id === selectedSessionId1);
       const group = selectFilteredDevice1.find((dev) => dev.id === newSessionDeviceID);
       setSessionNameForReflecDashboard(sess.name + ": " + new Date(sess.creation_date).toDateString())
       setGroupNameForReflecDashboard(group.name)
-      setReflectionDashboardDoneLoading(true)
+    } else {
+      setAlertMessage("The reflection dashboard couldn't be generated for this group — no analysis data was found for your username in it.");
+      setShowAlert(true);
     }
+    // Always leave the loading state; a failure shows the alert instead of
+    // spinning forever.
+    setReflectionDashboardDoneLoading(true)
   }
 
 
@@ -769,6 +791,12 @@ function StudentSessionDashboard() {
 
     let respObj = buildData("Participant level sesssion analysis", selectedSessionId1, deviceId, null, null)
     if (Object.keys(respObj).length === 0 || resp === false) {
+      return false;
+    }
+    // The username may not appear in this pod's metrics at all (wrong group,
+    // or a pod analyzed before this student joined) — bail cleanly instead of
+    // sending an incomplete request the server 500s on.
+    if (!respObj.participant_level_metric || !respObj.participant_level_metric.length) {
       return false;
     }
     console.log("Synthesized feedback: ",respObj)
@@ -968,10 +996,12 @@ function StudentSessionDashboard() {
       if (response.status === 200) {
         const jsonObj = await response.json()
         return jsonObj.answer
-      } else if (response.status === 400) {
-        console.log("LLM api response", response.message)
-        return null
       }
+      // Any non-200 (including 500s) must resolve to null — an undefined
+      // return here slipped past the callers' null checks and stranded the
+      // page on the loading dialog.
+      console.log("LLM api response status", response.status)
+      return null
     } catch (error) {
       console.log(
         "student dashboard loadReflectiondashboard",
