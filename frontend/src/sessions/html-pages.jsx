@@ -584,7 +584,11 @@ function SessionRow({ session, rowIndex, onOpen, openSessionDialog, endSession, 
                         )}
                     </span>
                 </td>
-                <td className="max-w-0 px-3 py-2" style={{ width: "38%" }}>
+                {/* min-w keeps the cell usable on phones: without it the
+                    38%/max-w-0 combo collapsed the column to ~3 characters
+                    and the status pill overflowed into the Date column
+                    (the table wrapper already scrolls horizontally). */}
+                <td className="max-w-0 min-w-44 overflow-hidden px-3 py-2" style={{ width: "38%" }}>
                     {editing ? (
                         <input
                             autoFocus
