@@ -72,12 +72,16 @@ function SignupPage() {
     useEffect(() => {
         if (mimeExtension !== null && mimetype !== null) {
             if (mimeExtension !== "" && (mimetype.endsWith("opus") || mimetype.endsWith("aac") || mimetype.endsWith("mp4a.40.2"))) {
-                //activate video websocket 
+                // The fingerprint handlers live on the live AUDIO service but
+                // the POSTHOC video service (/video_socket's live video server
+                // has no save-audio-video-fingerprinting handler — connecting
+                // there never acks and enrollment hangs on "Processing…").
                 audiows.current = new WebSocket(apiService.getAudioWebsocketEndpoint())
-                videows.current = new WebSocket(apiService.getVideoWebsocketEndpoint())
+                videows.current = new WebSocket(apiService.getVideoPosthocWebsocketEndpoint())
                 connect_audio_websocket_processor_service();
                 connect_video_websocket_processor_service();
             } else {
+                setCurrentForm("")
                 setAlertMessage("No Audio Source detected, please use another device");
                 setShowAlert(true);
             }
@@ -176,10 +180,23 @@ function SignupPage() {
 
     useEffect(() => {
         if (audioDisconnected || videoDisconnected) {
+            setCurrentForm("")
             setAlertMessage("You are Disconnected from the Server, please reload the page");
             setShowAlert(true);
         }
     }, [audioDisconnected, videoDisconnected])
+
+    // Watchdog: if the services haven't both acknowledged within 30s, stop
+    // the spinner and say so instead of processing forever.
+    useEffect(() => {
+        if (currentForm !== "processing" || (audioAuthenticated && videoAuthenticated)) return
+        const t = setTimeout(() => {
+            setCurrentForm("")
+            setAlertMessage("The enrollment services did not respond. Please try again in a moment.")
+            setShowAlert(true)
+        }, 30000)
+        return () => clearTimeout(t)
+    }, [currentForm, audioAuthenticated, videoAuthenticated])
 
     useEffect(() => {
         if (audioAuthenticated && videoAuthenticated) {
@@ -391,15 +408,29 @@ function SignupPage() {
     }
 
     const detectMediaSouceType = async () => {
-        const mediaType = await pickMimeType(constraintObj)
-        const mediaExt = (mediaType !== "" && mediaType.indexOf("webm") !== -1) ? "webm" : (mediaType !== "" && mediaType.indexOf("mp4") !== -1) ? "mp4" : ""
-        setMimeType(mediaType)
-        setMimeExtension(mediaExt)
+        // A rejected getUserMedia (permission denied, no camera) used to
+        // bubble out unhandled, stranding the page on "Processing…" forever.
+        try {
+            const mediaType = await pickMimeType(constraintObj)
+            const mediaExt = (mediaType !== "" && mediaType.indexOf("webm") !== -1) ? "webm" : (mediaType !== "" && mediaType.indexOf("mp4") !== -1) ? "mp4" : ""
+            setMimeType(mediaType)
+            setMimeExtension(mediaExt)
+        } catch (ex) {
+            setCurrentForm("")
+            setAlertMessage(
+                ex && ex.name === "NotAllowedError"
+                    ? "Camera and microphone access are needed to enroll. Please allow access and try again."
+                    : "No camera/microphone could be opened (" + ((ex && ex.name) || "error") + "). Enrollment needs both.",
+            )
+            setShowAlert(true)
+        }
     }
 
     const pickMimeType = async (constraintObj) => {
         const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
         const hasAudio = stream.getAudioTracks().length > 0;
+        // Probe only — release the devices (the capture page reopens them).
+        setTimeout(() => stream.getTracks().forEach((t) => t.stop()), 0);
 
         // Try best-to-widest support order.
         const candidates = [
