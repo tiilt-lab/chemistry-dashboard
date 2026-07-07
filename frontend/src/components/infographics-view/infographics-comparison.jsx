@@ -60,8 +60,8 @@ function AppInfographicsComparison(props) {
             hsemotion: "HSEmotion EfficientNet-B2 (AffectNet-8, open SOTA)",
         },
         attention: {
-            gazefollow: "Attended-visual-targets gaze model (Chong et al. 2020, GazeFollow) + YOLOv5m head detector",
-            gazelle: "Gaze-LLE (Meta 2024, DINOv2; open SOTA) + YOLOv5m head detector",
+            gazefollow: "Attended-visual-targets gaze model (Chong et al. 2020, GazeFollow)",
+            gazelle: "Gaze-LLE (Meta 2024, DINOv2; open SOTA)",
         },
         objects: {
             yolov4: "YOLOv4-P7 object detector (COCO)",
@@ -339,7 +339,7 @@ function AppInfographicsComparison(props) {
                             >
                                 {(props.spkr1VideoMetrics || []).length > 0 && (
 <div className="mb-2 flex flex-col gap-0.5">
-                                    <ModelNote label={models && models.attention && models.attention.label} fallback="Gaze-LLE (DINOv2, open SOTA) + YOLOv5m head detector" />
+                                    <ModelNote label={models && models.attention && models.attention.label} fallback="Gaze-LLE (DINOv2, open SOTA)" />
                                     <ModelNote label={models && models.emotion && models.emotion.label} fallback="HSEmotion EfficientNet-B2 (AffectNet-8)" />
                                     <ModelNote label={models && models.objects && models.objects.label} fallback="YOLO11m object detector (COCO)" />
                                 </div>
@@ -364,7 +364,7 @@ function AppInfographicsComparison(props) {
                             >
                                 {(props.spkr2VideoMetrics || []).length > 0 && (
 <div className="mb-2 flex flex-col gap-0.5">
-                                    <ModelNote label={models && models.attention && models.attention.label} fallback="Gaze-LLE (DINOv2, open SOTA) + YOLOv5m head detector" />
+                                    <ModelNote label={models && models.attention && models.attention.label} fallback="Gaze-LLE (DINOv2, open SOTA)" />
                                     <ModelNote label={models && models.emotion && models.emotion.label} fallback="HSEmotion EfficientNet-B2 (AffectNet-8)" />
                                     <ModelNote label={models && models.objects && models.objects.label} fallback="YOLO11m object detector (COCO)" />
                                 </div>

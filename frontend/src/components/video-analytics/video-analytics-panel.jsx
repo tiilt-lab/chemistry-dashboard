@@ -559,7 +559,7 @@ function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, o
                 <div className="mb-2">
                     <ModelNote
                         label={models && models.attention && models.attention.label}
-                        fallback="Gaze-LLE (DINOv2, open SOTA) + YOLOv5m head detector"
+                        fallback="Gaze-LLE (DINOv2, open SOTA)"
                     />
                 </div>
                 <div className="h-40">

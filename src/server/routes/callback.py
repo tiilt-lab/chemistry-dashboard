@@ -437,8 +437,8 @@ def _read_video_models():
 
 
 _ATTENTION_LABELS = {
-    "gazefollow": "Attended-visual-targets gaze model (Chong et al. 2020, GazeFollow) + YOLOv5m head detector",
-    "gazelle": "Gaze-LLE (Meta 2024, DINOv2; open SOTA) + YOLOv5m head detector",
+    "gazefollow": "Attended-visual-targets gaze model (Chong et al. 2020, GazeFollow)",
+    "gazelle": "Gaze-LLE (Meta 2024, DINOv2; open SOTA)",
 }
 _OBJECT_LABELS = {
     "yolov4": "YOLOv4-P7 object detector (COCO)",
@@ -458,7 +458,7 @@ _FACE_LABELS = {
 }
 _HEAD_LABELS = {
     "yolov5": "YOLOv5m head detector (CrowdHuman)",
-    "ultralytics": "YOLO11/YOLOv8 head detector (CrowdHuman)",
+    "ultralytics": "YOLOv8m head detector (SCUT-HEAD classroom dataset)",
 }
 
 
