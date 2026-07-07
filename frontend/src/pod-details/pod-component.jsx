@@ -3,6 +3,7 @@ import { DeviceService } from "../services/device-service";
 import { SessionService } from "../services/session-service";
 import { ActiveSessionService } from "../services/active-session-service";
 import { SessionModel } from "../models/session";
+import { SessionDeviceModel } from "../models/session-device";
 import { DeviceModel } from "../models/device";
 import { TranscriptModel } from "../models/transcript";
 import { KeywordUsageModel } from "../models/keyword-usage";
@@ -78,6 +79,15 @@ function PodComponent() {
       const deviceSub = activeSessionService.getSessionDevice(sessionDeviceId);
       if (deviceSub !== undefined) {
         setSessionDevice(deviceSub);
+      } else {
+        // Direct URL / stale store: fetch the pod so per-run provenance
+        // (posthoc_models) and metadata are available regardless of how the
+        // page was reached.
+        new SessionService()
+          .getSessionDeviceForClient(sessionDeviceId)
+          .then((r) => (r.status === 200 ? r.json() : null))
+          .then((d) => d && setSessionDevice(SessionDeviceModel.fromJson(d)))
+          .catch(() => {});
       }
     }
     if (transcripts.length <= 0) {

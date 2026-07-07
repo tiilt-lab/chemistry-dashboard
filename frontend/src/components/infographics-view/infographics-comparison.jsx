@@ -26,44 +26,80 @@ function AppInfographicsComparison(props) {
     // follow along while it plays.
     const [playbackTime, setPlaybackTime] = useState(null)
 
-    // Active transcription / scoring models, reported by the server from the
-    // audio processor's live config, so labels reflect what actually ran.
-    const [models, setModels] = useState(null)
-    // What actually transcribed the STORED rows: prefer the pod's per-run
-    // provenance (posthoc_models, stamped at completion) over the deployment
-    // config's live ASR that /api/v1/models reports.
-    const ASR_LABELS = {
-        "google-cloud-speech": "Google Cloud Speech-to-Text (video model, en-US)",
-        whisper: "Whisper (open, offline)",
-        whisperx: "WhisperX large-v3 (open; batched + word-aligned)",
-        qwen3: "Qwen3-ASR 1.7B + ForcedAligner (open)",
-        "qwen3-0.6b": "Qwen3-ASR 0.6B + ForcedAligner (open, fast)",
+    // Deployment-wide model registry from /api/v1/models (the audio/video
+    // services' live config). Used only as the FALLBACK: every module note in
+    // this view prefers the pod's own per-run provenance (posthoc_models,
+    // stamped when its analysis completed), so labels describe the models
+    // that actually produced the STORED rows, not whatever the deployment
+    // would use today.
+    const [globalModels, setGlobalModels] = useState(null)
+    // Label registry mirroring routes/callback.py, keyed by provenance field.
+    const PROVENANCE_LABELS = {
+        asr: {
+            "google-cloud-speech": "Google Cloud Speech-to-Text (video model, en-US)",
+            whisper: "Whisper (open, offline)",
+            whisperx: "WhisperX (open; batched + word-level alignment)",
+            qwen3: "Qwen3-ASR 1.7B + ForcedAligner (open)",
+            "qwen3-0.6b": "Qwen3-ASR 0.6B + ForcedAligner (open, fast)",
+        },
+        scorer: {
+            liwc: "the LIWC & Harvard General Inquirer lexicons",
+            open: "the Harvard General Inquirer lexicon (open)",
+            llm: "Google Gemini (LLM contextual scoring)",
+        },
+        embedder: {
+            "all-mpnet-base-v2": "MPNet sentence embedder (all-mpnet-base-v2)",
+            "bge-large-en-v1.5": "BGE large v1.5 (open SOTA)",
+        },
+        keywords: {
+            word2vec: "word2vec semantic matching (GoogleNews-300)",
+            embedding: "SentenceTransformer semantic matching (BGE, open)",
+        },
+        emotion: {
+            resmasking: "ResMaskingNet (FER-2013, 7 emotions)",
+            hsemotion: "HSEmotion EfficientNet-B2 (AffectNet-8, open SOTA)",
+        },
+        attention: {
+            gazefollow: "Attended-visual-targets gaze model (Chong et al. 2020, GazeFollow) + YOLOv5m head detector",
+            gazelle: "Gaze-LLE (Meta 2024, DINOv2; open SOTA) + YOLOv5m head detector",
+        },
+        objects: {
+            yolov4: "YOLOv4-P7 object detector (COCO)",
+            yolo11: "YOLO11m object detector (COCO, open SOTA)",
+        },
+    }
+    // /api/v1/models module key -> posthoc_models provenance key.
+    const MODULE_TO_PROVENANCE = {
+        transcription: "asr",
+        scoring: "scorer",
+        participation: "embedder",
+        keywords: "keywords",
+        emotion: "emotion",
+        attention: "attention",
+        objects: "objects",
     }
     const podModels =
         props.sessionDevice && props.sessionDevice.posthoc_models
+    // Same shape as /api/v1/models, resolved provenance-first, so children
+    // (VideoAnalyticsPanel etc.) inherit correct labels unchanged.
+    const models = (() => {
+        const out = { ...(globalModels || {}) }
+        for (const [module, field] of Object.entries(MODULE_TO_PROVENANCE)) {
+            const id = podModels && podModels[field]
+            if (id) {
+                out[module] = { id, label: PROVENANCE_LABELS[field][id] || id }
+            }
+        }
+        return out
+    })()
     const transcriptionLabel =
-        (podModels &&
-            podModels.asr &&
-            (ASR_LABELS[podModels.asr] || podModels.asr)) ||
-        (models && models.transcription && models.transcription.label)
-    // Same provenance-first rule for the E&T scorer: after a per-pod
-    // "Recompute E&T" the stored values come from the pod's chosen scorer,
-    // not the deployment default that /api/v1/models reports.
-    const SCORER_LABELS = {
-        liwc: "the LIWC & Harvard General Inquirer lexicons",
-        open: "the Harvard General Inquirer lexicon (open)",
-        llm: "Google Gemini (LLM contextual scoring)",
-    }
-    const scoringLabel =
-        (podModels &&
-            podModels.scorer &&
-            (SCORER_LABELS[podModels.scorer] || podModels.scorer)) ||
-        (models && models.scoring && models.scoring.label)
+        models.transcription && models.transcription.label
+    const scoringLabel = models.scoring && models.scoring.label
     useEffect(() => {
         new ApiService()
             .httpRequestCall("api/v1/models", "GET", {})
             .then((r) => (r.status === 200 ? r.json() : null))
-            .then((d) => d && setModels(d))
+            .then((d) => d && setGlobalModels(d))
             .catch(() => {})
     }, [])
 
