@@ -1114,6 +1114,29 @@ function StudentSessionDashboard() {
     return navigate("/")
   }
 
+  // Hierarchical back: from a pod/reflection/comparison view, return to the
+  // student's sessions overview; from the sessions list or the username
+  // entry, leave the dashboard.
+  const handleBack = () => {
+    const inPodView =
+      nextPage === "displaygrouppage" ||
+      nextPage === "displayreportpage" ||
+      nextPage === "Reflection Dashboard"
+    if (!inPodView) {
+      navigate("/")
+      return
+    }
+    // Reset the drill-down state so reopening a session (even the same one)
+    // auto-opens its group again.
+    sessionChosen.current = false
+    autoOpenedFor.current = null
+    setSelectedSessionDeviceId1(-1)
+    setSelectedSessionId1(-1)
+    setDetails("Individual")
+    setReflectionDashboardDoneLoading(false)
+    setNextPage("sessionlistpage")
+  }
+
   const loading = () => {
     return session.current === null || transcripts.length === 0
   }
@@ -1191,6 +1214,7 @@ function StudentSessionDashboard() {
       nextPage={nextPage}
       pageTitle={pageTitle.current}
       navigateToLogin={navigateToLogin}
+      handleBack={handleBack}
       sessiontype={sessiontype}
       setSessiontype={setSessiontype}
       changeTouppercase={changeTouppercase}

@@ -86,11 +86,13 @@ function AppSessionPage(props) {
                 )}
 
                 {props.seesions && props.seesions.length !== 0 ? (
-                    <div className="flex min-w-0 flex-1 flex-col px-3 sm:w-full sm:flex-none sm:px-6">
+                    <div className="flex min-w-0 flex-1 flex-col px-3 sm:min-h-0 sm:w-full sm:px-6">
                         <div className="mb-2 font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
                             Sessions
                         </div>
-                        <ScrollArea className="max-h-[220px] pr-1">
+                        {/* Fill the available sidebar height and scroll, rather
+                            than a fixed 220px cap that clipped the list. */}
+                        <ScrollArea className="max-h-[220px] pr-1 sm:max-h-none sm:min-h-0 sm:flex-1">
                             <div className="flex flex-row gap-2 sm:flex-col">
                                 {props.seesions.map((part, index) => (
                                     <button

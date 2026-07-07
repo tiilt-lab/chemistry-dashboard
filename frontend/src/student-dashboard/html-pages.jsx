@@ -1,6 +1,4 @@
 import { GenericDialogBox, DialogBox } from "../dialog/dialog-component"
-import { PodMicRing } from "../components/pod-mic-ring"
-import { POD_ON_COLOR, POD_OFF_COLOR, GLOW_COLOR } from "../components/pod-colors"
 import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { Appheader } from "../header/header-component"
@@ -9,7 +7,6 @@ import { pageShell, formCard } from "../components/layout-styles"
 import style from "./student-dashboard.module.css"
 import style2 from "../pod-details/pod.module.css"
 import React from "react"
-import Select from "react-select"
 import { AppInfographicsSessionComparison } from "../components/infographics-view/infographics_session-comparison"
 import { TranscriptsComponentClient } from "../transcripts/transcripts-component_client"
 import { CollaborationFeedbackDashboard } from "../components/reflection-dashboard-view/reflection-interactive-dashboard"
@@ -56,7 +53,7 @@ function StudentSessionDashboardPages(props) {
                             title={props.pageTitle}
                             leftText={false}
                             rightText={""}
-                            nav={() => props.navigateToLogin()}
+                            nav={() => (props.handleBack ? props.handleBack() : props.navigateToLogin())}
                         />
 
                         {props.nextPage === "reportoptionpage" && (
@@ -406,30 +403,7 @@ function StudentSessionDashboardPages(props) {
                             </button>
                         </div>
                     </div>
-                )) || props.currentForm === "Transcript" && (
-                    <div className={style["dialog-content"]}>
-                        <div className={style["dialog-heading"]}>
-                            Transcript
-                        </div>
-                        <div className={style["dialog-body"]}>
-                            {props.currentTranscript.transcript}
-                        </div>
-                        <div className={style["dialog-button-container"]}>
-                            <button
-                                className={`${style["dialog-button"]} ${style["right-button"]}`}
-                                onClick={props.closeDialog}
-                            >
-                                Close
-                            </button>
-                            <button
-                                className={`${style["dialog-button"]} ${style["left-button"]}`}
-                                onClick={props.seeAllTranscripts}
-                            >
-                                View All
-                            </button>
-                        </div>
-                    </div>
-                )}
+                ))}
             </GenericDialogBox>
             <DialogBox
                 itsclass={"add-dialog"}
