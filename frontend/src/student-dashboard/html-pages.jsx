@@ -16,6 +16,21 @@ import { CollaborationFeedbackDashboard } from "../components/reflection-dashboa
 import {SurveyCompletion} from "./survey-question"
 
 import MicIcon from "../Icons/Mic"
+import Camera from "../Icons/Camera"
+import Chevron from "../Icons/Chevron"
+import { StatusPill } from "../components/status-pill"
+
+// Same spreadsheet language as the instructor pages.
+const thCls =
+    "sticky top-0 bg-tiilt-ground px-4 py-2.5 text-left font-semibold whitespace-nowrap text-tiilt-ink"
+const fmtSessionDate = (s) =>
+    new Date(s.creation_date).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+    })
+const fmtMins = (secs) =>
+    secs > 0 ? `${Math.round(secs / 60)} min` : "—"
 
 function StudentSessionDashboardPages(props) {
 
@@ -151,36 +166,113 @@ function StudentSessionDashboardPages(props) {
                                 )}
                                 
 
-                                {props.nextPage === "displaygrouppage" && (
-                                    <div className="infographics-container mt-2 grow overflow-y-auto">
-                                        {props.sessionDevices !== null &&
-                                            props.sessionDevices.length === 0 ? (
-                                            <div className={style["load-text"]}>
-                                                {" "}
-                                                No Group found
+                                {props.nextPage === "sessionlistpage" && (
+                                    <div className="mt-2 grow overflow-y-auto px-4 py-4">
+                                        <div className="mx-auto max-w-3xl">
+                                            <div className="mb-3 text-sm text-tiilt-muted">
+                                                Your sessions — open one to see your
+                                                groups and reflections.
                                             </div>
-                                        ) : (
-                                            <></>
-                                        )}
-                                        {props.sessionDevices.length > 0 ? (
-                                            props.sessionDevices.map((device, index) => (
-                                                <div
-                                                    key={index}
-                                                    onClick={() => props.loadSelectedSessionDeviceMetrics(device.id)}
-                                                    className={style["pod-overview-button"]}
-                                                >
-                                                    <PodMicRing
-                                                        className={style["pod-overview-icon"]}
-                                                        color={device.connected ? POD_ON_COLOR : POD_OFF_COLOR}
-                                                        pulsing={!!device.button_pressed}
-                                                        pulseClassName={style.svgpulse}
-                                                    />
-                                                    <div>{device.name}</div>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <></>
-                                        )}
+                                            <div className="overflow-x-auto rounded-xl border border-tiilt-line bg-white">
+                                                <table className="w-full border-collapse text-left text-sm">
+                                                    <thead>
+                                                        <tr className="border-b border-tiilt-line">
+                                                            <th className={thCls + " w-10 text-center"}>#</th>
+                                                            <th className={thCls}>Session</th>
+                                                            <th className={thCls}>Date</th>
+                                                            <th className={thCls + " text-right"}>Duration</th>
+                                                            <th className={thCls} />
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {(props.previousSessions || []).map((s, i) => (
+                                                            <tr
+                                                                key={s.id}
+                                                                onClick={() => props.loadSelectedSessionMetrics(s)}
+                                                                title={`Open ${s.name}`}
+                                                                className="cursor-pointer border-t border-tiilt-line bg-white transition first:border-t-0 hover:bg-tiilt-soft/50"
+                                                            >
+                                                                <td className="px-4 py-2.5 text-center font-ahamono text-xs text-tiilt-muted">{i + 1}</td>
+                                                                <td className="px-4 py-2.5 font-semibold text-tiilt-ink">{s.name}</td>
+                                                                <td className="px-4 py-2.5 whitespace-nowrap text-tiilt-ink">{fmtSessionDate(s)}</td>
+                                                                <td className="px-4 py-2.5 text-right font-ahamono tabular-nums text-tiilt-ink">{fmtMins(s.length)}</td>
+                                                                <td className="px-4 py-2.5 text-right"><Chevron size={12} className="text-tiilt-muted" /></td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                                {(props.previousSessions || []).length === 0 ? (
+                                                    <div className="px-4 py-6 text-center text-sm text-tiilt-muted">
+                                                        No sessions found for this username yet.
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {props.nextPage === "displaygrouppage" && (
+                                    <div className="mt-2 grow overflow-y-auto px-4 py-4">
+                                        <div className="mx-auto max-w-3xl">
+                                            <div className="mb-3 text-sm text-tiilt-muted">
+                                                Your groups in this session — open one,
+                                                then use Reflection Dashboard or
+                                                Comparison in the sidebar.
+                                            </div>
+                                            <div className="overflow-x-auto rounded-xl border border-tiilt-line bg-white">
+                                                <table className="w-full border-collapse text-left text-sm">
+                                                    <thead>
+                                                        <tr className="border-b border-tiilt-line">
+                                                            <th className={thCls + " w-10 text-center"}>#</th>
+                                                            <th className={thCls + " w-12"}>Type</th>
+                                                            <th className={thCls}>Group</th>
+                                                            <th className={thCls}>Status</th>
+                                                            <th className={thCls} />
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {(props.sessionDevices || []).map((device, index) => (
+                                                            <tr
+                                                                key={device.id}
+                                                                onClick={() => props.loadSelectedSessionDeviceMetrics(device.id)}
+                                                                title={`Open ${device.name}`}
+                                                                className="cursor-pointer border-t border-tiilt-line bg-white transition first:border-t-0 hover:bg-tiilt-soft/50"
+                                                            >
+                                                                <td className="px-4 py-2.5 text-center font-ahamono text-xs text-tiilt-muted">{index + 1}</td>
+                                                                <td className="px-3 py-2.5">
+                                                                    <span
+                                                                        title={device.has_video ? "Video pod" : "Audio-only pod"}
+                                                                        className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-tiilt-soft text-tiilt-muted"
+                                                                    >
+                                                                        {device.has_video ? (
+                                                                            <Camera />
+                                                                        ) : (
+                                                                            <svg width="18" height="28" viewBox="0 0 17 27">
+                                                                                <MicIcon fill="currentColor" />
+                                                                            </svg>
+                                                                        )}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-4 py-2.5 font-semibold text-tiilt-ink">{device.name}</td>
+                                                                <td className="px-4 py-2.5">
+                                                                    {device.posthoc_analyzed_date ? (
+                                                                        <StatusPill tone="teal" dot className="text-[11px]">Analyzed</StatusPill>
+                                                                    ) : (
+                                                                        <StatusPill tone="neutral" className="text-[11px]">Not analyzed yet</StatusPill>
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-4 py-2.5 text-right"><Chevron size={12} className="text-tiilt-muted" /></td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                                {(props.sessionDevices || []).length === 0 ? (
+                                                    <div className="px-4 py-6 text-center text-sm text-tiilt-muted">
+                                                        No groups found for you in this session.
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
 

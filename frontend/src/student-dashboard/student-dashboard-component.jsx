@@ -31,6 +31,9 @@ const likertOptions = [["Very low","Low","Normal","High","Very high"],
 
 function StudentSessionDashboard() {
   const previousSessions = useRef([])
+  // False until the student explicitly opens a session from the table —
+  // keeps the landing on the sessions list.
+  const sessionChosen = useRef(false)
   const sessionsObjects = useRef({});
   const pageTitle = useRef("Dashboard")
   const session = useRef(null)
@@ -182,7 +185,10 @@ function StudentSessionDashboard() {
         //Load session groups the student joined
         setSelectedSessionDeviceId1(-1)
         setSelectFilteredDevice1(sessionDevices)
-        setNextPage("displaygrouppage")
+        // Land on the sessions table; only jump to a session's groups after
+        // the student explicitly opened one (the old behavior dumped the
+        // latest session's pod tiles with no way to see the session list).
+        setNextPage(sessionChosen.current ? "displaygrouppage" : "sessionlistpage")
       } else if (sessiontype === "currentsession" && !firstLoadCompleted) { //LOOK INTO THIS LOGIC, AND ENSURE SMOOTH OPERATION WITH LOADEDAFRESH
         // fetch the transcript
         fetchTranscript(session.current.id, setTranscripts)
@@ -255,7 +261,7 @@ function StudentSessionDashboard() {
       // ///we maintain a store that keeps already fetched transcript base session and device id
       // updateTranscriptVideoMetricStore(loadedAfresh, sessiontype,selectedSessionId1, selectedSessionDeviceId1,session1Transcripts,session1VideoMetrics)
 
-      setNextPage("displayreportpage")
+      setNextPage((p) => (p === "Reflection Dashboard" ? p : "displayreportpage"))
       setFirstLoadCompleted(true);
     }
 
@@ -281,7 +287,7 @@ function StudentSessionDashboard() {
         setEndTime2(Math.round(sessionLen * timeRange[1] * 100) / 100)
       }
 
-      setNextPage("displayreportpage")
+      setNextPage((p) => (p === "Reflection Dashboard" ? p : "displayreportpage"))
     }
 
   }, [transcriptDoneLoading, videoMetricDoneLoading, loadedAfresh, firstLoadCompleted]);
@@ -581,6 +587,7 @@ function StudentSessionDashboard() {
 
 
   const loadSelectedSessionMetrics = (newSession) => {
+    sessionChosen.current = true
     setTranscriptDoneLoading(false);
     setVideoMetricDoneLoading(false);
     setSession1Transcripts([]);
@@ -732,9 +739,14 @@ function StudentSessionDashboard() {
   //-----------------------------------------------------------------------//
 
   const loadReflectiondashboard = async (view) => {
-    if (selectedSessionId1 === -1 || selectedSessionDeviceId1 === -1) {
-      setAlertMessage("Please select a session and a group to load the reflection dashboard ");
-      setShowAlert(true);
+    // Auto-open the group when there is only one; alert with directions
+    // otherwise (previously this demanded a selection the UI never forced).
+    const deviceId = selectedSessionId1 === -1 ? -1 : ensureDeviceSelected()
+    if (selectedSessionId1 === -1 || deviceId === -1) {
+      if (selectedSessionId1 === -1) {
+        setAlertMessage("Open a session from the list first, then pick your group.");
+        setShowAlert(true);
+      }
     } else {
       const priorPage = nextPage
       setNextPage(view);
@@ -743,13 +755,13 @@ function StudentSessionDashboard() {
       // false status used to strand the page on "Processing…" forever.
       let actionstatus = false
       try {
-        actionstatus = await extractParticipantData(selectedSessionDeviceId1)
+        actionstatus = await extractParticipantData(deviceId)
       } catch (error) {
         console.log("loadReflectiondashboard", error)
       }
       if (actionstatus) {
         const sess = previousSessions.current.find((ses) => ses.id === selectedSessionId1);
-        const group = sessionDevices.find((dev) => dev.id === selectedSessionDeviceId1);
+        const group = sessionDevices.find((dev) => dev.id === deviceId);
         setSessionNameForReflecDashboard(sess?.name + ": " + new Date(sess?.creation_date).toDateString())
         setGroupNameForReflecDashboard(group?.name)
         setReflectionDashboardDoneLoading(true)
@@ -1035,9 +1047,30 @@ function StudentSessionDashboard() {
   // END OF IMPLEMENTATION FOR THE REFLECTION DASHBOARD 
   //-----------------------------------------------------------------------//
 
+  // A group must be open for either view. If the session has exactly one
+  // group, open it implicitly; otherwise ask the student to pick one.
+  const ensureDeviceSelected = () => {
+    if (selectedSessionDeviceId1 !== -1) return selectedSessionDeviceId1
+    if ((sessionDevices || []).length === 1) {
+      loadSelectedSessionDeviceMetrics(sessionDevices[0].id)
+      return sessionDevices[0].id
+    }
+    setAlertMessage(
+      sessionChosen.current
+        ? "Pick one of your groups from the list first."
+        : "Open a session from the list first, then pick your group.",
+    )
+    setShowAlert(true)
+    return -1
+  }
+
   const viewComparison = () => {
+    // Only setting `details` did nothing when the student was still on the
+    // sessions/groups list — the report view never opened.
+    if (ensureDeviceSelected() === -1) return
     setDetails("Comparison")
     setDisplaySingleSession(false);
+    setNextPage("displayreportpage")
   }
 
   const viewIndividual = () => {
