@@ -1,160 +1,166 @@
 import React from "react"
-import style from "./keywords.module.css"
-import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { DialogBox } from "../dialog/dialog-component"
-import Question from "../Icons/Question"
+
+const MAX_INLINE = 25
+
+// One chip per detected keyword: a similarity-tinted dot, the word, and how
+// often it came up. Clicking opens the strongest matching utterance in the
+// transcript.
+function KeywordChip({ k, onClick }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            title={`Strongest match ${Math.round(k.similarity)}% · said ${k.count} ${k.count === 1 ? "time" : "times"} — open in transcript`}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-tiilt-line bg-white px-2.5 py-1 text-xs font-semibold text-tiilt-ink transition hover:border-tiilt hover:bg-tiilt-soft"
+        >
+            <span
+                className="h-2 w-2 flex-none rounded-full"
+                style={{ backgroundColor: k.color }}
+                aria-hidden="true"
+            />
+            {k.word}
+            {k.count > 1 ? (
+                <span className="font-ahamono text-[10px] font-normal text-tiilt-muted">
+                    ×{k.count}
+                </span>
+            ) : null}
+        </button>
+    )
+}
+
+function segButton(active) {
+    return (
+        "cursor-pointer rounded-full px-3 py-1 text-xs font-semibold transition " +
+        (active
+            ? "bg-tiilt text-white"
+            : "bg-tiilt-line/40 text-tiilt-muted hover:bg-tiilt-soft hover:text-tiilt")
+    )
+}
 
 function AppKeywordsPage(props) {
+    const configured = (props.session.keywords || []).length > 0
+    const inline = props.displayKeywords.slice(0, MAX_INLINE)
+    const overflow = props.displayKeywords.length - inline.length
+
     return (
         <>
-            <div className="min-h-20 w-full">
-                <div className="mb-2 flex items-center justify-between">
-                    <button
-                        onClick={() => props.toggleDisplay(true)}
-                        className="cursor-pointer border-0 bg-transparent p-0"
-                        aria-label="About keyword detection"
-                    >
-                        <Question
-                            width={16}
-                            height={16}
-                            className="opacity-70"
-                            aria-hidden="true"
-                        />
-                    </button>
-                    <AppContextMenu label="Keyword display options" setcallback={props.setCallbackFunc}>
+            <div className="w-full">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="text-[11px] text-tiilt-muted">
+                        {props.displayKeywords.length > 0
+                            ? "Deeper dot = stronger match · click a keyword to open it in the transcript"
+                            : null}
+                    </div>
+                    <div className="flex flex-none gap-1" role="tablist" aria-label="Keyword view">
                         <button
-                            role="menuitem"
-                            className="mt-2.5 block w-full cursor-pointer px-2.5 text-left"
-                            onClick={() => {
-                                props.toggleGraph()
-                                props.callbackfunc(false)
-                            }}
+                            role="tab"
+                            aria-selected={!props.showGraph}
+                            className={segButton(!props.showGraph)}
+                            onClick={() => props.setShowGraph(false)}
                         >
-                            {props.showGraph ? "Show Words" : "Show Timeline"}
+                            Words
                         </button>
-                    </AppContextMenu>
+                        <button
+                            role="tab"
+                            aria-selected={props.showGraph}
+                            className={segButton(props.showGraph)}
+                            onClick={() => props.setShowGraph(true)}
+                        >
+                            Timeline
+                        </button>
+                    </div>
                 </div>
-                {!props.showGraph ? (
-                    <React.Fragment>
-                        {props.displayKeywords
-                            .slice(
-                                0,
-                                props.displayKeywords.length < 25
-                                    ? props.displayKeywords.length
-                                    : 25,
-                            )
-                            .map((displayKeyword, index) => (
-                                <span
-                                    key={index}
-                                    className={style["keyword"]}
-                                    style={{ color: `${displayKeyword.color}` }}
-                                    onClick={() =>
-                                        props.showKeywordContext(
-                                            displayKeyword.transcript_id,
-                                        )
-                                    }
-                                >
-                                    {displayKeyword.word}
-                                    {index !==
-                                    (props.displayKeywords.length < 25
-                                        ? props.displayKeywords.length
-                                        : 25) -
-                                        1 ? (
-                                        <span className={style["base"]}>
-                                            ,{" "}
-                                        </span>
-                                    ) : (
-                                        <></>
-                                    )}
-                                </span>
-                            ))}
 
-                        {props.displayKeywords.length == 0 ? (
-                            <div className={style["no-keywords"]}>
-                                No keywords detected
-                            </div>
-                        ) : (
-                            <></>
-                        )}
-                    </React.Fragment>
-                ) : (
-                    <></>
-                )}
+                {!props.showGraph ? (
+                    props.displayKeywords.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
+                            {inline.map((k) => (
+                                <KeywordChip
+                                    key={k.word}
+                                    k={k}
+                                    onClick={() => props.showKeywordContext(k.transcript_id)}
+                                />
+                            ))}
+                            {overflow > 0 ? (
+                                <button
+                                    type="button"
+                                    onClick={() => props.setShowDialog(true)}
+                                    className="inline-flex cursor-pointer items-center rounded-full bg-tiilt-line/40 px-2.5 py-1 text-xs font-semibold text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
+                                >
+                                    +{overflow} more
+                                </button>
+                            ) : null}
+                        </div>
+                    ) : (
+                        <div className="rounded-lg bg-tiilt-ground/60 px-3 py-2 text-xs text-tiilt-muted">
+                            {configured
+                                ? "None of this session's keywords (" +
+                                  props.session.keywords.join(", ") +
+                                  ") came up in this discussion."
+                                : "No keywords were configured for this session, so there is nothing to detect."}
+                        </div>
+                    )
+                ) : null}
 
                 {props.showGraph ? (
-                    <React.Fragment>
-                        <div className={style["timeline-container"]}>
-                            {props.session.keywords.map((keyword, index) => (
-                                <div
-                                    key={index}
-                                    className={style["keyword-timeline"]}
-                                >
-                                    <div className={style["keyword-text"]}>
+                    configured ? (
+                        <div className="flex flex-col gap-1">
+                            {props.session.keywords.map((keyword) => (
+                                <div key={keyword} className="flex items-center gap-3">
+                                    <div
+                                        className="w-24 flex-none truncate text-xs text-tiilt-muted"
+                                        title={keyword}
+                                    >
                                         {keyword}
                                     </div>
-                                    <div className={style["keyword-graph"]}>
-                                        <hr />
-                                        {props.keywordPoints[keyword].map(
+                                    <div className="relative h-6 w-[240px] flex-none">
+                                        <div className="absolute top-1/2 right-0 left-0 border-t border-tiilt-line" />
+                                        {(props.keywordPoints[keyword] || []).map(
                                             (point, index) => (
-                                                <div
+                                                <button
                                                     key={index}
-                                                    className={
-                                                        style["keyword-point"]
-                                                    }
+                                                    type="button"
+                                                    title={`"${point.word}" — open in transcript`}
+                                                    className="absolute top-1/2 h-3 w-3 -translate-y-1/2 cursor-pointer rounded-full border border-white/60 transition hover:scale-125"
                                                     style={{
-                                                        left:
-                                                            `${point.x}` + "px",
-                                                        backgroundColor: `${point.color}`,
+                                                        left: `${point.x - 6}px`,
+                                                        backgroundColor: point.color,
                                                     }}
                                                     onClick={() =>
-                                                        props.showKeywordContext(
-                                                            point.transcript_id,
-                                                        )
+                                                        props.showKeywordContext(point.transcript_id)
                                                     }
-                                                ></div>
+                                                />
                                             ),
                                         )}
                                     </div>
                                 </div>
                             ))}
                         </div>
-                        {props.session.keywords.length == 0 ? (
-                            <div className={style["no-keywords"]}>
-                                No keywords detected
-                            </div>
-                        ) : (
-                            <></>
-                        )}
-                    </React.Fragment>
-                ) : (
-                    <></>
-                )}
+                    ) : (
+                        <div className="rounded-lg bg-tiilt-ground/60 px-3 py-2 text-xs text-tiilt-muted">
+                            No keywords were configured for this session, so there is no
+                            timeline to draw.
+                        </div>
+                    )
+                ) : null}
             </div>
 
             <DialogBox
                 show={props.showDialog}
-                heading={"Keywords"}
-                message={props.displayKeywords.map((displayKeyword, index) => (
-                    <span
-                        key={index}
-                        className={style["keyword"]}
-                        style={{ color: `${displayKeyword.color}` }}
-                        onClick={() =>
-                            props.showKeywordContext(
-                                displayKeyword.transcript_id,
-                            )
-                        }
-                    >
-                        {displayKeyword.word}
-                        {index !==
-                        Object.keys(props.displayKeywords).length - 1 ? (
-                            <span className={style["base"]}>, </span>
-                        ) : (
-                            <></>
-                        )}
-                    </span>
-                ))}
-                closedialog={() => props.toggleDisplay(false)}
+                heading={"All detected keywords"}
+                message={
+                    <div className="flex flex-wrap gap-1.5">
+                        {props.displayKeywords.map((k) => (
+                            <KeywordChip
+                                key={k.word}
+                                k={k}
+                                onClick={() => props.showKeywordContext(k.transcript_id)}
+                            />
+                        ))}
+                    </div>
+                }
+                closedialog={() => props.setShowDialog(false)}
             />
         </>
     )
