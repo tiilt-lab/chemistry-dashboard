@@ -506,7 +506,8 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     // Labels come from the (provenance-merged) `models` prop when loaded.
     const fixedModules = [
         ["Facial emotion", "emotion", "HSEmotion EfficientNet-B2 (AffectNet-8)"],
-        ["Attention / gaze", "attention", "Gaze-LLE (DINOv2) + YOLOv5m heads"],
+        ["Attention / gaze", "attention", "Gaze-LLE (DINOv2, open SOTA)"],
+        ["Head / person detector", "head_detector", "YOLOv5m (CrowdHuman, 2021)"],
         ["Object of focus", "objects", "YOLO11m (COCO)"],
         ["Keyword matching", "keywords", "SentenceTransformer (BGE)"],
         ["Face recognition", "face", "dlib ResNet (128-D)"],
