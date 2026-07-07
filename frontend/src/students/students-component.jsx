@@ -968,18 +968,20 @@ function StudentsComponent(props) {
                                 : "No face embedding on file — this student cannot be identified in video."}
                         </div>
                         <div className="mb-3 rounded-lg bg-tiilt-soft px-3 py-2 text-xs leading-relaxed text-tiilt">
-                            To redo an enrollment, enable re-enrollment below,
-                            then have the student go through the sign-up
-                            recording again with the same username. New
-                            recordings are quality-checked automatically before
-                            they are accepted.
+                            Students can re-enroll themselves: they redo the
+                            sign-up recording with the same username and the
+                            same first/last name. New recordings are
+                            quality-checked automatically before being
+                            accepted. If their name was registered with a
+                            different spelling, use the button below to bypass
+                            the name check once.
                         </div>
                         {target.biometric_captured === "yes" ? (
                             <button
                                 className={dlgPrimary}
                                 onClick={allowReenrollment}
                             >
-                                Allow re-enrollment
+                                Allow re-enrollment (bypass name check)
                             </button>
                         ) : null}
                         <button className={dlgCancel} onClick={closeDialog}>

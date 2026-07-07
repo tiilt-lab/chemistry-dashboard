@@ -27,7 +27,9 @@ function ProfileCreationPage(props) {
                     <p className="mt-1 mb-6 text-sm text-tiilt-muted">
                         Enter your name and a username. On the next page you
                         will record a short video so BLINC can match your voice
-                        and face during analytics.
+                        and face during analytics. Enrolled before? Enter the
+                        same username and name to record a fresh sample — it
+                        replaces your old one.
                     </p>
 
                     <div className="flex max-w-md flex-col gap-4">

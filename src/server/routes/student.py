@@ -139,7 +139,19 @@ def add_students(**kwargs):
         database.save_changes()
         return json_response(student.json())
     else:
-        return json_response({'message': "Username already exists.", "data":student.json()}, 400)
+        # Existing username: allow self-service re-enrollment when the entered
+        # name matches the record (students have no passwords; the name check
+        # keeps a classmate from casually overwriting someone else's biometrics
+        # by typing their username). The client proceeds to the recording page
+        # when reenroll_allowed is set; a fresh recording replaces the stored
+        # voice print / face embedding under the same alias.
+        name_matches = (
+            (student.firstname or '').strip().lower() == firstname.strip().lower()
+            and (student.lastname or '').strip().lower() == lastname.strip().lower()
+        )
+        return json_response({'message': "Username already exists.",
+                              "data": student.json(),
+                              "reenroll_allowed": name_matches}, 400)
        
         
 @api_routes.route('/api/v1/student/updatestudent', methods=['POST'])

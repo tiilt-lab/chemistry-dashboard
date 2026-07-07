@@ -53,16 +53,19 @@ class AuthService {
             err => {
               if (err["message"] === "Username already exists."){
                 const student = StudentModel.fromJson(err["data"] );
-                if (student.biometric_captured === "yes"){
-                  setAlertMessage("The Username has been selected by anothr student, please enter a different one")
-                  setShowAlert(true)
-                }else{
+                // Re-enrollment is self-service: proceed to the recording page
+                // whenever the entered name matches the existing record (the
+                // server checks). A new recording replaces the old biometrics.
+                if (err["reenroll_allowed"] || student.biometric_captured !== "yes"){
                   setStudentObject(student)
+                }else{
+                  setAlertMessage("That username already belongs to a different student. If it's yours, enter your name exactly as you registered it — otherwise pick a different username.")
+                  setShowAlert(true)
                 }
               }
             }
           )
-          
+
           }
       },
       (apiError) => {
