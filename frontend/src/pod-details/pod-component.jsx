@@ -47,6 +47,11 @@ function PodComponent() {
   const [open, setOpen] = useState(true);
   const [selectedSpkralias, setSelectedSpkralias] = useState("");
   const [participantIDReflectionDashboard, setParticipantIDRefectionDashboard] = useState("")
+  // Participant whose AI narrative is still generating (inline banner, not a
+  // blocking dialog); guards against stale responses landing after a switch.
+  const [llmPendingFor, setLlmPendingFor] = useState("")
+  const latestParticipantRequest = useRef("")
+  const prefetchStarted = useRef(false)
   const { sessionId, sessionDeviceId } = useParams();
   const synthesizedFeedbackMetrics = useRef(null);
   const participants = useRef([])
@@ -233,10 +238,11 @@ function PodComponent() {
 
   useEffect(() => {
     if (participantIDReflectionDashboard !== "") {
-      let actionstatus = extractParticipantData(participantIDReflectionDashboard)
-      if (actionstatus) {
-        setCurrentParticipant(participantIDReflectionDashboard)
-      }
+      // Switch the view immediately — metrics are already local; the AI
+      // narrative streams in via the pending banner when not yet cached.
+      latestParticipantRequest.current = participantIDReflectionDashboard
+      setCurrentParticipant(participantIDReflectionDashboard)
+      extractParticipantData(participantIDReflectionDashboard)
     }
   }, [participantIDReflectionDashboard])
 
@@ -480,7 +486,13 @@ function PodComponent() {
     return retObj
   }
 
-  const extractParticipantData = async (participantId) => {
+  // Non-blocking participant load: the synthesized metrics for EVERY
+  // participant are already in memory (one fetch per pod), so a switch shows
+  // the new student's metrics instantly; only the AI narrative may need a
+  // ~30s Gemini generation, which renders as an inline pending banner instead
+  // of a page-blocking dialog. `background` prefetches without touching what
+  // is on screen (used to warm the remaining participants after first load).
+  const extractParticipantData = async (participantId, background = false) => {
     let respObj = buildData("Participant level sesssion analysis", participantId, null, null)
 
     if (!respObj || Object.keys(respObj).length === 0) {
@@ -488,38 +500,65 @@ function PodComponent() {
     }
 
     if (participantId in llmSessionAnalysis.current) {
-      selectedParticipantLLMAnalysis.current = llmSessionAnalysis.current[participantId]
-      selectedParticipantSynthesizedData.current = respObj
-      setSelectedMomentIdAndIndex([0, selectedParticipantSynthesizedData.current.participant_level_metric[0].windowid])
+      if (!background) {
+        selectedParticipantLLMAnalysis.current = llmSessionAnalysis.current[participantId]
+        selectedParticipantSynthesizedData.current = respObj
+        setSelectedMomentIdAndIndex([0, selectedParticipantSynthesizedData.current.participant_level_metric[0].windowid])
+        setLlmPendingFor("")
+      }
       return true
     }
 
+    if (!background) {
+      // Show this participant's metrics right away; AI panels go pending.
+      selectedParticipantLLMAnalysis.current = null
+      selectedParticipantSynthesizedData.current = respObj
+      setSelectedMomentIdAndIndex([0, respObj.participant_level_metric[0].windowid])
+      setLlmPendingFor(participantId)
+    }
+
     try {
-      setCurrentForm("awaitingllmresponse");
       const response = await new SessionService().getLLMFeedbackBasedOnMetrics(respObj);
 
       if (response.status === 200) {
         const jsonObj = await response.json()
         llmSessionAnalysis.current[participantId] = jsonObj.answer;
-        selectedParticipantLLMAnalysis.current = llmSessionAnalysis.current[participantId]
-        selectedParticipantSynthesizedData.current = respObj
-        loadprompthistory(participantId)
-        setSelectedMomentIdAndIndex([0, selectedParticipantSynthesizedData.current.participant_level_metric[0].windowid])
-        setCurrentForm("");
+        // Only update the screen if the user is still on this participant.
+        if (!background && latestParticipantRequest.current === participantId) {
+          selectedParticipantLLMAnalysis.current = llmSessionAnalysis.current[participantId]
+          loadprompthistory(participantId)
+          setLlmPendingFor("")
+        }
         return true
       } else {
         const errObj = await response.json().catch(() => ({}))
-        setCurrentForm("")
-        setLlmError(
-          "Couldn't generate the AI reflection: " +
-          (errObj.message || ("server returned " + response.status)),
-        )
+        if (!background) {
+          setLlmPendingFor("")
+          setLlmError(
+            "Couldn't generate the AI reflection: " +
+            (errObj.message || ("server returned " + response.status)),
+          )
+        }
         return false
       }
     } catch (error) {
-      setCurrentForm("")
-      setLlmError("Couldn't generate the AI reflection: " + error)
+      if (!background) {
+        setLlmPendingFor("")
+        setLlmError("Couldn't generate the AI reflection: " + error)
+      }
       return false
+    }
+  }
+
+  // After the first participant's reflection is up, quietly generate the
+  // rest so switching students is instant (reports persist server-side too).
+  const prefetchRemainingParticipants = async () => {
+    if (prefetchStarted.current) return
+    prefetchStarted.current = true
+    for (const p of participants.current) {
+      if (!(p in llmSessionAnalysis.current)) {
+        try { await extractParticipantData(p, true) } catch { /* best effort */ }
+      }
     }
   }
 
@@ -549,10 +588,15 @@ function PodComponent() {
       return
     }
     if (participants.current.length > 0) {
-      let actionstatus = await extractParticipantData(participants.current[0])
+      const first = participants.current[0]
+      latestParticipantRequest.current = first
+      setCurrentParticipant(first)
+      setDetails(view);
+      const actionstatus = await extractParticipantData(first)
       if (actionstatus) {
-        setCurrentParticipant(participants.current[0])
-        setDetails(view);
+        // Warm the other participants in the background so switching between
+        // students is instant.
+        prefetchRemainingParticipants()
       }
     }
   };
@@ -659,6 +703,7 @@ function PodComponent() {
       setIsThinking={setIsThinking}
       setParticipantIDRefectionDashboard={setParticipantIDRefectionDashboard}
       currentParticipant={currentParticipant}
+      llmPendingFor={llmPendingFor}
       selectedMomentIdAndIndex={selectedMomentIdAndIndex}
       setSelectedMomentIdAndIndex={setSelectedMomentIdAndIndex}
     />

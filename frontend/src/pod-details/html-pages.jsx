@@ -75,6 +75,7 @@ function PodComponentPages(props) {
                             <CollaborationFeedbackDashboard
                                 participants={props.participants}
                                 currentParticipant={props.currentParticipant}
+                                llmPendingFor={props.llmPendingFor}
                                 llmSessionAnalysis={
                                     props.selectedParticipantLLMAnalysis
                                 }
@@ -283,12 +284,8 @@ function PodComponentPages(props) {
                 )}
             </GenericDialogBox>
 
-            <WaitingDialog
-                itsclass={"add-dialog"}
-                heading={"Processing..."}
-                message={"Please wait..."}
-                show={props.currentForm === "awaitingllmresponse"}
-            />
+            {/* The AI reflection no longer blocks the page while generating —
+                the dashboard shows an inline pending banner instead. */}
 
             <ErrorDialog
                 message={props.llmError}

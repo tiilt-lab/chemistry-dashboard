@@ -227,7 +227,12 @@ function CollaborationFeedbackDashboard(props) {
     );
   }
 
-  if (!_hasAnalysis) {
+  // While the AI narrative for the selected participant is generating, keep
+  // the whole dashboard mounted (all metrics are local data) and show an
+  // inline banner — switching students must never block the page.
+  const llmPending = Boolean(props.llmPendingFor);
+
+  if (!_hasAnalysis && !llmPending) {
     return (
       <div className="rounded-xl border border-tiilt-line bg-white p-6 text-center text-sm text-tiilt-muted">
         AI collaboration analysis isn't available for this pod yet — it needs a
@@ -235,6 +240,15 @@ function CollaborationFeedbackDashboard(props) {
       </div>
     );
   }
+
+  const pendingBanner = llmPending ? (
+    <div className="mb-4 flex animate-pulse items-center gap-2 rounded-2xl border border-tiilt-line bg-tiilt-soft px-4 py-3 text-sm text-tiilt">
+      <Sparkles className="h-4 w-4 flex-none" />
+      Generating the AI reflection for {props.llmPendingFor}… the metrics below
+      are already live. First-time generation takes about 30 seconds; it's
+      instant afterwards.
+    </div>
+  ) : null;
 
   const strengthBox = (
     <div className="rounded-2xl border p-4 text-sm leading-6">
@@ -253,6 +267,8 @@ function CollaborationFeedbackDashboard(props) {
         heading={"Collaboration Reflection Dashboard"}
       >
         <div className={mode === "rating" ? "text-left" : "large-section text-left"}>
+
+          {pendingBanner}
 
           <motion.div
             initial={{ opacity: 0, y: 12 }}
