@@ -211,9 +211,24 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.currSpeaker = None
                 self.currAlias = None
         elif self.stream_data == 'audio-video-fingerprint':
+            # Any failure in here must reach the client — an unhandled
+            # exception used to bubble to onMessage's catch-all and the
+            # sign-up page waited on "Processing…" forever.
+            try:
+                self.process_fingerprint_blob(data)
+            except Exception as e:
+                logging.warning('fingerprint save failed: %s', e, exc_info=True)
+                self.send_json({'type': 'error',
+                                'message': 'Saving the recording failed on the server. Please try again.'})
+        else:
+            self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
+
+    def process_fingerprint_blob(self, data):
             self.vid_recorder.write(data)
             err = ""
             src = self.video_file+'.'+self.mediaExt
+            if not os.path.isfile(src):
+                raise RuntimeError('recording scratch file was not written: {0}'.format(src))
             audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}.{1}".format(self.currAlias,"wav"))
 
             with mp.VideoFileClip(src, audio=True) as clip:
@@ -268,8 +283,6 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.send_json({'type': 'saved',
                                     'message': "Biometric data captured successfully",
                                     'quality': verdict})
-        else:
-            self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 
     def send_json(self, message):
         payload = json.dumps(message).encode('utf8')

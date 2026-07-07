@@ -198,6 +198,20 @@ function SignupPage() {
         return () => clearTimeout(t)
     }, [currentForm, audioAuthenticated, videoAuthenticated])
 
+    // Save-phase watchdog: quality check + face embedding normally finish
+    // within a minute; past two minutes something server-side died without
+    // replying, so surface it instead of spinning forever.
+    useEffect(() => {
+        if (currentForm !== "processing" || !(audioAuthenticated && videoAuthenticated)) return
+        if (audioSaved && videoSaved) return
+        const t = setTimeout(() => {
+            setCurrentForm("")
+            setAlertMessage("Saving is taking too long — the server may have hit an error. Please try recording again.")
+            setShowAlert(true)
+        }, 120000)
+        return () => clearTimeout(t)
+    }, [currentForm, audioAuthenticated, videoAuthenticated, audioSaved, videoSaved])
+
     useEffect(() => {
         if (audioAuthenticated && videoAuthenticated) {
             if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN || videows.current === null || videows.current.readyState !== WebSocket.OPEN) return;

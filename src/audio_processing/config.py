@@ -11,6 +11,12 @@ def initialize():
     if record_original() or record_reduced():
         if not os.path.isdir(recordings_folder()):
             os.mkdir(recordings_folder())
+    # Enrollment scratch + voice-print folders. Their absence made the
+    # fingerprint save path crash server-side with no reply, leaving the
+    # sign-up page on "Processing…" forever.
+    for folder in (video_recordings_folder(), biometric_folder()):
+        if not os.path.isdir(folder):
+            os.makedirs(folder, exist_ok=True)
 
 def record_original():
     return str(config['record']['original']) in ['true', 'True', 't', '1']
