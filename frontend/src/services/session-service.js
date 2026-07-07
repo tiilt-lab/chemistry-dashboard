@@ -68,6 +68,14 @@ class SessionService {
     );
   }
 
+  renamePod(sessionId, sessionDeviceId, name) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/devices/${sessionDeviceId}/name`,
+      "PUT",
+      { name }
+    );
+  }
+
   updateSessionAnalysisConfig(sessionId, keywordListId, topicModelId) {
     return this.api.httpRequestCall(`api/v1/sessions/${sessionId}`, "PUT", {
       keywordListId: keywordListId,

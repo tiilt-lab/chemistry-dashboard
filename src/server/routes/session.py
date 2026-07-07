@@ -797,6 +797,27 @@ def set_help_button(**kwargs):
         return json_response()
     return json_response({'message': 'Session device not found.'}, 400)
 
+@api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/name', methods=['PUT'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def rename_session_device(session_id, device_id, **kwargs):
+    # Inline group rename from the pods overview (same UX as session rename).
+    name = sanitize((request.json or {}).get('name', '') or '').strip()
+    if not name:
+        return json_response({'message': 'Name must not be empty.'}, 400)
+    if len(name) > 64:
+        return json_response({'message': 'Name must not exceed 64 characters.'}, 400)
+    session_device = database.get_session_devices(id=device_id)
+    if not session_device or session_device.session_id != session_id:
+        return json_response({'message': 'Pod not found in this session.'}, 404)
+    session_device.name = name
+    database.save_changes()
+    # Live viewers of the session get the new name immediately.
+    socketio.emit('device_update', json.dumps(session_device.json()),
+                  room=str(session_device.session_id), namespace="/session")
+    return json_response(session_device.json())
+
+
 @api_routes.route('/api/v1/sessions/<int:session_id>/passcode', methods=['POST'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access

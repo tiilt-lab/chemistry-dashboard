@@ -46,7 +46,7 @@ function PodStatus({ device, enrich, queue }) {
     return <span className="text-xs text-tiilt-muted">—</span>
 }
 
-function PodRow({ device, enrich, onOpen, checked, onToggle, queue, index, lastSpoke }) {
+function PodRow({ device, enrich, onOpen, checked, onToggle, queue, index, lastSpoke, renameInline }) {
     const e = enrich || {}
     const name =
         device.name && String(device.name).trim()
@@ -54,6 +54,11 @@ function PodRow({ device, enrich, onOpen, checked, onToggle, queue, index, lastS
             : `Pod ${index + 1}`
     const dur = fmtDur(e.duration)
     const noData = e.has_data === false
+    const [editing, setEditing] = useState(false)
+    const commitRename = (value) => {
+        setEditing(false)
+        if (renameInline) renameInline(device, value)
+    }
     return (
         <tr
             onClick={noData ? undefined : onOpen}
@@ -63,7 +68,7 @@ function PodRow({ device, enrich, onOpen, checked, onToggle, queue, index, lastS
                     : `Open ${name}`
             }
             className={
-                "border-t border-tiilt-line bg-white transition first:border-t-0 " +
+                "group border-t border-tiilt-line bg-white transition first:border-t-0 " +
                 (noData
                     ? "cursor-not-allowed opacity-60"
                     : "cursor-pointer hover:bg-tiilt-soft/50")
@@ -112,6 +117,21 @@ function PodRow({ device, enrich, onOpen, checked, onToggle, queue, index, lastS
                 </span>
             </td>
             <td className="px-3 py-2">
+                {editing ? (
+                    <input
+                        autoFocus
+                        defaultValue={name}
+                        aria-label="Group name"
+                        maxLength={64}
+                        onClick={(ev) => ev.stopPropagation()}
+                        onKeyDown={(ev) => {
+                            if (ev.key === "Enter") commitRename(ev.target.value)
+                            if (ev.key === "Escape") setEditing(false)
+                        }}
+                        onBlur={(ev) => commitRename(ev.target.value)}
+                        className="w-full rounded-md border border-tiilt bg-white px-2 py-0.5 text-sm font-semibold text-tiilt-ink outline-none focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
+                    />
+                ) : (
                 <span className="flex items-center gap-2">
                     <span
                         title={name}
@@ -119,6 +139,19 @@ function PodRow({ device, enrich, onOpen, checked, onToggle, queue, index, lastS
                     >
                         {name}
                     </span>
+                    {renameInline ? (
+                        <button
+                            onClick={(ev) => {
+                                ev.stopPropagation()
+                                setEditing(true)
+                            }}
+                            aria-label={`Rename ${name}`}
+                            title="Rename group"
+                            className="flex h-6 w-6 flex-none cursor-pointer items-center justify-center rounded text-xs text-tiilt-muted opacity-0 transition group-hover:opacity-100 hover:bg-tiilt-soft hover:text-tiilt focus-visible:opacity-100"
+                        >
+                            {"✎"}
+                        </button>
+                    ) : null}
                     {device.connected ? (
                         lastSpoke && Date.now() - lastSpoke < 30000 ? (
                             <StatusPill tone="teal" pulse className="text-[11px]">
@@ -131,6 +164,7 @@ function PodRow({ device, enrich, onOpen, checked, onToggle, queue, index, lastS
                         )
                     ) : null}
                 </span>
+                )}
             </td>
             <td className="px-3 py-2 whitespace-nowrap">
                 <PodStatus device={device} enrich={enrich} queue={queue} />
@@ -532,6 +566,7 @@ function PodsOverviewPages(props) {
                                                         checked={props.selected && props.selected[device.id]}
                                                         onToggle={() => props.toggleSelect(device.id)}
                                                         queue={props.queueState && props.queueState[device.id]}
+                                                        renameInline={props.renamePodInline}
                                                         onOpen={() =>
                                                             props.goToDevice(device)
                                                         }

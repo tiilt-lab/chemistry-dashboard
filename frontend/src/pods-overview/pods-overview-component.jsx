@@ -232,6 +232,26 @@ function PodsOverviewComponent() {
     navigate("/sessions/" + session.id + "/pods/" + sessionDevice.id);
   };
 
+  // Inline group rename, same UX as the Manage Sessions inline rename.
+  // Mutate the store's device object too: the 2s poll copies the same model
+  // instances, so a purely-local state update would be overwritten until the
+  // device_update socket event lands.
+  const renamePodInline = (device, newName) => {
+    const trimmed = (newName || "").trim();
+    if (!trimmed || trimmed === device.name) return;
+    new SessionService().renamePod(session.id, device.id, trimmed).then(
+      (response) => {
+        if (response.status === 200) {
+          device.name = trimmed;
+          setSessionDevices((prev) => [...(prev || [])]);
+        }
+      },
+      (apierror) => {
+        console.log("pods-overview func: renamePodInline ", apierror);
+      },
+    );
+  };
+
   const goToSpeakerMetrics = (speakerID) => {
     navigate("/sessions/" + session.id + "/pods_session/" + speakerID);
   };
@@ -451,6 +471,7 @@ function PodsOverviewComponent() {
       openDialog={openDialog}
       navigateToSessions={navigateToSessions}
       sessionDevices={sessionDevices}
+      renamePodInline={renamePodInline}
       goToDevice={goToDevice}
       goToGraph={goToGraph}
       currentForm={currentForm}
