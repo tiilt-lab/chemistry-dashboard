@@ -214,6 +214,10 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.video_metric_analytics = VideoMetricAnalytics(
                         self.attention_detection, self.facial_emotion_detector,
                         self.image_object_detection, STOP_SIGNAL, source="post_hoc")
+                    # Optional TalkNCE active-speaker-detection pass, per-run.
+                    self.asd_choice = data.get('asd') or None
+                    self.asd_candidates = [s.get('alias') for s in (data.get('speakers') or [])
+                                           if s.get('alias')]
                     self.model_choices = {
                         'emotion_model': data.get('emotion_model') or cf.emotion_model(),
                         'attention_model': data.get('attention_model') or cf.attention_model(),
@@ -221,6 +225,8 @@ class ServerProtocol(WebSocketServerProtocol):
                         'face_model': cf.face_model(),
                         'head_model': cf.head_model(),
                     }
+                    if self.asd_choice:
+                        self.model_choices['asd_model'] = 'talknce-unitalk'
                     self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_{1}_{2}_({3})".format(self.config.auth_key,self.config.sessionId,self.config.deviceId,  str(time.ctime())))
                     #start processing
                     for speaker in data['speakers']:
@@ -343,15 +349,10 @@ class ServerProtocol(WebSocketServerProtocol):
         # Called by the processor when the run finishes: release the guard and
         # mark the pod complete server-side (survives a disconnected client).
         self._run_active = False
-        try:
-            if self.config:
-                running_video_processes.pop(self.config.auth_key, None)
-                callbacks.post_posthoc_completed(self.config.auth_key, getattr(self, 'model_choices', None))
-        except Exception as e:
-            logging.warning("video on_run_complete cleanup failed: %s", e)
         # Per-pod CUDA cleanup: batch runs grew this process ~1.5 GiB per pod
         # until whisperx in the AUDIO service could no longer load (shared
-        # card) - same class of leak fixed in whisperx_asr.
+        # card) - same class of leak fixed in whisperx_asr. Runs BEFORE the
+        # optional ASD subprocess so that pass gets the freed headroom.
         try:
             import gc
             import torch
@@ -363,6 +364,38 @@ class ServerProtocol(WebSocketServerProtocol):
                              torch.cuda.memory_reserved() / 2**30)
         except Exception as e:
             logging.warning("video posthoc CUDA cleanup failed: %s", e)
+        # Optional active-speaker-detection pass (TalkNCE-UniTalk). Synchronous
+        # so the artifact exists before the pod is stamped complete; best-effort
+        # so an ASD failure never fails the video run itself.
+        try:
+            if getattr(self, 'asd_choice', None) == 'talknce' and getattr(self, 'video_file', None):
+                self.run_asd_pass()
+        except Exception as e:
+            logging.warning("ASD pass failed: %s", e)
+        try:
+            if self.config:
+                running_video_processes.pop(self.config.auth_key, None)
+                callbacks.post_posthoc_completed(self.config.auth_key, getattr(self, 'model_choices', None))
+        except Exception as e:
+            logging.warning("video on_run_complete cleanup failed: %s", e)
+
+    def run_asd_pass(self):
+        import subprocess
+        import sys as _sys
+        video_path = str(self.video_file)
+        artifact = os.path.splitext(video_path)[0] + '_asd.json'
+        runner = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'asd', 'run_asd.py')
+        candidates = ','.join(getattr(self, 'asd_candidates', []) or [])
+        cmd = [_sys.executable, runner, video_path, '--out', artifact,
+               '--gallery', cf.facial_embedding_folder()]
+        if candidates:
+            cmd += ['--candidates', candidates]
+        logging.info("ASD: launching TalkNCE pass for %s", video_path)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=90 * 60)
+        if proc.returncode != 0:
+            raise RuntimeError("run_asd failed (rc={0}): {1}".format(
+                proc.returncode, (proc.stderr or '')[-2000:]))
+        logging.info("ASD: artifact written: %s", artifact)
 
 
 if __name__ == '__main__':

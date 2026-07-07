@@ -422,6 +422,8 @@ class ServerProtocol(WebSocketServerProtocol):
             self.asr = WhisperXASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval,
                                    audio_file=self.audio_file, model_size=cf.whisper_model_size(),
                                    diarize=(getattr(self, 'diarizer_choice', None) == 'pyannote'),
+                                   diarizer=(getattr(self, 'diarizer_choice', None)
+                                             if getattr(self, 'diarizer_choice', None) in ('pyannote', 'sortformer') else None),
                                    max_speakers=_max_spk, enrolled=_enr, speaker_model=_spk_model)
         elif getattr(self, 'asr_choice', None) == 'whisper':
             from asr_connectors.whisper_asr import WhisperASR

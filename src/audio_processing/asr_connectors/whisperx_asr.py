@@ -22,7 +22,8 @@ from .base_asr import AsrResult
 class WhisperXASR:
     def __init__(self, audio_queue, transcript_queue, config, media_type,
                  interval, audio_file=None, model_size=None, diarize=False,
-                 max_speakers=None, enrolled=None, speaker_model=None):
+                 max_speakers=None, enrolled=None, speaker_model=None,
+                 diarizer=None):
         self.audio_queue = audio_queue
         self.transcript_queue = transcript_queue
         self.config = config
@@ -33,10 +34,13 @@ class WhisperXASR:
         self.max_speakers = max_speakers
         self.enrolled = enrolled
         self.speaker_model = speaker_model
-        # Optional pyannote speaker-diarization pass (open SOTA; the gated
-        # weights need HUGGING_FACE_HUB_TOKEN). Segments get cluster labels
-        # (SPEAKER_00...) attached as .speaker_tag on each AsrResult.
-        self.diarize = diarize
+        # Optional speaker-diarization pass. 'pyannote' (open SOTA clustering;
+        # gated weights need HUGGING_FACE_HUB_TOKEN) or 'sortformer' (NVIDIA
+        # streaming Sortformer 4-spk, runs in its own NeMo venv). Segments get
+        # cluster labels attached as .speaker_tag on each AsrResult. The bare
+        # `diarize` bool is the legacy pyannote switch.
+        self.diarizer = diarizer or ("pyannote" if diarize else None)
+        self.diarize = self.diarizer is not None
         self.running = False
 
     def start(self):
@@ -92,7 +96,22 @@ class WhisperXASR:
                 result = whisperx.align(result["segments"], align_model,
                                         metadata, audio, device)
                 cluster_map = {}
-                if self.diarize:
+                if self.diarizer == "sortformer":
+                    import pandas as pd
+                    from whisperx.diarize import assign_word_speakers
+                    from asr_connectors.sortformer_diar import run_sortformer
+                    logging.info("WhisperX: running Sortformer diarization (NeMo venv)")
+                    sf_turns = run_sortformer(self.audio_file)
+                    diarize_segments = pd.DataFrame(
+                        [{"start": s, "end": e, "speaker": spk} for s, e, spk in sf_turns])
+                    if len(diarize_segments):
+                        result = assign_word_speakers(diarize_segments, result)
+                    logging.info("WhisperX: Sortformer diarization attached")
+                    if self.enrolled and self.speaker_model and sf_turns:
+                        from asr_connectors.cluster_reconcile import build_cluster_to_enrolled_map
+                        cluster_map = build_cluster_to_enrolled_map(
+                            self.audio_file, sf_turns, self.enrolled, self.speaker_model)
+                elif self.diarize:
                     import os
                     from whisperx.diarize import DiarizationPipeline, assign_word_speakers
                     token = os.environ.get("HUGGING_FACE_HUB_TOKEN")

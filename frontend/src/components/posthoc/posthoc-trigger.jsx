@@ -46,6 +46,7 @@ const ASR_OPTIONS = [
 const DIARIZER_OPTIONS = [
     { id: "fingerprint", label: "ECAPA fingerprint matching (enrolled voices)" },
     { id: "pyannote", label: "pyannote 3.1 clustering (open SOTA; WhisperX only)" },
+    { id: "sortformer", label: "NVIDIA Sortformer streaming 4-spk v2.1 (WhisperX only)" },
 ]
 const EMBEDDER_OPTIONS = [
     { id: "bge-large-en-v1.5", label: "BGE large v1.5 (open SOTA embedder)" },
@@ -127,6 +128,11 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     const diarizer = diarizerChoice || "pyannote"
     const [embedderChoice, setEmbedderChoice] = useState(null)
     const embedder = embedderChoice || "bge-large-en-v1.5"
+    // Optional video active-speaker detection (TalkNCE trained on UniTalk):
+    // per-face speaking scores fused with transcripts after analysis. Off by
+    // default — it adds a full-video face-tracking pass to the run.
+    const [asdChoice, setAsdChoice] = useState(null)
+    const asd = asdChoice || "none"
 
     const running = Object.values(streams).some(
         (s) => s === "connecting" || s === "running",
@@ -401,6 +407,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                 init: {
                     ...baseInit,
                     type: "Initialize_video_processing_analytics",
+                    asd: asd === "none" ? null : asd,
                 },
             },
         ])
@@ -574,6 +581,22 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                                 {o.label}
                             </option>
                         ))}
+                    </select>
+                </ModuleRow>
+                <ModuleRow
+                    name="Active speaker detection"
+                    usedBy="Full re-run (video)"
+                >
+                    <select
+                        value={asd}
+                        onChange={(e) => setAsdChoice(e.target.value)}
+                        disabled={running}
+                        className={selectCls}
+                    >
+                        <option value="none">Off</option>
+                        <option value="talknce">
+                            TalkNCE trained on UniTalk (who is talking on camera)
+                        </option>
                     </select>
                 </ModuleRow>
                 <ModuleRow

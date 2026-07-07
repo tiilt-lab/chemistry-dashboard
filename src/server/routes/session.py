@@ -348,6 +348,63 @@ def get_session_device_video_info(session_id, session_device_id, **kwargs):
     })
 
 
+@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/video_attribution', methods=['GET'])
+def get_video_attribution(session_id, session_device_id, **kwargs):
+    # Fuse the TalkNCE active-speaker artifact (written by the video posthoc's
+    # optional ASD pass) with the pod's transcripts: for each utterance, which
+    # on-camera face was talking, and by what margin. Computed at read time so
+    # audio and video posthoc can complete in either order and no schema
+    # changes are needed.
+    original = _find_original_video(session_device_id)
+    if original is None:
+        return json_response({'message': 'No recording.'}, 404)
+    artifact = os.path.splitext(original)[0] + '_asd.json'
+    if not os.path.isfile(artifact):
+        return json_response({'message': 'No active-speaker analysis for this pod. '
+                                         'Re-run analysis with ASD enabled.'}, 404)
+    try:
+        with open(artifact) as f:
+            asd = json.load(f)
+    except Exception as e:
+        logging.warning('video_attribution: bad artifact %s: %s', artifact, e)
+        return json_response({'message': 'Active-speaker artifact unreadable.'}, 500)
+
+    fps = float(asd.get('fps') or 25)
+    offset = _video_start_offset(session_id, session_device_id)
+    # Collapse tracks onto identities (unidentified tracks keep a track key).
+    by_identity = {}
+    for tr in asd.get('tracks', []):
+        key = tr.get('identity') or 'track{0}'.format(tr.get('id'))
+        dest = by_identity.setdefault(key, {})
+        for frame, score in zip(tr.get('frames', []), tr.get('scores', [])):
+            dest[frame] = max(score, dest.get(frame, 0.0))
+
+    rows = []
+    for t in database.get_transcripts(session_device_id=session_device_id):
+        v0 = t.start_time - offset
+        v1 = v0 + max(1.0, float(t.length or 1.0))
+        f0, f1 = int(v0 * fps), int(v1 * fps)
+        if f1 <= 0:
+            continue
+        means = {}
+        for who, frames in by_identity.items():
+            vals = [frames[f] for f in range(f0, f1) if f in frames]
+            if len(vals) >= max(1, (f1 - f0) * 0.3):
+                means[who] = sum(vals) / len(vals)
+        if not means:
+            continue
+        ranked = sorted(means.items(), key=lambda kv: -kv[1])
+        margin = ranked[0][1] - (ranked[1][1] if len(ranked) > 1 else 0.0)
+        rows.append({
+            'transcript_id': t.id,
+            'start_time': t.start_time,
+            'video_speaker': ranked[0][0],
+            'margin': round(margin, 4),
+            'scores': {k: round(v, 4) for k, v in means.items()},
+        })
+    return json_response({'fps': fps, 'offset': offset, 'rows': rows})
+
+
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/posthoc_completed', methods=['POST'])
 @wrappers.verify_login(public=True)
 def mark_posthoc_completed(session_id, session_device_id, user, **kwargs):
