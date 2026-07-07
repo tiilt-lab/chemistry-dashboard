@@ -199,11 +199,16 @@ function StudentSessionDashboard() {
           autoOpenedFor.current !== session.current.id
         ) {
           // A student is almost always in a single group per session, so
-          // skip the pod-picker and open that group's reflection dashboard
-          // straight away. The groups table remains for the rare multi-pod
-          // case below.
+          // skip the pod-picker. On the survey-only route (no-feedback
+          // control condition) open the group's survey; otherwise open its
+          // reflection dashboard. The groups table remains for the rare
+          // multi-pod case below.
           autoOpenedFor.current = session.current.id
-          loadReflectiondashboard("Reflection Dashboard")
+          if (pathToSurveyOptions === "survey") {
+            loadSelectedSessionDeviceMetrics(sessionDevices[0].id)
+          } else {
+            loadReflectiondashboard("Reflection Dashboard")
+          }
         } else if (sessionDevices.length !== 1) {
           setSelectedSessionDeviceId1(-1)
           setNextPage("displaygrouppage")
