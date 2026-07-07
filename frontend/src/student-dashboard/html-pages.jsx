@@ -64,56 +64,25 @@ function StudentSessionDashboardPages(props) {
                                 <div className={pageShell}>
                                 <div className={formCard}>
                                 <div className="mx-auto flex w-full max-w-md grow flex-col gap-4 overflow-y-auto px-4 py-6">
-                                    <div>
-                                        <label htmlFor="preference" className="mb-1.5 block text-sm font-semibold text-tiilt-ink">
-                                            Session preference
-                                        </label>
-                                        <select
-                                            id="preference"
-                                            className={dlgInput}
-                                            value={props.sessiontype}
-                                            onChange={(e) =>
-                                                props.setSessiontype(e.target.value)
-                                            }
-                                        >
-                                            <option value="">Select preference…</option>
-                                            <option value="currentsession">Current session</option>
-                                            <option value="previoussessions">Previous sessions</option>
-                                        </select>
-                                    </div>
+                                    <p className="text-sm text-tiilt-muted">
+                                        Enter your username to see all of your
+                                        discussion sessions and reflections.
+                                    </p>
                                     <div>
                                         <label htmlFor="username" className="mb-1.5 block text-sm font-semibold text-tiilt-ink">
-                                            User name
+                                            Username
                                         </label>
                                         <input
                                             id="username"
                                             className={dlgInput}
-                                            placeholder="Your name"
+                                            placeholder="Your username"
+                                            autoFocus
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter")
+                                                    props.loadDashboard(e.target.value.trim())
+                                            }}
                                         />
                                     </div>
-                                    {props.sessiontype === "currentsession" ? (
-                                        <div>
-                                            <label htmlFor="passcode" className="mb-1.5 block text-sm font-semibold text-tiilt-ink">
-                                                Passcode
-                                            </label>
-                                            <input
-                                                id="passcode"
-                                                className={dlgInput}
-                                                value={props.pcode}
-                                                placeholder="4 characters"
-                                                onInput={(event) => props.changeTouppercase(event)}
-                                            />
-                                            {props.wrongInput ? (
-                                                <div className="mt-1 text-sm text-tiilt-danger">
-                                                    Your passcode must be 4 characters long.
-                                                </div>
-                                            ) : (
-                                                <></>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <></>
-                                    )}
                                 </div>
                                 <div className="w-full flex-none border-t border-tiilt-line bg-white">
                                     <div className="mx-auto w-full max-w-md px-4 py-4">
@@ -121,7 +90,6 @@ function StudentSessionDashboardPages(props) {
                                             className={dlgPrimary + " w-full"}
                                             onClick={() =>
                                                 props.loadDashboard(
-                                                    document.getElementById("preference").value.trim(),
                                                     document.getElementById("username").value.trim()
                                                 )
                                             }

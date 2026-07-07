@@ -52,7 +52,10 @@ function StudentSessionDashboard() {
   const [currentForm, setCurrentForm] = useState("")
   const [showFeatures, setShowFeatures] = useState([])
   const [showBoxes, setShowBoxes] = useState([])
-  const [sessiontype, setSessiontype] = useState("")
+  // The student view always lists every session the student appeared in
+  // (getSessionsByAlias), so there is no current-vs-previous choice to make —
+  // the flow is hardwired to the all-sessions path.
+  const [sessiontype, setSessiontype] = useState("previoussessions")
 
 
   const [wrongInput, setWrongInput] = useState(false)
@@ -359,25 +362,13 @@ function StudentSessionDashboard() {
   //  STEP1: Clicking the  continue buttion   call this function to verify the selections and input              
   // --------------------------------------------------------
 
-  const loadDashboard = (preference, username) => {
-    if (preference === '') {
-      setAlertMessage("Please Select a Preffered Session");
-      setShowAlert(true);
-      document.getElementById("preference").focus();
-    } else if (username === '') {
-      setAlertMessage("Please Enter Your User Name");
+  const loadDashboard = (username) => {
+    if (username === '') {
+      setAlertMessage("Please enter your username.");
       setShowAlert(true);
       document.getElementById("username").focus();
-    } else if (sessiontype === "currentsession" && pcode === "") {
-      setAlertMessage("Please Enter the Pass Code");
-      setShowAlert(true);
-      document.getElementById("passcode").focus();
     } else {
       verifyUsername(username)
-      if (sessiontype === "currentsession") {
-        fetchSession(pcode)
-      }
-
     }
   }
 
