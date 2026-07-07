@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from "react"
 import { Refresh } from "@/Icons"
+import { StatusPill } from "../status-pill"
 import { ApiService } from "../../services/api-service"
 import { SessionService } from "../../services/session-service"
 import { KeywordService } from "../../services/keyword-service"
@@ -58,7 +59,7 @@ const SCORER_OPTIONS = [
     { id: "llm", label: "Google Gemini (LLM)" },
 ]
 
-function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, models, lastAnalyzed }) {
+function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, models, lastAnalyzed, sessionDevice }) {
     const api = new ApiService()
     const sockets = useRef([])
     const heartbeat = useRef(null)
@@ -120,19 +121,21 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     // once /api/v1/models arrives.
     const [asrChoice, setAsrChoice] = useState(null)
     const [scorerChoice, setScorerChoice] = useState(null)
-    // Post-hoc defaults to the open SOTA stack (batch WhisperX + pyannote),
-    // independent of the live pipeline's config default.
-    const asr = asrChoice || "whisperx"
-    const scorer = scorerChoice || (models && models.scoring && models.scoring.id) || "liwc"
+    // Selectors prefill from the pod's per-run provenance (what produced the
+    // data on screen), so the panel reads as current -> next; the open SOTA
+    // stack is the fallback for pods that predate provenance stamping.
+    const podModels = (sessionDevice && sessionDevice.posthoc_models) || {}
+    const asr = asrChoice || podModels.asr || "whisperx"
+    const scorer = scorerChoice || podModels.scorer || (models && models.scoring && models.scoring.id) || "liwc"
     const [diarizerChoice, setDiarizerChoice] = useState(null)
-    const diarizer = diarizerChoice || "pyannote"
+    const diarizer = diarizerChoice || podModels.diarizer || "pyannote"
     const [embedderChoice, setEmbedderChoice] = useState(null)
-    const embedder = embedderChoice || "bge-large-en-v1.5"
+    const embedder = embedderChoice || podModels.embedder || "bge-large-en-v1.5"
     // Optional video active-speaker detection (TalkNCE trained on UniTalk):
     // per-face speaking scores fused with transcripts after analysis. Off by
     // default — it adds a full-video face-tracking pass to the run.
     const [asdChoice, setAsdChoice] = useState(null)
-    const asd = asdChoice || "none"
+    const asd = asdChoice || (podModels.asd_model ? "talknce" : "none")
 
     const running = Object.values(streams).some(
         (s) => s === "connecting" || s === "running",
@@ -499,46 +502,125 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     const selectCls =
         "w-full cursor-pointer rounded-lg border border-tiilt-line bg-white py-1.5 pr-8 pl-3 text-sm text-tiilt-ink transition outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30 disabled:cursor-default disabled:bg-tiilt-ground disabled:text-tiilt-muted"
 
-    // Config-selected modules: the live label comes from /api/v1/models (the
-    // `models` prop); these fallbacks are only shown before that loads, so they
-    // track the current default stack rather than the historical one.
+    // Fixed-implementation modules, shown read-only in the disclosure below.
+    // Labels come from the (provenance-merged) `models` prop when loaded.
     const fixedModules = [
         ["Facial emotion", "emotion", "HSEmotion EfficientNet-B2 (AffectNet-8)"],
         ["Attention / gaze", "attention", "Gaze-LLE (DINOv2) + YOLOv5m heads"],
         ["Object of focus", "objects", "YOLO11m (COCO)"],
         ["Keyword matching", "keywords", "SentenceTransformer (BGE)"],
+        ["Face recognition", "face", "dlib ResNet (128-D)"],
     ]
 
-    const ModuleRow = ({ name, usedBy, children }) => (
-        <div className="grid grid-cols-1 items-center gap-1 sm:grid-cols-[11rem_1fr_10rem] sm:gap-3">
-            <span className="text-sm font-semibold text-tiilt-ink">{name}</span>
+    // Marks a selector whose value differs from what produced the current
+    // data — the panel reads as "current -> next".
+    const willChange = (field, value) =>
+        podModels[field] !== undefined && podModels[field] !== value
+
+    const SelectorRow = ({ name, field, value, children }) => (
+        <div className="grid grid-cols-1 items-center gap-1 sm:grid-cols-[10rem_1fr] sm:gap-3">
+            <span className="flex items-center gap-2 text-sm font-semibold text-tiilt-ink">
+                {name}
+                {field && willChange(field, value) ? (
+                    <span className="rounded-full bg-tiilt-orange/15 px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap text-tiilt-orange-text">
+                        will change
+                    </span>
+                ) : null}
+            </span>
             {children}
-            <span className="text-xs text-tiilt-muted">{usedBy}</span>
         </div>
     )
+
+    const ActionCard = ({ title, time, tone, desc, children }) => (
+        <div className="flex flex-col gap-3 rounded-xl border border-tiilt-line bg-white p-4">
+            <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-semibold text-tiilt-ink">{title}</span>
+                <StatusPill tone={tone || "neutral"}>{time}</StatusPill>
+            </div>
+            <div className="text-xs leading-relaxed text-tiilt-muted">{desc}</div>
+            {children}
+        </div>
+    )
+
+    // Short names for the "current data" summary chips.
+    const shortName = (id) =>
+        ({
+            "google-cloud-speech": "Google STT",
+            whisperx: "WhisperX",
+            whisper: "Whisper",
+            qwen3: "Qwen3-ASR",
+            "qwen3-0.6b": "Qwen3-ASR 0.6B",
+            pyannote: "pyannote",
+            fingerprint: "voice prints",
+            sortformer: "Sortformer",
+            liwc: "LIWC",
+            open: "Inquirer",
+            llm: "Gemini LLM",
+            "bge-large-en-v1.5": "BGE",
+            "all-mpnet-base-v2": "MPNet",
+        })[id] || id
 
     return (
         <div className="flex w-full flex-col gap-4">
             <div>
-                <div className="text-sm text-tiilt-muted">
-                    Re-process this pod through the analysis models. A full
-                    re-run reads the stored recording off disk and regenerates
-                    the transcript and all metrics; the style re-computations
-                    re-score the existing transcript only (no re-transcription).
-                </div>
-                {lastAnalyzed && !running ? (
-                    <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-tiilt-teal-text">
+                {podModels.asr || podModels.scorer ? (
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs text-tiilt-muted">
+                        <span>Current data was produced by</span>
+                        {["asr", "diarizer", "scorer", "embedder"]
+                            .filter((f) => podModels[f])
+                            .map((f) => (
+                                <StatusPill key={f} tone="neutral">
+                                    {shortName(podModels[f])}
+                                </StatusPill>
+                            ))}
+                        {podModels.asd_model ? (
+                            <StatusPill tone="neutral">ASD</StatusPill>
+                        ) : null}
+                        {lastAnalyzed ? <span>on {lastAnalyzed}</span> : null}
+                    </div>
+                ) : lastAnalyzed && !running ? (
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-tiilt-teal-text">
                         <Refresh />
                         Last full analysis: {lastAnalyzed}
                     </div>
                 ) : null}
+                <details className="mt-1.5">
+                    <summary className="cursor-pointer text-xs text-tiilt-muted hover:text-tiilt">
+                        All models used (fixed modules)
+                    </summary>
+                    <div className="mt-2 flex flex-col gap-1 rounded-lg bg-tiilt-ground/50 px-3 py-2">
+                        {fixedModules.map(([name, key, fallback]) => (
+                            <div
+                                key={key}
+                                className="grid grid-cols-1 gap-0.5 text-xs sm:grid-cols-[10rem_1fr]"
+                            >
+                                <span className="font-semibold text-tiilt-ink">{name}</span>
+                                <span className="text-tiilt-muted">
+                                    {(models && models[key] && models[key].label) || fallback}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </details>
             </div>
 
-            <div className="flex flex-col gap-2 rounded-lg border border-tiilt-line bg-tiilt-ground/50 p-3">
-                <div className="font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
-                    Models used for the next run
-                </div>
-                <ModuleRow name="Transcription" usedBy="Full re-run">
+            <ActionCard
+                title="Full re-analysis"
+                time={`~${fullEstimateMin} min`}
+                tone="orange"
+                desc={
+                    <>
+                        Re-transcribes the stored recording from scratch and rebuilds
+                        every metric.{" "}
+                        <span className="font-semibold text-tiilt-orange-text">
+                            Replaces the transcript and all analytics for this pod.
+                        </span>{" "}
+                        Also uses the style scorer and participation embedder selected
+                        in the cards below.
+                    </>
+                }
+            >
+                <SelectorRow name="Transcription" field="asr" value={asr}>
                     <select
                         value={asr}
                         onChange={(e) => setAsrChoice(e.target.value)}
@@ -551,25 +633,8 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                             </option>
                         ))}
                     </select>
-                </ModuleRow>
-                <ModuleRow
-                    name="P&I semantic cohesion"
-                    usedBy="P&I recompute · Full re-run"
-                >
-                    <select
-                        value={embedder}
-                        onChange={(e) => setEmbedderChoice(e.target.value)}
-                        disabled={running}
-                        className={selectCls}
-                    >
-                        {EMBEDDER_OPTIONS.map((o) => (
-                            <option key={o.id} value={o.id}>
-                                {o.label}
-                            </option>
-                        ))}
-                    </select>
-                </ModuleRow>
-                <ModuleRow name="Speaker identification" usedBy="Full re-run">
+                </SelectorRow>
+                <SelectorRow name="Speaker identification" field="diarizer" value={diarizer}>
                     <select
                         value={diarizer}
                         onChange={(e) => setDiarizerChoice(e.target.value)}
@@ -582,11 +647,8 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                             </option>
                         ))}
                     </select>
-                </ModuleRow>
-                <ModuleRow
-                    name="Active speaker detection"
-                    usedBy="Full re-run (video)"
-                >
+                </SelectorRow>
+                <SelectorRow name="Active speaker detection" field={null} value={asd}>
                     <select
                         value={asd}
                         onChange={(e) => setAsdChoice(e.target.value)}
@@ -598,11 +660,25 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                             TalkNCE trained on UniTalk (who is talking on camera)
                         </option>
                     </select>
-                </ModuleRow>
-                <ModuleRow
-                    name="E&T scoring"
-                    usedBy="Full re-run · E&T recompute"
-                >
+                </SelectorRow>
+                <div>
+                    <button
+                        onClick={runFull}
+                        disabled={running}
+                        className={btn + " bg-tiilt text-white hover:bg-tiilt-deep"}
+                    >
+                        Re-run full analysis
+                    </button>
+                </div>
+            </ActionCard>
+
+            <ActionCard
+                title="Re-score Expression & Thinking style"
+                time="<1 min"
+                tone="teal"
+                desc="Re-scores emotional tone, analytic thinking, clout, authenticity, and certainty for each utterance of the EXISTING transcript. Nothing else changes."
+            >
+                <SelectorRow name="Scoring method" field="scorer" value={scorer}>
                     <select
                         value={scorer}
                         onChange={(e) => setScorerChoice(e.target.value)}
@@ -615,36 +691,58 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                             </option>
                         ))}
                     </select>
-                </ModuleRow>
-                {fixedModules.map(([name, key, fallback]) => (
-                    <ModuleRow
-                        key={key}
-                        name={name}
-                        usedBy={
-                            key === "participation"
-                                ? "P&I recompute · Full re-run"
-                                : key === "keywords" || key === "diarization"
-                                  ? "Full re-run"
-                                  : "Full re-run (video)"
-                        }
+                </SelectorRow>
+                <div>
+                    <button
+                        onClick={() => runStyle("et")}
+                        disabled={running || !hasTranscript}
+                        title={hasTranscript ? "" : "No transcript available to re-score."}
+                        className={btn + " border border-tiilt-line bg-white text-tiilt-ink hover:border-tiilt hover:bg-tiilt-soft"}
                     >
-                        <select disabled className={selectCls}>
-                            <option>
-                                {(models && models[key] && models[key].label) ||
-                                    fallback}
-                            </option>
-                        </select>
-                    </ModuleRow>
-                ))}
-                <div className="text-xs text-tiilt-muted">
-                    Greyed-out modules have a single implementation; dropdowns
-                    apply to the next run you start below.
+                        Re-score E&amp;T style
+                    </button>
                 </div>
-            </div>
+            </ActionCard>
 
-            <div className="flex flex-col gap-2 rounded-xl border border-tiilt-line bg-white p-3">
+            <ActionCard
+                title="Re-compute Participation & Impact"
+                time="<1 min"
+                tone="teal"
+                desc="Recomputes participation, cohesion, and social-impact metrics from the EXISTING transcript. Nothing else changes."
+            >
+                <SelectorRow name="Sentence embedder" field="embedder" value={embedder}>
+                    <select
+                        value={embedder}
+                        onChange={(e) => setEmbedderChoice(e.target.value)}
+                        disabled={running}
+                        className={selectCls}
+                    >
+                        {EMBEDDER_OPTIONS.map((o) => (
+                            <option key={o.id} value={o.id}>
+                                {o.label}
+                            </option>
+                        ))}
+                    </select>
+                </SelectorRow>
+                <div>
+                    <button
+                        onClick={() => runStyle("pi")}
+                        disabled={running || !hasTranscript}
+                        title={hasTranscript ? "" : "No transcript available to re-score."}
+                        className={btn + " border border-tiilt-line bg-white text-tiilt-ink hover:border-tiilt hover:bg-tiilt-soft"}
+                    >
+                        Re-compute P&amp;I
+                    </button>
+                </div>
+            </ActionCard>
+
+            <div className="flex flex-col gap-2 rounded-xl border border-dashed border-tiilt-line bg-tiilt-ground/40 p-4">
                 <div className="text-sm font-semibold text-tiilt-ink">
-                    Keywords &amp; topic model
+                    Pod settings — keywords &amp; topic model
+                </div>
+                <div className="text-xs text-tiilt-muted">
+                    Saved for future runs. Applying here does NOT start an
+                    analysis — run one above afterwards to see the effect.
                 </div>
                 <div className="grid grid-cols-1 items-center gap-1 sm:grid-cols-[11rem_1fr_10rem] sm:gap-3">
                     <span className="text-sm font-semibold text-tiilt-ink">Keyword list</span>
@@ -695,50 +793,10 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                         disabled={kwSel === "" && tmSel === ""}
                         className={btn + " border border-tiilt-line bg-white text-tiilt-ink hover:border-tiilt hover:bg-tiilt-soft"}
                     >
-                        Apply
+                        Save settings
                     </button>
                     <span className="text-xs text-tiilt-muted">{cfgMsg}</span>
                 </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-                <button
-                    onClick={runFull}
-                    disabled={running}
-                    className={btn + " bg-tiilt text-white hover:bg-tiilt-deep"}
-                >
-                    Re-run full analysis (~{fullEstimateMin} min)
-                </button>
-                <button
-                    onClick={() => runStyle("pi")}
-                    disabled={running || !hasTranscript}
-                    title={
-                        hasTranscript
-                            ? ""
-                            : "No transcript available to re-score."
-                    }
-                    className={
-                        btn +
-                        " border border-tiilt-line bg-white text-tiilt-ink hover:border-tiilt hover:bg-tiilt-soft"
-                    }
-                >
-                    Re-compute P&I Style (&lt;1 min)
-                </button>
-                <button
-                    onClick={() => runStyle("et")}
-                    disabled={running || !hasTranscript}
-                    title={
-                        hasTranscript
-                            ? ""
-                            : "No transcript available to re-score."
-                    }
-                    className={
-                        btn +
-                        " border border-tiilt-line bg-white text-tiilt-ink hover:border-tiilt hover:bg-tiilt-soft"
-                    }
-                >
-                    Re-compute E&T Style (&lt;1 min)
-                </button>
             </div>
 
             {action && Object.keys(streams).length > 0 ? (

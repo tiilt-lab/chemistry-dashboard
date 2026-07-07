@@ -566,6 +566,7 @@ function AppInfographicsComparison(props) {
                             <PosthocTrigger
                                 models={models}
                                 session={props.session}
+                                sessionDevice={props.sessionDevice}
                                 sessionDeviceId={props.sessionDevice.id}
                                 lastAnalyzed={props.sessionDevice.posthoc_analyzed_date}
                                 speakers={props.speakers}
