@@ -498,6 +498,29 @@ class ServerProtocol(WebSocketServerProtocol):
                 cm.remove(self, self.config.session_key, self.config.auth_key)
         except Exception as e:
             logging.warning("on_run_complete cleanup failed: %s", e)
+        # Queue-driven pods disconnect right after triggering, so signal_end
+        # bails out early (_run_active) and its stop()s never run — worker
+        # threads then outlive the run and pin this protocol together with the
+        # pod's ENTIRE in-memory audio buffer (~1-2 GiB/pod). That was the
+        # host-RAM growth that got the service kernel-OOM-killed every ~8-10
+        # batch pods. Stop everything and drop the big references explicitly.
+        try:
+            for worker in (self.asr, self.processor, self.audioreader,
+                           self.processorspeakermetric):
+                if worker:
+                    try:
+                        worker.stop()
+                    except Exception:
+                        pass
+            self.asr = None
+            self.processor = None
+            self.audioreader = None
+            self.processorspeakermetric = None
+            self.audio_buffer = None
+            import gc
+            gc.collect()
+        except Exception as e:
+            logging.warning("on_run_complete worker teardown failed: %s", e)
 
        
         else:
