@@ -171,10 +171,10 @@ def get_speaker_video_metrics_by_session_alias(session_id=None, student_username
         query = query.filter(SessionDevice.session_id == session_id) 
 
     if student_username != None:
-        query = query.join().filter(SpeakerVideoMetrics.student_username == student_username)
+        query = query.filter(SpeakerVideoMetrics.student_username == student_username)
 
     if device_id != None:
-        query = query.join().filter(SpeakerVideoMetrics.session_device_id == device_id)    
+        query = query.filter(SpeakerVideoMetrics.session_device_id == device_id)
 
     return query.all()
 
@@ -745,13 +745,15 @@ def get_transcripts_by_session_alias(session_id=None, speaker_tag=None,device_id
         query = query.join(SessionDevice).filter(Transcript.session_device_id == SessionDevice.id)
         query = query.filter(SessionDevice.session_id == session_id) 
 
+    # Plain filters — the argless .join() this used to chain crashes on
+    # SQLAlchemy 2 (join() requires a target) and never added anything.
     if speaker_tag != None:
-        query = query.join().filter(Transcript.speaker_tag == speaker_tag)
+        query = query.filter(Transcript.speaker_tag == speaker_tag)
 
     if device_id != None:
-        query = query.join().filter(Transcript.session_device_id == device_id)    
+        query = query.filter(Transcript.session_device_id == device_id)
 
-    return query.all()    
+    return query.all()
 
 
 
