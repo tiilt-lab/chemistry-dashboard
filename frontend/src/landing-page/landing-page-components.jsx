@@ -6,6 +6,10 @@ import { btnPrimaryTall as primaryClass, btnSecondaryTall as secondaryClass } fr
 
 const timeOfDay = updateTime()
 
+// Small tertiary action used inside the audience panels.
+const linkBtn =
+    "cursor-pointer rounded-lg border border-tiilt-line bg-white px-3 py-2 text-sm font-semibold text-tiilt-ink transition hover:border-tiilt hover:bg-tiilt-soft hover:text-tiilt"
+
 function LandingPageComponent() {
     const navigate = useNavigate()
 
@@ -14,58 +18,72 @@ function LandingPageComponent() {
             <h1 className="text-xl font-semibold text-tiilt-ink">
                 Good {timeOfDay}!
             </h1>
-            <p className="mt-1 mb-6 text-sm text-tiilt-muted">
-                Welcome to the BLINC platform. Sign in to manage recordings, or
-                join a live session.
+            <p className="mt-1 mb-5 text-sm text-tiilt-muted">
+                Welcome to the BLINC platform.
             </p>
 
-            <div className="flex max-w-md flex-col gap-3">
-                <button
-                    className={primaryClass}
-                    onClick={() => navigate("/login")}
-                >
-                    Sign in
-                </button>
-                <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-4">
+                {/* Students first: they are the most frequent visitors and
+                    their main action is joining a live session. */}
+                <section className="rounded-xl border border-tiilt-line bg-tiilt-ground/50 p-4">
+                    <div className="font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
+                        Students
+                    </div>
+                    <p className="mt-1 mb-3 text-sm text-tiilt-muted">
+                        Join your group&apos;s discussion, or come back later to
+                        reflect on it.
+                    </p>
                     <button
-                        className={secondaryClass}
+                        className={primaryClass + " w-full"}
                         onClick={() => navigate("/join")}
                     >
-                        Join session
+                        Join a live session
                     </button>
-                    <button
-                        className={secondaryClass}
-                        onClick={() => navigate("/signup")}
-                    >
-                        Create account
-                    </button>
-                </div>
-
-                <div className="mt-4 border-t border-tiilt-line pt-4">
-                    <div className="mb-2 font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
-                        Students &amp; raters
-                    </div>
-                    <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+                    <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
                         <button
-                            className="font-semibold text-tiilt hover:underline"
+                            className={linkBtn}
                             onClick={() => navigate("/student/dashboard")}
                         >
-                            Student dashboard
+                            Reflection dashboard
                         </button>
                         <button
-                            className="font-semibold text-tiilt hover:underline"
+                            className={linkBtn}
+                            onClick={() => navigate("/signup")}
+                            title="Record the voice and face sample BLINC uses to recognize you. Re-enroll any time with the same username."
+                        >
+                            Enroll voice &amp; face
+                        </button>
+                        <button
+                            className={linkBtn}
                             onClick={() => navigate("/student/survey")}
                         >
                             Submit survey
                         </button>
-                        <button
-                            className="font-semibold text-tiilt hover:underline"
-                            onClick={() => navigate("/expert/rating")}
-                        >
-                            Expert rating
-                        </button>
                     </div>
-                </div>
+                </section>
+
+                {/* Instructors / researchers: account-based sign-in. */}
+                <section className="rounded-xl border border-tiilt-line p-4">
+                    <div className="font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
+                        Instructors &amp; researchers
+                    </div>
+                    <p className="mt-1 mb-3 text-sm text-tiilt-muted">
+                        Manage sessions and review discussion analytics.
+                    </p>
+                    <button
+                        className={secondaryClass + " w-full"}
+                        onClick={() => navigate("/login")}
+                    >
+                        Sign in with your account
+                    </button>
+                </section>
+
+                <button
+                    className="self-start text-sm font-semibold text-tiilt hover:underline"
+                    onClick={() => navigate("/expert/rating")}
+                >
+                    Invited expert? Rate a discussion &rarr;
+                </button>
             </div>
         </BrandCard>
     )
