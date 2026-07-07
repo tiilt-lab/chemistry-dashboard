@@ -104,6 +104,56 @@ def _run_job(job):
     raise RuntimeError("timed out waiting for pod %s to finish" % device_id)
 
 
+# The audio post-hoc service accumulates host RSS across pods (worker threads
+# blocked in queue reads survive their run and pin each pod's in-RAM audio
+# buffer). Unchecked, the kernel OOM-kills it every ~8-10 pods, erroring the
+# in-flight pod. Between jobs the service is guaranteed idle, so the queue
+# recycles it there whenever it has grown past the threshold: a ~30s restart
+# instead of a crash with casualties.
+_AUDIO_UNIT = "blinc-audio-posthoc-processor.service"
+_AUDIO_RSS_RECYCLE_BYTES = 14 * 2 ** 30
+
+
+def _audio_service_rss():
+    import subprocess
+    try:
+        out = subprocess.run(
+            ["systemctl", "show", _AUDIO_UNIT, "-p", "MemoryCurrent", "--value"],
+            capture_output=True, text=True, timeout=10).stdout.strip()
+        return int(out)
+    except Exception:
+        return 0
+
+
+def _maybe_recycle_audio_service():
+    import socket
+    import subprocess
+    rss = _audio_service_rss()
+    if rss < _AUDIO_RSS_RECYCLE_BYTES:
+        return
+    logging.info("posthoc queue: audio service at %.1f GiB — recycling between pods",
+                 rss / 2 ** 30)
+    try:
+        subprocess.run(["sudo", "-n", "systemctl", "restart", _AUDIO_UNIT], timeout=90)
+    except Exception as e:
+        logging.warning("posthoc queue: audio service recycle failed: %s", e)
+        return
+    # The service binds its WS port after the models load, so an accepting
+    # port means it is ready for the next trigger.
+    port = int(os.getenv("DC_AUDIO_POSTHOC_WS_PORT", "9015"))
+    deadline = time.time() + 240
+    while time.time() < deadline:
+        try:
+            s = socket.create_connection(("127.0.0.1", port), timeout=2)
+            s.close()
+            logging.info("posthoc queue: audio service recycled and ready")
+            return
+        except OSError:
+            time.sleep(3)
+    logging.warning("posthoc queue: audio service not accepting after recycle; "
+                    "continuing anyway")
+
+
 def _worker_loop():
     while True:
         with _lock:
@@ -113,6 +163,7 @@ def _worker_loop():
             job["state"] = "running"
             job["started_at"] = time.time()
         try:
+            _maybe_recycle_audio_service()
             _run_job(job)
             job["state"] = "done"
         except Exception as e:
