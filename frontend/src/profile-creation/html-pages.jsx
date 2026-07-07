@@ -121,26 +121,16 @@ function ProfileCreationPage(props) {
                             console.log("full", blob, diag)
                         }
                         saveRecording={props.saveRecording}
+                        enrollStatus={props.enrollStatus}
+                        onDoneEnrolling={props.onDoneEnrolling}
                     />
                 </div>
             )}
 
             <ErrorDialog message={props.alertMessage} show={props.showAlert} onClose={props.closeAlert} />
 
-            <DialogBox
-                itsclass={"add-dialog"}
-                heading={"Success"}
-                message={props.displayText}
-                show={props.currentForm === "success"}
-                closedialog={props.closeDialog}
-            />
-
-            <WaitingDialog
-                itsclass={"add-dialog"}
-                heading={"Processing..."}
-                message={"Please wait..."}
-                show={props.currentForm === "processing"}
-            />
+            {/* Save spinner + success/failure now render inline in the
+                RecordingCoach (see enrollStatus) rather than as popups. */}
         </>
     )
 }

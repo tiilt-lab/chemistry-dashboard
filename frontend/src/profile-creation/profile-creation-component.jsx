@@ -39,6 +39,10 @@ function SignupPage() {
     // Consecutive voice-quality failures; after 3 the next save is accepted
     // as-is so an unusual voice or setup can never lock a student out.
     const qualityFails = useRef(0)
+    // Inline enrollment verification status shown on the recording page
+    // (replaces the success/quality popups): idle | saving | success |
+    // quality_failed | error, with a message.
+    const [enrollStatus, setEnrollStatus] = useState({ kind: "idle", message: "" })
     const navigate = useNavigate()
 
     const apiService = new ApiService()
@@ -173,8 +177,12 @@ function SignupPage() {
 
     useEffect(() => {
         if (studentUpdate) {
-            setDisplayText("Biometric data captured successfully")
-            setCurrentForm("success")
+            // Inline success on the recording page instead of a popup.
+            setCurrentForm("")
+            setEnrollStatus({
+                kind: "success",
+                message: "Your voice and face were verified and saved. You're enrolled.",
+            })
         }
     }, [studentUpdate])
 
@@ -200,17 +208,18 @@ function SignupPage() {
 
     // Save-phase watchdog: quality check + face embedding normally finish
     // within a minute; past two minutes something server-side died without
-    // replying, so surface it instead of spinning forever.
+    // replying, so surface it inline instead of spinning forever.
     useEffect(() => {
-        if (currentForm !== "processing" || !(audioAuthenticated && videoAuthenticated)) return
+        if (enrollStatus.kind !== "saving") return
         if (audioSaved && videoSaved) return
         const t = setTimeout(() => {
-            setCurrentForm("")
-            setAlertMessage("Saving is taking too long — the server may have hit an error. Please try recording again.")
-            setShowAlert(true)
+            setEnrollStatus({
+                kind: "error",
+                message: "Saving is taking too long — the server may have hit an error. Please record again.",
+            })
         }, 120000)
         return () => clearTimeout(t)
-    }, [currentForm, audioAuthenticated, videoAuthenticated, audioSaved, videoSaved])
+    }, [enrollStatus.kind, audioSaved, videoSaved])
 
     useEffect(() => {
         if (audioAuthenticated && videoAuthenticated) {
@@ -250,9 +259,14 @@ function SignupPage() {
                 if (qualityFails.current >= 3 && audiows.current?.readyState === WebSocket.OPEN) {
                     audiows.current.send(JSON.stringify({ type: "fingerprint-force" }))
                 }
+                // Fresh attempt: clear the previous save-state flags so the
+                // "both saved" effect only fires for THIS submission.
+                setAudioSaved(false)
+                setVideoSaved(false)
+                setStudentUpdated(false)
+                setEnrollStatus({ kind: "saving", message: "" })
                 videows.current.send(fixedBlob)
                 audiows.current.send(fixedBlob)
-                setCurrentForm("processing")
             } else if (mimetype.startsWith('video/mp4')) {
 
             }
@@ -513,19 +527,21 @@ function SignupPage() {
                 // }
                 else if (message['type'] === 'error') {
                     stopRecording();
-                    setAlertMessage(message['message']);
-                    setShowAlert(true);
-
+                    setCurrentForm("")
+                    setEnrollStatus({
+                        kind: "error",
+                        message: message['message'] || "Saving the recording failed. Please record again.",
+                    })
                 }
                 else if (message['type'] === 'quality_failed') {
                     qualityFails.current += 1
                     setCurrentForm("")
-                    setAlertMessage(
-                        (message['message'] || "The recording did not pass the voice-quality check.") +
-                        " Please record again." +
-                        (qualityFails.current >= 3 ? " (Your next recording will be accepted as-is.)" : "")
-                    )
-                    setShowAlert(true)
+                    setEnrollStatus({
+                        kind: "quality_failed",
+                        message:
+                            (message['message'] || "The recording did not pass the voice-quality check.") +
+                            (qualityFails.current >= 3 ? " Your next recording will be accepted as-is." : ""),
+                    })
                 }
                 else if (message['type'] === 'saved') {
                     setAudioSaved(true)
@@ -559,9 +575,11 @@ function SignupPage() {
                 // }
                 else if (message['type'] === 'error') {
                     stopRecording();
-                    setAlertMessage(message['message']);
-                    setShowAlert(true);
-
+                    setCurrentForm("")
+                    setEnrollStatus({
+                        kind: "error",
+                        message: message['message'] || "Processing the video failed. Please record again.",
+                    })
                 }
                 else if (message['type'] === 'saved') {
                     setVideoSaved(true)
@@ -686,7 +704,8 @@ function SignupPage() {
             closeDialog={closeDialog}
             displayText={displayText}
             currentForm={currentForm}
-
+            enrollStatus={enrollStatus}
+            onDoneEnrolling={() => navigateToLogin()}
         />
     )
 }

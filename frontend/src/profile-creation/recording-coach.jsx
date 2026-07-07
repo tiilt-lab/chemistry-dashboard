@@ -31,6 +31,8 @@ function RecordingCoach({
     onComplete,
     saveRecording,
     onTestClip,
+    enrollStatus = { kind: "idle" },
+    onDoneEnrolling,
     showScript = true,
     scriptText = DEFAULT_SCRIPT,
 }) {
@@ -476,8 +478,14 @@ function RecordingCoach({
                                 <button className="rounded-xl bg-red-600 px-4 py-2 text-white" onClick={stopRecording}>Stop</button>
                             )}
 
-                            {isRecordingStopped && actualTimeElapsed >= minDurationSec && (
-                                <button className="rounded-xl bg-emerald-600 px-4 py-2 text-white shadow" onClick={startSaveRecording}>Save</button>
+                            {isRecordingStopped && actualTimeElapsed >= minDurationSec && enrollStatus.kind !== "success" && (
+                                <button
+                                    className="rounded-xl bg-emerald-600 px-4 py-2 text-white shadow disabled:opacity-50"
+                                    onClick={startSaveRecording}
+                                    disabled={enrollStatus.kind === "saving"}
+                                >
+                                    {enrollStatus.kind === "quality_failed" || enrollStatus.kind === "error" ? "Save again" : "Save"}
+                                </button>
                             )}
                             {countdown !== null && <span className="ml-2 text-lg font-semibold">{countdown}</span>}
                             <span className="ml-auto text-sm text-tiilt-muted">{elapsed}s / {maxDurationSec}s</span>
@@ -493,6 +501,45 @@ function RecordingCoach({
                                 is checked automatically and you may be asked to re-record.
                             </div>
                         )}
+
+                        {/* Inline enrollment verification status (replaces the
+                            success / quality popups). */}
+                        {enrollStatus.kind === "saving" ? (
+                            <div className="mt-3 flex items-center gap-3 rounded-xl border border-tiilt-line bg-tiilt-ground/60 p-3 text-sm text-tiilt-ink">
+                                <span className="h-4 w-4 flex-none animate-spin rounded-full border-2 border-tiilt border-t-transparent" />
+                                Verifying and saving your voice and face…
+                            </div>
+                        ) : null}
+                        {enrollStatus.kind === "success" ? (
+                            <div className="mt-3 rounded-xl border border-tiilt-teal/40 bg-tiilt-teal/15 p-3">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-tiilt-teal-text">
+                                    <span aria-hidden="true">✓</span> Enrollment complete
+                                </div>
+                                <div className="mt-1 text-sm text-tiilt-ink">{enrollStatus.message}</div>
+                                <button
+                                    className="mt-3 rounded-xl bg-tiilt px-4 py-2 text-sm font-semibold text-white shadow hover:bg-tiilt-deep"
+                                    onClick={onDoneEnrolling}
+                                >
+                                    Done
+                                </button>
+                            </div>
+                        ) : null}
+                        {enrollStatus.kind === "quality_failed" ? (
+                            <div className="mt-3 rounded-xl border border-tiilt-orange/40 bg-tiilt-orange/15 p-3">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-tiilt-orange-text">
+                                    <span aria-hidden="true">↻</span> Please record again
+                                </div>
+                                <div className="mt-1 text-sm leading-relaxed text-tiilt-ink">{enrollStatus.message}</div>
+                            </div>
+                        ) : null}
+                        {enrollStatus.kind === "error" ? (
+                            <div className="mt-3 rounded-xl border border-tiilt-danger/40 bg-tiilt-danger-soft p-3">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-tiilt-danger">
+                                    <span aria-hidden="true">!</span> Something went wrong
+                                </div>
+                                <div className="mt-1 text-sm leading-relaxed text-tiilt-ink">{enrollStatus.message}</div>
+                            </div>
+                        ) : null}
                     </div>
                 </div>
             </section>
