@@ -36,17 +36,8 @@ function PodComponentPages(props) {
                             closingSession={props.onSessionClosing}
                             menus={[
                                 {
-                                    title: "Transcripts",
-                                    action: () => props.seeAllTranscripts(),
-                                },
-                                {
-                                    title: "Group",
+                                    title: "Group Overview",
                                     action: () => props.dashboardView("Group"),
-                                },
-                                {
-                                    title: "Comparison",
-                                    action: () =>
-                                        props.dashboardView("Comparison"),
                                 },
                                 {
                                     title: "Reflection Dashboard",
@@ -55,17 +46,12 @@ function PodComponentPages(props) {
                                             "Reflection Dashboard",
                                         ),
                                 },
-                            ]}
-                            participants={props.speakers.map(
-                                (speaker, index) => ({
-                                    alias: speaker.alias,
+                                {
+                                    title: "Individual Comparison",
                                     action: () =>
-                                        props.loadSpeakerMetrics(
-                                            speaker.id,
-                                            speaker.alias,
-                                        ),
-                                }),
-                            )}
+                                        props.dashboardView("Comparison"),
+                                },
+                            ]}
                         />
                     ) : (
                         <></>
