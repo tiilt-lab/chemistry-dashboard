@@ -34,6 +34,9 @@ function StudentSessionDashboard() {
   // False until the student explicitly opens a session from the table —
   // keeps the landing on the sessions list.
   const sessionChosen = useRef(false)
+  // Session id whose single group was already auto-opened, so the effect
+  // doesn't re-trigger the reflection load on every re-render.
+  const autoOpenedFor = useRef(null)
   const sessionsObjects = useRef({});
   const pageTitle = useRef("Dashboard")
   const session = useRef(null)
@@ -186,12 +189,25 @@ function StudentSessionDashboard() {
 
       if (sessiontype === "previoussessions") {
         //Load session groups the student joined
-        setSelectedSessionDeviceId1(-1)
         setSelectFilteredDevice1(sessionDevices)
-        // Land on the sessions table; only jump to a session's groups after
-        // the student explicitly opened one (the old behavior dumped the
-        // latest session's pod tiles with no way to see the session list).
-        setNextPage(sessionChosen.current ? "displaygrouppage" : "sessionlistpage")
+        if (!sessionChosen.current) {
+          // Landing: the sessions table.
+          setSelectedSessionDeviceId1(-1)
+          setNextPage("sessionlistpage")
+        } else if (
+          sessionDevices.length === 1 &&
+          autoOpenedFor.current !== session.current.id
+        ) {
+          // A student is almost always in a single group per session, so
+          // skip the pod-picker and open that group's reflection dashboard
+          // straight away. The groups table remains for the rare multi-pod
+          // case below.
+          autoOpenedFor.current = session.current.id
+          loadReflectiondashboard("Reflection Dashboard")
+        } else if (sessionDevices.length !== 1) {
+          setSelectedSessionDeviceId1(-1)
+          setNextPage("displaygrouppage")
+        }
       } else if (sessiontype === "currentsession" && !firstLoadCompleted) { //LOOK INTO THIS LOGIC, AND ENSURE SMOOTH OPERATION WITH LOADEDAFRESH
         // fetch the transcript
         fetchTranscript(session.current.id, setTranscripts)
