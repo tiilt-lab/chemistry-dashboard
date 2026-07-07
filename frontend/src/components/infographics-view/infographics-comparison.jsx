@@ -46,6 +46,19 @@ function AppInfographicsComparison(props) {
             podModels.asr &&
             (ASR_LABELS[podModels.asr] || podModels.asr)) ||
         (models && models.transcription && models.transcription.label)
+    // Same provenance-first rule for the E&T scorer: after a per-pod
+    // "Recompute E&T" the stored values come from the pod's chosen scorer,
+    // not the deployment default that /api/v1/models reports.
+    const SCORER_LABELS = {
+        liwc: "the LIWC & Harvard General Inquirer lexicons",
+        open: "the Harvard General Inquirer lexicon (open)",
+        llm: "Google Gemini (LLM contextual scoring)",
+    }
+    const scoringLabel =
+        (podModels &&
+            podModels.scorer &&
+            (SCORER_LABELS[podModels.scorer] || podModels.scorer)) ||
+        (models && models.scoring && models.scoring.label)
     useEffect(() => {
         new ApiService()
             .httpRequestCall("api/v1/models", "GET", {})
@@ -389,7 +402,7 @@ function AppInfographicsComparison(props) {
                                     showFeatures={props.showFeatures}
                                     selectedTime={selectedTime}
                                     onSelectTime={setSelectedTime}
-                                    scoringLabel={models && models.scoring && models.scoring.label}
+                                    scoringLabel={scoringLabel}
                                 />
                             </AppSectionBoxComponent>
                         )}
@@ -407,7 +420,7 @@ function AppInfographicsComparison(props) {
                                     showFeatures={props.showFeatures}
                                     selectedTime={selectedTime}
                                     onSelectTime={setSelectedTime}
-                                    scoringLabel={models && models.scoring && models.scoring.label}
+                                    scoringLabel={scoringLabel}
                                 />
                             </AppSectionBoxComponent>
                         )}
@@ -420,7 +433,7 @@ function AppInfographicsComparison(props) {
                             >
                                 {((props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts) || []).length > 0 && (
 <div className="mb-2">
-                                    <ModelNote prefix="Scored from the transcript with" label={models && models.scoring && models.scoring.label} fallback="the LIWC & Harvard General Inquirer lexicons" />
+                                    <ModelNote prefix="Scored from the transcript with" label={scoringLabel} fallback="the LIWC & Harvard General Inquirer lexicons" />
                                 </div>
 )}
                                 <AppRadarComponent
@@ -447,7 +460,7 @@ function AppInfographicsComparison(props) {
                             >
                                 {(props.spkr2Transcripts || []).length > 0 && (
 <div className="mb-2">
-                                    <ModelNote prefix="Scored from the transcript with" label={models && models.scoring && models.scoring.label} fallback="the LIWC & Harvard General Inquirer lexicons" />
+                                    <ModelNote prefix="Scored from the transcript with" label={scoringLabel} fallback="the LIWC & Harvard General Inquirer lexicons" />
                                 </div>
 )}
                                 <AppRadarComponent
