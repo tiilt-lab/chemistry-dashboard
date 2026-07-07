@@ -23,29 +23,24 @@ function LandingPageComponent() {
             </p>
 
             <div className="flex flex-col gap-4">
-                {/* Students first: they are the most frequent visitors and
-                    their main action is joining a live session. */}
+                {/* Students: reflect on past discussions, enroll, surveys.
+                    (Recording devices are joined to live sessions by the
+                    instructor, not by students — that lives below.) */}
                 <section className="rounded-xl border border-tiilt-line bg-tiilt-ground/50 p-4">
                     <div className="font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
                         Students
                     </div>
                     <p className="mt-1 mb-3 text-sm text-tiilt-muted">
-                        Join your group&apos;s discussion, or come back later to
-                        reflect on it.
+                        Look back on your group discussions, or set up how BLINC
+                        recognizes you.
                     </p>
                     <button
                         className={primaryClass + " w-full"}
-                        onClick={() => navigate("/join")}
+                        onClick={() => navigate("/student/dashboard")}
                     >
-                        Join a live session
+                        My reflection dashboard
                     </button>
-                    <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                        <button
-                            className={linkBtn}
-                            onClick={() => navigate("/student/dashboard")}
-                        >
-                            Reflection dashboard
-                        </button>
+                    <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                         <button
                             className={linkBtn}
                             onClick={() => navigate("/signup")}
@@ -62,20 +57,30 @@ function LandingPageComponent() {
                     </div>
                 </section>
 
-                {/* Instructors / researchers: account-based sign-in. */}
+                {/* Instructors / researchers: sign in, or put a recording
+                    device into a live session. */}
                 <section className="rounded-xl border border-tiilt-line p-4">
                     <div className="font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
                         Instructors &amp; researchers
                     </div>
                     <p className="mt-1 mb-3 text-sm text-tiilt-muted">
-                        Manage sessions and review discussion analytics.
+                        Manage sessions and analytics, or connect this device to
+                        a running session as a group&apos;s recorder.
                     </p>
-                    <button
-                        className={secondaryClass + " w-full"}
-                        onClick={() => navigate("/login")}
-                    >
-                        Sign in with your account
-                    </button>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <button
+                            className={secondaryClass}
+                            onClick={() => navigate("/login")}
+                        >
+                            Sign in
+                        </button>
+                        <button
+                            className={secondaryClass}
+                            onClick={() => navigate("/join")}
+                        >
+                            Join a live session
+                        </button>
+                    </div>
                 </section>
 
                 <button
