@@ -746,9 +746,11 @@ def posthoc_queue_status(session_id, **kwargs):
 
 
 @api_routes.route('/api/v1/students/<username>/longitudinal', methods=['GET'])
-@wrappers.verify_login(public=True)
 def get_student_longitudinal(username, **kwargs):
     # A student's per-session speaking share + attention across the term.
+    # Open like the dashboard's other per-student routes (transcripts/student,
+    # videometrics/student): the anonymous student reflection dashboard is the
+    # caller, and verify_login(public=True) still 401s without a session.
     return json_response(database.get_student_longitudinal(username))
 
 @api_routes.route('/api/v1/devices/<int:session_device_id>/session_device', methods=['GET'])
