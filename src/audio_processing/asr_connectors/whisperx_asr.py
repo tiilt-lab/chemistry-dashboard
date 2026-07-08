@@ -81,51 +81,24 @@ class WhisperXASR:
 
             torch.load = _permissive_load
             try:
-                import whisperx
-                device = "cuda" if torch.cuda.is_available() else "cpu"
-                compute = "float16" if device == "cuda" else "int8"
-                logging.info("WhisperX: loading model '%s' on %s", self.model_size, device)
-                model = whisperx.load_model(self.model_size, device, compute_type=compute)
-                audio = whisperx.load_audio(self.audio_file)
-                result = model.transcribe(audio, batch_size=16)
-                language = result.get("language", "en")
-                logging.info("WhisperX: transcribed %d segments (lang=%s); aligning",
-                             len(result["segments"]), language)
-                align_model, metadata = whisperx.load_align_model(
-                    language_code=language, device=device)
-                result = whisperx.align(result["segments"], align_model,
-                                        metadata, audio, device)
-                cluster_map = {}
-                if self.diarizer == "sortformer":
-                    import pandas as pd
-                    from whisperx.diarize import assign_word_speakers
-                    from asr_connectors.sortformer_diar import run_sortformer
-                    logging.info("WhisperX: running Sortformer diarization (NeMo venv)")
-                    sf_turns = run_sortformer(self.audio_file)
-                    diarize_segments = pd.DataFrame(
-                        [{"start": s, "end": e, "speaker": spk} for s, e, spk in sf_turns])
-                    if len(diarize_segments):
-                        result = assign_word_speakers(diarize_segments, result)
-                    logging.info("WhisperX: Sortformer diarization attached")
-                    if self.enrolled and self.speaker_model and sf_turns:
-                        from asr_connectors.cluster_reconcile import build_cluster_to_enrolled_map
-                        cluster_map = build_cluster_to_enrolled_map(
-                            self.audio_file, sf_turns, self.enrolled, self.speaker_model)
-                elif self.diarize:
-                    import os
-                    from whisperx.diarize import DiarizationPipeline, assign_word_speakers
-                    token = os.environ.get("HUGGING_FACE_HUB_TOKEN")
-                    logging.info("WhisperX: running pyannote diarization")
-                    diarizer = DiarizationPipeline(model_name="pyannote/speaker-diarization-3.1", token=token, device=device)
-                    diarize_segments = diarizer(audio, max_speakers=self.max_speakers)
-                    result = assign_word_speakers(diarize_segments, result)
-                    logging.info("WhisperX: diarization attached")
-                    if self.enrolled and self.speaker_model:
-                        from asr_connectors.cluster_reconcile import build_cluster_to_enrolled_map
-                        turns = [(row['start'], row['end'], row['speaker'])
-                                 for _, row in diarize_segments.iterrows()]
-                        cluster_map = build_cluster_to_enrolled_map(
-                            self.audio_file, turns, self.enrolled, self.speaker_model)
+                # The RTX 8000 is shared with a second instance, so a whisperx
+                # model load / transcribe occasionally loses the memory race
+                # and dies with "CUDA out of memory" — a transient spike, not a
+                # real failure. Retry once after releasing our cache and letting
+                # the concurrent spike (often this same pod's video pass) clear.
+                import time as _time
+                result, cluster_map = None, {}
+                for attempt in range(2):
+                    try:
+                        result, cluster_map = self._run_gpu_pipeline(torch)
+                        break
+                    except RuntimeError as e:
+                        if attempt == 0 and "out of memory" in str(e).lower():
+                            logging.warning("WhisperX: CUDA OOM on shared GPU; "
+                                            "releasing cache and retrying in 45s")
+                            _time.sleep(45)
+                            continue
+                        raise
             finally:
                 torch.load = original_load
 
@@ -155,29 +128,13 @@ class WhisperXASR:
         except Exception as e:
             logging.error("WhisperX transcription failed: %s", e, exc_info=True)
         finally:
-            # Models are loaded fresh per pod inside a long-lived service;
-            # without an explicit release the CUDA allocations accumulate
-            # until a later pod's model load dies with CUDA OOM (observed
-            # mid-batch after ~5 pods with two instances sharing the card).
+            # The GPU models are freed inside _run_gpu_pipeline (per attempt);
+            # this is a final safety release of any residual cache.
             try:
                 import gc
                 import torch
-                # locals()-based deletion is a no-op in CPython; drop each
-                # reference explicitly so gc can actually free the models.
                 try:
-                    del model
-                except NameError:
-                    pass
-                try:
-                    del align_model, metadata
-                except NameError:
-                    pass
-                try:
-                    del diarizer, diarize_segments
-                except NameError:
-                    pass
-                try:
-                    del audio, result
+                    del result
                 except NameError:
                     pass
                 gc.collect()
@@ -189,3 +146,66 @@ class WhisperXASR:
                 pass
             self.running = False
             self.transcript_queue.put(None)
+
+    def _run_gpu_pipeline(self, torch):
+        # Load + transcribe + align + (optional) diarize on the GPU. Frees its
+        # own model/audio allocations before returning OR raising, so a retry
+        # after a CUDA OOM starts from a clean allocator.
+        import whisperx
+        model = align_model = diarizer = audio = None
+        try:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            compute = "float16" if device == "cuda" else "int8"
+            logging.info("WhisperX: loading model '%s' on %s", self.model_size, device)
+            model = whisperx.load_model(self.model_size, device, compute_type=compute)
+            audio = whisperx.load_audio(self.audio_file)
+            result = model.transcribe(audio, batch_size=16)
+            language = result.get("language", "en")
+            logging.info("WhisperX: transcribed %d segments (lang=%s); aligning",
+                         len(result["segments"]), language)
+            align_model, metadata = whisperx.load_align_model(
+                language_code=language, device=device)
+            result = whisperx.align(result["segments"], align_model,
+                                    metadata, audio, device)
+            cluster_map = {}
+            if self.diarizer == "sortformer":
+                import pandas as pd
+                from whisperx.diarize import assign_word_speakers
+                from asr_connectors.sortformer_diar import run_sortformer
+                logging.info("WhisperX: running Sortformer diarization (NeMo venv)")
+                sf_turns = run_sortformer(self.audio_file)
+                diarize_segments = pd.DataFrame(
+                    [{"start": s, "end": e, "speaker": spk} for s, e, spk in sf_turns])
+                if len(diarize_segments):
+                    result = assign_word_speakers(diarize_segments, result)
+                logging.info("WhisperX: Sortformer diarization attached")
+                if self.enrolled and self.speaker_model and sf_turns:
+                    from asr_connectors.cluster_reconcile import build_cluster_to_enrolled_map
+                    cluster_map = build_cluster_to_enrolled_map(
+                        self.audio_file, sf_turns, self.enrolled, self.speaker_model)
+            elif self.diarize:
+                import os
+                from whisperx.diarize import DiarizationPipeline, assign_word_speakers
+                token = os.environ.get("HUGGING_FACE_HUB_TOKEN")
+                logging.info("WhisperX: running pyannote diarization")
+                diarizer = DiarizationPipeline(model_name="pyannote/speaker-diarization-3.1", token=token, device=device)
+                diarize_segments = diarizer(audio, max_speakers=self.max_speakers)
+                result = assign_word_speakers(diarize_segments, result)
+                logging.info("WhisperX: diarization attached")
+                if self.enrolled and self.speaker_model:
+                    from asr_connectors.cluster_reconcile import build_cluster_to_enrolled_map
+                    turns = [(row['start'], row['end'], row['speaker'])
+                             for _, row in diarize_segments.iterrows()]
+                    cluster_map = build_cluster_to_enrolled_map(
+                        self.audio_file, turns, self.enrolled, self.speaker_model)
+            return result, cluster_map
+        finally:
+            # Free GPU models/audio so the next attempt (or pod) starts clean.
+            del model, align_model, diarizer, audio
+            try:
+                import gc
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+            except Exception:
+                pass
