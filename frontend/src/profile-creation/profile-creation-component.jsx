@@ -536,12 +536,25 @@ function SignupPage() {
                 else if (message['type'] === 'quality_failed') {
                     qualityFails.current += 1
                     setCurrentForm("")
-                    setEnrollStatus({
-                        kind: "quality_failed",
-                        message:
-                            (message['message'] || "The recording did not pass the voice-quality check.") +
-                            (qualityFails.current >= 3 ? " Your next recording will be accepted as-is." : ""),
-                    })
+                    const detail = message['detail'] || {}
+                    if (detail.partial_kept) {
+                        // Not enough speech yet, but the audio so far is KEPT
+                        // server-side — the next take is appended, so the
+                        // student only records the missing part.
+                        setEnrollStatus({
+                            kind: "continue",
+                            message: message['message'] ||
+                                "Almost there — record a little more speech; what you already recorded is kept.",
+                            neededSeconds: detail.still_needed_seconds || 10,
+                        })
+                    } else {
+                        setEnrollStatus({
+                            kind: "quality_failed",
+                            message:
+                                (message['message'] || "The recording did not pass the voice-quality check.") +
+                                (qualityFails.current >= 3 ? " Your next recording will be accepted as-is." : ""),
+                        })
+                    }
                 }
                 else if (message['type'] === 'saved') {
                     setAudioSaved(true)

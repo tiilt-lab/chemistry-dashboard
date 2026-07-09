@@ -66,6 +66,40 @@ def students_overview(**kwargs):
     return json_response(result)
 
 
+# Which enrolled voices sound alike. Computed live from the cached ECAPA
+# embeddings the audio service writes beside each voice print, restricted to
+# students in the caller's scope. Similar voices are allowed to enroll; this
+# is how instructors see whose utterances could be cross-attributed.
+@api_routes.route('/api/v1/students/voice_overlaps', methods=['GET'])
+@wrappers.verify_login()
+def students_voice_overlaps(**kwargs):
+    import numpy as np
+    user = kwargs['user']
+    is_admin = user.get('role') in ['admin', 'super']
+    rows = database.get_students_overview(owner_id=None if is_admin else user['id'])
+    visible = {student.username for student, _c, _l in rows}
+    embeddings = {}
+    for username in visible:
+        path = os.path.join(_VOICE_DIR, username + '.emb.npy')
+        if os.path.isfile(path):
+            try:
+                embeddings[username] = np.load(path)
+            except Exception:
+                pass
+    names = sorted(embeddings)
+    pairs = []
+    THRESHOLD = 0.50
+    for i, a in enumerate(names):
+        va = embeddings[a] / (np.linalg.norm(embeddings[a]) + 1e-9)
+        for b in names[i + 1:]:
+            vb = embeddings[b] / (np.linalg.norm(embeddings[b]) + 1e-9)
+            sim = float(np.dot(va, vb))
+            if sim >= THRESHOLD:
+                pairs.append({'a': a, 'b': b, 'similarity': round(sim, 3)})
+    pairs.sort(key=lambda p: -p['similarity'])
+    return json_response({'threshold': THRESHOLD, 'pairs': pairs})
+
+
 # Stream a student's voice-fingerprint recording so its quality can be
 # checked by ear. Scoped like everything else on the Students page.
 @api_routes.route('/api/v1/students/<int:student_id>/fingerprint_audio', methods=['GET'])

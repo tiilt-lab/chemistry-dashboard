@@ -223,6 +223,22 @@ class ServerProtocol(WebSocketServerProtocol):
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 
+    # A continuation take within this window is APPENDED to the student's
+    # kept partial audio instead of starting the speech count from scratch.
+    PARTIAL_MAX_AGE_SECONDS = 60 * 60
+
+    def _append_wavs(self, first_path, second_path, out_path):
+        # Both are 16k mono pcm16 written by our own extraction.
+        import wave as _wave
+        with _wave.open(first_path, 'rb') as a:
+            params = a.getparams()
+            frames = a.readframes(a.getnframes())
+        with _wave.open(second_path, 'rb') as b:
+            frames += b.readframes(b.getnframes())
+        with _wave.open(out_path, 'wb') as out:
+            out.setparams(params)
+            out.writeframes(frames)
+
     def process_fingerprint_blob(self, data):
             self.vid_recorder.write(data)
             err = ""
@@ -258,9 +274,26 @@ class ServerProtocol(WebSocketServerProtocol):
             if err!="":
                 self.send_json({'type': 'error', 'message': err})
             else:
-                # Quality gate: a fingerprint that can't verify against itself
-                # or is ambiguous vs another enrollment is worse than none.
-                # Checker crashes never block enrollment.
+                base = os.path.splitext(audio_fingerprint_file)[0]
+                partial = base + '.partial.wav'
+                # Cumulative takes: prepend a recent kept partial so the
+                # student only needs to ADD speech, never restart from zero.
+                try:
+                    if os.path.isfile(partial):
+                        if time.time() - os.path.getmtime(partial) <= self.PARTIAL_MAX_AGE_SECONDS:
+                            combined = base + '.combined.tmp.wav'
+                            self._append_wavs(partial, audio_fingerprint_file, combined)
+                            os.replace(combined, audio_fingerprint_file)
+                            logging.info('enrollment: appended new take to kept partial for %s', self.currAlias)
+                        else:
+                            os.remove(partial)
+                except Exception as e:
+                    logging.warning('enrollment partial merge failed (using new take only): %s', e)
+
+                # Quality gate: enough cumulative speech + the recording must
+                # match itself. Similarity to other students no longer blocks
+                # (it is recorded in the verdict instead). Checker crashes
+                # never block enrollment.
                 verdict = None
                 try:
                     verdict = enrollment_check.check_enrollment(
@@ -268,17 +301,28 @@ class ServerProtocol(WebSocketServerProtocol):
                 except Exception as e:
                     logging.warning('enrollment quality check failed to run: {0}'.format(e))
                 if verdict is not None and not verdict['ok'] and not self.fingerprint_force:
-                    # Remove the WAV and its sidecars (embedding cache +
-                    # verdict) together — a rejected recording must not linger
-                    # as an enrollment or as a stale quality report.
-                    base = os.path.splitext(audio_fingerprint_file)[0]
+                    # Keep the audio as the partial when the ONLY problem is
+                    # not enough speech yet — the next take appends to it. A
+                    # self-consistency failure means bad audio: start over.
+                    insufficient = (verdict.get('still_needed_seconds') or 0) > 0
+                    self_bad = (verdict.get('self_similarity') is not None
+                                and verdict['self_similarity'] < enrollment_check.MIN_SELF_SIMILARITY)
+                    keep_partial = insufficient and not self_bad
+                    if keep_partial:
+                        os.replace(audio_fingerprint_file, partial)
                     for p in (audio_fingerprint_file, base + '.emb.npy', base + '.check.json'):
                         if os.path.isfile(p):
                             os.remove(p)
+                    if not keep_partial and os.path.isfile(partial):
+                        os.remove(partial)
+                    detail = dict(verdict)
+                    detail['partial_kept'] = keep_partial
                     self.send_json({'type': 'quality_failed',
                                     'message': verdict['message'],
-                                    'detail': verdict})
+                                    'detail': detail})
                 else:
+                    if os.path.isfile(partial):
+                        os.remove(partial)
                     logging.info('Audio biometrics saved')
                     self.send_json({'type': 'saved',
                                     'message': "Biometric data captured successfully",

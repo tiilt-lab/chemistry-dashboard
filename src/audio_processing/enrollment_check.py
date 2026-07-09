@@ -29,11 +29,13 @@ import wave
 import numpy as np
 import torch
 
-MIN_NET_SPEECH_SECONDS = 12.0
+MIN_NET_SPEECH_SECONDS = 15.0
 MIN_SELF_SIMILARITY = 0.45
-# Different speakers land well under the 0.25 verification threshold; another
-# student at >= 0.50 means live utterances genuinely can't be told apart.
-MAX_OTHER_SIMILARITY = 0.50
+# Similarity to another enrolled voice no longer BLOCKS enrollment — voices
+# genuinely can sound alike. At >= this cosine similarity the other student
+# is recorded in the verdict's similar_to list so instructors can see which
+# voices overlap (and interpret attribution accordingly).
+SIMILAR_VOICE_THRESHOLD = 0.50
 _FRAME_SECONDS = 0.03
 _CACHE_SUFFIX = ".emb.npy"
 
@@ -111,11 +113,13 @@ def check_enrollment(wav_path, alias, model, biometric_dir=None):
     mask, speech_seconds = _speech_mask(x, sr)
     reasons = []
 
+    still_needed = max(0.0, MIN_NET_SPEECH_SECONDS - speech_seconds)
     if speech_seconds < MIN_NET_SPEECH_SECONDS:
         reasons.append(
-            "Only {0:.0f} seconds of speech were detected (need about {1:.0f}). "
-            "Please read the whole passage aloud without long pauses.".format(
-                speech_seconds, MIN_NET_SPEECH_SECONDS))
+            "So far {0:.0f} seconds of clear speech were captured — about "
+            "{1:.0f} more are needed. Keep going: what you already recorded "
+            "is kept, just record a bit more.".format(
+                speech_seconds, still_needed))
 
     speech = _speech_samples(x, sr, mask)
     self_sim = None
@@ -136,8 +140,11 @@ def check_enrollment(wav_path, alias, model, biometric_dir=None):
             "or too little clear speech). Please re-record in a quieter spot, "
             "closer to the microphone.")
 
+    # Similar voices are recorded, not rejected: list every enrolled voice
+    # above the threshold so the Students page can show which voices overlap.
     nearest_alias = None
     nearest_sim = None
+    similar_to = []
     if full_emb is not None:
         for name in os.listdir(biometric_dir):
             if not name.endswith(".wav"):
@@ -153,20 +160,12 @@ def check_enrollment(wav_path, alias, model, biometric_dir=None):
             sim = _cosine(full_emb, other)
             if nearest_sim is None or sim > nearest_sim:
                 nearest_sim, nearest_alias = sim, other_alias
-        too_similar = nearest_sim is not None and (
-            nearest_sim >= MAX_OTHER_SIMILARITY
-            or (self_sim is not None and nearest_sim >= self_sim))
-        if too_similar:
-            logging.warning(
-                "enrollment check: %s is ambiguous vs enrolled '%s' "
-                "(similarity %.3f, self %.3f)",
-                alias, nearest_alias, nearest_sim,
-                -1 if self_sim is None else self_sim)
-            reasons.append(
-                "This recording sounds too close to a voice that is already "
-                "enrolled, so utterances could be attributed to the wrong "
-                "person. Please re-record in a quieter spot, speaking "
-                "naturally at a normal volume.")
+            if sim >= SIMILAR_VOICE_THRESHOLD:
+                similar_to.append({"username": other_alias, "similarity": round(sim, 3)})
+        similar_to.sort(key=lambda x: -x["similarity"])
+        if similar_to:
+            logging.info("enrollment check: %s voice overlaps with %s",
+                         alias, [s["username"] for s in similar_to])
 
     ok = not reasons
     cache = os.path.splitext(wav_path)[0] + _CACHE_SUFFIX
@@ -184,8 +183,10 @@ def check_enrollment(wav_path, alias, model, biometric_dir=None):
         "message": " ".join(reasons),
         "duration_seconds": round(len(x) / float(sr), 1),
         "net_speech_seconds": round(speech_seconds, 1),
+        "still_needed_seconds": round(still_needed, 1),
         "self_similarity": None if self_sim is None else round(self_sim, 3),
         "nearest_other_similarity": None if nearest_sim is None else round(nearest_sim, 3),
+        "similar_to": similar_to,
     }
     # Sidecar verdict so the web app can show enrollment quality without
     # loading ECAPA (the Students page reads these).

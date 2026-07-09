@@ -19,11 +19,12 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
  *
  */
 
-// Long enough that reading it aloud yields ~15+ seconds of net speech (the
-// server verifies this and asks for a re-record if the clip is mostly silence).
+// Long enough that reading it aloud yields ~15+ seconds of net speech within
+// a ~30-second take (the server verifies cumulative speech and asks for MORE
+// audio — appended, not restarted — if there isn't enough yet).
 const DEFAULT_SCRIPT = `Please read the following passage in a clear, natural voice:
 
-“Today I am recording a short sample so my face and voice can be matched accurately during group discussions. I will speak at my normal pace and volume, the way I usually talk with my group. While reading this, I will keep my face toward the camera, and then slowly turn my head to the right, to the left, up, and down. Clear recordings like this one help the system tell every voice in the room apart, so each person's ideas are counted correctly.”`;
+“Today I am recording a short sample so my face and voice can be matched accurately during group discussions. I will speak at my normal pace and volume, the way I usually talk with my group. While reading this, I will keep my face toward the camera, and then slowly turn my head to the right, to the left, up, and down. Clear recordings like this one help the system tell every voice in the room apart, so each person's ideas are counted correctly. When my group meets, we share observations, ask each other questions, and build on one another's ideas — and a good recording today means all of that is attributed to the right person later.”`;
 
 function RecordingCoach({
     maxDurationSec = 60,
@@ -72,6 +73,13 @@ function RecordingCoach({
     const [hintsAudio, setHintsAudio] = useState([]);
     const [videoBlobData, setVideoBlobData] = useState(null)
     const [actualTimeElapsed, setActualTimeElapsed] = useState(0)
+
+    // Continuation mode: the server kept the previous audio and only needs
+    // roughly the missing seconds of speech — don't demand a full-length take.
+    const continuing = enrollStatus.kind === "continue"
+    const effectiveMinSec = continuing
+        ? Math.max(8, Math.ceil(enrollStatus.neededSeconds || 10) + 3)
+        : minDurationSec
 
     const FaceDetectorApi = useMemo(() => (typeof window !== 'undefined' && (window).FaceDetector ? new (window).FaceDetector({ fastMode: true }) : null), []);
 
@@ -333,7 +341,7 @@ function RecordingCoach({
     };
 
     const startSaveRecording = () => {
-        if (videoBlobData !== null && actualTimeElapsed >= minDurationSec) {
+        if (videoBlobData !== null && actualTimeElapsed >= effectiveMinSec) {
             saveRecording(videoBlobData, actualTimeElapsed)
         }
     }
@@ -478,7 +486,7 @@ function RecordingCoach({
                                 <button className="rounded-xl bg-red-600 px-4 py-2 text-white" onClick={stopRecording}>Stop</button>
                             )}
 
-                            {isRecordingStopped && actualTimeElapsed >= minDurationSec && enrollStatus.kind !== "success" && (
+                            {isRecordingStopped && actualTimeElapsed >= effectiveMinSec && enrollStatus.kind !== "success" && (
                                 <button
                                     className="rounded-xl bg-emerald-600 px-4 py-2 text-white shadow disabled:opacity-50"
                                     onClick={startSaveRecording}
@@ -490,14 +498,14 @@ function RecordingCoach({
                             {countdown !== null && <span className="ml-2 text-lg font-semibold">{countdown}</span>}
                             <span className="ml-auto text-sm text-tiilt-muted">{elapsed}s / {maxDurationSec}s</span>
                         </div>
-                        {isRecordingStopped && actualTimeElapsed < minDurationSec ? (
+                        {isRecordingStopped && actualTimeElapsed < effectiveMinSec ? (
                             <div className="mt-2 text-xs font-semibold text-amber-600">
                                 That was only {actualTimeElapsed}s — please record again and
-                                read the whole script (at least {minDurationSec}s).
+                                record at least {effectiveMinSec}s.
                             </div>
                         ) : (
                             <div className="mt-2 text-xs text-tiilt-muted">
-                                Read the whole script — at least {minDurationSec}s. The recording
+                                Read the whole script — at least {effectiveMinSec}s. The recording
                                 is checked automatically and you may be asked to re-record.
                             </div>
                         )}
@@ -522,6 +530,19 @@ function RecordingCoach({
                                 >
                                     Done
                                 </button>
+                            </div>
+                        ) : null}
+                        {enrollStatus.kind === "continue" ? (
+                            <div className="mt-3 rounded-xl border border-tiilt-teal/40 bg-tiilt-teal/10 p-3">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-tiilt-teal-text">
+                                    <span aria-hidden="true">＋</span> Almost there — keep going
+                                </div>
+                                <div className="mt-1 text-sm leading-relaxed text-tiilt-ink">
+                                    {enrollStatus.message} Record about{" "}
+                                    {Math.ceil(enrollStatus.neededSeconds || 10)}s more of
+                                    speaking and press Save — it will be added to what you
+                                    already recorded, not replace it.
+                                </div>
                             </div>
                         ) : null}
                         {enrollStatus.kind === "quality_failed" ? (

@@ -74,23 +74,17 @@ const SORTS = {
 
 // Voice-print state from the overview's enrollment fields (the .check.json
 // verdict the audio service writes at capture time / via the survey run).
-// Three grades: weak = genuinely broken (near-silent, doesn't match itself,
-// or confusable with another enrolled voice); short = only fails the newer
-// 12s net-speech bar (every recording from the old 10s-cap era does — usable,
-// but worth redoing eventually); ok = passes everything.
+// Three grades: weak = genuinely broken (near-silent or doesn't match
+// itself); short = only fails the net-speech bar (old 10s-cap era — usable,
+// but worth redoing eventually); ok = passes. Similarity to another voice is
+// NOT a defect — overlaps are shown separately.
 function voiceState(s) {
     if (!s.voice_enrolled) return { label: "No voice", tone: "orange" }
     const c = s.voice_check
     if (!c) return { label: "Voice ✓", tone: "neutral" } // not yet checked
-    const ambiguous =
-        c.nearest_other_similarity != null &&
-        (c.nearest_other_similarity >= 0.5 ||
-            (c.self_similarity != null &&
-                c.nearest_other_similarity >= c.self_similarity))
     const broken =
         (c.net_speech_seconds ?? 0) < 5 ||
-        (c.self_similarity != null && c.self_similarity < 0.45) ||
-        ambiguous
+        (c.self_similarity != null && c.self_similarity < 0.45)
     if (broken) return { label: "Voice: weak", tone: "orange" }
     if (c.ok === false) return { label: "Voice: short", tone: "neutral" }
     return { label: "Voice ✓", tone: "teal" }
@@ -124,6 +118,8 @@ function StudentsComponent(props) {
     const [syncEnabled, setSyncEnabled] = useState(false)
     // Bulk selection (admins): toggled from the row's index/select cell.
     const [selected, setSelected] = useState(() => new Set())
+    // username -> [{other, similarity}] for voices that sound alike.
+    const [voiceOverlaps, setVoiceOverlaps] = useState({})
 
     const toggleSelected = (id) =>
         setSelected((prev) => {
@@ -141,6 +137,21 @@ function StudentsComponent(props) {
         } catch {
             setStudents([])
         }
+        // Which enrolled voices sound alike (similar voices may enroll; the
+        // overlap is surfaced so attribution can be interpreted).
+        try {
+            const r = await new ApiService().httpRequestCall(
+                "api/v1/students/voice_overlaps", "GET", {})
+            if (r.status === 200) {
+                const d = await r.json()
+                const map = {}
+                for (const p of d.pairs || []) {
+                    ;(map[p.a] = map[p.a] || []).push({ other: p.b, similarity: p.similarity })
+                    ;(map[p.b] = map[p.b] || []).push({ other: p.a, similarity: p.similarity })
+                }
+                setVoiceOverlaps(map)
+            }
+        } catch { /* overlap info is best-effort */ }
     }
 
     useEffect(() => {
@@ -783,6 +794,20 @@ function StudentsComponent(props) {
                                                         >
                                                             {s.face_enrolled ? "Face ✓" : "No face"}
                                                         </StatusPill>
+                                                        {(voiceOverlaps[s.username] || []).length > 0 ? (
+                                                            <StatusPill
+                                                                tone="brand"
+                                                                title={
+                                                                    "Voice sounds similar to: " +
+                                                                    voiceOverlaps[s.username]
+                                                                        .map((o) => `${o.other} (${Math.round(o.similarity * 100)}%)`)
+                                                                        .join(", ")
+                                                                }
+                                                            >
+                                                                ≈ {voiceOverlaps[s.username].length}{" "}
+                                                                {voiceOverlaps[s.username].length === 1 ? "voice" : "voices"}
+                                                            </StatusPill>
+                                                        ) : null}
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-2.5 text-right font-ahamono tabular-nums text-tiilt-ink">
@@ -959,6 +984,31 @@ function StudentsComponent(props) {
                                 can only be attributed by diarization clustering.
                             </div>
                         )}
+                        {(voiceOverlaps[target.username] || []).length > 0 ? (
+                            <div className="mb-3">
+                                <div className="mb-1 text-sm font-semibold text-tiilt-ink">
+                                    Sounds similar to
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {voiceOverlaps[target.username].map((o) => (
+                                        <span
+                                            key={o.other}
+                                            className="inline-flex items-center gap-1 rounded-full bg-tiilt-soft px-2.5 py-1 text-xs font-semibold text-tiilt"
+                                        >
+                                            {o.other}
+                                            <span className="font-ahamono font-normal text-tiilt-muted">
+                                                {Math.round(o.similarity * 100)}%
+                                            </span>
+                                        </span>
+                                    ))}
+                                </div>
+                                <div className="mt-1 text-[11px] leading-relaxed text-tiilt-muted">
+                                    These voices can be confused with each other during
+                                    attribution — worth keeping in mind when reading
+                                    per-student metrics for groups containing both.
+                                </div>
+                            </div>
+                        ) : null}
                         <div className="mb-1 text-sm font-semibold text-tiilt-ink">
                             Face enrollment
                         </div>
