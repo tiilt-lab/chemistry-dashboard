@@ -41,5 +41,12 @@ def get_scorer(name=None):
         logging.info("Feature scorer: LIWC / Harvard General Inquirer")
         instance = liwc  # module implements initialize() + detect_features()
     instance.initialize()
+    # Don't cache an LLM scorer that came up without credentials: the key can
+    # arrive later (env file updated between runs), and caching the dead
+    # instance would silently return zeros for the process's whole lifetime.
+    if key == "llm" and getattr(instance, "_client", None) is None:
+        logging.warning("LLM scorer has no client (missing GOOGLE_API_KEY?); "
+                        "not caching so a later run can retry.")
+        return instance
     _instances[key] = instance
     return instance
