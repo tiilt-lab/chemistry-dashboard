@@ -21,10 +21,12 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 
 // Long enough that reading it aloud yields ~15+ seconds of net speech within
 // a ~30-second take (the server verifies cumulative speech and asks for MORE
-// audio — appended, not restarted — if there isn't enough yet).
-const DEFAULT_SCRIPT = `Please read the following passage in a clear, natural voice:
+// audio — appended, not restarted — if there isn't enough yet). The passage
+// is deliberately phonetically busy — plosives, fricatives, th-clusters, and
+// wide vowel range make for a more distinctive voice print than flat prose.
+const DEFAULT_SCRIPT = `Keep your face toward the camera, and slowly turn your head left, right, up, and down while you read this aloud in your normal voice:
 
-“Today I am recording a short sample so my face and voice can be matched accurately during group discussions. I will speak at my normal pace and volume, the way I usually talk with my group. While reading this, I will keep my face toward the camera, and then slowly turn my head to the right, to the left, up, and down. Clear recordings like this one help the system tell every voice in the room apart, so each person's ideas are counted correctly. When my group meets, we share observations, ask each other questions, and build on one another's ideas — and a good recording today means all of that is attributed to the right person later.”`;
+“The quick brown fox has retired — today, science does the jumping. Imagine a molecule of caffeine sky-diving into a cup of coffee: eight atoms of carbon, ten of hydrogen, spinning like a tiny amusement-park ride. Now picture sound itself. My voice is a wave, wobbling the air about a hundred times per blink of an eye, and somewhere in this building a computer is learning the exact shape of that wobble — the lows, the highs, the way I say aluminum and onomatopoeia. So here is my grand announcement: purple penguins prefer pickled plums, thirty-three thirsty thrushes think Thursday is thrilling, and I — reading this out loud — hereby become instantly recognizable.”`;
 
 function RecordingCoach({
     maxDurationSec = 60,
