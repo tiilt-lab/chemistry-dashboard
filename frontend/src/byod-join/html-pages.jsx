@@ -24,6 +24,7 @@ import MicIcon from "@icons/Mic"
 import Check from "@icons/Check"
 import Chevron from "@icons/Chevron"
 import { MicChannelProbe } from "./mic-channel-probe"
+import { DeviceCheckPage } from "./device-check"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
 
@@ -72,7 +73,18 @@ function ByodJoinPage(props) {
                             }
                             nav={() => props.navigateToLogin()}
                         />
-                        {(!props.state.audioSocketOpen) && (
+                        {!props.state.audioSocketOpen && props.deviceCheck && (
+                            <div className={pageShell}>
+                                <div className={formCard}>
+                                    <DeviceCheckPage
+                                        joinwith={props.deviceCheck.joinswith}
+                                        onConfirm={props.confirmDeviceCheck}
+                                        onBack={props.cancelDeviceCheck}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                        {!props.state.audioSocketOpen && !props.deviceCheck && (
                             <div className={pageShell}>
                             <div className={formCard}>
                                 <div className="mx-auto flex w-full max-w-md grow flex-col gap-4 overflow-y-auto px-4 py-6">

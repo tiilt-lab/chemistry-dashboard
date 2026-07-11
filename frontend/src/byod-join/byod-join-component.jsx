@@ -122,6 +122,11 @@ function JoinPage() {
     const [registeredVideoFingerprintAdded, setRegisteredVideoFingerprintAdded] = useState(false)
     const [savedFingerprintError, setSavedFingerprintError] = useState("")
 
+    // Pre-join device check: pending join params while the check page is
+    // shown, and the confirmed device/channel selection used for capture.
+    const [deviceCheck, setDeviceCheck] = useState(null)
+    const deviceSelection = useRef({ audioDeviceId: null, videoDeviceId: null, channelIndex: null })
+
     const navigate = useNavigate()
 
     // Reducer and state for managing connection and streaming status
@@ -350,7 +355,21 @@ function JoinPage() {
                 workletProcessor.port.onmessage = (data) => {
                     audiows.current.send(data.data.buffer)
                 }
-                source.current.connect(workletProcessor).connect(audioContext.current.destination)
+                // When a specific channel was picked on the device check
+                // page, feed only that channel to the sender (the worklet
+                // forwards its first input channel); otherwise send the
+                // source as-is (browser default mix).
+                const ch = deviceSelection.current?.channelIndex
+                if (ch !== null && ch !== undefined && source.current.channelCount > 1) {
+                    const splitter = audioContext.current.createChannelSplitter(
+                        source.current.channelCount,
+                    )
+                    source.current.connect(splitter)
+                    splitter.connect(workletProcessor, Math.min(ch, source.current.channelCount - 1), 0)
+                    workletProcessor.connect(audioContext.current.destination)
+                } else {
+                    source.current.connect(workletProcessor).connect(audioContext.current.destination)
+                }
             }
 
             const videoPlay = () => {
@@ -894,29 +913,63 @@ function JoinPage() {
         }
     }
 
-    // Verifies the users connection input and that the user
-    // has a microphone accessible to the browser.
+    // Verifies the users connection input, then routes through the device
+    // check page (camera preview, mic levels, channel choice) before the
+    // actual join.
     const verifyInputAndAudio = (names, passcode, joinswith, collaborators) => {
         if (names === null) {
             names = "User Device"
         }
-        requestAccessKey(names, passcode, collaborators, joinswith)
+        setDeviceCheck({ names, passcode, collaborators, joinswith })
+    }
+
+    // Called by the device check page once the user confirms their devices.
+    const confirmDeviceCheck = (selection) => {
+        const pending = deviceCheck
+        setDeviceCheck(null)
+        deviceSelection.current = selection
+        requestAccessKey(
+            pending.names,
+            pending.passcode,
+            pending.collaborators,
+            pending.joinswith,
+        )
     }
 
     // Requests session access from the server.
     const requestAccessKey = async (names, passcode, collaborators, l_joinwith) => {
         ending.current = false
         setCurrentForm("Connecting")
+        const sel = deviceSelection.current || {}
         const constraint = {}
-        if (l_joinwith === "Video" || l_joinwith === "Videocartoonify") {
+        // A specific channel implies a multi-channel rig: request all
+        // channels raw (echo cancellation forces a mono downmix on several
+        // platforms, which would destroy the separation being selected).
+        constraint.audio = sel.channelIndex !== null && sel.channelIndex !== undefined
+            ? {
+                  channelCount: { ideal: 8 },
+                  echoCancellation: false,
+                  noiseSuppression: false,
+                  autoGainControl: false,
+              }
+            : {}
+        if (sel.audioDeviceId) {
+            constraint.audio.deviceId = { exact: sel.audioDeviceId }
+        }
+        if (Object.keys(constraint.audio).length === 0) {
             constraint.audio = true
+        }
+        if (l_joinwith === "Video" || l_joinwith === "Videocartoonify") {
             constraint.video = {
                 facingMode: "user",
                 width: 640, //{ min: 640, ideal: 1280, max: 1920 },
                 height: 480, //{ min: 480, ideal: 720, max: 1080 }
             }
+            if (sel.videoDeviceId) {
+                constraint.video.deviceId = { exact: sel.videoDeviceId }
+                delete constraint.video.facingMode
+            }
         } else {
-            constraint.audio = true
             constraint.video = false
         }
         const mediaType = pickMimeType(constraint)
@@ -1542,6 +1595,9 @@ function JoinPage() {
             cartoonImgUrl={cartoonImgUrl}
             invalidName={invalidName}
             savedFingerprintError={savedFingerprintError}
+            deviceCheck={deviceCheck}
+            confirmDeviceCheck={confirmDeviceCheck}
+            cancelDeviceCheck={() => setDeviceCheck(null)}
             startProcessingSavedSpeakerFingerprint={startProcessingSavedSpeakerFingerprint}
             loadSpeakerMetrics={loadSpeakerMetrics}
             prevSessionId={prevSessionId}
