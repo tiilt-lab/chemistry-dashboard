@@ -735,12 +735,17 @@ function ByodJoinPage(props) {
                     </div>
                 )}
 
+            {/* Only the forms rendered inside — any other currentForm value
+                (ClosedSession, Connecting, …) has its own dialog below, and
+                showing this shell for them produced an empty floating box. */}
             <GenericDialogBox onClose={props.closeDialog}
-                show={
-                    props.currentForm !== "" &&
-                    props.currentForm !== "gottoselectedtranscript" &&
-                    props.currentForm !== "gototranscript"
-                }
+                show={[
+                    "Transcript",
+                    "Options",
+                    "fingerprintAudio",
+                    "renameAlias",
+                    "savedAudioVideoFingerprint",
+                ].includes(props.currentForm)}
             >
                 {(props.currentForm === "Transcript" && (
                     <div className={style2["dialog-content"]}>
@@ -925,16 +930,13 @@ function ByodJoinPage(props) {
                 closedialog={props.closeDialog}
             />
 
-            {/* <GenericDialogBox
-                itsclass={"add-dialog small-section"}
-                heading={"Session Closed"}
+            <DialogBox
+                itsclass={"add-dialog"}
+                heading={"Session ended"}
+                message={props.displayText || "You have left the session."}
                 show={props.currentForm === "ClosedSession"}
-            >
-                <div className="text-xl/loose font-sans font-bold m-2">Session Closed</div>
-                <div className="text-base font-sans font-normal m-2">{props.displayText}</div>
-                <SessionQRCode sessionId={props.prevSessionId} />
-                <button className="option-button font-sans small-section bg-red-500 hover:bg-red-400 m-2" onClick={props.closeDialog}>Close</button>
-            </GenericDialogBox> */}
+                closedialog={props.closeDialog}
+            />
 
             <WaitingDialog
                 itsclass={"add-dialog"}
