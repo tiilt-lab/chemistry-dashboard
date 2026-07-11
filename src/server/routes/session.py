@@ -585,6 +585,25 @@ def session_device(session_id, session_device_id, processing_key, **kwargs):
           session_device = database.get_session_devices(processing_key=processing_key)
         return json_response(session_device.json())
 
+def _pod_ids_with_recordings():
+    # session_device_ids that have a raw recording file on disk. Short
+    # recordings can finish before any transcript or video-metric row lands
+    # in the DB, but the recording itself is real data (playable, and
+    # post-hoc analyzable) — without this check the overview called such
+    # pods "No data" and refused to open them.
+    recordings_dir, _ = _video_dirs()
+    ids = set()
+    try:
+        for fn in os.listdir(recordings_dir):
+            if fn.endswith('.webm') or fn.endswith('.mp4'):
+                prefix = fn.split('-', 1)[0]
+                if prefix.isdigit():
+                    ids.add(int(prefix))
+    except OSError:
+        pass
+    return ids
+
+
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices', methods=['GET'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access
@@ -598,6 +617,7 @@ def session_devices(session_id, **kwargs):
         durations = database.get_pod_durations(session_id)
         speaker_counts = database.get_pod_speaker_counts(session_id)
         video_pods = database.get_pod_video_presence(session_id)
+        recorded = _pod_ids_with_recordings()
         result = []
         for device in devices:
             data = device.json()
@@ -605,10 +625,12 @@ def session_devices(session_id, **kwargs):
             if data['duration'] is None:
                 data['duration'] = posthoc_state.last_duration(device.id)
             data['speaker_count'] = speaker_counts.get(device.id, 0)
-            # True if the pod captured any usable data (transcript or video);
-            # ~17% of pods recorded nothing and should be flagged, not analyzed.
-            data['has_data'] = (durations.get(device.id) is not None) or (device.id in video_pods)
-            data['has_video'] = device.id in video_pods
+            # True if the pod captured any usable data (transcript, video
+            # metrics, or a recording file); pods that truly recorded
+            # nothing should be flagged, not analyzed.
+            data['has_data'] = (durations.get(device.id) is not None) \
+                or (device.id in video_pods) or (device.id in recorded)
+            data['has_video'] = (device.id in video_pods) or (device.id in recorded)
             data['analysis_running'] = posthoc_state.is_running(device.id)
             result.append(data)
         return json_response(result)
