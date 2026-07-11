@@ -104,8 +104,10 @@ function JoinPage() {
     const [mimetype, setMimeType] = useState(null)
     const [mimeExtension, setMimeExtension] = useState(null);
     const [wrongInput, setWrongInput] = useState(false)
-    const [preview, setPreview] = useState(false)
-    const [previewLabel, setPreviewLabel] = useState("Turn On Preview")
+    // Camera preview defaults ON for video joins so the group can see what
+    // is being recorded; the header Options dialog can still hide it.
+    const [preview, setPreview] = useState(true)
+    const [previewLabel, setPreviewLabel] = useState("Turn Off Preview")
     const [showFeatures, setShowFeatures] = useState([])
     const [showBoxes, setShowBoxes] = useState([])
     const [selectedSpeaker, setSelectedSpeaker] = useState(null)

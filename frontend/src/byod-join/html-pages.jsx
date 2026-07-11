@@ -627,31 +627,30 @@ function ByodJoinPage(props) {
 
                                             {props.joinwith === "Video" && (
                                                 <AppSectionBoxComponent
-                                                    heading={"Video control:"}
+                                                    heading={"Camera preview:"}
                                                 >
+                                                    {/* The <video> must stay mounted even when hidden —
+                                                        recording attaches to it and starts in its
+                                                        onloadedmetadata. */}
                                                     <div
                                                         className={
-                                                            style[
-                                                            "video-container"
-                                                            ]
+                                                            props.preview
+                                                                ? "px-3 pb-3"
+                                                                : "hidden"
                                                         }
-                                                        style={{
-                                                            display:
-                                                                props.preview
-                                                                    ? "block"
-                                                                    : "none",
-                                                        }}
                                                     >
                                                         <video
-                                                            controls={true}
                                                             muted={true}
                                                             autoPlay={true}
                                                             playsInline={true}
-                                                            style={{
-                                                                marginLeft:
-                                                                    "20px",
-                                                            }}
+                                                            className="mx-auto w-full max-w-md rounded-xl bg-black"
                                                         />
+                                                        <div className="mt-2 text-center text-xs text-tiilt-muted">
+                                                            Live view of what is
+                                                            being recorded. Hide
+                                                            it under Options in
+                                                            the header.
+                                                        </div>
                                                     </div>
                                                 </AppSectionBoxComponent>
                                             )}
@@ -659,28 +658,18 @@ function ByodJoinPage(props) {
                                             {props.joinwith ===
                                                 "Videocartoonify" && (
                                                     <AppSectionBoxComponent
-                                                        heading={"Video control:"}
+                                                        heading={"Camera preview:"}
                                                     >
                                                         <div
                                                             className={
-                                                                style[
-                                                                "video-container"
-                                                                ]
+                                                                props.preview
+                                                                    ? "px-3 pb-3"
+                                                                    : "hidden"
                                                             }
-                                                            style={{
-                                                                display:
-                                                                    props.preview
-                                                                        ? "block"
-                                                                        : "none",
-                                                            }}
                                                         >
                                                             <video
-                                                                controls={true}
                                                                 muted={true}
-                                                                style={{
-                                                                    marginLeft:
-                                                                        "20px",
-                                                                }}
+                                                                className="mx-auto w-full max-w-md rounded-xl bg-black"
                                                             />
                                                             <img
                                                                 style={{
