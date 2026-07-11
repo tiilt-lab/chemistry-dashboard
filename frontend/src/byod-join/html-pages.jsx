@@ -600,6 +600,38 @@ function ByodJoinPage(props) {
                                         )}
                                         <div className="center-column-container">
                                             <br />
+                                            {/* Explicit start/stop for this pod's recording. */}
+                                            {!props.armed ? (
+                                                <div className="shrink-0 rounded-xl border border-tiilt-line bg-white p-4 text-center">
+                                                    <div className="text-sm font-semibold text-tiilt-ink">
+                                                        Connected — not recording yet
+                                                    </div>
+                                                    <div className="mt-1 text-xs text-tiilt-muted">
+                                                        Check your camera and
+                                                        levels below, then start
+                                                        when your group is ready.
+                                                    </div>
+                                                    <button
+                                                        className={dlgPrimary + " mt-3 w-full"}
+                                                        onClick={props.startRecording}
+                                                    >
+                                                        Start recording
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex shrink-0 items-center justify-between rounded-xl border border-tiilt-line bg-white px-4 py-3">
+                                                    <div className="flex items-center gap-2 text-sm font-semibold text-tiilt-ink">
+                                                        <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500"></span>
+                                                        Recording
+                                                    </div>
+                                                    <button
+                                                        className="cursor-pointer rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-500"
+                                                        onClick={props.requestEndRecording}
+                                                    >
+                                                        End recording
+                                                    </button>
+                                                </div>
+                                            )}
                                             {props.joinwith === "Audio" && (
                                                 <AppSectionBoxComponent
                                                     heading={"Audio control:"}
@@ -909,6 +941,17 @@ function ByodJoinPage(props) {
 
                 }
             </GenericDialogBox>
+
+            <DialogBoxTwoOption
+                show={props.currentForm === "ConfirmEndRec"}
+                itsclass={style["dialog-window"]}
+                heading={"End recording"}
+                body={
+                    "This stops this pod's recording. The session itself stays open for other pods."
+                }
+                deletebuttonaction={props.confirmEndRecording}
+                cancelbuttonaction={props.closeDialog}
+            />
 
             <DialogBoxTwoOption
                 show={props.currentForm === "NavGuard"}

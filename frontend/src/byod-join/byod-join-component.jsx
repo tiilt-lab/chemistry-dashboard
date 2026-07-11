@@ -127,6 +127,11 @@ function JoinPage() {
     const [deviceCheck, setDeviceCheck] = useState(null)
     const deviceSelection = useRef({ audioDeviceId: null, videoDeviceId: null, channelIndex: null })
 
+    // Recording is started explicitly: after speaker validation the client
+    // holds (heartbeating) until "Start recording" is pressed. armed stays
+    // true across transient reconnects so recording resumes.
+    const [armed, setArmed] = useState(false)
+
     const navigate = useNavigate()
 
     // Reducer and state for managing connection and streaming status
@@ -302,14 +307,25 @@ function JoinPage() {
             }
         };
 
-        // Stop heartbeat immediately once validation is complete
+        // Once validation is complete, streaming waits for the explicit
+        // "Start recording" press (armed). Until then keep heartbeating so
+        // nginx/servers don't drop the idle sockets.
         if (state.speakersValidated) {
-             if (joinwith.current === "Audio") {
+            if (!armed) {
+                if (joinwith.current === "Audio") {
+                    sendAudioHeartbeat()
+                    heartbeatIntervalRef.current = setInterval(sendAudioHeartbeat, 20000)
+                } else {
+                    sendAudioVideoHeartbeat()
+                    heartbeatIntervalRef.current = setInterval(sendAudioVideoHeartbeat, 20000)
+                }
+                return () => clearHeartbeat()
+            }
+            if (joinwith.current === "Audio") {
                 dispatch({ type: "START_STREAMING", payload: (state.audioReady && state.audioSocketOpen  && state.speakersValidated) })
-             }else if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
+            } else if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
                 dispatch({ type: "START_STREAMING", payload: (state.audioReady && state.videoReady && state.audioSocketOpen && state.videoSocketOpen && state.speakersValidated) })
-             } 
-            
+            }
             clearHeartbeat();
             return;
         }
@@ -334,12 +350,28 @@ function JoinPage() {
             clearHeartbeat();
         };
         // }
-    }, [state.audioSocketOpen, state.videoSocketOpen, state.audioReady, state.videoReady, state.speakersValidated]);
+    }, [state.audioSocketOpen, state.videoSocketOpen, state.audioReady, state.videoReady, state.speakersValidated, armed]);
 
 
 
 
-    //FIFTH LEVEL: THIS IS TRIGGERED ONCE THE SPEAKERS ARE VALIDATED, THIS THEN STARTS THE STREAMING OF AUDIO AND VIDEO DATA TO THE SERVERS BY CONNECTING 
+    // Between validation and Start recording, show the camera on the live
+    // screen's preview so the group can frame the shot before recording.
+    useEffect(() => {
+        if (
+            state.speakersValidated &&
+            !state.startDiscussionStreaming &&
+            (joinwith.current === "Video" || joinwith.current === "Videocartoonify")
+        ) {
+            const video = document.querySelector("video")
+            if (video && streamReference.current && !video.srcObject) {
+                video.srcObject = streamReference.current
+                video.play().catch(() => {})
+            }
+        }
+    }, [state.speakersValidated, state.startDiscussionStreaming])
+
+    //FIFTH LEVEL: THIS IS TRIGGERED ONCE THE SPEAKERS ARE VALIDATED, THIS THEN STARTS THE STREAMING OF AUDIO AND VIDEO DATA TO THE SERVERS BY CONNECTING
     // THE AUDIO NODES TO THE AUDIO WORKLET PROCESSOR AND STARTING THE MEDIA RECORDER FOR VIDEO
     useEffect(() => {
         if (state.startDiscussionStreaming) {
@@ -353,7 +385,11 @@ function JoinPage() {
                     "audio-sender-processor",
                 )
                 workletProcessor.port.onmessage = (data) => {
-                    audiows.current.send(data.data.buffer)
+                    // The worklet can outlive the socket briefly during
+                    // disconnect/end-recording teardown.
+                    if (audiows.current?.readyState === WebSocket.OPEN) {
+                        audiows.current.send(data.data.buffer)
+                    }
                 }
                 // When a specific channel was picked on the device check
                 // page, feed only that channel to the sender (the worklet
@@ -375,9 +411,16 @@ function JoinPage() {
             const videoPlay = () => {
                 let video = document.querySelector("video")
                 video.srcObject = streamReference.current
-                video.onloadedmetadata = function (ev) {
+                const begin = () => {
                     video.play()
                     mediaRecorder.current.start(interval)
+                }
+                // The pre-start preview may have attached this stream
+                // already; loadedmetadata won't refire then.
+                if (video.readyState >= 1) {
+                    begin()
+                } else {
+                    video.onloadedmetadata = begin
                 }
 
                 mediaRecorder.current.ondataavailable = async function (ev) {
@@ -390,13 +433,17 @@ function JoinPage() {
                                 ev.data,
                                 interval * 6 * 60 * 24,
                                 (fixedblob) => {
-                                    videows.current.send(fixedblob)
+                                    if (videows.current?.readyState === WebSocket.OPEN) {
+                                        videows.current.send(fixedblob)
+                                    }
                                 },
                             )
                         } else if (ev.data.type.startsWith('video/mp4')) {
                             console.log("inside mp4 send")
                             const repairedMp4Data = await fixMp4DurationWithMp4Box(ev.data)
-                            videows.current.send(repairedMp4Data)
+                            if (videows.current?.readyState === WebSocket.OPEN) {
+                                videows.current.send(repairedMp4Data)
+                            }
                         }
 
                     }
@@ -547,6 +594,7 @@ function JoinPage() {
             name.current = ""
             setPcode("")
             ending.current = true
+            setArmed(false)
             dispatch({ type: "SPEAKERS_VALIDATED", payload: false })
             speakers.current = null
             setPrevSessionId(session.id)
@@ -579,6 +627,9 @@ function JoinPage() {
         dispatch({ type: "VIDEO_SOCKET_OPEN", payload: false })
         dispatch({ type: "AUDIO_READY", payload: false })
         dispatch({ type: "VIDEO_READY", payload: false })
+        // Streaming must restart from scratch after a reconnect; armed is
+        // kept so an in-progress recording resumes without re-pressing Start.
+        dispatch({ type: "STOP_STREAMING" })
 
         if (audiows.current != null) {
             audiows.current.close();
@@ -923,6 +974,18 @@ function JoinPage() {
         setDeviceCheck({ names, passcode, collaborators, joinswith })
     }
 
+    // End this pod's recording cleanly: closing the sockets makes the
+    // processing services finalize the pod's audio/video artifacts (same
+    // path as leaving the page, but deliberate and confirmed).
+    const endRecording = () => {
+        setArmed(false)
+        setDisplayText(
+            "This pod's recording has ended. You can close this page, or join again to record more.",
+        )
+        disconnect(true)
+        setCurrentForm("ClosedSession")
+    }
+
     // Called by the device check page once the user confirms their devices.
     const confirmDeviceCheck = (selection) => {
         const pending = deviceCheck
@@ -1051,9 +1114,16 @@ function JoinPage() {
     const connect_audio_processor_service = () => {
         audiows.current.binaryType = "arraybuffer"
 
+        // Local to THIS socket: React state in the onclose closure is a
+        // stale snapshot from connect time (always false), which made every
+        // mid-session drop take the "couldn't reach the server" dead end
+        // instead of reconnecting.
+        let opened = false
+
         audiows.current.onopen = (e) => {
             console.log("[Connected audio processor service]")
             console.log("speakers ", speakers.current)
+            opened = true
             dispatch({ type: "AUDIO_SOCKET_OPEN", payload: true })
             reconnectCounter.current = 0
             setPageTitle(name.current)
@@ -1091,18 +1161,16 @@ function JoinPage() {
         audiows.current.onclose = (e) => {
             console.log("[Disconnected]", ending.current)
             if (!ending.current) {
-                // Retry a few times, then surface a real error. (Previously
-                // this compared the ref object to 5 — always true — and then
-                // fell through to the give-up branch anyway, cancelling the
-                // retry it had just scheduled and showing nothing at all
-                // when the socket never opened, e.g. a 502 from nginx.)
-                if (reconnectCounter.current < 5 && state.audioSocketOpen) {
+                // Retry a few times, then surface a real error. `opened` is
+                // socket-local truth about whether this connection ever came
+                // up (state.* here would be a stale snapshot).
+                if (reconnectCounter.current < 5 && opened) {
                     setCurrentForm("Connecting")
                     disconnect()
                     reconnectCounter.current = reconnectCounter.current + 1
                     console.log("reconnecting ....")
                     setTimeout(handleStream, 2000)
-                } else if (!state.audioSocketOpen) {
+                } else if (!opened) {
                     setDisplayText(
                         "Couldn't reach the session server. Please try again, or ask your instructor to check that recording is running.",
                     )
@@ -1598,6 +1666,10 @@ function JoinPage() {
             deviceCheck={deviceCheck}
             confirmDeviceCheck={confirmDeviceCheck}
             cancelDeviceCheck={() => setDeviceCheck(null)}
+            armed={armed}
+            startRecording={() => setArmed(true)}
+            requestEndRecording={() => setCurrentForm("ConfirmEndRec")}
+            confirmEndRecording={endRecording}
             startProcessingSavedSpeakerFingerprint={startProcessingSavedSpeakerFingerprint}
             loadSpeakerMetrics={loadSpeakerMetrics}
             prevSessionId={prevSessionId}
