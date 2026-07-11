@@ -118,6 +118,7 @@ function JoinPage() {
     const [registeredUserAliasChanged, setRegisteredUserAliasChanged] = useState(false)
     const [registeredAudioFingerprintAdded, setRegisteredAudioFingerprintAdded] = useState(false)
     const [registeredVideoFingerprintAdded, setRegisteredVideoFingerprintAdded] = useState(false)
+    const [savedFingerprintError, setSavedFingerprintError] = useState("")
 
     const navigate = useNavigate()
 
@@ -510,6 +511,8 @@ function JoinPage() {
         setCurrentForm(form)
         if (form === "fingerprintAudio" || form === "renameAlias" || form === "savedAudioVideoFingerprint") {
             setSelectedSpeaker(speaker)
+            setInvalidName(false)
+            setSavedFingerprintError("")
         }
     }
 
@@ -646,8 +649,13 @@ function JoinPage() {
     }
 
     const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
-
-        const fetchData = new AuthService().getStudentProfileByID(registeredUsername)
+        const username = (registeredUsername || "").trim()
+        if (username === "") {
+            setSavedFingerprintError("Please enter a username.")
+            return
+        }
+        setSavedFingerprintError("")
+        const fetchData = new AuthService().getStudentProfileByID(username)
         fetchData
             .then(
                 (response) => {
@@ -658,7 +666,9 @@ function JoinPage() {
                             setRegisteredStudentData(student_data)
                         })
                     } else {
-                        setInvalidName(true)
+                        setSavedFingerprintError(
+                            "No enrollment found for that username.",
+                        )
                     }
                 },
                 (apierror) => {
@@ -666,9 +676,27 @@ function JoinPage() {
                         "byod-join-components func: startProcessingSavedSpeakerFingerprint 1 ",
                         apierror,
                     )
+                    setSavedFingerprintError(
+                        "Could not look up that username. Please try again.",
+                    )
                 },
             )
 
+    }
+
+    // A processing service reported it couldn't load the saved fingerprint
+    // (e.g. no voice/face file on disk for that alias). Reset the chained
+    // enrollment state and reopen the username dialog with the reason —
+    // previously the reply was never sent and the dialog hung forever.
+    const onSavedFingerprintFailed = (message) => {
+        setRegisteredStudentData(null)
+        setRegisteredUserAliasChanged(false)
+        setRegisteredAudioFingerprintAdded(false)
+        setRegisteredVideoFingerprintAdded(false)
+        setSavedFingerprintError(
+            message || "No saved fingerprint found for that username.",
+        )
+        setCurrentForm("savedAudioVideoFingerprint")
     }
 
     const addSavedSpeakerFingerprint =  () => {
@@ -988,6 +1016,9 @@ function JoinPage() {
                 console.log("got a response from audio endpoint....")
                 setRegisteredAudioFingerprintAdded(true)
 
+            } else if (message['type'] === 'registeredfingerprintfailed') {
+                console.log("saved fingerprint failed (audio): " + message["message"])
+                onSavedFingerprintFailed(message["message"])
             } else if (message["type"] === "error") {
                 disconnect(true)
                 setDisplayText(
@@ -1054,6 +1085,9 @@ function JoinPage() {
                 } else if (message['type'] === 'registeredfingerprintadded') {
                     console.log("got a response from video endpoint....")
                     setRegisteredVideoFingerprintAdded(true)
+                } else if (message['type'] === 'registeredfingerprintfailed') {
+                    console.log("saved fingerprint failed (video): " + message["message"])
+                    onSavedFingerprintFailed(message["message"])
                 } else if (message['type'] === 'error') {
                     disconnect(true);
                     setDisplayText(message["message"]);
@@ -1505,6 +1539,7 @@ function JoinPage() {
             viewGroup={viewGroup}
             cartoonImgUrl={cartoonImgUrl}
             invalidName={invalidName}
+            savedFingerprintError={savedFingerprintError}
             startProcessingSavedSpeakerFingerprint={startProcessingSavedSpeakerFingerprint}
             loadSpeakerMetrics={loadSpeakerMetrics}
             prevSessionId={prevSessionId}

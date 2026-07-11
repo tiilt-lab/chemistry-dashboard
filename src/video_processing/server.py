@@ -122,6 +122,11 @@ class ServerProtocol(WebSocketServerProtocol):
             return
         
         if data['type'] == 'speaker':
+            # Speakers can be added after the session starts, in which case
+            # the start message carried numSpeakers=0 and facial_embeddings
+            # was never initialized.
+            if self.facial_embeddings is None:
+                self.facial_embeddings = dict()
             if data['id'] == "done":
                 self.awaitingSpeakers = False
                 for speaker in data['speakers']:
@@ -140,11 +145,17 @@ class ServerProtocol(WebSocketServerProtocol):
             facial_embedding_file = os.path.join(cf.facial_embedding_folder(), "{0}".format(currAlias))
             try:
                 facials = np.load(facial_embedding_file+".npy", allow_pickle=True).item()
+                if self.facial_embeddings is None:
+                    self.facial_embeddings = dict()
                 self.facial_embeddings[currSpeaker] = {"alias": currAlias, "data": facials[currAlias]}
                 logging.info("storing registered speaker {}'s fingerprint with alias {}".format(currSpeaker, currAlias))
                 self.send_json({'type':'registeredfingerprintadded'})
             except Exception as e:
                 logging.info("error loading facial embedding for {} : {}".format(currSpeaker,e))
+                # The client waits for a reply; silence leaves the join
+                # dialog stuck on "processing".
+                self.send_json({'type': 'registeredfingerprintfailed',
+                                'message': 'No saved face fingerprint found for this username.'})
             
         if data['type'] == 'heartbeat':
             auth_key = data.get('key', None)

@@ -110,6 +110,11 @@ class ServerProtocol(WebSocketServerProtocol):
             logging.warning('Message does not contain "type".')
             return
         if data['type'] == 'speaker':
+            # Speakers can be added after the session starts, in which case
+            # the start message carried numSpeakers=0 and self.speakers was
+            # never initialized.
+            if self.speakers is None:
+                self.speakers = dict()
             if data['id'] == "done":
                 self.awaitingSpeakers = False
                 for speaker in data['speakers']:
@@ -140,17 +145,26 @@ class ServerProtocol(WebSocketServerProtocol):
         if data['type'] == 'add-saved-fingerprint':
             currSpeaker = data['id']
             currAlias = data['alias']
-            audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}".format(currAlias))
-            wavObj = wave.open(audio_fingerprint_file+'.wav')
-            byte_audio_data = self.read_bytes_from_wav(wavObj) 
-            if currSpeaker and currAlias:
-                self.speakers[currSpeaker] = {"alias": currAlias, "data": byte_audio_data}
-                logging.info("storing registered speaker {}'s fingerprint with alias {}".format(currSpeaker, currAlias))
-                currSpeaker = None
-                currAlias = None
-                self.send_json({'type':'registeredfingerprintadded'})
-            else:
-                logging.info("currentSpeaker and CurrentAlias are {0} {1}".format(currSpeaker,currAlias))    
+            # Any failure must reach the client, otherwise the join dialog
+            # waits forever for registeredfingerprintadded.
+            try:
+                audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}".format(currAlias))
+                wavObj = wave.open(audio_fingerprint_file+'.wav')
+                byte_audio_data = self.read_bytes_from_wav(wavObj)
+                if currSpeaker and currAlias:
+                    if self.speakers is None:
+                        self.speakers = dict()
+                    self.speakers[currSpeaker] = {"alias": currAlias, "data": byte_audio_data}
+                    logging.info("storing registered speaker {}'s fingerprint with alias {}".format(currSpeaker, currAlias))
+                    self.send_json({'type':'registeredfingerprintadded'})
+                else:
+                    logging.info("currentSpeaker and CurrentAlias are {0} {1}".format(currSpeaker,currAlias))
+                    self.send_json({'type': 'registeredfingerprintfailed',
+                                    'message': 'Missing speaker or username.'})
+            except Exception as e:
+                logging.warning('add-saved-fingerprint failed for alias %s: %s', currAlias, e)
+                self.send_json({'type': 'registeredfingerprintfailed',
+                                'message': 'No saved voice fingerprint found for this username.'})
 
         if data['type'] == 'heartbeat':
             auth_key = data.get('key', None)

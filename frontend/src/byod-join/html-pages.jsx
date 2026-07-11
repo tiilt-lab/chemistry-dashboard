@@ -35,6 +35,13 @@ function ByodJoinPage(props) {
     // and mic check are visible without an extra tap.
     const [editCode, setEditCode] = useState(false)
     const [showAdvanced, setShowAdvanced] = useState(true)
+    // Prefilled group name so joining takes zero typing when the exact name
+    // doesn't matter. Random suffix keeps two groups in the same session from
+    // colliding (a duplicate name would silently take over the other group's
+    // device once it disconnects).
+    const [defaultGroupName] = useState(
+        () => "Group " + Math.floor(100 + Math.random() * 900),
+    )
     return (
         <>
             {(props.currentForm === "gottoselectedtranscript" &&
@@ -81,6 +88,7 @@ function ByodJoinPage(props) {
                                         <input
                                             className={dlgInput}
                                             id="name"
+                                            defaultValue={defaultGroupName}
                                             placeholder="e.g. Table 3"
                                         />
                                     </div>
@@ -862,10 +870,8 @@ function ByodJoinPage(props) {
                                 className={style5["field-input"]}
                                 maxLength="64"
                             />
-                            <div>
-                                {props.invalidName
-                                    ? "Record not found for the entered Username"
-                                    : ""}
+                            <div className={props.savedFingerprintError ? dlgError : ""}>
+                                {props.savedFingerprintError}
                             </div>
                             <button
                                 className={style5["basic-button"]}
