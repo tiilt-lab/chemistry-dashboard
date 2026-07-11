@@ -91,10 +91,13 @@ function BrandPanel({ pitch = true }) {
 }
 
 // Full-page ground + centered card wrapper shared by the public pages.
+// Centering comes from the card's m-auto, NOT flex centering on the scroll
+// container: justify-center pushes overflow above the scroll origin, which
+// made tall pages (landing on a phone) unscrollable with the top clipped.
 function BrandCard({ children }) {
     return (
-        <main className="main-container items-center justify-center overflow-y-auto bg-tiilt-ground px-4 py-6">
-            <div className="grid w-full max-w-4xl overflow-hidden rounded-xl border border-tiilt-line bg-white shadow-modal md:min-h-[480px] md:grid-cols-[5fr_6fr]">
+        <main className="main-container overflow-y-auto bg-tiilt-ground px-4 py-6">
+            <div className="m-auto grid w-full max-w-4xl shrink-0 overflow-hidden rounded-xl border border-tiilt-line bg-white shadow-modal md:min-h-[480px] md:grid-cols-[5fr_6fr]">
                 <BrandPanel />
                 <section className="flex flex-col justify-center p-6 md:p-10">
                     {children}
