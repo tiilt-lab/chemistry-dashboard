@@ -158,11 +158,9 @@ class GoogleASR():
             try:
                 audio_generator = self.generator()
                 requests = (speech.StreamingRecognizeRequest(audio_content=content) for content in audio_generator)
-                # 2.x API: the streaming config rides as the first request; chain
-                # lazily so the live audio generator is not drained eagerly.
-                import itertools
-                config_request = speech.StreamingRecognizeRequest(streaming_config=streaming_config)
-                responses = client.streaming_recognize(requests=itertools.chain([config_request], requests))
+                # 2.x helper API: streaming_recognize(config, requests) — the
+                # helper sends the config as the first request itself.
+                responses = client.streaming_recognize(streaming_config, requests)
                 self.process_responses(responses, self.audio_time)
             except exceptions.InvalidArgument as e:
                 logging.warning('Invalid args for Google ASR Connector for client {0}. Attempting to restart connection...'.format(self.config.auth_key))
@@ -201,7 +199,7 @@ class GoogleASR():
         while self.running:
             try:
                 if not self.audio_queue.empty():
-                    audio_wav = types.RecognitionAudio(content=self.audio_queue.get()) 
+                    audio_wav = speech.RecognitionAudio(content=self.audio_queue.get())
                     responses = client.recognize(config = recognition_config, audio=audio_wav)
                     self.process_wav_responses(responses, self.audio_time)
                     self.audio_file_duration = self.audio_file_duration + self.audio_interval
