@@ -21,6 +21,12 @@ function fmtDur(seconds) {
 
 function PodStatus({ device, enrich, queue }) {
     const e = enrich || {}
+    if (device.connected)
+        return (
+            <StatusPill tone="danger" pulse>
+                Recording
+            </StatusPill>
+        )
     if (queue === "error") return <StatusPill tone="danger">Error</StatusPill>
     if (queue === "queued") return <StatusPill tone="brand">Queued</StatusPill>
     if (queue === "running" || e.analysis_running)
@@ -43,7 +49,8 @@ function PodStatus({ device, enrich, queue }) {
                 Analyzed
             </StatusPill>
         )
-    return <span className="text-xs text-tiilt-muted">—</span>
+    // Has data, no analysis yet: the recording ended and is ready to view.
+    return <StatusPill tone="neutral">Ended</StatusPill>
 }
 
 function PodRow({ device, enrich, onOpen, checked, onToggle, queue, index, lastSpoke, renameInline }) {
