@@ -591,6 +591,7 @@ function ByodJoinPage(props) {
                                             {props.joinwith === "Audio" && (
                                                 <AppSectionBoxComponent
                                                     heading={"Audio control:"}
+                                                    type="shrink-0"
                                                 >
                                                     <button
                                                         type="button"
@@ -625,9 +626,13 @@ function ByodJoinPage(props) {
                                                 </AppSectionBoxComponent>
                                             )}
 
+                                            {/* shrink-0: these boxes live in a flex column; without it
+                                                they get crushed to border-height and clipped by the
+                                                boxes' overflow-hidden (video preview showed as nothing). */}
                                             {props.joinwith === "Video" && (
                                                 <AppSectionBoxComponent
                                                     heading={"Camera preview:"}
+                                                    type="shrink-0"
                                                 >
                                                     {/* The <video> must stay mounted even when hidden —
                                                         recording attaches to it and starts in its
@@ -659,6 +664,7 @@ function ByodJoinPage(props) {
                                                 "Videocartoonify" && (
                                                     <AppSectionBoxComponent
                                                         heading={"Camera preview:"}
+                                                        type="shrink-0"
                                                     >
                                                         <div
                                                             className={
