@@ -622,7 +622,11 @@ function ByodJoinPage(props) {
                                                 <div className="flex shrink-0 items-center justify-between rounded-xl border border-tiilt-line bg-white px-4 py-3">
                                                     <div className="flex items-center gap-2 text-sm font-semibold text-tiilt-ink">
                                                         <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500"></span>
-                                                        Recording
+                                                        Recording{" "}
+                                                        <span className="font-ahamono text-xs font-normal text-tiilt-muted">
+                                                            {Math.floor(props.recSeconds / 60)}:
+                                                            {String(props.recSeconds % 60).padStart(2, "0")}
+                                                        </span>
                                                     </div>
                                                     <button
                                                         className="cursor-pointer rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-500"

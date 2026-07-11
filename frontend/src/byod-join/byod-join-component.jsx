@@ -131,6 +131,10 @@ function JoinPage() {
     // holds (heartbeating) until "Start recording" is pressed. armed stays
     // true across transient reconnects so recording resumes.
     const [armed, setArmed] = useState(false)
+    // Seconds actually streamed (ticks only while streaming is live, so it
+    // doubles as visible confirmation that data is flowing). The tick
+    // effect lives below the reducer declaration.
+    const [recSeconds, setRecSeconds] = useState(0)
 
     const navigate = useNavigate()
 
@@ -165,6 +169,12 @@ function JoinPage() {
         }
     }
     const [state, dispatch] = useReducer(reducer, initialState);
+
+    useEffect(() => {
+        if (!state.startDiscussionStreaming) return
+        const t = setInterval(() => setRecSeconds((s) => s + 1), 1000)
+        return () => clearInterval(t)
+    }, [state.startDiscussionStreaming])
 
     const interval = 10000
 
@@ -595,6 +605,7 @@ function JoinPage() {
             setPcode("")
             ending.current = true
             setArmed(false)
+            setRecSeconds(0)
             dispatch({ type: "SPEAKERS_VALIDATED", payload: false })
             speakers.current = null
             setPrevSessionId(session.id)
@@ -974,11 +985,21 @@ function JoinPage() {
         setDeviceCheck({ names, passcode, collaborators, joinswith })
     }
 
-    // End this pod's recording cleanly: closing the sockets makes the
-    // processing services finalize the pod's audio/video artifacts (same
-    // path as leaving the page, but deliberate and confirmed).
-    const endRecording = () => {
+    // End this pod's recording cleanly: flush the recorder's buffered
+    // media while the sockets are still open (the video recorder only
+    // ships a chunk every `interval` ms — without this, a recording
+    // shorter than that saved nothing at all), then close so the
+    // processing services finalize the pod's artifacts.
+    const endRecording = async () => {
         setArmed(false)
+        try {
+            if (mediaRecorder.current && mediaRecorder.current.state === "recording") {
+                mediaRecorder.current.requestData()
+                await new Promise((resolve) => setTimeout(resolve, 1500))
+            }
+        } catch (ex) {
+            console.log("final flush failed", ex)
+        }
         setDisplayText(
             "This pod's recording has ended. You can close this page, or join again to record more.",
         )
@@ -1667,6 +1688,7 @@ function JoinPage() {
             confirmDeviceCheck={confirmDeviceCheck}
             cancelDeviceCheck={() => setDeviceCheck(null)}
             armed={armed}
+            recSeconds={recSeconds}
             startRecording={() => setArmed(true)}
             requestEndRecording={() => setCurrentForm("ConfirmEndRec")}
             confirmEndRecording={endRecording}
