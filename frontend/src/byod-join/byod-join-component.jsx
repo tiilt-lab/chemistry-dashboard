@@ -176,6 +176,65 @@ function JoinPage() {
         return () => clearInterval(t)
     }, [state.startDiscussionStreaming])
 
+    // Mic watchdog: iOS silently mutes the mic track on audio-route changes
+    // (AirPods connecting, Siri, calls) — recording continues but captures
+    // silence. Watch the live level and the track's mute events, and surface
+    // it, so the group knows the moment their audio stops being captured.
+    const [micSilent, setMicSilent] = useState(false)
+    useEffect(() => {
+        if (!state.startDiscussionStreaming) {
+            setMicSilent(false)
+            return
+        }
+        const ctx = audioContext.current
+        const src = source.current
+        if (!ctx || !src) return
+        let raf = null
+        let silentSince = null
+        let analyser
+        try {
+            analyser = ctx.createAnalyser()
+            analyser.fftSize = 512
+            src.connect(analyser)
+        } catch (ex) {
+            console.log("mic watchdog unavailable", ex)
+            return
+        }
+        const buf = new Float32Array(analyser.fftSize)
+        const tick = () => {
+            analyser.getFloatTimeDomainData(buf)
+            let sum = 0
+            for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i]
+            const rms = Math.sqrt(sum / buf.length)
+            const now = performance.now()
+            // A dead/muted track produces exact zeros; even a quiet room
+            // gives noticeably more than this.
+            if (rms < 0.0001) {
+                if (silentSince === null) silentSince = now
+                if (now - silentSince > 10000) setMicSilent(true)
+            } else {
+                silentSince = null
+                setMicSilent(false)
+            }
+            raf = requestAnimationFrame(tick)
+        }
+        tick()
+        const track = streamReference.current?.getAudioTracks?.()[0]
+        const onMute = () => setMicSilent(true)
+        const onUnmute = () => {
+            silentSince = null
+            setMicSilent(false)
+        }
+        track?.addEventListener?.("mute", onMute)
+        track?.addEventListener?.("unmute", onUnmute)
+        return () => {
+            if (raf) cancelAnimationFrame(raf)
+            try { src.disconnect(analyser) } catch { /* context may be closed */ }
+            track?.removeEventListener?.("mute", onMute)
+            track?.removeEventListener?.("unmute", onUnmute)
+        }
+    }, [state.startDiscussionStreaming])
+
     const interval = 10000
 
     let wakeLock = null
@@ -1712,6 +1771,7 @@ function JoinPage() {
             confirmDeviceCheck={confirmDeviceCheck}
             cancelDeviceCheck={() => setDeviceCheck(null)}
             armed={armed}
+            micSilent={micSilent}
             recSeconds={recSeconds}
             startRecording={() => {
                 // Resume inside the tap itself — this is the user gesture

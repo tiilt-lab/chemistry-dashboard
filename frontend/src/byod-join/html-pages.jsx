@@ -619,7 +619,8 @@ function ByodJoinPage(props) {
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <div className="flex shrink-0 items-center justify-between rounded-xl border border-tiilt-line bg-white px-4 py-3">
+                                                <div className="flex shrink-0 flex-col gap-2 rounded-xl border border-tiilt-line bg-white px-4 py-3">
+                                                <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-2 text-sm font-semibold text-tiilt-ink">
                                                         <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500"></span>
                                                         Recording{" "}
@@ -634,6 +635,20 @@ function ByodJoinPage(props) {
                                                     >
                                                         End recording
                                                     </button>
+                                                </div>
+                                                {props.micSilent && (
+                                                    <div className="rounded-md bg-tiilt-orange/15 px-3 py-2 text-left text-xs leading-relaxed text-tiilt-orange-text">
+                                                        No microphone signal —
+                                                        the mic went quiet
+                                                        (earbuds connecting,
+                                                        Siri, or a call can
+                                                        cause this). Speech is
+                                                        not being captured
+                                                        right now; unplug/replug
+                                                        or speak to check it
+                                                        comes back.
+                                                    </div>
+                                                )}
                                                 </div>
                                             )}
                                             {props.joinwith === "Audio" && (

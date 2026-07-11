@@ -193,14 +193,30 @@ def _video_dirs():
             os.path.join(base, 'videorecordings_fixed'))
 
 
-def _find_original_video(session_device_id):
+def _recording_stamp(path):
+    # "(...)" timestamp in the recording filename; falls back to mtime order.
+    try:
+        stamp = path.split('(')[1].split(')')[0]
+        return datetime.strptime(stamp, '%a %b %d %H:%M:%S %Y')
+    except Exception:
+        return datetime.fromtimestamp(os.path.getmtime(path))
+
+
+def _find_original_videos(session_device_id):
+    # All recording segments for a pod in start-time order. A disconnect +
+    # reconnect mid-session starts a new file, so one pod can have several.
     recordings_dir, _ = _video_dirs()
     matches = (
         glob.glob(os.path.join(recordings_dir, '{0}-*_orig.webm'.format(session_device_id)))
         or glob.glob(os.path.join(recordings_dir, '{0}-*.webm'.format(session_device_id)))
         or glob.glob(os.path.join(recordings_dir, '{0}-*.mp4'.format(session_device_id)))
     )
-    return os.path.realpath(matches[0]) if matches else None
+    return sorted((os.path.realpath(m) for m in matches), key=_recording_stamp)
+
+
+def _find_original_video(session_device_id):
+    matches = _find_original_videos(session_device_id)
+    return matches[0] if matches else None
 
 
 def _evict_video_cache(cache_dir, incoming_bytes):
@@ -227,13 +243,17 @@ def _fixed_video_path(session_device_id):
     # The remux writes to a temp name and renames atomically, and concurrent
     # requests for the same device serialize on a lock — so a request can never
     # be served a partially written file.
-    original = _find_original_video(session_device_id)
-    if original is None:
+    originals = _find_original_videos(session_device_id)
+    if not originals:
         return None
     _, cache_dir = _video_dirs()
     os.makedirs(cache_dir, exist_ok=True)
-    ext = '.mp4' if original.lower().endswith('.mp4') else '.webm'
-    fixed = os.path.join(cache_dir, '{0}{1}'.format(session_device_id, ext))
+    ext = '.mp4' if originals[0].lower().endswith('.mp4') else '.webm'
+    # Segment count + total size in the cache name: a reconnect adds a new
+    # segment mid-session, which must invalidate the previously cached remux.
+    total_bytes = sum(os.path.getsize(o) for o in originals)
+    fixed = os.path.join(cache_dir, '{0}-{1}-{2}{3}'.format(
+        session_device_id, len(originals), total_bytes, ext))
     if os.path.exists(fixed):
         return fixed
     with _remux_locks_guard:
@@ -241,24 +261,55 @@ def _fixed_video_path(session_device_id):
     with lock:
         if os.path.exists(fixed):  # a concurrent request already remuxed it
             return fixed
-        _evict_video_cache(cache_dir, os.path.getsize(original))
+        _evict_video_cache(cache_dir, total_bytes)
         tmp = '{0}.tmp{1}'.format(fixed, ext)
+        seg_files = []
         try:
-            result = subprocess.run(
-                ['ffmpeg', '-y', '-v', 'error', '-i', original, '-c', 'copy', tmp],
-                capture_output=True, timeout=300)
-            if result.returncode != 0:
-                logging.warning('ffmpeg remux failed for %s: %s', original, result.stderr[-500:])
-                return original  # fall back to the raw file
+            if len(originals) == 1:
+                result = subprocess.run(
+                    ['ffmpeg', '-y', '-v', 'error', '-i', originals[0], '-c', 'copy', tmp],
+                    capture_output=True, timeout=300)
+                if result.returncode != 0:
+                    logging.warning('ffmpeg remux failed for %s: %s', originals, result.stderr[-500:])
+                    return originals[0]  # fall back to the raw first segment
+            else:
+                # Stitch all segments (same device, same codecs). The raw
+                # files carry a placeholder 24h duration, which the concat
+                # demuxer would use as the splice offset — so each segment
+                # is first remuxed alone (rewriting its real duration), then
+                # concatenated. The gap between segments is not represented;
+                # playback runs continuously.
+                for i, original in enumerate(originals):
+                    seg = '{0}.seg{1}{2}'.format(fixed, i, ext)
+                    result = subprocess.run(
+                        ['ffmpeg', '-y', '-v', 'error', '-i', original, '-c', 'copy', seg],
+                        capture_output=True, timeout=300)
+                    if result.returncode != 0:
+                        logging.warning('segment remux failed for %s: %s', original, result.stderr[-500:])
+                        return originals[0]
+                    seg_files.append(seg)
+                listfile = '{0}.list'.format(fixed)
+                seg_files.append(listfile)
+                with open(listfile, 'w') as f:
+                    for seg in seg_files[:-1]:
+                        f.write("file '{0}'\n".format(seg.replace("'", r"'\''")))
+                result = subprocess.run(
+                    ['ffmpeg', '-y', '-v', 'error', '-f', 'concat', '-safe', '0',
+                     '-i', listfile, '-c', 'copy', tmp],
+                    capture_output=True, timeout=300)
+                if result.returncode != 0:
+                    logging.warning('ffmpeg concat failed for %s: %s', originals, result.stderr[-500:])
+                    return originals[0]
             os.replace(tmp, fixed)  # atomic: readers see nothing or all of it
         except Exception as e:
-            logging.warning('remux error for %s: %s', original, e)
-            return original
+            logging.warning('remux error for %s: %s', originals, e)
+            return originals[0]
         finally:
-            try:
-                os.remove(tmp)
-            except OSError:
-                pass
+            for leftover in [tmp] + seg_files:
+                try:
+                    os.remove(leftover)
+                except OSError:
+                    pass
     return fixed
 
 
