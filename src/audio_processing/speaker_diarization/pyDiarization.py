@@ -23,7 +23,8 @@ def embedSignal(x, verification):
   signal = torch.tensor(np.frombuffer(x, dtype=np.dtype('int16')))
 
   embedding = verification.encode_batch(signal)
-  return [embedding[0, 0].numpy()]
+  # The model may live on CUDA; numpy conversion requires host memory.
+  return [embedding[0, 0].detach().cpu().numpy()]
 
 def checkFingerprints(x, fingerprints, verification):
   np_signal = torch.tensor(np.frombuffer(x, dtype=np.dtype('int16')))

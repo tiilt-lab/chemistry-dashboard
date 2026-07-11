@@ -387,9 +387,23 @@ function JoinPage() {
         if (state.startDiscussionStreaming) {
             console.log("starting audio streaming ...")
             const loadWorklet = async () => {
+                // iOS Safari starts AudioContexts created outside a direct
+                // user gesture in the "suspended" state — the worklet then
+                // never processes a frame and no audio reaches the server.
+                try {
+                    await audioContext.current.resume()
+                } catch (ex) {
+                    console.log("audio context resume failed", ex)
+                }
+                console.log("audio context state:", audioContext.current.state)
+                // Absolute path: a relative one resolves under /join/<code>
+                // on deep links, 404s into the SPA fallback HTML, and the
+                // worklet silently never loads — no audio ever reached the
+                // server from QR/passcode joins.
                 await audioContext.current.audioWorklet.addModule(
-                    "audio-sender-processor.js",
+                    "/audio-sender-processor.js",
                 )
+                console.log("audio worklet module loaded")
                 const workletProcessor = new AudioWorkletNode(
                     audioContext.current,
                     "audio-sender-processor",
@@ -1188,6 +1202,16 @@ function JoinPage() {
                 if (reconnectCounter.current < 5 && opened) {
                     setCurrentForm("Connecting")
                     disconnect()
+                    // The new server connection starts with no speaker
+                    // fingerprints — streaming into it before re-enrolling
+                    // triggers 'Binary audio data sent before start
+                    // message'. Drop back to the fingerprint step; armed
+                    // survives, so recording resumes after re-validation.
+                    dispatch({ type: "SPEAKERS_VALIDATED", payload: false })
+                    speakers.current = (speakers.current || []).map((s) => ({
+                        ...s,
+                        fingerprinted: false,
+                    }))
                     reconnectCounter.current = reconnectCounter.current + 1
                     console.log("reconnecting ....")
                     setTimeout(handleStream, 2000)
@@ -1689,7 +1713,12 @@ function JoinPage() {
             cancelDeviceCheck={() => setDeviceCheck(null)}
             armed={armed}
             recSeconds={recSeconds}
-            startRecording={() => setArmed(true)}
+            startRecording={() => {
+                // Resume inside the tap itself — this is the user gesture
+                // iOS requires before an AudioContext may run.
+                audioContext.current?.resume?.().catch(() => {})
+                setArmed(true)
+            }}
             requestEndRecording={() => setCurrentForm("ConfirmEndRec")}
             confirmEndRecording={endRecording}
             startProcessingSavedSpeakerFingerprint={startProcessingSavedSpeakerFingerprint}

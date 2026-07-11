@@ -15,6 +15,44 @@ import numpy as np
 # For converting nano seconds to seconds.
 NANO = 1000000000
 
+
+# google-cloud-speech 2.x returns word times as datetime.timedelta; the
+# processors were written against the 1.x proto interface
+# (.seconds/.nanos, mutable). Results are converted into these plain
+# equivalents — with the stream-restart offset already applied — before
+# being queued.
+class _TimePoint:
+    __slots__ = ('seconds', 'nanos')
+
+    def __init__(self, total_seconds):
+        self.seconds = int(total_seconds)
+        self.nanos = int((total_seconds - int(total_seconds)) * NANO)
+
+
+class _Word:
+    __slots__ = ('word', 'start_time', 'end_time')
+
+    def __init__(self, word, start_time, end_time):
+        self.word = word
+        self.start_time = start_time
+        self.end_time = end_time
+
+
+class _Alternative:
+    __slots__ = ('transcript', 'words')
+
+    def __init__(self, transcript, words):
+        self.transcript = transcript
+        self.words = words
+
+
+class _Result:
+    __slots__ = ('alternatives', 'is_final')
+
+    def __init__(self, alternatives, is_final=True):
+        self.alternatives = alternatives
+        self.is_final = is_final
+
 # Path for google asr credentials.
 cf.initialize()
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'google-cloud-key.json')
@@ -95,6 +133,21 @@ class GoogleASR():
         self.audio_time += generator_time
         
 
+    def _convert_result(self, result, audio_start_time):
+        # timedelta -> absolute seconds within the whole recording (stream
+        # restart offset + posthoc chunk offset), in the legacy shape.
+        alt = result.alternatives[0]
+        offset = audio_start_time + self.audio_file_duration
+        words = [
+            _Word(
+                w.word,
+                _TimePoint(w.start_time.total_seconds() + offset),
+                _TimePoint(w.end_time.total_seconds() + offset),
+            )
+            for w in alt.words
+        ]
+        return _Result([_Alternative(alt.transcript, words)])
+
     def process_responses(self, responses, audio_start_time):
         for response in responses:
             if not response.results:
@@ -103,37 +156,16 @@ class GoogleASR():
             if not result.alternatives:
                 continue
             if result.is_final and len(result.alternatives[0].words) > 0:
-                # are these tme calculations really needed? does not appear to be used anywhere
-                end_time = result.result_end_time
-                end_time.seconds, end_time.nanos = self.adjust_time(end_time.seconds, end_time.nanos, audio_start_time)
-                # are these tme calculations really needed? does not appear to be used anywhere
-                for word in result.alternatives[0].words:
-                    start = word.start_time
-                    end = word.end_time
-                    start.seconds, start.nanos = self.adjust_time(start.seconds, start.nanos, audio_start_time)
-                    end.seconds, end.nanos = self.adjust_time(end.seconds, end.nanos, audio_start_time)
-                self.transcript_queue.put(result)
+                logging.info('ASR result: %r', result.alternatives[0].transcript[:120])
+                self.transcript_queue.put(self._convert_result(result, audio_start_time))
 
     def process_wav_responses(self, response, audio_start_time):
         for result in response.results:
             if not result.alternatives:
                 return
-            
-            if  len(result.alternatives[0].words) > 0:
-                for word in result.alternatives[0].words:
-                    # are these tme calculations really needed? does not appear to be used anywhere
-                    start = word.start_time
-                    end = word.end_time
-                    start.seconds, start.nanos = self.adjust_time(start.seconds, start.nanos, audio_start_time)
-                    end.seconds, end.nanos = self.adjust_time(end.seconds, end.nanos, audio_start_time)
-                self.transcript_queue.put(result)
 
-    def adjust_time(self, seconds, nanos, offset):
-        adjusted_time = seconds + (nanos / NANO) + offset
-        adjusted_nanos, adjusted_seconds = math.modf(adjusted_time)
-        adjusted_nanos *= NANO
-        adjusted_seconds += self.audio_file_duration
-        return int(adjusted_seconds), int(adjusted_nanos)
+            if len(result.alternatives[0].words) > 0:
+                self.transcript_queue.put(self._convert_result(result, audio_start_time))
 
     def processing(self):
         logging.info('Google ASR thread started for {0}.'.format(self.config.auth_key))

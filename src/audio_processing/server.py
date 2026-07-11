@@ -118,7 +118,14 @@ class ServerProtocol(WebSocketServerProtocol):
             if data['id'] == "done":
                 self.awaitingSpeakers = False
                 for speaker in data['speakers']:
-                    self.speakers[speaker["id"]]["alias"] = speaker["alias"]
+                    entry = self.speakers.get(speaker["id"])
+                    if entry is None:
+                        # Client re-validated after a reconnect without
+                        # re-sending this speaker's fingerprint; don't crash
+                        # the whole message on the missing entry.
+                        logging.warning('speaker %s validated with no fingerprint on this connection', speaker["id"])
+                        continue
+                    entry["alias"] = speaker["alias"]
                 self.processor.setSpeakerFingerprints(self.speakers)
                 logging.info("Done awaiting all speakers info")
             else:

@@ -168,7 +168,9 @@ def add_transcript(**kwargs):
   keywords = content.get('keywords', [])
   if keywords is None:
     keywords = []
-  features = content.get('features', {})
+  # Arrives as an explicit null when feature scoring is off — .get's
+  # default only covers a missing key.
+  features = content.get('features') or {}
   topic_id = content.get('topic_id', -1)
   emotional_tone = features.get('emotional_tone_value', 0)
   analytic_thinking = features.get('analytic_thinking_value', 0)
@@ -230,7 +232,9 @@ def add_speaker_transcript_metrics(**kwargs):
   keywords = content.get('keywords', [])
   if keywords is None:
     keywords = []
-  features = content.get('features', {})
+  # Arrives as an explicit null when feature scoring is off — .get's
+  # default only covers a missing key.
+  features = content.get('features') or {}
   topic_id = content.get('topic_id', -1)
   emotional_tone = features.get('emotional_tone_value', 0)
   analytic_thinking = features.get('analytic_thinking_value', 0)
