@@ -381,7 +381,7 @@ function ByodJoinPage(props) {
                                         <div className="flex flex-col items-center">
                                             <button
                                                 className={btnSecondaryTall + " m-0.5 w-60 @sm:m-3 @sm:w-80"}
-                                                onClick={props.addSpeakerSlot}
+                                                onClick={() => props.openForms("addSpeaker")}
                                             >
                                                 + Add speaker
                                             </button>
@@ -548,7 +548,7 @@ function ByodJoinPage(props) {
                                         <div className="flex flex-col items-center">
                                             <button
                                                 className={btnSecondaryTall + " m-0.5 w-60 @sm:m-3 @sm:w-80"}
-                                                onClick={props.addSpeakerSlot}
+                                                onClick={() => props.openForms("addSpeaker")}
                                             >
                                                 + Add speaker
                                             </button>
@@ -803,6 +803,7 @@ function ByodJoinPage(props) {
                     "fingerprintAudio",
                     "renameAlias",
                     "savedAudioVideoFingerprint",
+                    "addSpeaker",
                 ].includes(props.currentForm)}
             >
                 {(props.currentForm === "Transcript" && (
@@ -915,6 +916,50 @@ function ByodJoinPage(props) {
                                 onClick={props.closeDialog}
                             >
                                 {" "}
+                                Cancel
+                            </button>
+                        </div>
+                    )) ||
+                    (props.currentForm === "addSpeaker" && (
+                        <div
+                            className={style5["dialog-window"]}
+                            style={{ minWidth: "min(20rem, 76vw)" }}
+                        >
+                            <div className={style5["dialog-heading"]}>
+                                Add speaker
+                            </div>
+                            <input
+                                aria-label="Speaker name"
+                                id="newspeakername"
+                                className={style5["field-input"]}
+                                maxLength="64"
+                                placeholder="Username or name"
+                                autoCapitalize="off"
+                                spellCheck="false"
+                            />
+                            <div className="px-2 text-left text-xs leading-relaxed text-tiilt-muted">
+                                Enrolled speakers: enter the username they
+                                enrolled with and their saved voice
+                                fingerprint attaches automatically. Anyone
+                                else is added by name and can record one
+                                from the speaker menu.
+                            </div>
+                            <button
+                                className={style5["basic-button"]}
+                                onClick={() => {
+                                    props.addSpeakerSlot(
+                                        document.getElementById("newspeakername")
+                                            .value,
+                                    )
+                                    props.closeDialog()
+                                }}
+                            >
+                                Add
+                            </button>
+                            <button
+                                className={style5["cancel-button"]}
+                                onClick={props.closeDialog}
+                            >
                                 Cancel
                             </button>
                         </div>

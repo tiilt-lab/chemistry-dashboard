@@ -728,15 +728,48 @@ function JoinPage() {
     // Add a speaker slot after joining (needed when the group joined with
     // "detect automatically", i.e. zero pre-created slots).
     const [, setSpeakerListTick] = useState(0)
-    const addSpeakerSlot = () => {
+    // Adds a speaker slot. When a name is given, enrolled speakers default
+    // to their saved fingerprint: an exact username match renames the slot
+    // and attaches the stored voice print automatically; anyone else just
+    // gets the name (fingerprint recordable from the speaker menu).
+    const addSpeakerSlot = (name = "") => {
         if (!sessionDevice) return
         sessionService.addSpeaker(sessionDevice.id).then(
             (response) => {
                 if (response.status === 200) {
-                    response.json().then((jsonObj) => {
+                    response.json().then(async (jsonObj) => {
                         const speaker = SpeakerModel.fromJson(jsonObj)
                         speakers.current = [...(speakers.current || []), speaker]
                         setSpeakerListTick((x) => x + 1)
+                        const username = (name || "").trim()
+                        if (!username) return
+                        setSelectedSpeaker(speaker)
+                        try {
+                            const resp = await new AuthService().getStudentProfileByID(username)
+                            if (resp.status === 200) {
+                                const studentJson = await resp.json()
+                                // Kicks off the existing chain: rename to the
+                                // username, then attach the saved fingerprint.
+                                setRegisteredStudentData(StudentModel.fromJson(studentJson))
+                                return
+                            }
+                        } catch (ex) {
+                            console.log("enrollment lookup failed", ex)
+                        }
+                        // Not enrolled — keep the entered name, no fingerprint.
+                        try {
+                            const r = await sessionService.updateCollaborator(speaker.id, username)
+                            if (r.status === 200) {
+                                const renamed = SpeakerModel.fromJson(await r.json())
+                                speakers.current = speakers.current.map((s) =>
+                                    s.id === speaker.id ? { ...s, alias: renamed.alias } : s,
+                                )
+                                setSpeakerListTick((x) => x + 1)
+                            }
+                        } catch (ex) {
+                            console.log("speaker rename failed", ex)
+                        }
+                        setSelectedSpeaker(null)
                     })
                 }
             },
