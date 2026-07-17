@@ -690,8 +690,11 @@ def session_devices(session_id, **kwargs):
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/dynamics', methods=['GET'])
 def get_pod_dynamics(session_id, session_device_id, **kwargs):
     # Conversation dynamics for a pod: per-speaker turns/speaking-share (equity)
-    # + the who-follows-whom response network.
-    return json_response(database.get_conversation_dynamics(session_device_id))
+    # + the who-follows-whom response network + Tier-1 talk metrics
+    # (equity timeline, silences, handoffs vs interruptions, questions).
+    result = database.get_conversation_dynamics(session_device_id)
+    result['talk'] = database.get_talk_metrics(session_device_id)
+    return json_response(result)
 
 
 @api_routes.route('/api/v1/sessions/upload_video', methods=['POST'])

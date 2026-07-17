@@ -166,6 +166,69 @@ function ResponseGraph({ transitions, colorOf, sharesByName }) {
     )
 }
 
+function fmtClock(sec) {
+    const m = Math.floor(sec / 60)
+    const s = Math.round(sec % 60)
+    return `${m}:${String(s).padStart(2, "0")}`
+}
+
+function Stat({ label, value, title }) {
+    return (
+        <div
+            className="rounded-lg border border-tiilt-line bg-tiilt-ground/50 px-3 py-2"
+            title={title}
+        >
+            <div className="text-base font-bold text-tiilt-ink">{value}</div>
+            <div className="text-[11px] text-tiilt-muted">{label}</div>
+        </div>
+    )
+}
+
+// Stacked columns: one per time bucket, colored by speaker; unfilled column
+// height is silence — so quiet stretches are visible at a glance.
+function EquityTimeline({ timeline, colorOf }) {
+    const { buckets, bucket_seconds } = timeline
+    if (!buckets || !buckets.length) return null
+    return (
+        <div>
+            <div className="flex h-20 items-end gap-1">
+                {buckets.map((b, i) => {
+                    const total = Object.values(b).reduce((a, v) => a + v, 0)
+                    const fill = Math.min(1, total / bucket_seconds)
+                    return (
+                        <div
+                            key={i}
+                            className="flex grow flex-col-reverse overflow-hidden rounded-sm bg-tiilt-ground"
+                            style={{ height: "100%" }}
+                            title={`${fmtClock(i * bucket_seconds)}–${fmtClock((i + 1) * bucket_seconds)} · ${Math.round(fill * 100)}% talk`}
+                        >
+                            {Object.entries(b)
+                                .sort((x, y) => y[1] - x[1])
+                                .map(([name, sec]) => (
+                                    <div
+                                        key={name}
+                                        style={{
+                                            height: `${(sec / bucket_seconds) * 100}%`,
+                                            backgroundColor: colorOf(name),
+                                        }}
+                                        title={`${name}: ${Math.round(sec)}s`}
+                                    />
+                                ))}
+                        </div>
+                    )
+                })}
+            </div>
+            <div className="mt-1 flex justify-between text-[10px] text-tiilt-muted">
+                <span>start</span>
+                <span>
+                    {fmtClock(buckets.length * bucket_seconds)} · empty space =
+                    silence
+                </span>
+            </div>
+        </div>
+    )
+}
+
 // Per-speaker speaking-time equity + a who-follows-whom response network,
 // derived from the pod's diarized transcript.
 export function ConversationDynamicsPanel({ sessionId, sessionDeviceId }) {
@@ -209,7 +272,16 @@ export function ConversationDynamicsPanel({ sessionId, sessionDeviceId }) {
             </div>
         )
 
-    const allNames = data.speakers.map((s) => s.name)
+    const talk = data.talk
+    // Include timeline-only names (e.g. "Unattributed") in the palette space.
+    const allNames = [
+        ...new Set([
+            ...data.speakers.map((s) => s.name),
+            ...(talk && talk.per_speaker
+                ? talk.per_speaker.map((s) => s.name)
+                : []),
+        ]),
+    ]
     const colorOf = (name) => speakerColorFor(name, allNames)
     const balance =
         data.gini <= 0.2
@@ -256,6 +328,102 @@ export function ConversationDynamicsPanel({ sessionId, sessionDeviceId }) {
                     ))}
                 </div>
             </div>
+
+            {talk && !talk.empty && (
+                <>
+                    {talk.never_spoke && talk.never_spoke.length > 0 && (
+                        <div className="rounded-md bg-tiilt-orange/15 px-3 py-2 text-xs leading-relaxed text-tiilt-orange-text">
+                            Never spoke (or no utterance was attributed to
+                            them): {talk.never_spoke.join(", ")}
+                        </div>
+                    )}
+
+                    <div>
+                        <div className="font-ahamono mb-2 text-[11px] tracking-wider text-tiilt-muted uppercase">
+                            Participation over time
+                        </div>
+                        <EquityTimeline
+                            timeline={talk.timeline}
+                            colorOf={colorOf}
+                        />
+                    </div>
+
+                    <div>
+                        <div className="font-ahamono mb-2 text-[11px] tracking-wider text-tiilt-muted uppercase">
+                            Silence &amp; turn-taking
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                            <Stat
+                                label={`silences over ${Math.round(talk.silences.threshold_seconds)}s`}
+                                value={talk.silences.count}
+                                title={`${talk.silences.pct_of_session}% of the session was silent`}
+                            />
+                            <Stat
+                                label="longest silence"
+                                value={
+                                    talk.silences.longest
+                                        ? fmtClock(talk.silences.longest.seconds)
+                                        : "—"
+                                }
+                                title={
+                                    talk.silences.longest
+                                        ? `at ${fmtClock(talk.silences.longest.at)} into the session`
+                                        : undefined
+                                }
+                            />
+                            <Stat
+                                label="clean handoffs"
+                                value={talk.turn_taking.clean_handoffs}
+                                title="Speaker changes with no overlap"
+                            />
+                            <Stat
+                                label="interruptions"
+                                value={talk.turn_taking.interruptions}
+                                title="Speaker changes that overlapped the previous speaker by more than 1s"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <div className="font-ahamono mb-2 text-[11px] tracking-wider text-tiilt-muted uppercase">
+                            Questions
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                            <Stat label="questions asked" value={talk.questions.total} />
+                            <Stat
+                                label="open / closed"
+                                value={`${talk.questions.open} / ${talk.questions.closed}`}
+                                title="Heuristic on the question's first words: why/how/what-if count as open; yes-no starters as closed. The rest are unclassified."
+                            />
+                            <Stat
+                                label="avg wait for a reply"
+                                value={
+                                    talk.questions.avg_wait_seconds != null
+                                        ? `${talk.questions.avg_wait_seconds}s`
+                                        : "—"
+                                }
+                                title="Time from the end of a question to the next utterance"
+                            />
+                            <Stat
+                                label="left hanging"
+                                value={talk.questions.hanging}
+                                title={`No reply within ${Math.round(talk.questions.hanging_wait_seconds)}s`}
+                            />
+                        </div>
+                        {talk.per_speaker.some((s) => s.questions > 0) && (
+                            <div className="mt-2 text-[11px] text-tiilt-muted">
+                                {talk.per_speaker
+                                    .filter((s) => s.questions > 0)
+                                    .map(
+                                        (s) =>
+                                            `${s.name}: ${s.questions} (${s.open_questions} open)`,
+                                    )
+                                    .join(" · ")}
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
 
             <div>
                 <div className="font-ahamono mb-2 text-[11px] tracking-wider text-tiilt-muted uppercase">

@@ -1455,6 +1455,21 @@ def get_conversation_dynamics(session_device_id):
     return compute_conversation_dynamics(rows)
 
 
+def get_talk_metrics(session_device_id):
+    # Tier-1 talk metrics (equity timeline, silences, handoffs/interruptions,
+    # questions & wait time). Unlike the dynamics network this keeps
+    # unattributed utterances — hiding them would overstate equity.
+    from analytics import compute_talk_metrics
+    rows = db.session.query(
+        Transcript.speaker_tag, Transcript.start_time, Transcript.length,
+        Transcript.question, Transcript.transcript) \
+        .filter(Transcript.session_device_id == session_device_id) \
+        .order_by(Transcript.start_time).all()
+    enrolled = [s.alias for s in get_speakers(session_device_id=session_device_id)
+                if s.alias]
+    return compute_talk_metrics(rows, enrolled=enrolled)
+
+
 def get_pod_duration(session_device_id):
     # Single-pod activity span (same derivation as get_pod_durations).
     from sqlalchemy import text
