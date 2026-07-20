@@ -13,9 +13,17 @@ import { AppFeaturesComponent } from "../../features/features-component"
 import { AppRadarComponent } from "../../radar/radar-component"
 import { AppKeywordsComponent } from "../../keywords/keywords-component"
 import { AppIndividualFeaturesComponent } from "../individualmetrics/features-component"
-import { AppIndividualVideoFeaturesComponent } from "../individualVideometrics/video-features-component"
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, lazy, Suspense } from "react"
 import { ApiService } from "../../services/api-service"
+
+// Heaviest chunk in the app (~288 KB). Only rendered when a pod has video
+// metrics AND the video box is expanded, so defer it until then — text-only
+// pods and unexpanded views never pay for it.
+const AppIndividualVideoFeaturesComponent = lazy(() =>
+    import("../individualVideometrics/video-features-component").then((m) => ({
+        default: m.AppIndividualVideoFeaturesComponent,
+    })),
+)
 
 function AppInfographicsComparison(props) {
     // Shared selection linking the transcript with the Expression & Thinking
@@ -33,42 +41,19 @@ function AppInfographicsComparison(props) {
     // that actually produced the STORED rows, not whatever the deployment
     // would use today.
     const [globalModels, setGlobalModels] = useState(null)
-    // Label registry mirroring routes/callback.py, keyed by provenance field.
-    const PROVENANCE_LABELS = {
-        asr: {
-            "google-cloud-speech": "Google Cloud Speech-to-Text (video model, en-US)",
-            whisper: "Whisper (open, offline)",
-            whisperx: "WhisperX (open; batched + word-level alignment)",
-            qwen3: "Qwen3-ASR 1.7B + ForcedAligner (open)",
-            "qwen3-0.6b": "Qwen3-ASR 0.6B + ForcedAligner (open, fast)",
-        },
-        scorer: {
-            liwc: "the LIWC & Harvard General Inquirer lexicons",
-            open: "the Harvard General Inquirer lexicon (open)",
-            llm: "Google Gemini (LLM contextual scoring)",
-        },
-        embedder: {
-            "all-mpnet-base-v2": "MPNet sentence embedder (all-mpnet-base-v2)",
-            "bge-large-en-v1.5": "BGE large v1.5 (open SOTA)",
-        },
-        keywords: {
-            word2vec: "word2vec semantic matching (GoogleNews-300)",
-            embedding: "SentenceTransformer semantic matching (BGE, open)",
-        },
-        emotion: {
-            resmasking: "ResMaskingNet (FER-2013, 7 emotions)",
-            hsemotion: "HSEmotion EfficientNet-B2 (AffectNet-8, open SOTA)",
-        },
-        attention: {
-            gazefollow: "Attended-visual-targets gaze model (Chong et al. 2020, GazeFollow)",
-            gazelle: "Gaze-LLE (Meta 2024, DINOv2; open SOTA)",
-        },
-        objects: {
-            yolov4: "YOLOv4-P7 object detector (COCO)",
-            yolo11: "YOLO11m object detector (COCO, open SOTA)",
-        },
-    }
-    // /api/v1/models module key -> posthoc_models provenance key.
+    // Label registry now comes from the API (GET /api/v1/provenance_labels),
+    // the single source of truth in routes/callback.py — the frontend used
+    // to hand-mirror it, and the drift was the "caption names the wrong
+    // model" bug. Empty until fetched; labels fall back to the id meanwhile.
+    const [provenanceLabels, setProvenanceLabels] = useState({})
+    useEffect(() => {
+        new ApiService()
+            .httpRequestCall("api/v1/provenance_labels", "GET", {})
+            .then((r) => (r.status === 200 ? r.json() : null))
+            .then((d) => d && setProvenanceLabels(d))
+            .catch(() => {})
+    }, [])
+    // /api/v1/models module key -> posthoc_models provenance field.
     const MODULE_TO_PROVENANCE = {
         transcription: "asr",
         scoring: "scorer",
@@ -87,7 +72,9 @@ function AppInfographicsComparison(props) {
         for (const [module, field] of Object.entries(MODULE_TO_PROVENANCE)) {
             const id = podModels && podModels[field]
             if (id) {
-                out[module] = { id, label: PROVENANCE_LABELS[field][id] || id }
+                const label = (provenanceLabels[field] &&
+                    provenanceLabels[field][id]) || id
+                out[module] = { id, label }
             }
         }
         return out
@@ -344,6 +331,7 @@ function AppInfographicsComparison(props) {
                                     <ModelNote label={models && models.objects && models.objects.label} fallback="YOLO11m object detector (COCO)" />
                                 </div>
 )}
+                                <Suspense fallback={null}>
                                 <AppIndividualVideoFeaturesComponent
                                     session={props.session}
                                     videometrics={props.spkr1VideoMetrics}
@@ -352,6 +340,7 @@ function AppInfographicsComparison(props) {
                                     )}
                                     showFeatures={props.showFeatures}
                                 />
+                                </Suspense>
                             </AppSectionBoxComponent>
                         )}
 
@@ -369,6 +358,7 @@ function AppInfographicsComparison(props) {
                                     <ModelNote label={models && models.objects && models.objects.label} fallback="YOLO11m object detector (COCO)" />
                                 </div>
 )}
+                                <Suspense fallback={null}>
                                 <AppIndividualVideoFeaturesComponent
                                     session={props.session}
                                     videometrics={props.spkr2VideoMetrics}
@@ -377,6 +367,7 @@ function AppInfographicsComparison(props) {
                                     )}
                                     showFeatures={props.showFeatures}
                                 />
+                                </Suspense>
                             </AppSectionBoxComponent>
                         )}
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { ApiService } from "../../services/api-service"
 import { speakerColorFor } from "../../globals"
 import { useIsDark } from "../../myhooks/custom-hooks"
+import { fmtClock } from "../../lib/utils"
 
 
 
@@ -166,11 +167,6 @@ function ResponseGraph({ transitions, colorOf, sharesByName }) {
     )
 }
 
-function fmtClock(sec) {
-    const m = Math.floor(sec / 60)
-    const s = Math.round(sec % 60)
-    return `${m}:${String(s).padStart(2, "0")}`
-}
 
 function Stat({ label, value, title }) {
     return (

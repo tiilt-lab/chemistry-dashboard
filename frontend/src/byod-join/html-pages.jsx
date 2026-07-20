@@ -24,6 +24,7 @@ import MicIcon from "@icons/Mic"
 import Check from "@icons/Check"
 import Chevron from "@icons/Chevron"
 import { MicChannelProbe } from "./mic-channel-probe"
+import { defaultGroupName as makeDefaultGroupName } from "../lib/utils"
 import { DeviceCheckPage } from "./device-check"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
@@ -40,9 +41,7 @@ function ByodJoinPage(props) {
     // doesn't matter. Random suffix keeps two groups in the same session from
     // colliding (a duplicate name would silently take over the other group's
     // device once it disconnects).
-    const [defaultGroupName] = useState(
-        () => "Group " + Math.floor(100 + Math.random() * 900),
-    )
+    const [defaultGroupName] = useState(makeDefaultGroupName)
     return (
         <>
             {(props.currentForm === "gottoselectedtranscript" &&

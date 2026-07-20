@@ -39,6 +39,7 @@ jobs:
       # only ever decrease. NOTE: --ext .js,.jsx is required — without it
       # eslint 8 silently skips every .jsx component.
       - run: npx eslint src --ext .js,.jsx --max-warnings 276
+      - run: npm test
       - run: npm run build
 
   secret-scan:
