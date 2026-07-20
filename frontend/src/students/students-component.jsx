@@ -15,7 +15,6 @@ import {
 } from "../components/dialog-styles"
 import { Appheader } from "../header/header-component"
 import { GenericDialogBox } from "../dialog/dialog-component"
-import { DataTable } from "../components/data-table"
 import { StatusPill } from "../components/status-pill"
 import { EmptyState } from "../components/empty-state"
 import { AppSpinner } from "../spinner/spinner-component"
@@ -23,6 +22,11 @@ import { AppContextMenu } from "../components/context-menu/context-menu-componen
 import { AuthService } from "../services/auth-service"
 import { ApiService } from "../services/api-service"
 import { isManager } from "../routes/roles"
+import {
+    voiceState,
+    enrollmentNeedsAttention,
+    VoiceQualityCard,
+} from "../components/voice-quality"
 import contextStyle from "../components/context-menu/context-menu.module.css"
 
 // "2026-06-18 14:35:58 UTC" -> Date (or null).
@@ -73,31 +77,8 @@ const SORTS = {
         (parseDate(b.creation_date)?.getTime() || 0),
 }
 
-// Voice-print state from the overview's enrollment fields (the .check.json
-// verdict the audio service writes at capture time / via the survey run).
-// Three grades: weak = genuinely broken (near-silent or doesn't match
-// itself); short = only fails the net-speech bar (old 10s-cap era — usable,
-// but worth redoing eventually); ok = passes. Similarity to another voice is
-// NOT a defect — overlaps are shown separately.
-function voiceState(s) {
-    if (!s.voice_enrolled) return { label: "No voice", tone: "orange" }
-    const c = s.voice_check
-    if (!c) return { label: "Voice ✓", tone: "neutral" } // not yet checked
-    const broken =
-        (c.net_speech_seconds ?? 0) < 5 ||
-        (c.self_similarity != null && c.self_similarity < 0.45)
-    if (broken) return { label: "Voice: weak", tone: "orange" }
-    if (c.ok === false) return { label: "Voice: short", tone: "neutral" }
-    return { label: "Voice ✓", tone: "teal" }
-}
-
-function enrollmentNeedsAttention(s) {
-    return (
-        !s.voice_enrolled ||
-        !s.face_enrolled ||
-        voiceState(s).label === "Voice: weak"
-    )
-}
+// voiceState / enrollmentNeedsAttention / the quality card moved to
+// components/voice-quality.jsx — shared with the student profile page.
 
 // Student roster with participation stats. Every signed-in user can view it;
 // the server scopes regular users to students seen in their own sessions.
@@ -115,7 +96,6 @@ function StudentsComponent(props) {
     const [status, setStatus] = useState("")
     const [statusTitle, setStatusTitle] = useState("")
     const [target, setTarget] = useState(null) // student a dialog acts on
-    const [activity, setActivity] = useState(null) // drill-down payload
     const [syncEnabled, setSyncEnabled] = useState(false)
     // Bulk selection (admins): toggled from the row's index/select cell.
     const [selected, setSelected] = useState(() => new Set())
@@ -230,32 +210,6 @@ function StudentsComponent(props) {
         setStatus("")
         setCurrentForm("")
         setTarget(null)
-        setActivity(null)
-    }
-
-    // Tier C: click a student -> their session history (scoped server-side
-    // exactly like the roster).
-    const openActivity = async (student) => {
-        setCurrentForm("Loading")
-        try {
-            const response = await new AuthService().getStudentActivity(
-                student.id,
-            )
-            if (response.status === 200) {
-                setActivity(await response.json())
-                setCurrentForm("Activity")
-            } else {
-                showStatus(
-                    "Couldn't load activity",
-                    "The student's session history could not be loaded.",
-                )
-            }
-        } catch {
-            showStatus(
-                "Couldn't load activity",
-                "The server could not be reached.",
-            )
-        }
     }
 
     const addStudent = async (firstname, lastname, username) => {
@@ -790,8 +744,10 @@ function StudentsComponent(props) {
                                         {visible.map((s, rowIndex) => (
                                             <tr
                                                 key={s.id}
-                                                onClick={() => openActivity(s)}
-                                                title={`View ${s.firstname}'s session history`}
+                                                onClick={() =>
+                                                    navigate(`/students/${s.id}`)
+                                                }
+                                                title={`Open ${s.firstname}'s profile`}
                                                 className="cursor-pointer border-t border-tiilt-line bg-white transition first:border-t-0 hover:bg-tiilt-soft/50"
                                             >
                                                 {canManage ? (
@@ -897,10 +853,12 @@ function StudentsComponent(props) {
                                                                 ]
                                                             }
                                                             onClick={() =>
-                                                                openActivity(s)
+                                                                navigate(
+                                                                    `/students/${s.id}`,
+                                                                )
                                                             }
                                                         >
-                                                            View activity
+                                                            Open profile
                                                         </button>
                                                         <button
                                                             role="menuitem"
@@ -989,56 +947,7 @@ function StudentsComponent(props) {
                         <div className="mb-1 text-sm font-semibold text-tiilt-ink">
                             Voice fingerprint
                         </div>
-                        {target.voice_enrolled ? (
-                            <>
-                                <audio
-                                    controls
-                                    preload="none"
-                                    className="mb-3 w-full"
-                                    src={`/api/v1/students/${target.id}/fingerprint_audio`}
-                                />
-                                {target.voice_check ? (
-                                    <div className="mb-3 flex flex-col gap-1.5 rounded-lg bg-tiilt-ground/60 px-3 py-2 text-xs text-tiilt-ink">
-                                        <div className="flex items-center justify-between gap-3">
-                                            <span>Clear speech in the recording</span>
-                                            <span className={"font-ahamono font-semibold " + ((target.voice_check.net_speech_seconds ?? 0) >= 12 ? "text-tiilt-teal-text" : "text-tiilt-orange-text")}>
-                                                {target.voice_check.net_speech_seconds ?? "?"}s
-                                                <span className="font-normal text-tiilt-muted"> / 12s needed</span>
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center justify-between gap-3" title="How well the two halves of the recording match each other. Low values mean noise or too little speech.">
-                                            <span>Matches itself</span>
-                                            <span className={"font-ahamono font-semibold " + ((target.voice_check.self_similarity ?? 0) >= 0.45 ? "text-tiilt-teal-text" : "text-tiilt-orange-text")}>
-                                                {target.voice_check.self_similarity ?? "—"}
-                                                <span className="font-normal text-tiilt-muted"> / 0.45 needed</span>
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center justify-between gap-3" title="Similarity to the closest OTHER enrolled voice. High values mean this student's speech can be confused with someone else's.">
-                                            <span>Confusable with another voice</span>
-                                            <span className={"font-ahamono font-semibold " + ((target.voice_check.nearest_other_similarity ?? 0) < 0.5 ? "text-tiilt-teal-text" : "text-tiilt-orange-text")}>
-                                                {target.voice_check.nearest_other_similarity ?? "—"}
-                                                <span className="font-normal text-tiilt-muted"> (0.50 = too close)</span>
-                                            </span>
-                                        </div>
-                                        {target.voice_check.ok === false ? (
-                                            <div className="mt-1 rounded-md bg-tiilt-orange/15 px-2.5 py-1.5 leading-relaxed text-tiilt-orange-text">
-                                                {target.voice_check.message ||
-                                                    "This recording failed the quality check."}
-                                            </div>
-                                        ) : null}
-                                    </div>
-                                ) : (
-                                    <div className="mb-3 text-xs text-tiilt-muted">
-                                        No quality report yet for this recording.
-                                    </div>
-                                )}
-                            </>
-                        ) : (
-                            <div className="mb-3 rounded-md bg-tiilt-orange/15 px-3 py-2 text-xs text-tiilt-orange-text">
-                                No voice recording on file — this student's speech
-                                can only be attributed by diarization clustering.
-                            </div>
-                        )}
+                        <VoiceQualityCard student={target} />
                         {(voiceOverlaps[target.username] || []).length > 0 ? (
                             <div className="mb-3">
                                 <div className="mb-1 text-sm font-semibold text-tiilt-ink">
@@ -1193,74 +1102,6 @@ function StudentsComponent(props) {
                         </button>
                         <button className={dlgCancel} onClick={closeDialog}>
                             Cancel
-                        </button>
-                    </div>
-                ) : null}
-
-                {currentForm === "Activity" && activity ? (
-                    <div className="flex min-w-[min(33rem,86vw)] flex-col gap-3">
-                        <div className={dlgHeading}>
-                            {activity.student.firstname}{" "}
-                            {activity.student.lastname}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-tiilt-muted">
-                            <span className="font-ahamono">
-                                {activity.student.username}
-                            </span>
-                            <span>
-                                {activity.sessions.length}{" "}
-                                {activity.sessions.length === 1
-                                    ? "session"
-                                    : "sessions"}
-                            </span>
-                            {activity.llm_reports > 0 ? (
-                                <span>
-                                    {activity.llm_reports} LLM feedback{" "}
-                                    {activity.llm_reports === 1
-                                        ? "report"
-                                        : "reports"}
-                                </span>
-                            ) : null}
-                        </div>
-                        {activity.sessions.length === 0 ? (
-                            <div className="rounded-lg bg-tiilt-soft/60 px-4 py-6 text-center text-sm text-tiilt-muted">
-                                No session participation yet — they'll appear
-                                here once they enroll a fingerprint in a
-                                session.
-                            </div>
-                        ) : (
-                            <DataTable
-                                columns={["Session", "Date", "Group", ""]}
-                                rows={activity.sessions.map((s) => [
-                                    s.session_name,
-                                    fmtDate(s.creation_date),
-                                    s.group_name,
-                                    s.owned ? (
-                                        <button
-                                            key="open"
-                                            className="rounded-md px-2 py-1 text-xs font-semibold text-tiilt transition hover:bg-tiilt-soft"
-                                            onClick={() =>
-                                                navigate(
-                                                    `/sessions/${s.session_id}/pods/${s.session_device_id}`,
-                                                )
-                                            }
-                                        >
-                                            Open ›
-                                        </button>
-                                    ) : (
-                                        <span
-                                            key="open"
-                                            className="text-xs text-tiilt-muted"
-                                            title="Owned by another user"
-                                        >
-                                            —
-                                        </span>
-                                    ),
-                                ])}
-                            />
-                        )}
-                        <button className={dlgCancel} onClick={closeDialog}>
-                            Close
                         </button>
                     </div>
                 ) : null}

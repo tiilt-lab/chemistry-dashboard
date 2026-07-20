@@ -31,6 +31,7 @@ const TopicListComponent = lazy(() => import('../topic-list/topic-list-component
 const ManageTopicModelsComponent = lazy(() => import('../manage-topic-models/manage-topic-models-component').then(m => ({ default: m.ManageTopicModelsComponent })))
 const PodsComponent = lazy(() => import('../pods/pods-component').then(m => ({ default: m.PodsComponent })))
 const StudentsComponent = lazy(() => import('../students/students-component').then(m => ({ default: m.StudentsComponent })))
+const StudentProfileComponent = lazy(() => import('../student-profile/student-profile-component').then(m => ({ default: m.StudentProfileComponent })))
 const RatersComponent = lazy(() => import('../raters/raters-component').then(m => ({ default: m.RatersComponent })))
 const UsersComponent = lazy(() => import('../users/users-component').then(m => ({ default: m.UsersComponent })))
 
@@ -81,6 +82,7 @@ function PageRouter() {
                 <Route path='/topic-list/new-session' element={<ProtectedRoute component={TopicListComponent}/>} />
                 <Route path='/pods' element={<ProtectedRoute component={PodsComponent}/> } />
                 <Route path='/students' element={<ProtectedRoute component={StudentsComponent}/> } />
+                <Route path='/students/:studentId' element={<ProtectedRoute component={StudentProfileComponent}/> } />
                 <Route path='/raters' element={<ProtectedRoute component={RatersComponent}/> } />
                 <Route path='/people' element={<Navigate replace to="/students" />} />
                 <Route path='/users' element={<ProtectedRoute component={UsersComponent}/> } />

@@ -133,8 +133,12 @@ def student_activity(student_id, **kwargs):
             'group_name': session_device.name,
             'owned': session_model.owner_id == user['id'],
         })
+    # The student-profile page is a one-call view: fold the enrollment state
+    # (voice/face + quality sidecar) into the student object like /overview.
+    student_entry = student.json()
+    student_entry.update(_enrollment_fields(student.username))
     return json_response({
-        'student': student.json(),
+        'student': student_entry,
         'sessions': sessions,
         'llm_reports': database.get_student_llm_report_count(student.username, owner_id=owner_id),
     })

@@ -3,7 +3,6 @@ import { TranscriptPanel } from "../transcript-panel/transcript-panel"
 import { VideoAnalyticsPanel } from "../video-analytics/video-analytics-panel"
 import { ConversationDynamicsPanel } from "../conversation-dynamics/conversation-dynamics-panel"
 import { DiscussionSummaryPanel } from "../discussion-summary/discussion-summary-panel"
-import { StudentLongitudinalPanel } from "../student-longitudinal/student-longitudinal-panel"
 import { VideoPlayer } from "../video-player/video-player"
 import { PosthocTrigger } from "../posthoc/posthoc-trigger"
 import { ModelNote } from "../model-note/model-note"
@@ -302,20 +301,9 @@ function AppInfographicsComparison(props) {
                             </AppSectionBoxComponent>
                         )}
 
-                    {props.details !== "Group" &&
-                        props.details !== "Comparison" &&
-                        props.getSpeakerAliasFromID(props.selectedSpkrId1) && (
-                            <AppSectionBoxComponent
-                                type={"w-full"}
-                                heading={"Participation across sessions"}
-                            >
-                                <StudentLongitudinalPanel
-                                    username={props.getSpeakerAliasFromID(
-                                        props.selectedSpkrId1,
-                                    )}
-                                />
-                            </AppSectionBoxComponent>
-                        )}
+                    {/* "Participation across sessions" moved to the student
+                        profile page (/students/:id) — cross-session data was
+                        out of place inside a single discussion's dashboard. */}
 
                     {props.details !== "Group" &&
                         props.showBoxes.length > 0 &&
