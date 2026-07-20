@@ -113,3 +113,25 @@ def test_speaker_alias_accepts_usernames():
         assert re.search(pat, u), u
     for bad in ['drop;table', 'a<b', 'x/y']:
         assert not re.search(pat, bad), bad
+
+
+def test_triage_session_now_is_timezone_independent():
+    # Regression: get_session_triage feeds session_now into compute_live_alerts.
+    # creation_date is stored naive-UTC (datetime.utcnow), so calling
+    # .timestamp() on it treats it as LOCAL time and skews every silence/alert
+    # threshold by the server's tz offset on any non-UTC host. The delta must be
+    # a naive utcnow subtraction (source-level check; database.py needs a
+    # Flask/db context to import).
+    import re, os
+    src = os.path.join(os.path.dirname(__file__), "..", "src", "server",
+                       "database.py")
+    body = open(src).read()
+    m = re.search(r'def get_session_triage\(.*?\n(?=def )', body, re.DOTALL)
+    assert m, "get_session_triage not found"
+    # drop comment lines so the anti-pattern named in a comment doesn't trip us
+    fn = "\n".join(l for l in m.group(0).splitlines()
+                   if not l.lstrip().startswith("#"))
+    assert "creation_date).total_seconds()" in fn, \
+        "session_now must use naive utcnow - creation_date subtraction"
+    assert "creation_date.timestamp()" not in fn, \
+        "creation_date.timestamp() is tz-fragile on naive UTC datetimes"

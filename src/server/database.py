@@ -1417,12 +1417,17 @@ def get_session_triage(session_id):
     # dominated, hanging question) from recent transcripts. Cheap enough to
     # poll during class. session_now is wall-clock elapsed since the session
     # started (transcript start_time is session-relative seconds).
-    import time as _time
+    from datetime import datetime
     from analytics import compute_live_alerts
     session = get_sessions(id=session_id, first=True)
     if session is None or session.creation_date is None:
         return []
-    session_now = max(0.0, _time.time() - session.creation_date.timestamp())
+    # creation_date is stored naive-UTC (datetime.utcnow); subtract another
+    # naive utcnow so the delta is timezone-independent. (time.time() -
+    # creation_date.timestamp() would treat the naive UTC value as LOCAL time
+    # and be wrong by the server's tz offset on a non-UTC host — same reason
+    # Session.length uses naive subtraction.)
+    session_now = max(0.0, (datetime.utcnow() - session.creation_date).total_seconds())
     out = []
     for d in get_session_devices(session_id=session_id):
         if not getattr(d, 'connected', False):
