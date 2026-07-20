@@ -47,12 +47,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      # The repo is public; block credentials before they land. We handle
-      # real secrets (passwords, service-account keys) during ops, so this is
-      # load-bearing, not decorative.
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # The repo is public; block credentials before they land. Run the
+      # gitleaks BINARY (MIT, free) rather than gitleaks-action, which
+      # requires a paid license for organization repos. `git` mode scans the
+      # full history; the config below silences known non-secrets.
+      - name: gitleaks
+        run: |
+          VERSION=8.18.4
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" | tar -xz gitleaks
+          ./gitleaks detect --config .gitleaks.toml --redact --no-banner
 
 # E2E tests (tests/e2e/) exercise a live deployment with real credentials
 # and are run manually — see the header of tests/e2e/join-record.spec.js.
