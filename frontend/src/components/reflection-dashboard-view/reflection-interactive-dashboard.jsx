@@ -39,10 +39,10 @@ const GROUP_METRICS = [
 
 const MOMENT_TILES = [
   [Eye, "Focus", "focusscore", "bg-tiilt-soft"],
-  [Mic, "Engagement", "engagementscore", "bg-violet-50"],
-  [Lightbulb, "Ideas", "ideacontributionscore", "bg-amber-50"],
-  [Brain, "Reasoning", "reasoningscore", "bg-emerald-50"],
-  [Users, "Leader", "leadershipscore", "bg-rose-50"],
+  [Mic, "Engagement", "engagementscore", "bg-violet-50 dark:bg-violet-950/40"],
+  [Lightbulb, "Ideas", "ideacontributionscore", "bg-amber-50 dark:bg-amber-950/40"],
+  [Brain, "Reasoning", "reasoningscore", "bg-emerald-50 dark:bg-emerald-950/40"],
+  [Users, "Leader", "leadershipscore", "bg-rose-50 dark:bg-rose-950/40"],
 ];
 
 function CollaborationFeedbackDashboard(props) {
@@ -122,9 +122,9 @@ function CollaborationFeedbackDashboard(props) {
   const [toneHi, toneMid] = mode === "student" ? [50, 30] : [75, 50];
 
   function statusClasses(status, selected = false) {
-    if (status === 1) return selected ? "border-emerald-500 bg-emerald-50" : "border-emerald-200 bg-emerald-50/60";
-    if (status === -1) return selected ? "border-rose-500 bg-rose-50" : "border-rose-200 bg-rose-50/60";
-    return selected ? "border-amber-500 bg-amber-50" : "border-amber-200 bg-amber-50/60";
+    if (status === 1) return selected ? "border-emerald-500 bg-emerald-50 dark:border-emerald-500 dark:bg-emerald-950/50" : "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/40";
+    if (status === -1) return selected ? "border-rose-500 bg-rose-50 dark:border-rose-500 dark:bg-rose-950/50" : "border-rose-200 bg-rose-50/60 dark:border-rose-900 dark:bg-rose-950/40";
+    return selected ? "border-amber-500 bg-amber-50 dark:border-amber-500 dark:bg-amber-950/50" : "border-amber-200 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/40";
   }
 
   function statusBadge(status) {
@@ -140,9 +140,9 @@ function CollaborationFeedbackDashboard(props) {
   }
 
   function toneSurface(value) {
-    if (value >= toneHi) return "border-emerald-200 bg-emerald-50";
-    if (value >= toneMid) return "border-amber-200 bg-amber-50";
-    return "border-rose-200 bg-rose-50";
+    if (value >= toneHi) return "border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/40";
+    if (value >= toneMid) return "border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/40";
+    return "border-rose-200 bg-rose-50 dark:border-rose-900 dark:bg-rose-950/40";
   }
 
   function changeBackground(value, color) {
@@ -161,7 +161,7 @@ function CollaborationFeedbackDashboard(props) {
           </div>
           <div className="text-lg font-bold">{v}%</div>
         </div>
-        <div className="mt-4 h-2 rounded-full bg-white/70">
+        <div className="mt-4 h-2 rounded-full bg-white/70 dark:bg-white/15">
           <div className={`h-2 rounded-full ${toneClass(v)}`} style={{ width: `${v}%` }} />
         </div>
       </div>
@@ -183,7 +183,7 @@ function CollaborationFeedbackDashboard(props) {
         </div>
         <div className="mt-3 grid grid-cols-5 gap-2 text-[11px]">
           {MOMENT_TILES.map(([, label, key]) => (
-            <div key={key} className="rounded-xl bg-white/80 p-2">
+            <div key={key} className="rounded-xl bg-white/80 p-2 dark:bg-white/10">
               <div className="text-muted-foreground">{label}</div>
               <div className="font-semibold">{item[key]}</div>
             </div>
@@ -208,7 +208,7 @@ function CollaborationFeedbackDashboard(props) {
         <div className="grid gap-3 md:grid-cols-2">
           <div className="rounded-2xl border p-4">
             <div className="text-xs text-muted-foreground">Evidence windows</div>
-            <ul className="mt-3 space-y-2 text-sm text-emerald-900/80">
+            <ul className="mt-3 space-y-2 text-sm text-emerald-900/80 dark:text-emerald-200">
               {response.Prompt_summary.Evidencewindows.map((item) => (
                 <li key={item} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4" />{item}</li>
               ))}
@@ -216,7 +216,7 @@ function CollaborationFeedbackDashboard(props) {
           </div>
           <div className="rounded-2xl border p-4">
             <div className="text-xs text-muted-foreground">Computed metrics used</div>
-            <ul className="mt-3 space-y-2 text-sm text-emerald-900/80">
+            <ul className="mt-3 space-y-2 text-sm text-emerald-900/80 dark:text-emerald-200">
               {response.Prompt_summary.Computedmetricsused.map((item) => (
                 <li key={item} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4" />{item}</li>
               ))}
@@ -234,7 +234,7 @@ function CollaborationFeedbackDashboard(props) {
 
   if (!_hasAnalysis && !llmPending) {
     return (
-      <div className="rounded-xl border border-tiilt-line bg-white p-6 text-center text-sm text-tiilt-muted">
+      <div className="rounded-xl border border-tiilt-line bg-white p-6 text-center dark:bg-white/5 text-sm text-tiilt-muted">
         AI collaboration analysis isn't available for this pod yet — it needs a
         completed full re-run and a configured LLM (GOOGLE_API_KEY).
       </div>
@@ -306,23 +306,23 @@ function CollaborationFeedbackDashboard(props) {
                     <div className="mt-2 text-sm ">{llmresponse_session_summary.Sessionpattern}</div>
                   </div>
                   {mode === "student" ? (
-                    <div className="rounded-2xl bg-violet-50 p-4 ring-1 ring-violet-100">
+                    <div className="rounded-2xl bg-violet-50 p-4 ring-1 ring-violet-100 dark:bg-violet-950/40 dark:ring-violet-900">
                       <div className="flex items-center gap-2 text-sm text-violet-700"><TrendingUp className="h-4 w-4" />Strong zone</div>
                       <div className="mt-2 text-sm ">{Array.isArray(llmresponse_session_summary.Strongzones)? llmresponse_session_summary.Strongzones[0] : llmresponse_session_summary.Strongzones}</div>
                     </div>
                   ) : (
-                    <div className="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
+                    <div className="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-100 dark:bg-emerald-950/40 dark:ring-emerald-900">
                       <div className="flex items-center gap-2 text-sm text-emerald-700"><TrendingUp className="h-4 w-4" />Strong zone</div>
                       <div className="mt-2 text-sm ">{Array.isArray(llmresponse_session_summary.Strongzones)? llmresponse_session_summary.Strongzones[0] : llmresponse_session_summary.Strongzones}</div>
                     </div>
                   )}
                   {mode === "student" ? (
-                    <div className="rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-50">
+                    <div className="rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-50 dark:bg-amber-950/40 dark:ring-amber-900">
                       <div className="flex items-center gap-2 text-sm text-amber-700"><TrendingDown className="h-4 w-4" />Caution zone</div>
                       <div className="mt-2 text-sm">{Array.isArray(llmresponse_session_summary.Declinezones)? llmresponse_session_summary.Declinezones[0] :llmresponse_session_summary.Declinezones}</div>
                     </div>
                   ) : (
-                    <div className="rounded-2xl bg-rose-50 p-4 ring-1 ring-rose-100">
+                    <div className="rounded-2xl bg-rose-50 p-4 ring-1 ring-rose-100 dark:bg-rose-950/40 dark:ring-rose-900">
                       <div className="flex items-center gap-2 text-sm text-rose-700"><TrendingDown className="h-4 w-4" />Decline zone</div>
                       <div className="mt-2 text-sm">{Array.isArray(llmresponse_session_summary.Declinezones)? llmresponse_session_summary.Declinezones[0] :llmresponse_session_summary.Declinezones}</div>
                     </div>
@@ -330,7 +330,7 @@ function CollaborationFeedbackDashboard(props) {
                 </div>
 
                 {mode === "student" ? (
-                  <div className="rounded-2xl border bg-emerald-50 p-4 mt-4 text-lg leading-6">
+                  <div className="rounded-2xl border bg-emerald-50 p-4 mt-4 dark:bg-emerald-950/40 dark:border-emerald-900 text-lg leading-6">
                     <div className="flex items-center gap-2 font-medium text-emerald-700"><Brain className="h-4 w-4" />Your Strength</div>
                     <p className="mt-2 text-sm">
                       {(llmresponse_session_summary.Strengths || []).join("\n")}
@@ -439,7 +439,7 @@ function CollaborationFeedbackDashboard(props) {
                   </CardContent>
                 </Card>
 
-                <Card className="rounded-[28px] border-0 bg-white/90 shadow-sm">
+                <Card className="rounded-[28px] border-0 bg-white/90 shadow-sm dark:bg-white/5">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-xl"><Users className="h-5 w-5" />Group collaboration indicators</CardTitle>
                     <CardDescription>Group-level Performace provided to give you an insight of how your contributions impacted group outcomes.</CardDescription>
@@ -467,16 +467,16 @@ function CollaborationFeedbackDashboard(props) {
                       {llmresponse_session_summary.Summary}
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/40">
                         <div className="flex items-center gap-2 font-medium text-emerald-800"><CheckCircle2 className="h-4 w-4" />What is going well</div>
-                        <ul className="mt-3 space-y-2 text-sm text-emerald-900/80">
+                        <ul className="mt-3 space-y-2 text-sm text-emerald-900/80 dark:text-emerald-200">
                           {(llmresponse_session_summary.Strengths || []).map((item) => (
                             <li key={item} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4" />{item}</li>
                           ))}
                         </ul>
                       </div>
                       {mode === "student" ? (
-                        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/40">
                           <div className="flex items-center gap-2 font-medium text-amber-800"><AlertTriangle className="h-4 w-4" />What to pay attention to</div>
                           <ul className="mt-3 space-y-2 text-sm text-amber-900/80">
                             {(llmresponse_session_summary.Concerns || []).map((item) => (
@@ -485,7 +485,7 @@ function CollaborationFeedbackDashboard(props) {
                           </ul>
                         </div>
                       ) : (
-                        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
+                        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900 dark:bg-rose-950/40">
                           <div className="flex items-center gap-2 font-medium text-rose-800"><AlertTriangle className="h-4 w-4" />What went wrong</div>
                           <ul className="mt-3 space-y-2 text-sm text-rose-900/80">
                             {(llmresponse_session_summary.Concerns || []).map((item) => (
@@ -496,7 +496,7 @@ function CollaborationFeedbackDashboard(props) {
                       )}
                     </div>
 
-                    <div className="rounded-2xl bg-violet-50 p-4 ring-1 ring-violet-100">
+                    <div className="rounded-2xl bg-violet-50 p-4 ring-1 ring-violet-100 dark:bg-violet-950/40 dark:ring-violet-900">
                       <div className="flex items-center gap-2 font-medium text-violet-700"><Lightbulb className="h-4 w-4" />What to work on</div>
                       <ul className="mt-3 space-y-2 text-sm text-violet-700">
                         {(llmresponse_session_summary.Actions || []).map((item) => (

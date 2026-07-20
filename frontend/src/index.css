@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Bind the `dark:` variant to our `.dark` CLASS (set by the theme toggle),
+   not the OS `prefers-color-scheme` media query it defaults to in Tailwind 4.
+   Without this, toggling dark mode lightened text (via the .dark rules below)
+   while `dark:` backgrounds never fired — light text on light cards. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* TIILT's typeface (tiilt.northwestern.edu); Regular is the only weight. */
 @font-face {
     font-family: "AHAMONO";
