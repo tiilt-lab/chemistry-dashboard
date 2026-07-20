@@ -229,12 +229,27 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.video_files_accum.append(fixed)
             
             if self.config.mimeExtension == "webm":
-                if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()): 
+                if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()):
                     temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
                     #accumulate. the file names to be used to combine the video chunks as one file
+                    # INSTRUMENTATION: this opens the WHOLE accumulated
+                    # recording every interval. If per-chunk decode time
+                    # climbs with video_count on a long real session, the
+                    # whole-file open is the culprit and the incremental-
+                    # decode optimization is justified; if it stays flat,
+                    # ffmpeg seek already handles it and we leave it alone.
+                    _decode_t0 = time.time()
+                    try:
+                        _recording_bytes = os.path.getsize(self.filename+'.'+self.config.mimeExtension)
+                    except OSError:
+                        _recording_bytes = -1
                     vidclip = mp.VideoFileClip(self.filename+'.'+self.config.mimeExtension)
                     subclips = (vidclip.subclipped if hasattr(vidclip, 'subclipped') else vidclip.subclip)((self.video_count-1)*self.interval,self.video_count*self.interval)  # moviepy 2 rename
-                    subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=16000,bitrate='50k') #nbytes=2,codec='pcm_s16le',
+                    subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=16000,bitrate='50k',logger=None) #nbytes=2,codec='pcm_s16le',
+                    logging.info('CHUNK_DECODE_TIMING auth={0} chunk={1} recording_mb={2:.1f} decode_s={3:.2f}'.format(
+                        self.config.auth_key, self.video_count,
+                        (_recording_bytes / 2**20) if _recording_bytes >= 0 else -1.0,
+                        time.time() - _decode_t0))
 
                     wavObj = wave.open(temp_aud_file+'.wav')
                     audiobyte = self.reduce_wav_channel(1,wavObj)

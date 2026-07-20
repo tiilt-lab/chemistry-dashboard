@@ -326,7 +326,14 @@ class VideoProcessor:
 
         if self.cf.process_video_analytics():
             # logging.info('processing video analytics for batch {0} of size {1}'.format(batch_idx, len(frames_batch)))
-            payload = [frames_batch, self.facialEmbeddings, batch_idx, time_markers, self.vid_img_dir, self.config.auth_key]
+            # 7th element is last_batch: the detect worker unpacks a 7-tuple
+            # (matching videoprocessor_posthoc). Live sessions stream
+            # indefinitely with no natural "final batch", so it is always
+            # False here; teardown is driven by client disconnect, not this
+            # flag. (Omitting it made every live batch raise ValueError:
+            # not enough values to unpack, silently disabling live gaze/
+            # attention analytics.)
+            payload = [frames_batch, self.facialEmbeddings, batch_idx, time_markers, self.vid_img_dir, self.config.auth_key, False]
             self.enqueue_latest_frame_payload(payload,self.config.auth_key)
             # self.process_video_analytics(frames_batch, self.facialEmbeddings, batch_idx, time_markers, self.vid_img_dir,self.config.auth_key)
             

@@ -271,15 +271,18 @@ class ImageObjectDetection:
             # logging.info(f"Inside Image-dection:  procesing image dectection took {t3 - t2:.6f}s")
 
     def worker(self,payload):
-        
+        # Bind auth_key before the try so the except handler can log it even
+        # when the failure is the unpack itself (a malformed payload used to
+        # raise NameError inside the handler, masking the real error).
+        auth_key = payload[5] if isinstance(payload, (list, tuple)) and len(payload) > 5 else 'unknown'
         try:
             images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key,last_batch = payload
             all_frames,accumulator = self.detection_with_facial_regonition(images,facial_embeddings,batch_track,time_marker,vid_img_dir,auth_key)
             logging.info("Alloc {0}: after image-detection for batch {1}".format((torch.cuda.memory_allocated() / 1024**2), batch_track))
             logging.info("reserved {0}: after image-detection for batch {1}".format((torch.cuda.memory_reserved() / 1024**2), batch_track))
-            
+
             accumulator_load = [auth_key,all_frames,accumulator,batch_track,last_batch]
-            #enque for gaze detection and attention flow processing, 
+            #enque for gaze detection and attention flow processing,
 
             return accumulator_load #remove later
             #uncomment later
