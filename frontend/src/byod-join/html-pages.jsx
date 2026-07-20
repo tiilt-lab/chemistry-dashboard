@@ -81,7 +81,7 @@ function ByodJoinPage(props) {
                             }
                             nav={() => props.navigateToLogin()}
                         />
-                        {!props.state.audioSocketOpen && props.deviceCheck && (
+                        {props.joinPhase === "device_check" && (
                             <div className={pageShell}>
                                 <div className={formCard}>
                                     <DeviceCheckPage
@@ -238,9 +238,7 @@ function ByodJoinPage(props) {
                             </div>
                             </div>
                         )}
-                        {props.state.audioSocketOpen && props.joinwith === "Audio" &&
-                            props.state.audioReady &&
-                            !props.state.speakersValidated && (
+                        {props.joinPhase === "enrolling" && props.joinwith === "Audio" && (
                                 <React.Fragment>
                                     <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto text-center">
                                         <div className="w-[300px] px-2 sm:w-[400px] lg:w-3xl">
@@ -405,9 +403,7 @@ function ByodJoinPage(props) {
                             )
                         }
 
-                        {props.state.audioSocketOpen && props.state.videoSocketOpen && (props.joinwith === "Video" || props.joinwith === "Videocartoonify") &&
-                            props.state.audioReady && props.state.videoReady &&
-                            !props.state.speakersValidated && (
+                        {props.joinPhase === "enrolling" && (props.joinwith === "Video" || props.joinwith === "Videocartoonify") && (
                                 <React.Fragment>
                                     <div className="@container relative box-border flex grow flex-col items-center justify-between overflow-y-auto text-center">
                                         <div className="w-[300px] px-2 sm:w-[400px] lg:w-3xl">
