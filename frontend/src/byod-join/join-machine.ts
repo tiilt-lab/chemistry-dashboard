@@ -43,23 +43,41 @@ function wantsVideo(joinwith: string): boolean {
     return joinwith === "Video" || joinwith === "Videocartoonify"
 }
 
-// The single source of truth for "what phase are we in", derived from the
-// existing flags exactly as the render gates in html-pages.jsx do today.
+// The single source of truth for "what phase are we in". Each phase maps
+// EXACTLY to one render gate in html-pages.jsx, so the gates can read the
+// phase instead of re-deriving from flags:
+//
+//   form         <- !audioSocketOpen && !deviceCheck  (the join form; the
+//                   "Connecting" dialog, if any, overlays it separately)
+//   device_check <- !audioSocketOpen && deviceCheck
+//   connecting   <- audioSocketOpen && not-yet-ready-to-enroll (overlay only,
+//                   no main content — a transient waiting state)
+//   enrolling    <- audioSocketOpen && ready && !speakersValidated
+//   ready        <- validated, live screen up, not recording
+//   recording    <- validated + armed + streaming
+//   ended        <- teardown / session closed
+//
+// Note the asymmetry that matches the gates: enrolling needs FULL readiness
+// (video too), but once validated the live screen tolerates a video drop, so
+// ready/recording gate on audioReady only.
 export function deriveJoinPhase(
     s: JoinFlags,
     ctx: JoinContext,
 ): JoinPhase {
     if (ctx.ending || ctx.currentForm === "ClosedSession") return "ended"
     if (!s.audioSocketOpen) {
-        if (ctx.deviceCheck) return "device_check"
-        return ctx.currentForm === "Connecting" ? "connecting" : "form"
+        return ctx.deviceCheck ? "device_check" : "form"
     }
-    const ready =
-        s.audioReady && (!wantsVideo(ctx.joinwith) || (s.videoSocketOpen && s.videoReady))
-    if (!ready) return "connecting"
-    if (!s.speakersValidated) return "enrolling"
-    if (s.startDiscussionStreaming && ctx.armed) return "recording"
-    return "ready"
+    if (!s.speakersValidated) {
+        const readyToEnroll =
+            s.audioReady &&
+            (!wantsVideo(ctx.joinwith) || (s.videoSocketOpen && s.videoReady))
+        return readyToEnroll ? "enrolling" : "connecting"
+    }
+    // Validated: the live screen shows as long as audio is up (matches the
+    // live render gate, which does not re-check video).
+    if (!s.audioReady) return "connecting"
+    return s.startDiscussionStreaming && ctx.armed ? "recording" : "ready"
 }
 
 // Legal forward transitions — the reference the incremental migration checks

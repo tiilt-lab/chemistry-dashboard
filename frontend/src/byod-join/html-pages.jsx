@@ -92,7 +92,7 @@ function ByodJoinPage(props) {
                                 </div>
                             </div>
                         )}
-                        {!props.state.audioSocketOpen && !props.deviceCheck && (
+                        {props.joinPhase === "form" && (
                             <div className={pageShell}>
                             <div className={formCard}>
                                 <div className="mx-auto flex w-full max-w-md grow flex-col gap-4 overflow-y-auto px-4 py-6">
@@ -568,9 +568,7 @@ function ByodJoinPage(props) {
                             )
                         }
 
-                        {props.state.audioSocketOpen &&
-                            props.state.audioReady &&
-                            props.state.speakersValidated && (
+                        {(props.joinPhase === "ready" || props.joinPhase === "recording") && (
                                 <>
                                     <div className="toolbar-view-container">
                                         {props.session ? (

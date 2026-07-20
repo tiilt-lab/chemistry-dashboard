@@ -26,10 +26,23 @@ describe("deriveJoinPhase", () => {
     it("shows device check when one is pending pre-connect", () => {
         expect(deriveJoinPhase(S(), C({ deviceCheck: true }))).toBe("device_check")
     })
-    it("connecting while the socket opens (initial and reconnect)", () => {
-        expect(deriveJoinPhase(S(), C({ currentForm: "Connecting" }))).toBe("connecting")
-        // audio socket open but not ready yet
+    it("pre-socket 'Connecting' still shows the form (dialog overlays it)", () => {
+        expect(deriveJoinPhase(S(), C({ currentForm: "Connecting" }))).toBe("form")
+    })
+    it("connecting once the socket is open but not yet ready to enroll", () => {
         expect(deriveJoinPhase(S({ audioSocketOpen: true }), C())).toBe("connecting")
+    })
+    it("connecting if audio drops after validation (live screen tolerates video drop)", () => {
+        const validated = S({ audioSocketOpen: true, speakersValidated: true })
+        // audio down -> connecting
+        expect(deriveJoinPhase(validated, C())).toBe("connecting")
+        // audio up, video down -> still live (ready), matching the live gate
+        expect(
+            deriveJoinPhase(
+                { ...validated, audioReady: true, videoReady: false },
+                C({ joinwith: "Video" }),
+            ),
+        ).toBe("ready")
     })
     it("enrolling once ready but speakers not validated", () => {
         expect(
