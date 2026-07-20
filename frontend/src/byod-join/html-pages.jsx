@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { btnPrimary, btnPrimaryTall, btnSecondaryTall, dlgInput, dlgSelect, dlgPrimary, dlgError } from "../components/dialog-styles"
 import { pageShell, formCard } from "../components/layout-styles"
 import { PodMicRing } from "../components/pod-mic-ring"
@@ -37,6 +37,15 @@ function ByodJoinPage(props) {
     // and mic check are visible without an extra tap.
     const [editCode, setEditCode] = useState(false)
     const [showAdvanced, setShowAdvanced] = useState(true)
+    // Reflect the derived join phase (join-machine.ts) onto the body so E2E
+    // and debugging have one signal for "where in the flow are we". Purely
+    // observational — no behavior depends on it yet.
+    useEffect(() => {
+        if (props.joinPhase) document.body.dataset.joinPhase = props.joinPhase
+        return () => {
+            delete document.body.dataset.joinPhase
+        }
+    }, [props.joinPhase])
     // Prefilled group name so joining takes zero typing when the exact name
     // doesn't matter. Random suffix keeps two groups in the same session from
     // colliding (a duplicate name would silently take over the other group's

@@ -3,6 +3,7 @@ import { POD_ON_COLOR as POD_COLOR } from "../components/pod-colors"
 import { useNavigate, useParams } from "react-router-dom"
 import { SessionService } from "../services/session-service"
 import { ByodJoinPage } from "./html-pages"
+import { deriveJoinPhase } from "./join-machine"
 import { SessionModel } from "../models/session"
 import { SessionDeviceModel } from "../models/session-device"
 import { SpeakerModel } from "../models/speaker"
@@ -1704,8 +1705,21 @@ function JoinPage() {
         setDetails("Individual");
     }
 
+    // Strangler-fig step 1: the explicit join phase, derived from the
+    // existing flags (see join-machine.ts). Observational for now —
+    // exposed as data-join-phase for tests/debugging; rendering and effects
+    // migrate onto it incrementally in later steps.
+    const joinPhase = deriveJoinPhase(state, {
+        deviceCheck: !!deviceCheck,
+        armed,
+        currentForm,
+        ending: ending.current,
+        joinwith: joinwith.current || "Audio",
+    })
+
     return (
         <ByodJoinPage
+            joinPhase={joinPhase}
             state={state}
             POD_COLOR={POD_COLOR}
             button_pressed={sessionDevBtnPressed}
