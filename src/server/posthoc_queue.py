@@ -22,6 +22,61 @@ _lock = threading.Lock()
 _jobs = []  # {session_id, device_id, state: queued|running|done|error, error}
 _worker = None
 
+# The queue survives Flask restarts: every mutation snapshots to disk, and
+# import-time restore re-queues whatever was pending (a job caught mid-run
+# is re-queued too — post-hoc runs are idempotent, so re-running beats
+# guessing whether the interrupted run finished). This retires the manual
+# snapshot-restart-re-enqueue routine restarts used to require.
+def _state_file():
+    try:
+        import config as cf
+        if not hasattr(cf, "config"):
+            cf.initialize()  # idempotent re-read of config.ini
+        base = cf.root_dir()
+        if base and os.path.isdir(base):
+            return os.path.join(base, "posthoc_queue.json")
+    except Exception:
+        pass
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "posthoc_queue.json")
+
+
+def _persist_locked():
+    path = _state_file()
+    tmp = path + ".tmp"
+    try:
+        with open(tmp, "w") as f:
+            json.dump(_jobs, f)
+        os.replace(tmp, path)
+    except Exception as e:
+        logging.warning("posthoc queue: persist failed: %s", e)
+
+
+def _restore():
+    global _worker
+    path = _state_file()
+    try:
+        with open(path) as f:
+            jobs = json.load(f)
+    except FileNotFoundError:
+        return
+    except Exception as e:
+        logging.warning("posthoc queue: restore failed: %s", e)
+        return
+    with _lock:
+        for j in jobs:
+            if j.get("state") == "running":
+                j["state"] = "queued"
+        _jobs[:] = jobs
+        pending = sum(1 for j in _jobs if j["state"] == "queued")
+        if pending and (_worker is None or not _worker.is_alive()):
+            _worker = threading.Thread(target=_worker_loop,
+                                       name="posthoc-queue", daemon=True)
+            _worker.start()
+    if pending:
+        logging.info("posthoc queue: restored %d pending job(s) after restart",
+                     pending)
+
 
 def _trigger(url, init, start_type):
     # Fire a run: connect, Initialize, wait for the readiness ack, send start.
@@ -162,6 +217,7 @@ def _worker_loop():
                 return  # drain and exit; next enqueue restarts the worker
             job["state"] = "running"
             job["started_at"] = time.time()
+            _persist_locked()
         try:
             _maybe_recycle_audio_service()
             _run_job(job)
@@ -172,6 +228,8 @@ def _worker_loop():
             job["error"] = str(e)
         finally:
             job["finished_at"] = time.time()
+            with _lock:
+                _persist_locked()
 
 
 def enqueue(session_id, device_ids, models=None):
@@ -188,6 +246,7 @@ def enqueue(session_id, device_ids, models=None):
                           "queued_at": time.time(),
                           "started_at": None, "finished_at": None})
             added.append(int(d))
+        _persist_locked()
         if _worker is None or not _worker.is_alive():
             _worker = threading.Thread(target=_worker_loop,
                                        name="posthoc-queue", daemon=True)
@@ -203,6 +262,7 @@ def clear_pending():
     with _lock:
         n = sum(1 for j in _jobs if j["state"] == "queued")
         _jobs[:] = [j for j in _jobs if j["state"] != "queued"]
+        _persist_locked()
         return n
 
 
@@ -214,3 +274,6 @@ def status(session_id=None):
                  "finished_at": j.get("finished_at")}
                 for j in _jobs
                 if session_id is None or j["session_id"] == int(session_id)]
+
+
+_restore()

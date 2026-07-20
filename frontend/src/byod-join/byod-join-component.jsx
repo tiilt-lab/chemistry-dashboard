@@ -522,10 +522,13 @@ function JoinPage() {
                                 },
                             )
                         } else if (ev.data.type.startsWith('video/mp4')) {
-                            console.log("inside mp4 send")
-                            const repairedMp4Data = await fixMp4DurationWithMp4Box(ev.data)
+                            // Sent as-is: the server-side remux cache fixes
+                            // duration/cues on playback. (An MP4Box-based
+                            // client-side "repair" used to live here; it had
+                            // never worked — its dependency was never loaded
+                            // — and silently dropped every mp4 chunk.)
                             if (videows.current?.readyState === WebSocket.OPEN) {
-                                videows.current.send(repairedMp4Data)
+                                videows.current.send(ev.data)
                             }
                         }
 
@@ -609,54 +612,6 @@ function JoinPage() {
             setPreviewLabel("Turn On Preview")
         }
     }, [preview])
-
-    const fixMp4DurationWithMp4Box = async (blob) => {
-
-        const isMp4 = blob.type?.startsWith("video/mp4");
-        if (!isMp4) return blob; // WebM/others pass-through
-
-        // FIXME: this path is currently non-functional. It reads a global
-        // `window.MP4Box` (see below) that nothing ever loads — the `mp4box`
-        // npm package was never imported and no <script> loads it, so this
-        // rejects for every mp4 blob and the caller (line ~355) then never
-        // sends the chunk. Affects browsers that record video/mp4 (e.g. Safari).
-        // To fix: `import MP4Box from "mp4box"` and use it here (re-add the dep),
-        // or drop mp4 duration-fixing entirely.
-
-        const ab = await blob.arrayBuffer();
-        // MP4Box API expects `fileStart` on each appended buffer.
-        ab.fileStart = 0;
-
-        return new Promise((resolve, reject) => {
-            try {
-                const MP4Box = (window).MP4Box;
-                const mp4boxfile = MP4Box.createFile();
-                let outBuffer = null;
-
-                mp4boxfile.onError = (e) => reject(e);
-                mp4boxfile.onReady = (info) => {
-                    const secs = info?.duration && info?.timescale
-                        ? info.duration / info.timescale
-                        : null;
-                    console.log("duration is. .... ", secs)
-                    // Export a finalized, non-fragmented MP4 with proper duration.
-                    const out = mp4boxfile.exportFile(); // ArrayBuffer
-                    outBuffer = out;
-                };
-
-                mp4boxfile.appendBuffer(ab);
-                mp4boxfile.flush();
-
-                if (!outBuffer) {
-                    reject(new Error("MP4Box failed to export file"));
-                    return;
-                }
-                resolve(new Blob([outBuffer], { type: "video/mp4" }));
-            } catch (err) {
-                reject(err);
-            }
-        });
-    }
 
     const openForms = (form, speaker = null) => {
         setCurrentForm(form)
@@ -1036,7 +991,15 @@ function JoinPage() {
                 ) {
 
                     if (mimetype !== "") {
-                        const mediaRec = new MediaRecorder(stream, { mimeType: mimetype })
+                        // Bitrate caps: browser defaults vary wildly (laptop
+                        // Chrome ~2.5 Mbps, phone Safari 7-10 Mbps for the
+                        // same 640x480) — uncapped, 20 pods fill ~60 GB/hour
+                        // of disk and saturate classroom Wi-Fi uplinks.
+                        const mediaRec = new MediaRecorder(stream, {
+                            mimeType: mimetype,
+                            videoBitsPerSecond: 2_500_000,
+                            audioBitsPerSecond: 128_000,
+                        })
                         mediaRecorder.current = mediaRec
 
                         //Since we are implementing distributed  processing for audio and video,
