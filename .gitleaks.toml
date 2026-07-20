@@ -1,23 +1,21 @@
 # gitleaks config for CI secret scanning.
 #
-# CI scans the CURRENT working tree (not full history): the goal is to block
-# NEW credentials from landing. The git history contains real historical
-# exposures (a 2023 GCP service-account key in commit c556bdc2, 2020 OAuth
-# creds in server/test/test_api.py) whose correct remediation is ROTATION at
-# the source, not a perpetual CI failure — those are tracked separately.
+# main and master were history-scrubbed (git filter-repo): the source-
+# separation notebooks and the credential-bearing test files were removed,
+# so those branches scan clean on their own. The only remaining allowlist is
+# the notebook path, kept so a PR opened from an OLD (un-rewritten) feature
+# branch that still contains the notebook doesn't fail on its 946 base64
+# output cells (false positives, not secrets). Real secrets — including the
+# rotated GCP key still in stale branches — are NOT allowlisted: if one
+# reaches a scanned ref, CI should flag it.
 title = "blinc gitleaks"
 
 [extend]
 useDefault = true
 
 [allowlist]
-description = "Known non-secrets and historical, separately-remediated files"
+description = "Jupyter notebook output cells (base64/tensor data ~ AWS-token regex)"
 paths = [
-  # Jupyter notebook output cells contain base64/tensor data that trips the
-  # AWS-token regex (946 false positives, zero real secrets).
   '''audio_processing/source_seperation/.*\.ipynb''',
-  # Historical committed secrets — remediation is key rotation (see header),
-  # allowlisted so CI gates on NEW leaks rather than immovable history.
-  '''.*google_cloud_key\.json''',
-  '''server/test/test_api\.py''',
+  '''src/audio_processing/source_seperation/.*\.ipynb''',
 ]
