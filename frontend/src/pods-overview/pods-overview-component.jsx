@@ -274,8 +274,13 @@ function PodsOverviewComponent() {
     );
   };
 
-  const goToSpeakerMetrics = (speakerID) => {
-    navigate("/sessions/" + session.id + "/pods_session/" + speakerID);
+  // A participant's metrics live in their pod's Individual view (URL-
+  // addressable), replacing the old pods_session dead-end clone page.
+  const goToSpeakerMetrics = (speaker) => {
+    navigate(
+      "/sessions/" + session.id + "/pods/" + speaker.session_device_id +
+        "?view=individual&speaker=" + speaker.id,
+    );
   };
 
   const onSessionClosing = (isClosing) => {
@@ -443,9 +448,6 @@ function PodsOverviewComponent() {
     setCurrentForm(dialog);
   };
 
-  const goToGraph = () => {
-    navigate("/sessions/" + session.id + "/graph");
-  };
 
   const getSessionSpeakers = (sessionID) => {
     const fetchData = new SessionService().getSessionSpeakers(sessionID);
@@ -496,7 +498,6 @@ function PodsOverviewComponent() {
       sessionDevices={sessionDevices}
       renamePodInline={renamePodInline}
       goToDevice={goToDevice}
-      goToGraph={goToGraph}
       currentForm={currentForm}
       closeDialog={closeDialog}
       setPasscodeState={setPasscodeState}

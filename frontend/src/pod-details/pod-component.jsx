@@ -9,8 +9,21 @@ import { TranscriptModel } from "../models/transcript";
 import { KeywordUsageModel } from "../models/keyword-usage";
 import { SpeakerModel } from "../models/speaker";
 import { useEffect, useState, useRef } from "react";
-import { useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
 import { PodComponentPages } from "./html-pages";
+
+// The dashboard views live in the URL (?view=...&speaker=...) so they are
+// linkable, bookmarkable, and reload/back-button safe. "Group" is the clean
+// URL. Slugs <-> the legacy `details` state values.
+const VIEW_SLUGS = {
+  Group: "group",
+  Comparison: "comparison",
+  "Reflection Dashboard": "reflection",
+  Individual: "individual",
+};
+const SLUG_VIEWS = Object.fromEntries(
+  Object.entries(VIEW_SLUGS).map(([view, slug]) => [slug, view]),
+);
 
 function PodComponent() {
   const [sessionDevice, setSessionDevice] = useState({});
@@ -54,6 +67,7 @@ function PodComponent() {
   const latestParticipantRequest = useRef("")
   const prefetchStarted = useRef(false)
   const { sessionId, sessionDeviceId } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const synthesizedFeedbackMetrics = useRef(null);
   const participants = useRef([])
   const selectedParticipantSynthesizedData = useRef({})
@@ -467,8 +481,21 @@ function PodComponent() {
     handleCheck(event, showBoxes, setShowBoxes);
   };
 
+  // Reflect the open view into the URL. Group is the clean URL; Individual
+  // carries the speaker id. No-op when the URL already matches, so the
+  // param->state sync effect below can call the loaders without history spam.
+  const writeViewParams = (view, speakerId) => {
+    const next = new URLSearchParams();
+    const slug = VIEW_SLUGS[view] || "group";
+    if (slug !== "group") next.set("view", slug);
+    if (slug === "individual" && speakerId != null)
+      next.set("speaker", String(speakerId));
+    if (next.toString() !== searchParams.toString()) setSearchParams(next);
+  };
+
   const dashboardView = (view) => {
     setDetails(view);
+    writeViewParams(view);
   };
 
   const buildData = (reporttype, participantId, defaultQuestionId, question) => {
@@ -602,6 +629,7 @@ function PodComponent() {
       latestParticipantRequest.current = first
       setCurrentParticipant(first)
       setDetails(view);
+      writeViewParams(view);
       const actionstatus = await extractParticipantData(first)
       if (actionstatus) {
         // Warm the other participants in the background so switching between
@@ -655,7 +683,46 @@ function PodComponent() {
     setSelectedSpkrId1(speakerId)
     setSelectedSpkralias(speakrAlias)
     setDetails("Individual");
+    writeViewParams("Individual", speakerId);
   }
+
+  // URL -> state: open the view named in the URL (deep link, reload, back/
+  // forward). Group/Comparison are plain state; Individual waits for the
+  // speakers list; Reflection waits for the synthesized-metrics fetch to fill
+  // participants (a ref, hence the short poll rather than a dependency).
+  useEffect(() => {
+    const view = SLUG_VIEWS[searchParams.get("view")] || "Group";
+    if (view === details) return;
+    if (view === "Group" || view === "Comparison") {
+      setDetails(view);
+      return;
+    }
+    if (view === "Individual") {
+      const spId = parseInt(searchParams.get("speaker"), 10);
+      const s = speakers.find((x) => x.id === spId);
+      if (s) loadSpeakerMetrics(s.id, s.alias);
+      else if (speakers.length > 0) setDetails("Individual");
+      // speakers not loaded yet: effect re-runs when they arrive
+      return;
+    }
+    // Reflection Dashboard
+    if (participants.current.length > 0) {
+      loadReflectiondashboard("Reflection Dashboard");
+      return;
+    }
+    const t = setInterval(() => {
+      if (participants.current.length > 0) {
+        clearInterval(t);
+        loadReflectiondashboard("Reflection Dashboard");
+      }
+    }, 400);
+    const stop = setTimeout(() => clearInterval(t), 15000);
+    return () => {
+      clearInterval(t);
+      clearTimeout(stop);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, speakers, details]);
 
   return (
     <PodComponentPages

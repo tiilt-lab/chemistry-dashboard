@@ -2,6 +2,7 @@ import style from './discussion-graph.module.css'
 import style2 from '../dialog/dialog.module.css'
 import {GenericDialogBox} from '../dialog/dialog-component'
 import { Appheader } from '../header/header-component'
+import { SessionTabs } from '../components/session-tabs'
 import React from 'react'
 
 function DiscussionPage(props){
@@ -18,6 +19,7 @@ function DiscussionPage(props){
         escToBack={true}
         headerclass={"discussion-graph-header"}
       />
+    <SessionTabs />
 <div className={style["page-container"]}>
   <div className={style["header-container"]}>
     <span className={style["header-spacer"]}></span>

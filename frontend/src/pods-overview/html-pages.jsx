@@ -4,6 +4,7 @@ import { dlgHeading, dlgBody, dlgLabel, dlgSelect, dlgPrimary, dlgCancel, dlgDan
 import { Appheader } from "../header/header-component"
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
+import { SessionTabs } from "../components/session-tabs"
 import { SkeletonRows } from "../components/skeleton"
 
 import MicIcon from "../Icons/Mic"
@@ -434,6 +435,7 @@ function PodsOverviewPages(props) {
                         onEnd={() => props.openDialog("ConfirmEnd")}
                     />
                 ) : null}
+                <SessionTabs />
                 <div className="toolbar-view-container">
                     {props.session !== null ? (
                         <AppSessionToolbar
@@ -447,16 +449,12 @@ function PodsOverviewPages(props) {
                                             "selectdownloadoption",
                                         ),
                                 },
-                                {
-                                    title: "Graph",
-                                    action: () => props.goToGraph(),
-                                },
                             ]}
                             participants={props.sessionSpeaker.map(
                                 (speaker, index) => ({
                                     alias: speaker.alias,
                                     action: () =>
-                                        props.goToSpeakerMetrics(speaker.id),
+                                        props.goToSpeakerMetrics(speaker),
                                 }),
                             )}
                         ></AppSessionToolbar>

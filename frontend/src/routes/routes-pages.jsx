@@ -26,7 +26,6 @@ const FileUploadComponent = lazy(() => import('../file-upload/file-upload-compon
 const SettingsComponent = lazy(() => import('../settings/settings-component').then(m => ({ default: m.SettingsComponent })))
 const OpsComponent = lazy(() => import('../ops/ops-component').then(m => ({ default: m.OpsComponent })))
 const PodComponent = lazy(() => import('../pod-details/pod-component').then(m => ({ default: m.PodComponent })))
-const PodComponentSession = lazy(() => import('../pod-details-session/pod-component-session').then(m => ({ default: m.PodComponentSession })))
 const TranscriptsComponent = lazy(() => import('../transcripts/transcripts-component').then(m => ({ default: m.TranscriptsComponent })))
 const TopicListComponent = lazy(() => import('../topic-list/topic-list-component').then(m => ({ default: m.TopicListComponent })))
 const ManageTopicModelsComponent = lazy(() => import('../manage-topic-models/manage-topic-models-component').then(m => ({ default: m.ManageTopicModelsComponent })))
@@ -74,7 +73,6 @@ function PageRouter() {
                     <Route path='overview' element={<ProtectedRoute component={PodsOverviewComponent}/>} />
                     <Route path='graph' element={<ProtectedRoute component={DiscussionGraphComponent}/>} />
                     <Route path='pods/:sessionDeviceId' element={<ProtectedRoute component={PodComponent}/>} />
-                    <Route path='pods_session/:speakerId' element={<ProtectedRoute component={PodComponentSession}/>} />
                     <Route path='pods/:sessionDeviceId/transcripts' element={<ProtectedRoute component={TranscriptsComponent}/>} />
                 </Route>
                 <Route path='/topic-models' element={<ProtectedRoute component={ManageTopicModelsComponent}/>} />
