@@ -28,6 +28,66 @@ if not GOOGLE_API_KEY or len(GOOGLE_API_KEY) < 30 or not GOOGLE_API_KEY.startswi
 client = genai.Client(api_key=GOOGLE_API_KEY)
 
 
+# ---------------------------------------------------------------------------
+# Local-first LLM. The box runs Ollama on a 46GB Quadro RTX 8000; reflections
+# generate there at zero per-token cost and student transcripts never leave
+# the machine. Gemini remains as fallback when the local server / model is
+# unavailable — so a Gemini spend-cap outage can no longer take the feature
+# down, and vice versa.
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:14b")
+
+
+class _LocalResponse:
+    """Duck-types the genai response (.text) so call sites don't change."""
+    def __init__(self, text):
+        self.text = text
+
+
+def call_local_llm(prompt, timeout=600):
+    import requests as _requests
+    r = _requests.post(OLLAMA_URL + "/api/generate", json={
+        "model": OLLAMA_MODEL,
+        "prompt": prompt,
+        "stream": False,
+        # long transcripts/metrics: don't silently truncate at ollama's 4k
+        # default. Qwen3 thinking blocks are stripped below.
+        "options": {"num_ctx": 16384, "temperature": 0.4},
+    }, timeout=timeout)
+    r.raise_for_status()
+    text = (r.json().get("response") or "").strip()
+    # qwen3 emits <think>...</think> before the answer; drop it.
+    if "<think>" in text:
+        import re as _re
+        text = _re.sub(r"<think>.*?</think>", "", text, flags=_re.S).strip()
+    if not text:
+        raise RuntimeError("local llm returned empty response")
+    return _LocalResponse(text)
+
+
+def _local_llm_available():
+    import requests as _requests
+    try:
+        r = _requests.get(OLLAMA_URL + "/api/tags", timeout=3)
+        models = [m.get("name", "") for m in r.json().get("models", [])]
+        return any(m == OLLAMA_MODEL or m.startswith(OLLAMA_MODEL + ":")
+                   or m.split(":")[0] == OLLAMA_MODEL.split(":")[0]
+                   for m in models)
+    except Exception:
+        return False
+
+
+def call_llm(prompt):
+    """Local first, Gemini fallback. Every reflection/Q&A/summary goes
+    through here."""
+    if _local_llm_available():
+        try:
+            return call_local_llm(prompt)
+        except Exception as e:
+            logging.warning("local llm failed (%s); falling back to Gemini", e)
+    return call_gemini_with_retry(prompt)
+
+
 def _llm_error_response(e):
     """Map raw Gemini failures to something an instructor can act on. The
     spend-cap 429 used to dump the whole error JSON into the dialog."""
@@ -68,7 +128,7 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
         prompt = build_prompt(metricObj,"Session_level analysis for participant")
 
         try:
-            response = call_gemini_with_retry(prompt)
+            response = call_llm(prompt)
             
             # client.models.generate_content(
             #     model="gemini-2.5-flash",
@@ -117,7 +177,7 @@ def fetch_response_for_question(**kwargs):
         prompt = build_prompt(questionObj,"Interactive question answer")
 
         try:
-            response = call_gemini_with_retry(prompt)
+            response = call_llm(prompt)
 
             raw = response.text.replace('\n',"").strip()
 
@@ -185,7 +245,7 @@ def generate_discussion_summary(session_id, session_device_id, **kwargs):
         "Transcript:\n" + convo
     )
     try:
-        response = call_gemini_with_retry(prompt)
+        response = call_llm(prompt)
         raw = response.text.strip()
         if raw.startswith("```"):
             raw = raw.replace("```json", "").replace("```", "").strip()
