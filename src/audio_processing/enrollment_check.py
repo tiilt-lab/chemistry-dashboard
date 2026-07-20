@@ -102,6 +102,38 @@ def _cached_embedding(wav_path, model):
     return emb
 
 
+def evaluate_enrollment(speech_seconds, self_sim, similar_to, duration_seconds,
+                        nearest_sim=None):
+    """Pure verdict logic: given measured quantities, decide ok/reasons and
+    build the sidecar dict. Kept separate from all I/O and the ECAPA model so
+    the thresholds are unit-testable. `similar_to` is the already-computed
+    list of {username, similarity} above SIMILAR_VOICE_THRESHOLD;
+    `nearest_sim` is the closest other voice (may be below threshold)."""
+    reasons = []
+    still_needed = max(0.0, MIN_NET_SPEECH_SECONDS - speech_seconds)
+    if speech_seconds < MIN_NET_SPEECH_SECONDS:
+        reasons.append(
+            "So far {0:.0f} seconds of clear speech were captured — about "
+            "{1:.0f} more are needed. Keep going: what you already recorded "
+            "is kept, just record a bit more.".format(
+                speech_seconds, still_needed))
+    if self_sim is not None and self_sim < MIN_SELF_SIMILARITY:
+        reasons.append(
+            "The recording doesn't match itself well enough (too much noise "
+            "or too little clear speech). Please re-record in a quieter spot, "
+            "closer to the microphone.")
+    return {
+        "ok": not reasons,
+        "message": " ".join(reasons),
+        "duration_seconds": round(duration_seconds, 1),
+        "net_speech_seconds": round(speech_seconds, 1),
+        "still_needed_seconds": round(still_needed, 1),
+        "self_similarity": None if self_sim is None else round(self_sim, 3),
+        "nearest_other_similarity": None if nearest_sim is None else round(nearest_sim, 3),
+        "similar_to": similar_to,
+    }
+
+
 def check_enrollment(wav_path, alias, model, biometric_dir=None):
     """Verdict dict for a just-saved enrollment WAV. 'ok' False means the
     recording should be discarded and re-captured; 'reasons' explains why in
@@ -111,15 +143,6 @@ def check_enrollment(wav_path, alias, model, biometric_dir=None):
 
     x, sr = _load_wav_float(wav_path)
     mask, speech_seconds = _speech_mask(x, sr)
-    reasons = []
-
-    still_needed = max(0.0, MIN_NET_SPEECH_SECONDS - speech_seconds)
-    if speech_seconds < MIN_NET_SPEECH_SECONDS:
-        reasons.append(
-            "So far {0:.0f} seconds of clear speech were captured — about "
-            "{1:.0f} more are needed. Keep going: what you already recorded "
-            "is kept, just record a bit more.".format(
-                speech_seconds, still_needed))
 
     speech = _speech_samples(x, sr, mask)
     self_sim = None
@@ -134,11 +157,6 @@ def check_enrollment(wav_path, alias, model, biometric_dir=None):
             self_sim = _cosine(emb_a, emb_b)
         except Exception as e:
             logging.warning("enrollment check: embedding failed for %s: %s", alias, e)
-    if self_sim is not None and self_sim < MIN_SELF_SIMILARITY:
-        reasons.append(
-            "The recording doesn't match itself well enough (too much noise "
-            "or too little clear speech). Please re-record in a quieter spot, "
-            "closer to the microphone.")
 
     # Similar voices are recorded, not rejected: list every enrolled voice
     # above the threshold so the Students page can show which voices overlap.
@@ -167,7 +185,6 @@ def check_enrollment(wav_path, alias, model, biometric_dir=None):
             logging.info("enrollment check: %s voice overlaps with %s",
                          alias, [s["username"] for s in similar_to])
 
-    ok = not reasons
     cache = os.path.splitext(wav_path)[0] + _CACHE_SUFFIX
     if full_emb is not None:
         # Cache regardless of verdict: whatever WAV survives on disk IS the
@@ -178,16 +195,9 @@ def check_enrollment(wav_path, alias, model, biometric_dir=None):
         except Exception as e:
             logging.warning("enrollment check: could not cache %s: %s", cache, e)
 
-    verdict = {
-        "ok": ok,
-        "message": " ".join(reasons),
-        "duration_seconds": round(len(x) / float(sr), 1),
-        "net_speech_seconds": round(speech_seconds, 1),
-        "still_needed_seconds": round(still_needed, 1),
-        "self_similarity": None if self_sim is None else round(self_sim, 3),
-        "nearest_other_similarity": None if nearest_sim is None else round(nearest_sim, 3),
-        "similar_to": similar_to,
-    }
+    verdict = evaluate_enrollment(
+        speech_seconds, self_sim, similar_to,
+        duration_seconds=len(x) / float(sr), nearest_sim=nearest_sim)
     # Sidecar verdict so the web app can show enrollment quality without
     # loading ECAPA (the Students page reads these).
     try:

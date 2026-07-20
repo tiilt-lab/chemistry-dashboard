@@ -69,3 +69,14 @@ def test_gini_bounds():
     assert gini_coefficient([]) == 0.0
     assert gini_coefficient([5, 5, 5]) == 0.0
     assert gini_coefficient([0, 0, 10]) > 0.6
+
+
+def test_classify_question_edges():
+    from analytics import classify_question
+    # trailing context after the '?' must not confuse it
+    assert classify_question("What if we tried X? Just a thought.") == "open"
+    # capitalization + leading whitespace
+    assert classify_question("   should we?") == "closed"
+    # a statement with no question words
+    assert classify_question("The reaction proceeds.") == "other"
+    assert classify_question(None) == "other"

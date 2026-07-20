@@ -235,3 +235,24 @@ def compute_talk_metrics(rows, enrolled=None, silence_threshold=10.0,
         'never_spoke': never_spoke,
         'span_seconds': round(span, 1),
     }
+
+
+def pairwise_voice_overlaps(embeddings, threshold=0.50):
+    """Which enrolled voices sound alike. `embeddings` is {username: vector}
+    (numpy arrays or lists). Returns pairs with cosine >= threshold, sorted
+    by descending similarity. Pure (numpy only) so it is unit-testable and
+    reusable between the live endpoint and any batch report."""
+    import numpy as np
+    names = sorted(embeddings)
+    normed = {}
+    for n in names:
+        v = np.asarray(embeddings[n], dtype=float).ravel()
+        normed[n] = v / (np.linalg.norm(v) + 1e-9)
+    pairs = []
+    for i, a in enumerate(names):
+        for b in names[i + 1:]:
+            sim = float(np.dot(normed[a], normed[b]))
+            if sim >= threshold:
+                pairs.append({'a': a, 'b': b, 'similarity': round(sim, 3)})
+    pairs.sort(key=lambda p: -p['similarity'])
+    return pairs

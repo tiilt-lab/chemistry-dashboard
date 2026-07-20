@@ -86,17 +86,9 @@ def students_voice_overlaps(**kwargs):
                 embeddings[username] = np.load(path)
             except Exception:
                 pass
-    names = sorted(embeddings)
-    pairs = []
+    from analytics import pairwise_voice_overlaps
     THRESHOLD = 0.50
-    for i, a in enumerate(names):
-        va = embeddings[a] / (np.linalg.norm(embeddings[a]) + 1e-9)
-        for b in names[i + 1:]:
-            vb = embeddings[b] / (np.linalg.norm(embeddings[b]) + 1e-9)
-            sim = float(np.dot(va, vb))
-            if sim >= THRESHOLD:
-                pairs.append({'a': a, 'b': b, 'similarity': round(sim, 3)})
-    pairs.sort(key=lambda p: -p['similarity'])
+    pairs = pairwise_voice_overlaps(embeddings, threshold=THRESHOLD)
     return json_response({'threshold': THRESHOLD, 'pairs': pairs})
 
 

@@ -491,6 +491,29 @@ def get_models(**kwargs):
     return json_response(result)
 
 
+# Full id->label registry keyed by provenance field, so the frontend resolves
+# per-pod model labels from ONE source instead of hand-mirroring these dicts
+# (mirror drift was the "caption names the wrong model" bug). Keys match the
+# posthoc_models provenance fields.
+_PROVENANCE_REGISTRY = {
+    "asr": _ASR_LABELS,
+    "scorer": _SCORER_LABELS,
+    "embedder": _EMBEDDER_LABELS,
+    "keywords": _KEYWORD_LABELS,
+    "emotion": _EMOTION_LABELS,
+    "attention": _ATTENTION_LABELS,
+    "objects": _OBJECT_LABELS,
+    "face": _FACE_LABELS,
+    "head": _HEAD_LABELS,
+}
+
+
+@api_routes.route('/api/v1/provenance_labels', methods=['GET'])
+@wrappers.verify_login(public=True)
+def get_provenance_labels(**kwargs):
+    return json_response(_PROVENANCE_REGISTRY)
+
+
 @api_routes.route('/api/v1/syncstudenttable', methods=['POST'])
 @wrappers.verify_login()
 def sync_student_table(**kwargs):
