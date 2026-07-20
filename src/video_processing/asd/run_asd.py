@@ -351,14 +351,23 @@ def main():
     out = {"fps": FPS, "video": os.path.basename(args.video), "tracks": []}
     for i, tr in enumerate(tracks):
         frames = sorted(tr["scores"])
-        out["tracks"].append({
+        rec = {
             "id": i,
             "frames": frames,
             "scores": [tr["scores"][f] for f in frames],
             "x": round(float(np.mean(tr["x"])), 1),
             "identity": tr.get("identity"),
             "identity_distance": tr.get("identity_distance"),
-        })
+        }
+        # Mean ArcFace embedding per track (insightface backend), so face
+        # galleries can be MINTED from session video the same way voice prints
+        # are minted from session audio.
+        embs = tr.get("embeddings")
+        if embs:
+            v = np.mean(np.stack([np.asarray(e, float) for e in embs]), axis=0)
+            v = v / (np.linalg.norm(v) + 1e-9)
+            rec["embedding"] = [round(float(x), 5) for x in v]
+        out["tracks"].append(rec)
     with open(args.out, "w") as f:
         json.dump(out, f)
     logging.info("ASD: artifact written to %s", args.out)
