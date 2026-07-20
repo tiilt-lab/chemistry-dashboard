@@ -5,6 +5,7 @@ import { btnPrimary } from "../components/dialog-styles"
 import { pageShell, formCard } from "../components/layout-styles"
 import { DialogBoxTwoOption } from "../dialog/dialog-component"
 import { Appheader } from "../header/header-component"
+import { LibraryTabs } from "../components/library-tabs"
 import style from "./manage-topic-models.module.css"
 import style2 from "../components/context-menu/context-menu.module.css"
 
@@ -13,11 +14,12 @@ function ManageTopicsPage(props) {
         <>
             <div role="main" className="main-container">
                 <Appheader
-                    title={"Manage Topic Models"}
+                    title={"Library"}
                     leftText={false}
                     rightText={""}
                     nav={props.navigate}
                 />
+                <LibraryTabs />
                 <div className={pageShell}>
                 <div className={formCard}>
                 <div className="relative min-h-0 w-full grow overflow-y-auto">

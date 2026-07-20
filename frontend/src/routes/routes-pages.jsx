@@ -85,6 +85,7 @@ function PageRouter() {
                 <Route path='/students/:studentId' element={<ProtectedRoute component={StudentProfileComponent}/> } />
                 <Route path='/raters' element={<ProtectedRoute component={RatersComponent}/> } />
                 <Route path='/people' element={<Navigate replace to="/students" />} />
+                <Route path='/library' element={<Navigate replace to="/keyword-lists" />} />
                 <Route path='/users' element={<ProtectedRoute component={UsersComponent}/> } />
                 <Route path='/settings' element={<ProtectedRoute component={SettingsComponent}/> } />
                 <Route path='/ops' element={<ProtectedRoute component={OpsComponent}/> } />

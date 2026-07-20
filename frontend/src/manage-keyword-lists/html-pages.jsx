@@ -1,10 +1,11 @@
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { SkeletonRows } from "../components/skeleton"
 import { EmptyState } from "../components/empty-state"
-import { btnPrimary, btnSecondary } from "../components/dialog-styles"
+import { btnPrimary } from "../components/dialog-styles"
 import { pageShell, formCard } from "../components/layout-styles"
 import { DialogBoxTwoOption } from "../dialog/dialog-component"
 import { Appheader } from "../header/header-component"
+import { LibraryTabs } from "../components/library-tabs"
 import style from "./manage-keyword-lists.module.css"
 import style2 from "../components/context-menu/context-menu.module.css"
 
@@ -13,11 +14,12 @@ function KeywordListPage(props) {
         <>
             <div role="main" className="main-container">
                 <Appheader
-                    title={"Manage Keyword Lists"}
+                    title={"Library"}
                     leftText={false}
                     rightText={""}
                     nav={props.navigate}
                 />
+                <LibraryTabs />
                 <div className={pageShell}>
                 <div className={formCard}>
                 <div className="relative min-h-0 w-full grow overflow-y-auto">
@@ -94,12 +96,6 @@ function KeywordListPage(props) {
                         onClick={props.openNewKeywordList}
                     >
                         New Keyword List
-                    </button>
-                    <button
-                        className={btnSecondary + " h-11 w-full max-w-55 cursor-pointer text-tiilt"}
-                        onClick={props.createTopicModel}
-                    >
-                        Create Topic Model
                     </button>
                 </div>
                 </div>
