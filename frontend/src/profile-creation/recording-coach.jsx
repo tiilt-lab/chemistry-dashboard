@@ -501,7 +501,7 @@ function RecordingCoach({
                             <span className="ml-auto text-sm text-tiilt-muted">{elapsed}s / {maxDurationSec}s</span>
                         </div>
                         {isRecordingStopped && actualTimeElapsed < effectiveMinSec ? (
-                            <div className="mt-2 text-xs font-semibold text-amber-600">
+                            <div className="mt-2 text-xs font-semibold text-amber-600 dark:text-amber-400">
                                 That was only {actualTimeElapsed}s — please record again and
                                 record at least {effectiveMinSec}s.
                             </div>
@@ -605,7 +605,7 @@ function LevelMeter({ rmsDb, peakDb, clipping }) {
             </div>
             <div className="mt-1 flex items-center justify-between text-xs text-tiilt-muted">
                 <span>RMS {Number.isFinite(rmsDb) ? rmsDb.toFixed(1) : '…'} dBFS</span>
-                <span>Peak {Number.isFinite(peakDb) ? peakDb.toFixed(1) : '…'} dBFS {clipping && <strong className="text-red-600">(CLIP)</strong>}</span>
+                <span>Peak {Number.isFinite(peakDb) ? peakDb.toFixed(1) : '…'} dBFS {clipping && <strong className="text-red-600 dark:text-red-400">(CLIP)</strong>}</span>
             </div>
         </div>
     );

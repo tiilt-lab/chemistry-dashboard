@@ -43,9 +43,9 @@ function LikertRatingInterface(props) {
               </Badge>
             </div>
 
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-              <div className="flex items-center gap-2 font-medium text-emerald-800"><CheckCircle2 className="h-4 w-4" />Evaluation Instructions</div>
-              <ul className="mt-3 space-y-2 text-sm text-emerald-900/80">
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/40">
+              <div className="flex items-center gap-2 font-medium text-emerald-800 dark:text-emerald-300"><CheckCircle2 className="h-4 w-4" />Evaluation Instructions</div>
+              <ul className="mt-3 space-y-2 text-sm text-emerald-900/80 dark:text-emerald-200">
                 {props.evaluationOptionInstruction.map((item) => (
                   <li className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4" />{item}</li>
                 ))}

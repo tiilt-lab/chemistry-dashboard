@@ -307,23 +307,23 @@ function CollaborationFeedbackDashboard(props) {
                   </div>
                   {mode === "student" ? (
                     <div className="rounded-2xl bg-violet-50 p-4 ring-1 ring-violet-100 dark:bg-violet-950/40 dark:ring-violet-900">
-                      <div className="flex items-center gap-2 text-sm text-violet-700"><TrendingUp className="h-4 w-4" />Strong zone</div>
+                      <div className="flex items-center gap-2 text-sm text-violet-700 dark:text-violet-300"><TrendingUp className="h-4 w-4" />Strong zone</div>
                       <div className="mt-2 text-sm ">{Array.isArray(llmresponse_session_summary.Strongzones)? llmresponse_session_summary.Strongzones[0] : llmresponse_session_summary.Strongzones}</div>
                     </div>
                   ) : (
                     <div className="rounded-2xl bg-emerald-50 p-4 ring-1 ring-emerald-100 dark:bg-emerald-950/40 dark:ring-emerald-900">
-                      <div className="flex items-center gap-2 text-sm text-emerald-700"><TrendingUp className="h-4 w-4" />Strong zone</div>
+                      <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-300"><TrendingUp className="h-4 w-4" />Strong zone</div>
                       <div className="mt-2 text-sm ">{Array.isArray(llmresponse_session_summary.Strongzones)? llmresponse_session_summary.Strongzones[0] : llmresponse_session_summary.Strongzones}</div>
                     </div>
                   )}
                   {mode === "student" ? (
                     <div className="rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-50 dark:bg-amber-950/40 dark:ring-amber-900">
-                      <div className="flex items-center gap-2 text-sm text-amber-700"><TrendingDown className="h-4 w-4" />Caution zone</div>
+                      <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300"><TrendingDown className="h-4 w-4" />Caution zone</div>
                       <div className="mt-2 text-sm">{Array.isArray(llmresponse_session_summary.Declinezones)? llmresponse_session_summary.Declinezones[0] :llmresponse_session_summary.Declinezones}</div>
                     </div>
                   ) : (
                     <div className="rounded-2xl bg-rose-50 p-4 ring-1 ring-rose-100 dark:bg-rose-950/40 dark:ring-rose-900">
-                      <div className="flex items-center gap-2 text-sm text-rose-700"><TrendingDown className="h-4 w-4" />Decline zone</div>
+                      <div className="flex items-center gap-2 text-sm text-rose-700 dark:text-rose-300"><TrendingDown className="h-4 w-4" />Decline zone</div>
                       <div className="mt-2 text-sm">{Array.isArray(llmresponse_session_summary.Declinezones)? llmresponse_session_summary.Declinezones[0] :llmresponse_session_summary.Declinezones}</div>
                     </div>
                   )}
@@ -331,7 +331,7 @@ function CollaborationFeedbackDashboard(props) {
 
                 {mode === "student" ? (
                   <div className="rounded-2xl border bg-emerald-50 p-4 mt-4 dark:bg-emerald-950/40 dark:border-emerald-900 text-lg leading-6">
-                    <div className="flex items-center gap-2 font-medium text-emerald-700"><Brain className="h-4 w-4" />Your Strength</div>
+                    <div className="flex items-center gap-2 font-medium text-emerald-700 dark:text-emerald-300"><Brain className="h-4 w-4" />Your Strength</div>
                     <p className="mt-2 text-sm">
                       {(llmresponse_session_summary.Strengths || []).join("\n")}
                     </p>
@@ -468,7 +468,7 @@ function CollaborationFeedbackDashboard(props) {
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/40">
-                        <div className="flex items-center gap-2 font-medium text-emerald-800"><CheckCircle2 className="h-4 w-4" />What is going well</div>
+                        <div className="flex items-center gap-2 font-medium text-emerald-800 dark:text-emerald-300"><CheckCircle2 className="h-4 w-4" />What is going well</div>
                         <ul className="mt-3 space-y-2 text-sm text-emerald-900/80 dark:text-emerald-200">
                           {(llmresponse_session_summary.Strengths || []).map((item) => (
                             <li key={item} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4" />{item}</li>
@@ -477,8 +477,8 @@ function CollaborationFeedbackDashboard(props) {
                       </div>
                       {mode === "student" ? (
                         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/40">
-                          <div className="flex items-center gap-2 font-medium text-amber-800"><AlertTriangle className="h-4 w-4" />What to pay attention to</div>
-                          <ul className="mt-3 space-y-2 text-sm text-amber-900/80">
+                          <div className="flex items-center gap-2 font-medium text-amber-800 dark:text-amber-300"><AlertTriangle className="h-4 w-4" />What to pay attention to</div>
+                          <ul className="mt-3 space-y-2 text-sm text-amber-900/80 dark:text-amber-300">
                             {(llmresponse_session_summary.Concerns || []).map((item) => (
                               <li key={item} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4" />{item}</li>
                             ))}
@@ -486,8 +486,8 @@ function CollaborationFeedbackDashboard(props) {
                         </div>
                       ) : (
                         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-900 dark:bg-rose-950/40">
-                          <div className="flex items-center gap-2 font-medium text-rose-800"><AlertTriangle className="h-4 w-4" />What went wrong</div>
-                          <ul className="mt-3 space-y-2 text-sm text-rose-900/80">
+                          <div className="flex items-center gap-2 font-medium text-rose-800 dark:text-rose-300"><AlertTriangle className="h-4 w-4" />What went wrong</div>
+                          <ul className="mt-3 space-y-2 text-sm text-rose-900/80 dark:text-rose-300">
                             {(llmresponse_session_summary.Concerns || []).map((item) => (
                               <li key={item} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4" />{item}</li>
                             ))}
@@ -497,8 +497,8 @@ function CollaborationFeedbackDashboard(props) {
                     </div>
 
                     <div className="rounded-2xl bg-violet-50 p-4 ring-1 ring-violet-100 dark:bg-violet-950/40 dark:ring-violet-900">
-                      <div className="flex items-center gap-2 font-medium text-violet-700"><Lightbulb className="h-4 w-4" />What to work on</div>
-                      <ul className="mt-3 space-y-2 text-sm text-violet-700">
+                      <div className="flex items-center gap-2 font-medium text-violet-700 dark:text-violet-300"><Lightbulb className="h-4 w-4" />What to work on</div>
+                      <ul className="mt-3 space-y-2 text-sm text-violet-700 dark:text-violet-300">
                         {(llmresponse_session_summary.Actions || []).map((item) => (
                           <li key={item} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4" />{item}</li>
                         ))}
