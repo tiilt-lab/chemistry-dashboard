@@ -57,6 +57,37 @@ def get_speaker_tags(session_device_id=None):
     query = db.session.query(Transcript).filter(session_device_id=session_device_id).distinct(Transcript.speaker_tag)
     return query.count()
 
+
+def reassign_transcript_speaker(transcript_id, alias, apply_to_tag=False):
+    """Human correction of who a transcript segment is from. Sets speaker_tag
+    (and speaker_id, if a matching Speaker slot exists on the pod) on the row;
+    with apply_to_tag, relabels EVERY row in the same pod currently sharing
+    this row's tag (one click fixes a whole diarization cluster). Returns
+    (rows_changed, session_device_id) or (None, None) if the row is missing.
+    """
+    row = db.session.query(Transcript).filter(Transcript.id == transcript_id).first()
+    if row is None:
+        return None, None
+    did = row.session_device_id
+    # match the alias to a speaker slot on this pod so speaker_id stays in sync
+    speaker = db.session.query(Speaker).filter(
+        Speaker.session_device_id == did, Speaker.alias == alias).first()
+    speaker_id = speaker.id if speaker else None
+
+    if apply_to_tag and row.speaker_tag is not None:
+        targets = db.session.query(Transcript).filter(
+            Transcript.session_device_id == did,
+            Transcript.speaker_tag == row.speaker_tag)
+    else:
+        targets = db.session.query(Transcript).filter(Transcript.id == transcript_id)
+    n = 0
+    for t in targets.all():
+        t.speaker_tag = alias
+        t.speaker_id = speaker_id
+        n += 1
+    db.session.commit()
+    return n, did
+
 def update_speaker(speaker_id, alias = None):
     speaker = get_speakers(id = speaker_id)
     if speaker:

@@ -4,6 +4,7 @@ import { useNavigate, useOutletContext,useParams, useSearchParams } from 'react-
 import {TranscriptComponentPage} from './html-pages'
 import { decorateTranscripts } from './transcript-utils'
 import { useD3 } from '../myhooks/custom-hooks';
+import { ApiService } from '../services/api-service';
 import * as d3 from 'd3';
 
 function TranscriptsComponent(){
@@ -32,6 +33,7 @@ function TranscriptsComponent(){
   const [trigger, setTrigger] = useState(0)
   const [showDoA,setShowDoA] = useState(false);
   const [reload, setReload] = useState(false)
+  const [roster, setRoster] = useState([])
   const [activeSessionService, setActiveSessionService] = useOutletContext();
   const { sessionDeviceId } = useParams(); 
   const [searchParam, setSearchParam] = useSearchParams();
@@ -97,6 +99,41 @@ useEffect(()=>{
 
 const createDisplayTranscripts = ()=> {
     setDisplayTranscripts(decorateTranscripts(transcripts, showKeywords, showDoA, angleToColor))
+  }
+
+  // Roster of this pod, for the "this section is from…" speaker picker.
+  useEffect(() => {
+    if (sessionDeviceId === undefined) return
+    new ApiService()
+      .httpRequestCall(`api/v1/devices/${sessionDeviceId}/speakers`, "GET", {})
+      .then((r) => (r.status === 200 ? r.json() : []))
+      .then((list) => setRoster(
+        [...new Set((list || []).map((s) => s.alias).filter(Boolean))].sort()))
+      .catch(() => {})
+  }, [sessionDeviceId])
+
+  // How many segments currently carry each tag (drives the "all N" bulk fix).
+  const tagCounts = transcripts.reduce((m, t) => {
+    if (t.speaker_tag) m[t.speaker_tag] = (m[t.speaker_tag] || 0) + 1
+    return m
+  }, {})
+
+  // Persist a human correction, then reflect it locally without a reload.
+  const reassignSpeaker = async (transcriptId, alias, applyToTag) => {
+    const target = transcripts.find((t) => t.id === transcriptId)
+    const oldTag = target ? target.speaker_tag : null
+    const res = await new ApiService().httpRequestCall(
+      `api/v1/transcripts/${transcriptId}/reassign`, "POST",
+      { alias, apply_to_tag: !!applyToTag })
+    if (res.status !== 200) return
+    const next = transcripts.map((t) => {
+      const hit = applyToTag && oldTag
+        ? t.speaker_tag === oldTag
+        : t.id === transcriptId
+      return hit ? { ...t, speaker_tag: alias } : t
+    })
+    setTranscripts(next)
+    setDisplayTranscripts(decorateTranscripts(next, showKeywords, showDoA, angleToColor))
   }
 
   const angleToColor = (angle, id)=> {
@@ -182,6 +219,9 @@ const createDisplayTranscripts = ()=> {
       legendRef = {legendRef}
       showKeywords = {showKeywords}
       toggleKeywords = {toggleKeywords}
+      roster = {roster}
+      tagCounts = {tagCounts}
+      reassignSpeaker = {reassignSpeaker}
     />
   )
 }

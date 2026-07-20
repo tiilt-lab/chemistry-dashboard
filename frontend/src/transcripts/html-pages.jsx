@@ -1,5 +1,6 @@
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { Appheader } from "../header/header-component"
+import { SpeakerReassign } from "../components/speaker-reassign"
 
 import { dlgHeading, dlgBody, dlgCancel } from "../components/dialog-styles"
 
@@ -56,14 +57,30 @@ function TranscriptComponentPage(props) {
                                             </span>
                                         </div>
                                         <div className="min-w-0 grow text-[15px] leading-relaxed text-tiilt-ink">
-                                            {transcript.speaker_tag ? (
+                                            {props.reassignSpeaker ? (
+                                                <SpeakerReassign
+                                                    tag={transcript.speaker_tag}
+                                                    roster={props.roster || []}
+                                                    count={
+                                                        (props.tagCounts || {})[
+                                                            transcript.speaker_tag
+                                                        ] || 0
+                                                    }
+                                                    onReassign={(alias, applyToTag) =>
+                                                        props.reassignSpeaker(
+                                                            transcript.id,
+                                                            alias,
+                                                            applyToTag,
+                                                        )
+                                                    }
+                                                />
+                                            ) : transcript.speaker_tag ? (
                                                 <span className="font-semibold text-tiilt">
-                                                    {transcript.speaker_tag}
-                                                    :{" "}
+                                                    {transcript.speaker_tag}:{" "}
                                                 </span>
                                             ) : (
                                                 <></>
-                                            )}
+                                            )}{" "}
                                             {transcript.words.map(
                                                 (transcriptData, wIndex) =>
                                                     transcriptData.matchingKeywords !==

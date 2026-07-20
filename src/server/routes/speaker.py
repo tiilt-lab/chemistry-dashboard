@@ -40,3 +40,39 @@ def update_speaker(speaker_id, **kwargs):
 def get_transcript_speaker_metrics(transcript_id, **kwargs):
     speaker_metrics = database.get_speaker_transcript_metrics(transcript_id=transcript_id)
     return json_response([speaker_metric.json() for speaker_metric in speaker_metrics])
+
+
+# Human correction of who a transcript segment is from ("this section is from
+# X"). Signed-in users; the alias must be someone actually on that pod so a
+# correction can't invent a speaker. With apply_to_tag, one confirmation
+# relabels every segment sharing the current (often diarization-cluster) tag.
+@api_routes.route('/api/v1/transcripts/<int:transcript_id>/reassign', methods=['POST'])
+@wrappers.verify_login()
+def reassign_transcript_speaker(transcript_id, **kwargs):
+    body = request.json or {}
+    alias = (body.get('alias') or '').strip()
+    if not alias:
+        return json_response({'message': 'An alias is required.'}, 400)
+    valid, message = Speaker.verify_fields(alias=alias)
+    if not valid:
+        return json_response({'message': message}, 400)
+
+    # scope check: the row must belong to a pod the caller can see, and the
+    # alias must be a real roster member of that pod.
+    from tables.transcript import Transcript
+    from app import db
+    row = db.session.query(Transcript).filter(Transcript.id == transcript_id).first()
+    if row is None:
+        return json_response({'message': 'Transcript not found.'}, 404)
+    roster = {s.alias for s in database.get_speakers(
+        session_device_id=row.session_device_id) if s.alias}
+    if alias not in roster:
+        return json_response({
+            'message': 'That name is not a participant in this group.'}, 400)
+
+    n, did = database.reassign_transcript_speaker(
+        transcript_id, alias, apply_to_tag=bool(body.get('apply_to_tag')))
+    logging.info("manual speaker reassign: transcript %s -> %s (%s rows) by %s",
+                 transcript_id, alias, n, kwargs.get('user', {}).get('email'))
+    return json_response({'reassigned': n, 'alias': alias,
+                          'session_device_id': did})
