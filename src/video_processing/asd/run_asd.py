@@ -72,14 +72,16 @@ def iou(a, b):
     return inter / ua if ua > 0 else 0.0
 
 
-def build_tracks(dets, stride):
-    """Greedy IOU association over the sampled detection frames."""
+def build_tracks(dets, stride, embeds=None):
+    """Greedy IOU association over the sampled detection frames. When `embeds`
+    (per-frame ArcFace vectors aligned with dets) is given, each track carries
+    the embeddings of its detections for identity matching."""
     open_tracks, done = [], []
     max_gap = stride * 8  # tolerate short detection dropouts (~0.6s)
     for f in sorted(dets):
         used = set()
         for tr in open_tracks:
-            lf, lbox = tr[-1]
+            lf, lbox = tr[-1][0], tr[-1][1]
             best_j, best_v = None, IOU_JOIN
             if f - lf <= max_gap:
                 for j, box in enumerate(dets[f]):
@@ -89,7 +91,8 @@ def build_tracks(dets, stride):
                     if v > best_v:
                         best_j, best_v = j, v
             if best_j is not None:
-                tr.append((f, dets[f][best_j]))
+                emb = embeds[f][best_j] if embeds else None
+                tr.append((f, dets[f][best_j], emb))
                 used.add(best_j)
         still_open = []
         for tr in open_tracks:
@@ -100,27 +103,29 @@ def build_tracks(dets, stride):
         open_tracks = still_open
         for j, box in enumerate(dets[f]):
             if j not in used:
-                open_tracks.append([(f, box)])
+                open_tracks.append([(f, box, embeds[f][j] if embeds else None)])
     done.extend(open_tracks)
 
     tracks = []
     for tr in done:
         if len(tr) < MIN_TRACK_DETS:
             continue
-        half = np.median([max(b[2] - b[0], b[3] - b[1]) / 2 for _, b in tr])
+        half = np.median([max(b[2] - b[0], b[3] - b[1]) / 2 for _, b, _ in tr])
         if half < FACE_MIN_HALF:
             continue
         # interpolate (x, y, s) per frame across the sampled detections
-        fs = np.array([f for f, _ in tr])
-        xs = np.array([(b[0] + b[2]) / 2 for _, b in tr])
-        ys = np.array([(b[1] + b[3]) / 2 for _, b in tr])
-        ss = np.array([max(b[2] - b[0], b[3] - b[1]) / 2 for _, b in tr])
+        fs = np.array([f for f, _, _ in tr])
+        xs = np.array([(b[0] + b[2]) / 2 for _, b, _ in tr])
+        ys = np.array([(b[1] + b[3]) / 2 for _, b, _ in tr])
+        ss = np.array([max(b[2] - b[0], b[3] - b[1]) / 2 for _, b, _ in tr])
         frames = np.arange(fs[0], fs[-1] + 1)
+        embv = [e for _, _, e in tr if e is not None]
         tracks.append({
             "frames": frames,
             "x": np.interp(frames, fs, xs),
             "y": np.interp(frames, fs, ys),
             "s": np.interp(frames, fs, ss),
+            "embeddings": embv,
         })
     tracks.sort(key=lambda t: t["frames"][0])
     return tracks
@@ -300,6 +305,9 @@ def main():
     parser.add_argument("--candidates", default="",
                         help="comma-separated aliases to restrict identity matching")
     parser.add_argument("--det-stride", type=int, default=2)
+    parser.add_argument("--face-backend", choices=["s3fd", "insightface"],
+                        default="s3fd",
+                        help="s3fd+dlib (baseline) or insightface SCRFD+ArcFace (SOTA)")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s - ASD %(levelname)s: %(message)s")
@@ -319,16 +327,26 @@ def main():
     from scipy.io import wavfile
     _, audio = wavfile.read(wav)
 
-    dets, total = detect_faces(v25, args.det_stride)
-    tracks = build_tracks(dets, args.det_stride)
-    logging.info("ASD: %d frames, %d tracks", total, len(tracks))
-    collect_crops(v25, tracks)
+    cands = set(filter(None, args.candidates.split(","))) or None
+    if args.face_backend == "insightface":
+        from insightface_faces import (detect_and_embed, load_arcface_gallery,
+                                       identify_tracks as identify_arcface)
+        dets, embeds, total = detect_and_embed(v25, args.det_stride)
+        tracks = build_tracks(dets, args.det_stride, embeds)
+    else:
+        dets, total = detect_faces(v25, args.det_stride)
+        tracks = build_tracks(dets, args.det_stride)
+    logging.info("ASD: %d frames, %d tracks (%s)", total, len(tracks), args.face_backend)
+    collect_crops(v25, tracks)  # visual crops still feed the talking-scorer
     model, fc = load_scorer()
     score_tracks(tracks, audio, model, fc)
     del model, fc
     torch.cuda.empty_cache()
-    identify_tracks(tracks, os.path.abspath(args.gallery),
-                    set(filter(None, args.candidates.split(","))) or None)
+    if args.face_backend == "insightface":
+        identify_arcface(tracks, load_arcface_gallery(
+            os.path.abspath(args.gallery), cands))
+    else:
+        identify_tracks(tracks, os.path.abspath(args.gallery), cands)
 
     out = {"fps": FPS, "video": os.path.basename(args.video), "tracks": []}
     for i, tr in enumerate(tracks):
