@@ -171,6 +171,28 @@ function JoinPage() {
     }
     const [state, dispatch] = useReducer(reducer, initialState);
 
+    // Single entry point for the forward-progress transitions (join-machine
+    // step 3). Routing them through one named function centralizes what used
+    // to be scattered dispatch() calls and gives one place to add the legal-
+    // transition guard and logging as the migration continues. Teardown and
+    // the streaming-start decision still dispatch directly for now.
+    const JOIN_EVENTS = {
+        audio_socket_open: { type: "AUDIO_SOCKET_OPEN", payload: true },
+        video_socket_open: { type: "VIDEO_SOCKET_OPEN", payload: true },
+        audio_ready: { type: "AUDIO_READY", payload: true },
+        video_ready: { type: "VIDEO_READY", payload: true },
+        speakers_validated: { type: "SPEAKERS_VALIDATED", payload: true },
+    }
+    const next = (event) => {
+        const action = JOIN_EVENTS[event]
+        if (!action) {
+            console.warn("join-machine: unknown transition", event)
+            return
+        }
+        console.log("join-machine transition:", event)
+        dispatch(action)
+    }
+
     useEffect(() => {
         if (!state.startDiscussionStreaming) return
         const t = setInterval(() => setRecSeconds((s) => s + 1), 1000)
@@ -749,7 +771,7 @@ function JoinPage() {
             if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
                 videows.current.send(JSON.stringify(message))
             }
-            dispatch({ type: "SPEAKERS_VALIDATED", payload: true })
+            next("speakers_validated")
 
         } else {
             setDisplayText(
@@ -1215,7 +1237,7 @@ function JoinPage() {
             console.log("[Connected audio processor service]")
             console.log("speakers ", speakers.current)
             opened = true
-            dispatch({ type: "AUDIO_SOCKET_OPEN", payload: true })
+            next("audio_socket_open")
             reconnectCounter.current = 0
             setPageTitle(name.current)
 
@@ -1226,7 +1248,7 @@ function JoinPage() {
 
             if (message["type"] === "start") {
                 console.log("audio authenticated ....")
-                dispatch({ type: "AUDIO_READY", payload: true })
+                next("audio_ready")
                 closeDialog()
             } else if (message['type'] === 'registeredfingerprintadded') {
                 console.log("got a response from audio endpoint....")
@@ -1294,7 +1316,7 @@ function JoinPage() {
 
         videows.current.onopen = (e) => {
             console.log("[Connected to video processor services]")
-            dispatch({ type: "VIDEO_SOCKET_OPEN", payload: true })
+            next("video_socket_open")
         }
 
         videows.current.onmessage = (e) => {
@@ -1302,7 +1324,7 @@ function JoinPage() {
                 const message = JSON.parse(e.data);
                 if (message['type'] === 'start') {
                     console.log("video authenticated ....")
-                    dispatch({ type: "VIDEO_READY", payload: true })
+                    next("video_ready")
                     closeDialog();
                 } else if (message['type'] === 'attention_data') {
 
