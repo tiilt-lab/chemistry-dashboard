@@ -176,8 +176,20 @@ function StudentsComponent(props) {
             const d = parseDate(s.last_active)
             return d && d.getTime() > cutoff
         }).length
-        return { total: students.length, enrolled, active }
-    }, [students])
+        // Enrollment health: how many enrolled prints need re-recording, and
+        // how many students are in a confusable-voice pair.
+        const attention = students.filter((s) => enrollmentNeedsAttention(s)).length
+        const confusableUsers = new Set()
+        for (const pair of voiceOverlaps.pairs || []) {
+            confusableUsers.add(pair.a)
+            confusableUsers.add(pair.b)
+        }
+        return {
+            total: students.length, enrolled, active, attention,
+            confusable: confusableUsers.size,
+            confusablePairs: (voiceOverlaps.pairs || []).length,
+        }
+    }, [students, voiceOverlaps])
 
     const visible = useMemo(() => {
         if (students === null) return null
@@ -582,6 +594,48 @@ function StudentsComponent(props) {
                                     label="Active last 30 days"
                                     value={stats.active}
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setFilter(
+                                            filter === "attention"
+                                                ? "all"
+                                                : "attention",
+                                        )
+                                    }
+                                    className={
+                                        "flex-1 rounded-xl border p-4 text-left transition " +
+                                        (stats.attention
+                                            ? "border-tiilt-orange/40 bg-tiilt-orange/10 hover:border-tiilt-orange"
+                                            : "border-tiilt-line bg-white hover:border-tiilt")
+                                    }
+                                    title={
+                                        stats.attention
+                                            ? "Filter to enrollments needing re-recording"
+                                            : "All enrollments look healthy"
+                                    }
+                                >
+                                    <div className="font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
+                                        Enrollment health
+                                    </div>
+                                    <div
+                                        className={
+                                            "mt-1 text-2xl font-bold " +
+                                            (stats.attention
+                                                ? "text-tiilt-orange-text"
+                                                : "text-tiilt-teal-text")
+                                        }
+                                    >
+                                        {stats.attention
+                                            ? `${stats.attention} need attention`
+                                            : "All healthy"}
+                                    </div>
+                                    <div className="mt-1 text-xs text-tiilt-muted">
+                                        {stats.confusable > 0
+                                            ? `${stats.confusable} in ${stats.confusablePairs} confusable pair${stats.confusablePairs === 1 ? "" : "s"}`
+                                            : "no voice overlaps"}
+                                    </div>
+                                </button>
                             </div>
                         ) : null}
 
