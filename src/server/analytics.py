@@ -251,6 +251,11 @@ def pairwise_voice_overlaps(embeddings, threshold=0.50):
     pairs = []
     for i, a in enumerate(names):
         for b in names[i + 1:]:
+            # A truncated write or a model-version change can leave one stored
+            # embedding a different length; np.dot would raise and take down the
+            # whole endpoint. Skip the incomparable pair instead of crashing.
+            if normed[a].shape != normed[b].shape:
+                continue
             sim = float(np.dot(normed[a], normed[b]))
             if sim >= threshold:
                 pairs.append({'a': a, 'b': b, 'similarity': round(sim, 3)})

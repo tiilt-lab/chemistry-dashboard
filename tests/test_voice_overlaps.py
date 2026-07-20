@@ -39,3 +39,13 @@ def test_threshold_is_respected_and_sorted():
 
 def test_single_voice_has_no_pairs():
     assert pairwise_voice_overlaps({"only": [1.0, 2.0]}) == []
+
+
+def test_mismatched_dims_skip_instead_of_crash():
+    # A truncated write / model-version change can leave one embedding a
+    # different length. The endpoint loads these straight from disk, so a crash
+    # here 500s the whole feature. Comparable pairs must still be returned.
+    emb = {"a": [1.0, 0.0, 0.0], "b": [1.0, 0.0, 0.0], "bad": [1.0, 0.0]}
+    pairs = pairwise_voice_overlaps(emb, threshold=0.5)
+    assert len(pairs) == 1
+    assert {pairs[0]["a"], pairs[0]["b"]} == {"a", "b"}
