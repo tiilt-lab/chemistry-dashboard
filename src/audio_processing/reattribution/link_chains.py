@@ -33,6 +33,31 @@ def cosine(a, b):
     return float(np.dot(a, b) / ((np.linalg.norm(a) * np.linalg.norm(b)) + 1e-9))
 
 
+def consolidate_within_pod(clusters, roster_size):
+    """Merge over-split clusters inside one pod down to at most roster_size.
+
+    pyannote sometimes fragments one person into two clusters; left alone,
+    each fragment seeds its own cross-pod chain that can never re-merge (they
+    share a pod). Greedily merge the closest pair until n <= roster_size.
+    """
+    items = [{"labels": [lbl], "emb": np.asarray(c["embedding"], dtype=float),
+              "seconds": c.get("seconds", 0.0)} for lbl, c in clusters.items()]
+    while len(items) > max(1, roster_size):
+        best = None
+        for i in range(len(items)):
+            for j in range(i + 1, len(items)):
+                sim = cosine(items[i]["emb"], items[j]["emb"])
+                if best is None or sim > best[2]:
+                    best = (i, j, sim)
+        i, j, _ = best
+        wi, wj = items[i]["seconds"] or 1, items[j]["seconds"] or 1
+        items[i]["emb"] = (items[i]["emb"] * wi + items[j]["emb"] * wj) / (wi + wj)
+        items[i]["seconds"] += items[j]["seconds"]
+        items[i]["labels"] += items[j]["labels"]
+        items.pop(j)
+    return items
+
+
 def link_clusters(pods, link_threshold=0.55):
     """Greedy agglomerative linking of clusters ACROSS pods into chains.
 
@@ -44,10 +69,9 @@ def link_clusters(pods, link_threshold=0.55):
     """
     nodes = []
     for p in pods:
-        for label, c in p["clusters"].items():
-            nodes.append({"pod": p["device_id"], "label": label,
-                          "emb": np.asarray(c["embedding"], dtype=float),
-                          "seconds": c.get("seconds", 0.0),
+        for item in consolidate_within_pod(p["clusters"], len(p["roster"])):
+            nodes.append({"pod": p["device_id"], "label": "+".join(item["labels"]),
+                          "emb": item["emb"], "seconds": item["seconds"],
                           "roster": set(p["roster"])})
     # each chain: list of node indices; track pods used to forbid same-pod merge
     chains = [{"idx": [i], "pods": {n["pod"]}, "emb": n["emb"].copy()}
