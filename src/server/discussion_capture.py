@@ -19,6 +19,7 @@ from routes.topic_model import api_routes as topicmodel_api
 from routes.speaker import api_routes as speaker_api
 from routes.student import api_routes as student_api
 from routes.llm_query import api_routes as llm_api
+from routes.health import api_routes as health_api
 
 app.register_blueprint(admin_api)
 app.register_blueprint(auth_api)
@@ -31,6 +32,7 @@ app.register_blueprint(topicmodel_api)
 app.register_blueprint(speaker_api)
 app.register_blueprint(student_api)
 app.register_blueprint(llm_api)
+app.register_blueprint(health_api)
 
 
 def main():

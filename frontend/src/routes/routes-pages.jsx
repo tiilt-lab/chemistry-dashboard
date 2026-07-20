@@ -22,6 +22,7 @@ const PodsOverviewComponent = lazy(() => import('../pods-overview/pods-overview-
 const DiscussionGraphComponent = lazy(() => import('../discussion-graph/discussion-graph-component').then(m => ({ default: m.DiscussionGraphComponent })))
 const FileUploadComponent = lazy(() => import('../file-upload/file-upload-component').then(m => ({ default: m.FileUploadComponent })))
 const SettingsComponent = lazy(() => import('../settings/settings-component').then(m => ({ default: m.SettingsComponent })))
+const OpsComponent = lazy(() => import('../ops/ops-component').then(m => ({ default: m.OpsComponent })))
 const PodComponent = lazy(() => import('../pod-details/pod-component').then(m => ({ default: m.PodComponent })))
 const PodComponentSession = lazy(() => import('../pod-details-session/pod-component-session').then(m => ({ default: m.PodComponentSession })))
 const TranscriptsComponent = lazy(() => import('../transcripts/transcripts-component').then(m => ({ default: m.TranscriptsComponent })))
@@ -80,6 +81,7 @@ function PageRouter() {
                 <Route path='/people' element={<Navigate replace to="/students" />} />
                 <Route path='/users' element={<ProtectedRoute component={UsersComponent}/> } />
                 <Route path='/settings' element={<ProtectedRoute component={SettingsComponent}/> } />
+                <Route path='/ops' element={<ProtectedRoute component={OpsComponent}/> } />
             </Routes>
             </Suspense>
         </BrowserRouter>
