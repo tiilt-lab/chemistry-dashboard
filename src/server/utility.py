@@ -884,7 +884,10 @@ def compute_derived_metric_and_update(metric_acc_per_window,speakerDetail,total_
     speaking_word_count = []
     shared_task_focus = []
 
-    facial_expression = {'serious':0.9,'neutral':0.8,'surprise':0.7,'happy':0.6,'sad':0.4,'fear':0.3,'disgust':0.2}
+    # 'angry' was missing, so any window whose dominant facial emotion was
+    # angry crashed the whole synthesized-metrics computation (KeyError) and
+    # 500'd the reflection dashboard for that pod.
+    facial_expression = {'serious':0.9,'neutral':0.8,'surprise':0.7,'happy':0.6,'sad':0.4,'angry':0.3,'fear':0.3,'disgust':0.2}
 
     
     metric_heading = ['windowid','starttime','endtime','transcript','wordcount','keywords','speaking_alignment','analyticthinking','authenticity','certainty','clout',
@@ -920,8 +923,10 @@ def compute_derived_metric_and_update(metric_acc_per_window,speakerDetail,total_
         comp_turn = turn/total_turn if total_turn > 0 else 0
         turnshare.append(round((comp_turn)*100,2))
 
-        eng_score = round((focusscore[-1]+participation_score_val+emotional_tone_val+facial_expression[facial_emotion]+ speaking_slience_focus)/5,2) if word_count_val > 0 and facial_emotion != "None" \
-            else  round((focus_level+facial_expression[facial_emotion]+ gazeontask*100)/3,2)  if facial_emotion != "None" else round((participation_score_val+emotional_tone_val+speaking*100)/3,2)
+        # .get with a neutral-ish fallback: an unrecognized emotion label from
+        # a future model version must degrade the score, not crash the report.
+        eng_score = round((focusscore[-1]+participation_score_val+emotional_tone_val+facial_expression.get(facial_emotion, 0.5)+ speaking_slience_focus)/5,2) if word_count_val > 0 and facial_emotion != "None" \
+            else  round((focus_level+facial_expression.get(facial_emotion, 0.5)+ gazeontask*100)/3,2)  if facial_emotion != "None" else round((participation_score_val+emotional_tone_val+speaking*100)/3,2)
         enagementscore.append(eng_score)
 
         reason_score = 0 if word_count_val <= 0  else  round((analytic_thinking_val+certainty_val+internal_cohesion_val)/3,2)
@@ -997,8 +1002,12 @@ def compute_derived_metric_and_update(metric_acc_per_window,speakerDetail,total_
     session_metrics.append(round(sum(ideacontributionscore)/total_windows,2))
     session_metrics.append(round(sum(speakingalignmentscore)/total_windows,2))
     session_metrics.append(round(sum(momentum)/total_windows,2))
-    session_metrics.append(round((sum(speaking_word_count)/sum(total_verbal_turn_acc))*100,2))
-    session_metrics.append(round((len(speaking_word_count)/len(total_verbal_turn_acc))*100,2))
+    # Guard both ratios: a pod whose windows carry no verbal turns (silent
+    # recording, unattributed speech) must produce zeros, not a
+    # ZeroDivisionError that 500s the whole synthesized report.
+    _turn_total = sum(total_verbal_turn_acc)
+    session_metrics.append(round((sum(speaking_word_count)/_turn_total)*100,2) if _turn_total else 0)
+    session_metrics.append(round((len(speaking_word_count)/len(total_verbal_turn_acc))*100,2) if total_verbal_turn_acc else 0)
     session_metrics.append(session_most_common_trend)
     session_metrics.append(early_trend)
     session_metrics.append(mid_trend)

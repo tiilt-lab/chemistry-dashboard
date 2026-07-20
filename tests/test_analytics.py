@@ -115,6 +115,24 @@ def test_speaker_alias_accepts_usernames():
         assert not re.search(pat, bad), bad
 
 
+def test_engagement_emotion_map_is_total():
+    # Regression: 'angry' was missing from the facial_expression weights, so
+    # any analysis window whose dominant facial emotion was angry KeyError'd
+    # the synthesized-metrics computation and 500'd the reflection dashboard
+    # for that pod. The map must cover the emotion model's labels and lookups
+    # must be .get() so unknown future labels degrade instead of crash.
+    import re, os
+    src = open(os.path.join(os.path.dirname(__file__), "..", "src", "server",
+                            "utility.py")).read()
+    m = re.search(r"facial_expression = \{(.*?)\}", src)
+    assert m, "facial_expression map not found"
+    for label in ['serious', 'neutral', 'surprise', 'happy', 'sad', 'angry',
+                  'fear', 'disgust']:
+        assert "'%s'" % label in m.group(1), "missing emotion label: " + label
+    assert "facial_expression[" not in src, \
+        "bare indexing crashes on unknown emotion labels — use .get()"
+
+
 def test_triage_session_now_is_timezone_independent():
     # Regression: get_session_triage feeds session_now into compute_live_alerts.
     # creation_date is stored naive-UTC (datetime.utcnow), so calling
