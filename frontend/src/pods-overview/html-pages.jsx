@@ -474,7 +474,7 @@ function PodsOverviewPages(props) {
                             <div className="mb-4 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
                                 <div>
                                     <h2 className="text-lg font-semibold text-tiilt-ink">
-                                        Pods
+                                        Groups
                                         {props.sessionDevices !== null &&
                                         props.initialized ? (
                                             <span className="ml-1.5 font-normal text-tiilt-muted">
@@ -485,9 +485,12 @@ function PodsOverviewPages(props) {
                                         )}
                                     </h2>
                                     <div className="mt-0.5 text-xs text-tiilt-muted">
-                                        Open a pod to view its analytics
+                                        Open a group to view its analytics
                                     </div>
                                 </div>
+                                {/* Post-hoc analysis is for ended recordings —
+                                    while live, this screen is for monitoring. */}
+                                {props.session && !props.session.recording ? (
                                 <span className="flex flex-none items-center gap-3 text-sm text-tiilt-muted">
                                     {Object.values(props.queueState || {}).some((v) => v === "queued" || v === "running") ||
                                     Object.values(props.enriched || {}).some((e) => e && e.analysis_running) ? (
@@ -507,6 +510,7 @@ function PodsOverviewPages(props) {
                                         </button>
                                     ) : null}
                                 </span>
+                                ) : null}
                             </div>
                             {props.sessionDevices !== null &&
                             props.initialized &&
@@ -537,7 +541,7 @@ function PodsOverviewPages(props) {
                                 ) : (
                                     <div className="rounded-xl border border-dashed border-tiilt-line py-16 text-center">
                                         <div className="text-base font-semibold text-tiilt-ink">
-                                            No pods in this session
+                                            No groups in this session
                                         </div>
                                         <div className="mt-1 text-sm text-tiilt-muted">
                                             Participants and recording devices
@@ -558,8 +562,8 @@ function PodsOverviewPages(props) {
                                                 <th className="sticky top-0 bg-tiilt-ground py-2.5 pr-1 pl-3 text-center">
                                                     <input
                                                         type="checkbox"
-                                                        title="Select all pods for batch analysis"
-                                                        aria-label="Select all pods"
+                                                        title="Select all groups for batch analysis"
+                                                        aria-label="Select all groups"
                                                         className="h-4 w-4 cursor-pointer accent-tiilt"
                                                         checked={
                                                             props.sessionDevices.length > 0 &&
