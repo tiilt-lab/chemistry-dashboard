@@ -5,7 +5,7 @@
   "type": "module",
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.8",
-    "@tailwindcss/vite": "^4.1.4",
+    "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^5.16.4",
     "@testing-library/react": "^13.2.0",
     "@testing-library/user-event": "^13.5.0",
@@ -69,14 +69,14 @@
   "devDependencies": {
     "@originjs/vite-plugin-commonjs": "^1.0.3",
     "@svgr/cli": "^8.1.0",
-    "@vitejs/plugin-react": "^4.4.1",
+    "@vitejs/plugin-react": "^6.0.3",
     "eslint": "^8.57.1",
     "eslint-config-react-app": "^7.0.1",
     "eslint-plugin-react": "^7.36.1",
     "eslint-plugin-react-hooks": "^5.2.0",
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.11",
-    "vite": "^6.3.2",
+    "vite": "^8.1.5",
     "vite-plugin-eslint": "^1.8.1",
     "vite-svg-loader": "^5.1.0"
   }
