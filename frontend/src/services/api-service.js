@@ -65,6 +65,11 @@ export class ApiService {
             method,
             mode: "cors",
             credentials: "include",
+            // API responses reflect mutable server state; never let the browser
+            // serve a stale cached copy. Without this, a GET re-fetched right
+            // after a mutation (e.g. the students list after a merge) could
+            // return the pre-mutation body, so the page never updated.
+            cache: "no-store",
             headers: this._generateHeaders(headers || {}, data),
             redirect: "follow",
         }
