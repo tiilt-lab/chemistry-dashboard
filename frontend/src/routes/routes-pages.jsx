@@ -46,7 +46,9 @@ function RouteFallback() {
 function PageRouter() {
 
     return (
-        <BrowserRouter>
+        // v7_startTransition keeps the current page on screen while a lazy
+        // route chunk loads, instead of flashing the Suspense spinner.
+        <BrowserRouter future={{ v7_startTransition: true }}>
             <RouteErrorBoundary>
             <Suspense fallback={<RouteFallback />}>
             <Routes>

@@ -1,5 +1,6 @@
 import { AuthService } from '../services/auth-service';
 import { DeviceService } from '../services/device-service';
+import { clearAuthCache } from '../routes/protected-route';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DeviceModel } from '../models/device'
@@ -21,6 +22,7 @@ function SettingsComponent(props) {
   }
 
   const signOut = () => {
+    clearAuthCache()
     new AuthService().logout().then(
       () => navigate('/login'),
       () => navigate('/login'),
