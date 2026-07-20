@@ -1454,19 +1454,42 @@ def get_student_longitudinal(username):
         .order_by(Session.creation_date).all()
     out = []
     for did, sid, sname, sdate in devices:
-        their_sec = db.session.query(func.sum(Transcript.length)).filter(
+        # One grouped pass per pod: everyone's seconds + utterance counts.
+        # Gives this student's totals AND their group context (size, rank) —
+        # share alone is meaningless without knowing how many people were
+        # splitting the airtime.
+        per_speaker = db.session.query(
+            Transcript.speaker_tag,
+            func.sum(Transcript.length),
+            func.count(Transcript.id)).filter(
             Transcript.session_device_id == did,
-            Transcript.speaker_tag == username).scalar() or 0
-        total_sec = db.session.query(func.sum(Transcript.length)).filter(
+            Transcript.speaker_tag.isnot(None)) \
+            .group_by(Transcript.speaker_tag).all()
+        total_sec = sum(float(sec or 0) for _t, sec, _n in per_speaker)
+        their_sec, their_utt_count = 0.0, 0
+        for tag, sec, n in per_speaker:
+            if tag == username:
+                their_sec, their_utt_count = float(sec or 0), int(n)
+        group_size = len(per_speaker)
+        rank = 1 + sum(1 for tag, sec, _n in per_speaker
+                       if tag != username and float(sec or 0) > their_sec)
+        # Turns = consecutive runs by this speaker (30 quick utterances in
+        # one exchange is one turn, not thirty). Distinguishes "one long
+        # monologue" from "engaged repeatedly" at identical share.
+        tags = [t for (t,) in db.session.query(Transcript.speaker_tag).filter(
             Transcript.session_device_id == did,
-            Transcript.speaker_tag.isnot(None)).scalar() or 0
+            Transcript.speaker_tag.isnot(None))
+            .order_by(Transcript.start_time).all()]
+        turns, prev = 0, None
+        for t in tags:
+            if t == username and prev != username:
+                turns += 1
+            prev = t
         avg_attn = db.session.query(func.avg(SpeakerVideoMetrics.attention_level)).filter(
             SpeakerVideoMetrics.session_device_id == did,
             SpeakerVideoMetrics.student_username == username).scalar()
-        # Tier-1 countable metrics for THIS student in this session, so the
-        # panel can trend more than talk time: questions asked and their
-        # openness, computed from the same transcript rows the dynamics
-        # panel uses.
+        # Questions asked and their openness, from the same transcript rows
+        # the dynamics panel uses.
         their_utts = db.session.query(
             Transcript.question, Transcript.transcript).filter(
             Transcript.session_device_id == did,
@@ -1481,6 +1504,11 @@ def get_student_longitudinal(username):
             'date': str(sdate) if sdate else None,
             'speaking_share': round(their_sec / total_sec, 3) if total_sec else 0,
             'speaking_seconds': int(their_sec),
+            'group_size': group_size,
+            'rank': rank if their_sec > 0 else None,
+            'turns': turns,
+            'utterances': their_utt_count,
+            'avg_turn_seconds': round(their_sec / turns, 1) if turns else None,
             'avg_attention': round(float(avg_attn), 2) if avg_attn is not None else None,
             'questions': questions,
             'open_questions': open_qs,
