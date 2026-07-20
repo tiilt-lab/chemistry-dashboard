@@ -33,10 +33,12 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       # Lint gates on errors (rules-of-hooks — conditional-hook crashes) and
-      # ratchets warnings: the exhaustive-deps backlog is 7; new warnings push
-      # over the cap and fail. Trend this to 0 as the join state machine is
-      # cleaned up. (exhaustive-deps drift caused three production incidents.)
-      - run: npx eslint src --max-warnings 7
+      # ratchets warnings. The backlog across .js AND .jsx is 276 (of which 65
+      # are react-hooks/exhaustive-deps — the bug class behind three
+      # production incidents this month); the cap lets none NEW in and must
+      # only ever decrease. NOTE: --ext .js,.jsx is required — without it
+      # eslint 8 silently skips every .jsx component.
+      - run: npx eslint src --ext .js,.jsx --max-warnings 276
       - run: npm run build
 
   secret-scan:

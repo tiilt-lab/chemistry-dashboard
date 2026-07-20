@@ -32,8 +32,8 @@
     "start": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "lint": "eslint src",
-    "lint:strict": "eslint src --rule \"{\"react-hooks/exhaustive-deps\":\"error\"}\""
+    "lint": "eslint src --ext .js,.jsx",
+    "lint:strict": "eslint src --ext .js,.jsx --rule \"{\"react-hooks/exhaustive-deps\":\"error\"}\""
   },
   "eslintConfig": {
     "extends": [
