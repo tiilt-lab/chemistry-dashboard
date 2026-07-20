@@ -12,7 +12,7 @@ import pod from "../assets/img/icon-pod.svg"
 const GROUPS = [
     {
         icon: recordicon,
-        name: "Sessions & Pods",
+        name: "Sessions & Devices",
         links: [
             {
                 label: "Sessions",
@@ -20,9 +20,9 @@ const GROUPS = [
                 path: "/sessions",
             },
             {
-                label: "Pods",
-                desc: "Recording devices and their connection status",
-                path: "/pods",
+                label: "Devices",
+                desc: "Recording hardware and its connection status",
+                path: "/devices",
             },
         ],
     },
@@ -70,6 +70,11 @@ const ADMIN_GROUP = {
             label: "Raters",
             desc: "Expert raters assigned to session dashboards",
             path: "/raters",
+        },
+        {
+            label: "Server health",
+            desc: "GPU, disk, queues, and service status",
+            path: "/ops",
         },
     ],
 }

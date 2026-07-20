@@ -18,7 +18,7 @@ function PodComponentPage(props) {
     <>
       <div role="main" className="main-container">
         <Appheader
-          title={"Manage Pods"}
+          title={"Devices"}
           leftText={false}
           nav={props.navigateToHomescreen}
         />
@@ -32,8 +32,8 @@ function PodComponentPage(props) {
             </div>
           ) : props.devices.length === 0 ? (
             <EmptyState
-              title="There are no pods"
-              subtitle="Add a pod with the button below."
+              title="There are no devices"
+              subtitle="Add a device with the button below."
             />
           ) : (
             <ul className="flex flex-col gap-2">
@@ -65,7 +65,7 @@ function PodComponentPage(props) {
                   {device.connected ? (
                     <button
                       onClick={() => props.blinkPod(device)}
-                      title="Blink pod"
+                      title="Blink device"
                       className={`flex h-9 w-9 flex-none items-center justify-center rounded-lg border transition ${device.blinking ? "border-tiilt bg-tiilt-soft text-tiilt" : "border-tiilt-line text-tiilt-muted hover:border-tiilt hover:text-tiilt"}`}
                     >
                       <LightIcon width={20} height={20} fill="currentColor" />
@@ -119,9 +119,9 @@ function PodComponentPage(props) {
         <div className={dlgWindow} style={{ minWidth: "min(20rem, 76vw)" }}>
           {props.currentForm === "Remove" ? (
             <React.Fragment>
-              <div className={dlgHeading}>Remove pod</div>
+              <div className={dlgHeading}>Remove device</div>
               <div className="text-sm text-tiilt-muted">
-                Are you sure you want to remove this pod?
+                Are you sure you want to remove this device?
               </div>
               <button className={dlgDanger} onClick={props.removeDevice}>
                 Remove
@@ -135,7 +135,7 @@ function PodComponentPage(props) {
           )}
           {props.currentForm === "Add" ? (
             <React.Fragment>
-              <div className={dlgHeading}>Pod MAC address</div>
+              <div className={dlgHeading}>Device MAC address</div>
               <input
                 id="macInput"
                 className={dlgInput}
@@ -165,7 +165,7 @@ function PodComponentPage(props) {
           )}
           {props.currentForm === "Rename" ? (
             <React.Fragment>
-              <div className={dlgHeading}>Pod name</div>
+              <div className={dlgHeading}>Device name</div>
               <input
                 id="nameInput"
                 className={dlgInput}

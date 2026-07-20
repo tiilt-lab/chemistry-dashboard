@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { ApiService } from "../services/api-service"
 import { Appheader } from "../header/header-component"
 import { useRequireManager } from "../routes/roles"
+import { AdminTabs } from "../components/admin-tabs"
 
 // One-screen server health for a live class: the GPU/RAM/disk/queue numbers
 // we used to SSH in for. Polls /api/v1/health every 5s.
@@ -67,7 +68,8 @@ export function OpsComponent(props) {
 
     return (
         <div role="main" className="main-container">
-            <Appheader title="Server health" leftText={false} rightText={""} />
+            <Appheader title="Admin" leftText={false} rightText={""} />
+            <AdminTabs />
             <div className="mx-auto w-full max-w-3xl overflow-y-auto px-4 py-6">
                 {err && (
                     <div className="mb-4 rounded-md bg-tiilt-danger-soft px-3 py-2 text-sm text-tiilt-danger">

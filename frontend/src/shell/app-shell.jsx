@@ -8,9 +8,9 @@ import { TiiltLogo } from "../components/tiilt-logo"
 // route around every signed-in page, so moving between sections no longer
 // means going back to /home. Collapses to an icon rail below lg.
 //
-// "Devices" is the physical recorder hardware (the /pods route — rename of
-// the route itself is a later phase); a group inside a session stays a
-// "Group". "Library" fronts the keyword/topic configuration cluster.
+// "Devices" is the physical recorder hardware (/devices; /pods redirects);
+// a group inside a session stays a "Group". "Library" fronts the
+// keyword/topic configuration cluster.
 
 function IconSessions(props) {
     return (
@@ -59,7 +59,7 @@ function IconAdmin(props) {
 const NAV_ITEMS = [
     { label: "Sessions", to: "/sessions", match: ["/sessions"], Icon: IconSessions },
     { label: "Students", to: "/students", match: ["/students"], Icon: IconStudents },
-    { label: "Devices", to: "/pods", match: ["/pods"], Icon: IconDevices },
+    { label: "Devices", to: "/devices", match: ["/devices", "/pods"], Icon: IconDevices },
     {
         label: "Library",
         to: "/keyword-lists",

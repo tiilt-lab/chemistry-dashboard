@@ -69,12 +69,17 @@ function PodsComponent(props){
         apierror=>{console.log("pods-components func: blinkpod 2 ", apierror)}
         )
     } else {
-      this.deviceService.blinkPod(device.id, 'stop').subscribe(() => {
-        if (device.timeoutId !== null) {
-          clearTimeout(device.timeoutId);
-          device.timeoutId = null;
-        }
-      });
+      // (was a leftover class-style `this.deviceService...subscribe()` call —
+      // it threw in this function component, so stop-blink never worked)
+      new DeviceService().blinkPod(device.id, 'stop').then(
+        () => {
+          if (device.timeoutId != null) {
+            clearTimeout(device.timeoutId);
+            device.timeoutId = null;
+          }
+        },
+        (apierror) => { console.log("pods-components func: blinkpod stop ", apierror) },
+      );
     }
   }
 

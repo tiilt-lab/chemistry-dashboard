@@ -19,6 +19,7 @@ import { AppSpinner } from "../spinner/spinner-component"
 import { AuthService } from "../services/auth-service"
 import { RaterModel } from "../models/rater"
 import { useRequireManager } from "../routes/roles"
+import { AdminTabs } from "../components/admin-tabs"
 
 const rowDeleteClass =
     "rounded-md px-2 py-1 text-xs font-semibold text-tiilt-danger transition hover:bg-tiilt-danger-soft"
@@ -130,11 +131,12 @@ function RatersComponent(props) {
         <>
             <div role="main" className="main-container">
                 <Appheader
-                    title={"Raters"}
+                    title={"Admin"}
                     leftText={false}
                     rightText={""}
                     nav={() => navigate("/home")}
                 />
+                <AdminTabs />
                 <div className="relative min-h-0 w-full grow overflow-y-auto">
                     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-8">
                         <div className="flex items-center justify-between gap-3">

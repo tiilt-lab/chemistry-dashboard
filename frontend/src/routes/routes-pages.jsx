@@ -80,7 +80,10 @@ function PageRouter() {
                 <Route path='/file_upload/new-session' element={<ProtectedRoute component={FileUploadComponent}/>} />
                 <Route path='/topic-list' element={<ProtectedRoute component={TopicListComponent}/>} />
                 <Route path='/topic-list/new-session' element={<ProtectedRoute component={TopicListComponent}/>} />
-                <Route path='/pods' element={<ProtectedRoute component={PodsComponent}/> } />
+                {/* Physical recorder hardware is "Devices"; a group within a
+                    session stays a "Group" — the word "pod" meant both. */}
+                <Route path='/devices' element={<ProtectedRoute component={PodsComponent}/> } />
+                <Route path='/pods' element={<Navigate replace to="/devices" />} />
                 <Route path='/students' element={<ProtectedRoute component={StudentsComponent}/> } />
                 <Route path='/students/:studentId' element={<ProtectedRoute component={StudentProfileComponent}/> } />
                 <Route path='/raters' element={<ProtectedRoute component={RatersComponent}/> } />

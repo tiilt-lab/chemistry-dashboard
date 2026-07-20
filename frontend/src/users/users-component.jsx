@@ -21,6 +21,7 @@ import { AppContextMenu } from "../components/context-menu/context-menu-componen
 import { AuthService } from "../services/auth-service"
 import { UserModel } from "../models/user"
 import { useRequireManager } from "../routes/roles"
+import { AdminTabs } from "../components/admin-tabs"
 import contextStyle from "../components/context-menu/context-menu.module.css"
 
 // Admin user management: one table of accounts with per-row actions, instead
@@ -228,11 +229,12 @@ function UsersComponent(props) {
         <>
             <div role="main" className="main-container">
                 <Appheader
-                    title={"Users"}
+                    title={"Admin"}
                     leftText={false}
                     rightText={""}
                     nav={() => navigate("/home")}
                 />
+                <AdminTabs />
                 <div className="relative min-h-0 w-full grow overflow-y-auto">
                     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-8">
                         <div className="flex items-center justify-between gap-3">
