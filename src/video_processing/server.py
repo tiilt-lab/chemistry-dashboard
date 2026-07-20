@@ -266,13 +266,15 @@ class ServerProtocol(WebSocketServerProtocol):
                             os.remove(temp_aud_file+'.wav')
 
                     chunk_iter = subclips.iter_frames(fps=10, dtype="uint8", with_times=True)
-                    _t_frames = time.time()
-                    logging.info('CHUNK_DECODE_TIMING auth={0} chunk={1} recording_mb={2:.1f} '
-                                 'open_s={3:.2f} subclip_s={4:.2f} audio_s={5:.2f} frames_s={6:.2f} total_s={7:.2f}'.format(
+                    # Minimal growth probe: open_s is the only remaining
+                    # O(session length) term (the ~7s audio extraction was
+                    # removed). If open_s climbs with recording_mb on a real
+                    # long session, revisit incremental decode; so far it is
+                    # flat ~0.5s up to the short recordings tested.
+                    logging.info('CHUNK_DECODE_TIMING auth={0} chunk={1} recording_mb={2:.1f} open_s={3:.2f} total_s={4:.2f}'.format(
                         self.config.auth_key, self.video_count,
                         (_recording_bytes / 2**20) if _recording_bytes >= 0 else -1.0,
-                        _t_open - _t0, _t_sub - _t_open, _t_audio - _t_sub,
-                        _t_frames - _t_audio, _t_frames - _t0))
+                        _t_open - _t0, time.time() - _t0))
                     self.enqueue_latest_video_chunk(chunk_iter)
                     logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
 

@@ -38,6 +38,30 @@ def test_video_analytics_payload_arity_matches_consumer():
                 % (name, arity, consumer_arity))
 
 
+def test_accumulator_load_arity_matches_consumer():
+    # Second video handoff: detect.py builds accumulator_load, consumed by
+    # VideoMetricProcessor. Same drift risk as the frame payload; lock it.
+    detect = _read("video_processing", "attention_tracking", "detect.py")
+    produced = re.findall(r"accumulator_load = \[(.*?)\]", detect)
+    assert produced, "accumulator_load producer not found in detect.py"
+    producer_arities = {len([x for x in lst.split(",") if x.strip()])
+                        for lst in produced}
+    assert producer_arities == {5}, (
+        "detect.py builds accumulator_load of arity %s (expected 5)"
+        % producer_arities)
+
+    consumer = _read("video_processing", "video_cartoonizer",
+                     "VideoMetricProcessor.py")
+    # full unpacks: auth_key,all_frames,accumulator,batch_track,last_batch
+    unpacks = re.findall(r"(auth_key,[\w,_]*last_batch) = payload", consumer)
+    assert unpacks, "VideoMetricProcessor payload unpack not found"
+    for u in unpacks:
+        arity = len(u.split(","))
+        assert arity == 5, (
+            "VideoMetricProcessor unpacks a %d-tuple; detect.py builds 5"
+            % arity)
+
+
 def test_provenance_registry_covers_frontend_fields():
     # The frontend resolves per-pod labels via MODULE_TO_PROVENANCE fields;
     # the API registry must contain every field the frontend asks for.

@@ -83,8 +83,8 @@ def pod_join_session(session_id, pod_id):
                 if not sent:
                     logging.critical('pod_join_session: Pod {0} was not able to connect to the Audio Processing Service.  Is it in another session?'.format(pod.pod_id))
                 sent = ConnectionManager.instance.send_command(pod.id, {'cmd': 'color', 'color': '0xFF0000'})
-            except:
-                logging.critical('pod_join_session: Pod {0} was unreachable or failed to respond.'.format(pod.id))
+            except Exception:
+                logging.critical('pod_join_session: Pod {0} was unreachable or failed to respond.'.format(pod.id), exc_info=True)
 
         return True, {'session_device': session_device.json()}
     else:

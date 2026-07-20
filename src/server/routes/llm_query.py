@@ -76,7 +76,8 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
     
     try:
         parsed = json.loads(raw)
-    except:
+    except (json.JSONDecodeError, ValueError, TypeError):
+        # Model returned prose, not JSON — pass it through as raw text.
         parsed = {"raw": raw}
 
     return json_response({
@@ -122,7 +123,8 @@ def fetch_response_for_question(**kwargs):
     
     try:
         parsed = json.loads(raw)
-    except:
+    except (json.JSONDecodeError, ValueError, TypeError):
+        # Model returned prose, not JSON — pass it through as raw text.
         parsed = {"raw": raw}
 
     return json_response({
