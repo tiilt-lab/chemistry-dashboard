@@ -45,7 +45,12 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = cf.https()
 app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
 app.config['SESSION_COOKIE_NAME'] = 'DCSession'
-app.config['PERMANENT_SESSION_LIFETIME'] =  timedelta(minutes=30)
+# 30 minutes was far too aggressive: with a sliding window (refresh-each-
+# request below), a user reading a dashboard or writing for half an hour with
+# no request firing got logged out. 7 days of INACTIVITY is the threshold now
+# — the cookie stays HttpOnly + Secure + SameSite=Strict, so the longer window
+# is low-risk, and instructors stay signed in across a week of class sessions.
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
 # this proxyfix will allow remote_addr to be correct based on the number of proxies in the chain
