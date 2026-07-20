@@ -230,45 +230,53 @@ class ServerProtocol(WebSocketServerProtocol):
             
             if self.config.mimeExtension == "webm":
                 if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()):
-                    temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
-                    #accumulate. the file names to be used to combine the video chunks as one file
-                    # INSTRUMENTATION: this opens the WHOLE accumulated
-                    # recording every interval. If per-chunk decode time
-                    # climbs with video_count on a long real session, the
-                    # whole-file open is the culprit and the incremental-
-                    # decode optimization is justified; if it stays flat,
-                    # ffmpeg seek already handles it and we leave it alone.
-                    _decode_t0 = time.time()
+                    _t0 = time.time()
                     try:
                         _recording_bytes = os.path.getsize(self.filename+'.'+self.config.mimeExtension)
                     except OSError:
                         _recording_bytes = -1
+                    # Open the accumulated recording and slice the newest
+                    # chunk. This is the only step the frame-analytics path
+                    # needs; the open cost grows with session length (watch
+                    # open_s vs recording_mb — the remaining candidate for
+                    # incremental decode on very long sessions).
                     vidclip = mp.VideoFileClip(self.filename+'.'+self.config.mimeExtension)
+                    _t_open = time.time()
                     subclips = (vidclip.subclipped if hasattr(vidclip, 'subclipped') else vidclip.subclip)((self.video_count-1)*self.interval,self.video_count*self.interval)  # moviepy 2 rename
-                    subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=16000,bitrate='50k',logger=None) #nbytes=2,codec='pcm_s16le',
-                    logging.info('CHUNK_DECODE_TIMING auth={0} chunk={1} recording_mb={2:.1f} decode_s={3:.2f}'.format(
+                    _t_sub = time.time()
+
+                    # Extract audio ONLY for the cartoonify remux, which is
+                    # the sole consumer of the _audio.dat sidecar. This
+                    # ~7s/chunk write_audiofile used to run for every
+                    # analytics session too — pointlessly: the audio is
+                    # already captured by the live transcription socket and
+                    # by the saved webm's own opus track, and analytics
+                    # (video frames) never uses it. Cheapest 10x win in the
+                    # live path.
+                    _t_audio = _t_sub
+                    if cf.video_cartoonize():
+                        temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
+                        subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=16000,bitrate='50k',logger=None) #nbytes=2,codec='pcm_s16le',
+                        _t_audio = time.time()
+                        wavObj = wave.open(temp_aud_file+'.wav')
+                        audiobyte = self.reduce_wav_channel(1,wavObj)
+                        if (cf.video_record_original or cf.video_record_reduced):
+                            self.orig_vid_recorder.write_audio(audiobyte)
+                        if os.path.isfile(temp_aud_file+'.wav'):
+                            os.remove(temp_aud_file+'.wav')
+
+                    chunk_iter = subclips.iter_frames(fps=10, dtype="uint8", with_times=True)
+                    _t_frames = time.time()
+                    logging.info('CHUNK_DECODE_TIMING auth={0} chunk={1} recording_mb={2:.1f} '
+                                 'open_s={3:.2f} subclip_s={4:.2f} audio_s={5:.2f} frames_s={6:.2f} total_s={7:.2f}'.format(
                         self.config.auth_key, self.video_count,
                         (_recording_bytes / 2**20) if _recording_bytes >= 0 else -1.0,
-                        time.time() - _decode_t0))
-
-                    wavObj = wave.open(temp_aud_file+'.wav')
-                    audiobyte = self.reduce_wav_channel(1,wavObj)
-
-                if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()): 
-                    chunk_iter = subclips.iter_frames(fps=10, dtype="uint8", with_times=True)
+                        _t_open - _t0, _t_sub - _t_open, _t_audio - _t_sub,
+                        _t_frames - _t_audio, _t_frames - _t0))
                     self.enqueue_latest_video_chunk(chunk_iter)
-                    # self.video_queue.put(subclips.iter_frames(fps=10, dtype="uint8", with_times=True))
                     logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
 
-                # Save audio data only if video saving is activated is activated.
-                # as we need to merge the audio data with the carttonized video
-                if (cf.video_record_original or cf.video_record_reduced) and (cf.video_cartoonize() or cf.process_video_analytics()):
-                    self.orig_vid_recorder.write_audio(audiobyte)
-
-                    if os.path.isfile(temp_aud_file+'.wav'):
-                        os.remove(temp_aud_file+'.wav')
-
-                self.video_count = self.video_count + 1    
+                self.video_count = self.video_count + 1
             
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
