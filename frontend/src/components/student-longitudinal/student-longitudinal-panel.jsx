@@ -72,11 +72,21 @@ export function StudentLongitudinalPanel({ username }) {
                         <span className="w-16 flex-none text-right font-ahamono tabular-nums text-tiilt-muted">
                             {Math.round(r.speaking_share * 100)}%
                         </span>
+                        <span
+                            className="w-20 flex-none text-right font-ahamono tabular-nums text-tiilt-muted"
+                            title="Questions asked (open questions in parentheses)"
+                        >
+                            {r.questions != null
+                                ? `${r.questions}q${r.open_questions ? ` (${r.open_questions})` : ""}`
+                                : ""}
+                        </span>
                     </div>
                 ))}
             </div>
             <div className="mt-1 text-[11px] text-tiilt-muted">
-                Bars show this student's share of speaking time per session.
+                Bars show this student's share of speaking time per session;
+                the right column is questions asked (open questions in
+                parentheses).
             </div>
         </div>
     )

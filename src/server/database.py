@@ -1433,6 +1433,18 @@ def get_student_longitudinal(username):
         avg_attn = db.session.query(func.avg(SpeakerVideoMetrics.attention_level)).filter(
             SpeakerVideoMetrics.session_device_id == did,
             SpeakerVideoMetrics.student_username == username).scalar()
+        # Tier-1 countable metrics for THIS student in this session, so the
+        # panel can trend more than talk time: questions asked and their
+        # openness, computed from the same transcript rows the dynamics
+        # panel uses.
+        their_utts = db.session.query(
+            Transcript.question, Transcript.transcript).filter(
+            Transcript.session_device_id == did,
+            Transcript.speaker_tag == username).all()
+        from analytics import classify_question
+        questions = sum(1 for q, _t in their_utts if q)
+        open_qs = sum(1 for q, t in their_utts
+                      if q and classify_question(t) == 'open')
         out.append({
             'session_id': sid,
             'session_name': sname,
@@ -1440,6 +1452,8 @@ def get_student_longitudinal(username):
             'speaking_share': round(their_sec / total_sec, 3) if total_sec else 0,
             'speaking_seconds': int(their_sec),
             'avg_attention': round(float(avg_attn), 2) if avg_attn is not None else None,
+            'questions': questions,
+            'open_questions': open_qs,
         })
     return out
 
