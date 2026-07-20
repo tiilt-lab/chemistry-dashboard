@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { ApiService } from "../services/api-service"
 import { Appheader } from "../header/header-component"
+import { useRequireManager } from "../routes/roles"
 
 // One-screen server health for a live class: the GPU/RAM/disk/queue numbers
 // we used to SSH in for. Polls /api/v1/health every 5s.
@@ -41,10 +42,14 @@ function fmtUptime(s) {
     return h > 0 ? `${h}h ${m}m` : `${m}m`
 }
 
-export function OpsComponent() {
+export function OpsComponent(props) {
+    // Server internals are admin territory; this page used to be reachable by
+    // any signed-in account that knew the URL.
+    const canView = useRequireManager(props.userdata)
     const [h, setH] = useState(null)
     const [err, setErr] = useState(false)
     useEffect(() => {
+        if (!canView) return
         let alive = true
         const load = () =>
             new ApiService()
@@ -58,7 +63,7 @@ export function OpsComponent() {
             alive = false
             clearInterval(t)
         }
-    }, [])
+    }, [canView])
 
     return (
         <div role="main" className="main-container">

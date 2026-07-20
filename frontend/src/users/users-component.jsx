@@ -20,6 +20,7 @@ import { AppSpinner } from "../spinner/spinner-component"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { AuthService } from "../services/auth-service"
 import { UserModel } from "../models/user"
+import { useRequireManager } from "../routes/roles"
 import contextStyle from "../components/context-menu/context-menu.module.css"
 
 // Admin user management: one table of accounts with per-row actions, instead
@@ -33,13 +34,10 @@ function UsersComponent(props) {
     const [statusTitle, setStatusTitle] = useState("")
     const [target, setTarget] = useState(null) // the user a dialog acts on
 
-    const canManage = me && (me.isAdmin || me.isSuper)
+    const canManage = useRequireManager(me)
 
     useEffect(() => {
-        if (!canManage) {
-            navigate("/home")
-            return
-        }
+        if (!canManage) return
         loadUsers()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])

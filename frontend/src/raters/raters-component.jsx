@@ -18,6 +18,7 @@ import { DataTable } from "../components/data-table"
 import { AppSpinner } from "../spinner/spinner-component"
 import { AuthService } from "../services/auth-service"
 import { RaterModel } from "../models/rater"
+import { useRequireManager } from "../routes/roles"
 
 const rowDeleteClass =
     "rounded-md px-2 py-1 text-xs font-semibold text-tiilt-danger transition hover:bg-tiilt-danger-soft"
@@ -26,7 +27,7 @@ const rowDeleteClass =
 function RatersComponent(props) {
     const me = props.userdata
     const navigate = useNavigate()
-    const canManage = me && (me.isAdmin || me.isSuper)
+    const canManage = useRequireManager(me)
 
     const [raters, setRaters] = useState(null)
     const [currentForm, setCurrentForm] = useState("")
@@ -35,10 +36,7 @@ function RatersComponent(props) {
     const [toDelete, setToDelete] = useState(null)
 
     useEffect(() => {
-        if (!canManage) {
-            navigate("/home")
-            return
-        }
+        if (!canManage) return
         loadRaters()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])

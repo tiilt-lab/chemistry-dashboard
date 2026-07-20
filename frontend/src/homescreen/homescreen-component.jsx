@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom"
 import { ThemeToggle } from "../header/header-component"
+import { isManager } from "../routes/roles"
 import GearIcon from "../Icons/Settings"
 import { updateTime } from "../utilities/helper-functions"
 import { TiiltLogo } from "../components/tiilt-logo"
@@ -114,8 +115,7 @@ function HomeScreen(props) {
     const timeOfDay = updateTime()
     const navigate = useNavigate()
     const user = props.userdata
-    const canManageUsers = user && (user.isAdmin || user.isSuper)
-    const groups = canManageUsers ? [...GROUPS, ADMIN_GROUP] : GROUPS
+    const groups = isManager(user) ? [...GROUPS, ADMIN_GROUP] : GROUPS
 
     return (
         <div className="main-container overflow-y-auto bg-tiilt-ground">

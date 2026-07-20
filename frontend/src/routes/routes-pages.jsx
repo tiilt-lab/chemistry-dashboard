@@ -8,6 +8,7 @@ import {SessionsComponent} from '../sessions/sessions-component'
 import {SessionManagerComponent} from '../session-manager/session-manager-component';
 import { AppSpinner } from '../spinner/spinner-component'
 import {ProtectedRoute} from './protected-route'
+import { AppShell } from '../shell/app-shell'
 
 // Heavy dashboards (chart.js / d3 / framer-motion / shadcn) are code-split so
 // the landing/login/join first load stays small. Each lazy chunk shows the
@@ -55,6 +56,9 @@ function PageRouter() {
                 <Route path="/student/dashboard" element={<StudentSessionDashboard />} />
                 <Route path="/student/survey" element={<StudentSessionDashboard />} />
                 <Route path="/expert/rating" element={<ExpertRatingComponent />} />
+                {/* Signed-in pages share the AppShell layout: persistent left
+                    nav rail + content column. Public flows stay outside. */}
+                <Route element={<AppShell />}>
                 <Route path='/home' element={<ProtectedRoute component={HomeScreen} />}/>
                 <Route path='/keyword-lists' element={<ProtectedRoute  component={ManageKeywordListsComponent} />}/>
                 <Route path='/keyword-lists/new' element={<ProtectedRoute  component={KeywordListItemsComponent}/>}/>
@@ -82,6 +86,7 @@ function PageRouter() {
                 <Route path='/users' element={<ProtectedRoute component={UsersComponent}/> } />
                 <Route path='/settings' element={<ProtectedRoute component={SettingsComponent}/> } />
                 <Route path='/ops' element={<ProtectedRoute component={OpsComponent}/> } />
+                </Route>
             </Routes>
             </Suspense>
         </BrowserRouter>

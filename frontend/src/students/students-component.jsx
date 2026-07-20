@@ -22,6 +22,7 @@ import { AppSpinner } from "../spinner/spinner-component"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { AuthService } from "../services/auth-service"
 import { ApiService } from "../services/api-service"
+import { isManager } from "../routes/roles"
 import contextStyle from "../components/context-menu/context-menu.module.css"
 
 // "2026-06-18 14:35:58 UTC" -> Date (or null).
@@ -104,7 +105,7 @@ function enrollmentNeedsAttention(s) {
 function StudentsComponent(props) {
     const me = props.userdata
     const navigate = useNavigate()
-    const canManage = me && (me.isAdmin || me.isSuper)
+    const canManage = isManager(me)
 
     const [students, setStudents] = useState(null)
     const [search, setSearch] = useState("")
