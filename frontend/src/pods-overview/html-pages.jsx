@@ -53,7 +53,37 @@ function PodStatus({ device, enrich, queue }) {
     return <StatusPill tone="neutral">Ended</StatusPill>
 }
 
-function PodRow({ device, enrich, onOpen, checked, onToggle, queue, index, lastSpoke, renameInline }) {
+// Live triage badges for a connected pod: silent / dominated / hanging
+// question. Only shown while the pod is connected and has an alert.
+function TriageBadges({ alerts, connected }) {
+    if (!connected || !alerts) return null
+    const badges = []
+    if (alerts.silent)
+        badges.push({ key: "silent", tone: "orange", label: "Silent" })
+    if (alerts.dominated_by)
+        badges.push({
+            key: "dom",
+            tone: "orange",
+            label: `${alerts.dominated_by.name} ${Math.round(alerts.dominated_by.share * 100)}%`,
+        })
+    if (alerts.hanging_question)
+        badges.push({ key: "q", tone: "brand", label: "Question hanging" })
+    return badges.map((b) => (
+        <span
+            key={b.key}
+            className={
+                "rounded px-1.5 py-0.5 text-[10px] font-semibold " +
+                (b.tone === "brand"
+                    ? "bg-tiilt-soft text-tiilt"
+                    : "bg-tiilt-orange/15 text-tiilt-orange-text")
+            }
+        >
+            {b.label}
+        </span>
+    ))
+}
+
+function PodRow({ device, enrich, alerts, onOpen, checked, onToggle, queue, index, lastSpoke, renameInline }) {
     const e = enrich || {}
     const name =
         device.name && String(device.name).trim()
@@ -174,7 +204,10 @@ function PodRow({ device, enrich, onOpen, checked, onToggle, queue, index, lastS
                 )}
             </td>
             <td className="px-3 py-2 whitespace-nowrap">
-                <PodStatus device={device} enrich={enrich} queue={queue} />
+                <div className="flex flex-wrap items-center gap-1">
+                    <PodStatus device={device} enrich={enrich} queue={queue} />
+                    <TriageBadges alerts={alerts} connected={device.connected} />
+                </div>
             </td>
             <td className="px-3 py-2 text-right font-ahamono tabular-nums whitespace-nowrap text-tiilt-ink">
                 {e.speaker_count > 0 ? (
@@ -570,6 +603,7 @@ function PodsOverviewPages(props) {
                                                         lastSpoke={props.lastActivity && props.lastActivity[device.id]}
                                                         device={device}
                                                         enrich={props.enriched && props.enriched[device.id]}
+                                                        alerts={props.triage && props.triage[device.id]}
                                                         checked={props.selected && props.selected[device.id]}
                                                         onToggle={() => props.toggleSelect(device.id)}
                                                         queue={props.queueState && props.queueState[device.id]}

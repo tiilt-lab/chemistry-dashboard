@@ -1412,6 +1412,31 @@ def get_pod_video_presence(session_id):
     return set(r[0] for r in rows)
 
 
+def get_session_triage(session_id):
+    # Live triage: per connected pod, real-time alert flags (silent,
+    # dominated, hanging question) from recent transcripts. Cheap enough to
+    # poll during class. session_now is wall-clock elapsed since the session
+    # started (transcript start_time is session-relative seconds).
+    import time as _time
+    from analytics import compute_live_alerts
+    session = get_sessions(id=session_id, first=True)
+    if session is None or session.creation_date is None:
+        return []
+    session_now = max(0.0, _time.time() - session.creation_date.timestamp())
+    out = []
+    for d in get_session_devices(session_id=session_id):
+        if not getattr(d, 'connected', False):
+            continue
+        rows = db.session.query(
+            Transcript.speaker_tag, Transcript.start_time,
+            Transcript.length, Transcript.question).filter(
+            Transcript.session_device_id == d.id).order_by(
+            Transcript.start_time).all()
+        alerts = compute_live_alerts(rows, session_now)
+        out.append({'device_id': d.id, 'name': d.name, 'alerts': alerts})
+    return out
+
+
 def get_student_longitudinal(username):
     # A student's trajectory across every session they took part in: per-session
     # speaking share (transcript) + average attention (video), chronologically,

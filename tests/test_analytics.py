@@ -80,3 +80,20 @@ def test_classify_question_edges():
     # a statement with no question words
     assert classify_question("The reaction proceeds.") == "other"
     assert classify_question(None) == "other"
+
+
+def test_live_alerts():
+    from analytics import compute_live_alerts
+    # dominated: A holds all recent talk; recent activity -> not silent
+    a = compute_live_alerts(
+        [('A', 0, 50, False), ('B', 60, 5, True), ('A', 120, 100, False),
+         ('A', 250, 40, False)], session_now=300)
+    assert a['silent'] is False
+    assert a['dominated_by'] and a['dominated_by']['name'] == 'A'
+    # hanging question: last utterance is a question, unanswered 38s
+    h = compute_live_alerts([('A', 0, 50, False), ('B', 260, 2, True)],
+                            session_now=300)
+    assert h['hanging_question'] is True
+    # silent: last activity long ago
+    assert compute_live_alerts([('A', 0, 50, False)], session_now=300)['silent'] is True
+    assert compute_live_alerts([], session_now=100)['silent'] is True

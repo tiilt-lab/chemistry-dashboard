@@ -687,6 +687,14 @@ def session_devices(session_id, **kwargs):
         return json_response(result)
 
 
+@api_routes.route('/api/v1/sessions/<int:session_id>/triage', methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def get_session_triage(session_id, **kwargs):
+    # Live per-pod alert flags for the instructor overview during class.
+    return json_response(database.get_session_triage(session_id))
+
+
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/dynamics', methods=['GET'])
 def get_pod_dynamics(session_id, session_device_id, **kwargs):
     # Conversation dynamics for a pod: per-speaker turns/speaking-share (equity)

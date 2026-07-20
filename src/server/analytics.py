@@ -256,3 +256,50 @@ def pairwise_voice_overlaps(embeddings, threshold=0.50):
                 pairs.append({'a': a, 'b': b, 'similarity': round(sim, 3)})
     pairs.sort(key=lambda p: -p['similarity'])
     return pairs
+
+
+def compute_live_alerts(rows, session_now, window=600.0,
+                        silent_after=180.0, dominated_share=0.70,
+                        hanging_after=30.0):
+    """Real-time triage flags for one pod, from its ordered utterances and
+    the session's current elapsed time (session_now, seconds since start).
+    rows: (speaker_tag, start_time, length, question). Pure/testable.
+
+    - silent: no utterance ended within silent_after seconds
+    - dominated: one speaker holds >= dominated_share of the last `window`
+    - hanging_question: last utterance is a question, unanswered for
+      hanging_after seconds
+    """
+    utts = [(t or 'Unattributed', float(s or 0), float(l or 0), bool(q))
+            for t, s, l, q in rows]
+    if not utts:
+        return {'silent': True, 'dominated_by': None, 'hanging_question': False,
+                'last_activity_age': None}
+
+    last_end = max(s + l for _t, s, l, _q in utts)
+    age = max(0.0, session_now - last_end)
+
+    # speaking time per speaker within the recent window
+    win_start = session_now - window
+    share = {}
+    for tag, s, l, _q in utts:
+        end = s + l
+        overlap = max(0.0, min(end, session_now) - max(s, win_start))
+        if overlap > 0:
+            share[tag] = share.get(tag, 0.0) + overlap
+    total = sum(share.values())
+    dominated_by = None
+    if total > 30:  # need enough recent talk to judge
+        top, sec = max(share.items(), key=lambda kv: kv[1])
+        if sec / total >= dominated_share:
+            dominated_by = {'name': top, 'share': round(sec / total, 2)}
+
+    last_tag, last_s, last_l, last_q = utts[-1]
+    hanging = bool(last_q) and (session_now - (last_s + last_l)) >= hanging_after
+
+    return {
+        'silent': age >= silent_after,
+        'dominated_by': dominated_by,
+        'hanging_question': hanging,
+        'last_activity_age': round(age, 1),
+    }

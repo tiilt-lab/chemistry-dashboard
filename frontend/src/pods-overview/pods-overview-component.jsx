@@ -1,4 +1,5 @@
 import { SessionService } from "../services/session-service";
+import { ApiService } from "../services/api-service";
 import { SessionModel } from "../models/session";
 import { DeviceService } from "../services/device-service";
 import { DeviceModel } from "../models/device";
@@ -47,6 +48,27 @@ function PodsOverviewComponent() {
     if (session === null || !session.id) return;
     loadQueue(session.id);
     const t = setInterval(() => loadQueue(session.id), 15000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
+
+  // Live triage: per-pod alert flags (silent / dominated / hanging question)
+  // while a class is running. Only polled when the session is still live.
+  const [triage, setTriage] = useState({});
+  useEffect(() => {
+    if (session === null || !session.id || session.ended) return;
+    const load = () =>
+      new ApiService()
+        .httpRequestCall(`api/v1/sessions/${session.id}/triage`, "GET", {})
+        .then((r) => (r.status === 200 ? r.json() : []))
+        .then((list) => {
+          const m = {};
+          for (const p of list) m[p.device_id] = p.alerts;
+          setTriage(m);
+        })
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 8000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
@@ -455,6 +477,7 @@ function PodsOverviewComponent() {
   return (
     <PodsOverviewPages
       enriched={enriched}
+      triage={triage}
       selected={selected}
       toggleSelect={toggleSelect}
       toggleSelectAll={toggleSelectAll}
