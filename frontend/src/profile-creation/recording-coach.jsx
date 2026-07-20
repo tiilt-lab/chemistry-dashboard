@@ -19,14 +19,26 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
  *
  */
 
-// Long enough that reading it aloud yields ~15+ seconds of net speech within
-// a ~30-second take (the server verifies cumulative speech and asks for MORE
-// audio — appended, not restarted — if there isn't enough yet). The passage
-// is deliberately phonetically busy — plosives, fricatives, th-clusters, and
-// wide vowel range make for a more distinctive voice print than flat prose.
-const DEFAULT_SCRIPT = `Keep your face toward the camera, and slowly turn your head left, right, up, and down while you read this aloud in your normal voice:
+// Natural prompts instead of a scripted read-aloud. Two reasons:
+// 1. Domain match: the print is compared against spontaneous DISCUSSION
+//    speech later, and read-aloud prosody measurably differs from talking —
+//    prints built from natural answers match classroom audio better.
+// 2. People actually do it: a scripted tongue-twister gets rushed, flat,
+//    embarrassed readings; questions get real voices.
+// A few sentences per prompt yields the ~15+ seconds of net speech the
+// server verifies (it asks for MORE audio — appended, not restarted — if a
+// take is short). The topics still sweep a wide phonetic range (names,
+// numbers, places, food, opinions) without feeling like a drill.
+const DEFAULT_SCRIPT = `Keep your face toward the camera and slowly turn your head left, right, up, and down while you talk. No script — just answer a few of these out loud, in your normal speaking voice, a couple of sentences each:
 
-“The quick brown fox has retired — today, science does the jumping. Imagine a molecule of caffeine sky-diving into a cup of coffee: eight atoms of carbon, ten of hydrogen, spinning like a tiny amusement-park ride. Now picture sound itself. My voice is a wave, wobbling the air about a hundred times per blink of an eye, and somewhere in this building a computer is learning the exact shape of that wobble — the lows, the highs, the way I say aluminum and onomatopoeia. So here is my grand announcement: purple penguins prefer pickled plums, thirty-three thirsty thrushes think Thursday is thrilling, and I — reading this out loud — hereby become instantly recognizable.”`;
+•  Say your name, and what you're studying or working on this term.
+•  How did you get here today? Describe the route like you're giving directions.
+•  What did you eat most recently — and honestly, was it any good?
+•  Explain something from a class to a friend who missed it.
+•  Recommend a show, game, or song, and make your case for it.
+•  What are your plans for the rest of the week?
+
+Keep going until the meter fills — pauses and "um"s are completely fine.`;
 
 function RecordingCoach({
     maxDurationSec = 60,
@@ -470,7 +482,7 @@ function RecordingCoach({
 
                     {showScript && (
                         <div className="rounded-2xl border p-4 shadow-sm">
-                            <h3 className="mb-2 font-medium">Script</h3>
+                            <h3 className="mb-2 font-medium">Things to talk about</h3>
                             <div className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-xl bg-tiilt-ground p-3 text-sm leading-relaxed">
                                 {scriptText}
                             </div>
@@ -507,8 +519,9 @@ function RecordingCoach({
                             </div>
                         ) : (
                             <div className="mt-2 text-xs text-tiilt-muted">
-                                Read the whole script — at least {effectiveMinSec}s. The recording
-                                is checked automatically and you may be asked to re-record.
+                                Talk through a few prompts — at least {effectiveMinSec}s. The
+                                recording is checked automatically and you may be asked to
+                                record a bit more.
                             </div>
                         )}
 
