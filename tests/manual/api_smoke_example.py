@@ -1,7 +1,7 @@
 import argparse
 import os
-from discussion_capture_client import DiscussionCaptureAPIClient
-from audio_processor_client import AudioProcessorClient
+from .discussion_capture_client import DiscussionCaptureAPIClient
+from .audio_processor_client import AudioProcessorClient
 
 # This example creates a session, adds a device, and transmits
 # a wave file using the newly created device's credentials.

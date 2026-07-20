@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pytest
+      # Unit tests cover the pure analytics module and posthoc queue
+      # persistence; they have no DB/GPU/network dependencies.
+      - run: python -m pytest tests/ -q
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+# E2E tests (tests/e2e/) exercise a live deployment with real credentials
+# and are run manually — see the header of tests/e2e/join-record.spec.js.
+# They are deliberately not wired into CI: this repository is public, and
+# no deployment secrets belong in it or its workflows.
