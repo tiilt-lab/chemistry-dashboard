@@ -11,7 +11,11 @@ class Speaker(db.Model):
     session_device = db.relationship("SessionDevice", back_populates="speakers")
 
     NAME_MAX_LENGTH = 64
-    NAME_CHARS = 'a-zA-Z0-9\': '
+    # Speaker aliases are usually enrolled usernames, which commonly contain
+    # '.', '_' and '-' (e.g. ainee.witt, i_orlyse, KalebC-21). The old set
+    # rejected those, so add-speaker-by-username and the saved-fingerprint
+    # attach silently failed for them. '-' must be last (literal, not a range).
+    NAME_CHARS = "a-zA-Z0-9._:' -"
 
     def __hash__(self):
         return hash((self.id))

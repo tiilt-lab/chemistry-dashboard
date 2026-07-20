@@ -97,3 +97,19 @@ def test_live_alerts():
     # silent: last activity long ago
     assert compute_live_alerts([('A', 0, 50, False)], session_now=300)['silent'] is True
     assert compute_live_alerts([], session_now=100)['silent'] is True
+
+
+def test_speaker_alias_accepts_usernames():
+    # Regression: usernames with . _ - were rejected, breaking add-speaker by
+    # username + saved-fingerprint attach. Read NAME_CHARS from source (the
+    # model needs a Flask/db context to import).
+    import re, os
+    src = os.path.join(os.path.dirname(__file__), "..", "src", "server",
+                       "tables", "speaker.py")
+    m = re.search(r'NAME_CHARS = (["\'])(.*?)\1', open(src).read())
+    assert m, "NAME_CHARS not found"
+    pat = r'^[{0}]+\Z'.format(m.group(2))
+    for u in ['ainee.witt', 'i_orlyse', 'KalebC-21', 'domisky200', "O'Brien"]:
+        assert re.search(pat, u), u
+    for bad in ['drop;table', 'a<b', 'x/y']:
+        assert not re.search(pat, bad), bad
