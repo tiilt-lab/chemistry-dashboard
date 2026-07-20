@@ -67,8 +67,13 @@ def main():
               (alias, m.get("seconds", "?"), m.get("anchor", "?"), action))
         if args.execute:
             if has_old:
-                shutil.copy2(dst, dst + ".bak-" + args.stamp)
-            shutil.copy2(staged[alias], dst)
+                shutil.copy2(dst, dst + ".bak-" + args.stamp)  # keep original mtime
+            # copy (NOT copy2): the promoted .emb.npy must get a FRESH mtime,
+            # newer than the enrollment .wav — else _cached_embedding sees a
+            # stale cache and regenerates from the old recording, silently
+            # undoing the promotion.
+            shutil.copy(staged[alias], dst)
+            os.utime(dst, None)
 
     if args.execute:
         print("\npromoted %d profiles into %s (backups: *.emb.npy.bak-%s)"
