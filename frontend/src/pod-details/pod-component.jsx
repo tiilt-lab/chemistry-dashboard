@@ -589,8 +589,14 @@ function PodComponent() {
 
   // After the first participant's reflection is up, quietly generate the
   // rest so switching students is instant (reports persist server-side too).
+  // Cost control: prefetching every participant's AI reflection multiplied
+  // each first dashboard open by group size (4-5x Gemini spend) and helped
+  // exhaust the monthly cap. Reports generate on demand per participant now
+  // (cached in the DB after the first time); flip to true only if budget
+  // allows the instant-switching nicety.
+  const PREFETCH_ALL_PARTICIPANTS = false
   const prefetchRemainingParticipants = async () => {
-    if (prefetchStarted.current) return
+    if (!PREFETCH_ALL_PARTICIPANTS || prefetchStarted.current) return
     prefetchStarted.current = true
     for (const p of participants.current) {
       if (!(p in llmSessionAnalysis.current)) {

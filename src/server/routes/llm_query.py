@@ -27,6 +27,25 @@ if not GOOGLE_API_KEY or len(GOOGLE_API_KEY) < 30 or not GOOGLE_API_KEY.startswi
 
 client = genai.Client(api_key=GOOGLE_API_KEY)
 
+
+def _llm_error_response(e):
+    """Map raw Gemini failures to something an instructor can act on. The
+    spend-cap 429 used to dump the whole error JSON into the dialog."""
+    s = str(e)
+    logging.error("llm error: %s", s)
+    if 'RESOURCE_EXHAUSTED' in s or "'code': 429" in s or s.startswith('429'):
+        return json_response({
+            'message': "The monthly AI budget is used up, so generating NEW "
+                       "reflections and answers is paused. Already-generated "
+                       "reports still load normally. New ones resume when the "
+                       "budget resets or the spend cap is raised "
+                       "(ai.studio/spend).",
+        }, 429)
+    return json_response({
+        'message': "The AI service couldn't complete this request. "
+                   "Please try again in a few minutes.",
+    }, 502)
+
 @api_routes.route('/api/v1/llmqueries/generate_llm_feedback_based_on_metrics', methods=['POST'])
 def generate_llm_feedback_based_on_metrics(**kwargs):
     metricObj = request.json
@@ -69,10 +88,7 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
                 #insert to database
                 database.add_speaker_session_device_llm_report(metricObj['participant_name'], metricObj['sessionid'], metricObj['sessiondeviceid'],raw)  
         except Exception as e:
-            logging.error("exception throw: {0}".format(e))
-            return json_response({
-                "message": str(e)
-            }, 400)
+            return _llm_error_response(e)
     
     try:
         parsed = json.loads(raw)
@@ -116,10 +132,7 @@ def fetch_response_for_question(**kwargs):
                 #insert to database
                 database.add_speaker_session_device_llm_question_answer(questionObj['participant_name'], questionObj['sessionid'], questionObj['sessiondeviceid'],questionObj['default_question_id'],questionObj['question'],raw)  
         except Exception as e:
-            logging.error("exception throw: {0}".format(e))
-            return json_response({
-                "message": str(e)
-            }, 400)
+            return _llm_error_response(e)
     
     try:
         parsed = json.loads(raw)
@@ -178,8 +191,7 @@ def generate_discussion_summary(session_id, session_device_id, **kwargs):
             raw = raw.replace("```json", "").replace("```", "").strip()
         data = json.loads(raw)
     except Exception as e:
-        logging.error("discussion summary failed: %s", e)
-        return json_response({'summary': None, 'message': 'Summary generation failed.'}, 502)
+        return _llm_error_response(e)
     return json_response(data)
 
 
