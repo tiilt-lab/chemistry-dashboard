@@ -27,6 +27,24 @@ export const openRatios = (rows) =>
         .filter((r) => (r.questions || 0) > 0)
         .map((r) => Math.round((100 * (r.open_questions || 0)) / r.questions))
 
+// Idea give-and-take rows (only sessions with a stored post-hoc report).
+// Both metrics share one normalization max so "gives" and "takes" bars are
+// comparable with each other — they're the two directions of the same
+// cross-cohesion measure.
+export const giveTake = (rows) => {
+    const withPair = rows.filter(
+        (r) => r.influence != null || r.external_relevance != null,
+    )
+    const max = Math.max(
+        0,
+        ...withPair.flatMap((r) => [r.influence || 0, r.external_relevance || 0]),
+    )
+    return {
+        rows: withPair,
+        norm: (v) => (max > 0 && v != null ? Math.max(2, (v / max) * 100) : 0),
+    }
+}
+
 const TREND_CHIP = {
     up: { text: "▲ growing", cls: "bg-tiilt-teal/15 text-tiilt-teal-text" },
     down: { text: "▼ declining", cls: "bg-tiilt-orange/15 text-tiilt-orange-text" },
@@ -166,6 +184,66 @@ export function StudentLongitudinalPanel({ username }) {
                     )
                 })}
             </div>
+            {(() => {
+                const gt = giveTake(withData)
+                if (!gt.rows.length) return null
+                const inflTrend = trendOf(
+                    gt.rows.map((r) => r.influence).filter((v) => v != null),
+                )
+                return (
+                    <div className="mt-2 flex flex-col gap-1.5">
+                        <div className="flex items-center gap-2">
+                            <div className="font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
+                                Idea give-and-take
+                            </div>
+                            {inflTrend === "up" ? (
+                                <span className="rounded-full bg-tiilt-teal/15 px-2 py-0.5 text-[11px] font-semibold text-tiilt-teal-text">
+                                    ▲ influence growing
+                                </span>
+                            ) : inflTrend === "down" ? (
+                                <span className="rounded-full bg-tiilt-orange/15 px-2 py-0.5 text-[11px] font-semibold text-tiilt-orange-text">
+                                    ▼ influence declining
+                                </span>
+                            ) : null}
+                        </div>
+                        {gt.rows.map((r) => (
+                            <div
+                                key={r.session_id}
+                                className="flex items-center gap-2 text-xs"
+                            >
+                                <span className="w-36 flex-none truncate text-tiilt-ink">
+                                    {r.session_name || `Session ${r.session_id}`}
+                                </span>
+                                <div className="flex grow flex-col gap-0.5">
+                                    <div
+                                        className="h-1.5 rounded bg-tiilt-teal/70"
+                                        style={{ width: `${gt.norm(r.influence)}%` }}
+                                        title={`Influence ${r.influence ?? "—"}: how much others' following speech relates to theirs`}
+                                    />
+                                    <div
+                                        className="h-1.5 rounded bg-tiilt-lavender"
+                                        style={{ width: `${gt.norm(r.external_relevance)}%` }}
+                                        title={`External relevance ${r.external_relevance ?? "—"}: how much their speech relates to others'`}
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                        <div className="text-[11px] text-tiilt-muted">
+                            <span className="font-semibold text-tiilt-teal-text">
+                                Teal
+                            </span>{" "}
+                            = influence (others take up their ideas);{" "}
+                            <span className="font-semibold text-tiilt">
+                                lavender
+                            </span>{" "}
+                            = relevance (they build on others'). Read as a
+                            pair — introducers run teal-heavy, synthesizers
+                            lavender-heavy. Only sessions with a full
+                            post-hoc analysis appear.
+                        </div>
+                    </div>
+                )
+            })()}
             <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-tiilt-muted">
                 <span>
                     Avg {avgTurns} {avgTurns === 1 ? "turn" : "turns"}/session

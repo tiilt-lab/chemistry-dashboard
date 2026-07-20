@@ -1498,6 +1498,32 @@ def get_student_longitudinal(username):
         questions = sum(1 for q, _t in their_utts if q)
         open_qs = sum(1 for q, t in their_utts
                       if q and classify_question(t) == 'open')
+        # Idea give-and-take, when a post-hoc synthesized report exists for
+        # this pod: influence (socialimpact — how much others' following
+        # speech relates to yours) and external relevance (responsivityscore
+        # — how much yours relates to others'). Mean across analysis windows;
+        # None when the session was never batch-analyzed.
+        influence = relevance = None
+        try:
+            import json as _json
+            reports = get_synthesized_feedback_report(
+                sessionId=sid, sessionDeviceId=did)
+            if reports:
+                pl = _json.loads(reports[0].synthesized_feedback) \
+                    .get('participants_level', {})
+                entries = pl.get(username) or []
+                si = [e['socialimpact'] for e in entries
+                      if isinstance(e.get('socialimpact'), (int, float))]
+                rs = [e['responsivityscore'] for e in entries
+                      if isinstance(e.get('responsivityscore'), (int, float))]
+                if si:
+                    influence = round(sum(si) / len(si), 4)
+                if rs:
+                    relevance = round(sum(rs) / len(rs), 4)
+        except Exception:
+            # a malformed stored report must not break the profile page
+            logging.getLogger(__name__).warning(
+                'longitudinal: unreadable synthesized report for device %s', did)
         out.append({
             'session_id': sid,
             'session_name': sname,
@@ -1509,6 +1535,8 @@ def get_student_longitudinal(username):
             'turns': turns,
             'utterances': their_utt_count,
             'avg_turn_seconds': round(their_sec / turns, 1) if turns else None,
+            'influence': influence,
+            'external_relevance': relevance,
             'avg_attention': round(float(avg_attn), 2) if avg_attn is not None else None,
             'questions': questions,
             'open_questions': open_qs,

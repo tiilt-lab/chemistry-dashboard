@@ -6,7 +6,7 @@ vi.stubGlobal("window", {
     location: { protocol: "https:", host: "example.test" },
 })
 
-const { trendOf, fmtMins, openRatios } = await import(
+const { trendOf, fmtMins, openRatios, giveTake } = await import(
     "./student-longitudinal-panel"
 )
 
@@ -35,6 +35,25 @@ describe("fmtMins", () => {
     it("tolerates null/negative", () => {
         expect(fmtMins(null)).toBe("0:00")
         expect(fmtMins(-5)).toBe("0:00")
+    })
+})
+
+describe("giveTake", () => {
+    it("keeps only analyzed sessions and normalizes to the shared max", () => {
+        const { rows, norm } = giveTake([
+            { influence: 0.4, external_relevance: 0.2 },
+            { influence: null, external_relevance: null }, // never analyzed
+            { influence: 0.1, external_relevance: 0.8 },
+        ])
+        expect(rows.length).toBe(2)
+        expect(norm(0.8)).toBe(100) // shared max across BOTH series
+        expect(norm(0.4)).toBe(50)
+        expect(norm(null)).toBe(0)
+    })
+    it("all-null input yields no rows and a zero norm", () => {
+        const { rows, norm } = giveTake([{ influence: null, external_relevance: null }])
+        expect(rows.length).toBe(0)
+        expect(norm(0.5)).toBe(0)
     })
 })
 
