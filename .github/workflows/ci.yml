@@ -39,6 +39,10 @@ jobs:
       # only ever decrease. NOTE: --ext .js,.jsx is required — without it
       # eslint 8 silently skips every .jsx component.
       - run: npx eslint src --ext .js,.jsx --max-warnings 276
+      # Type-checks converted .ts files (strict); existing .js/.jsx are
+      # allowed but unchecked (gradual adoption). Fails only on typed code,
+      # so it can't be blocked by the legacy JS backlog.
+      - run: npm run typecheck
       - run: npm test
       - run: npm run build
 

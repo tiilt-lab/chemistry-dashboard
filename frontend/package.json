@@ -34,7 +34,8 @@
     "serve": "vite preview",
     "lint": "eslint src --ext .js,.jsx",
     "lint:strict": "eslint src --ext .js,.jsx --rule \"{\"react-hooks/exhaustive-deps\":\"error\"}\"",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "eslintConfig": {
     "extends": [
@@ -56,6 +57,8 @@
   },
   "devDependencies": {
     "@svgr/cli": "^8.1.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.4.1",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^10.1.2",
@@ -65,6 +68,7 @@
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "shadcn": "^4.1.0",
+    "typescript": "^5.9.3",
     "vite": "^6.3.2",
     "vite-plugin-eslint": "^1.8.1",
     "vitest": "^2.1.9"
