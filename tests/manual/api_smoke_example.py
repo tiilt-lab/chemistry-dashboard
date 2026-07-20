@@ -20,12 +20,15 @@ def main():
     #     print('File does not exist.')
     #     return
 
-    # --- Debug input ---
-    ip = '192.168.99.135'
-    usr = 'api'
-    psd = '***REMOVED***'
-    client_id = '***REMOVED***'
-    client_secret = '***REMOVED***'
+    # --- Debug input --- credentials come from the environment; never hardcode
+    # (the previous hardcoded X-Client-Id/Secret pair leaked into public git
+    # history — see BLINC_API_CLIENT_ID/SECRET in your shell to run this).
+    import os
+    ip = os.environ.get('BLINC_API_IP', '192.168.99.135')
+    usr = os.environ.get('BLINC_API_USER', 'api')
+    psd = os.environ.get('BLINC_API_PASSWORD', '')
+    client_id = os.environ.get('BLINC_API_CLIENT_ID', '')
+    client_secret = os.environ.get('BLINC_API_CLIENT_SECRET', '')
     filename = './test.wav'
     https = False
 
