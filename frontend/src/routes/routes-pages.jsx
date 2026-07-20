@@ -9,6 +9,7 @@ import {SessionManagerComponent} from '../session-manager/session-manager-compon
 import { AppSpinner } from '../spinner/spinner-component'
 import {ProtectedRoute} from './protected-route'
 import { AppShell } from '../shell/app-shell'
+import { RouteErrorBoundary } from './error-boundary'
 
 // Heavy dashboards (chart.js / d3 / framer-motion / shadcn) are code-split so
 // the landing/login/join first load stays small. Each lazy chunk shows the
@@ -47,6 +48,7 @@ function PageRouter() {
 
     return (
         <BrowserRouter>
+            <RouteErrorBoundary>
             <Suspense fallback={<RouteFallback />}>
             <Routes>
                 <Route path="/" element={<LandingPageComponent />} />
@@ -91,6 +93,7 @@ function PageRouter() {
                 </Route>
             </Routes>
             </Suspense>
+            </RouteErrorBoundary>
         </BrowserRouter>
     )
 }
