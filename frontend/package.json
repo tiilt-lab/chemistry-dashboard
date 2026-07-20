@@ -31,7 +31,9 @@
     "svgr": "svgr -d src/Icons/ --ext jsx --ignore-existing src/assets/img",
     "start": "vite",
     "build": "vite build",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "lint": "eslint src",
+    "lint:strict": "eslint src --rule \"{\"react-hooks/exhaustive-deps\":\"error\"}\""
   },
   "eslintConfig": {
     "extends": [
