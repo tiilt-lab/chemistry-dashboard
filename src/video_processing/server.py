@@ -225,9 +225,37 @@ class ServerProtocol(WebSocketServerProtocol):
                 # self.orig_vid_recorder.write(data,temp_file_name)
                 fixed = self.filename+"_"+str(self.video_count)+"."+self.config.mimeExtension
                 self.orig_vid_recorder.write(data,fixed)
-                # self.remux_mp4(temp_file_name, fixed)       
+                # self.remux_mp4(temp_file_name, fixed)
                 self.video_files_accum.append(fixed)
-            
+
+                # Live frame analytics for mp4 pods. This branch only existed
+                # for webm — mp4-sending browsers recorded fine but silently
+                # got no facial analytics at all. Same slice-the-newest-
+                # interval approach as the webm path below, on the accumulated
+                # fragmented-mp4 (video_count never increments on this path,
+                # so every chunk appends into _1.mp4).
+                if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()):
+                    try:
+                        if not hasattr(self, 'analytics_chunk_count'):
+                            self.analytics_chunk_count = 0
+                        self.analytics_chunk_count += 1
+                        _t0 = time.time()
+                        vidclip = mp.VideoFileClip(fixed)
+                        _t_open = time.time()
+                        subclips = (vidclip.subclipped if hasattr(vidclip, 'subclipped') else vidclip.subclip)(
+                            (self.analytics_chunk_count - 1) * self.interval,
+                            min(self.analytics_chunk_count * self.interval, vidclip.duration))
+                        chunk_iter = subclips.iter_frames(fps=10, dtype="uint8", with_times=True)
+                        logging.info('CHUNK_DECODE_TIMING auth={0} chunk={1} (mp4) open_s={2:.2f} total_s={3:.2f}'.format(
+                            self.config.auth_key, self.analytics_chunk_count,
+                            _t_open - _t0, time.time() - _t0))
+                        self.enqueue_latest_video_chunk(chunk_iter)
+                        logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
+                    except Exception as e:
+                        # analytics must never break recording
+                        logging.warning('mp4 analytics decode failed (chunk %s): %s',
+                                        getattr(self, 'analytics_chunk_count', '?'), e)
+
             if self.config.mimeExtension == "webm":
                 if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()):
                     _t0 = time.time()

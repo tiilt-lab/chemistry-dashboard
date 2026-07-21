@@ -35,6 +35,14 @@ ACCEPT_SIM = 0.30      # mid floor, needs margin...
 ACCEPT_MARGIN = 0.05
 ACCEPT_LOW = 0.20      # low floor, needs a dominant lead over the runner-up
 ACCEPT_LOW_MARGIN = 0.06
+# Closed-world assignment: a pod's fingerprint set IS its roster — nobody
+# else can be speaking. When every participant has a usable reference, an
+# utterance that fails the confidence gates is still assigned to the best
+# match (there is no fourth person), except genuine non-speech: below the
+# noise floor (whisper hallucinations on silence, keyboard noise) stays None.
+CLOSED_WORLD = True
+NOISE_FLOOR = 0.08
+
 # Session adaptation: only utterances this confident teach the session print
 # (guards against a wrong accept poisoning the wrong person's reference).
 ADAPT_MIN_SIM = 0.40
@@ -123,6 +131,14 @@ def checkFingerprints(x, fingerprints, verification):
   accepted = (best_sim >= ACCEPT_SURE
               or (best_sim >= ACCEPT_SIM and margin >= ACCEPT_MARGIN)
               or (best_sim >= ACCEPT_LOW and margin >= ACCEPT_LOW_MARGIN))
+  if not accepted and CLOSED_WORLD and len(scored) == len(fingerprints) \
+      and best_sim >= NOISE_FLOOR:
+    # roster is complete: best-of-roster beats "unknown". Low-confidence
+    # (below the gates) — logged as such, and deliberately NOT fed to
+    # session adaptation.
+    logging.info('closed-world assign %s (sim %.3f, next %.3f)',
+                 best_alias, best_sim, runner_up)
+    return best_alias, best_id
   if accepted:
     if best_sim >= ADAPT_MIN_SIM:
       acc = _SESSION_ACC.setdefault(best_alias, [])
