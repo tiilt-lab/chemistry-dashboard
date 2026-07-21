@@ -205,6 +205,9 @@ function AppInfographicsComparison(props) {
                                     compact
                                     transcriptionLabel={transcriptionLabel}
                                     onEditText={props.editTranscriptText}
+                                    onReassignSpeaker={props.reassignTranscriptRow}
+                                    roster={props.roster}
+                                    tagCounts={props.tagCounts}
                                 />
                             </div>
                         </AppSectionBoxComponent>
@@ -282,6 +285,9 @@ function AppInfographicsComparison(props) {
                                 playbackTime={playbackTime}
                                 transcriptionLabel={transcriptionLabel}
                                 onEditText={props.editTranscriptText}
+                                onReassignSpeaker={props.reassignTranscriptRow}
+                                roster={props.roster}
+                                tagCounts={props.tagCounts}
                             />
                         </AppSectionBoxComponent>
                     )}

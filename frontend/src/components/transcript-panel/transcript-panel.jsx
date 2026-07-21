@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { formatSeconds, speakerColorFor } from "../../globals"
+import { SpeakerReassign } from "../speaker-reassign"
 
 const FEATURE_FIELDS = [
     ["Emotional tone", "emotional_tone_value"],
@@ -31,6 +32,9 @@ function TranscriptPanel({
     playbackTime,
     compact,
     onEditText,
+    onReassignSpeaker,
+    roster,
+    tagCounts,
 }) {
     const scrollRef = useRef(null)
     const selectedRef = useRef(null)
@@ -218,7 +222,22 @@ function TranscriptPanel({
                                             />
                                         ) : (
                                             <span className="text-sm leading-snug text-tiilt-ink">
-                                                {t.speaker_tag ? (
+                                                {onReassignSpeaker && t.id != null ? (
+                                                    <span
+                                                        className="inline-block"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <SpeakerReassign
+                                                            tag={t.speaker_tag}
+                                                            color={t.speaker_tag ? color : undefined}
+                                                            roster={roster || []}
+                                                            count={(tagCounts || {})[t.speaker_tag] || 0}
+                                                            onReassign={(alias, applyToTag, guest) =>
+                                                                onReassignSpeaker(t.id, alias, applyToTag, guest)
+                                                            }
+                                                        />
+                                                    </span>
+                                                ) : t.speaker_tag ? (
                                                     <span
                                                         className="font-semibold"
                                                         style={{ color }}
@@ -227,7 +246,7 @@ function TranscriptPanel({
                                                     </span>
                                                 ) : (
                                                     <></>
-                                                )}
+                                                )}{" "}
                                                 {t.transcript}
                                             </span>
                                         )}

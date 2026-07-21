@@ -459,20 +459,30 @@ function PodComponent() {
     return m;
   }, {});
 
-  const reassignTranscriptSpeaker = async (alias, applyToTag, guest) => {
-    const t = currentTranscript;
-    if (!t || t.id == null) return;
-    const oldTag = t.speaker_tag;
+  // Reassign any row by id (transcript panel); the dialog variant below
+  // just targets the currently open transcript.
+  const reassignTranscriptRow = async (transcriptId, alias, applyToTag, guest) => {
+    const target = transcripts.find((t) => t.id === transcriptId);
+    const oldTag = target ? target.speaker_tag : null;
     const res = await new ApiService().httpRequestCall(
-      `api/v1/transcripts/${t.id}/reassign`, "POST",
+      `api/v1/transcripts/${transcriptId}/reassign`, "POST",
       { alias, apply_to_tag: !!applyToTag, allow_guest: !!guest });
     if (res.status !== 200) return;
     setTranscripts(transcripts.map((row) => {
-      const hit = applyToTag && oldTag ? row.speaker_tag === oldTag : row.id === t.id;
+      const hit = applyToTag && oldTag
+        ? row.speaker_tag === oldTag
+        : row.id === transcriptId;
       return hit ? { ...row, speaker_tag: alias } : row;
     }));
-    setCurrentTranscript({ ...t, speaker_tag: alias });
+    if (currentTranscript && currentTranscript.id === transcriptId) {
+      setCurrentTranscript({ ...currentTranscript, speaker_tag: alias });
+    }
     if (guest) getSpeakers();
+  };
+
+  const reassignTranscriptSpeaker = (alias, applyToTag, guest) => {
+    if (!currentTranscript || currentTranscript.id == null) return;
+    return reassignTranscriptRow(currentTranscript.id, alias, applyToTag, guest);
   };
 
   const saveTranscriptText = async () => {
@@ -827,6 +837,7 @@ function PodComponent() {
       cancelPodEdit={cancelPodEdit}
       saveTranscriptText={saveTranscriptText}
       editTranscriptText={editTranscriptText}
+      reassignTranscriptRow={reassignTranscriptRow}
       reassignTranscriptSpeaker={reassignTranscriptSpeaker}
       closeDialog={closeDialog}
       seeAllTranscripts={seeAllTranscripts}
