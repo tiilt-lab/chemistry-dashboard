@@ -26,32 +26,87 @@ def embedSignal(x, verification):
   # The model may live on CUDA; numpy conversion requires host memory.
   return [embedding[0, 0].detach().cpu().numpy()]
 
-def checkFingerprints(x, fingerprints, verification):
-  np_signal = torch.tensor(np.frombuffer(x, dtype=np.dtype('int16')))
-  # logging.info("Checking Fingerprint equality")
-  max_score = 0
-  speaker_alias = None
-  speaker_id = -1
-  for speaker in fingerprints:
-    # logging.info("Checking speaker {}".format(speaker))
-    speaker_signal = torch.tensor(np.frombuffer(fingerprints[speaker]["data"], dtype=np.dtype('int16')))
-    try:
-      score, prediction = verification.verify_batch(np_signal, speaker_signal)
-      # logging.info("Current prediction is {} with score of {}".format(prediction.item(), score.item()))
-    except Exception as e:
-      # A failed comparison (e.g. segment too short) must not abort the whole
-      # utterance — skip this speaker and keep going.
-      logging.info("Error occured. while checking fingerprint: {0}".format(e))
-      continue
-    if prediction.item():
-      if score.item() > max_score:
-        max_score = score
-        speaker_alias = fingerprints[speaker]["alias"]
-        speaker_id = speaker
+# Live-attribution accept gates, in cosine-similarity space (float-domain
+# ECAPA embeddings). Strong prints (v2, minutes of real speech) score
+# ~0.4-0.7 on their own utterances; wrong-speaker sims sit well under 0.3.
+ACCEPT_SIM = 0.30      # floor: below this, abstain
+ACCEPT_MARGIN = 0.05   # best must clearly beat the runner-up...
+ACCEPT_SURE = 0.45     # ...unless it is this high on its own
 
-  if(speaker_alias):
-    logging.info("Selected speaker is {}".format(speaker_alias))
-  return speaker_alias, speaker_id
+# alias -> normalized reference embedding, for the life of the process. A
+# speaker's reference never changes mid-session, so embed it exactly once
+# (the old code re-embedded every print for every utterance).
+_PRINT_CACHE = {}
+
+
+def _print_embedding(alias, raw_bytes, verification):
+  """Reference embedding for one speaker. Prefers the cached enrollment
+  embedding (<alias>.emb.npy — where minted v2 voice prints live), falling
+  back to embedding the provided fingerprint audio in FLOAT domain (raw-int16
+  embeddings are degraded; see cluster_reconcile's measurement)."""
+  if alias in _PRINT_CACHE:
+    return _PRINT_CACHE[alias]
+  emb = None
+  try:
+    import config as cf
+    path = os.path.join(cf.biometric_folder(), '{0}.emb.npy'.format(alias))
+    if os.path.isfile(path):
+      emb = np.load(path).astype(np.float32)
+      logging.info('live print for %s: cached enrollment embedding', alias)
+  except Exception as e:
+    logging.warning('live print cache read failed for %s: %s', alias, e)
+  if emb is None and raw_bytes:
+    try:
+      sig = torch.tensor(
+          np.frombuffer(raw_bytes, dtype=np.int16).astype(np.float32) / 32768.0)
+      emb = verification.encode_batch(sig)[0, 0].detach().cpu().numpy()
+      logging.info('live print for %s: embedded join-time recording', alias)
+    except Exception as e:
+      logging.warning('live print embed failed for %s: %s', alias, e)
+  if emb is not None:
+    emb = emb / (np.linalg.norm(emb) + 1e-9)
+    _PRINT_CACHE[alias] = emb
+  return emb
+
+
+def checkFingerprints(x, fingerprints, verification):
+  """Assign an utterance to one of THIS POD's participants, or abstain.
+
+  The utterance is embedded once (float domain) and scored by cosine against
+  each participant's reference print. Accept only a clear winner: above the
+  floor AND ahead of the runner-up by a margin (or high enough to be sure on
+  its own). Anything murky stays unassigned for the post-hoc sweep instead of
+  being guessed wrong."""
+  try:
+    sig = torch.tensor(
+        np.frombuffer(x, dtype=np.int16).astype(np.float32) / 32768.0)
+    utt = verification.encode_batch(sig)[0, 0].detach().cpu().numpy()
+  except Exception as e:
+    logging.info('utterance embed failed: {0}'.format(e))
+    return None, -1
+  utt = utt / (np.linalg.norm(utt) + 1e-9)
+
+  scored = []
+  for speaker in fingerprints:
+    info = fingerprints[speaker]
+    ref = _print_embedding(info.get('alias'), info.get('data'), verification)
+    if ref is None:
+      continue
+    scored.append((float(np.dot(utt, ref)), info.get('alias'), speaker))
+  if not scored:
+    return None, -1
+  scored.sort(reverse=True, key=lambda s: s[0])
+  best_sim, best_alias, best_id = scored[0]
+  runner_up = scored[1][0] if len(scored) > 1 else -1.0
+
+  if best_sim >= ACCEPT_SURE or \
+      (best_sim >= ACCEPT_SIM and best_sim - runner_up >= ACCEPT_MARGIN):
+    logging.info('Selected speaker is %s (sim %.3f, next %.3f)',
+                 best_alias, best_sim, runner_up)
+    return best_alias, best_id
+  logging.info('speaker abstain (best %s %.3f, next %.3f)',
+               best_alias, best_sim, runner_up)
+  return None, -1
 
 
 
