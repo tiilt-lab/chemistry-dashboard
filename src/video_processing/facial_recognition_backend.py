@@ -124,3 +124,18 @@ def get_face_backend():
                           "Install with `pip install insightface onnxruntime-gpu`.", e)
     _BACKEND = _DlibBackend()
     return _BACKEND
+
+
+_NAMED = {}
+
+
+def get_backend_by_name(name):
+    """Explicit backend, independent of config and of get_face_backend()'s
+    cache. Enrollment dual-writes with BOTH backends (ArcFace for the
+    forward-looking gallery, dlib for the deployed 128-D live matcher)
+    regardless of which one the matcher is configured to use."""
+    if name in _NAMED:
+        return _NAMED[name]
+    backend = _InsightFaceBackend() if name == "insightface" else _DlibBackend()
+    _NAMED[name] = backend
+    return backend

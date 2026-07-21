@@ -530,7 +530,8 @@ function RecordingCoach({
                         {enrollStatus.kind === "saving" ? (
                             <div className="mt-3 flex items-center gap-3 rounded-xl border border-tiilt-line bg-tiilt-ground/60 p-3 text-sm text-tiilt-ink">
                                 <span className="h-4 w-4 flex-none animate-spin rounded-full border-2 border-tiilt border-t-transparent" />
-                                Verifying and saving your voice and face…
+                                Verifying and saving your voice and face — this
+                                takes about half a minute. Keep this page open.
                             </div>
                         ) : null}
                         {enrollStatus.kind === "success" ? (

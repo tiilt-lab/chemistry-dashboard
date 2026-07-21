@@ -1,5 +1,6 @@
 import logging
 import threading
+import time
 try:
     import moviepy.editor as mp  # moviepy 1.x
 except ImportError:
@@ -8,7 +9,65 @@ import  cv2
 import numpy as np
 import json
 import os
-from facial_recognition_backend import get_face_backend
+from facial_recognition_backend import get_backend_by_name
+
+
+def _sample_frames(video_path, max_frames):
+    """RGB frames spread across the whole clip (head turns from every part of
+    the recording contribute)."""
+    vidclip = mp.VideoFileClip(video_path)
+    duration = float(vidclip.duration or 0)
+    fps = 2 if duration <= 0 else min(2.0, max_frames / max(duration, 1.0))
+    frames = list(vidclip.iter_frames(fps=max(fps, 0.5), dtype="uint8"))
+    if len(frames) > max_frames:
+        step = len(frames) / max_frames
+        frames = [frames[int(i * step)] for i in range(max_frames)]
+    return [cv2.cvtColor(f, cv2.COLOR_BGR2RGB) for f in frames]
+
+
+def build_face_embeddings(video_path, max_frames=40, dlib_frames=12):
+    """Dual-backend enrollment embeddings from one clip. Pure + import-free of
+    the websocket plumbing so it can be tested standalone.
+
+    ArcFace (GPU, ~seconds) runs over ALL sampled frames and is the
+    forward-looking gallery entry (.arc.npy — same convention the ASD path
+    and gallery minting use). Dlib (CPU, the slow one) runs over a SUBSET
+    with jitter off, only to keep the deployed 128-D live matcher working
+    for this student until the whole gallery migrates. Returns
+    (arc_vec_512 | None, dlib_vec_128 | None, timings_dict).
+    """
+    frames = _sample_frames(video_path, max_frames)
+    timings = {"frames": len(frames)}
+
+    t0 = time.time()
+    arc = get_backend_by_name("insightface")
+    arc_embs = []
+    for frame in frames:
+        encs = arc.encode(frame, arc.locate(frame))
+        if encs:
+            arc_embs.append(encs[0])
+    arc_vec = None
+    if arc_embs:
+        v = np.mean(arc_embs, axis=0)
+        arc_vec = (v / (np.linalg.norm(v) + 1e-9)).astype(np.float32)
+    timings["arcface_s"] = round(time.time() - t0, 1)
+    timings["arcface_faces"] = len(arc_embs)
+
+    t0 = time.time()
+    dlib = get_backend_by_name("dlib")
+    # Prefer frames ArcFace saw a face in; jitters off — averaging a dozen
+    # frames of a coached head-turn clip replaces what jitter augmentation
+    # bought on single stills, at a fraction of the CPU time.
+    subset = frames[:: max(1, len(frames) // dlib_frames)][:dlib_frames]
+    dlib_embs = []
+    for frame in subset:
+        encs = dlib.encode(frame, dlib.locate(frame), num_jitters=1)
+        if encs:
+            dlib_embs.append(encs[0])
+    dlib_vec = np.mean(dlib_embs, axis=0) if dlib_embs else None
+    timings["dlib_s"] = round(time.time() - t0, 1)
+    timings["dlib_faces"] = len(dlib_embs)
+    return arc_vec, dlib_vec, timings
 
 class FacialBiometricProcessor:
     def __init__(self,facial_biometric_file,video_file,mediaExt,currAlias):
@@ -45,41 +104,23 @@ class FacialBiometricProcessor:
                 pass
 
     def _savefacialembedding(self,facial_biometric_file,video_file,mediaExt,currAlias):
-        embeddings = []
-        student_embedding = {}
-        face_backend = get_face_backend()
+        arc_vec, dlib_vec, timings = build_face_embeddings(
+            video_file + '.' + mediaExt)
+        logging.info('face embedding timings for %s: %s', currAlias, timings)
 
-        # Coached recordings run up to 60s now (previously 10s). Encoding
-        # every frame at 5fps with jitters takes minutes on CPU, so sample at
-        # most MAX_FRAMES frames spread across the whole clip — head turns
-        # from every part of the script still contribute.
-        MAX_FRAMES = 40
-        vidclip = mp.VideoFileClip(video_file+'.'+mediaExt)
-        duration = float(vidclip.duration or 0)
-        fps = 2 if duration <= 0 else min(2.0, MAX_FRAMES / max(duration, 1.0))
-        frames = list(vidclip.iter_frames(fps=max(fps, 0.5), dtype="uint8"))
-        if len(frames) > MAX_FRAMES:
-            step = len(frames) / MAX_FRAMES
-            frames = [frames[int(i * step)] for i in range(MAX_FRAMES)]
-        for frame in frames:
-            # Detect face locations in the frame
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            face_locations = face_backend.locate(frame)
-
-            # Face embeddings for each detected face (backend-specific dimension)
-            encodings = face_backend.encode(frame, face_locations, num_jitters=2)
-
-            if len(encodings) > 0:
-                embeddings.append(encodings[0])  # Take first detected face
-
-        if len(embeddings) == 0:
+        if arc_vec is None and dlib_vec is None:
             self.send_json({'type': 'error', 'message': "No face could be captured — please record again with your face visible and better lighting."})
             return
 
-        # Compute average embedding
-        avg_embedding = np.mean(embeddings, axis=0)
-        student_embedding[currAlias] = avg_embedding
-        np.save(facial_biometric_file+".npy", student_embedding)
+        # ArcFace 512 — the forward-looking gallery entry (same .arc.npy
+        # convention as the ASD identify path and gallery minting).
+        if arc_vec is not None:
+            np.save(facial_biometric_file + ".arc.npy", arc_vec)
+        # dlib 128, legacy dict format — keeps the deployed live matcher
+        # working for this student until the whole gallery migrates.
+        if dlib_vec is not None:
+            np.save(facial_biometric_file + ".npy", {currAlias: dlib_vec})
 
-        logging.info('video biometrics saved (%d face samples)', len(embeddings))
+        logging.info('video biometrics saved (arc:%s dlib:%s)',
+                     timings.get("arcface_faces"), timings.get("dlib_faces"))
         self.send_json({'type': 'saved', 'message': "Biometric data captured successfully"})
