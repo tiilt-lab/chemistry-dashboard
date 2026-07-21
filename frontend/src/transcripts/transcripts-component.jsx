@@ -154,7 +154,14 @@ const createDisplayTranscripts = ()=> {
   const cancelEdit = () => setEditingId(null)
   const saveEdit = async () => {
     const text = editDraft.trim()
-    if (!text || editingId == null) return
+    if (editingId == null) return
+    // Blur commits like the title-rename pattern, so a click-in click-out
+    // with no change (or an emptied box) must not post an edit.
+    const orig = transcripts.find((t) => t.id === editingId)
+    if (!text || (orig && orig.transcript === text)) {
+      setEditingId(null)
+      return
+    }
     const res = await new ApiService().httpRequestCall(
       `api/v1/transcripts/${editingId}/edit_text`, "POST", { transcript: text })
     if (res.status !== 200) return

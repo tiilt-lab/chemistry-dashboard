@@ -144,32 +144,33 @@ function PodComponentPages(props) {
                                 onReassign={props.reassignTranscriptSpeaker}
                             />
                         </div>
-                        <textarea
-                            value={props.editDraft}
-                            onChange={(e) => props.setEditDraft(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter" && !e.shiftKey) {
-                                    e.preventDefault()
-                                    props.saveTranscriptText()
-                                }
-                            }}
-                            aria-label="Edit transcript text"
-                            rows={Math.max(3, Math.ceil((props.editDraft || "").length / 60))}
-                            className="w-full rounded-lg border border-tiilt-line bg-white p-2 text-[15px] leading-relaxed text-tiilt-ink outline-none focus:border-tiilt"
-                        />
-                        <div className={style["dialog-button-container"]}>
-                            <button
-                                className={`${style["dialog-button"]} ${style["right-button"]}`}
-                                disabled={
-                                    !(props.editDraft || "").trim() ||
-                                    (props.editDraft || "").trim() ===
-                                        props.currentTranscript.transcript
-                                }
-                                onClick={props.saveTranscriptText}
-                                title="Save the corrected transcript text"
+                        {props.podEditing ? (
+                            <textarea
+                                autoFocus
+                                value={props.editDraft}
+                                onChange={(e) => props.setEditDraft(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Escape") props.cancelPodEdit()
+                                    if (e.key === "Enter" && !e.shiftKey) {
+                                        e.preventDefault()
+                                        props.saveTranscriptText()
+                                    }
+                                }}
+                                onBlur={props.saveTranscriptText}
+                                aria-label="Edit transcript text"
+                                rows={Math.max(2, Math.ceil((props.editDraft || "").length / 60))}
+                                className="w-full rounded-md border border-tiilt bg-white px-2 py-1 text-[15px] leading-relaxed text-tiilt-ink outline-none focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
+                            />
+                        ) : (
+                            <div
+                                className={style["dialog-body"] + " cursor-text rounded-md px-1 transition hover:bg-tiilt-soft/50"}
+                                title="Click to edit this transcript"
+                                onClick={() => props.setPodEditing(true)}
                             >
-                                Save
-                            </button>
+                                {props.currentTranscript.transcript}
+                            </div>
+                        )}
+                        <div className={style["dialog-button-container"]}>
                             <button
                                 className={`${style["dialog-button"]} ${style["right-button"]}`}
                                 onClick={props.closeDialog}

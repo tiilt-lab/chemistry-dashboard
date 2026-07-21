@@ -83,42 +83,29 @@ function TranscriptComponentPage(props) {
                                                 <></>
                                             )}{" "}
                                             {props.editingId === transcript.id ? (
-                                                <span className="mt-1 flex items-start gap-2">
-                                                    <textarea
-                                                        autoFocus
-                                                        value={props.editDraft}
-                                                        onChange={(e) =>
-                                                            props.setEditDraft(e.target.value)
+                                                <textarea
+                                                    autoFocus
+                                                    value={props.editDraft}
+                                                    onChange={(e) =>
+                                                        props.setEditDraft(e.target.value)
+                                                    }
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Escape") props.cancelEdit()
+                                                        if (e.key === "Enter" && !e.shiftKey) {
+                                                            e.preventDefault()
+                                                            props.saveEdit()
                                                         }
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === "Escape") props.cancelEdit()
-                                                            if (e.key === "Enter" && !e.shiftKey) {
-                                                                e.preventDefault()
-                                                                props.saveEdit()
-                                                            }
-                                                        }}
-                                                        rows={Math.max(2, Math.ceil((props.editDraft || "").length / 70))}
-                                                        className="w-full rounded-lg border border-tiilt bg-white p-2 text-[15px] leading-relaxed text-tiilt-ink outline-none"
-                                                    />
-                                                    <span className="flex flex-none flex-col gap-1">
-                                                        <button
-                                                            type="button"
-                                                            onClick={props.saveEdit}
-                                                            className="rounded bg-tiilt px-2.5 py-1 text-xs font-semibold text-white"
-                                                        >
-                                                            Save
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={props.cancelEdit}
-                                                            className="rounded px-2.5 py-1 text-xs font-semibold text-tiilt-muted hover:bg-tiilt-soft"
-                                                        >
-                                                            Cancel
-                                                        </button>
-                                                    </span>
-                                                </span>
+                                                    }}
+                                                    onBlur={props.saveEdit}
+                                                    rows={Math.max(1, Math.ceil((props.editDraft || "").length / 70))}
+                                                    className="w-full rounded-md border border-tiilt bg-white px-1 py-0.5 text-[15px] leading-relaxed text-tiilt-ink outline-none focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
+                                                />
                                             ) : (
-                                                <>
+                                                <span
+                                                    className="cursor-text"
+                                                    title="Click to edit this transcript"
+                                                    onClick={() => props.beginEdit && props.beginEdit(transcript)}
+                                                >
                                             {transcript.words.map(
                                                 (transcriptData, wIndex) =>
                                                     transcriptData.matchingKeywords !==
@@ -129,11 +116,12 @@ function TranscriptComponentPage(props) {
                                                             style={{
                                                                 color: transcriptData.color,
                                                             }}
-                                                            onClick={() =>
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
                                                                 props.openKeywordDialog(
                                                                     transcriptData.matchingKeywords,
                                                                 )
-                                                            }
+                                                            }}
                                                             aria-label={`Keyword details for ${transcriptData.word}`}
                                                             className="inline cursor-pointer p-0 text-left font-semibold underline decoration-dotted underline-offset-2"
                                                         >
@@ -158,7 +146,7 @@ function TranscriptComponentPage(props) {
                                                     ✎
                                                 </button>
                                             ) : null}
-                                                </>
+                                                </span>
                                             )}
                                         </div>
                                     </li>

@@ -443,11 +443,14 @@ function PodComponent() {
     setCurrentForm("Transcript");
     setCurrentTranscript(transcript);
     setEditDraft(transcript && transcript.transcript ? transcript.transcript : "");
+    setPodEditing(false);
   };
 
   // Human corrections from the transcript dialog: fix the text, or fix who
-  // said it (same endpoints as the full transcripts page).
+  // said it (same endpoints as the full transcripts page). Editing is
+  // inline like a title rename: click the text, Enter/blur saves.
   const [editDraft, setEditDraft] = useState("");
+  const [podEditing, setPodEditing] = useState(false);
   const roster = [...new Set(speakers.map((s) => s.alias).filter(Boolean))].sort();
   const tagCounts = transcripts.reduce((m, t) => {
     if (t.speaker_tag) m[t.speaker_tag] = (m[t.speaker_tag] || 0) + 1;
@@ -473,14 +476,24 @@ function PodComponent() {
   const saveTranscriptText = async () => {
     const t = currentTranscript;
     const clean = (editDraft || "").trim();
-    if (!t || t.id == null || !clean || clean === t.transcript) return;
+    if (!t || t.id == null || !clean || clean === t.transcript) {
+      setPodEditing(false);
+      setEditDraft(t && t.transcript ? t.transcript : "");
+      return;
+    }
     const res = await new ApiService().httpRequestCall(
       `api/v1/transcripts/${t.id}/edit_text`, "POST", { transcript: clean });
     if (res.status !== 200) return;
     setTranscripts(transcripts.map((row) =>
       row.id === t.id ? { ...row, transcript: clean } : row));
     setCurrentTranscript({ ...t, transcript: clean });
-    closeDialog();
+    setPodEditing(false);
+  };
+
+  const cancelPodEdit = () => {
+    setPodEditing(false);
+    setEditDraft(currentTranscript && currentTranscript.transcript
+      ? currentTranscript.transcript : "");
   };
 
   const openDialog = (form) => {
@@ -792,6 +805,9 @@ function PodComponent() {
       tagCounts={tagCounts}
       editDraft={editDraft}
       setEditDraft={setEditDraft}
+      podEditing={podEditing}
+      setPodEditing={setPodEditing}
+      cancelPodEdit={cancelPodEdit}
       saveTranscriptText={saveTranscriptText}
       reassignTranscriptSpeaker={reassignTranscriptSpeaker}
       closeDialog={closeDialog}
