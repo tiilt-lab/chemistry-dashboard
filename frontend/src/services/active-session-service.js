@@ -116,12 +116,19 @@ export class ActiveSessionService {
             this.sessionSource.next(SessionModel.fromJson(JSON.parse(e)))
         })
 
-        // Handle room join.
+        // Handle room join. socket.io fires 'connect' (and therefore
+        // join_room) again after every reconnect, and the server answers
+        // each join with a full digest replay — start from a clean slate so
+        // a reconnect doesn't append a second copy of every transcript.
         this.socket.on("room_joined", (e) => {
             this.initialized = true
+            this.transcriptSource.next([])
+            this.videoMetricSource.next([])
         })
 
-        // Update transcripts and speaker metrics.
+        // Update transcripts and speaker metrics. Replace-by-id when the row
+        // is already known (a live update racing the digest replay must not
+        // duplicate it).
         this.socket.on("transcript_metrics_update", (e) => {
             const data = JSON.parse(e)
             const speaker_metrics = SpeakerMetricsModel.fromJsonList(
@@ -132,15 +139,24 @@ export class ActiveSessionService {
                 speaker_metrics,
             )
             const currentTranscripts = this.transcriptSource.getValue()
-
-            currentTranscripts.push(transcript_model)
+            const index = currentTranscripts.findIndex(
+                (t) => t.id === transcript_model.id,
+            )
+            if (index !== -1) {
+                currentTranscripts[index] = transcript_model
+            } else {
+                currentTranscripts.push(transcript_model)
+            }
             this.transcriptSource.next(currentTranscripts)
         })
 
-        // Initial digest of transcripts and speaker metrics.
+        // Initial digest of transcripts and speaker metrics (paged; several
+        // events per join). Skip ids already present so replays and races
+        // can never duplicate rows.
         this.socket.on("transcript_metrics_digest", (e) => {
             const data = JSON.parse(e)
             const transcripts = this.transcriptSource.getValue()
+            const known = new Set(transcripts.map((t) => t.id))
             for (const transcript_metrics of data) {
                 const speaker_metrics = SpeakerMetricsModel.fromJsonList(
                     transcript_metrics["speaker_metrics"],
@@ -149,7 +165,10 @@ export class ActiveSessionService {
                     transcript_metrics["transcript"],
                     speaker_metrics,
                 )
-                transcripts.push(transcript_model)
+                if (!known.has(transcript_model.id)) {
+                    known.add(transcript_model.id)
+                    transcripts.push(transcript_model)
+                }
             }
             this.transcriptSource.next(transcripts)
         })

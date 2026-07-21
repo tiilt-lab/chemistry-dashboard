@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 // Click it, pick the right participant, and either fix just this line or
 // every line currently sharing this label (a diarization cluster is usually
 // all-or-nothing wrong, so the bulk action is the common case).
-export function SpeakerReassign({ tag, roster, count, onReassign, disabled }) {
+export function SpeakerReassign({ tag, roster, count, onReassign, disabled, color }) {
     const [open, setOpen] = useState(false)
     const [busy, setBusy] = useState(false)
     const [guestMode, setGuestMode] = useState(false)
@@ -40,6 +40,7 @@ export function SpeakerReassign({ tag, roster, count, onReassign, disabled }) {
                 type="button"
                 disabled={disabled}
                 onClick={() => setOpen((v) => !v)}
+                style={color ? { color } : undefined}
                 title={disabled ? label : "Reassign speaker"}
                 className={
                     "rounded px-1 font-semibold text-tiilt transition " +

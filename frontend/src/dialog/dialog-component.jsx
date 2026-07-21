@@ -16,8 +16,15 @@ function ModalShell({ onClose, label, containerClass, containerStyle, children }
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       )].filter((el) => !el.disabled && el.offsetParent !== null);
 
-    const first = focusables()[0];
-    (first || node).focus();
+    // Move focus into the dialog — unless a child already claimed it
+    // (React's autoFocus runs in child effects before this parent effect,
+    // and it sets no [autofocus] attribute to query for). Unconditionally
+    // focusing the first control used to blur an autofocused inline editor
+    // the instant the dialog opened.
+    if (!node.contains(document.activeElement)) {
+      const first = focusables()[0];
+      (first || node).focus();
+    }
 
     const onKey = (e) => {
       if (e.key === 'Escape' && onClose) {

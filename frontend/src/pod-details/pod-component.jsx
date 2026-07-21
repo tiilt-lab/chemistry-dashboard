@@ -443,7 +443,9 @@ function PodComponent() {
     setCurrentForm("Transcript");
     setCurrentTranscript(transcript);
     setEditDraft(transcript && transcript.transcript ? transcript.transcript : "");
-    setPodEditing(false);
+    // Editing is the default action for a clicked segment — the dialog
+    // opens straight into the inline editor.
+    setPodEditing(true);
   };
 
   // Human corrections from the transcript dialog: fix the text, or fix who

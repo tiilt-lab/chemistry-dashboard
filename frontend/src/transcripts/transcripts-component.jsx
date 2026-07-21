@@ -120,6 +120,16 @@ const createDisplayTranscripts = ()=> {
     return m
   }, {})
 
+  // One distinct, stable color per speaker in this pod: golden-angle hues
+  // over the sorted speaker list, so colors stay far apart and a given
+  // roster always maps to the same palette.
+  const speakerColors = [...new Set(
+    transcripts.map((t) => t.speaker_tag).filter(Boolean))].sort()
+    .reduce((m, tag, i) => {
+      m[tag] = `hsl(${Math.round((210 + i * 137.508) % 360)}, 60%, 45%)`
+      return m
+    }, {})
+
   // Persist a human correction, then reflect it locally without a reload.
   // guest=true attributes to someone outside the roster (they get added as a
   // speaker on this group server-side).
@@ -257,6 +267,7 @@ const createDisplayTranscripts = ()=> {
       toggleKeywords = {toggleKeywords}
       roster = {roster}
       tagCounts = {tagCounts}
+      speakerColors = {speakerColors}
       reassignSpeaker = {reassignSpeaker}
       editingId = {editingId}
       editDraft = {editDraft}

@@ -60,6 +60,7 @@ function TranscriptComponentPage(props) {
                                             {props.reassignSpeaker ? (
                                                 <SpeakerReassign
                                                     tag={transcript.speaker_tag}
+                                                    color={(props.speakerColors || {})[transcript.speaker_tag]}
                                                     roster={props.roster || []}
                                                     count={
                                                         (props.tagCounts || {})[
@@ -76,7 +77,12 @@ function TranscriptComponentPage(props) {
                                                     }
                                                 />
                                             ) : transcript.speaker_tag ? (
-                                                <span className="font-semibold text-tiilt">
+                                                <span
+                                                    className="font-semibold text-tiilt"
+                                                    style={(props.speakerColors || {})[transcript.speaker_tag]
+                                                        ? { color: props.speakerColors[transcript.speaker_tag] }
+                                                        : undefined}
+                                                >
                                                     {transcript.speaker_tag}:{" "}
                                                 </span>
                                             ) : (
