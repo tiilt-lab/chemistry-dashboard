@@ -31,6 +31,8 @@ function CreateSessionComponent(props) {
   const [byod, setByod] = useState(changedState ? prevState.byod : true);
   const [doa, setDoa] = useState(changedState ? prevState.doa : true);
   const [features, setFeatures] = useState(changedState ? prevState.features : true);
+  // Live transcription engine, locked at creation (whisper = local GPU).
+  const [asr, setAsr] = useState(changedState ? (prevState.asr || 'whisper') : 'whisper');
   const [selectedKeywordList, setSelectedKeywordList] = useState(changedState ? prevState.selectedKeywordList : null);
   const [selectedTopicModel, setSelectedTopicModel] = useState(changedState ? prevState.selectedTopicModel : null);
   const [selectedDevices, setSelectedDevices] = useState([]);
@@ -157,7 +159,7 @@ function CreateSessionComponent(props) {
       const deviceIds = selectedDevices.map(d => d.id);
       const keywordListId = (selectedKeywordList) ? selectedKeywordList.id : null;
       const topicModelId = (selectedTopicModel) ? selectedTopicModel.id : null;
-      const fetchData = new SessionService().createNewSession(finalName, deviceIds, keywordListId, topicModelId, byod, features, doa, folder)
+      const fetchData = new SessionService().createNewSession(finalName, deviceIds, keywordListId, topicModelId, byod, features, doa, folder, asr)
       fetchData.then(
         response=>{
           if(response.status === 200){
@@ -263,7 +265,7 @@ function CreateSessionComponent(props) {
   
   
   const getStateInfo = () => {
-    return {state: {sessionName: sessionName, byod: byod, features: features, doa: doa, folder: folder, folderPath: folderPath, currentMenu: currentMenu, pageTitle: pageTitle, selectedKeywordList: selectedKeywordList, selectedTopicModel: selectedTopicModel}};
+    return {state: {sessionName: sessionName, byod: byod, features: features, doa: doa, asr: asr, folder: folder, folderPath: folderPath, currentMenu: currentMenu, pageTitle: pageTitle, selectedKeywordList: selectedKeywordList, selectedTopicModel: selectedTopicModel}};
   }
 
   const openDialog = (form, text)=> {
@@ -287,6 +289,8 @@ function CreateSessionComponent(props) {
     byod = {byod}
     features = {features}
     setFeatures = {setFeatures}
+    asr = {asr}
+    setAsr = {setAsr}
     goToSettings = {goToSettings}
     goToDevices = {goToDevices}
     devices = {devices}

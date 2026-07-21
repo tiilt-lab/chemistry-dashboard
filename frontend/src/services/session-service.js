@@ -267,7 +267,8 @@ class SessionService {
     byod,
     features,
     doa,
-    folder
+    folder,
+    asr
   ) {
     const body = {
       name: name,
@@ -278,6 +279,8 @@ class SessionService {
       features: features,
       doa: doa,
       folder: folder,
+      // live transcription engine, locked at creation
+      asr: asr || null,
     };
 
     return this.api.httpRequestCall("api/v1/sessions", "POST", body);

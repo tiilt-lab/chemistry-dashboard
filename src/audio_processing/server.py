@@ -428,7 +428,9 @@ class ServerProtocol(WebSocketServerProtocol):
         self.audio_buffer = AudioBuffer(self.config)
         self.asr_audio_queue = queue.Queue(maxsize=3)
         self.asr_transcript_queue = queue.Queue()
-        self.asr = create_asr(cf.asr(), self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval)
+        # The session's locked-at-creation ASR choice wins; the deployment
+        # config is the default for sessions that didn't choose.
+        self.asr = create_asr(getattr(self.config, 'asr', None) or cf.asr(), self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval)
         self.asr.start()
         self.processor = AudioProcessor(self.audio_buffer, self.asr_transcript_queue, diarization_model, semantic_model, self.config)
         self.processor.start()

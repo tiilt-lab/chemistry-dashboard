@@ -92,6 +92,57 @@ function CreateSessionPage(props) {
                   onChange={() => props.setFeatures(!props.features)}
                 />
               </div>
+              <div>
+                <label className={fieldLabel}>Live transcription</label>
+                <div className="divide-y divide-tiilt-line overflow-hidden rounded-lg border border-tiilt-line">
+                  {[
+                    {
+                      value: "whisper",
+                      name: "Whisper — on this server",
+                      desc: "More accurate on group audio; captions run a few seconds behind. Audio never leaves the machine.",
+                    },
+                    {
+                      value: "google-cloud-speech",
+                      name: "Google Cloud",
+                      desc: "Fastest word-by-word captions; audio is sent to Google and billed per minute.",
+                    },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => props.setAsr(opt.value)}
+                      aria-pressed={props.asr === opt.value}
+                      className={
+                        "flex w-full items-start gap-3 px-3 py-2.5 text-left transition " +
+                        (props.asr === opt.value
+                          ? "bg-tiilt-soft"
+                          : "bg-white hover:bg-tiilt-soft/40")
+                      }
+                    >
+                      <span
+                        className={
+                          "mt-1 h-3.5 w-3.5 flex-none rounded-full border-2 " +
+                          (props.asr === opt.value
+                            ? "border-tiilt bg-tiilt"
+                            : "border-tiilt-line")
+                        }
+                        aria-hidden="true"
+                      />
+                      <span>
+                        <span className="block text-sm font-semibold text-tiilt-ink">
+                          {opt.name}
+                        </span>
+                        <span className="block text-xs text-tiilt-muted">
+                          {opt.desc}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1 text-xs text-tiilt-muted">
+                  Locked once the session starts.
+                </p>
+              </div>
             </div>
             <div className={footerBar}>
               <div className={footerRow}>

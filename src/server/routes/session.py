@@ -137,6 +137,11 @@ def create_session(user, **kwargs):
     byod = request.json.get('byod', False)
     features = request.json.get('features', True)
     doa = request.json.get('doa', False)
+    # Live transcription engine, chosen at creation and locked for the
+    # session's lifetime (it lives in the session's immutable Redis config).
+    asr = request.json.get('asr', None)
+    if asr is not None and asr not in ('google-cloud-speech', 'whisper'):
+        return json_response({'message': 'asr must be google-cloud-speech or whisper.'}, 400)
     folder = request.json.get('folder', None)
     if folder == -1:
         folder = None
@@ -144,7 +149,7 @@ def create_session(user, **kwargs):
         owned_folder = database.get_folders(id=folder, owner_id=user['id'], first =True)
         if not owned_folder:
             return json_response({'message': 'Either the folder does not exist or invalid access'}, 404)
-    new_session = session_handler.create_session(user['id'], name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder)
+    new_session = session_handler.create_session(user['id'], name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder, asr=asr)
     return json_response(new_session.json())
 
 @api_routes.route('/api/v1/sessions/byod', methods=['POST'])

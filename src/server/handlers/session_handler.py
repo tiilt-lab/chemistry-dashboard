@@ -9,7 +9,7 @@ import json
 from device_websockets import ConnectionManager
 from redis_helper import RedisSessions
 
-def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder):
+def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder, asr=None):
     session, keywords = database.create_session(user_id, keyword_list_id, topic_model_id, name, folder)
     if byod:
         session = database.generate_session_passcode(session.id)
@@ -21,7 +21,11 @@ def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod
         'keywords': keywords,
         'doa': doa,
         'topic_model': topic_model_id,
-        'owner': user_id
+        'owner': user_id,
+        # Live ASR engine, locked for the session's lifetime (this blob is
+        # written once here and deleted at end_session). None -> deployment
+        # default (audio service falls back to its config.ini asr=).
+        'asr': asr,
     }
     RedisSessions.create_session(session.id, config)
     if devices:

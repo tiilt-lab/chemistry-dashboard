@@ -5,7 +5,7 @@ import logging
 import config as cf
 
 class ProcessingConfig:
-    def __init__(self, auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, transcribe, keywords, doa, features, tag, diarization, embeddings_file, topic_model, owner,sessionId,deviceId,videocartoonify,mimeExtension):
+    def __init__(self, auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, transcribe, keywords, doa, features, tag, diarization, embeddings_file, topic_model, owner,sessionId,deviceId,videocartoonify,mimeExtension, asr=None):
         self.auth_key = auth_key
         self.session_key = session_key
         self.server_start = server_start
@@ -27,6 +27,9 @@ class ProcessingConfig:
         self.deviceId = deviceId
         self.videocartoonify = videocartoonify
         self.mimeExtension = mimeExtension
+        # Per-session live ASR engine, chosen at session creation and locked
+        # into the session's Redis config; None -> the deployment default.
+        self.asr = asr
 
     @staticmethod
     def from_json(data, source=None):
@@ -87,6 +90,7 @@ class ProcessingConfig:
             doa = session_config.get('doa', False)
             topic_model = session_config.get('topic_model', None)
             owner = session_config.get('owner', None)
+            asr = session_config.get('asr', None)
 
         elif not session_key and source == "posthoc processing":
             # Post-hoc re-analysis has no live session key; derive the timing
@@ -100,6 +104,7 @@ class ProcessingConfig:
             doa = data.get('doa', False)
             topic_model = data.get('topic_model', None)
             owner = data.get('owner', None)
+            asr = data.get('asr', None)
         else:
             logging.warning('Invalid key sent by device.')
             return False, "Invalid key."
@@ -107,7 +112,8 @@ class ProcessingConfig:
         return True, ProcessingConfig(auth_key, session_key, server_start, start_offset,
                                       sample_rate, encoding, channels, transcribe, keywords,
                                       doa, features, tag, diarization, embeddings_file,
-                                      topic_model, owner,sessionId,deviceId,videocartoonify,mimeExtension)
+                                      topic_model, owner,sessionId,deviceId,videocartoonify,mimeExtension,
+                                      asr=asr)
 
     def is_valid_key(self):
         return RedisSessions.get_device_key(self.auth_key) is not None
