@@ -10,6 +10,7 @@ import { KeywordUsageModel } from "../models/keyword-usage";
 import { SpeakerModel } from "../models/speaker";
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
+import { ApiService } from "../services/api-service";
 import { PodComponentPages } from "./html-pages";
 
 // The dashboard views live in the URL (?view=...&speaker=...) so they are
@@ -441,6 +442,45 @@ function PodComponent() {
   const onClickedTimeline = (transcript) => {
     setCurrentForm("Transcript");
     setCurrentTranscript(transcript);
+    setEditDraft(transcript && transcript.transcript ? transcript.transcript : "");
+  };
+
+  // Human corrections from the transcript dialog: fix the text, or fix who
+  // said it (same endpoints as the full transcripts page).
+  const [editDraft, setEditDraft] = useState("");
+  const roster = [...new Set(speakers.map((s) => s.alias).filter(Boolean))].sort();
+  const tagCounts = transcripts.reduce((m, t) => {
+    if (t.speaker_tag) m[t.speaker_tag] = (m[t.speaker_tag] || 0) + 1;
+    return m;
+  }, {});
+
+  const reassignTranscriptSpeaker = async (alias, applyToTag, guest) => {
+    const t = currentTranscript;
+    if (!t || t.id == null) return;
+    const oldTag = t.speaker_tag;
+    const res = await new ApiService().httpRequestCall(
+      `api/v1/transcripts/${t.id}/reassign`, "POST",
+      { alias, apply_to_tag: !!applyToTag, allow_guest: !!guest });
+    if (res.status !== 200) return;
+    setTranscripts(transcripts.map((row) => {
+      const hit = applyToTag && oldTag ? row.speaker_tag === oldTag : row.id === t.id;
+      return hit ? { ...row, speaker_tag: alias } : row;
+    }));
+    setCurrentTranscript({ ...t, speaker_tag: alias });
+    if (guest) getSpeakers();
+  };
+
+  const saveTranscriptText = async () => {
+    const t = currentTranscript;
+    const clean = (editDraft || "").trim();
+    if (!t || t.id == null || !clean || clean === t.transcript) return;
+    const res = await new ApiService().httpRequestCall(
+      `api/v1/transcripts/${t.id}/edit_text`, "POST", { transcript: clean });
+    if (res.status !== 200) return;
+    setTranscripts(transcripts.map((row) =>
+      row.id === t.id ? { ...row, transcript: clean } : row));
+    setCurrentTranscript({ ...t, transcript: clean });
+    closeDialog();
   };
 
   const openDialog = (form) => {
@@ -748,6 +788,12 @@ function PodComponent() {
       llmError={llmError}
       clearLlmError={() => setLlmError("")}
       currentTranscript={currentTranscript}
+      roster={roster}
+      tagCounts={tagCounts}
+      editDraft={editDraft}
+      setEditDraft={setEditDraft}
+      saveTranscriptText={saveTranscriptText}
+      reassignTranscriptSpeaker={reassignTranscriptSpeaker}
       closeDialog={closeDialog}
       seeAllTranscripts={seeAllTranscripts}
       openDialog={openDialog}

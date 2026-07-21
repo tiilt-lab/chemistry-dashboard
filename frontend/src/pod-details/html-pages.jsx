@@ -1,5 +1,6 @@
 import { GenericDialogBox, WaitingDialog } from "../dialog/dialog-component"
 import { ErrorDialog } from "../components/error-dialog"
+import { SpeakerReassign } from "../components/speaker-reassign"
 import { AppSpinner } from "../spinner/spinner-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { Appheader } from "../header/header-component"
@@ -131,10 +132,44 @@ function PodComponentPages(props) {
                         <div className={style["dialog-heading"]}>
                             Transcript
                         </div>
-                        <div className={style["dialog-body"]}>
-                            {props.currentTranscript.transcript}
+                        <div className="text-sm">
+                            <SpeakerReassign
+                                tag={props.currentTranscript.speaker_tag}
+                                roster={props.roster || []}
+                                count={
+                                    (props.tagCounts || {})[
+                                        props.currentTranscript.speaker_tag
+                                    ] || 0
+                                }
+                                onReassign={props.reassignTranscriptSpeaker}
+                            />
                         </div>
+                        <textarea
+                            value={props.editDraft}
+                            onChange={(e) => props.setEditDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.shiftKey) {
+                                    e.preventDefault()
+                                    props.saveTranscriptText()
+                                }
+                            }}
+                            aria-label="Edit transcript text"
+                            rows={Math.max(3, Math.ceil((props.editDraft || "").length / 60))}
+                            className="w-full rounded-lg border border-tiilt-line bg-white p-2 text-[15px] leading-relaxed text-tiilt-ink outline-none focus:border-tiilt"
+                        />
                         <div className={style["dialog-button-container"]}>
+                            <button
+                                className={`${style["dialog-button"]} ${style["right-button"]}`}
+                                disabled={
+                                    !(props.editDraft || "").trim() ||
+                                    (props.editDraft || "").trim() ===
+                                        props.currentTranscript.transcript
+                                }
+                                onClick={props.saveTranscriptText}
+                                title="Save the corrected transcript text"
+                            >
+                                Save
+                            </button>
                             <button
                                 className={`${style["dialog-button"]} ${style["right-button"]}`}
                                 onClick={props.closeDialog}

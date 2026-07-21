@@ -91,7 +91,10 @@ function PodRow({ device, enrich, alerts, onOpen, checked, onToggle, queue, inde
             ? device.name
             : `Pod ${index + 1}`
     const dur = fmtDur(e.duration)
-    const noData = e.has_data === false
+    // A connected pod is always clickable — live views (transcript, facial
+    // analytics) are exactly what you open before any data lands. The
+    // no-data lockout is only for ended pods that truly recorded nothing.
+    const noData = e.has_data === false && !device.connected
     const [editing, setEditing] = useState(false)
     const commitRename = (value) => {
         setEditing(false)
