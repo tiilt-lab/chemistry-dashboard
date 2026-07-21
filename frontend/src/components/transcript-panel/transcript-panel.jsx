@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { formatSeconds, speakerColorFor } from "../../globals"
 
 const FEATURE_FIELDS = [
@@ -30,10 +30,28 @@ function TranscriptPanel({
     transcriptionLabel,
     playbackTime,
     compact,
+    onEditText,
 }) {
     const scrollRef = useRef(null)
     const selectedRef = useRef(null)
     const playingRef = useRef(null)
+
+    // Inline text correction (same behavior as the full transcripts page):
+    // clicking an utterance opens it for editing in place; Enter or clicking
+    // away saves, Esc cancels. The E&T metric chips live on the timestamp.
+    const [editingId, setEditingId] = useState(null)
+    const [draft, setDraft] = useState("")
+    const beginEdit = (t) => {
+        if (!onEditText || t.id == null) return
+        setEditingId(t.id)
+        setDraft(t.transcript || "")
+    }
+    const commitEdit = async (t) => {
+        const clean = (draft || "").trim()
+        setEditingId(null)
+        if (!clean || clean === t.transcript) return
+        await onEditText(t.id, clean)
+    }
 
     const speakerColors = buildSpeakerColors(transcripts)
     const speakers = Object.keys(speakerColors)
@@ -146,38 +164,73 @@ function TranscriptPanel({
                                               : null
                                     }
                                     onClick={() =>
-                                        onSelectTime &&
-                                        onSelectTime(
-                                            isSelected ? null : t.start_time,
-                                        )
+                                        onEditText
+                                            ? beginEdit(t)
+                                            : onSelectTime &&
+                                              onSelectTime(
+                                                  isSelected ? null : t.start_time,
+                                              )
                                     }
                                     style={{ borderLeftColor: color }}
                                     className={
-                                        "cursor-pointer rounded-r-lg border-l-[3px] py-1 pr-2 pl-3 transition " +
+                                        (onEditText ? "cursor-text" : "cursor-pointer") +
+                                        " rounded-r-lg border-l-[3px] py-1 pr-2 pl-3 transition " +
                                         (isSelected
                                             ? "bg-tiilt-soft"
                                             : isPlaying
                                               ? "bg-tiilt-ground ring-1 ring-tiilt-line ring-inset"
                                               : "hover:bg-tiilt-ground/70")
                                     }
+                                    title={onEditText ? "Click to edit this transcript" : undefined}
                                 >
                                     <div className="flex gap-3">
-                                        <span className="font-ahamono w-14 flex-none pt-0.5 text-xs text-tiilt-muted tabular-nums">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                onSelectTime &&
+                                                    onSelectTime(
+                                                        isSelected ? null : t.start_time,
+                                                    )
+                                            }}
+                                            title="Show expression & thinking metrics for this utterance"
+                                            className="font-ahamono w-14 flex-none cursor-pointer pt-0.5 text-left text-xs text-tiilt-muted tabular-nums underline decoration-dotted underline-offset-2 hover:text-tiilt"
+                                        >
                                             {formatSeconds(t.start_time)}
-                                        </span>
-                                        <span className="text-sm leading-snug text-tiilt-ink">
-                                            {t.speaker_tag ? (
-                                                <span
-                                                    className="font-semibold"
-                                                    style={{ color }}
-                                                >
-                                                    {t.speaker_tag}:{" "}
-                                                </span>
-                                            ) : (
-                                                <></>
-                                            )}
-                                            {t.transcript}
-                                        </span>
+                                        </button>
+                                        {editingId != null && editingId === t.id ? (
+                                            <textarea
+                                                autoFocus
+                                                value={draft}
+                                                onChange={(e) => setDraft(e.target.value)}
+                                                onClick={(e) => e.stopPropagation()}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Escape") setEditingId(null)
+                                                    if (e.key === "Enter" && !e.shiftKey) {
+                                                        e.preventDefault()
+                                                        commitEdit(t)
+                                                    }
+                                                }}
+                                                onBlur={() => commitEdit(t)}
+                                                aria-label="Edit transcript text"
+                                                rows={Math.max(1, Math.ceil((draft || "").length / 60))}
+                                                className="w-full rounded-md border border-tiilt bg-white px-1 py-0.5 text-sm leading-snug text-tiilt-ink outline-none focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
+                                            />
+                                        ) : (
+                                            <span className="text-sm leading-snug text-tiilt-ink">
+                                                {t.speaker_tag ? (
+                                                    <span
+                                                        className="font-semibold"
+                                                        style={{ color }}
+                                                    >
+                                                        {t.speaker_tag}:{" "}
+                                                    </span>
+                                                ) : (
+                                                    <></>
+                                                )}
+                                                {t.transcript}
+                                            </span>
+                                        )}
                                     </div>
                                     {isSelected ? (
                                         <div className="mt-2 ml-14 flex flex-wrap gap-1.5">

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { formatHMS as formatSeconds } from "../globals";
+import { formatHMS as formatSeconds, speakerColorFor } from "../globals";
 import { useNavigate, useOutletContext,useParams, useSearchParams } from 'react-router-dom';
 import {TranscriptComponentPage} from './html-pages'
 import { decorateTranscripts } from './transcript-utils'
@@ -120,15 +120,15 @@ const createDisplayTranscripts = ()=> {
     return m
   }, {})
 
-  // One distinct, stable color per speaker in this pod: golden-angle hues
-  // over the sorted speaker list, so colors stay far apart and a given
-  // roster always maps to the same palette.
-  const speakerColors = [...new Set(
-    transcripts.map((t) => t.speaker_tag).filter(Boolean))].sort()
-    .reduce((m, tag, i) => {
-      m[tag] = `hsl(${Math.round((210 + i * 137.508) % 360)}, 60%, 45%)`
-      return m
-    }, {})
+  // One distinct, stable color per speaker — the same shared palette the
+  // pod page's transcript panel uses, so a speaker keeps one color across
+  // both views.
+  const speakerTags = [...new Set(
+    transcripts.map((t) => t.speaker_tag).filter(Boolean))]
+  const speakerColors = speakerTags.reduce((m, tag) => {
+    m[tag] = speakerColorFor(tag, speakerTags)
+    return m
+  }, {})
 
   // Persist a human correction, then reflect it locally without a reload.
   // guest=true attributes to someone outside the roster (they get added as a

@@ -492,6 +492,21 @@ function PodComponent() {
     setPodEditing(false);
   };
 
+  // Inline correction from the transcript panel (id + text, no dialog).
+  const editTranscriptText = async (transcriptId, text) => {
+    const clean = (text || "").trim();
+    const orig = transcripts.find((t) => t.id === transcriptId);
+    if (!clean || !orig || orig.transcript === clean) return;
+    const res = await new ApiService().httpRequestCall(
+      `api/v1/transcripts/${transcriptId}/edit_text`, "POST", { transcript: clean });
+    if (res.status !== 200) return;
+    setTranscripts(transcripts.map((row) =>
+      row.id === transcriptId ? { ...row, transcript: clean } : row));
+    if (currentTranscript && currentTranscript.id === transcriptId) {
+      setCurrentTranscript({ ...currentTranscript, transcript: clean });
+    }
+  };
+
   const cancelPodEdit = () => {
     setPodEditing(false);
     setEditDraft(currentTranscript && currentTranscript.transcript
@@ -811,6 +826,7 @@ function PodComponent() {
       setPodEditing={setPodEditing}
       cancelPodEdit={cancelPodEdit}
       saveTranscriptText={saveTranscriptText}
+      editTranscriptText={editTranscriptText}
       reassignTranscriptSpeaker={reassignTranscriptSpeaker}
       closeDialog={closeDialog}
       seeAllTranscripts={seeAllTranscripts}

@@ -43,7 +43,8 @@ export function SpeakerReassign({ tag, roster, count, onReassign, disabled, colo
                 style={color ? { color } : undefined}
                 title={disabled ? label : "Reassign speaker"}
                 className={
-                    "rounded px-1 font-semibold text-tiilt transition " +
+                    "rounded px-1 font-semibold transition " +
+                    (tag ? "text-tiilt " : "text-tiilt-muted ") +
                     (disabled
                         ? "cursor-default"
                         : "cursor-pointer underline decoration-dotted underline-offset-2 hover:bg-tiilt-soft")

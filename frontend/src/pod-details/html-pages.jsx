@@ -112,6 +112,7 @@ function PodComponentPages(props) {
                                 getSpeakerAliasFromID={
                                     props.getSpeakerAliasFromID
                                 }
+                                editTranscriptText={props.editTranscriptText}
                                 seeAllTranscripts={props.seeAllTranscripts}
                             ></AppInfographicsComparison>
                         )}

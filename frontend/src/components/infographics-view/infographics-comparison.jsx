@@ -204,6 +204,7 @@ function AppInfographicsComparison(props) {
                                     playbackTime={playbackTime}
                                     compact
                                     transcriptionLabel={transcriptionLabel}
+                                    onEditText={props.editTranscriptText}
                                 />
                             </div>
                         </AppSectionBoxComponent>
@@ -280,6 +281,7 @@ function AppInfographicsComparison(props) {
                                 onSelectTime={setSelectedTime}
                                 playbackTime={playbackTime}
                                 transcriptionLabel={transcriptionLabel}
+                                onEditText={props.editTranscriptText}
                             />
                         </AppSectionBoxComponent>
                     )}
