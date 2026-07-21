@@ -32,7 +32,6 @@ function TranscriptsComponent(){
   const [showKeywords, setShowKeywords] = useState(true);
   const [trigger, setTrigger] = useState(0)
   const [showDoA,setShowDoA] = useState(false);
-  const [reload, setReload] = useState(false)
   const [roster, setRoster] = useState([])
   const [activeSessionService, setActiveSessionService] = useOutletContext();
   const { sessionDeviceId } = useParams(); 
@@ -67,7 +66,6 @@ function TranscriptsComponent(){
                  const data = e.filter(t => t.session_device_id === parseInt(sessionDeviceId, 10))
                      .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
                  setTranscripts(data)
-                 setReload(true)
              }
          })
          subscriptions.push(transcriptSub);
@@ -85,11 +83,15 @@ function TranscriptsComponent(){
   }
 },[])
 
+// Recompute the decorated rows whenever the transcript set changes. The
+// previous one-shot `reload` flag latched true on the FIRST socket digest
+// page — if that page held only other pods' rows (sessions with >200
+// transcripts are paginated), later pages never re-triggered the display
+// build and the list rendered permanently empty.
 useEffect(()=>{
-  if(reload){
-    createDisplayTranscripts();
-  }
-},[reload])
+  createDisplayTranscripts();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+},[transcripts])
 
 useEffect(()=>{
   if(trigger > 0){

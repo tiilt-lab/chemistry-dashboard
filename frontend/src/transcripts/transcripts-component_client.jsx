@@ -12,7 +12,6 @@ function TranscriptsComponentClient(props){
   const [displayTranscripts, setDisplayTranscripts] = useState([]);
   const [showKeywords, setShowKeywords] = useState(true);
   const [showDoA,setShowDoA] = useState(false);
-  const [reload,setReload] = useState(false);
   const navigate = useNavigate()
   const sessionService = new SessionService()
   
@@ -44,12 +43,14 @@ function TranscriptsComponentClient(props){
   },[transcripts.length]) 
   */
   
-  // hook for more frequent results (speaker tags for instance)
+  // Rebuild the decorated rows whenever a poll delivers transcripts. (The
+  // old reload flag was set false-then-true inside one awaited fetch, which
+  // React 18 batches into "no change" — the display list froze after the
+  // first successful fetch.)
   useEffect(()=>{
-    if(reload == true){
-      createDisplayTranscripts();
-    }
-  },[reload])
+    createDisplayTranscripts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[transcripts])
 
 
 const fetchTranscript = async (deviceid) => {
@@ -57,11 +58,9 @@ const fetchTranscript = async (deviceid) => {
       const response = await sessionService.getSessionDeviceTranscriptsForClient(deviceid)
 
       if (response.status === 200) {
-          setReload(false);
           const jsonObj = await response.json()
           const data = jsonObj
           setTransripts(data);
-          setReload(true);
       } else if (response.status === 400 || response.status === 401) {
           console.log(response, 'no transcript obj fromtranscripts-Component-client.js')
       }
