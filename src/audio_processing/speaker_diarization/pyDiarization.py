@@ -27,16 +27,28 @@ def embedSignal(x, verification):
   return [embedding[0, 0].detach().cpu().numpy()]
 
 # Live-attribution accept gates, in cosine-similarity space (float-domain
-# ECAPA embeddings). Strong prints (v2, minutes of real speech) score
-# ~0.4-0.7 on their own utterances; wrong-speaker sims sit well under 0.3.
-ACCEPT_SIM = 0.30      # floor: below this, abstain
-ACCEPT_MARGIN = 0.05   # best must clearly beat the runner-up...
-ACCEPT_SURE = 0.45     # ...unless it is this high on its own
+# ECAPA embeddings). Enrollment prints score lower against live session audio
+# than against themselves (mic/room domain gap), so acceptance is tiered:
+# high-sim alone, mid-sim with a margin, or low-sim with a DOMINANT margin.
+ACCEPT_SURE = 0.45     # this high alone: accept
+ACCEPT_SIM = 0.30      # mid floor, needs margin...
+ACCEPT_MARGIN = 0.05
+ACCEPT_LOW = 0.20      # low floor, needs a dominant lead over the runner-up
+ACCEPT_LOW_MARGIN = 0.06
+# Session adaptation: only utterances this confident teach the session print
+# (guards against a wrong accept poisoning the wrong person's reference).
+ADAPT_MIN_SIM = 0.40
+ADAPT_MAX_SAMPLES = 12
+ADAPT_MIN_SAMPLES = 3  # use the adapted print only once it's stable
 
 # alias -> normalized reference embedding, for the life of the process. A
-# speaker's reference never changes mid-session, so embed it exactly once
-# (the old code re-embedded every print for every utterance).
+# speaker's enrollment reference never changes mid-session, so embed it
+# exactly once (the old code re-embedded every print for every utterance).
 _PRINT_CACHE = {}
+# alias -> list of confidently-accepted utterance embeddings from live
+# sessions. Bridges the enrollment-mic vs session-mic domain gap: after a few
+# clear utterances, the speaker is matched against how they sound TODAY.
+_SESSION_ACC = {}
 
 
 def _print_embedding(alias, raw_bytes, verification):
@@ -89,18 +101,36 @@ def checkFingerprints(x, fingerprints, verification):
   scored = []
   for speaker in fingerprints:
     info = fingerprints[speaker]
-    ref = _print_embedding(info.get('alias'), info.get('data'), verification)
+    alias = info.get('alias')
+    ref = _print_embedding(alias, info.get('data'), verification)
     if ref is None:
       continue
-    scored.append((float(np.dot(utt, ref)), info.get('alias'), speaker))
+    sim = float(np.dot(utt, ref))
+    # Session-adapted reference: how this person sounds through TODAY's mic.
+    acc = _SESSION_ACC.get(alias)
+    if acc and len(acc) >= ADAPT_MIN_SAMPLES:
+      sref = np.mean(acc, axis=0)
+      sref = sref / (np.linalg.norm(sref) + 1e-9)
+      sim = max(sim, float(np.dot(utt, sref)))
+    scored.append((sim, alias, speaker))
   if not scored:
     return None, -1
   scored.sort(reverse=True, key=lambda s: s[0])
   best_sim, best_alias, best_id = scored[0]
   runner_up = scored[1][0] if len(scored) > 1 else -1.0
+  margin = best_sim - runner_up
 
-  if best_sim >= ACCEPT_SURE or \
-      (best_sim >= ACCEPT_SIM and best_sim - runner_up >= ACCEPT_MARGIN):
+  accepted = (best_sim >= ACCEPT_SURE
+              or (best_sim >= ACCEPT_SIM and margin >= ACCEPT_MARGIN)
+              or (best_sim >= ACCEPT_LOW and margin >= ACCEPT_LOW_MARGIN))
+  if accepted:
+    if best_sim >= ADAPT_MIN_SIM:
+      acc = _SESSION_ACC.setdefault(best_alias, [])
+      acc.append(utt)
+      if len(acc) > ADAPT_MAX_SAMPLES:
+        acc.pop(0)
+      if len(acc) == ADAPT_MIN_SAMPLES:
+        logging.info('session-adapted print active for %s', best_alias)
     logging.info('Selected speaker is %s (sim %.3f, next %.3f)',
                  best_alias, best_sim, runner_up)
     return best_alias, best_id
