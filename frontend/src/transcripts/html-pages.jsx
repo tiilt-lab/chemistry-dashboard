@@ -56,7 +56,7 @@ function TranscriptComponentPage(props) {
                                                 )}
                                             </span>
                                         </div>
-                                        <div className="min-w-0 grow text-[15px] leading-relaxed text-tiilt-ink">
+                                        <div className="group min-w-0 grow text-[15px] leading-relaxed text-tiilt-ink">
                                             {props.reassignSpeaker ? (
                                                 <SpeakerReassign
                                                     tag={transcript.speaker_tag}
@@ -66,11 +66,12 @@ function TranscriptComponentPage(props) {
                                                             transcript.speaker_tag
                                                         ] || 0
                                                     }
-                                                    onReassign={(alias, applyToTag) =>
+                                                    onReassign={(alias, applyToTag, guest) =>
                                                         props.reassignSpeaker(
                                                             transcript.id,
                                                             alias,
                                                             applyToTag,
+                                                            guest,
                                                         )
                                                     }
                                                 />
@@ -81,6 +82,43 @@ function TranscriptComponentPage(props) {
                                             ) : (
                                                 <></>
                                             )}{" "}
+                                            {props.editingId === transcript.id ? (
+                                                <span className="mt-1 flex items-start gap-2">
+                                                    <textarea
+                                                        autoFocus
+                                                        value={props.editDraft}
+                                                        onChange={(e) =>
+                                                            props.setEditDraft(e.target.value)
+                                                        }
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === "Escape") props.cancelEdit()
+                                                            if (e.key === "Enter" && !e.shiftKey) {
+                                                                e.preventDefault()
+                                                                props.saveEdit()
+                                                            }
+                                                        }}
+                                                        rows={Math.max(2, Math.ceil((props.editDraft || "").length / 70))}
+                                                        className="w-full rounded-lg border border-tiilt bg-white p-2 text-[15px] leading-relaxed text-tiilt-ink outline-none"
+                                                    />
+                                                    <span className="flex flex-none flex-col gap-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={props.saveEdit}
+                                                            className="rounded bg-tiilt px-2.5 py-1 text-xs font-semibold text-white"
+                                                        >
+                                                            Save
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={props.cancelEdit}
+                                                            className="rounded px-2.5 py-1 text-xs font-semibold text-tiilt-muted hover:bg-tiilt-soft"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </span>
+                                                </span>
+                                            ) : (
+                                                <>
                                             {transcript.words.map(
                                                 (transcriptData, wIndex) =>
                                                     transcriptData.matchingKeywords !==
@@ -108,6 +146,19 @@ function TranscriptComponentPage(props) {
                                                                 " "}
                                                         </span>
                                                     ),
+                                            )}
+                                            {props.beginEdit ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => props.beginEdit(transcript)}
+                                                    title="Edit this transcript text"
+                                                    aria-label="Edit transcript text"
+                                                    className="ml-1 inline-flex cursor-pointer rounded px-1 text-xs text-tiilt-muted opacity-0 transition group-hover:opacity-100 hover:bg-tiilt-soft hover:text-tiilt focus:opacity-100"
+                                                >
+                                                    ✎
+                                                </button>
+                                            ) : null}
+                                                </>
                                             )}
                                         </div>
                                     </li>

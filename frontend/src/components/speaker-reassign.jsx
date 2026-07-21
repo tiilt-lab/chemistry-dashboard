@@ -7,6 +7,8 @@ import { useState, useRef, useEffect } from "react"
 export function SpeakerReassign({ tag, roster, count, onReassign, disabled }) {
     const [open, setOpen] = useState(false)
     const [busy, setBusy] = useState(false)
+    const [guestMode, setGuestMode] = useState(false)
+    const [guestName, setGuestName] = useState("")
     const ref = useRef(null)
 
     useEffect(() => {
@@ -19,11 +21,13 @@ export function SpeakerReassign({ tag, roster, count, onReassign, disabled }) {
         return () => document.removeEventListener("mousedown", away)
     }, [open])
 
-    const pick = async (alias, applyToTag) => {
+    const pick = async (alias, applyToTag, guest = false) => {
         setBusy(true)
         try {
-            await onReassign(alias, applyToTag)
+            await onReassign(alias, applyToTag, guest)
             setOpen(false)
+            setGuestMode(false)
+            setGuestName("")
         } finally {
             setBusy(false)
         }
@@ -54,11 +58,12 @@ export function SpeakerReassign({ tag, roster, count, onReassign, disabled }) {
                     <div className="px-2 py-1 text-[11px] font-semibold tracking-wide text-tiilt-muted uppercase">
                         This section is from…
                     </div>
-                    {roster.length === 0 ? (
+                    {roster.length === 0 && !guestMode ? (
                         <div className="px-2 py-2 text-xs text-tiilt-muted">
                             No participants on file for this group.
                         </div>
                     ) : (
+                        !guestMode &&
                         roster.map((alias) => (
                             <div
                                 key={alias}
@@ -91,6 +96,42 @@ export function SpeakerReassign({ tag, roster, count, onReassign, disabled }) {
                                 ) : null}
                             </div>
                         ))
+                    )}
+                    {guestMode ? (
+                        <form
+                            className="flex items-center gap-1 px-1 py-1"
+                            onSubmit={(e) => {
+                                e.preventDefault()
+                                const name = guestName.trim()
+                                if (name) pick(name, false, true)
+                            }}
+                        >
+                            <input
+                                autoFocus
+                                value={guestName}
+                                onChange={(e) => setGuestName(e.target.value)}
+                                placeholder="Guest's name"
+                                maxLength={64}
+                                className="w-full rounded border border-tiilt-line px-2 py-1 text-sm text-tiilt-ink outline-none focus:border-tiilt"
+                            />
+                            <button
+                                type="submit"
+                                disabled={busy || !guestName.trim()}
+                                className="flex-none rounded bg-tiilt px-2 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                            >
+                                Add
+                            </button>
+                        </form>
+                    ) : (
+                        <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => setGuestMode(true)}
+                            className="mt-0.5 w-full rounded-md border-t border-tiilt-line px-2 py-1.5 text-left text-xs font-semibold text-tiilt-muted transition hover:bg-tiilt-soft/50 hover:text-tiilt"
+                            title="Attribute to someone who isn't in this group's roster — they'll be added as a speaker on this group"
+                        >
+                            Someone else…
+                        </button>
                     )}
                 </div>
             ) : null}

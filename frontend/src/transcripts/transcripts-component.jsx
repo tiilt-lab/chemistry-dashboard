@@ -119,13 +119,18 @@ const createDisplayTranscripts = ()=> {
   }, {})
 
   // Persist a human correction, then reflect it locally without a reload.
-  const reassignSpeaker = async (transcriptId, alias, applyToTag) => {
+  // guest=true attributes to someone outside the roster (they get added as a
+  // speaker on this group server-side).
+  const reassignSpeaker = async (transcriptId, alias, applyToTag, guest) => {
     const target = transcripts.find((t) => t.id === transcriptId)
     const oldTag = target ? target.speaker_tag : null
     const res = await new ApiService().httpRequestCall(
       `api/v1/transcripts/${transcriptId}/reassign`, "POST",
-      { alias, apply_to_tag: !!applyToTag })
+      { alias, apply_to_tag: !!applyToTag, allow_guest: !!guest })
     if (res.status !== 200) return
+    if (guest && !roster.includes(alias)) {
+      setRoster((r) => [...r, alias].sort())
+    }
     const next = transcripts.map((t) => {
       const hit = applyToTag && oldTag
         ? t.speaker_tag === oldTag
@@ -134,6 +139,28 @@ const createDisplayTranscripts = ()=> {
     })
     setTranscripts(next)
     setDisplayTranscripts(decorateTranscripts(next, showKeywords, showDoA, angleToColor))
+  }
+
+  // Click-to-edit the transcript text of one row. The server preserves the
+  // original ASR text in voice_features.asr_text on first edit.
+  const [editingId, setEditingId] = useState(null)
+  const [editDraft, setEditDraft] = useState("")
+  const beginEdit = (t) => {
+    setEditingId(t.id)
+    setEditDraft(t.transcript || "")
+  }
+  const cancelEdit = () => setEditingId(null)
+  const saveEdit = async () => {
+    const text = editDraft.trim()
+    if (!text || editingId == null) return
+    const res = await new ApiService().httpRequestCall(
+      `api/v1/transcripts/${editingId}/edit_text`, "POST", { transcript: text })
+    if (res.status !== 200) return
+    const next = transcripts.map((t) =>
+      t.id === editingId ? { ...t, transcript: text } : t)
+    setTranscripts(next)
+    setDisplayTranscripts(decorateTranscripts(next, showKeywords, showDoA, angleToColor))
+    setEditingId(null)
   }
 
   const angleToColor = (angle, id)=> {
@@ -222,6 +249,12 @@ const createDisplayTranscripts = ()=> {
       roster = {roster}
       tagCounts = {tagCounts}
       reassignSpeaker = {reassignSpeaker}
+      editingId = {editingId}
+      editDraft = {editDraft}
+      setEditDraft = {setEditDraft}
+      beginEdit = {beginEdit}
+      cancelEdit = {cancelEdit}
+      saveEdit = {saveEdit}
     />
   )
 }

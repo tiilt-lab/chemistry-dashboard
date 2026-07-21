@@ -58,6 +58,30 @@ def get_speaker_tags(session_device_id=None):
     return query.count()
 
 
+def update_transcript_text(transcript_id, text):
+    """Human edit of a transcript row's text. Preserves the original ASR text
+    in voice_features.asr_text on first edit; refreshes word_count and the
+    question flag."""
+    import json as _json
+    row = db.session.query(Transcript).filter(Transcript.id == transcript_id).first()
+    if row is None:
+        return False
+    try:
+        vf = _json.loads(row.voice_features) if row.voice_features else {}
+        if not isinstance(vf, dict):
+            vf = {}
+    except Exception:
+        vf = {}
+    if 'asr_text' not in vf:
+        vf['asr_text'] = row.transcript
+    row.voice_features = _json.dumps(vf)
+    row.transcript = text
+    row.word_count = len(text.split())
+    row.question = '?' in text
+    db.session.commit()
+    return True
+
+
 def reassign_transcript_speaker(transcript_id, alias, apply_to_tag=False):
     """Human correction of who a transcript segment is from. Sets speaker_tag
     (and speaker_id, if a matching Speaker slot exists on the pod) on the row;
