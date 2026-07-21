@@ -45,7 +45,7 @@ export function SpeakerReassign({ tag, roster, count, onReassign, disabled }) {
                     "rounded px-1 font-semibold text-tiilt transition " +
                     (disabled
                         ? "cursor-default"
-                        : "cursor-pointer hover:bg-tiilt-soft hover:underline decoration-dotted")
+                        : "cursor-pointer underline decoration-dotted underline-offset-2 hover:bg-tiilt-soft")
                 }
             >
                 {label}:

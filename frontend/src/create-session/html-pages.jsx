@@ -14,7 +14,7 @@ import LightIcon from "@icons/Light";
 // (Keyword lists and topic models moved to post-hoc analysis.)
 
 const contentWrap =
-  "mx-auto flex w-full max-w-lg grow flex-col gap-4 overflow-y-auto px-4 py-6";
+  "mx-auto flex w-full max-w-lg grow flex-col gap-4 px-4 py-6";
 const fieldLabel = "mb-1.5 block text-sm font-semibold text-tiilt-ink";
 const footerBar = "w-full flex-none border-t border-tiilt-line bg-white";
 const footerRow = "mx-auto flex w-full max-w-lg gap-3 px-4 py-4";

@@ -48,7 +48,7 @@ function ExpertRatingPage(props) {
                             <React.Fragment>
                                 <div className={pageShell}>
                                 <div className={formCard}>
-                                <div className="mx-auto flex w-full max-w-md grow flex-col gap-4 overflow-y-auto px-4 py-6">
+                                <div className="mx-auto flex w-full max-w-md grow flex-col gap-4 px-4 py-6">
                                     <div>
                                         <label htmlFor="evaluatortype" className="mb-1.5 block text-sm font-semibold text-tiilt-ink">
                                             Evaluating as

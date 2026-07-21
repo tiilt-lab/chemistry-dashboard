@@ -25,7 +25,7 @@ function PodComponentPage(props) {
 
         <div className={pageShell}>
         <div className={formCard}>
-        <div className="mx-auto flex w-full max-w-lg grow flex-col gap-4 overflow-y-auto px-4 py-6">
+        <div className="mx-auto flex w-full max-w-lg grow flex-col gap-4 px-4 py-6">
           {props.devices === undefined ? (
             <div className="py-10 text-center text-sm text-tiilt-muted">
               Loading…

@@ -22,7 +22,7 @@ function ManageTopicsPage(props) {
                 <LibraryTabs />
                 <div className={pageShell}>
                 <div className={formCard}>
-                <div className="relative min-h-0 w-full grow overflow-y-auto">
+                <div className="relative min-h-0 w-full grow">
                     <div className="mx-auto w-full max-w-2xl px-4 py-6">
                         {!props.topicModels ? (
                             <SkeletonRows rows={5} />

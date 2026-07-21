@@ -60,7 +60,7 @@ function StudentSessionDashboardPages(props) {
                             <React.Fragment>
                                 <div className={pageShell}>
                                 <div className={formCard}>
-                                <div className="mx-auto flex w-full max-w-md grow flex-col gap-4 overflow-y-auto px-4 py-6">
+                                <div className="mx-auto flex w-full max-w-md grow flex-col gap-4 px-4 py-6">
                                     <p className="text-sm text-tiilt-muted">
                                         Enter your username to see all of your
                                         discussion sessions and reflections.
@@ -132,7 +132,7 @@ function StudentSessionDashboardPages(props) {
                                 
 
                                 {props.nextPage === "sessionlistpage" && (
-                                    <div className="mt-2 grow overflow-y-auto px-4 py-4">
+                                    <div className="mt-2 grow px-4 py-4">
                                         <div className="mx-auto max-w-3xl">
                                             <div className="mb-3 text-sm text-tiilt-muted">
                                                 Your sessions — open one to see your
@@ -177,7 +177,7 @@ function StudentSessionDashboardPages(props) {
                                 )}
 
                                 {props.nextPage === "displaygrouppage" && (
-                                    <div className="mt-2 grow overflow-y-auto px-4 py-4">
+                                    <div className="mt-2 grow px-4 py-4">
                                         <div className="mx-auto max-w-3xl">
                                             <div className="mb-3 text-sm text-tiilt-muted">
                                                 Your groups in this session — open one,

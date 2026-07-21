@@ -17,7 +17,7 @@ function KeywordListPages(props) {
       <div className={pageShell}>
       <div className={formCard}>
       {props.keywordList && props.keywordListItems ? (
-        <div className="mx-auto flex w-full max-w-lg grow flex-col gap-3 overflow-y-auto px-4 py-6">
+        <div className="mx-auto flex w-full max-w-lg grow flex-col gap-3 px-4 py-6">
           <div>
             <label
               htmlFor="kw-list-name"

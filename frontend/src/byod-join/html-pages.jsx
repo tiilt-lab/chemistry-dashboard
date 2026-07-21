@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react"
 import { btnPrimary, btnPrimaryTall, btnSecondaryTall, dlgInput, dlgSelect, dlgPrimary, dlgError } from "../components/dialog-styles"
+import { pageShell, formCard } from "../components/layout-styles"
 import { PodMicRing } from "../components/pod-mic-ring"
 import { Appheader } from "../header/header-component"
 import { VoiceRecorder } from "react-voice-recorder-player"
@@ -28,15 +29,6 @@ import { defaultGroupName as makeDefaultGroupName } from "../lib/utils"
 import { DeviceCheckPage } from "./device-check"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
-
-// Single-scroll variants of the shared pageShell/formCard: the page's
-// main-container owns the only scrollbar, so the join flow never shows a
-// scrollbar nested inside another. The card grows with its content instead
-// of capping height and scrolling internally.
-const pageShell =
-    "flex grow flex-col md:items-center md:justify-center md:p-6"
-const formCard =
-    "flex w-full grow flex-col md:grow-0 md:max-w-xl md:rounded-2xl md:border md:border-tiilt-line md:bg-white md:shadow-modal"
 
 const fieldLabel = "mb-1.5 block text-left text-sm font-semibold text-tiilt-ink"
 
@@ -249,7 +241,7 @@ function ByodJoinPage(props) {
                         )}
                         {props.joinPhase === "enrolling" && props.joinwith === "Audio" && (
                                 <React.Fragment>
-                                    <div className="@container relative box-border flex grow flex-col items-center justify-between text-center">
+                                    <div className="@container relative box-border flex min-h-0 grow flex-col items-center justify-between overflow-y-auto text-center">
                                         <div className="w-[300px] px-2 sm:w-[400px] lg:w-3xl">
                                             <div className="my-1.5 font-sans text-base/loose font-medium text-tiilt-muted">
                                                 Please add a Speaker Fingerprint
@@ -414,7 +406,7 @@ function ByodJoinPage(props) {
 
                         {props.joinPhase === "enrolling" && (props.joinwith === "Video" || props.joinwith === "Videocartoonify") && (
                                 <React.Fragment>
-                                    <div className="@container relative box-border flex grow flex-col items-center justify-between text-center">
+                                    <div className="@container relative box-border flex min-h-0 grow flex-col items-center justify-between overflow-y-auto text-center">
                                         <div className="w-[300px] px-2 sm:w-[400px] lg:w-3xl">
                                             <div className="my-1.5 font-sans text-base/loose font-medium text-tiilt-muted">
                                                 Please add a Speaker Fingerprint

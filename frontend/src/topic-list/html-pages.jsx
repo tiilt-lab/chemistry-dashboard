@@ -38,7 +38,7 @@ function TopicListPage(props) {
 
         <div className={pageShell}>
         <div className={formCard}>
-        <div className="mx-auto flex w-full max-w-lg grow flex-col gap-2 overflow-y-auto px-4 py-6">
+        <div className="mx-auto flex w-full max-w-lg grow flex-col gap-2 px-4 py-6">
           {props.topicListStruct.length === 0 ? (
             <EmptyState
               title="No topics"

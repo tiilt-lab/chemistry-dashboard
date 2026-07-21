@@ -153,7 +153,7 @@ function TranscriptComponentPage(props) {
                                                     onClick={() => props.beginEdit(transcript)}
                                                     title="Edit this transcript text"
                                                     aria-label="Edit transcript text"
-                                                    className="ml-1 inline-flex cursor-pointer rounded px-1 text-xs text-tiilt-muted opacity-0 transition group-hover:opacity-100 hover:bg-tiilt-soft hover:text-tiilt focus:opacity-100"
+                                                    className="ml-1 inline-flex cursor-pointer rounded px-1 text-xs text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
                                                 >
                                                     ✎
                                                 </button>

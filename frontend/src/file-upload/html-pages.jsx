@@ -14,7 +14,7 @@ function FileUploadPage(props) {
         />
         <div className={pageShell}>
         <div className={formCard}>
-        <div className="mx-auto flex w-full max-w-md grow flex-col gap-4 overflow-y-auto px-4 py-8">
+        <div className="mx-auto flex w-full max-w-md grow flex-col gap-4 px-4 py-8">
           <div className="text-center">
             <div className="text-lg font-semibold text-tiilt-ink">
               Upload files for topic modeling
