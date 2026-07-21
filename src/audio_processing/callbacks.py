@@ -131,6 +131,8 @@ def post_speaker_transcript_metrics(transcript_data, speakers, participation_sco
         'topic_id': transcript_data['topic_id'],
         'speaker_tag': transcript_data['speaker_tag'],
         'speaker_id':transcript_data['speaker_id'],
+        # optional passthrough (e.g. {'contested': [aliases]} on overlap)
+        'voice_features': transcript_data.get('voice_features'),
         'speakers':speakers,
         'participation_scores': participation_scores,
         'internal_cohesion': internal_cohesion,

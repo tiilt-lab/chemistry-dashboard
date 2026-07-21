@@ -17,6 +17,7 @@ from doa.doa_respeaker_v2_6mic_array import calculateDOA
 from speaker_diarization.pyDiarization import clusterSpectralEmbeddings
 from speaker_diarization.pyDiarization import embedSignal, checkFingerprints
 from speaker_diarization.pyDiarization import getSpectralEmbeddings
+from speaker_diarization import segment_split
 import numpy as np
 from joblib import load
 from topic_modeling.topic_modeling import preprocess_transcript
@@ -215,26 +216,55 @@ class AudioProcessor:
             start_time += self.config.start_offset
             end_time += self.config.start_offset
             
-            # Perform Speaker Diarization
+            # Perform Speaker Diarization (interruption-aware: a segment where
+            # the speaker flips mid-way is split at the change point into two
+            # cleanly-attributed rows; true overlap is tagged contested).
             speaker_tag = None
             speaker_id = -1
             if self.config.diarization and self.fingerprints and len(self.fingerprints):
-                speaker_tag, speaker_id = checkFingerprints(
+                word_tuples = [
+                    (w.word,
+                     w.start_time.seconds + (w.start_time.nanos / NANO) + self.config.start_offset,
+                     w.end_time.seconds + (w.end_time.nanos / NANO) + self.config.start_offset)
+                    for w in words]
+                try:
+                    parts = segment_split.split_and_attribute(
+                        np.frombuffer(audio_data, dtype=np.int16), word_tuples,
+                        start_time, end_time, self.fingerprints,
+                        self.diarization_model)
+                except Exception as e:
+                    logging.warning('segment split failed (%s); whole-segment matching', e)
+                    tag, sid = checkFingerprints(
                         audio_data, self.fingerprints, self.diarization_model)
-                self.speaker_metrics_process.process_transcript(
-                    {
-                        'source': self.config.auth_key,
-                        'start_time': start_time,
-                        'end_time': end_time,
-                        'transcript': transcript_text,
-                        'doa': doa,
-                        'questions': questions,
-                        'keywords': keywords,
-                        'features': features,
-                        'topic_id': topic_id,
-                        'speaker_tag': speaker_tag,
-                        'speaker_id': speaker_id
-                    })
+                    parts = [{'start': start_time, 'end': end_time,
+                              'text_slice': (0, len(words)), 'alias': tag,
+                              'speaker_id': sid, 'contested': None}]
+                multi = len(parts) > 1
+                for p in parts:
+                    if multi:
+                        w0, w1 = p['text_slice']
+                        p_text = ' '.join(word_tuples[i][0] for i in range(w0, w1)).strip() or transcript_text
+                        p_questions = features_detector.detect_questions(p_text) if self.config.transcribe else None
+                        p_keywords = keyword_detector.detect_keywords(p_text, self.config.keywords) if self.config.keywords else None
+                        p_features = scorer_factory.get_scorer(cf.scorer()).detect_features(p_text) if self.config.features else None
+                    else:
+                        p_text, p_questions, p_keywords, p_features = transcript_text, questions, keywords, features
+                    self.speaker_metrics_process.process_transcript(
+                        {
+                            'source': self.config.auth_key,
+                            'start_time': p['start'],
+                            'end_time': p['end'],
+                            'transcript': p_text,
+                            'doa': doa,
+                            'questions': p_questions,
+                            'keywords': p_keywords,
+                            'features': p_features,
+                            'topic_id': topic_id,
+                            'speaker_tag': p['alias'],
+                            'speaker_id': p['speaker_id'],
+                            'voice_features': ({'contested': p['contested']}
+                                               if p.get('contested') else None),
+                        })
             else:
                 if self.config.diarization:
                     if len(self.embeddings) == 0 and self.embeddings_file is not None:
