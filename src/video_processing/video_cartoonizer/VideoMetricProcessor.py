@@ -54,6 +54,9 @@ class VideoMetricAnalytics:
     # candidates that join later having to wait longer till it gets to their turn
     def scheduler(self):
         while self.running:
+            # Idle briefly between rounds — with skip-on-empty below, a round
+            # over all-empty queues completes instantly and would hot-spin.
+            time.sleep(0.05)
             candidate_turn = 0
             candidate_unique_ids = list(self.Imagedetection.accumulator_queue_manager.keys())
             len_candidate_unique_ids = len(candidate_unique_ids)
@@ -63,10 +66,14 @@ class VideoMetricAnalytics:
 
             while candidate_turn < len_candidate_unique_ids:
                 try:
-                    # block briefly to avoid CPU spin; adjust timeout for latency needs
                     payload = self.Imagedetection.accumulator_queue_manager[candidate_unique_ids[candidate_turn]].get_nowait() #get(timeout=0.25)
-                    
+
                 except Empty:
+                    # Advance past an empty queue instead of retrying it —
+                    # same starvation bug as the image-detection scheduler:
+                    # live sessions never send last_batch, so dead sessions'
+                    # empty queues would otherwise pin the round-robin forever.
+                    candidate_turn += 1
                     continue
                 
                 self.work_queue.put(payload) 

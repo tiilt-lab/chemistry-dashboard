@@ -212,21 +212,29 @@ class ImageObjectDetection:
     # candidates that join later having to wait longer till it gets to their turn
     def scheduler(self):
         while self.running:
+            # Idle briefly between rounds — with skip-on-empty below, a round
+            # over all-empty queues completes instantly and would hot-spin.
+            time.sleep(0.05)
             candidate_turn = 0
             candidate_unique_ids = list(self.frame_queue_manager.keys())
             len_candidate_unique_ids = len(candidate_unique_ids)
-            
+
             if len_candidate_unique_ids != 0:
                 self.hasreceivedjob = True
 
             while candidate_turn < len_candidate_unique_ids:
                 try:
-                    # block briefly to avoid CPU spin; adjust timeout for latency needs
                     payload = self.frame_queue_manager[candidate_unique_ids[candidate_turn]].get_nowait() #get(timeout=0.25)
                 except Empty:
+                    # Skip this candidate rather than retrying it. Live sessions
+                    # never send last_batch, so their queues stay registered
+                    # after disconnect — retrying a dead session's empty queue
+                    # here spun forever and starved every later session (no
+                    # image detection ran after the first sessions post-restart).
+                    candidate_turn += 1
                     continue
-                
-                self.work_queue.put(payload) 
+
+                self.work_queue.put(payload)
                 _,_,_,_,_,auth_key,last_batch = payload
 
                 if last_batch:
@@ -282,11 +290,11 @@ class ImageObjectDetection:
             logging.info("reserved {0}: after image-detection for batch {1}".format((torch.cuda.memory_reserved() / 1024**2), batch_track))
 
             accumulator_load = [auth_key,all_frames,accumulator,batch_track,last_batch]
-            #enque for gaze detection and attention flow processing,
-
-            return accumulator_load #remove later
-            #uncomment later
-            # self.enqueue_latest_accumulator_payload(accumulator_load,auth_key)
+            # Enqueue for gaze/attention/emotion processing. This handoff was
+            # left as a bare `return` (dead code) — the VideoMetricProcessor
+            # never received a payload, so live video metrics were never
+            # computed or posted.
+            self.enqueue_latest_accumulator_payload(accumulator_load,auth_key)
         except Exception as e:
             error_str = traceback.format_exc()
             logging.warning('Exception thrown while image detedction worker is running {0} {1}'.format(error_str, auth_key))
