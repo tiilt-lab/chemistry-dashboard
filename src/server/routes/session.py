@@ -525,6 +525,10 @@ def session_device_transcripts(session_id, device_id, **kwargs):
 @api_routes.route('/api/v1/sessions/devices/<int:device_id>/speakers/<int:speaker_id>/transcripts', methods=['GET'])
 @wrappers.verify_device_read_access
 def speaker_id_transcripts_for(device_id, speaker_id, **kwargs):
+    # The guard authorises the pod, so the speaker must belong to it — otherwise
+    # one pod's key or session would read any speaker's transcripts by id.
+    if not database.get_speakers(id=speaker_id, session_device_id=device_id):
+        return json_response({'message': 'Does not exist.'}, 404)
     transcripts = database.get_transcripts(speaker_id=speaker_id)
     return json_response([transcript.json() for transcript in transcripts])
 
@@ -605,10 +609,15 @@ def session_transcript_speaker_metrics(session_id):
                                     'speaker_metrics' : [speaker_metric.json() for speaker_metric in speaker_metrics]})
     return json_response(json.dumps(transcripts_metrics))
 
+# Same body as speaker_id_transcripts_for above; kept because the BYOD client
+# may call it with its pod key rather than a login. Guarded by device: a bare
+# speaker_id proved nothing, so anyone could read any speaker's transcripts by
+# counting upwards.
 @api_routes.route('/api/v1/sessions/devices/<int:device_id>/speakers/<int:speaker_id>/transcripts/client', methods=['GET'])
-# @wrappers.verify_login(public=True)
-# @wrappers.verify_session_access
+@wrappers.verify_device_read_access
 def speaker_id_transcripts_for_client(device_id, speaker_id, **kwargs):
+    if not database.get_speakers(id=speaker_id, session_device_id=device_id):
+        return json_response({'message': 'Does not exist.'}, 404)
     transcripts = database.get_transcripts(speaker_id=speaker_id)
     return json_response([transcript.json() for transcript in transcripts])
 
