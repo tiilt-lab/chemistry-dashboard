@@ -719,6 +719,13 @@ function SignupPage() {
             currentForm={currentForm}
             enrollStatus={enrollStatus}
             onDoneEnrolling={() => navigateToLogin()}
+            // Leaving without enrolling: the account already exists, so this
+            // just releases the processing sockets the capture page opened and
+            // returns home. The coach stops the camera and mic before calling.
+            onSkipEnrolling={() => {
+                closeResources()
+                navigateToLogin()
+            }}
         />
     )
 }

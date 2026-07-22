@@ -123,6 +123,7 @@ function ProfileCreationPage(props) {
                         saveRecording={props.saveRecording}
                         enrollStatus={props.enrollStatus}
                         onDoneEnrolling={props.onDoneEnrolling}
+                        onSkipEnrolling={props.onSkipEnrolling}
                     />
                 </div>
             )}

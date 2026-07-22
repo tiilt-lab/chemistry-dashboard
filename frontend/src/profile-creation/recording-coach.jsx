@@ -48,6 +48,7 @@ function RecordingCoach({
     onTestClip,
     enrollStatus = { kind: "idle" },
     onDoneEnrolling,
+    onSkipEnrolling,
     showScript = true,
     scriptText = DEFAULT_SCRIPT,
 }) {
@@ -575,6 +576,32 @@ function RecordingCoach({
                                     <span aria-hidden="true">!</span> Something went wrong
                                 </div>
                                 <div className="mt-1 text-sm leading-relaxed text-tiilt-ink">{enrollStatus.message}</div>
+                            </div>
+                        ) : null}
+
+                        {/* Enrolling is optional and can be finished any time: the
+                            account is committed before this page loads, and joining a
+                            session never checks for a voice print. Without a way out,
+                            the only exit was closing the tab — which works, but leaves
+                            people unsure whether they have an account at all. Hidden
+                            once enrollment succeeds, since Done covers that. */}
+                        {enrollStatus.kind !== "success" && enrollStatus.kind !== "saving" && !isRecording && !isTesting ? (
+                            <div className="mt-3 border-t border-tiilt-line pt-3">
+                                <div className="text-xs text-tiilt-muted">
+                                    Your account is already created. Enrolling your voice and
+                                    face helps the system tell who said what — you can do it
+                                    now or come back any time.
+                                </div>
+                                <button
+                                    type="button"
+                                    className="mt-2 cursor-pointer rounded-xl border border-tiilt-line px-4 py-2 text-sm font-semibold text-tiilt-ink transition hover:bg-tiilt-soft"
+                                    onClick={() => {
+                                        stopEverything();
+                                        if (onSkipEnrolling) onSkipEnrolling();
+                                    }}
+                                >
+                                    Skip for now
+                                </button>
                             </div>
                         ) : null}
                     </div>
