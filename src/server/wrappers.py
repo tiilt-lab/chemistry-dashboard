@@ -11,7 +11,19 @@ def verify_login(roles=None, allow_key=False, public=False):
         def verify_function(*args, **kwargs):
             # Allow access for sessions.
             if session.get('user', None):
-                user = session.get('user', None)
+                # The cookie holds a snapshot taken at login, so anything an
+                # admin changes afterwards used to take effect only once the
+                # person signed in again: a promotion granted nothing, a
+                # demotion took nothing away, locking left the account working,
+                # and a deleted user kept their access. Re-read the row instead
+                # and treat the cookie as nothing more than the user's id.
+                stale_user = session.get('user', None)
+                system_user = database.get_users(id=stale_user.get('id'))
+                if not system_user or system_user.locked:
+                    session.clear()
+                    return json_response({'message': 'You are not authorized to use this endpoint.'}, 401)
+                user = system_user.json()
+                session['user'] = user
                 kwargs['user'] = user
                 if (not roles) or (roles and user.get('role', '') in roles):
                     return f(*args, **kwargs)
@@ -34,7 +46,9 @@ def verify_login(roles=None, allow_key=False, public=False):
                     if api_client and api_client.verify_token(client_token):
                         user = database.get_users(id=api_client.user_id)
                         kwargs['user'] = user.json()
-                        if (not roles) or (roles and user.get('role', '') in roles):
+                        # user is a model here, not the dict the session branch
+                        # deals with — .get() would raise rather than authorise.
+                        if (not roles) or (roles and user.role in roles):
                             return f(*args, **kwargs)
                         else:
                             return json_response({'message': 'You are not authorized to use this endpoint.'}, 401)
