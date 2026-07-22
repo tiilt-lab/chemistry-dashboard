@@ -1,50 +1,40 @@
 import { useNavigate, Link } from "react-router-dom"
+import { useState } from "react"
 import { InlineSpinner } from "../components/inline-spinner"
 import { btnPrimaryTall } from "../components/dialog-styles"
-import { useEffect, useState } from "react"
 import { AuthService } from "../services/auth-service"
 import { BrandCard } from "../components/brand-panel"
 
-function LoginPage() {
+// Instructor / researcher sign-up. This creates a login account (role 'user'),
+// which a super can promote to admin afterwards. It is not /signup — that page
+// enrols a study participant's voice and face and creates no login at all.
+function RegisterPage() {
     const navigate = useNavigate()
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
+    const [confirm, setConfirm] = useState("")
     const [showPassword, setShowPassword] = useState(false)
     const [errors, setErrors] = useState({})
     const [loading, setLoading] = useState(false)
-    const [loginStatus, setLoginStatus] = useState(0)
-    const [authObject, setAuthObject] = useState(null)
 
-    useEffect(() => {
-        if (loginStatus.status === 200 && authObject !== null) {
-            return navigate("/home")
-        } else if (loginStatus.status === 400) {
-            setLoading(false)
-            setErrors({
-                form: loginStatus.message || "Login failed. Please try again.",
-            })
-        } else if (loginStatus.status === 401) {
-            return navigate("/login")
-        } else if (loginStatus.status === 600) {
-            setLoading(false)
-            setErrors({ form: "Invalid email or password." })
-        }
-    }, [loginStatus, authObject])
-
-    const handleSubmit = (event) => {
+    const handleSubmit = async (event) => {
         event.preventDefault()
         const next = {}
         if (!email.trim()) next.email = "Enter your email address."
-        if (!password.trim()) next.password = "Enter your password."
+        if (!password) next.password = "Choose a password."
+        if (!confirm) next.confirm = "Re-enter your password."
+        else if (password !== confirm) next.confirm = "The two passwords do not match."
         setErrors(next)
-        if (next.email || next.password) return
+        if (next.email || next.password || next.confirm) return
+
         setLoading(true)
-        new AuthService().login(
-            email.trim(),
-            password.trim(),
-            setLoginStatus,
-            setAuthObject,
-        )
+        const result = await new AuthService().register(email.trim(), password, confirm)
+        if (result.ok) {
+            // The server signs the new account in, so go straight to the app.
+            return navigate("/home")
+        }
+        setLoading(false)
+        setErrors({ form: result.message })
     }
 
     const inputClass = (invalid) =>
@@ -52,17 +42,28 @@ function LoginPage() {
         `focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30 ` +
         (invalid ? "border-tiilt-danger" : "border-tiilt-line")
 
+    const fieldError = (message) =>
+        message ? (
+            <div
+                role="alert"
+                className="rounded-md bg-tiilt-danger-soft px-3 py-1.5 text-[13px] text-tiilt-danger"
+            >
+                {message}
+            </div>
+        ) : null
+
     return (
         <BrandCard>
             <Link
-                to="/"
+                to="/login"
                 className="mb-4 text-sm font-semibold text-tiilt-muted hover:text-tiilt"
             >
                 &larr; Back
             </Link>
-            <h1 className="text-xl font-semibold text-tiilt-ink">Sign in</h1>
+            <h1 className="text-xl font-semibold text-tiilt-ink">Create an account</h1>
             <p className="mt-1 mb-6 text-sm text-tiilt-muted">
-                Use your instructor or researcher account.
+                For instructors and researchers who run sessions. Study
+                participants do not need one — they join with a passcode.
             </p>
 
             <form
@@ -71,10 +72,7 @@ function LoginPage() {
                 noValidate
             >
                 <div className="flex flex-col gap-1.5">
-                    <label
-                        htmlFor="email"
-                        className="text-sm font-semibold text-tiilt-ink"
-                    >
+                    <label htmlFor="email" className="text-sm font-semibold text-tiilt-ink">
                         Email
                     </label>
                     <input
@@ -89,21 +87,11 @@ function LoginPage() {
                         onChange={(e) => setEmail(e.target.value)}
                         className={inputClass(errors.email)}
                     />
-                    {errors.email && (
-                        <div
-                            role="alert"
-                            className="rounded-md bg-tiilt-danger-soft px-3 py-1.5 text-[13px] text-tiilt-danger"
-                        >
-                            {errors.email}
-                        </div>
-                    )}
+                    {fieldError(errors.email)}
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                    <label
-                        htmlFor="password"
-                        className="text-sm font-semibold text-tiilt-ink"
-                    >
+                    <label htmlFor="password" className="text-sm font-semibold text-tiilt-ink">
                         Password
                     </label>
                     <div className="relative flex">
@@ -111,7 +99,7 @@ function LoginPage() {
                             id="password"
                             name="password"
                             type={showPassword ? "text" : "password"}
-                            autoComplete="current-password"
+                            autoComplete="new-password"
                             placeholder="••••••••"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
@@ -126,14 +114,31 @@ function LoginPage() {
                             {showPassword ? "Hide" : "Show"}
                         </button>
                     </div>
-                    {errors.password && (
-                        <div
-                            role="alert"
-                            className="rounded-md bg-tiilt-danger-soft px-3 py-1.5 text-[13px] text-tiilt-danger"
-                        >
-                            {errors.password}
-                        </div>
-                    )}
+                    {/* Mirrors User.validate_password on the server, so the
+                        rules are visible before the request rather than as a
+                        rejection afterwards. */}
+                    <div className="text-[13px] text-tiilt-muted">
+                        At least 8 characters, with an uppercase letter, a
+                        lowercase letter, a digit, and a special character.
+                    </div>
+                    {fieldError(errors.password)}
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                    <label htmlFor="confirm" className="text-sm font-semibold text-tiilt-ink">
+                        Confirm password
+                    </label>
+                    <input
+                        id="confirm"
+                        name="confirm"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="new-password"
+                        placeholder="••••••••"
+                        value={confirm}
+                        onChange={(e) => setConfirm(e.target.value)}
+                        className={inputClass(errors.confirm)}
+                    />
+                    {fieldError(errors.confirm)}
                 </div>
 
                 {errors.form && (
@@ -145,40 +150,19 @@ function LoginPage() {
                     </div>
                 )}
 
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className={btnPrimaryTall + " gap-2.5 disabled:opacity-70"}
-                >
-                    {loading ? (
-                        <>
-                            <InlineSpinner />
-                            Signing in…
-                        </>
-                    ) : (
-                        "Sign in"
-                    )}
+                <button type="submit" className={btnPrimaryTall} disabled={loading}>
+                    {loading ? <InlineSpinner /> : "Create account"}
                 </button>
 
-                {/* /register creates an instructor login. This used to point at
-                    /signup, which enrols a participant's voice and face and
-                    creates no account — staff who followed it ended up with a
-                    student record they could not sign in with. */}
                 <div className="text-sm text-tiilt-muted">
-                    New here?{" "}
-                    <Link
-                        to="/register"
-                        className="font-semibold text-tiilt hover:underline"
-                    >
-                        Create an account
+                    Already have an account?{" "}
+                    <Link to="/login" className="font-semibold text-tiilt hover:underline">
+                        Sign in
                     </Link>
                 </div>
                 <div className="text-sm text-tiilt-muted">
                     Here as a study participant?{" "}
-                    <Link
-                        to="/signup"
-                        className="font-semibold text-tiilt hover:underline"
-                    >
+                    <Link to="/signup" className="font-semibold text-tiilt hover:underline">
                         Enroll your voice and face
                     </Link>
                 </div>
@@ -187,4 +171,4 @@ function LoginPage() {
     )
 }
 
-export { LoginPage }
+export { RegisterPage }

@@ -67,23 +67,34 @@ class User(db.Model):
         self.change_password = True
         return random_password
 
+    # The strength rules, separated from set_password so a caller can check a
+    # password before there is a User to set it on — self-service signup has to
+    # reject a weak password without first creating the account.
+    @staticmethod
+    def validate_password(password):
+        password = (password or '').strip()
+        if len(password) < 8:
+            return False, 'Password must be at least 8 characters long.'
+        if len(password) > 64:
+            return False, 'Password must be at 64 characters or shorter.'
+        if not re.match('.*[0-9]', password):
+            return False, 'Password must contain at least one digit.'
+        if not re.match('.*[A-Z]', password):
+            return False, 'Password must contain at least one uppercase letter.'
+        if not re.match('.*[a-z]', password):
+            return False, 'Password must contain at least one lowercase letter.'
+        if not re.match('.*[!"#$%&\'()*+,-./:;<=>?@[\\]^_`}{|~]', password):
+            return False, 'Password must contain at least one special character.'
+        if not re.match(r'^[ a-zA-Z0-9!#$&()*+-.:;<=>?@\[\]_}{|~]*$', password):
+            return False, 'Invalid special character.  Please only use the following... \n! # $ & ? @ * + - < = > . : ; [ ] ( ) _'
+        return True, 'Password is valid.'
+
     def set_password(self, password, validate=True):
         if validate:
             password = password.strip()
-            if len(password) < 8:
-                return False, 'Password must be at least 8 characters long.'
-            if len(password) > 64:
-                return False, 'Password must be at 64 characters or shorter.'
-            if not re.match('.*[0-9]', password):
-                return False, 'Password must contain at least one digit.'
-            if not re.match('.*[A-Z]', password):
-                return False, 'Password must contain at least one uppercase letter.'
-            if not re.match('.*[a-z]', password):
-                return False, 'Password must contain at least one lowercase letter.'
-            if not re.match('.*[!"#$%&\'()*+,-./:;<=>?@[\\]^_`}{|~]', password):
-                return False, 'Password must contain at least one special character.'
-            if not re.match('^[ a-zA-Z0-9!#$&()*+-.:;<=>?@\[\]_}{|~]*$', password):
-                return False, 'Invalid special character.  Please only use the following... \n! # $ & ? @ * + - < = > . : ; [ ] ( ) _'
+            valid, message = User.validate_password(password)
+            if not valid:
+                return False, message
         salt_bytes = self.salt.encode('ascii')
         pwdhash = hashlib.pbkdf2_hmac('sha512', password.encode('utf-8'), salt_bytes, 100000)
         self.hash_pass = binascii.hexlify(pwdhash).decode('ascii')

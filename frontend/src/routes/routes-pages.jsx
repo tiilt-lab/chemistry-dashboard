@@ -4,6 +4,7 @@ import LandingPageComponent from '../landing-page/landing-page-components';
 import { LoginPage } from '../login/login-component'
 import {HomeScreen} from '../homescreen/homescreen-component'
 import {SignupPage} from '../profile-creation/profile-creation-component';
+import { RegisterPage } from '../register/register-component'
 import {SessionsComponent} from '../sessions/sessions-component'
 import {SessionManagerComponent} from '../session-manager/session-manager-component';
 import { AppSpinner } from '../spinner/spinner-component'
@@ -54,6 +55,7 @@ function PageRouter() {
             <Routes>
                 <Route path="/" element={<LandingPageComponent />} />
                 <Route path="/login" element={<LoginPage  />} />
+                <Route path="/register" element={<RegisterPage />} />
                 <Route path="/signup" element={<SignupPage />} />
                 <Route path="/join" element={<JoinPage />} />
                 <Route path="/join/:joinCode" element={<JoinPage />} />

@@ -60,6 +60,51 @@ def login():
     logging.info('Login attempt for {0} from {1} failed'.format(email, ip))
     return json_response({'message': message}, 400)
 
+# Self-service sign-up for instructors. Creates a plain 'user': it can run its
+# own sessions and see nothing but its own data, and a super promotes it to
+# admin afterwards from the Admin panel. Deliberately distinct from
+# /student/addstudent, which enrols a study participant and creates no login.
+#
+# Rate-limited by source address rather than by the submitted email, since the
+# email is attacker-chosen here and would make the limit trivial to sidestep.
+@api_routes.route('/api/v1/register', methods=['POST'])
+@limiter.limit("5 per minute")
+def register():
+    content = request.json or {}
+    # Not passed through sanitize(): that HTML-escapes, and /login compares the
+    # raw address, so an email containing & or ' would be stored in a form it
+    # could never log in with. verify_fields() below is the character check.
+    email = (content.get('email', None) or '').strip()
+    password = content.get('password', None) or ''
+    confirm = content.get('confirm', None) or ''
+    ip = utility.get_client_ip(request)
+
+    if not email or not password:
+        return json_response({'message': 'Please provide both an email and password.'}, 400)
+    valid, message = User.verify_fields(email=email)
+    if not valid:
+        return json_response({'message': message}, 400)
+    if password != confirm:
+        return json_response({'message': 'Confirmation password and password do not match.'}, 400)
+    # Checked before the account exists, so a weak password never leaves a
+    # half-created row behind.
+    valid, message = User.validate_password(password)
+    if not valid:
+        return json_response({'message': message}, 400)
+
+    success, user = database.add_user(email, role='user', password=password.strip())
+    if not success:
+        logging.info('Registration attempt for existing account {0} from {1}.'.format(email, ip))
+        return json_response({'message': 'An account with that email already exists.'}, 400)
+
+    user.last_login = datetime.utcnow()
+    database.save_changes()
+    # Signed in immediately, exactly as a successful login would.
+    session['user'] = user.json()
+    session.permanent = True
+    logging.info('Registered new user {0} from {1}.'.format(email, ip))
+    return json_response(user.json())
+
 @api_routes.route('/api/v1/logout', methods=['POST'])
 @wrappers.verify_login()
 def logout(**kwargs):

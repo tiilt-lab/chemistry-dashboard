@@ -4,6 +4,28 @@ import { UserModel } from "../models/user";
 import { StudentModel } from "../models/student";
 class AuthService {
 
+  // Instructor sign-up. Creates a system user (role 'user') and signs it in,
+  // unlike createStudentProfile below, which enrols a study participant and
+  // creates no login. Resolves to { ok, message } for the caller to render.
+  async register(email, password, confirm) {
+    const body = { email: email, password: password, confirm: confirm };
+    try {
+      const response = await new ApiService().httpRequestCall("api/v1/register", "POST", body);
+      if (response.status === 200) {
+        return { ok: true, user: UserModel.fromJson(await response.json()) };
+      }
+      let message = "Could not create the account. Please try again.";
+      try {
+        message = (await response.json()).message || message;
+      } catch {
+        /* rate limiter and proxy errors are not always JSON */
+      }
+      return { ok: false, message };
+    } catch {
+      return { ok: false, message: "The server could not be reached." };
+    }
+  }
+
   login(email, password, setLoginStatus, setAuthObject) {
     const body = {
       email: email,
