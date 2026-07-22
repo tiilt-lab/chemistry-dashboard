@@ -168,7 +168,13 @@ def verify_folder_access(f):
     def verify_function(*args, **kwargs):
         folder_id = kwargs['folder_id']
         user = kwargs['user']
-        folder_model = database.get_folders(id=folder_id, owner_id=user['id'])
+        # Renaming, moving and deleting a folder stay with its owner, or a
+        # super — matching verify_session_access. Admins get read-only breadth
+        # from the listing in folder.get_folders, not from this guard.
+        if user.get('role') == 'super':
+            folder_model = database.get_folders(id=folder_id)
+        else:
+            folder_model = database.get_folders(id=folder_id, owner_id=user['id'])
         if folder_model:
             kwargs['folder'] = folder_model
             return f(*args, **kwargs)

@@ -11,7 +11,22 @@ api_routes = Blueprint('folder', __name__)
 @api_routes.route('/api/folders', methods=['GET'])
 @wrappers.verify_login()
 def get_folders(user, **kwargs):
-    return json_response([folder.json() for folder in database.get_folders(owner_id=user['id'])])
+    # Folders follow sessions: admins and supers see every account's, so a
+    # session an admin is allowed to read is not hidden by a folder they cannot
+    # see. Without this the sessions list returned another owner's sessions but
+    # the page filed them under a folder it had never heard of, and they simply
+    # never appeared. Writes stay owner-or-super via verify_folder_access.
+    sees_all = user.get('role') in ['admin', 'super']
+    folders = database.get_folders(owner_id=None if sees_all else user['id'])
+    owner_emails = database.get_user_emails() if sees_all else {}
+    result = []
+    for folder in folders:
+        data = folder.json()
+        data['owned'] = folder.owner_id == user['id']
+        if sees_all:
+            data['owner'] = owner_emails.get(folder.owner_id)
+        result.append(data)
+    return json_response(result)
 
 @api_routes.route('/api/folder', methods=['POST'])
 @wrappers.verify_login()
