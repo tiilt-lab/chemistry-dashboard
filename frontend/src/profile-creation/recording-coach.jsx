@@ -64,6 +64,25 @@ function RecordingCoach({
     const sourceRef = useRef(null);
     const scriptStartRef = useRef(null);
 
+    // The elapsed-time loop is a requestAnimationFrame recursion whose only
+    // exits used to be the test cap and the max-duration cap. A manual Stop
+    // left it running, so the clock kept climbing to maxDurationSec and
+    // overwrote actualTimeElapsed with the cap — a 50s take was saved, and
+    // stamped into the WebM, as 60s. These two let a stop actually stop it.
+    const tickActiveRef = useRef(false);
+    const rafRef = useRef(null);
+    // Read by stopRecording so the saved length is the tick's own last value
+    // rather than whatever the last render happened to observe.
+    const elapsedRef = useRef(0);
+
+    const cancelTick = () => {
+        tickActiveRef.current = false;
+        if (rafRef.current !== null) {
+            cancelAnimationFrame(rafRef.current);
+            rafRef.current = null;
+        }
+    };
+
     const [devices, setDevices] = useState([]);
     const [micId, setMicId] = useState();
     const [camId, setCamId] = useState();
@@ -167,6 +186,8 @@ function RecordingCoach({
     };
 
     const stopEverything = () => {
+        cancelTick();
+        elapsedRef.current = 0;
         stopMeters();
         stopVisionLoop();
 
@@ -282,6 +303,8 @@ function RecordingCoach({
     // Start a recording (test or full)
     const beginRecording = async (mode) => {
         if (!mediaStreamRef.current) return;
+        cancelTick();
+        elapsedRef.current = 0;
         recordedChunksRef.current = [];
         const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
             ? 'video/webm;codecs=vp9,opus'
@@ -318,18 +341,26 @@ function RecordingCoach({
         const startedAt = Date.now();
         rec.start(250);
 
+        tickActiveRef.current = true;
         const tick = () => {
+            // A manual Stop clears the flag; without this the loop outlived the
+            // recorder and kept reporting time that was never recorded.
+            if (!tickActiveRef.current) return;
+
             const sec = Math.floor((Date.now() - startedAt) / 1000);
+            elapsedRef.current = sec;
             setElapsed(sec);
 
             // Stop logic
             if (mode === 'test' && sec >= 5) {
-                rec.stop();
+                cancelTick();
+                if (rec.state !== 'inactive') rec.stop();
                 setIsTesting(false);
                 return;
             }
             if (mode === 'full' && sec >= maxDurationSec) {
-                rec.stop();
+                cancelTick();
+                if (rec.state !== 'inactive') rec.stop();
                 setIsRecording(false);
                 // Hitting the cap must still surface the Save button —
                 // previously only a manual Stop did.
@@ -337,12 +368,15 @@ function RecordingCoach({
                 setActualTimeElapsed(sec);
                 return;
             }
-            requestAnimationFrame(tick);
+            rafRef.current = requestAnimationFrame(tick);
         };
-        requestAnimationFrame(tick);
+        rafRef.current = requestAnimationFrame(tick);
     };
 
     const stopRecording = () => {
+        // Stop the clock before the recorder: the displayed time must freeze
+        // where the take actually ended, and that value is what gets saved.
+        cancelTick();
         if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
             mediaRecorderRef.current.stop();
         }
@@ -351,7 +385,8 @@ function RecordingCoach({
         }
         setIsRecording(false);
         setIsTesting(false);
-        setActualTimeElapsed(elapsed)
+        setElapsed(elapsedRef.current);
+        setActualTimeElapsed(elapsedRef.current)
 
     };
 
