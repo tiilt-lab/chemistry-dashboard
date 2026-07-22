@@ -53,10 +53,12 @@ app.config['SESSION_COOKIE_NAME'] = 'DCSession'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
-# this proxyfix will allow remote_addr to be correct based on the number of proxies in the chain
-# when running behind an AWS load balancer, that counts as 1. Nginx counts as another.
-# For now, determine if behind AWS based on the https setting.
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=2 if cf.cloud() else 1, x_proto=1)
+# Trust exactly as many trailing X-Forwarded-For entries as there are proxies in
+# front of this instance (see config.proxy_count). Trusting one too many hands
+# remote_addr to the caller, since everything left of the proxies' own entries is
+# client-supplied; trusting one too few leaves every client looking like the
+# proxy. Set proxy_count in config.ini when the chain is longer than nginx alone.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=cf.proxy_count(), x_proto=1)
 
 # Redis
 r = redis.Redis(host=cf.redis_host(), port=cf.redis_port(), db=cf.redis_db())

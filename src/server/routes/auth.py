@@ -68,7 +68,9 @@ def login():
 # Rate-limited by source address rather than by the submitted email, since the
 # email is attacker-chosen here and would make the limit trivial to sidestep.
 @api_routes.route('/api/v1/register', methods=['POST'])
-@limiter.limit("5 per minute")
+# Per source address. Generous enough that someone fighting the password rules
+# does not lock themselves out — every rejected attempt counts against it.
+@limiter.limit("15 per minute")
 def register():
     content = request.json or {}
     # Not passed through sanitize(): that HTML-escapes, and /login compares the

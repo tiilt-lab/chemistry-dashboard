@@ -14,11 +14,19 @@ class AuthService {
       if (response.status === 200) {
         return { ok: true, user: UserModel.fromJson(await response.json()) };
       }
+      // The rate limiter answers with its own non-JSON body, so without this
+      // the generic fallback below replaced a specific, actionable reason.
+      if (response.status === 429) {
+        return {
+          ok: false,
+          message: "Too many attempts from this network. Wait a minute and try again.",
+        };
+      }
       let message = "Could not create the account. Please try again.";
       try {
         message = (await response.json()).message || message;
       } catch {
-        /* rate limiter and proxy errors are not always JSON */
+        /* proxy and server errors are not always JSON */
       }
       return { ok: false, message };
     } catch {

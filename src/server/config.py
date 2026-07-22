@@ -15,6 +15,17 @@ def cloud():
     # to determine if running in AWS
     return https()
 
+def proxy_count():
+    # How many reverse proxies sit in front of this instance, i.e. how many
+    # trailing X-Forwarded-For entries to trust. This box has only nginx, so 1.
+    # It used to be derived from https() on the assumption that TLS meant an AWS
+    # load balancer in front of nginx; on a plain nginx host that made ProxyFix
+    # read one entry too far to the left, into the part of the header the client
+    # supplies. remote_addr then became whatever a caller claimed, which
+    # verify_local trusts, and with no header at all it stayed nginx's
+    # 127.0.0.1 so every client shared one rate-limit bucket.
+    return int(config['server'].get('proxy_count', 1))
+
 def debug():
     return str(config['server']['debug']) in ['true', 'True', 't']
 
