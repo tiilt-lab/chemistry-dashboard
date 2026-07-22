@@ -1463,7 +1463,7 @@ function JoinPage() {
     const fetchTranscript = async (deviceid) => {
         try {
             const response =
-                await sessionService.getSessionDeviceTranscriptSpeakerMetricsForClient(deviceid)
+                await sessionService.getSessionDeviceTranscriptSpeakerMetricsForClient(deviceid, 0, key.current)
 
             if (response.status === 200) {
                 const jsonObj = await response.json()
@@ -1491,6 +1491,8 @@ function JoinPage() {
             const response =
                 await sessionService.getSessionDeviceVideoMetricsForClient(
                     deviceid,
+                    0,
+                    key.current,
                 )
 
             if (response.status === 200) {

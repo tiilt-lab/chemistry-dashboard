@@ -13,6 +13,11 @@ export class SessionModel {
   has_posthoc;
   pod_count;
   participant_count;
+  // Only sent to admins and supers, who see every account's sessions: the
+  // owner's email, and whether the session is the caller's own. Admins may
+  // read another account's session but not rename, delete, or stop it.
+  owner;
+  owned;
 
   // Client Fields
   local_start_date;
@@ -73,6 +78,8 @@ export class SessionModel {
     model.pod_count = json['pod_count'] != null ? json['pod_count'] : null
     model.participant_count = json['participant_count'] != null ? json['participant_count'] : null
     model.analysis_running = json['analysis_running'] === true
+    model.owner = json['owner'] != null ? json['owner'] : null
+    model.owned = json['owned'] !== false
     return model;
   }
 

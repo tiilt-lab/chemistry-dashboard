@@ -526,7 +526,7 @@ function PodDurations({ sessionId }) {
     )
 }
 
-function SessionRow({ session, rowIndex, onOpen, openSessionDialog, endSession, checked, onToggle, renameInline, folderHint }) {
+function SessionRow({ session, rowIndex, onOpen, openSessionDialog, endSession, checked, onToggle, renameInline, folderHint, canModify = true }) {
     const [expanded, setExpanded] = useState(false)
     const [editing, setEditing] = useState(false)
     const hasPods = session.pod_count != null && session.pod_count > 0
@@ -625,19 +625,29 @@ function SessionRow({ session, rowIndex, onOpen, openSessionDialog, endSession, 
                                     Analyzing{"\u2026"}
                                 </StatusPill>
                             ) : null}
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    setEditing(true)
-                                }}
-                                aria-label={`Rename ${session.title}`}
-                                title="Rename"
-                                className="flex h-6 w-6 flex-none cursor-pointer items-center justify-center rounded text-xs text-tiilt-muted opacity-0 transition group-hover:opacity-100 hover:bg-tiilt-soft hover:text-tiilt focus-visible:opacity-100"
-                            >
-                                {"\u270E"}
-                            </button>
+                            {canModify ? (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        setEditing(true)
+                                    }}
+                                    aria-label={`Rename ${session.title}`}
+                                    title="Rename"
+                                    className="flex h-6 w-6 flex-none cursor-pointer items-center justify-center rounded text-xs text-tiilt-muted opacity-0 transition group-hover:opacity-100 hover:bg-tiilt-soft hover:text-tiilt focus-visible:opacity-100"
+                                >
+                                    {"\u270E"}
+                                </button>
+                            ) : null}
                         </span>
                     )}
+                    {session.owner && !session.owned ? (
+                        <span
+                            title={`Owned by ${session.owner} \u2014 you can view this session but not change it`}
+                            className="mt-0.5 flex w-fit flex-none items-center gap-1 rounded-full bg-tiilt-line/40 px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap text-tiilt-muted"
+                        >
+                            {session.owner}
+                        </span>
+                    ) : null}
                     {folderHint ? (
                         <span
                             title={`In folder ${folderHint}`}
@@ -690,42 +700,52 @@ function SessionRow({ session, rowIndex, onOpen, openSessionDialog, endSession, 
                             </button>
                         ) : null}
                         <AppContextMenu label={`Options for session ${session.title}`}>
-                            <button
-                                role="menuitem"
-                                className={menuItemClass}
-                                onClick={() =>
-                                    openSessionDialog("RenameSession", session)
-                                }
-                            >
-                                Edit Name
-                            </button>
-                            <button
-                                role="menuitem"
-                                className={menuItemClass}
-                                onClick={() =>
-                                    openSessionDialog("MoveSession", session)
-                                }
-                            >
-                                Move To...
-                            </button>
-                            {!session.recording ? (
-                                <button
-                                    role="menuitem"
-                                    className={menuDangerClass}
-                                    onClick={() =>
-                                        openSessionDialog("DeleteSession", session)
-                                    }
-                                >
-                                    Delete
-                                </button>
+                            {canModify ? (
+                                <>
+                                    <button
+                                        role="menuitem"
+                                        className={menuItemClass}
+                                        onClick={() =>
+                                            openSessionDialog("RenameSession", session)
+                                        }
+                                    >
+                                        Edit Name
+                                    </button>
+                                    <button
+                                        role="menuitem"
+                                        className={menuItemClass}
+                                        onClick={() =>
+                                            openSessionDialog("MoveSession", session)
+                                        }
+                                    >
+                                        Move To...
+                                    </button>
+                                    {!session.recording ? (
+                                        <button
+                                            role="menuitem"
+                                            className={menuDangerClass}
+                                            onClick={() =>
+                                                openSessionDialog("DeleteSession", session)
+                                            }
+                                        >
+                                            Delete
+                                        </button>
+                                    ) : (
+                                        <button
+                                            role="menuitem"
+                                            className={menuDangerClass}
+                                            onClick={() => endSession(session)}
+                                        >
+                                            End
+                                        </button>
+                                    )}
+                                </>
                             ) : (
-                                <button
-                                    role="menuitem"
-                                    className={menuDangerClass}
-                                    onClick={() => endSession(session)}
-                                >
-                                    End
-                                </button>
+                                // The server refuses these for a session you do not
+                                // own, so offering them would only produce a 404.
+                                <span className="block px-3 py-2 text-xs text-tiilt-muted">
+                                    View only{"—"}owned by {session.owner}
+                                </span>
                             )}
                         </AppContextMenu>
                     </span>
@@ -1008,6 +1028,12 @@ function DiscussionSessionPage(props) {
                                                             key={session.id}
                                                             rowIndex={rowIndex}
                                                             session={session}
+                                                            // Admins see every account's sessions but may
+                                                            // only read them; supers may change anything.
+                                                            canModify={
+                                                                session.owned ||
+                                                                (props.me || {}).role === "super"
+                                                            }
                                                             checked={props.selectedIds[session.id]}
                                                             onToggle={() => props.toggleSelected(session.id)}
                                                             onOpen={props.goToSession}

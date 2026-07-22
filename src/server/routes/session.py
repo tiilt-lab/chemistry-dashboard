@@ -32,12 +32,19 @@ image_queue_dict = {}
 @api_routes.route('/api/v1/sessions', methods=['GET'])
 @wrappers.verify_login(public=True)
 def get_sessions(user, **kwargs):
-    sessions = database.get_sessions(owner_id=user['id'])
-    video_ids = database.get_session_ids_with_video(owner_id=user['id'])
-    posthoc_ids = database.get_session_ids_with_posthoc(owner_id=user['id'])
-    pod_counts = database.get_session_device_counts(owner_id=user['id'])
-    participant_counts = database.get_session_participant_counts(owner_id=user['id'])
+    # Admins and supers see every account's sessions, so the helpers below are
+    # asked for all owners (they treat owner_id=None as unfiltered). Each row
+    # carries 'owner' and 'owned' so the list can label whose session it is and
+    # the UI can hide actions an admin may look at but not perform.
+    sees_all = user.get('role') in ['admin', 'super']
+    scope = None if sees_all else user['id']
+    sessions = database.get_sessions(owner_id=scope)
+    video_ids = database.get_session_ids_with_video(owner_id=scope)
+    posthoc_ids = database.get_session_ids_with_posthoc(owner_id=scope)
+    pod_counts = database.get_session_device_counts(owner_id=scope)
+    participant_counts = database.get_session_participant_counts(owner_id=scope)
     running_session_ids = database.get_session_ids_for_devices(posthoc_state.running_device_ids())
+    owner_emails = database.get_user_emails() if sees_all else {}
     result = []
     for session in sessions:
         data = session.json()
@@ -46,12 +53,15 @@ def get_sessions(user, **kwargs):
         data['pod_count'] = pod_counts.get(session.id, 0)
         data['participant_count'] = participant_counts.get(session.id, 0)
         data['analysis_running'] = session.id in running_session_ids
+        data['owned'] = session.owner_id == user['id']
+        if sees_all:
+            data['owner'] = owner_emails.get(session.owner_id)
         result.append(data)
     return json_response(result)
 
 @api_routes.route('/api/v1/sessions/<int:session_id>', methods=['GET'])
 @wrappers.verify_login(public=True)
-@wrappers.verify_session_access
+@wrappers.verify_session_read_access
 def get_session(session, **kwargs):
     return json_response(session.json())
 
@@ -505,24 +515,18 @@ def end_session(session_id, **kwargs):
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/transcripts', methods=['GET'])
 @wrappers.verify_login(public=True)
-@wrappers.verify_session_access
+@wrappers.verify_session_read_access
 def session_device_transcripts(session_id, device_id, **kwargs):
     transcripts = database.get_transcripts(session_device_id=device_id)
     return json_response([transcript.json() for transcript in transcripts])
 
+# Guarded by device rather than session: the URL names no session_id, so the
+# session guard raised KeyError on every call and this returned 500.
 @api_routes.route('/api/v1/sessions/devices/<int:device_id>/speakers/<int:speaker_id>/transcripts', methods=['GET'])
-@wrappers.verify_login(public=True)
-@wrappers.verify_session_access
+@wrappers.verify_device_read_access
 def speaker_id_transcripts_for(device_id, speaker_id, **kwargs):
     transcripts = database.get_transcripts(speaker_id=speaker_id)
     return json_response([transcript.json() for transcript in transcripts])
-
-@api_routes.route('/api/v1/sessions/devices/<int:device_id>/speaker_tags', methods=['GET'])
-#@wrappers.verify_login(public=True)
-#@wrappers.verify_session_access
-def speaker_tags_for(device_id, **kwargs):
-    tags = database.get_speaker_tags(session_device_id=device_id)
-    return json_response({"Speakers": tags})
 
 @api_routes.route('/api/v1/devices/<int:device_id>/transcripts/client', methods=['GET'])
 # @wrappers.verify_login(public=True)
@@ -534,8 +538,7 @@ def session_device_transcripts_for_client(device_id, **kwargs):
     return json_response([transcript.json() for transcript in transcripts])
 
 @api_routes.route('/api/v1/devices/<int:device_id>/transcriptspeakermetrics/client', methods=['GET'])
-# @wrappers.verify_login(public=True)
-# @wrappers.verify_session_access
+@wrappers.verify_device_read_access
 def session_device_transcript_speaker_metrics_for_client(device_id, **kwargs):
     transcript_speaker_metrics = []
     transcripts = database.get_transcripts(session_device_id=device_id)
@@ -546,8 +549,7 @@ def session_device_transcript_speaker_metrics_for_client(device_id, **kwargs):
     return json_response(transcript_speaker_metrics)
 
 @api_routes.route('/api/v1/devices/<int:device_id>/videometrics/client', methods=['GET'])
-# @wrappers.verify_login(public=True)
-# @wrappers.verify_session_access
+@wrappers.verify_device_read_access
 def session_device_videometrics_for_client(device_id, **kwargs):
     videometrics = database.get_speaker_video_metrics(session_device_id=device_id)
     return json_response([videometric.json() for videometric in videometrics])
@@ -612,28 +614,28 @@ def speaker_id_transcripts_for_client(device_id, speaker_id, **kwargs):
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/speakers', methods=['GET'])
 @wrappers.verify_login(public=True)
-@wrappers.verify_session_access
+@wrappers.verify_session_read_access
 def session_device_speakers(session_id, device_id, **kwargs):
     speakers = database.get_speakers(session_device_id=device_id)
     return json_response([speaker.json() for speaker in speakers])
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/speakers', methods=['GET'])
 @wrappers.verify_login(public=True)
-@wrappers.verify_session_access
+@wrappers.verify_session_read_access
 def session_speakers(session_id, **kwargs):
     speakers = database.get_speakers(session_id=session_id)
     return json_response([speaker.json() for speaker in speakers])
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/keywords', methods=['GET'])
 @wrappers.verify_login(public=True)
-@wrappers.verify_session_access
+@wrappers.verify_session_read_access
 def session_device_keywords(session_id, device_id, **kwargs):
     keywords = database.get_keyword_usages(session_device_id=device_id)
     return json_response([keyword.json() for keyword in keywords])
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:session_device_id>', methods=['GET'])
 @wrappers.verify_login(public=True)
-@wrappers.verify_session_access
+@wrappers.verify_session_read_access
 def session_device(session_id, session_device_id, processing_key, **kwargs):
         if session_device_id:
           session_device = database.get_session_devices(id=session_device_id)
@@ -662,7 +664,7 @@ def _pod_ids_with_recordings():
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices', methods=['GET'])
 @wrappers.verify_login(public=True)
-@wrappers.verify_session_access
+@wrappers.verify_session_read_access
 def session_devices(session_id, **kwargs):
         # The overview polls this every 2s while open; the auto-close task
         # treats a recently-watched session as active.
@@ -694,7 +696,7 @@ def session_devices(session_id, **kwargs):
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/triage', methods=['GET'])
 @wrappers.verify_login(public=True)
-@wrappers.verify_session_access
+@wrappers.verify_session_read_access
 def get_session_triage(session_id, **kwargs):
     # Live per-pod alert flags for the instructor overview during class.
     return json_response(database.get_session_triage(session_id))
@@ -829,7 +831,7 @@ def stop_posthoc_queue(session_id, **kwargs):
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/posthoc_queue', methods=['GET'])
 @wrappers.verify_login(public=True)
-@wrappers.verify_session_access
+@wrappers.verify_session_read_access
 def posthoc_queue_status(session_id, **kwargs):
     return json_response(posthoc_queue.status(session_id))
 
@@ -954,7 +956,7 @@ def _metrics_export_response(si, json_payload, format):
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/exporttranscriptmetrics/<int:windowsize>/<string:format>',methods=['GET'])
 @wrappers.verify_login(public=True)
-@wrappers.verify_session_access
+@wrappers.verify_session_read_access
 def export_session_transcript_metrics(session_id,windowsize, format, **kwargs):
     si = io.StringIO()
     field_names = None  
@@ -1015,7 +1017,7 @@ def export_session_transcript_metrics(session_id,windowsize, format, **kwargs):
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/exportvideometrics/<int:windowsize>/<string:format>',methods=['GET'])
 @wrappers.verify_login(public=True)
-@wrappers.verify_session_access
+@wrappers.verify_session_read_access
 def export_session_video_metrics(session_id, windowsize, format, **kwargs):
     field_names = None
     fwrite = None  
@@ -1054,7 +1056,7 @@ def export_session_video_metrics(session_id, windowsize, format, **kwargs):
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/exporttranscriptvideometrics/<int:windowsize>/<string:format>',methods=['GET'])
 @wrappers.verify_login(public=True)
-@wrappers.verify_session_access
+@wrappers.verify_session_read_access
 def export_session_transcript_video_metrics(session_id,windowsize, format, **kwargs):
     si = io.StringIO()
     field_names = None

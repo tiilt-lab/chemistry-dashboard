@@ -652,6 +652,7 @@ function SessionsComponent(props) {
             audioCount={audioCount}
             openFolderDialog={openFolderDialog}
             navigateToHomescreen={navigateToHomescreen}
+            me={props.userdata}
             isLoading={isLoading}
             sessions={sessions}
             folders={folders}

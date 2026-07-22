@@ -53,11 +53,6 @@ def get_speakers(session_id=None, session_device_id=None, id = None):
     
     return query.all()
 
-def get_speaker_tags(session_device_id=None):
-    query = db.session.query(Transcript).filter(session_device_id=session_device_id).distinct(Transcript.speaker_tag)
-    return query.count()
-
-
 def update_transcript_text(transcript_id, text):
     """Human edit of a transcript row's text. Preserves the original ASR text
     in voice_features.asr_text on first edit; refreshes word_count and the
@@ -825,6 +820,11 @@ def get_users(id=None, email=None, roles=None):
     if email != None:
         return query.filter(User.email == email).first()
     return query.all()
+
+def get_user_emails():
+    # {user_id: email} in one query, so a listing can label rows with their
+    # owner without a per-row lookup. Emails only — never hashes or salts.
+    return {row[0]: row[1] for row in db.session.query(User.id, User.email).all()}
 
 def add_user(email, role='user', password=None):
     matched_user = get_users(email=email)

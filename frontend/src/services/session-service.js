@@ -165,11 +165,19 @@ class SessionService {
     );
   }
 
-  getSessionDeviceTranscriptSpeakerMetricsForClient(sessionDeviceId, startTime = 0) {
-    return this.api.httpRequestCall(
+  // The pod's processing key, handed to the BYOD client in its join response,
+  // is what proves a caller belongs to this pod. Logged-in users are covered by
+  // their session cookie instead, so the header is only sent when we have one.
+  _clientKeyHeader(processingKey) {
+    return processingKey ? { "X-Processing-Key": processingKey } : {};
+  }
+
+  getSessionDeviceTranscriptSpeakerMetricsForClient(sessionDeviceId, startTime = 0, processingKey = null) {
+    return this.api.httpRequestCallWithHeader(
       `api/v1/devices/${sessionDeviceId}/transcriptspeakermetrics/client`,
       "GET",
-      {}
+      {},
+      this._clientKeyHeader(processingKey)
     );
   }
 
@@ -181,11 +189,12 @@ class SessionService {
     );
   }
 
-  getSessionDeviceVideoMetricsForClient(sessionDeviceId, startTime = 0) {
-    return this.api.httpRequestCall(
+  getSessionDeviceVideoMetricsForClient(sessionDeviceId, startTime = 0, processingKey = null) {
+    return this.api.httpRequestCallWithHeader(
       `api/v1/devices/${sessionDeviceId}/videometrics/client`,
       "GET",
-      {}
+      {},
+      this._clientKeyHeader(processingKey)
     );
   }
 
