@@ -219,6 +219,7 @@ function TranscriptPanel({
                                     title={onEditText ? "Click to edit this transcript" : undefined}
                                 >
                                     <div className="flex gap-3">
+                                        {/* Column 1 — timestamp */}
                                         <button
                                             type="button"
                                             onClick={(e) => {
@@ -237,67 +238,79 @@ function TranscriptPanel({
                                         >
                                             {formatSeconds(displayTime(t.start_time))}
                                         </button>
-                                        {editingId != null && editingId === t.id ? (
-                                            <textarea
-                                                autoFocus
-                                                value={draft}
-                                                onChange={(e) => setDraft(e.target.value)}
-                                                onClick={(e) => e.stopPropagation()}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === "Escape") setEditingId(null)
-                                                    if (e.key === "Enter" && !e.shiftKey) {
-                                                        e.preventDefault()
-                                                        commitEdit(t)
-                                                    }
-                                                }}
-                                                onBlur={() => commitEdit(t)}
-                                                aria-label="Edit transcript text"
-                                                rows={Math.max(1, Math.ceil((draft || "").length / 60))}
-                                                className="w-full rounded-md border border-tiilt bg-white px-1 py-0.5 text-sm leading-snug text-tiilt-ink outline-none focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
-                                            />
-                                        ) : (
-                                            <span className="text-sm leading-snug text-tiilt-ink">
-                                                {onReassignSpeaker && t.id != null ? (
-                                                    <span
-                                                        className="inline-flex items-center gap-1"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <SpeakerReassign
-                                                            tag={t.speaker_tag}
-                                                            color={t.speaker_tag ? color : undefined}
-                                                            roster={roster || []}
-                                                            count={(tagCounts || {})[t.speaker_tag] || 0}
-                                                            onReassign={(alias, applyToTag, guest) =>
-                                                                onReassignSpeaker(t.id, alias, applyToTag, guest)
-                                                            }
-                                                        />
-                                                        {t.speaker_tag ? (
-                                                            <ConfidenceTag
-                                                                percent={t.speaker_confidence}
-                                                                contested={t.contested}
-                                                            />
-                                                        ) : null}
-                                                    </span>
-                                                ) : t.speaker_tag ? (
-                                                    <span
-                                                        className="font-semibold"
-                                                        style={{ color }}
-                                                    >
-                                                        {t.speaker_tag}:{" "}
+
+                                        {/* Column 2 — speaker (click to reassign) + confidence */}
+                                        <div
+                                            className="w-28 flex-none overflow-hidden pt-0.5 text-sm leading-snug"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            {onReassignSpeaker && t.id != null ? (
+                                                <span className="flex flex-wrap items-center gap-x-1">
+                                                    <SpeakerReassign
+                                                        tag={t.speaker_tag}
+                                                        color={t.speaker_tag ? color : undefined}
+                                                        roster={roster || []}
+                                                        count={(tagCounts || {})[t.speaker_tag] || 0}
+                                                        onReassign={(alias, applyToTag, guest) =>
+                                                            onReassignSpeaker(t.id, alias, applyToTag, guest)
+                                                        }
+                                                    />
+                                                    {t.speaker_tag ? (
                                                         <ConfidenceTag
                                                             percent={t.speaker_confidence}
                                                             contested={t.contested}
-                                                        />{" "}
+                                                        />
+                                                    ) : null}
+                                                </span>
+                                            ) : t.speaker_tag ? (
+                                                <span className="flex flex-wrap items-center gap-x-1">
+                                                    <span
+                                                        className="truncate font-semibold"
+                                                        style={{ color }}
+                                                    >
+                                                        {t.speaker_tag}
                                                     </span>
-                                                ) : (
-                                                    <></>
-                                                )}{" "}
-                                                {t.transcript}
-                                            </span>
-                                        )}
+                                                    <ConfidenceTag
+                                                        percent={t.speaker_confidence}
+                                                        contested={t.contested}
+                                                    />
+                                                </span>
+                                            ) : (
+                                                <span className="text-tiilt-muted">—</span>
+                                            )}
+                                        </div>
+
+                                        {/* Column 3 — transcribed text (or the editor) */}
+                                        <div className="min-w-0 flex-1">
+                                            {editingId != null && editingId === t.id ? (
+                                                <textarea
+                                                    autoFocus
+                                                    value={draft}
+                                                    onChange={(e) => setDraft(e.target.value)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Escape") setEditingId(null)
+                                                        if (e.key === "Enter" && !e.shiftKey) {
+                                                            e.preventDefault()
+                                                            commitEdit(t)
+                                                        }
+                                                    }}
+                                                    onBlur={() => commitEdit(t)}
+                                                    aria-label="Edit transcript text"
+                                                    rows={Math.max(1, Math.ceil((draft || "").length / 60))}
+                                                    className="w-full rounded-md border border-tiilt bg-white px-1 py-0.5 text-sm leading-snug text-tiilt-ink outline-none focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
+                                                />
+                                            ) : (
+                                                <span className="text-sm leading-snug text-tiilt-ink">
+                                                    {t.transcript}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                     {isSelected ? (
-                                        <div className="mt-2 ml-14 flex flex-wrap gap-1.5">
+                                        // Indent to align under the text column:
+                                        // timestamp 3.5rem + gap + speaker 7rem + gap.
+                                        <div className="mt-2 ml-[12rem] flex flex-wrap gap-1.5">
                                             {FEATURE_FIELDS.map(
                                                 ([label, field]) => (
                                                     <span
