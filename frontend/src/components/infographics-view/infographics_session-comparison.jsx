@@ -1,7 +1,6 @@
 import { AppSectionBoxComponent } from "../section-box/section-box-component"
 import { AppTimelineSlider } from "../timeline-slider/timeline-slider-component"
 import { AppTimeline } from "../../timeline/timeline-component"
-import { AppRadarComponent } from "../../radar/radar-component"
 import { AppKeywordsComponent } from "../../keywords/keywords-component"
 import { AppIndividualFeaturesComponent } from "../individualmetrics/features-component"
 import { AppIndividualVideoFeaturesComponent } from "../individualVideometrics/video-features-component"
@@ -187,7 +186,7 @@ function AppInfographicsSessionComparison(props) {
                 )}
 
             {props.showBoxes.length > 0 &&
-                props.showBoxes[10]["clicked"] && (
+                props.showBoxes[9]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
                         heading={`Visual Analytics`}
@@ -202,7 +201,7 @@ function AppInfographicsSessionComparison(props) {
 
             {props.details === "Comparison" &&
                 props.showBoxes.length > 0 &&
-                props.showBoxes[10]["clicked"] && (
+                props.showBoxes[9]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
                         heading={`Visual Analytics`}
@@ -217,7 +216,7 @@ function AppInfographicsSessionComparison(props) {
                 )}
 
             {props.showBoxes.length > 0 &&
-                props.showBoxes[4]["clicked"] && (
+                props.showBoxes[3]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
                         heading={`Participation and Impact Style`}
@@ -233,7 +232,7 @@ function AppInfographicsSessionComparison(props) {
 
             {props.details === "Comparison" &&
                 props.showBoxes.length > 0 &&
-                props.showBoxes[4]["clicked"] && (
+                props.showBoxes[3]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
                         heading={`Participation and Impact Style`}
@@ -247,40 +246,6 @@ function AppInfographicsSessionComparison(props) {
                     </AppSectionBoxComponent>
                 )}
 
-            {props.showBoxes.length > 0 &&
-                props.showBoxes[3]["clicked"] && (
-                    <AppSectionBoxComponent
-                        type={"medium-section"}
-                        heading={"Radar chart"}
-                    >
-                        <AppRadarComponent
-                            session={props.session}
-                            transcripts={props.session1Transcripts}
-                            radarTrigger={props.radarTrigger}
-                            start={props.startTime}
-                            end={props.endTime}
-                            showFeatures={props.showFeatures}
-                        />
-                    </AppSectionBoxComponent>
-                )}
-
-            {props.details === "Comparison" &&
-                props.showBoxes.length > 0 &&
-                props.showBoxes[3]["clicked"] && (
-                    <AppSectionBoxComponent
-                        type={"medium-section"}
-                        heading={"Radar chart"}
-                    >
-                        <AppRadarComponent
-                            session={props.session}
-                            transcripts={props.session2Transcripts}
-                            radarTrigger={props.radarTrigger}
-                            start={props.startTime}
-                            end={props.endTime}
-                            showFeatures={props.showFeatures}
-                        />
-                    </AppSectionBoxComponent>
-                )}
         </div>
 </>
     )

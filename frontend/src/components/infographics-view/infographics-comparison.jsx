@@ -8,7 +8,6 @@ import { PosthocTrigger } from "../posthoc/posthoc-trigger"
 import { ModelNote } from "../model-note/model-note"
 import { AppTimelineSlider } from "../timeline-slider/timeline-slider-component"
 import { AppTimeline } from "../../timeline/timeline-component"
-import { AppRadarComponent } from "../../radar/radar-component"
 import { AppKeywordsComponent } from "../../keywords/keywords-component"
 import { AppIndividualFeaturesComponent } from "../individualmetrics/features-component"
 import React, { useState, useEffect, lazy, Suspense } from "react"
@@ -314,7 +313,7 @@ function AppInfographicsComparison(props) {
 
                     {props.details !== "Group" &&
                         props.showBoxes.length > 0 &&
-                        props.showBoxes[10]["clicked"] && (
+                        props.showBoxes[9]["clicked"] && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={`Visual Analytics`}
@@ -341,7 +340,7 @@ function AppInfographicsComparison(props) {
 
                     {props.details === "Comparison" &&
                         props.showBoxes.length > 0 &&
-                        props.showBoxes[10]["clicked"] && (
+                        props.showBoxes[9]["clicked"] && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={`Visual Analytics`}
@@ -368,7 +367,7 @@ function AppInfographicsComparison(props) {
 
                     {props.details !== "Group" &&
                         props.showBoxes.length > 0 &&
-                        props.showBoxes[4]["clicked"] && (
+                        props.showBoxes[3]["clicked"] && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={`Participation and Impact Style`}
@@ -389,7 +388,7 @@ function AppInfographicsComparison(props) {
 
                     {props.details === "Comparison" &&
                         props.showBoxes.length > 0 &&
-                        props.showBoxes[4]["clicked"] && (
+                        props.showBoxes[3]["clicked"] && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={`Participation and Impact Style`}
@@ -408,54 +407,6 @@ function AppInfographicsComparison(props) {
                             </AppSectionBoxComponent>
                         )}
 
-                    {props.showBoxes.length > 0 &&
-                        props.showBoxes[3]["clicked"] && (
-                            <AppSectionBoxComponent
-                                type={"w-full"}
-                                heading={"Radar chart"}
-                            >
-                                {((props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts) || []).length > 0 && (
-<div className="mb-2">
-                                    <ModelNote prefix="Scored from the transcript with" label={scoringLabel} fallback="the LIWC & Harvard General Inquirer lexicons" />
-                                </div>
-)}
-                                <AppRadarComponent
-                                    session={props.session}
-                                    transcripts={
-                                        props.details === "Group"
-                                            ? props.displayTranscripts
-                                            : props.spkr1Transcripts
-                                    }
-                                    radarTrigger={props.radarTrigger}
-                                    start={props.startTime}
-                                    end={props.endTime}
-                                    showFeatures={props.showFeatures}
-                                />
-                            </AppSectionBoxComponent>
-                        )}
-
-                    {props.details === "Comparison" &&
-                        props.showBoxes.length > 0 &&
-                        props.showBoxes[3]["clicked"] && (
-                            <AppSectionBoxComponent
-                                type={"w-full"}
-                                heading={"Radar chart"}
-                            >
-                                {(props.spkr2Transcripts || []).length > 0 && (
-<div className="mb-2">
-                                    <ModelNote prefix="Scored from the transcript with" label={scoringLabel} fallback="the LIWC & Harvard General Inquirer lexicons" />
-                                </div>
-)}
-                                <AppRadarComponent
-                                    session={props.session}
-                                    transcripts={props.spkr2Transcripts}
-                                    radarTrigger={props.radarTrigger}
-                                    start={props.startTime}
-                                    end={props.endTime}
-                                    showFeatures={props.showFeatures}
-                                />
-                            </AppSectionBoxComponent>
-                        )}
                     {props.showBoxes.length > 0 &&
                         props.showBoxes[2]["clicked"] && (
                             <AppSectionBoxComponent

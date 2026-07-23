@@ -207,7 +207,6 @@ function PodComponent() {
       "Timeline control",
       "Session timeline",
       "Keyword detection",
-      "Radar chart",
       "Participation",
       "Social Impact",
       "Responsivity",
