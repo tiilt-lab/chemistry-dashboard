@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect, useMemo } from "react"
 import { ApiService } from "../../services/api-service"
+import { sessionToVideo, videoToSession } from "./video-time"
 
 // Plays a pod's recorded video in sync with the transcript. The server remuxes
 // recordings so duration/seeking work; /video/info supplies the real duration
@@ -12,40 +13,8 @@ import { ApiService } from "../../services/api-service"
 // its video time is that segment's video_start + (s - start). Time inside a
 // gap (no segment) clamps to the nearest segment edge.
 //
-// segments: [{start, video_start, duration}] in play order. A single-segment
-// pod is just one entry, so the same code path serves both.
-function sessionToVideo(s, segments) {
-    if (!segments || segments.length === 0) return Math.max(s, 0)
-    for (let i = 0; i < segments.length; i++) {
-        const seg = segments[i]
-        const dur = seg.duration == null ? Infinity : seg.duration
-        if (s < seg.start) {
-            // Before this segment: either in the gap before it (clamp to its
-            // start) or, for the first segment, before recording began.
-            return seg.video_start
-        }
-        if (s < seg.start + dur) {
-            return seg.video_start + (s - seg.start)
-        }
-    }
-    // After the last segment ends: clamp to the end of the video.
-    const last = segments[segments.length - 1]
-    return last.video_start + (last.duration == null ? 0 : last.duration)
-}
-
-function videoToSession(v, segments) {
-    if (!segments || segments.length === 0) return Math.max(v, 0)
-    for (let i = 0; i < segments.length; i++) {
-        const seg = segments[i]
-        const dur = seg.duration == null ? Infinity : seg.duration
-        if (v < seg.video_start + dur) {
-            return seg.start + Math.max(v - seg.video_start, 0)
-        }
-    }
-    const last = segments[segments.length - 1]
-    return last.start + (last.duration == null ? 0 : last.duration)
-}
-
+// segments: [{start, video_start, duration}] in play order. See video-time.js
+// for the piecewise session<->video mapping shared with the transcript panel.
 function formatVttTime(t) {
     const h = String(Math.floor(t / 3600)).padStart(2, "0")
     const m = String(Math.floor((t % 3600) / 60)).padStart(2, "0")
@@ -83,6 +52,7 @@ function VideoPlayer({
     selectedTime,
     transcripts,
     onPlaybackTime,
+    onSegments,
 }) {
     const ref = useRef(null)
     const lastEmit = useRef(0)
@@ -110,6 +80,9 @@ function VideoPlayer({
                         ? d.segments
                         : [{ start: d.offset || 0, video_start: 0, duration: d.duration || null }]
                 setSegments(segs)
+                // Share the layout so the transcript panel can label lines on
+                // the video's clock instead of session time.
+                if (onSegments) onSegments(segs)
                 setStatus("ready")
             })
             .catch(() => !cancelled && setStatus("missing"))

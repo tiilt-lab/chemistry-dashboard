@@ -26,6 +26,10 @@ function AppInfographicsComparison(props) {
     // Style graphs. It is the start_time of the selected utterance, which maps
     // 1:1 to a point on each feature graph.
     const [selectedTime, setSelectedTime] = useState(null)
+    // Video segment layout, lifted from the player so the transcript panel can
+    // show each line on the video's clock (recording-relative) rather than
+    // session time — the two differ by however long setup ran before recording.
+    const [videoSegments, setVideoSegments] = useState(null)
     // Session-relative playhead of the discussion video, so the transcript can
     // follow along while it plays.
     const [playbackTime, setPlaybackTime] = useState(null)
@@ -167,6 +171,7 @@ function AppInfographicsComparison(props) {
                                     selectedTime={selectedTime}
                                     transcripts={props.displayTranscripts}
                                     onPlaybackTime={setPlaybackTime}
+                                    onSegments={setVideoSegments}
                                 />
                                 <TranscriptPanel
                                     transcripts={props.displayTranscripts}
@@ -176,6 +181,7 @@ function AppInfographicsComparison(props) {
                                     selectedTime={selectedTime}
                                     onSelectTime={setSelectedTime}
                                     playbackTime={playbackTime}
+                                    videoSegments={videoSegments}
                                     compact
                                     transcriptionLabel={transcriptionLabel}
                                     onEditText={props.editTranscriptText}

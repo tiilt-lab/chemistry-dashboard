@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { formatSeconds, speakerColorFor } from "../../globals"
 import { SpeakerReassign } from "../speaker-reassign"
+import { sessionToVideo } from "../video-player/video-time"
 
 const FEATURE_FIELDS = [
     ["Emotional tone", "emotional_tone_value"],
@@ -59,7 +60,13 @@ function TranscriptPanel({
     onReassignSpeaker,
     roster,
     tagCounts,
+    // When present, timestamps are shown on the video's clock (recording-
+    // relative) so they match the player, instead of session time. The click
+    // target stays in session time — that is what drives the video seek.
+    videoSegments,
 }) {
+    const displayTime = (s) =>
+        videoSegments ? sessionToVideo(s, videoSegments) : s
     const scrollRef = useRef(null)
     const selectedRef = useRef(null)
     const playingRef = useRef(null)
@@ -221,10 +228,14 @@ function TranscriptPanel({
                                                         isSelected ? null : t.start_time,
                                                     )
                                             }}
-                                            title="Show expression & thinking metrics for this utterance"
+                                            title={
+                                                videoSegments
+                                                    ? "Jump the video here"
+                                                    : "Show expression & thinking metrics for this utterance"
+                                            }
                                             className="font-ahamono w-14 flex-none cursor-pointer pt-0.5 text-left text-xs text-tiilt-muted tabular-nums underline decoration-dotted underline-offset-2 hover:text-tiilt"
                                         >
-                                            {formatSeconds(t.start_time)}
+                                            {formatSeconds(displayTime(t.start_time))}
                                         </button>
                                         {editingId != null && editingId === t.id ? (
                                             <textarea
