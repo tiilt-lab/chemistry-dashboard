@@ -32,47 +32,47 @@ function DiscussionGraphComponent() {
   const [trigger, setTrigger] = useState(0)
 
   useEffect(() => {
-    const deviceSub = activeSessionService.getSessionDevices()
-    if (deviceSub !== undefined) {
-      setSessionDevices(deviceSub);
-      deviceSub.map(sd => {
-        sd['visible'] = true;
-        sd['transcripts'] = [];
-      });
-      
-    };
+    // Devices and the session were read once with getValue() at mount. On a
+    // cold load the session manager has not fetched them yet, so both came back
+    // empty and nothing ever refilled them — updateGraph's "are there devices"
+    // guard then failed forever and the page rendered as an empty shell. Follow
+    // the sources instead, the way the pods overview does.
+    const subs = [];
+    subs.push(activeSessionService.sessionDeviceSource.subscribe(devices => {
+      if (Array.isArray(devices) && devices.length > 0) {
+        devices.forEach(sd => {
+          if (sd['visible'] === undefined) sd['visible'] = true;
+          if (!Array.isArray(sd['transcripts'])) sd['transcripts'] = [];
+        });
+        setSessionDevices([...devices]);
+      }
+    }));
 
-    const sessionModel = activeSessionService.getSession();
-    if (sessionModel !== undefined) {
-      setSession(sessionModel);
-    };
+    subs.push(activeSessionService.sessionSource.subscribe(sessionModel => {
+      if (sessionModel !== undefined && sessionModel !== null) {
+        setSession(sessionModel);
+      }
+    }));
 
-    if (transcripts.length <= 0) {
-      const transcriptSub = activeSessionService.getTranscripts()
-       transcriptSub.subscribe(e => {
-           if (Object.keys(e).length !== 0) {
-               setTranscripts(e)
-               setReload(true);
-           }
-       })
-       subscriptions.push(transcriptSub);
-   }
+    subs.push(activeSessionService.getTranscripts().subscribe(e => {
+      if (Object.keys(e).length !== 0) {
+        setTranscripts(e);
+      }
+    }));
 
-    
+    setSubscriptions(subs);
     return () => {
-      subscriptions.map(sub => {
-          if (sub.closed) {
-              sub.unsubscribe()
-          }
-      });
-  }
+      // The old teardown unsubscribed only when sub.closed was already true —
+      // i.e. never for a live subscription — so every visit to this tab leaked
+      // one and the callbacks kept firing into an unmounted component.
+      subs.forEach(sub => sub && sub.unsubscribe && sub.unsubscribe());
+    };
   }, [])
 
-  useEffect(()=>{
-    if(reload){
-      updateGraph();
-    }
-  },[reload])
+  // Rebuild whenever either input lands, in whichever order they arrive.
+  useEffect(() => {
+    updateGraph();
+  }, [transcripts, sessionDevices])
 
   useEffect(()=>{
     if(trigger > 0){
@@ -111,6 +111,12 @@ function DiscussionGraphComponent() {
         if (device['visible']) {
           displayDev.push(device); // This will not work if user has deactivated some devices!!
         }
+      }
+      // Start from empty each time. These arrays live on the shared device
+      // objects, so re-running appended a second copy of every line to the
+      // column instead of replacing it.
+      for (const device of displayDev) {
+        device['transcripts'] = [];
       }
       for (const transcript of transcripts) {
         const matchingDevice = displayDev.find(d => d.id === transcript.session_device_id);
@@ -162,7 +168,9 @@ function DiscussionGraphComponent() {
 
     const questions = [];
     for (const transcript of questionTranscripts) {
-      const sentences = transcript.transcript.match(/[^\.!\?]+[\.!\?]+/g);
+      // Same null-not-empty-array trap, and more likely here: this pattern
+      // needs terminal punctuation, which 827 rows in this database lack.
+      const sentences = (transcript.transcript || '').match(/[^\.!\?]+[\.!\?]+/g) || [];
       for (const sentence of sentences) {
         if (sentence.includes('?')) {
           questions.push(sentence);
@@ -173,7 +181,12 @@ function DiscussionGraphComponent() {
   }
 
   const createDisplayTranscript = (transcript, highlight = false) => {
-    const sentences = transcript.transcript.match(/([^\.!\?]+[\.!\?]+)|([^\.!\?]+$)/g);
+    // Whisper emits bare punctuation for silence — this session has 42 rows
+    // that are just "." — and both alternatives of this pattern need a
+    // non-punctuation character, so .match() returns null rather than []. That
+    // is not iterable, and the resulting TypeError took down the whole page.
+    const text = transcript.transcript || '';
+    const sentences = text.match(/([^\.!\?]+[\.!\?]+)|([^\.!\?]+$)/g) || [];
     const words = [];
     for (const sentence of sentences) {
       sentence.split(' ').map(word => words.push({ 'word': word, 'highlight': sentence.includes('?') && highlight }));
