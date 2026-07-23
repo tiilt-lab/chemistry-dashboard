@@ -36,6 +36,33 @@ function ConfidenceTag({ percent, contested }) {
 }
 
 
+// RFC-4180 field: quote when it holds a comma, quote, or newline; double any
+// internal quotes.
+function csvField(value) {
+    const s = value == null ? "" : String(value)
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s
+}
+
+// The visible rows as CSV — the same four columns as the panel (time, speaker,
+// confidence, text). Timestamps use whatever clock the panel is showing.
+function transcriptsToCsv(rows, displayTime) {
+    const header = ["Time", "Speaker", "Confidence", "Transcript"]
+    const lines = [header.join(",")]
+    for (const t of rows) {
+        lines.push(
+            [
+                formatSeconds(displayTime(t.start_time)),
+                t.speaker_tag || "",
+                t.speaker_confidence != null ? t.speaker_confidence + "%" : "",
+                t.transcript || "",
+            ]
+                .map(csvField)
+                .join(","),
+        )
+    }
+    return lines.join("\n")
+}
+
 function buildSpeakerColors(transcripts) {
     const tags = [...new Set((transcripts || []).map((t) => t.speaker_tag).filter(Boolean))]
     const map = {}
@@ -67,6 +94,22 @@ function TranscriptPanel({
 }) {
     const displayTime = (s) =>
         videoSegments ? sessionToVideo(s, videoSegments) : s
+
+    const downloadCsv = () => {
+        const csv = transcriptsToCsv(list, displayTime)
+        // BOM so Excel reads UTF-8 (accented names, smart quotes) correctly.
+        const blob = new Blob(["﻿" + csv], {
+            type: "text/csv;charset=utf-8",
+        })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = "transcript.csv"
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(url)
+    }
     const scrollRef = useRef(null)
     const selectedRef = useRef(null)
     const playingRef = useRef(null)
@@ -338,16 +381,26 @@ function TranscriptPanel({
                     </ul>
                 </div>
             )}
-            {onOpenFull ? (
-                <button
-                    onClick={onOpenFull}
-                    className="mt-3 text-sm font-semibold text-tiilt hover:underline"
-                >
-                    Open full transcript →
-                </button>
-            ) : (
-                <></>
-            )}
+            <div className="mt-3 flex items-center justify-between gap-3">
+                {onOpenFull ? (
+                    <button
+                        onClick={onOpenFull}
+                        className="text-sm font-semibold text-tiilt hover:underline"
+                    >
+                        Open full transcript →
+                    </button>
+                ) : (
+                    <span />
+                )}
+                {list.length > 0 ? (
+                    <button
+                        onClick={downloadCsv}
+                        className="text-sm font-semibold text-tiilt hover:underline"
+                    >
+                        Download as CSV ↓
+                    </button>
+                ) : null}
+            </div>
         </div>
     )
 }
