@@ -137,17 +137,27 @@ class SpeakerProcessor:
         index = self.indicies[speaker] + 1 if speaker != -1 else 0
         self.contributions[index] += 1
 
-        embedding = self.semantic_model.encode(transcript)
-
-        if self.length > 0:
-          cross_cohesion = self.calculateCohesionSums(index, embedding, self.semantic_model)
-          self.processResponsivity(cross_cohesion)
-          self.calculateNewness(embedding, index)
-
-        else:
-          self.embeddings = np.array([embedding])
-          self.subspace_basis = normalizeVector(self.embeddings)
-          self.total_new[index] += 1
+        # Cohesion, responsivity, social impact, and newness each measure an
+        # utterance against the REST of the discussion, so their value is only
+        # meaningful once the whole session exists — and the sentence-embedding
+        # + subspace math is the expensive part of this pipeline. They are a
+        # post-hoc concern: the post-hoc pass rebuilds this state from scratch
+        # over every stored transcript. Live computes participation only, which
+        # keeps the in-class dashboard responsive and frees GPU for ASR and
+        # diarization. (The semantic-metric arrays stay at their zero init and
+        # are overwritten when post-hoc runs.) Every non-realtime caller — the
+        # post-hoc re-analysis and the "pi" metric recomputation — still
+        # computes the full set.
+        if action != "realtime_processing":
+          embedding = self.semantic_model.encode(transcript)
+          if self.length > 0:
+            cross_cohesion = self.calculateCohesionSums(index, embedding, self.semantic_model)
+            self.processResponsivity(cross_cohesion)
+            self.calculateNewness(embedding, index)
+          else:
+            self.embeddings = np.array([embedding])
+            self.subspace_basis = normalizeVector(self.embeddings)
+            self.total_new[index] += 1
 
         self.length += 1
         self.prev_window_speakers.append(speaker)
