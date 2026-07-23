@@ -306,10 +306,12 @@ function DiscussionGraphComponent() {
   }
   
   const changeCheck = (index) => {
-    let newarr = displayDevices;
-    newarr[index].checked = !newarr[index].checked;
+    // A new array, not the same one mutated: setState on an identical reference
+    // does not re-render, which is why this previously needed the trigger
+    // counter to make the checkbox appear to respond.
+    const newarr = displayDevices.map((device, i) =>
+      (i === index) ? Object.assign(device, { checked: !device.checked }) : device);
     setDisplayDevices(newarr);
-    setTrigger(trigger+1)
   }
   
   const checkedDevices = () => {
