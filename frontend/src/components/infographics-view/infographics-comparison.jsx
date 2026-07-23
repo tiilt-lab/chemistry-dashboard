@@ -7,7 +7,6 @@ import { VideoPlayer } from "../video-player/video-player"
 import { PosthocTrigger } from "../posthoc/posthoc-trigger"
 import { ModelNote } from "../model-note/model-note"
 import { AppTimelineSlider } from "../timeline-slider/timeline-slider-component"
-import { AppTimeline } from "../../timeline/timeline-component"
 import { AppKeywordsComponent } from "../../keywords/keywords-component"
 import { AppIndividualFeaturesComponent } from "../individualmetrics/features-component"
 import React, { useState, useEffect, lazy, Suspense } from "react"
@@ -144,38 +143,15 @@ function AppInfographicsComparison(props) {
                             </div>
                         )}
                     {props.showBoxes.length > 0 &&
-                        (props.showBoxes[0]["clicked"] ||
-                            props.showBoxes[1]["clicked"]) && (
+                        props.showBoxes[0]["clicked"] && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
-                                heading={"Session timeline"}
+                                heading={"Adjust time range"}
                             >
-                                {props.showBoxes[0]["clicked"] && (
-                                    <div className="mb-4">
-                                        <div className="mb-2 font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
-                                            Adjust time range
-                                        </div>
-                                        <AppTimelineSlider
-                                            id="timeSlider"
-                                            inputChanged={props.setRange}
-                                        />
-                                    </div>
-                                )}
-                                {props.showBoxes[1]["clicked"] && (
-                                    <AppTimeline
-                                        clickedTimeline={
-                                            props.onClickedTimeline
-                                        }
-                                        session={props.session}
-                                        transcripts={
-                                            props.details === "Group"
-                                                ? props.displayTranscripts
-                                                : props.spkr1Transcripts
-                                        }
-                                        start={props.startTime}
-                                        end={props.endTime}
-                                    />
-                                )}
+                                <AppTimelineSlider
+                                    id="timeSlider"
+                                    inputChanged={props.setRange}
+                                />
                             </AppSectionBoxComponent>
                         )}
 
@@ -290,30 +266,13 @@ function AppInfographicsComparison(props) {
                         </AppSectionBoxComponent>
                     )}
 
-                    {props.details === "Comparison" &&
-                        props.showBoxes.length > 0 &&
-                        props.showBoxes[1]["clicked"] && (
-                            <AppSectionBoxComponent
-                                type={"w-full"}
-                                heading={"Session timeline"}
-                            >
-                                <AppTimeline
-                                    clickedTimeline={props.onClickedTimeline}
-                                    session={props.session}
-                                    transcripts={props.spkr2Transcripts}
-                                    start={props.startTime}
-                                    end={props.endTime}
-                                />
-                            </AppSectionBoxComponent>
-                        )}
-
                     {/* "Participation across sessions" moved to the student
                         profile page (/students/:id) — cross-session data was
                         out of place inside a single discussion's dashboard. */}
 
                     {props.details !== "Group" &&
                         props.showBoxes.length > 0 &&
-                        props.showBoxes[9]["clicked"] && (
+                        props.showBoxes[8]["clicked"] && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={`Visual Analytics`}
@@ -340,7 +299,7 @@ function AppInfographicsComparison(props) {
 
                     {props.details === "Comparison" &&
                         props.showBoxes.length > 0 &&
-                        props.showBoxes[9]["clicked"] && (
+                        props.showBoxes[8]["clicked"] && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={`Visual Analytics`}
@@ -367,7 +326,7 @@ function AppInfographicsComparison(props) {
 
                     {props.details !== "Group" &&
                         props.showBoxes.length > 0 &&
-                        props.showBoxes[3]["clicked"] && (
+                        props.showBoxes[2]["clicked"] && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={`Participation and Impact Style`}
@@ -388,7 +347,7 @@ function AppInfographicsComparison(props) {
 
                     {props.details === "Comparison" &&
                         props.showBoxes.length > 0 &&
-                        props.showBoxes[3]["clicked"] && (
+                        props.showBoxes[2]["clicked"] && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={`Participation and Impact Style`}
@@ -408,7 +367,7 @@ function AppInfographicsComparison(props) {
                         )}
 
                     {props.showBoxes.length > 0 &&
-                        props.showBoxes[2]["clicked"] && (
+                        props.showBoxes[1]["clicked"] && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={"Keyword detection"}
@@ -435,7 +394,7 @@ function AppInfographicsComparison(props) {
 
                     {props.details === "Comparison" &&
                         props.showBoxes.length > 0 &&
-                        props.showBoxes[2]["clicked"] && (
+                        props.showBoxes[1]["clicked"] && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={"Keyword detection"}

@@ -205,7 +205,6 @@ function PodComponent() {
     // initialize the components toolbar
     let boxArr = [
       "Timeline control",
-      "Session timeline",
       "Keyword detection",
       "Participation",
       "Social Impact",

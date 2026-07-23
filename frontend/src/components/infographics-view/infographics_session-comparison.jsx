@@ -1,6 +1,5 @@
 import { AppSectionBoxComponent } from "../section-box/section-box-component"
 import { AppTimelineSlider } from "../timeline-slider/timeline-slider-component"
-import { AppTimeline } from "../../timeline/timeline-component"
 import { AppKeywordsComponent } from "../../keywords/keywords-component"
 import { AppIndividualFeaturesComponent } from "../individualmetrics/features-component"
 import { AppIndividualVideoFeaturesComponent } from "../individualVideometrics/video-features-component"
@@ -121,14 +120,15 @@ function AppInfographicsSessionComparison(props) {
                 props.showBoxes[1]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
-                        heading={"Session timeline"}
+                        heading={"Keyword detection"}
                     >
-                        <AppTimeline
-                            clickedTimeline={props.onClickedTimeline}
+                        <AppKeywordsComponent
                             session={props.session}
+                            // sessionDevice={props.sessionDevice}
                             transcripts={props.session1Transcripts}
                             start={props.startTime}
                             end={props.endTime}
+                            fromclient={props.fromclient}
                         />
                     </AppSectionBoxComponent>
                 )}
@@ -138,40 +138,6 @@ function AppInfographicsSessionComparison(props) {
                 props.showBoxes[1]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
-                        heading={"Session timeline"}
-                    >
-                        <AppTimeline
-                            clickedTimeline={props.onClickedTimeline}
-                            session={props.session}
-                            transcripts={props.session2Transcripts}
-                            start={props.startTime2}
-                            end={props.endTime2}
-                        />
-                    </AppSectionBoxComponent>
-                )}
-
-            {props.showBoxes.length > 0 &&
-                props.showBoxes[2]["clicked"] && (
-                    <AppSectionBoxComponent
-                        type={"medium-section"}
-                        heading={"Keyword detection"}
-                    >
-                        <AppKeywordsComponent
-                            session={props.session}
-                            // sessionDevice={props.sessionDevice}
-                            transcripts={props.session1Transcripts}
-                            start={props.startTime}
-                            end={props.endTime}
-                            fromclient={props.fromclient}
-                        />
-                    </AppSectionBoxComponent>
-                )}
-
-            {props.details === "Comparison" &&
-                props.showBoxes.length > 0 &&
-                props.showBoxes[2]["clicked"] && (
-                    <AppSectionBoxComponent
-                        type={"medium-section"}
                         heading={"Keyword detection"}
                     >
                         <AppKeywordsComponent
@@ -186,7 +152,7 @@ function AppInfographicsSessionComparison(props) {
                 )}
 
             {props.showBoxes.length > 0 &&
-                props.showBoxes[9]["clicked"] && (
+                props.showBoxes[8]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
                         heading={`Visual Analytics`}
@@ -201,7 +167,7 @@ function AppInfographicsSessionComparison(props) {
 
             {props.details === "Comparison" &&
                 props.showBoxes.length > 0 &&
-                props.showBoxes[9]["clicked"] && (
+                props.showBoxes[8]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
                         heading={`Visual Analytics`}
@@ -216,7 +182,7 @@ function AppInfographicsSessionComparison(props) {
                 )}
 
             {props.showBoxes.length > 0 &&
-                props.showBoxes[3]["clicked"] && (
+                props.showBoxes[2]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
                         heading={`Participation and Impact Style`}
@@ -232,7 +198,7 @@ function AppInfographicsSessionComparison(props) {
 
             {props.details === "Comparison" &&
                 props.showBoxes.length > 0 &&
-                props.showBoxes[3]["clicked"] && (
+                props.showBoxes[2]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
                         heading={`Participation and Impact Style`}
