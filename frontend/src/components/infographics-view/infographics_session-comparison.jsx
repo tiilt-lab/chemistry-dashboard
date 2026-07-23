@@ -1,7 +1,6 @@
 import { AppSectionBoxComponent } from "../section-box/section-box-component"
 import { AppTimelineSlider } from "../timeline-slider/timeline-slider-component"
 import { AppTimeline } from "../../timeline/timeline-component"
-import { AppFeaturesComponent } from "../../features/features-component"
 import { AppRadarComponent } from "../../radar/radar-component"
 import { AppKeywordsComponent } from "../../keywords/keywords-component"
 import { AppIndividualFeaturesComponent } from "../individualmetrics/features-component"
@@ -188,7 +187,7 @@ function AppInfographicsSessionComparison(props) {
                 )}
 
             {props.showBoxes.length > 0 &&
-                props.showBoxes[11]["clicked"] && (
+                props.showBoxes[10]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
                         heading={`Visual Analytics`}
@@ -203,7 +202,7 @@ function AppInfographicsSessionComparison(props) {
 
             {props.details === "Comparison" &&
                 props.showBoxes.length > 0 &&
-                props.showBoxes[11]["clicked"] && (
+                props.showBoxes[10]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
                         heading={`Visual Analytics`}
@@ -218,7 +217,7 @@ function AppInfographicsSessionComparison(props) {
                 )}
 
             {props.showBoxes.length > 0 &&
-                props.showBoxes[5]["clicked"] && (
+                props.showBoxes[4]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
                         heading={`Participation and Impact Style`}
@@ -234,7 +233,7 @@ function AppInfographicsSessionComparison(props) {
 
             {props.details === "Comparison" &&
                 props.showBoxes.length > 0 &&
-                props.showBoxes[5]["clicked"] && (
+                props.showBoxes[4]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
                         heading={`Participation and Impact Style`}
@@ -252,35 +251,6 @@ function AppInfographicsSessionComparison(props) {
                 props.showBoxes[3]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
-                        heading={"Expression and Thinking Style"}
-                    >
-                        <AppFeaturesComponent
-                            session={props.session}
-                            transcripts={props.session1Transcripts}
-                            showFeatures={props.showFeatures}
-                        />
-                    </AppSectionBoxComponent>
-                )}
-
-            {props.details === "Comparison" &&
-                props.showBoxes.length > 0 &&
-                props.showBoxes[3]["clicked"] && (
-                    <AppSectionBoxComponent
-                        type={"medium-section"}
-                        heading={`Expression and Thinking Style`}
-                    >
-                        <AppFeaturesComponent
-                            session={props.session}
-                            transcripts={props.session2Transcripts}
-                            showFeatures={props.showFeatures}
-                        />
-                    </AppSectionBoxComponent>
-                )}
-
-            {props.showBoxes.length > 0 &&
-                props.showBoxes[4]["clicked"] && (
-                    <AppSectionBoxComponent
-                        type={"medium-section"}
                         heading={"Radar chart"}
                     >
                         <AppRadarComponent
@@ -296,7 +266,7 @@ function AppInfographicsSessionComparison(props) {
 
             {props.details === "Comparison" &&
                 props.showBoxes.length > 0 &&
-                props.showBoxes[4]["clicked"] && (
+                props.showBoxes[3]["clicked"] && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
                         heading={"Radar chart"}

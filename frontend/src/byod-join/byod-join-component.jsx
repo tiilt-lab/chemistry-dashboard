@@ -287,7 +287,6 @@ function JoinPage() {
             "Timeline control",
             "Session timeline",
             "Keyword detection",
-            "Session features",
             "Radar chart",
             "Participation",
             "Social Impact",
