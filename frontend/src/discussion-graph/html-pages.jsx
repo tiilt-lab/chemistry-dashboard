@@ -4,11 +4,14 @@ import { Appheader } from '../header/header-component'
 import { SessionTabs } from '../components/session-tabs'
 import { dlgHeading, dlgBody, btnPrimarySm, btnSecondary } from '../components/dialog-styles'
 
-// Vertical pixels per second of conversation. The timeline ruler and the
-// transcript blocks share it, so a block's top edge always lines up with its
-// start time on the ruler.
+// Time runs left to right. Horizontal pixels per second of conversation: the
+// ruler and every transcript bar share it, so a bar's left edge lines up with
+// its start time and its width is how long that turn actually took.
 const PX_PER_SEC = 20
 const TIMESTAMP_STEP_SEC = 5
+// Frozen first column holding the group names, in step with the ruler's spacer.
+const NAME_COL_PX = 160
+const ROW_PX = 52
 
 function ColumnHeader({ device, onOpenStats }) {
     return (
@@ -16,71 +19,80 @@ function ColumnHeader({ device, onOpenStats }) {
             type="button"
             onClick={() => onOpenStats(device)}
             title={`Statistics for ${device.name}`}
-            className="w-full cursor-pointer truncate rounded-lg px-3 py-2 text-sm font-semibold text-tiilt-ink transition hover:bg-tiilt-soft hover:text-tiilt"
+            className="w-full cursor-pointer truncate px-3 py-2 text-left text-sm font-semibold text-tiilt-ink transition hover:bg-tiilt-soft hover:text-tiilt"
         >
             {device.name}
         </button>
     )
 }
 
-// One pod's column. Blocks are positioned absolutely from their start time —
-// the old markup pushed them with margin-top, which stacks in normal flow, so
-// each line drifted further past its real position the longer a session ran.
-function TranscriptColumn({ device, height, onHighlight, onOpenKeywords }) {
+// One group's lane. Bars are absolutely positioned from their start time, so a
+// silence in the conversation is a visible gap rather than something the layout
+// closes up.
+function TranscriptLane({ device, width, onHighlight, onOpenKeywords }) {
     return (
         <div
-            className="relative min-w-[250px] flex-1 border-l border-tiilt-line"
-            style={{ height: `${height}px` }}
+            className="relative border-b border-tiilt-line"
+            style={{ width: `${width}px`, height: `${ROW_PX}px` }}
         >
-            {device.transcripts.map((transcript, index) => (
-                <div
-                    key={index}
-                    className="absolute right-1 left-1 overflow-hidden rounded-lg border border-tiilt-line bg-white px-2 py-1 text-[13px] leading-snug text-tiilt-ink shadow-sm"
-                    style={{
-                        top: `${transcript.start_time * PX_PER_SEC}px`,
-                        minHeight: `${Math.max(transcript.length * PX_PER_SEC, 24)}px`,
-                    }}
-                >
-                    {transcript.question ? (
-                        <button
-                            type="button"
-                            aria-label="Highlight this question"
-                            onClick={() => onHighlight(transcript)}
-                            className="mr-1 cursor-pointer rounded bg-tiilt-soft px-1.5 text-xs font-bold text-tiilt hover:bg-tiilt hover:text-white"
-                        >
-                            ?
-                        </button>
-                    ) : null}
-                    {transcript.speaker_tag ? (
-                        <span className="font-semibold text-tiilt-muted">
-                            {transcript.speaker_tag}:{' '}
+            {device.transcripts.map((transcript, index) => {
+                const plain = transcript.transcript.map((w) => w.word).join(' ')
+                return (
+                    <div
+                        key={index}
+                        title={`${transcript.speaker_tag ? transcript.speaker_tag + ': ' : ''}${plain}`}
+                        className="absolute top-1.5 flex items-center gap-1 overflow-hidden rounded-lg border border-tiilt-line bg-white px-2 py-1 text-[13px] leading-snug whitespace-nowrap text-tiilt-ink shadow-sm"
+                        style={{
+                            left: `${transcript.start_time * PX_PER_SEC}px`,
+                            width: `${Math.max(transcript.length * PX_PER_SEC, 28)}px`,
+                            height: `${ROW_PX - 12}px`,
+                        }}
+                    >
+                        {transcript.question ? (
+                            <button
+                                type="button"
+                                aria-label="Highlight this question"
+                                onClick={() => onHighlight(transcript)}
+                                className="flex-none cursor-pointer rounded bg-tiilt-soft px-1.5 text-xs font-bold text-tiilt hover:bg-tiilt hover:text-white"
+                            >
+                                ?
+                            </button>
+                        ) : null}
+                        {transcript.speaker_tag ? (
+                            <span className="flex-none font-semibold text-tiilt-muted">
+                                {transcript.speaker_tag}:
+                            </span>
+                        ) : null}
+                        <span className="overflow-hidden">
+                            {transcript.transcript.map((word, wordIndex) => (
+                                <React.Fragment key={wordIndex}>
+                                    {word.matchingKeywords !== null ? (
+                                        <button
+                                            type="button"
+                                            aria-label={`Keyword details for ${word.word}`}
+                                            onClick={() => onOpenKeywords(word.matchingKeywords)}
+                                            style={{ color: word.color }}
+                                            className={
+                                                'inline cursor-pointer p-0 text-left font-semibold underline decoration-dotted ' +
+                                                (word.highlight ? 'bg-tiilt-orange/20' : '')
+                                            }
+                                        >
+                                            {word.word}
+                                        </button>
+                                    ) : (
+                                        <span
+                                            className={word.highlight ? 'bg-tiilt-orange/20' : ''}
+                                        >
+                                            {' '}
+                                            {word.word}{' '}
+                                        </span>
+                                    )}
+                                </React.Fragment>
+                            ))}
                         </span>
-                    ) : null}
-                    {transcript.transcript.map((word, wordIndex) => (
-                        <React.Fragment key={wordIndex}>
-                            {word.matchingKeywords !== null ? (
-                                <button
-                                    type="button"
-                                    aria-label={`Keyword details for ${word.word}`}
-                                    onClick={() => onOpenKeywords(word.matchingKeywords)}
-                                    style={{ color: word.color }}
-                                    className={
-                                        'inline cursor-pointer p-0 text-left font-semibold underline decoration-dotted ' +
-                                        (word.highlight ? 'bg-tiilt-orange/20' : '')
-                                    }
-                                >
-                                    {word.word}
-                                </button>
-                            ) : (
-                                <span className={word.highlight ? 'bg-tiilt-orange/20' : ''}>
-                                    {' '}
-                                    {word.word}{' '}
-                                </span>
-                            )}
-                        </React.Fragment>
-                    ))}
-                </div>
-            ))}
+                    </div>
+                )
+            })}
         </div>
     )
 }
@@ -97,8 +109,8 @@ function EmptyState({ message, hint }) {
 function DiscussionPage(props) {
     const devices = props.checkedDevices()
     const hasGraph = devices.length > 0
-    // Tall enough for the last line of the longest column, with a little air.
-    const graphHeight =
+    // Wide enough for the last turn in the longest lane, with a little air.
+    const trackWidth =
         Math.max(
             0,
             ...devices.map((d) =>
@@ -108,7 +120,7 @@ function DiscussionPage(props) {
                       PX_PER_SEC
                     : 0,
             ),
-        ) + 40
+        ) + 80
 
     return (
         <>
@@ -132,24 +144,57 @@ function DiscussionPage(props) {
                                         Conversation timeline
                                     </h2>
                                     <p className="text-sm text-tiilt-muted">
-                                        Every group on a shared clock. Select a group
-                                        name for its statistics, or a highlighted word
-                                        for the keywords it matched.
+                                        Every group on a shared clock, one lane each,
+                                        scrolling sideways through the session. Select a
+                                        group name for its statistics, or a highlighted
+                                        word for the keywords it matched.
                                     </p>
                                 </div>
                             </div>
 
                             {hasGraph ? (
                                 <div className="overflow-hidden rounded-2xl border border-tiilt-line bg-white shadow-pop">
+                                    {/* The one scroller on this page. Time runs
+                                        rightwards; the name column is pinned with
+                                        sticky so it stays readable at any offset. */}
                                     <div className="overflow-x-auto">
-                                        <div className="min-w-fit">
-                                            {/* Column headers, held above the scroll */}
-                                            <div className="sticky top-0 z-10 flex border-b border-tiilt-line bg-tiilt-ground">
-                                                <span className="w-[70px] flex-none" />
-                                                {devices.map((device, index) => (
+                                        <div
+                                            className="min-w-fit"
+                                            style={{ width: `${NAME_COL_PX + trackWidth}px` }}
+                                        >
+                                            {/* Ruler */}
+                                            <div className="flex border-b border-tiilt-line bg-tiilt-ground">
+                                                <span
+                                                    className="sticky left-0 z-20 flex-none bg-tiilt-ground"
+                                                    style={{ width: `${NAME_COL_PX}px` }}
+                                                />
+                                                <div
+                                                    className="relative h-8 font-ahamono text-[11px] tabular-nums text-tiilt-muted"
+                                                    style={{ width: `${trackWidth}px` }}
+                                                >
+                                                    {props.timestamps.map((timestamp, index) => (
+                                                        <div
+                                                            key={index}
+                                                            className="absolute top-2 border-l border-tiilt-line pl-1"
+                                                            style={{
+                                                                left: `${index * TIMESTAMP_STEP_SEC * PX_PER_SEC}px`,
+                                                            }}
+                                                        >
+                                                            {timestamp}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* One row per group */}
+                                            {devices.map((device, index) => (
+                                                <div key={index} className="flex">
                                                     <div
-                                                        key={index}
-                                                        className="min-w-[250px] flex-1"
+                                                        className="sticky left-0 z-20 flex flex-none items-center border-r border-b border-tiilt-line bg-white"
+                                                        style={{
+                                                            width: `${NAME_COL_PX}px`,
+                                                            height: `${ROW_PX}px`,
+                                                        }}
                                                     >
                                                         <ColumnHeader
                                                             device={device}
@@ -158,40 +203,16 @@ function DiscussionPage(props) {
                                                             }
                                                         />
                                                     </div>
-                                                ))}
-                                            </div>
-
-                                            <div className="flex">
-                                                {/* Ruler */}
-                                                <div
-                                                    className="relative w-[70px] flex-none font-ahamono text-[11px] tabular-nums text-tiilt-muted"
-                                                    style={{ height: `${graphHeight}px` }}
-                                                >
-                                                    {props.timestamps.map((timestamp, index) => (
-                                                        <div
-                                                            key={index}
-                                                            className="absolute right-2"
-                                                            style={{
-                                                                top: `${index * TIMESTAMP_STEP_SEC * PX_PER_SEC}px`,
-                                                            }}
-                                                        >
-                                                            {timestamp}
-                                                        </div>
-                                                    ))}
-                                                </div>
-
-                                                {devices.map((device, index) => (
-                                                    <TranscriptColumn
-                                                        key={index}
+                                                    <TranscriptLane
                                                         device={device}
-                                                        height={graphHeight}
+                                                        width={trackWidth}
                                                         onHighlight={props.highlightQuestions}
                                                         onOpenKeywords={(keywords) =>
                                                             props.openForms('keywords', keywords)
                                                         }
                                                     />
-                                                ))}
-                                            </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     </div>
                                 </div>
