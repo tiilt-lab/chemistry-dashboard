@@ -3,12 +3,49 @@ import { ApiService } from "../../services/api-service"
 
 // Plays a pod's recorded video in sync with the transcript. The server remuxes
 // recordings so duration/seeking work; /video/info supplies the real duration
-// and the session-relative start offset (video 0:00 = session `offset`s).
+// and the segment layout that maps transcript time <-> video time.
 //
-// Sync model:
-//   transcript/graph click (selectedTime, session s) -> seek video to t-offset
-//   video playback -> onPlaybackTime(videoTime + offset) so the transcript
-//   follows along; subtitles are WebVTT cues built from the transcript.
+// A pod that dropped and rejoined has several recording segments, and the
+// concatenated video runs them back-to-back with the disconnect gaps removed.
+// So the mapping is piecewise, not a single offset: a transcript at session
+// time `s` sits in the segment whose [start, start+duration) contains it, and
+// its video time is that segment's video_start + (s - start). Time inside a
+// gap (no segment) clamps to the nearest segment edge.
+//
+// segments: [{start, video_start, duration}] in play order. A single-segment
+// pod is just one entry, so the same code path serves both.
+function sessionToVideo(s, segments) {
+    if (!segments || segments.length === 0) return Math.max(s, 0)
+    for (let i = 0; i < segments.length; i++) {
+        const seg = segments[i]
+        const dur = seg.duration == null ? Infinity : seg.duration
+        if (s < seg.start) {
+            // Before this segment: either in the gap before it (clamp to its
+            // start) or, for the first segment, before recording began.
+            return seg.video_start
+        }
+        if (s < seg.start + dur) {
+            return seg.video_start + (s - seg.start)
+        }
+    }
+    // After the last segment ends: clamp to the end of the video.
+    const last = segments[segments.length - 1]
+    return last.video_start + (last.duration == null ? 0 : last.duration)
+}
+
+function videoToSession(v, segments) {
+    if (!segments || segments.length === 0) return Math.max(v, 0)
+    for (let i = 0; i < segments.length; i++) {
+        const seg = segments[i]
+        const dur = seg.duration == null ? Infinity : seg.duration
+        if (v < seg.video_start + dur) {
+            return seg.start + Math.max(v - seg.video_start, 0)
+        }
+    }
+    const last = segments[segments.length - 1]
+    return last.start + (last.duration == null ? 0 : last.duration)
+}
+
 function formatVttTime(t) {
     const h = String(Math.floor(t / 3600)).padStart(2, "0")
     const m = String(Math.floor((t % 3600) / 60)).padStart(2, "0")
@@ -17,7 +54,7 @@ function formatVttTime(t) {
     return `${h}:${m}:${s}.${ms}`
 }
 
-function buildVtt(transcripts, offset) {
+function buildVtt(transcripts, segments) {
     const cues = []
     const list = [...(transcripts || [])].sort(
         (a, b) => a.start_time - b.start_time,
@@ -25,11 +62,11 @@ function buildVtt(transcripts, offset) {
     for (let i = 0; i < list.length; i++) {
         const t = list[i]
         if (!t.transcript) continue
-        const start = Math.max(t.start_time - offset, 0)
+        const start = sessionToVideo(t.start_time, segments)
         // Utterance length when present; otherwise run until the next cue.
         const next = list[i + 1]
         const fallbackEnd = next
-            ? Math.max(next.start_time - offset, start + 1)
+            ? Math.max(sessionToVideo(next.start_time, segments), start + 1)
             : start + 4
         const end = t.length ? start + Math.max(t.length, 1.5) : fallbackEnd
         const speaker = t.speaker_tag ? `<v ${t.speaker_tag}>` : ""
@@ -50,7 +87,9 @@ function VideoPlayer({
     const ref = useRef(null)
     const lastEmit = useRef(0)
     const [status, setStatus] = useState("loading") // loading | ready | missing
-    const [offset, setOffset] = useState(0)
+    // Segment layout for the transcript<->video mapping. A single-segment pod
+    // is one entry synthesised from the scalar offset if the server is older.
+    const [segments, setSegments] = useState([])
 
     const base =
         new ApiService().getEndpoint() +
@@ -64,7 +103,13 @@ function VideoPlayer({
             .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
             .then((d) => {
                 if (cancelled) return
-                setOffset(d.offset || 0)
+                // Prefer the full segment layout; fall back to a one-segment
+                // list built from the scalar offset for older servers.
+                const segs =
+                    Array.isArray(d.segments) && d.segments.length > 0
+                        ? d.segments
+                        : [{ start: d.offset || 0, video_start: 0, duration: d.duration || null }]
+                setSegments(segs)
                 setStatus("ready")
             })
             .catch(() => !cancelled && setStatus("missing"))
@@ -77,11 +122,11 @@ function VideoPlayer({
     // Subtitles from the transcript, shifted into video time.
     const vttUrl = useMemo(() => {
         if (!transcripts || transcripts.length === 0) return null
-        const blob = new Blob([buildVtt(transcripts, offset)], {
+        const blob = new Blob([buildVtt(transcripts, segments)], {
             type: "text/vtt",
         })
         return URL.createObjectURL(blob)
-    }, [transcripts, offset])
+    }, [transcripts, segments])
     useEffect(
         () => () => {
             if (vttUrl) URL.revokeObjectURL(vttUrl)
@@ -93,7 +138,7 @@ function VideoPlayer({
     useEffect(() => {
         const v = ref.current
         if (!v || selectedTime == null || status !== "ready") return
-        const target = Math.max(selectedTime - offset, 0)
+        const target = sessionToVideo(selectedTime, segments)
         if (Math.abs(v.currentTime - target) > 0.75) {
             try {
                 v.currentTime = target
@@ -101,7 +146,7 @@ function VideoPlayer({
                 /* metadata not ready yet */
             }
         }
-    }, [selectedTime, status, offset])
+    }, [selectedTime, status, segments])
 
     // Playback -> transcript follow (throttled to ~2 updates/s).
     const onTimeUpdate = () => {
@@ -110,7 +155,7 @@ function VideoPlayer({
         const now = v.currentTime
         if (Math.abs(now - lastEmit.current) < 0.5) return
         lastEmit.current = now
-        onPlaybackTime(now + offset)
+        onPlaybackTime(videoToSession(now, segments))
     }
 
     if (status === "missing") {

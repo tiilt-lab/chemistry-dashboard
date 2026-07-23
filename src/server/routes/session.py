@@ -217,6 +217,21 @@ def _recording_stamp(path):
         return datetime.fromtimestamp(os.path.getmtime(path))
 
 
+def _probe_duration(path):
+    # Real duration in seconds, or None. Raw live-recording webm carries a
+    # placeholder 24h header, so this is meant for the REMUXED copies (which
+    # rewrite the true duration); a >12h result is treated as that placeholder.
+    try:
+        probe = subprocess.run(
+            ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+             '-of', 'default=noprint_wrappers=1:nokey=1', path],
+            capture_output=True, timeout=60)
+        d = float(probe.stdout.strip())
+        return d if 0 < d < 12 * 3600 else None
+    except Exception:
+        return None
+
+
 def _find_original_videos(session_device_id):
     # All recording segments for a pod in start-time order. A disconnect +
     # reconnect mid-session starts a new file, so one pod can have several.
@@ -269,16 +284,26 @@ def _fixed_video_path(session_device_id):
     total_bytes = sum(os.path.getsize(o) for o in originals)
     fixed = os.path.join(cache_dir, '{0}-{1}-{2}{3}'.format(
         session_device_id, len(originals), total_bytes, ext))
-    if os.path.exists(fixed):
+    # Real per-segment durations, written beside the remux. The concatenated
+    # video drops the disconnect gaps between segments, so mapping transcript
+    # time to video time needs each segment's true length (see _video_segments).
+    seg_json = fixed + '.segments.json'
+    # A single segment maps fine without the sidecar (one open-ended segment),
+    # but a multi-segment video needs the real per-segment durations to skip the
+    # disconnect gaps — so if its remux was cached before the sidecar existed,
+    # fall through and regenerate both.
+    if os.path.exists(fixed) and (len(originals) == 1 or os.path.exists(seg_json)):
         return fixed
     with _remux_locks_guard:
         lock = _remux_locks.setdefault(session_device_id, threading.Lock())
     with lock:
-        if os.path.exists(fixed):  # a concurrent request already remuxed it
+        # a concurrent request already produced it (same condition as above)
+        if os.path.exists(fixed) and (len(originals) == 1 or os.path.exists(seg_json)):
             return fixed
         _evict_video_cache(cache_dir, total_bytes)
         tmp = '{0}.tmp{1}'.format(fixed, ext)
         seg_files = []
+        durations = []
         try:
             if len(originals) == 1:
                 result = subprocess.run(
@@ -287,6 +312,7 @@ def _fixed_video_path(session_device_id):
                 if result.returncode != 0:
                     logging.warning('ffmpeg remux failed for %s: %s', originals, result.stderr[-500:])
                     return originals[0]  # fall back to the raw first segment
+                durations = [_probe_duration(tmp)]
             else:
                 # Stitch all segments (same device, same codecs). The raw
                 # files carry a placeholder 24h duration, which the concat
@@ -303,6 +329,7 @@ def _fixed_video_path(session_device_id):
                         logging.warning('segment remux failed for %s: %s', original, result.stderr[-500:])
                         return originals[0]
                     seg_files.append(seg)
+                    durations.append(_probe_duration(seg))
                 listfile = '{0}.list'.format(fixed)
                 seg_files.append(listfile)
                 with open(listfile, 'w') as f:
@@ -316,6 +343,11 @@ def _fixed_video_path(session_device_id):
                     logging.warning('ffmpeg concat failed for %s: %s', originals, result.stderr[-500:])
                     return originals[0]
             os.replace(tmp, fixed)  # atomic: readers see nothing or all of it
+            try:
+                with open(seg_json, 'w') as f:
+                    json.dump(durations, f)
+            except OSError as e:
+                logging.warning('could not write segment sidecar %s: %s', seg_json, e)
         except Exception as e:
             logging.warning('remux error for %s: %s', originals, e)
             return originals[0]
@@ -342,6 +374,52 @@ def _video_start_offset(session_id, session_device_id):
         return max((recording_start - session_model.creation_date).total_seconds(), 0.0)
     except Exception:
         return 0.0
+
+
+def _video_segments(session_id, session_device_id):
+    # The recording as the player sees it: one entry per segment, in play order,
+    #   {'start': session-relative time of the segment's FIRST frame,
+    #    'video_start': where it begins in the concatenated video (gaps removed),
+    #    'duration': real length in seconds}.
+    # A pod that dropped and rejoined has several segments; the concatenated
+    # video runs them back-to-back, so 'start' (which includes the disconnect
+    # gap) and 'video_start' (which does not) diverge. The player maps between
+    # transcript time and video time across these.
+    originals = _find_original_videos(session_device_id)
+    session_model = database.get_sessions(id=session_id, first=True)
+    if not originals or session_model is None:
+        return []
+    # Ensure the remux + duration sidecar exist, then read the durations.
+    fixed = _fixed_video_path(session_device_id)
+    durations = []
+    if fixed:
+        try:
+            with open(fixed + '.segments.json') as f:
+                durations = json.load(f)
+        except (OSError, ValueError):
+            durations = []
+
+    segments = []
+    video_cursor = 0.0
+    for i, original in enumerate(originals):
+        start = max((_recording_stamp(original)
+                     - session_model.creation_date).total_seconds(), 0.0)
+        dur = durations[i] if i < len(durations) and durations[i] else None
+        if dur is None:
+            # No probed length (probe failed, or sidecar missing on a raw
+            # fallback). Approximate from the next segment's start; the last
+            # segment is left open-ended.
+            if i + 1 < len(originals):
+                nxt = max((_recording_stamp(originals[i + 1])
+                           - session_model.creation_date).total_seconds(), 0.0)
+                dur = max(nxt - start, 0.0)
+            else:
+                dur = None
+        segments.append({'start': start, 'video_start': video_cursor,
+                         'duration': dur})
+        if dur is not None:
+            video_cursor += dur
+    return segments
 
 
 def prewarm_video_cache():
@@ -410,7 +488,10 @@ def get_session_device_video_info(session_id, session_device_id, **kwargs):
         logging.warning('ffprobe failed for %s: %s', path, e)
     return json_response({
         'duration': duration,
+        # offset stays for the single-segment fast path and older clients;
+        # segments is the full layout the player maps against (see below).
         'offset': _video_start_offset(session_id, session_device_id),
+        'segments': _video_segments(session_id, session_device_id),
     })
 
 
