@@ -15,7 +15,7 @@ from features_detector import scorer_factory
 from keyword_detector import keyword_detector
 from doa.doa_respeaker_v2_6mic_array import calculateDOA
 from speaker_diarization.pyDiarization import clusterSpectralEmbeddings
-from speaker_diarization.pyDiarization import embedSignal, checkFingerprints
+from speaker_diarization.pyDiarization import embedSignal, checkFingerprints, part_voice_features
 from speaker_diarization.pyDiarization import getSpectralEmbeddings
 from speaker_diarization import segment_split
 import numpy as np
@@ -234,11 +234,12 @@ class AudioProcessor:
                         self.diarization_model)
                 except Exception as e:
                     logging.warning('segment split failed (%s); whole-segment matching', e)
-                    tag, sid = checkFingerprints(
+                    tag, sid, conf = checkFingerprints(
                         audio_data, self.fingerprints, self.diarization_model)
                     parts = [{'start': start_time, 'end': end_time,
                               'text_slice': (0, len(words)), 'alias': tag,
-                              'speaker_id': sid, 'contested': None}]
+                              'speaker_id': sid, 'contested': None,
+                              'confidence': conf}]
                 multi = len(parts) > 1
                 for p in parts:
                     if multi:
@@ -262,8 +263,7 @@ class AudioProcessor:
                             'topic_id': topic_id,
                             'speaker_tag': p['alias'],
                             'speaker_id': p['speaker_id'],
-                            'voice_features': ({'contested': p['contested']}
-                                               if p.get('contested') else None),
+                            'voice_features': part_voice_features(p),
                         })
             else:
                 if self.config.diarization:

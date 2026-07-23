@@ -14,7 +14,7 @@ from features_detector import features_detector
 from keyword_detector import keyword_detector
 from doa.doa_respeaker_v2_6mic_array import calculateDOA
 from speaker_diarization.pyDiarization import clusterSpectralEmbeddings
-from speaker_diarization.pyDiarization import embedSignal, checkFingerprints
+from speaker_diarization.pyDiarization import embedSignal, checkFingerprints, part_voice_features
 from speaker_diarization.pyDiarization import getSpectralEmbeddings
 import numpy as np
 from joblib import load
@@ -286,14 +286,17 @@ class AudioProcessorPosthoc:
             speaker_tag = None
             speaker_id = -1
             if self.config.diarization and self.fingerprints and len(self.fingerprints):
-                speaker_tag, speaker_id = checkFingerprints(
+                speaker_tag, speaker_id, confidence = checkFingerprints(
                         audio_data, self.fingerprints, self.diarization_model)
                 if not speaker_tag:
                     # Batch ASRs (WhisperX + pyannote) can carry a diarization
                     # cluster label; better than leaving the utterance untagged
                     # when fingerprint matching fails.
                     speaker_tag = getattr(transcript_data, 'speaker_tag', None)
-                
+                    # That label is a cluster, not a fingerprint match, so the
+                    # print confidence does not describe it.
+                    confidence = None
+
                 # logging.info("processed for {0} : {1}".format(self.config.auth_key,[str(int(start_time//60))+':'+str(int(start_time%60)), str(int(end_time//60))+':'+str(int(end_time%60)),transcript_text,  speaker_tag, speaker_id]))
                 self.speaker_metrics_process.process_transcript(
                     {
@@ -307,7 +310,8 @@ class AudioProcessorPosthoc:
                         'features': features,
                         'topic_id': topic_id,
                         'speaker_tag': speaker_tag,
-                        'speaker_id': speaker_id
+                        'speaker_id': speaker_id,
+                        'voice_features': part_voice_features({'confidence': confidence}),
                     },action="posthoc_processing")
             else:
                 if self.config.diarization:

@@ -20,6 +20,12 @@ export class TranscriptModel {
   topic_id;
   speaker_id;
   speaker_metrics;
+  // Diarization attribution confidence for this line (0-100), or null when the
+  // speaker was not set by a fingerprint match (clustering fallback, or older
+  // transcripts recorded before confidence was captured). contested lists the
+  // voices that overlapped when the segment could not be cleanly attributed.
+  speaker_confidence;
+  contested;
 
   static fromJson(json, speaker_metrics) {
     const model = new TranscriptModel();
@@ -42,6 +48,12 @@ export class TranscriptModel {
     model.keywords = KeywordUsageModel.fromJsonList(json["keywords"]);
     model.keywords.forEach((k) => (k.transcript_id = model.id));
     model.speaker_metrics = speaker_metrics;
+    const vf = json["voice_features"] || {};
+    model.speaker_confidence =
+      vf.confidence && typeof vf.confidence.percent === "number"
+        ? vf.confidence.percent
+        : null;
+    model.contested = Array.isArray(vf.contested) ? vf.contested : null;
     return model;
   }
 

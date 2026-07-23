@@ -10,6 +10,30 @@ const FEATURE_FIELDS = [
     ["Certainty", "certainty_value"],
 ]
 
+// How sure the diarizer was that this line is from the labelled speaker, shown
+// inline so a reviewer can spot the shaky attributions to fix first. Amber
+// below ~55% (or when two voices overlapped), muted otherwise. Nothing renders
+// when there is no score — a clustering-fallback or pre-confidence transcript.
+function ConfidenceTag({ percent, contested }) {
+    if (percent == null) return null
+    const low = contested || percent < 55
+    return (
+        <span
+            title={
+                contested
+                    ? `Two voices overlapped here (${contested.join(", ")}) — ${percent}% match to the labelled speaker`
+                    : `${percent}% match to this speaker's voice print`
+            }
+            className={
+                "font-ahamono text-xs tabular-nums " +
+                (low ? "font-semibold text-tiilt-orange-text" : "text-tiilt-muted")
+            }
+        >
+            ({percent}%)
+        </span>
+    )
+}
+
 
 function buildSpeakerColors(transcripts) {
     const tags = [...new Set((transcripts || []).map((t) => t.speaker_tag).filter(Boolean))]
@@ -224,7 +248,7 @@ function TranscriptPanel({
                                             <span className="text-sm leading-snug text-tiilt-ink">
                                                 {onReassignSpeaker && t.id != null ? (
                                                     <span
-                                                        className="inline-block"
+                                                        className="inline-flex items-center gap-1"
                                                         onClick={(e) => e.stopPropagation()}
                                                     >
                                                         <SpeakerReassign
@@ -236,6 +260,12 @@ function TranscriptPanel({
                                                                 onReassignSpeaker(t.id, alias, applyToTag, guest)
                                                             }
                                                         />
+                                                        {t.speaker_tag ? (
+                                                            <ConfidenceTag
+                                                                percent={t.speaker_confidence}
+                                                                contested={t.contested}
+                                                            />
+                                                        ) : null}
                                                     </span>
                                                 ) : t.speaker_tag ? (
                                                     <span
@@ -243,6 +273,10 @@ function TranscriptPanel({
                                                         style={{ color }}
                                                     >
                                                         {t.speaker_tag}:{" "}
+                                                        <ConfidenceTag
+                                                            percent={t.speaker_confidence}
+                                                            contested={t.contested}
+                                                        />{" "}
                                                     </span>
                                                 ) : (
                                                     <></>

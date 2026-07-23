@@ -43,6 +43,53 @@ ACCEPT_LOW_MARGIN = 0.06
 CLOSED_WORLD = True
 NOISE_FLOOR = 0.08
 
+# Turn a raw cosine similarity into a 0-100 confidence for display. Raw cosine
+# is not intuitive here: enrolment prints score ~0.2-0.45 against live audio, so
+# 0.45 already means "sure" and showing it as 45% would read as a coin toss.
+# Anchor the scale on the accept gates above so the number matches how the
+# diarizer actually treats the match, and lift it slightly when the winner
+# leads the runner-up by a clear margin.
+_CONF_ANCHORS = [
+    (NOISE_FLOOR, 0),   # 0.08 -> nothing worth attributing
+    (ACCEPT_LOW, 35),   # 0.20 -> weak, only taken with a dominant margin
+    (ACCEPT_SIM, 60),   # 0.30 -> mid floor
+    (ACCEPT_SURE, 88),  # 0.45 -> confident on its own
+    (0.60, 98),
+    (1.0, 100),
+]
+
+
+def part_voice_features(part):
+    """Assemble the transcript's voice_features payload from an attributed part,
+    or None when there is nothing to record. Carries the diarization confidence
+    and any contested-overlap flag so the UI can show both."""
+    vf = {}
+    if part.get('contested'):
+        vf['contested'] = part['contested']
+    if part.get('confidence'):
+        vf['confidence'] = part['confidence']
+    return vf or None
+
+
+def confidence_percent(sim, margin=0.0):
+    """0-100 attribution confidence from a cosine similarity and the winner's
+    lead over the runner-up. Piecewise-linear on the accept gates, clamped."""
+    if sim is None:
+        return None
+    base = 0.0
+    if sim <= _CONF_ANCHORS[0][0]:
+        base = 0.0
+    elif sim >= _CONF_ANCHORS[-1][0]:
+        base = 100.0
+    else:
+        for (x0, y0), (x1, y1) in zip(_CONF_ANCHORS, _CONF_ANCHORS[1:]):
+            if x0 <= sim <= x1:
+                base = y0 + (y1 - y0) * (sim - x0) / (x1 - x0)
+                break
+    # A clear lead adds a little certainty; a photo-finish subtracts none.
+    base += max(0.0, min(margin, 0.10)) * 60
+    return int(max(0, min(100, round(base))))
+
 # Session adaptation: only utterances this confident teach the session print
 # (guards against a wrong accept poisoning the wrong person's reference).
 ADAPT_MIN_SIM = 0.40
@@ -103,7 +150,7 @@ def checkFingerprints(x, fingerprints, verification):
     utt = verification.encode_batch(sig)[0, 0].detach().cpu().numpy()
   except Exception as e:
     logging.info('utterance embed failed: {0}'.format(e))
-    return None, -1
+    return None, -1, None
   utt = utt / (np.linalg.norm(utt) + 1e-9)
 
   scored = []
@@ -122,11 +169,17 @@ def checkFingerprints(x, fingerprints, verification):
       sim = max(sim, float(np.dot(utt, sref)))
     scored.append((sim, alias, speaker))
   if not scored:
-    return None, -1
+    return None, -1, None
   scored.sort(reverse=True, key=lambda s: s[0])
   best_sim, best_alias, best_id = scored[0]
   runner_up = scored[1][0] if len(scored) > 1 else -1.0
   margin = best_sim - runner_up
+  # Confidence travels with the assignment so the transcript can show how sure
+  # the match was. 'closed_world' flags a below-gate best-of-roster pick, which
+  # is the one most likely to need a human's eye.
+  conf = {'percent': confidence_percent(best_sim, margin),
+          'sim': round(float(best_sim), 3),
+          'margin': round(float(margin), 3)}
 
   accepted = (best_sim >= ACCEPT_SURE
               or (best_sim >= ACCEPT_SIM and margin >= ACCEPT_MARGIN)
@@ -138,7 +191,8 @@ def checkFingerprints(x, fingerprints, verification):
     # session adaptation.
     logging.info('closed-world assign %s (sim %.3f, next %.3f)',
                  best_alias, best_sim, runner_up)
-    return best_alias, best_id
+    conf['closed_world'] = True
+    return best_alias, best_id, conf
   if accepted:
     if best_sim >= ADAPT_MIN_SIM:
       acc = _SESSION_ACC.setdefault(best_alias, [])
@@ -149,10 +203,10 @@ def checkFingerprints(x, fingerprints, verification):
         logging.info('session-adapted print active for %s', best_alias)
     logging.info('Selected speaker is %s (sim %.3f, next %.3f)',
                  best_alias, best_sim, runner_up)
-    return best_alias, best_id
+    return best_alias, best_id, conf
   logging.info('speaker abstain (best %s %.3f, next %.3f)',
                best_alias, best_sim, runner_up)
-  return None, -1
+  return None, -1, None
 
 
 

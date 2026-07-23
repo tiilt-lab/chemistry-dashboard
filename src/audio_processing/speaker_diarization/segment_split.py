@@ -126,22 +126,21 @@ def split_and_attribute(int16_audio, words, seg_start, seg_end,
     duration = seg_end - seg_start
     whole = {'start': seg_start, 'end': seg_end,
              'text_slice': (0, len(words)), 'alias': None,
-             'speaker_id': -1, 'contested': None}
+             'speaker_id': -1, 'contested': None, 'confidence': None}
 
     def decide(clip):
-        alias, sid = pyd.checkFingerprints(clip.tobytes(), fingerprints,
-                                           verification)
-        return alias, sid
+        return pyd.checkFingerprints(clip.tobytes(), fingerprints,
+                                     verification)
 
     if duration < MIN_SPLIT_S or len(words) < 2:
-        whole['alias'], whole['speaker_id'] = decide(int16_audio)
+        whole['alias'], whole['speaker_id'], whole['confidence'] = decide(int16_audio)
         return [whole]
 
     votes = _window_votes(int16_audio, fingerprints, verification)
     cp = _change_point(votes)
 
     if cp is None:
-        whole['alias'], whole['speaker_id'] = decide(int16_audio)
+        whole['alias'], whole['speaker_id'], whole['confidence'] = decide(int16_audio)
         # Contested = two voices each winning solid shares of the windows
         # (ping-pong too fast to split). Checked even when the whole-segment
         # gate accepted one name — the second voice is still real signal.
@@ -167,7 +166,7 @@ def split_and_attribute(int16_audio, words, seg_start, seg_end,
     left_end = words[best_i - 1][2]
     right_start = words[best_i][1]
     if (left_end - seg_start) < MIN_PART_S or (seg_end - right_start) < MIN_PART_S:
-        whole['alias'], whole['speaker_id'] = decide(int16_audio)
+        whole['alias'], whole['speaker_id'], whole['confidence'] = decide(int16_audio)
         return [whole]
 
     a0 = int((0) * SR)
@@ -177,9 +176,10 @@ def split_and_attribute(int16_audio, words, seg_start, seg_end,
     for (s, e, sl, clip) in [
             (seg_start, left_end, (0, best_i), int16_audio[a0:a1]),
             (right_start, seg_end, (best_i, len(words)), int16_audio[b0:])]:
-        alias, sid = decide(clip)
+        alias, sid, conf = decide(clip)
         parts.append({'start': s, 'end': e, 'text_slice': sl,
-                      'alias': alias, 'speaker_id': sid, 'contested': None})
+                      'alias': alias, 'speaker_id': sid, 'contested': None,
+                      'confidence': conf})
     logging.info('segment split at %.1fs: %s | %s',
                  cp_abs, parts[0]['alias'], parts[1]['alias'])
     return parts
