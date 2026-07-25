@@ -8,9 +8,8 @@ import { TiiltLogo } from "../components/tiilt-logo"
 // route around every signed-in page, so moving between sections no longer
 // means going back to /home. Collapses to an icon rail below lg.
 //
-// "Devices" is the physical recorder hardware (/devices; /pods redirects);
-// a group inside a session stays a "Group". "Library" fronts the
-// keyword/topic configuration cluster.
+// A group inside a session is a "Group". "Library" fronts the keyword/topic
+// configuration cluster.
 
 function IconSessions(props) {
     return (
@@ -27,15 +26,6 @@ function IconStudents(props) {
             <path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" />
             <path d="M16 5.5a3.5 3.5 0 0 1 0 5" />
             <path d="M18.5 14.5c1.9.9 3 2.6 3 5.5" />
-        </svg>
-    )
-}
-function IconDevices(props) {
-    return (
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
-            <rect x="5" y="3" width="14" height="18" rx="3" />
-            <circle cx="12" cy="14" r="3.5" />
-            <line x1="9" y1="7" x2="15" y2="7" />
         </svg>
     )
 }
@@ -59,7 +49,6 @@ function IconAdmin(props) {
 const NAV_ITEMS = [
     { label: "Sessions", to: "/sessions", match: ["/sessions"], Icon: IconSessions },
     { label: "Students", to: "/students", match: ["/students"], Icon: IconStudents },
-    { label: "Devices", to: "/devices", match: ["/devices", "/pods"], Icon: IconDevices },
     {
         label: "Library",
         to: "/keyword-lists",

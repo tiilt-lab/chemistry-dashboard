@@ -12,17 +12,12 @@ import pod from "../assets/img/icon-pod.svg"
 const GROUPS = [
     {
         icon: recordicon,
-        name: "Sessions & Devices",
+        name: "Sessions",
         links: [
             {
                 label: "Sessions",
                 desc: "Record new sessions and review past ones",
                 path: "/sessions",
-            },
-            {
-                label: "Devices",
-                desc: "Recording hardware and its connection status",
-                path: "/devices",
             },
         ],
     },

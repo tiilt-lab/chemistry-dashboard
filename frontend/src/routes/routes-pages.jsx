@@ -30,7 +30,6 @@ const PodComponent = lazy(() => import('../pod-details/pod-component').then(m =>
 const TranscriptsComponent = lazy(() => import('../transcripts/transcripts-component').then(m => ({ default: m.TranscriptsComponent })))
 const TopicListComponent = lazy(() => import('../topic-list/topic-list-component').then(m => ({ default: m.TopicListComponent })))
 const ManageTopicModelsComponent = lazy(() => import('../manage-topic-models/manage-topic-models-component').then(m => ({ default: m.ManageTopicModelsComponent })))
-const PodsComponent = lazy(() => import('../pods/pods-component').then(m => ({ default: m.PodsComponent })))
 const StudentsComponent = lazy(() => import('../students/students-component').then(m => ({ default: m.StudentsComponent })))
 const StudentProfileComponent = lazy(() => import('../student-profile/student-profile-component').then(m => ({ default: m.StudentProfileComponent })))
 const RatersComponent = lazy(() => import('../raters/raters-component').then(m => ({ default: m.RatersComponent })))
@@ -84,10 +83,13 @@ function PageRouter() {
                 <Route path='/file_upload/new-session' element={<ProtectedRoute component={FileUploadComponent}/>} />
                 <Route path='/topic-list' element={<ProtectedRoute component={TopicListComponent}/>} />
                 <Route path='/topic-list/new-session' element={<ProtectedRoute component={TopicListComponent}/>} />
-                {/* Physical recorder hardware is "Devices"; a group within a
-                    session stays a "Group" — the word "pod" meant both. */}
-                <Route path='/devices' element={<ProtectedRoute component={PodsComponent}/> } />
-                <Route path='/pods' element={<Navigate replace to="/devices" />} />
+                {/* The Devices page (physical recorder hardware) is gone.
+                    Both paths redirect so existing links and bookmarks land
+                    somewhere useful instead of a blank shell. Pods are still
+                    managed where they are used: when creating a session, and
+                    in Settings. */}
+                <Route path='/devices' element={<Navigate replace to="/sessions" />} />
+                <Route path='/pods' element={<Navigate replace to="/sessions" />} />
                 <Route path='/students' element={<ProtectedRoute component={StudentsComponent}/> } />
                 <Route path='/students/:studentId' element={<ProtectedRoute component={StudentProfileComponent}/> } />
                 <Route path='/raters' element={<ProtectedRoute component={RatersComponent}/> } />
