@@ -1,25 +1,71 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
+import { createPortal } from "react-dom"
+
+const MENU_W = 240 // matches the menu's rendered width
+const MENU_MAX_H = 280
 
 // Clickable speaker label on a transcript line: "this section is from…".
 // Click it, pick the right participant, and either fix just this line or
 // every line currently sharing this label (a diarization cluster is usually
 // all-or-nothing wrong, so the bulk action is the common case).
+//
+// The menu renders in a portal on document.body, positioned from the button's
+// viewport rect. It used to be absolutely positioned inside the row, where the
+// transcript list's own scroll container (overflow-y-auto) clipped it — z-index
+// cannot escape an ancestor's overflow, so most of the menu was cut off.
 export function SpeakerReassign({ tag, roster, count, onReassign, disabled, color }) {
     const [open, setOpen] = useState(false)
     const [busy, setBusy] = useState(false)
     const [guestMode, setGuestMode] = useState(false)
     const [guestName, setGuestName] = useState("")
+    const [pos, setPos] = useState(null)
     const ref = useRef(null)
+    const menuRef = useRef(null)
+
+    // Anchor under the button, flipping above it when the viewport has no room
+    // below, and keeping the menu inside the left/right edges.
+    const place = useCallback(() => {
+        const el = ref.current
+        if (!el) return
+        const r = el.getBoundingClientRect()
+        const below = window.innerHeight - r.bottom
+        const flip = below < MENU_MAX_H && r.top > below
+        setPos({
+            top: flip ? undefined : r.bottom + 4,
+            bottom: flip ? window.innerHeight - r.top + 4 : undefined,
+            left: Math.max(8, Math.min(r.left, window.innerWidth - MENU_W - 8)),
+        })
+    }, [])
 
     useEffect(() => {
         if (!open) return
+        place()
+        // The menu is no longer a DOM descendant of the button, so an
+        // outside-click test has to check both.
         const away = (e) => {
-            if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+            if (
+                ref.current && !ref.current.contains(e.target) &&
+                menuRef.current && !menuRef.current.contains(e.target)
+            ) {
+                setOpen(false)
+            }
         }
+        const onKey = (e) => e.key === "Escape" && setOpen(false)
+        // Follow the anchor while the transcript list or page scrolls
+        // (capture: the scroll happens on an inner container, not window).
         document.addEventListener("mousedown", away)
-        document.addEventListener("keydown", (e) => e.key === "Escape" && setOpen(false))
-        return () => document.removeEventListener("mousedown", away)
-    }, [open])
+        document.addEventListener("keydown", onKey)
+        window.addEventListener("scroll", place, true)
+        window.addEventListener("resize", place)
+        return () => {
+            document.removeEventListener("mousedown", away)
+            // The old cleanup dropped only the mousedown listener, leaking one
+            // Escape handler per open.
+            document.removeEventListener("keydown", onKey)
+            window.removeEventListener("scroll", place, true)
+            window.removeEventListener("resize", place)
+        }
+    }, [open, place])
 
     const pick = async (alias, applyToTag, guest = false) => {
         setBusy(true)
@@ -52,10 +98,19 @@ export function SpeakerReassign({ tag, roster, count, onReassign, disabled, colo
             >
                 {label}:
             </button>
-            {open ? (
+            {open && pos ? createPortal(
                 <div
                     role="menu"
-                    className="absolute top-full left-0 z-20 mt-1 w-60 rounded-lg border border-tiilt-line bg-white p-1 shadow-pop"
+                    ref={menuRef}
+                    style={{
+                        position: "fixed",
+                        top: pos.top,
+                        bottom: pos.bottom,
+                        left: pos.left,
+                        width: MENU_W,
+                        maxHeight: MENU_MAX_H,
+                    }}
+                    className="z-50 overflow-y-auto rounded-lg border border-tiilt-line bg-white p-1 shadow-pop"
                 >
                     <div className="px-2 py-1 text-[11px] font-semibold tracking-wide text-tiilt-muted uppercase">
                         This section is from…
@@ -135,7 +190,8 @@ export function SpeakerReassign({ tag, roster, count, onReassign, disabled, colo
                             Someone else…
                         </button>
                     )}
-                </div>
+                </div>,
+                document.body,
             ) : null}
         </span>
     )

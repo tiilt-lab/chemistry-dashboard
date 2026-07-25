@@ -284,7 +284,7 @@ function TranscriptPanel({
 
                                         {/* Column 2 — speaker (click to reassign) + confidence */}
                                         <div
-                                            className="w-28 flex-none overflow-hidden pt-0.5 text-sm leading-snug"
+                                            className="w-28 flex-none pt-0.5 text-sm leading-snug"
                                             onClick={(e) => e.stopPropagation()}
                                         >
                                             {onReassignSpeaker && t.id != null ? (
