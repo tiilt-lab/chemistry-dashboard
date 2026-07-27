@@ -719,7 +719,7 @@ function PodComponent() {
       if (response.status === 200) {
         const jsonObj = await response.json()
         llmSessionAnalysis.current[participantId] = jsonObj.answer;
-        // console.log("llm response: ",llmSessionAnalysis.current[participantId])
+        console.log("llm response: ",llmSessionAnalysis.current[participantId])
         selectedParticipantLLMAnalysis.current = llmSessionAnalysis.current[participantId]
         selectedParticipantSynthesizedData.current = respObj
         loadprompthistory(participantId)

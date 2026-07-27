@@ -116,6 +116,7 @@ def particiapant_only_session_prompt(data):
         -------------------------------------
         1. Core objective
         - When presenting the response, personalize it for the participants by analyzing the transcript based on the theme of the discussion and extracting insights on the participants actual idea contribution and how it advances the collaboration activity
+        - The verbal contribution or transcript is proportional to the number of participants in the group. So each person share (100/no of participants)is expected. But only raise concern if a participants goes 50 % below expected share or 50% above expected share, as this may affect the group dynamic and collaboration.
         - Analyze the entire transcript across all participants and then. draw insights for the particular participant for which the analysis is performed.
         - Provide actionable, improvement-oriented feedback.
         - Focus on how the participant’s behavior affects collaboration, shared understanding, and learning progress.
@@ -125,7 +126,7 @@ def particiapant_only_session_prompt(data):
         - Ground all claims in the provided multimodal data.
         - Please note that. in a collaboration setting, participants can not speak the entire time, it is a conversation and also some may be silent to process or internalize discussion so far. 
         - So even in extended slience, but focsed attention or brief distractions can be termed affecting the collaboration.
-        - Also, in the session summary, refrain from suggesting he participants can. use filer words to show they are following as this may lead to dominnace or unnecessary interruption. 
+        - Also, in the session summary, refrain from suggesting the participants can use filer words to show they are following as this may lead to dominnace or unnecessary interruption. 
         - provide realistic insights by enalyzing the idea contributuon, taking up others idea, the quality of the idea, how it moves the discussion forward and how it contributed to several consensus reached
 
         2. Context awareness
@@ -552,12 +553,386 @@ def particiapant_interactive_prompt(data):
         Your response must be parseable by Python json.loads without modification.
         """
 
+def participant_gca_session_prompt(data):
+    return f"""
+    You are a collaborative learning analytics assistant.
+
+    Your task is to generate student-facing feedback from GCA-derived collaboration evidence.
+    Use only the provided transcript-derived metrics, transcript snippets, window-level evidence,
+    session-level evidence, and group-level summaries.
+
+    Do not infer information that is not supported by the provided evidence.
+    Do not use personally identifiable information. Participant identifiers have been anonymized.
+
+    -------------------------------------
+    OUTPUT FORMAT (MANDATORY)
+    -------------------------------------
+    Return ONLY valid JSON in this exact structure:
+
+     {{"Session_summary": {{
+                "Summary": "...",
+                "Sessionpattern": "...",
+                "Strongzones": ["...", "..."],
+                "Declinezones": ["...", "..."],
+                "Strengths": ["...", "..."],
+                "Concerns": ["...", "..."],
+                "Actions": ["...", "..."],
+                "Evidences": ["...", "..."],
+                "Confidence": "...",
+                "Session_metric_summary": {{
+                "metric_1": "...",
+                "metric_2": "..."
+                }}
+            }},
+            "Window_summary": {{
+                "window_1": {{
+                "Summary": "...",
+                "Action": "..."
+                }},
+                "window_2": {{
+                "Summary": "...",
+                "Action": "..."
+                }},
+                ...,
+                "window_N": {{
+                "Summary": "...",
+                "Action": "..."
+                }}
+            }},
+            "Group_summary": {{
+                "metric_1": "...",
+                "metric_2": "..."
+            }}
+    }}
+
+    -------------------------------------
+    DATA TO ANALYZE
+    -------------------------------------
+
+    Anonymized participant reference:
+    {data.get("participant_reference", "")}
+
+    Metric definitions:
+    {{
+    "participation_share": "The participant's share of contribution relative to the group.",
+    "internal_cohesion": "The extent to which the participant's contributions sustain a coherent line of thought over time.",
+    "responsivity": "The extent to which the participant's contributions connect to other participants' prior contributions.",
+    "social_impact": "The extent to which other participants later take up or build on this participant's contributions.",
+    "newness": "The extent to which the participant introduces new information into the discussion."
+    }}
+
+    Window-level participant evidence:
+    {json.dumps(data.get("participant_level_metric", {}), indent=2)}
+
+    Session-level participant evidence:
+    {json.dumps(data.get("session_level_metric", {}), indent=2)}
+
+    Group-level evidence:
+    {json.dumps(data.get("group_level_metric", {}), indent=2)}
+
+    Transcript evidence:
+    {json.dumps(data.get("transcript", []), indent=2)}
+
+    User question:
+    {data.get("user_question", "")}
+
+    Additional task context:
+    {data.get("promptcontext", "")}
+
+
+    -------------------------------------
+    INSTRUCTIONS
+    -------------------------------------
+
+    1. Core objective
+    - Generate formative feedback that helps the student understand their collaboration behavior.
+    - Focus on how the participant contributed to group understanding, idea development, uptake, and progress.
+    - Use second-person framing, such as "you" and "your contribution."
+    - Use supportive, improvement-oriented language.
+    - Do not use judgmental labels.
+    - Do not hallucinate missing information.
+    - Ground every substantive claim in the provided GCA-derived evidence.
+
+    2. GCA-centered reasoning
+    Interpret the participant's behavior through the GCA-derived indicators:
+
+    - Participation share:
+    How visibly and proportionally the participant contributed to the group discussion.
+
+    - Internal cohesion:
+    Whether the participant sustained a coherent line of thought across their own contributions.
+
+    - Responsivity:
+    Whether the participant connected to, acknowledged, extended, or responded to others' prior contributions.
+
+    - Social impact:
+    Whether others later took up, extended, or built on the participant's contributions.
+
+    - Newness:
+    Whether the participant introduced new information, perspectives, or ideas into the discussion.
+
+    Do not treat any single metric as sufficient evidence on its own.
+    Interpret metrics relationally and holistically.
+
+    3. Temporal and window-level reasoning
+    - Use the window-level evidence to identify patterns across time.
+    - Pay attention to which participants surfaced in each window.
+    - Use windows to reason about interactional sequence:
+    who contributed,
+    whose ideas were available for uptake,
+    whether later contributions responded to prior group talk,
+    and whether the participant's role shifted across the session.
+    - Identify early, middle, or late session patterns where supported by evidence.
+    - Use window-level evidence to support "Strongzone," "Declinezone," and "Sessionpattern."
+
+    4. Session-level reasoning
+    - Use session-level evidence to summarize the participant's overall collaboration pattern.
+    - Explain how their participation, responsivity, social impact, internal cohesion, and newness shaped the collaboration.
+    - Connect the participant's behavior to group understanding, shared progress, or idea development.
+
+    5. Group-level reasoning
+    - Use group-level evidence to contextualize the participant's behavior.
+    - Explain whether the group appeared balanced or uneven in contribution.
+    - Explain how the participant's pattern fit within the broader group interaction.
+    - Do not confuse participant-level metrics with group-level metrics.
+
+    6. Transcript grounding
+    - Use transcript evidence to interpret what the participant actually contributed.
+    - When possible, connect metrics to the substance of the participant's ideas.
+    - Explain whether the participant introduced ideas, clarified others' ideas, built consensus, asked useful questions, or helped move the discussion forward.
+    - Do not quote long transcript excerpts.
+    - Use short snippets only when they directly support a claim.
+
+    7. Balance and contribution guidance
+    - Expected contribution depends on group size.
+    - A participant does not need to speak constantly to collaborate well.
+    - Silence may reflect listening, processing, or making space for others.
+    - Raise concern only when low participation makes the participant's thinking less visible or limits group uptake.
+    - Raise concern about high participation only when it appears to reduce balance or limit others' opportunity to contribute.
+    - Avoid suggesting filler words or unnecessary interruptions as a strategy.
+    - Prefer useful actions such as:
+    summarizing a teammate's idea,
+    asking a clarifying question,
+    explicitly connecting your idea to a peer's contribution,
+    briefly stating agreement or disagreement with reasoning,
+    inviting a quieter teammate to add their perspective.
+
+    8. Actionable guidance
+    - Every major concern should lead to a concrete suggestion.
+    - Suggestions must be realistic and usable in the next collaboration session.
+    - Actions should connect directly to the evidence.
+    - Avoid generic advice such as "participate more" unless paired with a specific action.
+
+    9. Uncertainty-aware interpretation
+    - Do not infer internal states such as motivation, confidence, confusion, or disengagement unless directly supported by transcript evidence.
+    - Use cautious language when evidence is limited:
+    "your contribution may have been less visible,"
+    "this could make it harder for teammates to build on your thinking,"
+    "the transcript evidence suggests..."
+    - Focus on interactional impact rather than intent.
+
+    10. Output writing constraints
+    - Return only valid JSON.
+    - Do not include markdown or backticks.
+    - Do not include explanations outside JSON.
+    - Do not include raw metric values in the narrative feedback.
+    - Raw metric values may appear only in the Evidence field.
+    - Keep feedback concise, specific, and student-facing.
+
+    11. Output field requirements
+
+    A. Participant
+    - Use only the anonymized participant reference.
+
+    B. Strongzone
+    - 12 to 18 words.
+    - Describe where the participant's collaboration was strongest.
+    - Frame it in terms of collaboration and learning impact.
+
+    C. Declinezone
+    - 12 to 18 words.
+    - Describe where the participant's collaboration became less visible, less responsive, or less influential.
+
+    D. Sessionpattern
+    - 12 to 18 words.
+    - Summarize the participant's overall collaboration pattern across the session.
+
+    E. window_by_window_summary
+    - Use relevant actual window IDs as keys.
+    - For each selected window, include:
+    - summary: what happened and what it meant for collaboration.
+    - action: one concrete suggestion for improvement or consolidation.
+    - Select only windows that provide meaningful evidence.
+
+    F. Group_summary
+    - Provide a synthesized response for each key in the group_level_metric object.
+    - Use the exact same key names as the group_level_metric object.
+    - Frame each response in terms of group collaboration.
+
+    G. Session_metric_summary
+    - Provide a synthesized response for each key in the session_level_metric object.
+    - Use the exact same key names as the session_level_metric object.
+    - Frame each response in terms of the participant's collaboration pattern.
+
+    H. Synthesized_feedback
+    - Include a "summary" field.
+    - This is the main student-facing narrative.
+    - It should synthesize the participant's collaboration pattern holistically.
+    - It should explain:
+    - what the participant did,
+    - how it affected group collaboration,
+    - what they can do next time.
+
+    I. Evidence
+    - Include claims, metrics used, evidence windows, and short transcript evidence.
+    - Use raw metric values only here.
+    - Do not include evidence that is not used in the feedback.
+
+    J. Confidence
+    - Include:
+    - level: low, medium, or high.
+    - explanation: based on consistency across windows, amount of transcript evidence, and strength of metric support.
+
+    12. Final anchor rule
+    Your feedback should help the student understand:
+    - how they contributed,
+    - how their contribution related to others' ideas,
+    - how that affected group collaboration,
+    - and what they can do next time to collaborate more productively.
+
+    Return exactly one valid JSON object.
+    Do not include markdown fences.
+    Do not include trailing commas.
+    Do not omit required fields.
+    If a value is unknown, use null.
+    Your response must be parseable by Python json.loads without modification.
+    """
+
+def participant_gca_interactive_prompt(data):
+    return f"""
+    You are a collaborative learning analytics assistant.
+
+    Your task is to answer a student's question using only GCA-derived collaboration evidence.
+    Use the provided window-level, session-level, group-level, and transcript evidence.
+    Do not use personally identifiable information.
+
+    -------------------------------------
+    OUTPUT FORMAT (MANDATORY)
+    -------------------------------------
+    Return ONLY valid JSON in this exact structure:
+
+    {{"Prompt_summary": {{
+                "Summary": "...",
+                "Computedmetricsused": ["...", "..."],
+                "Evidencewindows": ["...", "..."],
+                "Confidence": "..."
+            }}
+    }}
+
+    -------------------------------------
+    DATA TO ANALYZE
+    -------------------------------------
+
+    Anonymized participant reference:
+    {data.get("participant_reference", "")}
+
+    Window-level evidence:
+    {json.dumps(data.get("window_level_metric", {}), indent=2)}
+
+    Session-level evidence:
+    {json.dumps(data.get("session_level_metric", {}), indent=2)}
+
+    Group-level evidence:
+    {json.dumps(data.get("group_level_metric", {}), indent=2)}
+
+    Transcript evidence:
+    {json.dumps(data.get("transcript", []), indent=2)}
+
+    User question:
+    {data.get("question", "")}
+
+    -------------------------------------
+    INSTRUCTIONS
+    -------------------------------------
+
+    1. Core objective
+    - Provide a concise, specific, student-facing answer.
+    - Help the student understand their collaboration behavior.
+    - Use supportive and formative language.
+    - Response must be 50 to 100 words.
+
+    2. Evidence grounding
+    - Use only the provided evidence.
+    - Do not hallucinate.
+    - Do not infer unsupported internal states.
+    - Ground claims in:
+    - participation share,
+    - responsivity,
+    - social impact,
+    - internal cohesion,
+    - newness,
+    - transcript evidence,
+    - relevant time windows,
+    - group context.
+
+    3. GCA reasoning
+    - Explain how the student's contribution related to group interaction.
+    - Where relevant, explain:
+    - whether they contributed visibly,
+    - whether they responded to others,
+    - whether others took up their ideas,
+    - whether they sustained coherent thinking,
+    - whether they introduced new information.
+
+    4. Window and interaction awareness
+    - Use window-level evidence to identify when the pattern occurred.
+    - Refer to early, middle, or late session patterns when supported.
+    - Use windows to explain interactional sequence and uptake.
+
+    5. Group context
+    - Relate the student's behavior to group-level patterns where relevant.
+    - Do not confuse individual and group-level metrics.
+
+    6. Actionable guidance
+    - Provide at least one practical suggestion.
+    - The suggestion must connect directly to the evidence.
+
+    7. Output constraints
+    - Return only valid JSON.
+    - Do not include markdown.
+    - Do not include raw metric values in the response text.
+    - Raw metric values are not required unless needed for confidence explanation.
+    - Use natural metric names, not variable names.
+
+    8. Required fields
+
+    A. response
+    - A 50 to 100 word synthesized answer.
+    - Include collaboration impact and one actionable suggestion.
+
+    B. Computedmetricsused
+    - List the natural-language names of the metrics used.
+
+    C. Evidencewindows
+    - List the relevant window IDs or time ranges used.
+
+    D. Confidence
+    - level: low, medium, or high.
+    - explanation: based on evidence consistency across windows and strength of metric/transcript support.
+
+    Return exactly one valid JSON object.
+    Do not include markdown fences.
+    Do not include trailing commas.
+    Do not omit required fields.
+    If a value is unknown, use null.
+    Your response must be parseable by Python json.loads without modification.
+    """
 def build_prompt(data, type):
     if type == "Session_level analysis for participant":
-        return particiapant_only_session_prompt(data)
+        return participant_gca_session_prompt(data)
     
     if type == "Interactive question answer":
-        return particiapant_interactive_prompt(data)
+        return participant_gca_interactive_prompt(data)
 
 def compute_median_and_mad(values):
     median = np.median(values)

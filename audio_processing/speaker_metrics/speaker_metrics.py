@@ -85,7 +85,7 @@ class SpeakerProcessor:
           lag = i + 1
           prev_speaker =  self.indicies[self.prev_window_speakers[-lag]]  #self.indicies[self.prev_window_speakers[i]] + 1 if self.prev_window_speakers[i] != -1 else 0
           sim = model.similarity(self.embeddings[-lag], embedding)
-          logging.info("simillarity is {0} for lag {1}".format(sim,lag))
+          # logging.info("simillarity is {0} for lag {1}".format(sim,lag))
           self.xi_sums[i][current_speaker][prev_speaker] +=  sim #model.similarity(self.embeddings[self.length-i-1], embedding)
           self.window_lagged_contributions[i][current_speaker][prev_speaker] += 1
       if len(self.prev_window_speakers) >= self.tau_window:
@@ -139,6 +139,99 @@ class SpeakerProcessor:
 
       # return group_past_context_embedding
 
+    def speaker_cumulative_past_context_by_session(self, min_lag, use_weighted_past=True):
+      """
+      For each lag τ, identify the speaker who contributed at t-τ and aggregate
+      that speaker's own contributions from the beginning of the session up to
+      and including t-τ.
+
+      Important:
+      - self.embeddings contains only past contributions when this is called.
+      - index 0 in the returned list corresponds to lag 1.
+      - tau moves backward: lag 1 = most recent previous contribution,
+        lag 2 = second most recent previous contribution, etc.
+      """
+
+      speaker_contexts = []
+      total_past = len(self.embeddings)
+
+      for i in range(min_lag):
+          lag = i + 1
+          lagged_position = total_past - lag
+
+          if lagged_position < 0:
+              speaker_contexts.append(None)
+              continue
+
+          # Speaker index at t - tau
+          tau_speaker = self.embedding_speakers[lagged_position]
+
+          # Only use that speaker's contributions from the beginning
+          # up to and including the contribution at t - tau.
+          speaker_history = [
+              emb
+              for emb, spk in zip(
+                  self.embeddings[:lagged_position + 1],
+                  self.embedding_speakers[:lagged_position + 1]
+              )
+              if spk == tau_speaker
+          ]
+
+          context_embedding = self.aggregate_embeddings(
+              speaker_history,
+              weighted=use_weighted_past
+          )
+
+          speaker_contexts.append({
+              "lag": lag,
+              "speaker": tau_speaker,
+              "context_embedding": context_embedding,
+              "history_count": len(speaker_history),
+              "lagged_position": lagged_position
+          })
+
+      return speaker_contexts
+
+
+    def speaker_cumulative_past_context_by_tau(self, min_lag, use_weighted_past=True):
+      """
+      Builds lag-faithful, speaker-specific past contexts within the current
+      trailing lag window.
+
+      For each lag tau:
+        - identify the speaker at t - tau
+        - aggregate only that speaker's contributions within the current
+          lag window, from the window start up to and including t - tau
+      """
+
+      speaker_contexts = []
+
+      total_past = len(self.embeddings)
+      window_start = total_past - min_lag
+
+      for i in range(min_lag):
+          lag = i + 1
+          lagged_position = total_past - lag
+          lagged_speaker = self.embedding_speakers[lagged_position]
+
+          context_embeddings = [
+              emb
+              for emb, spk in zip(
+                  self.embeddings[window_start:lagged_position + 1],
+                  self.embedding_speakers[window_start:lagged_position + 1]
+              )
+              if spk == lagged_speaker
+          ]
+
+          speaker_contexts.append(
+              self.aggregate_embeddings(
+                  context_embeddings,
+                  weighted=use_weighted_past
+              )
+          )
+
+      return speaker_contexts
+
     # --------------------------------------------------
     # 2. Current speaker past  contribution
     #    Uses recent speaker speaker_window_size contributions + current contribution
@@ -175,65 +268,146 @@ class SpeakerProcessor:
 
       return speaker_contexts
 
-    def calculateCohesionSums_V2(self,speaker,embedding,model,current_window_size=3,use_weighted_past=True):
+    def calculateCohesionSums_V2(self, speaker, embedding, model,current_window_size=3,use_weighted_past=True):
       try:
-        current_speaker = speaker
-        min_lag = min(self.length, self.tau_window)
-        if min_lag == 0:
-          return np.zeros((self.tau_window, self.participants, self.participants))
-      
-      
-        # --------------------------------------------------
-        # 4. Compute group-context similarity
-        # --------------------------------------------------
-        group_past_context_embedding = self.group_level_past_context(min_lag,use_weighted_past)
-        current_context_embedding = self.current_speaker_contextualized_contribution(current_window_size,embedding)
-        # group_sim = model.similarity(group_past_context_embedding.astype(np.float32),current_context_embedding.astype(np.float32))
-        # group_sim = float(group_sim)
+          current_speaker = speaker
+          min_lag = min(self.length, self.tau_window)
 
-        # --------------------------------------------------
-        # 5. Compute internal speaker cohesion similarity
-        # --------------------------------------------------
-        speaker_past_context_embedding = self.speaker_context_internal_cohesion(current_speaker,min_lag,use_weighted_past)
-      
-        # logging.info("group cohesion sim={0}, internal speaker cohesion sim={1}, speaker={2}".format(group_sim,internal_sim,current_speaker))
+          if min_lag == 0:
+              return np.zeros(
+                  (self.tau_window, self.participants, self.participants)
+              )
 
-        # --------------------------------------------------
-        # 6. Attribute scores to speaker-pair matrix
-        # --------------------------------------------------
-        for i in range(0, min_lag):
-          lag = i + 1
-          prev_speaker = self.indicies[self.prev_window_speakers[-lag]]
-          group_sim = float(model.similarity(group_past_context_embedding[i].astype(np.float32),self.safe_normalize(embedding).astype(np.float32))) #current_context_embedding.astype(np.float32)
+          current_embedding = self.safe_normalize(embedding).astype(np.float32)
 
-          if prev_speaker != current_speaker:
-              self.xi_sums[i][current_speaker][prev_speaker] += group_sim
+          # --------------------------------------------------
+          # Compute lag-faithful speaker-context similarity
+          # --------------------------------------------------
+          speaker_past_contexts = self.speaker_cumulative_past_context_by_session(
+              min_lag,
+              use_weighted_past
+          )
+
+          # --------------------------------------------------
+          # Attribute scores to speaker-pair matrix.
+          # Off-diagonal cells estimate cross-speaker cohesion.
+          # Diagonal cells estimate internal cohesion.
+          # --------------------------------------------------
+          for i in range(0, min_lag):
+              tau_context = speaker_past_contexts[i]
+
+              if tau_context is None:
+                  continue
+
+              prev_speaker = tau_context["speaker"]
+              speaker_context = tau_context["context_embedding"]
+
+              if speaker_context is None:
+                  continue
+
+              speaker_sim = float(model.similarity(
+                  speaker_context.astype(np.float32),
+                  current_embedding
+              ))
+
+              self.xi_sums[i][current_speaker][prev_speaker] += speaker_sim
               self.window_lagged_contributions[i][current_speaker][prev_speaker] += 1
 
-          speaker_context = speaker_past_context_embedding[i]
+          
+          if len(self.prev_window_speakers) >= self.tau_window:
+              self.prev_window_speakers.pop(0)
 
-          if speaker_context is not None:
-              internal_sim = model.similarity(speaker_context.astype(np.float32),self.safe_normalize(embedding).astype(np.float32))
-              internal_sim = float(internal_sim)
+          with np.errstate(divide='ignore', invalid='ignore'):
+              cross_cohesion = np.divide(
+                  self.xi_sums,
+                  self.window_lagged_contributions
+              )
+              cross_cohesion = np.nan_to_num(cross_cohesion)
 
-              self.xi_sums[i][current_speaker][current_speaker] += internal_sim
-              self.window_lagged_contributions[i][current_speaker][current_speaker] += 1
+          return cross_cohesion
 
-        if len(self.prev_window_speakers) >= self.tau_window:
-            self.prev_window_speakers.pop(0)
-
-        with np.errstate(divide='ignore', invalid='ignore'):
-            cross_cohesion = np.divide(
-                self.xi_sums,
-                self.window_lagged_contributions
-            )
-            cross_cohesion = np.nan_to_num(cross_cohesion)
-        # logging.info("cross cohesion is {0}".format(cross_cohesion))
-        return cross_cohesion
       except Exception as e:
-        error_str = traceback.format_exc()
-        logging.info("threw exception {0}".format(error_str))
+          error_str = traceback.format_exc()
+          logging.info("threw exception {0}".format(error_str))
 
+
+    def calculateCohesionSums_V3(self, speaker, embedding, model,current_window_size=3,use_weighted_past=True):
+      try:
+          current_speaker = speaker
+          min_lag = min(self.length, self.tau_window)
+
+          if min_lag == 0:
+              return np.zeros(
+                  (self.tau_window, self.participants, self.participants)
+              )
+
+          current_embedding = self.safe_normalize(embedding).astype(np.float32)
+
+          # --------------------------------------------------
+          # Compute lag-faithful speaker-context similarity
+          # --------------------------------------------------
+          speaker_past_contexts = self.speaker_cumulative_past_context_by_tau(
+              min_lag,
+              use_weighted_past
+          )
+
+          # --------------------------------------------------
+          # Attribute scores to speaker-pair matrix.
+          # Off-diagonal cells estimate cross-speaker cohesion.
+          # Diagonal cells estimate internal cohesion.
+          # --------------------------------------------------
+          for i in range(0, min_lag):
+              # tau_context = speaker_past_contexts[i]
+
+              # if tau_context is None:
+              #     continue
+
+              # prev_speaker = tau_context["speaker"]
+              # speaker_context = tau_context["context_embedding"]
+
+              # if speaker_context is None:
+              #     continue
+
+              # speaker_sim = float(model.similarity(
+              #     speaker_context.astype(np.float32),
+              #     current_embedding
+              # ))
+
+              # self.xi_sums[i][current_speaker][prev_speaker] += speaker_sim
+              # self.window_lagged_contributions[i][current_speaker][prev_speaker] += 1
+
+            lag = i + 1
+            prev_speaker = self.indicies[self.prev_window_speakers[-lag]]
+            speaker_context = speaker_past_contexts[i]
+
+            if speaker_context is None:
+                continue
+
+            sim = float(
+                model.similarity(
+                    speaker_context.astype(np.float32),
+                    self.safe_normalize(embedding).astype(np.float32)
+                )
+            )
+
+            self.xi_sums[i][current_speaker][prev_speaker] += sim
+            self.window_lagged_contributions[i][current_speaker][prev_speaker] += 1
+
+          if len(self.prev_window_speakers) >= self.tau_window:
+              self.prev_window_speakers.pop(0)
+
+          with np.errstate(divide='ignore', invalid='ignore'):
+              cross_cohesion = np.divide(
+                  self.xi_sums,
+                  self.window_lagged_contributions
+              )
+              cross_cohesion = np.nan_to_num(cross_cohesion)
+
+          return cross_cohesion
+
+      except Exception as e:
+          error_str = traceback.format_exc()
+          logging.info("threw exception {0}".format(error_str))
 
 
     def subspaceProjection(self, s, v):
@@ -327,7 +501,7 @@ class SpeakerProcessor:
           embedding = self.semantic_model.encode(transcript)
 
           if self.length > 0:
-            cross_cohesion = self.calculateCohesionSums_V2(index, embedding, self.semantic_model) #self.calculateCohesionSums(index, embedding, self.semantic_model)
+            cross_cohesion = self.calculateCohesionSums_V3(index, embedding, self.semantic_model) #self.calculateCohesionSums(index, embedding, self.semantic_model)
             self.processResponsivity_v2(cross_cohesion) #self.processResponsivity(cross_cohesion)
             self.calculateNewness_by_group_contributions(embedding, index)
 
