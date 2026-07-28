@@ -122,7 +122,6 @@ function ExpertRatingComponent() {
     // initialize the components toolbar
     let boxArr = [
       "Timeline control",
-      "Keyword detection",
       "Participation",
       "Social Impact",
       "Responsivity",

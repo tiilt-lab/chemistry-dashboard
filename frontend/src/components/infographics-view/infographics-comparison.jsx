@@ -7,7 +7,6 @@ import { VideoPlayer } from "../video-player/video-player"
 import { PosthocTrigger } from "../posthoc/posthoc-trigger"
 import { ModelNote } from "../model-note/model-note"
 import { AppTimelineSlider } from "../timeline-slider/timeline-slider-component"
-import { AppKeywordsComponent } from "../../keywords/keywords-component"
 import { AppIndividualFeaturesComponent } from "../individualmetrics/features-component"
 import React, { useState, useEffect, lazy, Suspense } from "react"
 import { ApiService } from "../../services/api-service"
@@ -81,7 +80,6 @@ function AppInfographicsComparison(props) {
     })()
     const transcriptionLabel =
         models.transcription && models.transcription.label
-    const scoringLabel = models.scoring && models.scoring.label
     useEffect(() => {
         new ApiService()
             .httpRequestCall("api/v1/models", "GET", {})
@@ -278,7 +276,7 @@ function AppInfographicsComparison(props) {
 
                     {props.details !== "Group" &&
                         props.showBoxes.length > 0 &&
-                        props.showBoxes[8]["clicked"] && (
+                        props.showBoxes[7]["clicked"] && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={`Visual Analytics`}
@@ -305,7 +303,7 @@ function AppInfographicsComparison(props) {
 
                     {props.details === "Comparison" &&
                         props.showBoxes.length > 0 &&
-                        props.showBoxes[8]["clicked"] && (
+                        props.showBoxes[7]["clicked"] && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={`Visual Analytics`}
@@ -332,7 +330,7 @@ function AppInfographicsComparison(props) {
 
                     {props.details !== "Group" &&
                         props.showBoxes.length > 0 &&
-                        props.showBoxes[2]["clicked"] && (
+                        props.showBoxes[1]["clicked"] && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={`Participation and Impact Style`}
@@ -353,7 +351,7 @@ function AppInfographicsComparison(props) {
 
                     {props.details === "Comparison" &&
                         props.showBoxes.length > 0 &&
-                        props.showBoxes[2]["clicked"] && (
+                        props.showBoxes[1]["clicked"] && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={`Participation and Impact Style`}
@@ -368,55 +366,6 @@ function AppInfographicsComparison(props) {
                                     transcripts={props.spkr2Transcripts}
                                     spkrId={props.selectedSpkrId2}
                                     showFeatures={props.showFeatures}
-                                />
-                            </AppSectionBoxComponent>
-                        )}
-
-                    {props.showBoxes.length > 0 &&
-                        props.showBoxes[1]["clicked"] && (
-                            <AppSectionBoxComponent
-                                type={"w-full"}
-                                heading={"Keyword detection"}
-                            >
-                                {((props.details === "Group" ? props.displayTranscripts : props.spkr1Transcripts) || []).length > 0 && (
-<div className="mb-2">
-                                    <ModelNote prefix="Matched with" label={models && models.keywords && models.keywords.label} fallback="word2vec semantic matching (GoogleNews-300)" />
-                                </div>
-)}
-                                <AppKeywordsComponent
-                                    session={props.session}
-                                    sessionDevice={props.sessionDevice}
-                                    transcripts={
-                                        props.details === "Group"
-                                            ? props.displayTranscripts
-                                            : props.spkr1Transcripts
-                                    }
-                                    start={props.startTime}
-                                    end={props.endTime}
-                                    fromclient={props.fromclient}
-                                />
-                            </AppSectionBoxComponent>
-                        )}
-
-                    {props.details === "Comparison" &&
-                        props.showBoxes.length > 0 &&
-                        props.showBoxes[1]["clicked"] && (
-                            <AppSectionBoxComponent
-                                type={"w-full"}
-                                heading={"Keyword detection"}
-                            >
-                                {(props.spkr2Transcripts || []).length > 0 && (
-<div className="mb-2">
-                                    <ModelNote prefix="Matched with" label={models && models.keywords && models.keywords.label} fallback="word2vec semantic matching (GoogleNews-300)" />
-                                </div>
-)}
-                                <AppKeywordsComponent
-                                    session={props.session}
-                                    sessionDevice={props.sessionDevice}
-                                    transcripts={props.spkr2Transcripts}
-                                    start={props.startTime}
-                                    end={props.endTime}
-                                    fromclient={props.fromclient}
                                 />
                             </AppSectionBoxComponent>
                         )}
