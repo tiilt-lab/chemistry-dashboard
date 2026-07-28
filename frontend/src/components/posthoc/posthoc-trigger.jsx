@@ -64,7 +64,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     const sockets = useRef([])
     const heartbeat = useRef(null)
     // Per-stream state for the currently running action, keyed by a label
-    // ("Audio"/"Video"/"P&I style"/"E&T style"). idle|connecting|running|done|error
+    // ("Audio"/"Video"). idle|connecting|running|done|error
     const [streams, setStreams] = useState({})
     const streamsRef = useRef({})
     // Per-stream detail: { message, percent, startedAt, endedAt } for the live
@@ -247,13 +247,6 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
         id: sp.id,
         alias: sp.alias,
     }))
-    const simplifiedTranscript = (transcripts || []).map((t) => ({
-        id: t.id,
-        start_time: t.start_time,
-        speaker_id: t.speaker_id,
-        speaker_tag: t.speaker_tag,
-        transcript: t.transcript,
-    }))
     const baseInit = {
         sessionid: session.id,
         server_start: session.creation_date,
@@ -414,30 +407,6 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                 },
             },
         ])
-
-    const runStyle = (kind) => {
-        const isPI = kind === "pi"
-        begin(kind, [
-            {
-                endpoint: api.getAudioPosthocWebsocketEndpoint(),
-                label: isPI ? "P&I style" : "E&T style",
-                startType: isPI
-                    ? "start_speaker_transcript_processing"
-                    : "start_transcript_metric_processing",
-                init: {
-                    ...baseInit,
-                    type: isPI
-                        ? "Initialize_participation_and_impact_style_computation"
-                        : "Initialize_expressing_and_thinking_style_computation",
-                    transcript: simplifiedTranscript,
-                    scorer,
-                    embedder,
-                },
-            },
-        ])
-    }
-
-    const hasTranscript = simplifiedTranscript.length > 0
 
     const label = (s) =>
         s === "connecting"
@@ -616,8 +585,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                         <span className="font-semibold text-tiilt-orange-text">
                             Replaces the transcript and all analytics for this pod.
                         </span>{" "}
-                        Also uses the style scorer and participation embedder selected
-                        in the cards below.
+                        Uses the models selected below.
                     </>
                 }
             >
@@ -662,23 +630,6 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                         </option>
                     </select>
                 </SelectorRow>
-                <div>
-                    <button
-                        onClick={runFull}
-                        disabled={running}
-                        className={btn + " bg-tiilt text-white hover:bg-tiilt-deep"}
-                    >
-                        Re-run full analysis
-                    </button>
-                </div>
-            </ActionCard>
-
-            <ActionCard
-                title="Re-score Expression & Thinking style"
-                time="<1 min"
-                tone="teal"
-                desc="Re-scores emotional tone, analytic thinking, clout, authenticity, and certainty for each utterance of the EXISTING transcript. Nothing else changes."
-            >
                 <SelectorRow name="Scoring method" field="scorer" value={scorer}>
                     <select
                         value={scorer}
@@ -693,24 +644,6 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                         ))}
                     </select>
                 </SelectorRow>
-                <div>
-                    <button
-                        onClick={() => runStyle("et")}
-                        disabled={running || !hasTranscript}
-                        title={hasTranscript ? "" : "No transcript available to re-score."}
-                        className={btn + " border border-tiilt-line bg-white text-tiilt-ink hover:border-tiilt hover:bg-tiilt-soft"}
-                    >
-                        Re-score E&amp;T style
-                    </button>
-                </div>
-            </ActionCard>
-
-            <ActionCard
-                title="Re-compute Participation & Impact"
-                time="<1 min"
-                tone="teal"
-                desc="Recomputes participation, cohesion, and social-impact metrics from the EXISTING transcript. Nothing else changes."
-            >
                 <SelectorRow name="Sentence embedder" field="embedder" value={embedder}>
                     <select
                         value={embedder}
@@ -727,12 +660,11 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                 </SelectorRow>
                 <div>
                     <button
-                        onClick={() => runStyle("pi")}
-                        disabled={running || !hasTranscript}
-                        title={hasTranscript ? "" : "No transcript available to re-score."}
-                        className={btn + " border border-tiilt-line bg-white text-tiilt-ink hover:border-tiilt hover:bg-tiilt-soft"}
+                        onClick={runFull}
+                        disabled={running}
+                        className={btn + " bg-tiilt text-white hover:bg-tiilt-deep"}
                     >
-                        Re-compute P&amp;I
+                        Re-run full analysis
                     </button>
                 </div>
             </ActionCard>

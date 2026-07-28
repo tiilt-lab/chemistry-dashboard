@@ -424,7 +424,7 @@ function AppInfographicsComparison(props) {
                     {props.details === "Group" && props.sessionDevice && (
                         <AppSectionBoxComponent
                             type={"w-full"}
-                            heading={"Re-run analysis"}
+                            heading={"Post-Hoc Analysis"}
                         >
                             <PosthocTrigger
                                 models={models}
