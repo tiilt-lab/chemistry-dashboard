@@ -472,8 +472,17 @@ class ServerProtocol(WebSocketServerProtocol):
         # must NOT kill it — let it finish in the background and mark itself
         # complete (on_run_complete). Only tear down when nothing is running.
         if getattr(self, '_run_active', False):
-            logging.info("Client gone but audio post-hoc run active — continuing in background.")
-            return
+            # The socket-local flag can outlive the run: a status probe that
+            # adopted the run and dropped before completion cleanup reached
+            # it keeps _run_active forever, and the inactivity sweep then
+            # logs "run active" every 10s for a finished run. Trust the run
+            # registry instead; if this pod has no live entry, clear the
+            # flag and fall through to normal teardown.
+            key = getattr(getattr(self, 'config', None), 'auth_key', None)
+            if key and key in running_audio_processes:
+                logging.info("Client gone but audio post-hoc run active — continuing in background.")
+                return
+            self._run_active = False
         if self.asr:
             self.asr.stop()
         if self.processor:
