@@ -802,6 +802,43 @@ def get_pod_dynamics(session_id, session_device_id, **kwargs):
     return json_response(result)
 
 
+@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/posthoc_running', methods=['GET'])
+def get_posthoc_running(session_id, session_device_id, **kwargs):
+    # Reliable "is an analysis running for this pod" for the dashboard. The
+    # trigger panel's websocket probes ask the processing services directly,
+    # but a busy run starves their event loops for minutes at a time, so the
+    # probes time out and the page shows nothing. This reads the capture
+    # server's own callback-fed state instead.
+    return json_response(posthoc_state.running_detail(session_device_id))
+
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/gaze_overlays', methods=['GET'])
+def get_gaze_overlays(session_id, session_device_id, **kwargs):
+    # Gaze-model overlay geometry (head boxes / gaze points / focused-object
+    # boxes, normalized coords) for the video player's overlay toggles. Only
+    # exists for pods whose video analysis ran after overlay capture landed.
+    recordings_dir, _ = _video_dirs()
+    path = os.path.join(recordings_dir,
+                        '{0}-gaze_overlays.jsonl'.format(session_device_id))
+    records = []
+    try:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    records.append(json.loads(line))
+    except FileNotFoundError:
+        pass
+    return json_response({'records': records})
+
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/joint_attention', methods=['GET'])
+def get_pod_joint_attention(session_id, session_device_id, **kwargs):
+    # Joint visual attention: >=2 members' gaze on the same target, computed
+    # from the per-person Gaze-LLE focus targets the video pipeline stores.
+    return json_response(database.get_joint_attention(session_device_id))
+
+
 @api_routes.route('/api/v1/sessions/upload_video', methods=['POST'])
 @wrappers.verify_login(public=True)
 def upload_video_session(user, **kwargs):

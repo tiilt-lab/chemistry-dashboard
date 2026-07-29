@@ -282,6 +282,38 @@ def add_speaker_transcript_metrics(**kwargs):
     res = {'transcript_id':transcript.__hash__()}
   return json_response(payload=res)
 
+def _gaze_overlay_path(session_device_id):
+    # Same location scheme as routes/session.py _video_dirs(): the pipeline's
+    # recordings folder inside the repo, next to the pod's video files.
+    import os
+    base = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        '..', 'video_processing', 'videorecordings')
+    return os.path.join(base, '{0}-gaze_overlays.jsonl'.format(session_device_id))
+
+
+@api_routes.route('/api/v1/callback/gaze_overlays', methods=['POST'])
+def add_gaze_overlays(**kwargs):
+    # Overlay geometry from the video pipeline: per person per timestamp, the
+    # head box, gaze point, and focused-object box in normalized coordinates.
+    # Appended to a per-pod JSONL; reset=True (a run's first batch) replaces
+    # the previous run's file.
+    import os
+    content = request.get_json()
+    key = content.get('source', '')
+    records = content.get('records') or []
+    session_device = database.get_session_devices(processing_key=key)
+    if not session_device:
+        return json_response({'message': 'Unknown processing key.'}, 404)
+    path = _gaze_overlay_path(session_device.id)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    mode = 'w' if content.get('reset') else 'a'
+    with open(path, mode) as f:
+        for r in records:
+            f.write(json.dumps(r) + '\n')
+    return json_response()
+
+
 @api_routes.route('/api/v1/callback/speakervideometrics', methods=['POST'])
 def add_speaker_video_metrics(**kwargs):
   # EXPECTED FORMAT
@@ -443,6 +475,7 @@ def _read_video_models():
 _ATTENTION_LABELS = {
     "gazefollow": "Attended-visual-targets gaze model (Chong et al. 2020, GazeFollow)",
     "gazelle": "Gaze-LLE (Meta 2024, DINOv2; open SOTA)",
+    "page-vith+": "PAGE ViT-H+ (Ye et al. 2026, DINOv3; claimed SOTA, unverified)",
 }
 _OBJECT_LABELS = {
     "yolov4": "YOLOv4-P7 object detector (COCO)",

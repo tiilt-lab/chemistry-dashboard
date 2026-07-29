@@ -69,6 +69,83 @@ def on_task_pct(focus_values, off_task=None, away=None):
     return round(on / total * 100) if total else None
 
 
+def compute_joint_attention(rows, bucket_seconds=30):
+    """Joint visual attention over (student_username, time_stamp,
+    object_on_focus) rows from the video pipeline (one row per tracked person
+    per aggregated timestamp; targets come from Gaze-LLE gaze points snapped
+    to the nearest detected object, "person:<alias>" when it is a recognized
+    head, "Nothing" when the gaze lands on no detected object).
+
+    A "moment" is one timestamp where >=2 people were tracked. Joint attention
+    at a moment means >=2 people share the same non-idle target — the group
+    construct with the strongest evidence base in collaboration sensing
+    (joint visual attention -> learning/performance).
+
+    Returns the overall joint share, a bucketed timeline for a strip chart,
+    the most-shared targets, co-attention pairs, and directed peer-gaze
+    counts (who looks toward whom).
+    """
+    idle = {None, "", "Nothing"}
+    by_ts = {}
+    for name, ts, focus in rows:
+        by_ts.setdefault(ts, {})[name] = focus
+
+    total_moments = 0
+    joint_moments = 0
+    target_moments = {}
+    pair_moments = {}
+    peer_gaze = {}
+    timeline = {}
+    for ts, focuses in sorted(by_ts.items()):
+        if len(focuses) < 2:
+            continue
+        total_moments += 1
+        groups = {}
+        for name, focus in focuses.items():
+            if focus in idle:
+                continue
+            groups.setdefault(focus, []).append(name)
+            if isinstance(focus, str) and focus.startswith("person:"):
+                key = (name, focus[len("person:"):])
+                peer_gaze[key] = peer_gaze.get(key, 0) + 1
+        shared = {t: p for t, p in groups.items() if len(p) >= 2}
+        bucket = int(ts // bucket_seconds) * bucket_seconds
+        b = timeline.setdefault(bucket, {'moments': 0, 'joint': 0})
+        b['moments'] += 1
+        if shared:
+            joint_moments += 1
+            b['joint'] += 1
+            for target, people in shared.items():
+                target_moments[target] = target_moments.get(target, 0) + 1
+                people = sorted(people)
+                for i in range(len(people)):
+                    for j in range(i + 1, len(people)):
+                        key = (people[i], people[j])
+                        pair_moments[key] = pair_moments.get(key, 0) + 1
+
+    return {
+        'empty': total_moments == 0,
+        'bucket_seconds': bucket_seconds,
+        'total_moments': total_moments,
+        'joint_moments': joint_moments,
+        'joint_share': round(joint_moments / total_moments, 4)
+        if total_moments else 0.0,
+        'timeline': [
+            {'start': start, 'moments': v['moments'], 'joint': v['joint'],
+             'share': round(v['joint'] / v['moments'], 4)}
+            for start, v in sorted(timeline.items())],
+        'top_targets': [
+            {'target': t, 'moments': m}
+            for t, m in sorted(target_moments.items(), key=lambda x: -x[1])[:8]],
+        'pairs': [
+            {'a': a, 'b': b, 'moments': m}
+            for (a, b), m in sorted(pair_moments.items(), key=lambda x: -x[1])],
+        'peer_gaze': [
+            {'from': f, 'to': t, 'moments': m}
+            for (f, t), m in sorted(peer_gaze.items(), key=lambda x: -x[1])[:8]],
+    }
+
+
 # ---------------------------------------------------------------------------
 # Tier-1 talk metrics: transparent, countable measures educators trust.
 # Everything below is derived only from utterance timing, the question flag,

@@ -57,6 +57,20 @@ def running_device_ids():
         return {d for d, _ in _running}
 
 
+def running_detail(device_id):
+    # Full run state for one pod: which scopes are active and since when.
+    # Serves the pod page's HTTP status poll — the websocket status probes go
+    # to the processing services themselves, whose event loops starve under a
+    # heavy run (observed ~2-minute wake intervals mid-analysis).
+    with _lock:
+        _prune()
+        scopes = {s: ts for (d, s), ts in _running.items()
+                  if d == int(device_id)}
+    return {'running': bool(scopes),
+            'scopes': sorted(scopes),
+            'started_at': min(scopes.values()) if scopes else None}
+
+
 _durations = {}  # device_id -> last-known duration, held across a run's wipe
 
 

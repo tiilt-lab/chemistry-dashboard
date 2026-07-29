@@ -1610,6 +1610,18 @@ def get_conversation_dynamics(session_device_id):
     return compute_conversation_dynamics(rows)
 
 
+def get_joint_attention(session_device_id):
+    # DB wrapper: fetch a pod's per-person gaze targets, then compute.
+    from analytics import compute_joint_attention
+    rows = db.session.query(
+        SpeakerVideoMetrics.student_username,
+        SpeakerVideoMetrics.time_stamp,
+        SpeakerVideoMetrics.object_on_focus) \
+        .filter(SpeakerVideoMetrics.session_device_id == session_device_id) \
+        .order_by(SpeakerVideoMetrics.time_stamp).all()
+    return compute_joint_attention(rows)
+
+
 def get_talk_metrics(session_device_id):
     # Tier-1 talk metrics (equity timeline, silences, handoffs/interruptions,
     # questions & wait time). Unlike the dynamics network this keeps

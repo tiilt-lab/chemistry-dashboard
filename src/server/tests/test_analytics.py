@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from analytics import (  # noqa: E402
     compute_conversation_dynamics,
+    compute_joint_attention,
     gini_coefficient,
     on_task_pct,
 )
@@ -69,3 +70,54 @@ def test_on_task_pct():
     assert on_task_pct(vals) == 60  # 3 of 5 on-task
     assert on_task_pct([]) is None
     assert on_task_pct(["cell phone", "Nothing"]) == 0
+
+
+def test_joint_attention_basic():
+    # t=0: A,B both on laptop (joint); t=1: A laptop, B book (not joint);
+    # t=2: only A tracked (not a moment).
+    rows = [
+        ("A", 0, "laptop"), ("B", 0, "laptop"),
+        ("A", 1, "laptop"), ("B", 1, "book"),
+        ("A", 2, "laptop"),
+    ]
+    d = compute_joint_attention(rows)
+    assert d["total_moments"] == 2
+    assert d["joint_moments"] == 1
+    assert d["joint_share"] == 0.5
+    assert d["top_targets"][0] == {"target": "laptop", "moments": 1}
+    assert d["pairs"] == [{"a": "A", "b": "B", "moments": 1}]
+
+
+def test_joint_attention_idle_targets_not_joint():
+    # Both idle ("Nothing") is a tracked moment but never joint attention.
+    rows = [("A", 0, "Nothing"), ("B", 0, "Nothing")]
+    d = compute_joint_attention(rows)
+    assert d["total_moments"] == 1
+    assert d["joint_moments"] == 0 and d["joint_share"] == 0.0
+
+
+def test_joint_attention_peer_gaze_and_person_target():
+    # A and B both look at person C: joint attention on C plus directed
+    # peer-gaze edges A->C and B->C.
+    rows = [("A", 0, "person:C"), ("B", 0, "person:C")]
+    d = compute_joint_attention(rows)
+    assert d["joint_moments"] == 1
+    edges = {(e["from"], e["to"]): e["moments"] for e in d["peer_gaze"]}
+    assert edges == {("A", "C"): 1, ("B", "C"): 1}
+
+
+def test_joint_attention_timeline_buckets():
+    rows = [
+        ("A", 0, "laptop"), ("B", 0, "laptop"),
+        ("A", 31, "book"), ("B", 31, "laptop"),
+    ]
+    d = compute_joint_attention(rows, bucket_seconds=30)
+    assert d["timeline"] == [
+        {"start": 0, "moments": 1, "joint": 1, "share": 1.0},
+        {"start": 30, "moments": 1, "joint": 0, "share": 0.0},
+    ]
+
+
+def test_joint_attention_empty():
+    d = compute_joint_attention([])
+    assert d["empty"] is True and d["joint_share"] == 0.0
