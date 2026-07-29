@@ -12,8 +12,24 @@ import callbacks
 SpeakerProcessor
 
 Perfrom textual analysis of each speakers data using the transcripts and diarization output.
-Follows Group Communication Analysis study using matrix operations to optimize the performance
-as the discussion continues
+
+Implements the Group Communication Analysis (GCA) framework:
+
+    Dowell, N. M. M., Nixon, T. M., & Graesser, A. C. (2019).
+    Group communication analysis: A computational linguistics approach for
+    detecting sociocognitive roles in multiparty interactions.
+    Behavior Research Methods, 51(3), 1007-1041.
+    https://doi.org/10.3758/s13428-018-1102-z
+
+The variable names track the paper's notation: tau_window is the lag window
+tau, xi_sums accumulates the cross-cohesion terms xi. From the cross-cohesion
+tensor come the responsivity matrix and its derived per-speaker measures
+(internal cohesion, social impact, overall responsivity); newness and
+communication density follow the paper's LSA-subspace formulation, computed
+here with sentence-transformer embeddings. Matrix operations keep the update
+incremental as the discussion continues.
+
+These scores surface in the frontend as "Participation and Impact Style".
 '''
 
 normalizeVector = lambda v: np.divide(v, np.linalg.norm(v))
