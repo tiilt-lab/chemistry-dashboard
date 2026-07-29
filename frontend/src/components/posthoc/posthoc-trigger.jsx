@@ -56,6 +56,10 @@ const SCORER_OPTIONS = [
     { id: "open", label: "Harvard General Inquirer (open)" },
     { id: "llm", label: "Google Gemini (LLM)" },
 ]
+const ATTENTION_OPTIONS = [
+    { id: "gazelle", label: "Gaze-LLE (DINOv2; CVPR 2025)" },
+    { id: "page-vith+", label: "PAGE ViT-H+ (claimed SOTA, arXiv 2026 — experimental)" },
+]
 
 function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, models, lastAnalyzed, sessionDevice }) {
     const api = new ApiService()
@@ -98,6 +102,12 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     // default — it adds a full-video face-tracking pass to the run.
     const [asdChoice, setAsdChoice] = useState(null)
     const asd = asdChoice || (podModels.asd_model ? "talknce" : "none")
+    const [attentionChoice, setAttentionChoice] = useState(null)
+    const attention =
+        attentionChoice ||
+        podModels.attention ||
+        (models && models.attention && models.attention.id) ||
+        "gazelle"
 
     const running = Object.values(streams).some(
         (s) => s === "connecting" || s === "running",
@@ -205,6 +215,65 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionDeviceId])
 
+    // Reliable status fallback: the websocket probes above ask the processing
+    // services directly, but a busy run starves their event loops for minutes
+    // at a time, so probes time out and an active run shows nothing. The
+    // capture server tracks run state from the services' HTTP callbacks —
+    // poll that, and only fill in streams the probes left idle.
+    useEffect(() => {
+        let stopped = false
+        const check = () =>
+            new ApiService()
+                .httpRequestCall(
+                    `api/v1/sessions/${session.id}/device/${sessionDeviceId}/posthoc_running`,
+                    "GET",
+                    {},
+                )
+                .then((r) => (r.status === 200 ? r.json() : null))
+                .then((d) => {
+                    if (stopped || !d) return
+                    const scopes = d.scopes || []
+                    for (const [scope, label] of [
+                        ["audio", "Audio"],
+                        ["video", "Video"],
+                    ]) {
+                        const cur = streamsRef.current[label]
+                        const meta = streamMetaRef.current[label] || {}
+                        if (scopes.includes(scope)) {
+                            if (!cur || cur === "idle") {
+                                setAction("full")
+                                setStream(label, "running")
+                                updateMeta(label, {
+                                    startedAt: d.started_at
+                                        ? d.started_at * 1000
+                                        : Date.now(),
+                                    message: "Running in the background",
+                                })
+                            }
+                        } else if (
+                            cur === "running" &&
+                            meta.message === "Running in the background"
+                        ) {
+                            // Only complete runs this poll discovered; the
+                            // websocket path owns its own completion events.
+                            setStream(label, "done")
+                            updateMeta(label, {
+                                endedAt: Date.now(),
+                                message: "Complete",
+                            })
+                        }
+                    }
+                })
+                .catch(() => {})
+        check()
+        const t = setInterval(check, 15000)
+        return () => {
+            stopped = true
+            clearInterval(t)
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sessionDeviceId])
+
     const speakerList = (speakers || []).map((sp) => ({
         id: sp.id,
         alias: sp.alias,
@@ -240,7 +309,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                 diarizer,
                 embedder,
                 emotion: models && models.emotion && models.emotion.id,
-                attention: models && models.attention && models.attention.id,
+                attention,
                 objects: models && models.objects && models.objects.id,
                 keywords: models && models.keywords && models.keywords.id,
             }
@@ -366,6 +435,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                     ...baseInit,
                     type: "Initialize_video_processing_analytics",
                     asd: asd === "none" ? null : asd,
+                    attention_model: attention,
                 },
             },
         ])
@@ -437,7 +507,6 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     // Labels come from the (provenance-merged) `models` prop when loaded.
     const fixedModules = [
         ["Facial emotion", "emotion", "HSEmotion EfficientNet-B2 (AffectNet-8)"],
-        ["Attention / gaze", "attention", "Gaze-LLE (DINOv2, open SOTA)"],
         ["Head / person detector", "head_detector", "YOLOv5m (CrowdHuman, 2021)"],
         ["Object of focus", "objects", "YOLO11m (COCO)"],
         ["Keyword matching", "keywords", "SentenceTransformer (BGE)"],
@@ -590,6 +659,20 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                         <option value="talknce">
                             TalkNCE trained on UniTalk (who is talking on camera)
                         </option>
+                    </select>
+                </SelectorRow>
+                <SelectorRow name="Attention / gaze" field="attention" value={attention}>
+                    <select
+                        value={attention}
+                        onChange={(e) => setAttentionChoice(e.target.value)}
+                        disabled={running}
+                        className={selectCls}
+                    >
+                        {ATTENTION_OPTIONS.map((o) => (
+                            <option key={o.id} value={o.id}>
+                                {o.label}
+                            </option>
+                        ))}
                     </select>
                 </SelectorRow>
                 <SelectorRow name="Scoring method" field="scorer" value={scorer}>
