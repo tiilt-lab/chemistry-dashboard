@@ -25,6 +25,10 @@ class VideoMetricAnalytics:
         self.worker_loop_t = None
         self.running = False
         self.hasreceivedjob = False
+        # First overlay post of a run replaces the pod's stored overlay file
+        # (reset), later ones append. Reset per VideoMetricAnalytics instance
+        # == per post-hoc run, since server_posthoc builds a fresh instance.
+        self._overlays_posted = False
         self.STOP = stop_signal  # sentinel
         
 
@@ -119,7 +123,7 @@ class VideoMetricAnalytics:
         processing_timer = time.monotonic()
         torch.cuda.synchronize()
         t1 = time.time()
-        video_metrics = self.compute_videoMetrics(all_frames,accumulator,batch_track)
+        video_metrics, overlay_records = self.compute_videoMetrics(all_frames,accumulator,batch_track)
         torch.cuda.synchronize()
         t2 = time.time()
         logging.info(f"Inside VideoMetricProcessor: procesing attention and emotion dectection took {t2 - t1:.6f}s for {auth_key}")
@@ -131,20 +135,25 @@ class VideoMetricAnalytics:
         can_post =  video_metrics and (self.source == "real_time" or self.source == "post_hoc") 
         logging.info("insert {0} into DB for batch {1} and {2}".format(video_metrics,batch_track,can_post))
         
-        if video_metrics and can_post: 
-            
+        if video_metrics and can_post:
+
             success = callbacks.post_video_metrics(auth_key, video_metrics)
 
             processing_time = time.monotonic() - processing_timer
             if success:
                 logging.info( f"Video processing results posted successfully for client {auth_key} (Processing time: {processing_time})")
 
+        if overlay_records:
+            callbacks.post_gaze_overlays(auth_key, overlay_records,
+                                         reset=not self._overlays_posted)
+            self._overlays_posted = True
+
     def worker_posthoc(self,payload):
         auth_key,all_frames,accumulator,batch_track,last_batch = payload
         processing_timer = time.monotonic()
         torch.cuda.synchronize()
         t1 = time.time()
-        video_metrics = self.compute_videoMetrics(all_frames,accumulator,batch_track)
+        video_metrics, overlay_records = self.compute_videoMetrics(all_frames,accumulator,batch_track)
         torch.cuda.synchronize()
         t2 = time.time()
         logging.info(f"Inside VideoMetricProcessor: procesing attention and emotion dectection took {t2 - t1:.6f}s for {auth_key}")
@@ -153,16 +162,26 @@ class VideoMetricAnalytics:
         can_post =  True
         logging.info("insert {0} into DB for batch {1} and {2}".format(video_metrics,batch_track,can_post))
         
-        if video_metrics and can_post: 
-            
+        if video_metrics and can_post:
+
             success = callbacks.post_video_metrics(auth_key, video_metrics)
 
             processing_time = time.monotonic() - processing_timer
             if success:
                 logging.info( f"Video processing results posted successfully for client {auth_key} (Processing time: {processing_time})")
 
+        if overlay_records:
+            callbacks.post_gaze_overlays(auth_key, overlay_records,
+                                         reset=not self._overlays_posted)
+            self._overlays_posted = True
+
     def compute_videoMetrics(self,frames,face_object_detected,batch_track=None):
         video_metrics = {}
+        # Overlay geometry (head boxes, gaze points, focused-object boxes) so
+        # the dashboard can draw the gaze model's output on top of the video.
+        # Post-hoc only: the live path stays lean. Coordinates are normalized
+        # to [0,1] so the frontend can scale to any rendered size.
+        overlay_records = []
         try:
             for person_id, persons_detail in face_object_detected['head'].items():
                 # with attention_emotion_det_lock:
@@ -177,6 +196,7 @@ class VideoMetricAnalytics:
                     pred_attention_level = 0
                     pred_object_focused_on = "Nothing"
                     closest_object_index = None
+                    overlay_obj_box = None
                     frame_index,person_alias,h_bbox,time_stamp = persons_detail[index]
                     
                     #guarding code
@@ -204,6 +224,7 @@ class VideoMetricAnalytics:
                         # logging.info(f"Inside VideoMetricProcessor: object of focus took {t2 - t1:.6f}s")
                         if closest_object_index is not None:
                             object_class_id,object_class_name,object_id,oo_bbox, t_stamp = other_objects_in_frame[closest_object_index]
+                            overlay_obj_box = oo_bbox
                             #if head gaze is focused on other object
                             pred_attention_level = self.AttentionTracking.track_person_level_of_attention(object_class_id,person_id)
                             pred_object_focused_on = object_class_name
@@ -229,10 +250,35 @@ class VideoMetricAnalytics:
                     else:
                         pred_attention_level = self.AttentionTracking.track_person_level_of_attention(None,person_id,action="N")
                     
+                    if self.source != "real_time":
+                        try:
+                            # imsizes/bbox values arrive as torch tensors from
+                            # the DataLoader collation — cast to float before
+                            # arithmetic (round(tensor) raises TypeError).
+                            f_w = float(imsizes[index][0])
+                            f_h = float(imsizes[index][1])
+                            norm_box = lambda b: [round(float(b[0])/f_w,4), round(float(b[1])/f_h,4), round(float(b[2])/f_w,4), round(float(b[3])/f_h,4)]
+                            overlay_records.append({
+                                't': float(time_stamp),
+                                'p': str(person_alias),
+                                'head': norm_box(h_bbox),
+                                'gaze': [round(float(gaze_x)/f_w,4), round(float(gaze_y)/f_h,4)]
+                                        if gaze_x is not None and gaze_y is not None else None,
+                                'obj': norm_box(overlay_obj_box) if overlay_obj_box is not None else None,
+                                'label': str(pred_object_focused_on) if pred_object_focused_on != "Nothing" else None,
+                            })
+                        except Exception:
+                            # Overlay capture must never break metric
+                            # computation, but a silent pass hid a per-record
+                            # TypeError for an entire run — log the first one.
+                            if not getattr(self, '_overlay_warned', False):
+                                self._overlay_warned = True
+                                logging.exception("gaze overlay capture failed (first occurrence; suppressing further)")
+
                     if person_id not in video_metrics:
                         video_metrics[person_id] = [[time_stamp,pred_emotion,pred_attention_level,pred_object_focused_on]]
                     else:
-                        video_metrics[person_id].append([time_stamp,pred_emotion,pred_attention_level,pred_object_focused_on])   
+                        video_metrics[person_id].append([time_stamp,pred_emotion,pred_attention_level,pred_object_focused_on])
                 
                 # logging.info("Bfeore Aggregate {0} into DB for batch {1}".format(video_metrics,batch_track))
                 #aggregate data in same time stamp
@@ -243,8 +289,8 @@ class VideoMetricAnalytics:
             error_str = traceback.format_exc()
             logging.info("Error in computing video metrics: {0}".format(error_str))
         
-        return video_metrics
-    
+        return video_metrics, overlay_records
+
     def aggregate_all_metrics_in_same_timestamp(self,persons_detail):
         data = []
         facial_emotion = []

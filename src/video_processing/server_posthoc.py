@@ -102,8 +102,19 @@ def get_attention_detector(name=None):
                 if name == 'gazelle':
                     from attention_tracking.gazelle_attention import GazeLLEAttentionDetection
                     _ATTENTION_CACHE[name] = GazeLLEAttentionDetection()
+                elif name == 'page-vith+':
+                    from attention_tracking.page_attention import PageAttentionDetection
+                    _ATTENTION_CACHE[name] = PageAttentionDetection()
                 else:
                     _ATTENTION_CACHE[name] = AttentionDetection()
+                # Cache-miss backends are constructed lazily, so load weights
+                # now: a bad selection (e.g. PAGE without its checkpoint)
+                # fails here — surfaced to the client — instead of mid-run.
+                try:
+                    _ATTENTION_CACHE[name].init_model(batch_size)
+                except Exception:
+                    del _ATTENTION_CACHE[name]
+                    raise
     return _ATTENTION_CACHE[name]
 
 class ServerProtocol(WebSocketServerProtocol):
@@ -209,11 +220,23 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.config = result
                     # Optional per-run model choices from the trigger UI; fall
                     # back to the deployment config when the field is absent.
-                    self.facial_emotion_detector = get_emotion_detector(data.get('emotion_model'))
-                    self.attention_detection = get_attention_detector(data.get('attention_model'))
+                    try:
+                        self.facial_emotion_detector = get_emotion_detector(data.get('emotion_model'))
+                        self.attention_detection = get_attention_detector(data.get('attention_model'))
+                    except Exception as e:
+                        # e.g. PAGE selected but its checkpoint isn't
+                        # installed — fail the run with the actionable message
+                        # instead of dying mid-analysis.
+                        logging.exception("Per-run model selection failed")
+                        running_video_processes.pop(key, None)
+                        self.send_json({'type': 'error', 'message': str(e)})
+                        return
                     self.video_metric_analytics = VideoMetricAnalytics(
                         self.attention_detection, self.facial_emotion_detector,
                         self.image_object_detection, STOP_SIGNAL, source="post_hoc")
+                    # Fresh head-track state for this run — a rerun must not
+                    # inherit locked identities from the previous pass.
+                    self.image_object_detection.reset_session_tracker(self.config.auth_key)
                     # Optional TalkNCE active-speaker-detection pass, per-run.
                     self.asd_choice = data.get('asd') or None
                     self.asd_candidates = [s.get('alias') for s in (data.get('speakers') or [])
@@ -309,19 +332,22 @@ class ServerProtocol(WebSocketServerProtocol):
         parent_dir = current_dir.parent
         # Go into sibling directory
         target_dir = parent_dir / "video_processing" / "videorecordings"
-        # Find file starting with prefix
+        # Match the web server's discovery (routes/session.py
+        # _find_original_videos): accept .webm AND .mp4 — uploaded sessions
+        # store *_orig.mp4, and the old *.webm-only glob made those pods
+        # report "No video captured" with the file sitting right there. The
+        # "-" after the id keeps 91 from matching 918-*. Newest by mtime.
         prefix = str(sessionDeviceId)
-        files = list(target_dir.glob(f"{prefix}*.webm"))
-
-        if files:
-            file_path = files[-1]
-            logging.info("Found: {}".format(file_path))
-            return file_path
-            # with open(file_path, "r") as f:
-            #     content = f.read()
-        else:
-            logging.info("No file found")
-            return None
+        for pattern in (f"{prefix}-*_orig.webm", f"{prefix}-*.webm",
+                        f"{prefix}-*_orig.mp4", f"{prefix}-*.mp4"):
+            files = sorted(target_dir.glob(pattern),
+                           key=lambda p: p.stat().st_mtime)
+            if files:
+                file_path = files[-1]
+                logging.info("Found: {}".format(file_path))
+                return file_path
+        logging.info("No video file found for session device %s", prefix)
+        return None
     
 
 

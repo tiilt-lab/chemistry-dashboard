@@ -306,8 +306,13 @@ class VideoProcessor:
             with object_detector_lock():  # serialize CUDA/NMS across all users in this process
                 all_frames,face_object_detected = self.image_object_detection.detection_with_facial_regonition(batch_frames,facialEmbeddings,batch_track,time_marker,vid_img_dir,auth_key)
 
-            attention_emotion_det_lock =  attention_emotion_predictor_lock()  # serialize attention/emotion prediction across all users in this process    
-            video_metrics = self.VideoMetricAnalytics.compute_videoMetrics(all_frames,face_object_detected,attention_emotion_det_lock)
+            attention_emotion_det_lock =  attention_emotion_predictor_lock()  # serialize attention/emotion prediction across all users in this process
+            video_metrics, overlay_records = self.VideoMetricAnalytics.compute_videoMetrics(all_frames,face_object_detected,attention_emotion_det_lock)
+            if overlay_records:
+                callbacks.post_gaze_overlays(
+                    self.config.auth_key, overlay_records,
+                    reset=not self.VideoMetricAnalytics._overlays_posted)
+                self.VideoMetricAnalytics._overlays_posted = True
             
             if video_metrics: 
                 # logging.info(video_metrics)

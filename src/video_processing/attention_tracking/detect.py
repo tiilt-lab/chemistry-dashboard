@@ -26,6 +26,113 @@ from yolo_head.utils.torch_utils import select_device
 from yolo_head.utils.plots import plot_one_box
 
 
+class _SessionHeadTracker:
+    """Frame-to-frame head tracking with identity persistence for one pod.
+
+    Face recognition alone identified each student in only 30-50% of seconds
+    on real pods: masked, hooded, small, or turned-away faces fail the
+    embedding match even though the head detector sees them fine. So heads
+    are matched to tracks by IoU frame-over-frame; a track earns its identity
+    once the same enrolled student is its best unique face match LOCK_VOTES
+    times, and from then on the track keeps emitting that identity while the
+    head remains trackable — recognition gaps no longer become data gaps.
+    One track per identity at any moment, so a duplicate label cannot recur.
+    """
+
+    IOU_MATCH = 0.25
+    MAX_MISSED = 15         # frames a track survives unseen (~15 s at 1 fps)
+    LOCK_VOTES = 2          # confirmed sightings before an identity sticks
+
+    def __init__(self):
+        self.frame_no = 0
+        self.next_id = 1
+        self.tracks = {}    # id -> {bbox, last_seen, alias, votes}
+
+    @staticmethod
+    def _iou(a, b):
+        ax1, ay1, ax2, ay2 = a
+        bx1, by1, bx2, by2 = b
+        iw = max(0.0, min(ax2, bx2) - max(ax1, bx1))
+        ih = max(0.0, min(ay2, by2) - max(ay1, by1))
+        inter = iw * ih
+        if inter <= 0:
+            return 0.0
+        union = ((ax2 - ax1) * (ay2 - ay1)
+                 + (bx2 - bx1) * (by2 - by1) - inter)
+        return inter / union if union > 0 else 0.0
+
+    def update(self, heads):
+        """heads: [{'bbox': (x1,y1,x2,y2), 'dists': {alias: d} | None,
+        'cutoff': float | None}] for one frame, in any order.
+        Returns {head_idx: alias} — at most one head per alias."""
+        self.frame_no += 1
+        for tid in [t for t, tr in self.tracks.items()
+                    if self.frame_no - tr['last_seen'] > self.MAX_MISSED]:
+            del self.tracks[tid]
+
+        # Greedy IoU matching of this frame's heads to live tracks.
+        iou_pairs = []
+        for h_idx, h in enumerate(heads):
+            for tid, tr in self.tracks.items():
+                iou = self._iou(h['bbox'], tr['bbox'])
+                if iou >= self.IOU_MATCH:
+                    iou_pairs.append((-iou, h_idx, tid))
+        iou_pairs.sort()
+        head_track = {}
+        used_tracks = set()
+        for _, h_idx, tid in iou_pairs:
+            if h_idx in head_track or tid in used_tracks:
+                continue
+            head_track[h_idx] = tid
+            used_tracks.add(tid)
+        for h_idx, h in enumerate(heads):
+            if h_idx not in head_track:
+                tid = self.next_id
+                self.next_id += 1
+                self.tracks[tid] = {'bbox': h['bbox'], 'last_seen': 0,
+                                    'alias': None, 'votes': {}}
+                head_track[h_idx] = tid
+            tr = self.tracks[head_track[h_idx]]
+            tr['bbox'] = h['bbox']
+            tr['last_seen'] = self.frame_no
+
+        # Unique face-recognition assignment for identity-less tracks only;
+        # aliases already locked to a live track are off the table.
+        locked = {tr['alias'] for tr in self.tracks.values() if tr['alias']}
+        rec_pairs = []
+        for h_idx, h in enumerate(heads):
+            if not h['dists']:
+                continue
+            if self.tracks[head_track[h_idx]]['alias']:
+                continue
+            for alias, d in h['dists'].items():
+                if alias not in locked and d < h['cutoff']:
+                    rec_pairs.append((d, h_idx, alias))
+        rec_pairs.sort()
+        out = {}
+        used_aliases = set(locked)
+        used_heads = set()
+        for d, h_idx, alias in rec_pairs:
+            if h_idx in used_heads or alias in used_aliases:
+                continue
+            used_heads.add(h_idx)
+            used_aliases.add(alias)
+            tr = self.tracks[head_track[h_idx]]
+            tr['votes'][alias] = tr['votes'].get(alias, 0) + 1
+            if tr['votes'][alias] >= self.LOCK_VOTES:
+                tr['alias'] = alias
+            out[h_idx] = alias
+
+        # Carry locked identities for tracked heads the face matcher missed.
+        for h_idx, tid in head_track.items():
+            if h_idx in out:
+                continue
+            alias = self.tracks[tid]['alias']
+            if alias:
+                out[h_idx] = alias
+        return out
+
+
 class ImageObjectDetection:
     def __init__(self,stop_signal,num_workers=1,source="real_time"):
         self.frame_queue_manager = {}
@@ -447,6 +554,9 @@ class ImageObjectDetection:
                     det = det.clone()
                     det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
                     detected_faces = 0
+                    # Buffered head candidates for this frame; identities are
+                    # assigned AFTER all heads are seen (unique per frame).
+                    head_candidates = []
                     #use this for face tracking across frames
                     for *xyxy, conf, cls in reversed(det):
                         int_cls = int(cls)
@@ -470,40 +580,58 @@ class ImageObjectDetection:
                             # logging.info("face big shape : {0}, type: {1}, min: {2} and, max: {3}".format(face_big.shape, face_big.dtype, face_big.min(), face.max()))
                             
                             quality_face = self.prepare_quality_face(face,min_size=90,min_blur=50,upscale_to=320)
-                            
-                            if  quality_face is None:
-                                continue
 
-                            face_locations = self.face_backend.locate(quality_face, model="cnn") #hog is faster but less accurate than cnn. cnn may not work well with small faces.
-                            # logging.info("Face locations for small : {0}".format(face_locations))
-                            # face_locations = face_recognition.face_locations(face_big, model="cnn") #hog is faster but less accurate than cnn. cnn may not work well with small faces.
-                            # logging.info("Face locations for big : {0}".format(face_locations))
-                            if face_locations:
-                                face_embedding  = self.face_backend.encode(quality_face, face_locations,num_jitters=2)
-                                # (top, right, bottom, left) =  face_locations[0]
-                                # face_2 = face_big[top:bottom, left:right]
-                                # save_to = os.path.join(vid_img_dir, "face_{0}_{1}_{2}.{3}".format(int(p),self.object_names_K_V.get(int_cls, None),detected_faces,'png'))
-                                # cv2.imwrite(save_to,face_2)
-                            else:  
-                                # logging.info("Face locations: empty")
-                                h_face, w_face = quality_face.shape[:2]
-                                face_embedding  = self.face_backend.encode(face,known_face_locations=[(0, w_face, h_face, 0)],num_jitters=2)
-                            # logging.info("Face locations: {0}".format(face_locations))
-                            if face_embedding:  
-                                match, cos_score,L2_score,dist_score = self.identify_student(face_embedding[0], facial_embeddings, "face_"+str(detected_faces),cos_threshold=0.95,L2_threshold=0.3,frame_index=int(p))
-                                if match != "Unknown":
-                                    # plot_one_box(xyxy, im0, label=self.object_names_K_V.get(int_cls, None), color=[random.randint(0, 255) for _ in range(3)], line_thickness=3)
-                                    # logging.info("Match: {0}, cos score: {1}, Euclid: {2}, Distance: {3}".format(match,cos_score,L2_score,dist_score))
-                                    self._save_face_thumbnail(match, quality_face, dist_score, face_locations[0] if face_locations else None)
-                                    self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_face",match,accumulator,time_marker,im0,int(p))
+                            # Every detected head becomes a candidate — even
+                            # when the face is unrecognizable (mask, hood,
+                            # blur, too small) — so the tracker can keep its
+                            # track alive and carry a locked identity through
+                            # the recognition gap. dists=None marks "head
+                            # seen, face unusable this frame".
+                            cand = {
+                                'bbox': tuple(float(v) for v in xyxy),
+                                'xyxy': xyxy, 'int_cls': int_cls,
+                                'quality_face': None, 'face_loc': None,
+                                'dists': None, 'cutoff': None,
+                            }
+                            if quality_face is not None:
+                                face_locations = self.face_backend.locate(quality_face, model="cnn") #hog is faster but less accurate than cnn. cnn may not work well with small faces.
+                                if face_locations:
+                                    face_embedding  = self.face_backend.encode(quality_face, face_locations,num_jitters=2)
                                 else:
-                                    pass
-                                    # logging.info(f"Match: {match}, Confidence: {cos_score:.3f}")   
-                                 
+                                    h_face, w_face = quality_face.shape[:2]
+                                    face_embedding  = self.face_backend.encode(face,known_face_locations=[(0, w_face, h_face, 0)],num_jitters=2)
+                                if face_embedding:
+                                    dists, cutoff = self._distances_to_enrolled(
+                                        face_embedding[0], facial_embeddings)
+                                    cand.update({
+                                        'quality_face': quality_face,
+                                        'face_loc': face_locations[0] if face_locations else None,
+                                        'dists': dists, 'cutoff': cutoff,
+                                    })
+                            head_candidates.append(cand)
+
                         else:
                         #   logging.info("Other object dtected is: {0}".format(self.object_names_K_V.get(int_cls, None)))
                           self.accumulate_head_and_otherobject_track_V2(xyxy,int_cls,"detected_other_objects","None",accumulator,time_marker,im0,int(p)) 
                          
+                    # Track-level identity resolution: heads are matched to
+                    # this pod's persistent tracks by IoU; identities are
+                    # assigned uniquely (one head per student per frame) and,
+                    # once locked to a track, carried through frames where
+                    # the face is unrecognizable. Replaces per-head
+                    # independent matching, which duplicated one alias onto
+                    # several heads in 85% of stored seconds for pod 918 and
+                    # dropped every unrecognizable head.
+                    assignments = self._tracker_for(auth_key).update(head_candidates)
+                    for h_idx, alias in assignments.items():
+                        cand = head_candidates[h_idx]
+                        if cand['quality_face'] is not None and cand['dists'] \
+                                and alias in cand['dists']:
+                            self._save_face_thumbnail(alias, cand['quality_face'], cand['dists'][alias], cand['face_loc'])
+                        self.accumulate_head_and_otherobject_track_V2(
+                            cand['xyxy'], cand['int_cls'], "detected_face",
+                            alias, accumulator, time_marker, im0, int(p))
+
                     # print("number of detected faces for frame ",str(i)+" is "+str(detected_faces))
                     # save_to = os.path.join(vid_img_dir, "frame_{0}.{1}".format(int(p),'png'))
                     # cv2.imwrite(save_to,im0)
@@ -585,6 +713,43 @@ class ImageObjectDetection:
             logging.info("saved face thumbnail for %s (dist %.3f)", alias, match_distance)
         except Exception as e:
             logging.warning("face thumbnail save failed for %s: %s", alias, e)
+
+    def reset_session_tracker(self, auth_key):
+        """Drop a pod's head-track state. Called at the start of a post-hoc
+        run so a rerun of the same pod never inherits the previous run's
+        locked identities or stale head positions."""
+        if hasattr(self, '_session_trackers'):
+            self._session_trackers.pop(auth_key, None)
+
+    def _tracker_for(self, auth_key):
+        """Per-pod head tracker; state persists across batches of one session
+        (the detector instance is shared, so keyed by auth_key). Post-hoc
+        reruns call reset_session_tracker first so no state leaks between
+        runs of the same pod."""
+        if not hasattr(self, '_session_trackers'):
+            self._session_trackers = {}
+        tracker = self._session_trackers.get(auth_key)
+        if tracker is None:
+            if len(self._session_trackers) >= 8:
+                self._session_trackers.pop(next(iter(self._session_trackers)))
+            tracker = _SessionHeadTracker()
+            self._session_trackers[auth_key] = tracker
+        return tracker
+
+    def _distances_to_enrolled(self, face_embedding, store_facial_embeddings):
+        """Distance from one face embedding to EVERY enrolled student, using
+        the backend's calibrated metric, so the caller can resolve identities
+        jointly across all heads in a frame. Returns ({alias: distance},
+        acceptance cutoff)."""
+        max_distance = self.face_backend.match_params()["max_distance"]
+        dists = {}
+        for person in store_facial_embeddings:
+            alias = store_facial_embeddings[person]["alias"]
+            d = self.face_backend.distance(
+                store_facial_embeddings[person]["data"], face_embedding)
+            if alias not in dists or d < dists[alias]:
+                dists[alias] = d
+        return dists, max_distance
 
     def identify_student(self,face_embedding, store_facial_embeddings,detect_img_name, cos_threshold=0.95,L2_threshold=0.3,frame_index=None):
         """

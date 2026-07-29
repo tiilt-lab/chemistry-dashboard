@@ -41,9 +41,11 @@ def get_redis_session_config(session_key):
     
 def post_service_restarted(scope='video'):
     # Announce a service (re)start so the server clears stale running flags
-    # from runs that died with the previous process.
+    # from runs that died with the previous process. (Video config has no
+    # processing_callback accessor — that typo made this callback fail on
+    # every restart, leaving dead runs flagged as running for the 3h TTL.)
     try:
-        base = config.processing_callback().rsplit('/', 1)[0]
+        base = config.video_metrics_callback().rsplit('/', 1)[0]
         requests.post(base + '/posthoc_service_restarted', json={'scope': scope})
     except Exception as e:
         logging.warning('service_restarted callback failed: {0}'.format(e))
@@ -86,6 +88,20 @@ def post_video_metrics(source, video_metrics):
         return response.status_code == 200
     except Exception as e:
         logging.warning('video metric callback failed: {0}'.format(e))
+        return False
+
+
+def post_gaze_overlays(source, records, reset=False):
+    # Overlay geometry (head/gaze/object boxes) for the dashboard's video
+    # overlay toggles. The server appends to a per-pod JSONL; reset=True on a
+    # run's first batch replaces the previous run's file.
+    try:
+        base = config.video_metrics_callback().rsplit('/', 1)[0]
+        response = requests.post(base + '/gaze_overlays',
+                                 json={'source': source, 'records': records, 'reset': reset})
+        return response.status_code == 200
+    except Exception as e:
+        logging.warning('gaze overlay callback failed: {0}'.format(e))
         return False
 
 
