@@ -1,13 +1,18 @@
 import { AppSectionBoxComponent } from "../section-box/section-box-component"
 import { AppTimelineSlider } from "../timeline-slider/timeline-slider-component"
 import { AppIndividualFeaturesComponent } from "../individualmetrics/features-component"
-import { AppIndividualVideoFeaturesComponent } from "../individualVideometrics/video-features-component"
 import { VideoAnalyticsPanel } from "../video-analytics/video-analytics-panel"
 import { StudentLongitudinalPanel } from "../student-longitudinal/student-longitudinal-panel"
 
 import React from "react"
 
 function AppInfographicsSessionComparison(props) {
+    // Section toggles by label, not index — index gating broke every time an
+    // entry was added or retired. A missing list or label means "show it".
+    const boxOn = (label) => {
+        const box = (props.showBoxes || []).find((b) => b.label === label)
+        return !box || box.clicked
+    }
     return (
         <>
         <div className="infographics-container">
@@ -102,8 +107,7 @@ function AppInfographicsSessionComparison(props) {
                     />
                 </AppSectionBoxComponent>
             ) : null}
-            {props.showBoxes.length > 0 &&
-                props.showBoxes[0]["clicked"] && (
+            {boxOn("Timeline control") && (
                     <AppSectionBoxComponent
                         type={"wide-section"}
                         heading={"Timeline control"}
@@ -115,11 +119,12 @@ function AppInfographicsSessionComparison(props) {
                     </AppSectionBoxComponent>
                 )}
 
-            {props.showBoxes.length > 0 &&
-                props.showBoxes[7]["clicked"] && (
+            {boxOn("Video Metrics") && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
                         heading={`Visual Analytics`}
+                        badge={"gaze+facial · exploratory"}
+                        badgeTone={"amber"}
                     >
                         <VideoAnalyticsPanel
                             session={props.session}
@@ -130,11 +135,12 @@ function AppInfographicsSessionComparison(props) {
                 )}
 
             {props.details === "Comparison" &&
-                props.showBoxes.length > 0 &&
-                props.showBoxes[7]["clicked"] && (
+                boxOn("Video Metrics") && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
                         heading={`Visual Analytics`}
+                        badge={"gaze+facial · exploratory"}
+                        badgeTone={"amber"}
                     >
                         <VideoAnalyticsPanel
                             session={props.session}
@@ -145,11 +151,12 @@ function AppInfographicsSessionComparison(props) {
                     </AppSectionBoxComponent>
                 )}
 
-            {props.showBoxes.length > 0 &&
-                props.showBoxes[1]["clicked"] && (
+            {boxOn("Participation") && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
                         heading={`Participation and Impact Style`}
+                        badge={"verbal · exploratory"}
+                        badgeTone={"amber"}
                     >
                         <AppIndividualFeaturesComponent
                             session={props.session}
@@ -161,11 +168,12 @@ function AppInfographicsSessionComparison(props) {
                 )}
 
             {props.details === "Comparison" &&
-                props.showBoxes.length > 0 &&
-                props.showBoxes[1]["clicked"] && (
+                boxOn("Participation") && (
                     <AppSectionBoxComponent
                         type={"medium-section"}
                         heading={`Participation and Impact Style`}
+                        badge={"verbal · exploratory"}
+                        badgeTone={"amber"}
                     >
                         <AppIndividualFeaturesComponent
                             session={props.session}

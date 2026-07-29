@@ -16,9 +16,11 @@ import { PodComponentPages } from "./html-pages";
 // The dashboard views live in the URL (?view=...&speaker=...) so they are
 // linkable, bookmarkable, and reload/back-button safe. "Group" is the clean
 // URL. Slugs <-> the legacy `details` state values.
+// "Comparison" (the two-dropdown Individual Comparison view) is retired for
+// pods: speaker comparison lives in the Group view's multi-speaker panels, and
+// per-speaker detail is the Individual view, opened from the Speakers cards.
 const VIEW_SLUGS = {
   Group: "group",
-  Comparison: "comparison",
   "Reflection Dashboard": "reflection",
   Individual: "individual",
 };
@@ -46,19 +48,12 @@ function PodComponent() {
   const [startTime, setStartTime] = useState();
   const [endTime, setEndTime] = useState();
   const [intervalId, setIntervalId] = useState();
-  const [trigger, setTrigger] = useState(0);
   const [activeSessionService, setActiveSessionService] = useOutletContext();
-  const [showFeatures, setShowFeatures] = useState([]);
-  const [showBoxes, setShowBoxes] = useState([]);
-  const [radarTrigger, setRadarTrigger] = useState(0);
   const [details, setDetails] = useState("Group");
   const [speakers, setSpeakers] = useState([]);
   const [selectedSpkrId1, setSelectedSpkrId1] = useState(-1);
-  const [selectedSpkrId2, setSelectedSpkrId2] = useState(-1);
   const [spkr1Transcripts, setSpkr1Transcripts] = useState([]);
-  const [spkr2Transcripts, setSpkr2Transcripts] = useState([]);
   const [spkr1VideoMetrics, setSpkr1VideoMetrics] = useState([])
-  const [spkr2VideoMetrics, setSpkr2VideoMetrics] = useState([])
   const [open, setOpen] = useState(true);
   const [selectedSpkralias, setSelectedSpkralias] = useState("");
   const [participantIDReflectionDashboard, setParticipantIDRefectionDashboard] = useState("")
@@ -184,37 +179,6 @@ function PodComponent() {
       }, 2000)
     );
 
-    // initialize the options toolbar
-    let featuresArr = [
-      "Emotional tone",
-      "Analytic thinking",
-      "Clout",
-      "Authenticity",
-      "Confusion",
-      "Participation",
-      "Social Impact",
-      "Responsivity",
-      "Internal Cohesion",
-      "Newness",
-      "Communication Density",
-      "Attention Level",
-      "Facial Emotions",
-      "Object Focused On"
-    ]
-    initChecklistData(featuresArr, setShowFeatures)
-    // initialize the components toolbar
-    let boxArr = [
-      "Timeline control",
-      "Participation",
-      "Social Impact",
-      "Responsivity",
-      "Internal Cohesion",
-      "Newness",
-      "Communication Density",
-      "Video Metrics"
-    ]
-    initChecklistData(boxArr, setShowBoxes)
-
     return () => {
       subscriptions.map((sub) => {
         if (sub.closed) {
@@ -245,12 +209,7 @@ function PodComponent() {
     }
 
 
-  }, [displayTranscripts, displayVideoMetrics, selectedSpkrId1, selectedSpkrId2, details]);
-
-  useEffect(() => {
-    if (trigger > 0) {
-    }
-  }, [trigger]);
+  }, [displayTranscripts, displayVideoMetrics, selectedSpkrId1, details]);
 
   useEffect(() => {
     if (sessionDeviceId && session.id) getSpeakers();
@@ -266,17 +225,6 @@ function PodComponent() {
       extractParticipantData(participantIDReflectionDashboard)
     }
   }, [participantIDReflectionDashboard])
-
-  // to initialize the checklist data structures
-  const initChecklistData = (featuresArr, setFn) => {
-    let valueInd = 0;
-    let showFeats = [];
-    for (const feature of featuresArr) {
-      showFeats.push({ label: feature, value: valueInd, clicked: true });
-      valueInd++;
-    }
-    setFn(showFeats);
-  };
 
   const ResetTimeRange = (values) => {
     setTimeRange(values);
@@ -294,18 +242,8 @@ function PodComponent() {
           return values;
         }, [])
       );
-      setSpkr2Transcripts(
-        displayTranscripts.reduce((values, transcript) => {
-          if (transcript.speaker_id === selectedSpkrId2
-          ) {
-            values.push(transcript);
-          }
-          return values;
-        }, [])
-      );
     } else {
       setSpkr1Transcripts([]);
-      setSpkr2Transcripts([]);
     }
   };
 
@@ -313,7 +251,6 @@ function PodComponent() {
 
     if (displayVideoMetrics.length) {
       let speakerAlias1 = getSpeakerAliasFromID(selectedSpkrId1)
-      let speakerAlias2 = getSpeakerAliasFromID(selectedSpkrId2)
       setSpkr1VideoMetrics(
         displayVideoMetrics.reduce((values, videometrics) => {
           if (videometrics.student_username === speakerAlias1
@@ -323,18 +260,8 @@ function PodComponent() {
           return values
         }, []),
       )
-      setSpkr2VideoMetrics(
-        displayVideoMetrics.reduce((values, videometrics) => {
-          if (videometrics.student_username === speakerAlias2
-          ) {
-            values.push(videometrics)
-          }
-          return values
-        }, []),
-      )
     } else {
       setSpkr1VideoMetrics([])
-      setSpkr2VideoMetrics([])
     }
   }
   const generateDisplayTranscripts = (s, e) => {
@@ -536,26 +463,6 @@ function PodComponent() {
 
     const toggleDeleteValFalse = () => {toggleDeleteVal(false)}
     */
-
-  // toggles the clicked status of the data field that was clicked
-  const handleCheck = (event, propStruct, propFn) => {
-    let featTemp = propStruct;
-    featTemp[event.option.value]["clicked"] =
-      !featTemp[event.option.value]["clicked"];
-    propFn(featTemp);
-    setTrigger(trigger + 1);
-  };
-
-  // toggles for showFeatures
-  const handleCheckFeats = (value, event) => {
-    handleCheck(event, showFeatures, setShowFeatures);
-    setRadarTrigger(radarTrigger + 1);
-  };
-
-  // toggles for showBoxes
-  const handleCheckBoxes = (value, event) => {
-    handleCheck(event, showBoxes, setShowBoxes);
-  };
 
   // Reflect the open view into the URL. Group is the clean URL; Individual
   // carries the speaker id. No-op when the URL already matches, so the
@@ -775,7 +682,7 @@ function PodComponent() {
   useEffect(() => {
     const view = SLUG_VIEWS[searchParams.get("view")] || "Group";
     if (view === details) return;
-    if (view === "Group" || view === "Comparison") {
+    if (view === "Group") {
       setDetails(view);
       return;
     }
@@ -841,20 +748,11 @@ function PodComponent() {
       deleteDeviceToggle={deleteDeviceToggle}
       setDeleteDeviceToggle={setDeleteDeviceToggle}
       removeDeviceFromSession={removeDeviceFromSession}
-      showFeatures={showFeatures}
-      showBoxes={showBoxes}
-      handleCheckFeats={handleCheckFeats}
-      handleCheckBoxes={handleCheckBoxes}
-      radarTrigger={radarTrigger}
       speakers={speakers}
       selectedSpkrId1={selectedSpkrId1}
       setSelectedSpkrId1={setSelectedSpkrId1}
-      selectedSpkrId2={selectedSpkrId2}
-      setSelectedSpkrId2={setSelectedSpkrId2}
       spkr1Transcripts={spkr1Transcripts}
-      spkr2Transcripts={spkr2Transcripts}
       spkr1VideoMetrics={spkr1VideoMetrics}
-      spkr2VideoMetrics={spkr2VideoMetrics}
       getSpeakerAliasFromID={getSpeakerAliasFromID}
       details={details}
       setDetails={setDetails}

@@ -1,8 +1,9 @@
 import { useIsDark } from "../../myhooks/custom-hooks";
+import { GcaNote } from "./gca-note"
 import { applyChartTheme } from "../chart-theme"
 import { Line } from "react-chartjs-2"
 import { brandColor } from "../../globals"
-import { Chart as ChartJS } from "chart.js/auto"
+import "chart.js/auto"
 
 // Inline classifier explanations (previously behind a ? dialog).
 const FEATURE_DESCRIPTIONS = {
@@ -85,17 +86,26 @@ function FeatureCard({ feature }) {
 }
 
 function IndividualFeaturePage(props) {
-    const rows = props.showFeatures
-        .filter((sf) => sf["clicked"])
-        .map((sf) => props.features[sf["value"]])
-        .filter((feature) => feature !== undefined)
+    // Filter by label, not index — the showFeatures list spans the retired
+    // E&T names plus the video features, so positional lookup was off by five
+    // (the "Emotional tone" toggle controlled the Participation card). A
+    // missing list or label means "show it".
+    const rows = props.features.filter((feature) => {
+        const sf = (props.showFeatures || []).find(
+            (s) => s.label === feature.name,
+        )
+        return !sf || sf.clicked
+    })
 
     return (
-        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
-            {props.features.length > 0 &&
-                rows.map((feature, index) => (
-                    <FeatureCard key={index} feature={feature} />
-                ))}
+        <div className="flex w-full flex-col gap-3">
+            <GcaNote />
+            <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+                {props.features.length > 0 &&
+                    rows.map((feature, index) => (
+                        <FeatureCard key={index} feature={feature} />
+                    ))}
+            </div>
         </div>
     )
 }

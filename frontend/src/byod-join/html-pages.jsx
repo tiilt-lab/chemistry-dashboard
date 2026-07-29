@@ -782,6 +782,7 @@ function ByodJoinPage(props) {
                                                 spkr2VideoMetrics={props.spkr2VideoMetrics}
                                                 details={props.details}
                                                 getSpeakerAliasFromID={props.getSpeakerAliasFromID}
+                                                loadSpeakerMetrics={props.loadSpeakerMetrics}
                                             />
                                         </div>
 

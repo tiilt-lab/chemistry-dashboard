@@ -6,7 +6,6 @@ import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { Appheader } from "../header/header-component"
 import style from "./pod.module.css"
 import React from "react"
-import Select from "react-select"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
 import { CollaborationFeedbackDashboard } from "../components/reflection-dashboard-view/reflection-interactive-dashboard"
 
@@ -47,11 +46,6 @@ function PodComponentPages(props) {
                                             "Reflection Dashboard",
                                         ),
                                 },
-                                {
-                                    title: "Individual Comparison",
-                                    action: () =>
-                                        props.dashboardView("Comparison"),
-                                },
                             ]}
                         />
                     ) : (
@@ -91,23 +85,16 @@ function PodComponentPages(props) {
                                 displayVideoMetrics={props.displayVideoMetrics}
                                 fromclient={false}
                                 onClickedTimeline={props.onClickedTimeline}
-                                radarTrigger={props.radarTrigger}
                                 session={props.session}
                                 sessionDevice={props.sessionDevice}
                                 setRange={props.setRange}
-                                showBoxes={props.showBoxes}
-                                showFeatures={props.showFeatures}
                                 startTime={props.startTime}
                                 endTime={props.endTime}
                                 speakers={props.speakers}
                                 selectedSpkrId1={props.selectedSpkrId1}
                                 setSelectedSpkrId1={props.setSelectedSpkrId1}
-                                selectedSpkrId2={props.selectedSpkrId2}
-                                setSelectedSpkrId2={props.setSelectedSpkrId2}
                                 spkr1Transcripts={props.spkr1Transcripts}
-                                spkr2Transcripts={props.spkr2Transcripts}
                                 spkr1VideoMetrics={props.spkr1VideoMetrics}
-                                spkr2VideoMetrics={props.spkr2VideoMetrics}
                                 details={props.details}
                                 getSpeakerAliasFromID={
                                     props.getSpeakerAliasFromID
@@ -117,6 +104,7 @@ function PodComponentPages(props) {
                                 roster={props.roster}
                                 tagCounts={props.tagCounts}
                                 seeAllTranscripts={props.seeAllTranscripts}
+                                loadSpeakerMetrics={props.loadSpeakerMetrics}
                             ></AppInfographicsComparison>
                         )}
                     </div>
@@ -195,30 +183,6 @@ function PodComponentPages(props) {
 
                 {props.currentForm === "Options" ? (
                     <div className={style["dialog-content"]}>
-                        <div className={style["dialog-heading"]}>
-                            Section Boxes
-                        </div>
-                        <div className={style["dialog-dropdown"]}>
-                            <Select
-                                options={props.showBoxes}
-                                value={props.showBoxes.filter(
-                                    (feature) => feature["clicked"],
-                                )}
-                                onChange={props.handleCheckBoxes}
-                            />
-                        </div>
-                        <div className={style["dialog-heading"]}>
-                            Session Features
-                        </div>
-                        <div className={style["dialog-dropdown"]}>
-                            <Select
-                                options={props.showFeatures}
-                                value={props.showFeatures.filter(
-                                    (feature) => feature["clicked"],
-                                )}
-                                onChange={props.handleCheckFeats}
-                            />
-                        </div>
                         <div className={style["dialog-heading"]}>
                             Device Options
                         </div>

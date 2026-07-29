@@ -8,6 +8,10 @@ import { PosthocTrigger } from "../posthoc/posthoc-trigger"
 import { ModelNote } from "../model-note/model-note"
 import { AppTimelineSlider } from "../timeline-slider/timeline-slider-component"
 import { AppIndividualFeaturesComponent } from "../individualmetrics/features-component"
+import { AppGroupFeaturesComponent } from "../individualmetrics/group-features-component"
+import { SessionVitals } from "../session-vitals/session-vitals"
+import { SpeakerCardsPanel } from "../speaker-cards/speaker-cards-panel"
+import { JointAttentionPanel } from "../joint-attention/joint-attention-panel"
 import React, { useState, useEffect, lazy, Suspense } from "react"
 import { ApiService } from "../../services/api-service"
 
@@ -80,6 +84,13 @@ function AppInfographicsComparison(props) {
     })()
     const transcriptionLabel =
         models.transcription && models.transcription.label
+    // Section toggles by label, not index — index gating broke every time an
+    // entry was added or retired (see the E&T removal realignment). A missing
+    // list or label means "show it".
+    const boxOn = (label) => {
+        const box = (props.showBoxes || []).find((b) => b.label === label)
+        return !box || box.clicked
+    }
     useEffect(() => {
         new ApiService()
             .httpRequestCall("api/v1/models", "GET", {})
@@ -87,6 +98,216 @@ function AppInfographicsComparison(props) {
             .then((d) => d && setGlobalModels(d))
             .catch(() => {})
     }, [])
+
+    // Two arrangements of the same Group sections: the teacher's mental model
+    // (what happened -> how the group worked -> who did what -> tools) and the
+    // researcher's taxonomy (grouped by sensor modality, after Schneider et
+    // al. 2025). The choice persists per browser.
+    const isGroup = props.details === "Group" && !!props.sessionDevice
+    const [sectionMode, setSectionMode] = useState(() => {
+        try {
+            return window.localStorage.getItem("podSectionMode") || "question"
+        } catch (e) {
+            return "question"
+        }
+    })
+    const pickMode = (m) => {
+        setSectionMode(m)
+        try {
+            window.localStorage.setItem("podSectionMode", m)
+        } catch (e) {
+            // private-mode storage failures just lose the preference
+        }
+    }
+    const MODALITY_ORDER = [
+        "Verbal",
+        "Gaze",
+        "Head & facial",
+        "Record & logs",
+        "Cross-modal",
+        "Tools",
+    ]
+    // Array order == the "by question" order.
+    const groupSections = !isGroup
+        ? []
+        : [
+              {
+                  key: "record",
+                  modality: "Record & logs",
+                  node: (
+                      <AppSectionBoxComponent
+                          type={"w-full"}
+                          heading={"Session video & transcript"}
+                      >
+                          <div className="flex w-full flex-col gap-3">
+                              <VideoPlayer
+                                  sessionId={props.session.id}
+                                  sessionDeviceId={props.sessionDevice.id}
+                                  selectedTime={selectedTime}
+                                  transcripts={props.displayTranscripts}
+                                  onPlaybackTime={setPlaybackTime}
+                                  onSegments={setVideoSegments}
+                              />
+                              <TranscriptPanel
+                                  transcripts={props.displayTranscripts}
+                                  start={props.startTime}
+                                  end={props.endTime}
+                                  onOpenFull={props.seeAllTranscripts}
+                                  selectedTime={selectedTime}
+                                  onSelectTime={setSelectedTime}
+                                  playbackTime={playbackTime}
+                                  videoSegments={videoSegments}
+                                  compact
+                                  transcriptionLabel={transcriptionLabel}
+                                  onEditText={props.editTranscriptText}
+                                  onReassignSpeaker={props.reassignTranscriptRow}
+                                  roster={props.roster}
+                                  tagCounts={props.tagCounts}
+                              />
+                          </div>
+                      </AppSectionBoxComponent>
+                  ),
+              },
+              {
+                  key: "summary",
+                  modality: "Record & logs",
+                  node: (
+                      <AppSectionBoxComponent
+                          type={"w-full"}
+                          heading={"AI discussion summary"}
+                      >
+                          <DiscussionSummaryPanel
+                              sessionId={props.session.id}
+                              sessionDeviceId={props.sessionDevice.id}
+                          />
+                      </AppSectionBoxComponent>
+                  ),
+              },
+              {
+                  key: "dynamics",
+                  modality: "Verbal",
+                  node: (
+                      <AppSectionBoxComponent
+                          type={"w-full"}
+                          heading={"Conversation dynamics"}
+                          badge={"verbal · evidence-backed"}
+                          badgeTone={"teal"}
+                      >
+                          <ConversationDynamicsPanel
+                              sessionId={props.session.id}
+                              sessionDeviceId={props.sessionDevice.id}
+                          />
+                      </AppSectionBoxComponent>
+                  ),
+              },
+              {
+                  key: "pi",
+                  modality: "Verbal",
+                  node: (
+                      <AppSectionBoxComponent
+                          type={"w-full"}
+                          heading={"Participation & impact styles"}
+                          badge={"verbal · exploratory"}
+                          badgeTone={"amber"}
+                      >
+                          {(props.displayTranscripts || []).length > 0 && (
+                              <div className="mb-2">
+                                  <ModelNote label={models && models.participation && models.participation.label} fallback="sentence-transformer semantic cohesion (all-mpnet-base-v2)" />
+                              </div>
+                          )}
+                          <AppGroupFeaturesComponent
+                              transcripts={props.displayTranscripts}
+                              speakers={props.speakers}
+                          />
+                      </AppSectionBoxComponent>
+                  ),
+              },
+              ...((props.displayVideoMetrics || []).length > 0
+                  ? [
+                        {
+                            key: "joint-attention",
+                            modality: "Gaze",
+                            node: (
+                                <AppSectionBoxComponent
+                                    type={"w-full"}
+                                    heading={"Joint visual attention"}
+                                    badge={"gaze · evidence-backed"}
+                                    badgeTone={"teal"}
+                                >
+                                    <div className="mb-2">
+                                        <ModelNote label={models && models.attention && models.attention.label} fallback="Gaze-LLE (DINOv2, open SOTA)" />
+                                    </div>
+                                    <JointAttentionPanel
+                                        sessionId={props.session.id}
+                                        sessionDeviceId={props.sessionDevice.id}
+                                    />
+                                </AppSectionBoxComponent>
+                            ),
+                        },
+                        {
+                            key: "video-analytics",
+                            modality: "Head & facial",
+                            node: (
+                                <AppSectionBoxComponent
+                                    type={"w-full"}
+                                    heading={"Video analytics"}
+                                    badge={"gaze+facial · exploratory"}
+                                    badgeTone={"amber"}
+                                >
+                                    <VideoAnalyticsPanel
+                                        videometrics={props.displayVideoMetrics}
+                                        start={props.startTime}
+                                        end={props.endTime}
+                                        models={models}
+                                        playbackTime={playbackTime}
+                                        onSeek={setSelectedTime}
+                                        sessionId={props.session.id}
+                                        sessionDeviceId={props.sessionDevice.id}
+                                    />
+                                </AppSectionBoxComponent>
+                            ),
+                        },
+                    ]
+                  : []),
+              {
+                  key: "speakers",
+                  modality: "Cross-modal",
+                  node: (
+                      <AppSectionBoxComponent
+                          type={"w-full"}
+                          heading={"Speakers"}
+                      >
+                          <SpeakerCardsPanel
+                              sessionId={props.session.id}
+                              sessionDeviceId={props.sessionDevice.id}
+                              speakers={props.speakers}
+                              transcripts={props.displayTranscripts}
+                              onOpenSpeaker={props.loadSpeakerMetrics}
+                          />
+                      </AppSectionBoxComponent>
+                  ),
+              },
+              {
+                  key: "posthoc",
+                  modality: "Tools",
+                  node: (
+                      <AppSectionBoxComponent
+                          type={"w-full"}
+                          heading={"Post-Hoc Analysis"}
+                      >
+                          <PosthocTrigger
+                              models={models}
+                              session={props.session}
+                              sessionDevice={props.sessionDevice}
+                              sessionDeviceId={props.sessionDevice.id}
+                              lastAnalyzed={props.sessionDevice.posthoc_analyzed_date}
+                              speakers={props.speakers}
+                              transcripts={props.displayTranscripts}
+                          />
+                      </AppSectionBoxComponent>
+                  ),
+              },
+          ]
 
     return (
         <>
@@ -144,94 +365,91 @@ function AppInfographicsComparison(props) {
                                 )}
                             </div>
                         )}
-                    {props.showBoxes.length > 0 &&
-                        props.showBoxes[0]["clicked"] && (
-                            <AppSectionBoxComponent
-                                type={"w-full"}
-                                heading={"Adjust time range"}
-                            >
-                                <AppTimelineSlider
-                                    id="timeSlider"
-                                    inputChanged={props.setRange}
-                                />
-                            </AppSectionBoxComponent>
-                        )}
-
-                    {props.details === "Group" && props.sessionDevice && (
-                        <AppSectionBoxComponent
-                            type={"w-full"}
-                            heading={"Session video & transcript"}
-                        >
-                            <div className="flex w-full flex-col gap-3">
-                                <VideoPlayer
+                    {isGroup && (
+                        <div className="flex flex-col gap-2 @sm:flex-row @sm:items-center">
+                            <div className="min-w-0 grow">
+                                <SessionVitals
                                     sessionId={props.session.id}
                                     sessionDeviceId={props.sessionDevice.id}
-                                    selectedTime={selectedTime}
-                                    transcripts={props.displayTranscripts}
-                                    onPlaybackTime={setPlaybackTime}
-                                    onSegments={setVideoSegments}
-                                />
-                                <TranscriptPanel
-                                    transcripts={props.displayTranscripts}
-                                    start={props.startTime}
-                                    end={props.endTime}
-                                    onOpenFull={props.seeAllTranscripts}
-                                    selectedTime={selectedTime}
-                                    onSelectTime={setSelectedTime}
-                                    playbackTime={playbackTime}
-                                    videoSegments={videoSegments}
-                                    compact
-                                    transcriptionLabel={transcriptionLabel}
-                                    onEditText={props.editTranscriptText}
-                                    onReassignSpeaker={props.reassignTranscriptRow}
-                                    roster={props.roster}
-                                    tagCounts={props.tagCounts}
                                 />
                             </div>
-                        </AppSectionBoxComponent>
+                            <div className="flex flex-none overflow-hidden rounded-lg border border-tiilt-line text-xs">
+                                <button
+                                    type="button"
+                                    onClick={() => pickMode("question")}
+                                    className={
+                                        "px-2.5 py-1.5 transition " +
+                                        (sectionMode === "question"
+                                            ? "bg-tiilt-soft font-semibold text-tiilt-ink"
+                                            : "bg-white text-tiilt-muted hover:bg-tiilt-ground")
+                                    }
+                                >
+                                    By question
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => pickMode("sensor")}
+                                    className={
+                                        "px-2.5 py-1.5 transition " +
+                                        (sectionMode === "sensor"
+                                            ? "bg-tiilt-soft font-semibold text-tiilt-ink"
+                                            : "bg-white text-tiilt-muted hover:bg-tiilt-ground")
+                                    }
+                                >
+                                    By sensor
+                                </button>
+                            </div>
+                        </div>
                     )}
 
-                    {props.details === "Group" && props.sessionDevice && (
-                        <AppSectionBoxComponent
-                            type={"w-full"}
-                            heading={"Conversation dynamics"}
-                        >
-                            <ConversationDynamicsPanel
-                                sessionId={props.session.id}
-                                sessionDeviceId={props.sessionDevice.id}
-                            />
-                        </AppSectionBoxComponent>
-                    )}
+                    <AppSectionBoxComponent
+                        type={"w-full"}
+                        heading={"Adjust time range"}
+                    >
+                        <AppTimelineSlider
+                            id="timeSlider"
+                            inputChanged={props.setRange}
+                        />
+                    </AppSectionBoxComponent>
 
-                    {props.details === "Group" && props.sessionDevice && (
-                        <AppSectionBoxComponent
-                            type={"w-full"}
-                            heading={"AI discussion summary"}
-                        >
-                            <DiscussionSummaryPanel
-                                sessionId={props.session.id}
-                                sessionDeviceId={props.sessionDevice.id}
-                            />
-                        </AppSectionBoxComponent>
-                    )}
+                    {isGroup &&
+                        sectionMode === "question" &&
+                        groupSections.map((s) => (
+                            <React.Fragment key={s.key}>
+                                {s.node}
+                            </React.Fragment>
+                        ))}
+
+                    {isGroup &&
+                        sectionMode === "sensor" &&
+                        MODALITY_ORDER.filter((m) =>
+                            groupSections.some((s) => s.modality === m),
+                        ).map((m) => (
+                            <React.Fragment key={m}>
+                                <div className="font-ahamono mt-1 text-[11px] tracking-wider text-tiilt-muted uppercase">
+                                    {m}
+                                </div>
+                                {groupSections
+                                    .filter((s) => s.modality === m)
+                                    .map((s) => (
+                                        <React.Fragment key={s.key}>
+                                            {s.node}
+                                        </React.Fragment>
+                                    ))}
+                            </React.Fragment>
+                        ))}
 
                     {props.details !== "Comparison" &&
-                        (props.details === "Group"
-                            ? props.displayVideoMetrics
-                            : props.spkr1VideoMetrics) &&
-                        (props.details === "Group"
-                            ? props.displayVideoMetrics.length
-                            : props.spkr1VideoMetrics.length) > 0 && (
+                        props.details !== "Group" &&
+                        (props.spkr1VideoMetrics || []).length > 0 && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={"Video analytics"}
+                                badge={"gaze+facial · exploratory"}
+                                badgeTone={"amber"}
                             >
                                 <VideoAnalyticsPanel
-                                    videometrics={
-                                        props.details === "Group"
-                                            ? props.displayVideoMetrics
-                                            : props.spkr1VideoMetrics
-                                    }
+                                    videometrics={props.spkr1VideoMetrics}
                                     start={props.startTime}
                                     end={props.endTime}
                                     models={models}
@@ -275,11 +493,12 @@ function AppInfographicsComparison(props) {
                         out of place inside a single discussion's dashboard. */}
 
                     {props.details !== "Group" &&
-                        props.showBoxes.length > 0 &&
-                        props.showBoxes[7]["clicked"] && (
+                        boxOn("Video Metrics") && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={`Visual Analytics`}
+                                badge={"gaze+facial · exploratory"}
+                                badgeTone={"amber"}
                             >
                                 {(props.spkr1VideoMetrics || []).length > 0 && (
 <div className="mb-2 flex flex-col gap-0.5">
@@ -302,11 +521,12 @@ function AppInfographicsComparison(props) {
                         )}
 
                     {props.details === "Comparison" &&
-                        props.showBoxes.length > 0 &&
-                        props.showBoxes[7]["clicked"] && (
+                        boxOn("Video Metrics") && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={`Visual Analytics`}
+                                badge={"gaze+facial · exploratory"}
+                                badgeTone={"amber"}
                             >
                                 {(props.spkr2VideoMetrics || []).length > 0 && (
 <div className="mb-2 flex flex-col gap-0.5">
@@ -329,11 +549,12 @@ function AppInfographicsComparison(props) {
                         )}
 
                     {props.details !== "Group" &&
-                        props.showBoxes.length > 0 &&
-                        props.showBoxes[1]["clicked"] && (
+                        boxOn("Participation") && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={`Participation and Impact Style`}
+                                badge={"verbal · exploratory"}
+                                badgeTone={"amber"}
                             >
                                 {(props.spkr1Transcripts || []).length > 0 && (
 <div className="mb-2">
@@ -350,11 +571,12 @@ function AppInfographicsComparison(props) {
                         )}
 
                     {props.details === "Comparison" &&
-                        props.showBoxes.length > 0 &&
-                        props.showBoxes[1]["clicked"] && (
+                        boxOn("Participation") && (
                             <AppSectionBoxComponent
                                 type={"w-full"}
                                 heading={`Participation and Impact Style`}
+                                badge={"verbal · exploratory"}
+                                badgeTone={"amber"}
                             >
                                 {(props.spkr2Transcripts || []).length > 0 && (
 <div className="mb-2">
@@ -370,22 +592,6 @@ function AppInfographicsComparison(props) {
                             </AppSectionBoxComponent>
                         )}
 
-                    {props.details === "Group" && props.sessionDevice && (
-                        <AppSectionBoxComponent
-                            type={"w-full"}
-                            heading={"Post-Hoc Analysis"}
-                        >
-                            <PosthocTrigger
-                                models={models}
-                                session={props.session}
-                                sessionDevice={props.sessionDevice}
-                                sessionDeviceId={props.sessionDevice.id}
-                                lastAnalyzed={props.sessionDevice.posthoc_analyzed_date}
-                                speakers={props.speakers}
-                                transcripts={props.displayTranscripts}
-                            />
-                        </AppSectionBoxComponent>
-                    )}
                 </div>
             )}
         </>
