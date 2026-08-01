@@ -228,6 +228,7 @@ facial-expression-analysis
 gaze_estimation
 
 audio_processing/videorecordings/*
+audio_processing/LIWC_Model_training/*
 
 topicModels/*
 
