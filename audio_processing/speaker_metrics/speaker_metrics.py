@@ -410,11 +410,26 @@ class SpeakerProcessor:
           logging.info("threw exception {0}".format(error_str))
 
 
-    def subspaceProjection(self, s, v):
-        proj = 0
-        for vector in s:
-            proj += projection(vector, v)
-        return proj
+    # def subspaceProjection(self, s, v):
+    #     proj = 0
+    #     for vector in s:
+    #         proj += projection(vector, v)
+    #     return proj
+
+    def subspaceProjection(self, basis, vector, epsilon=1e-12):
+      vector = np.asarray(vector, dtype=float).reshape(-1)
+      projection_sum = np.zeros_like(vector)
+
+      for basis_vector in basis:
+          basis_vector = np.asarray(basis_vector,dtype=float).reshape(-1)
+
+          denominator = np.dot( basis_vector,basis_vector)
+
+          if denominator > epsilon:
+              projection_sum += ( np.dot(vector, basis_vector) / denominator) * basis_vector
+
+      return projection_sum
+
 
     def processResponsivity(self, cross_cohesion):
         min_lag = min(self.length, self.tau_window)
@@ -440,16 +455,82 @@ class SpeakerProcessor:
       self.social_impact = np.divide(np.sum(responsivity, axis=0, where=self.ignore_diag),denom)
       self.overall_responsivity = np.divide(np.sum(responsivity, axis=1, where=self.ignore_diag),denom)
 
-    def calculateNewness_by_particpant_contributions(self, embedding, speaker):
-        self.embeddings = np.concatenate((self.embeddings, np.array([embedding])))
-        given_data = self.subspaceProjection(self.subspace_basis, embedding)
-        new_data = np.array([embedding - given_data])
-        self.total_new[speaker] += np.linalg.norm(new_data)/(np.linalg.norm(given_data) + np.linalg.norm(new_data))
-        normalized_new_data = normalizeVector(new_data)
-        self.subspace_basis = np.concatenate((self.subspace_basis, normalized_new_data), axis = 0)
-        with np.errstate(divide='ignore', invalid='ignore'):
-            self.newness = np.divide(self.total_new, self.contributions)
-            self.newness = np.nan_to_num(self.newness)
+    # def calculateNewness_by_particpant_contributions(self, embedding, speaker):
+    #     self.embeddings = np.concatenate((self.embeddings, np.array([embedding])))
+    #     given_data = self.subspaceProjection(self.subspace_basis, embedding)
+    #     new_data = np.array([embedding - given_data])
+    #     self.total_new[speaker] += np.linalg.norm(new_data)/(np.linalg.norm(given_data) + np.linalg.norm(new_data))
+    #     normalized_new_data = normalizeVector(new_data)
+    #     self.subspace_basis = np.concatenate((self.subspace_basis, normalized_new_data), axis = 0)
+    #     with np.errstate(divide='ignore', invalid='ignore'):
+    #         self.newness = np.divide(self.total_new, self.contributions)
+    #         self.newness = np.nan_to_num(self.newness)
+
+    def calculateNewness_by_participant_contributions(self,embedding,speaker,epsilon=1e-10):
+      embedding = np.asarray(embedding,dtype=float,).reshape(-1)
+
+      # 1. Project the current contribution onto the semantic
+      #    space spanned by all previous contributions.
+      if self.subspace_basis.size == 0:
+          given_data = np.zeros_like(embedding)
+      else:
+          given_data = self.subspaceProjection(self.subspace_basis,embedding)
+
+      # 2. Extract the semantic component not represented
+      #    by previous contributions.
+      new_data = embedding - given_data
+
+      # Re-orthogonalize to reduce floating-point drift.
+      if self.subspace_basis.size > 0:
+          new_data -= self.subspaceProjection(self.subspace_basis,new_data)
+
+      given_norm = np.linalg.norm(given_data)
+      new_norm = np.linalg.norm(new_data)
+      denominator = given_norm + new_norm
+
+      # 3. GCA contribution-level Newness.
+      contribution_newness = (
+          new_norm / denominator
+          if denominator > epsilon
+          else 0.0
+      )
+
+      self.total_new[speaker] += contribution_newness
+
+      # 4. Expand the basis only when the contribution introduces
+      #    a genuinely new semantic direction.
+      relative_tolerance = epsilon * max(np.linalg.norm(embedding),1.0 )
+
+      if new_norm > relative_tolerance:
+          normalized_new_data = new_data / new_norm
+
+          if self.subspace_basis.size == 0:
+              self.subspace_basis = (
+                  normalized_new_data.reshape(1, -1)
+              )
+          else:
+              self.subspace_basis = np.vstack(
+                  [
+                      self.subspace_basis,
+                      normalized_new_data,
+                  ]
+              )
+
+  
+      # 6. GCA participant-level Newness:
+      #    mean contribution-level Newness.
+      self.newness = np.divide(
+          self.total_new,
+          self.contributions,
+          out=np.full(
+              self.total_new.shape,
+              np.nan,
+              dtype=float,
+          ),
+          where=self.contributions > 0,
+      )
+
+      return contribution_newness
 
     def calculateNewness_by_group_contributions(self, embedding, speaker):
         self.embeddings = np.concatenate((self.embeddings, np.array([embedding])))
@@ -473,6 +554,21 @@ class SpeakerProcessor:
         self.running = False
         self.asr_complete = True
 
+    def append_contribution_history(self,embedding,speaker_index,speaker_id):
+          embedding = np.asarray(embedding,dtype=np.float32).reshape(1, -1)
+    
+          if self.embeddings.size == 0:
+              self.embeddings = embedding
+          else:
+              self.embeddings = np.concatenate(
+                  [self.embeddings, embedding],
+                  axis=0,
+              )
+    
+          self.embedding_speakers.append(speaker_index)
+          self.prev_window_speakers.append(speaker_id)
+          self.length += 1
+    
     def process_transcript(self, speaker_transcript_data,action="realtime_processing"):
       try:
         processing_timer = time.time()
@@ -503,14 +599,18 @@ class SpeakerProcessor:
           if self.length > 0:
             cross_cohesion = self.calculateCohesionSums_V3(index, embedding, self.semantic_model) #self.calculateCohesionSums(index, embedding, self.semantic_model)
             self.processResponsivity_v2(cross_cohesion) #self.processResponsivity(cross_cohesion)
-            self.calculateNewness_by_group_contributions(embedding, index)
 
           else:
-            self.embeddings = np.array([embedding])
-            self.subspace_basis = normalizeVector(self.embeddings)
-            self.total_new[index] += 1
+            pass
+            # self.embeddings = np.array([embedding])
+            # self.subspace_basis = normalizeVector(self.embeddings)
+            # self.total_new[index] += 1
 
-          self.length += 1
+          self.calculateNewness_by_participant_contributions(embedding, index)
+          # Append the current contribution only after all metrics
+          # relative to the preceding discourse have been calculated.
+          self.append_contribution_history(embedding=embedding,speaker_index=index,speaker_id=speaker)
+          # self.length += 1
           self.prev_window_speakers.append(speaker)
           self.embedding_speakers.append(index)
           self.participation_scores = np.subtract(np.multiply(np.divide(self.contributions, self.length), self.participants), 1)
@@ -519,7 +619,7 @@ class SpeakerProcessor:
           ic_score = self.internal_cohesion
           or_score = self.overall_responsivity
           si_score = self.social_impact
-          n_score = self.newness
+          n_score = np.nan_to_num(self.newness,nan=0.0, posinf=0.0,neginf=0.0).astype(float) #self.newness
           cd_score = self.communication_density
 
         if action == "speaker metric recomputation":
@@ -604,7 +704,7 @@ def process(processing_queue, speaker_transcript_queue, model):
                 if processor.length > 0:
                   cross_cohesion = processor.calculateCohesionSums(index, embedding, model)
                   processor.processResponsivity(cross_cohesion)
-                  processor.calculateNewness_by_particpant_contributions(embedding, index)
+                  processor.calculateNewness_by_participant_contributions(embedding, index)
 
                 else:
                   processor.embeddings = np.array([embedding])

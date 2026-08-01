@@ -641,7 +641,7 @@ def getSynthesizedSessionAnalytics(session_id,session_name,datatype, **kwargs):
     session_devices = database.get_session_devices(session_id=session_id)
     if datatype == 'individual-analytics':
         field_names = ['Session ID','Session Name', 'Device ID', 'Device Name',"User ID" ,'Engagement', 'Focus','Idea Contribution', 'Initiative', 'Leadership', 'Momentum', 'Reasoning', 'Verbal Share', 'Verbal Share (Balanced)','Dominance','Under Contribution', 'Turn Taking', 'Turn Taking (Balanced)',
-                    "Shared Task Focus","Analytic Thinking",'Authenticity', 'Certainty','Clout','Internal Cohesion','Social Impact','Newness', 'Participation Score', 'Responsivity', 'Word Count']
+                    "Shared Task Focus","Analytic Thinking",'Authenticity', 'Certainty','Clout','Internal Cohesion','Social Impact','Newness', 'Participation Score','Participation Share', 'Responsivity', 'Word Count']
     elif datatype == 'group-analytics':   
         field_names = ['Session ID','Session Name', 'Device ID', 'Device Name','Num of Particpants','Verbal Share (Balanced)','Participation(turntaking) Balance',"Shared Task Focus","Group Trajectory",'Group Engagement', 'Group Cohesion'] 
     elif datatype == 'LIWC-summary':   
@@ -700,7 +700,8 @@ def getSynthesizedSessionAnalytics(session_id,session_name,datatype, **kwargs):
                         'Internal Cohesion':  metrics.get('avg_internalcohesion', 0),
                         'Social Impact':  metrics.get('avg_socialimpact', 0),
                         'Newness':  metrics.get('avg_newness', 0),
-                        'Participation Score': metrics.get('avg_participationscore', 0),
+                        'Participation Score': round((len(speakers) * (metrics.get('avg_participationscore', 0)/100) -1), 2),
+                        'Participation Share': metrics.get('avg_participationscore', 0),
                         'Responsivity':  metrics.get('avg_responsivity', 0),
                         'Word Count': metrics.get('wordcount', 0)
                         })
