@@ -11,6 +11,7 @@ import threading
 import callbacks
 import traceback
 from speaker_metrics import speaker_metrics
+from features_detector.features_detector import detect_LIWC_Indices
 from queue import Full
 import config as cf
 import json
@@ -35,10 +36,15 @@ class SpeakerMetricProcessor:
 
         cf.initialize()
 
-    def start(self):
-        self.processing_thread = threading.Thread(target=self.process,name="audio_stream_reader")
+    def start_speaker_metric_processing(self):
+        self.processing_thread = threading.Thread(target=self.process_speaker_metrics,name="speaker_metric_processing")
         self.processing_thread.daemon = True
         self.processing_thread.start()
+
+    def start_transcript_metric_processing(self):
+        self.processing_thread = threading.Thread(target=self.process_transcript_metrics,name="transcript_metric_processing")
+        self.processing_thread.daemon = True
+        self.processing_thread.start()    
 
     def stop(self):
         self.running = False
@@ -56,7 +62,7 @@ class SpeakerMetricProcessor:
         self.speaker_metrics_process.setSpeakers(self.fingerprints)
 
 
-    def process(self):
+    def process_speaker_metrics(self):
         try:
             for transcriptObj in self.transcripts:
                 # id,start_time, speaker_id, speaker_tag,transcript
@@ -82,5 +88,35 @@ class SpeakerMetricProcessor:
                 self.send_json({'type': 'process_completed', 'message': "Speaker Metric Computation Completed"})  
             except Full:
                 pass
+
+    def process_transcript_metrics(self):
+        try:
+            for transcriptObj in self.transcripts:
+                # id,start_time, speaker_id, speaker_tag,transcript
+                liwc_summary = detect_LIWC_Indices(transcriptObj['transcript'])
+
+                logging.info("transcript: {0} ; liwcsummary: {1}".format(transcriptObj['transcript'],liwc_summary))
+                # self.speaker_metrics_process.process_transcript(
+                #     {
+                #         'source': self.config.auth_key,
+                #         'transcript_id': transcriptObj['id'],
+                #         'start_time': transcriptObj['start_time'],
+                #         'transcript': transcriptObj['transcript'],
+                #         'speaker_tag': transcriptObj['speaker_tag'],
+                #         'speaker_id': transcriptObj['speaker_id']
+                #     },action="speaker metric recomputation")
+                
+                # compute_particpation_score(transcriptObj['speaker_id'],transcriptObj['start_time'],transcriptObj['transcript'])
+              
+        except Exception as e:
+            error_str = traceback.format_exc()
+            logging.info('exception occured while computing transcript metrics  : {0}'.format(error_str))
+        finally:
+            try:
+                self.running_audio_processes.pop(self.config.auth_key,None)
+                logging.info('transcript metric computation thread stopped for {0}.'.format(self.config.auth_key))
+                self.send_json({'type': 'process_completed', 'message': "Transcript Metric Computation Completed"})  
+            except Full:
+                pass        
 
        

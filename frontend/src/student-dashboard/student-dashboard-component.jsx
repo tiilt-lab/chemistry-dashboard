@@ -808,7 +808,7 @@ function StudentSessionDashboard() {
         setRatings(rest)
         setSurveyAlreadyCompleted(true)
       }
-      if (actionstatus && reflectionUsers.includes(userDetail.username)) {
+      if (actionstatus) {
         const sess = previousSessions.current.find((ses) => ses.id === selectedSessionId1);
         const group = sessionDevices.find((dev) => dev.id === selectedSessionDeviceId1);
         setSessionNameForReflecDashboard(sess?.name + ": " + new Date(sess?.creation_date).toDateString())

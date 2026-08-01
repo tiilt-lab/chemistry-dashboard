@@ -190,6 +190,45 @@ function CollaborationFeedbackDashboard(props) {
     if (value) return color
   }
   function TimelinePill({ item, item_index, window_length, selected, onClick }) {
+   
+    //   return (
+    //   <button
+    //     onClick={onClick}
+    //     className={`w-full rounded-2xl border p-3 text-left transition hover:shadow-sm ${statusClasses(item?.trenddirection, selected)}`}
+    //   >
+    //     <div className="flex items-center justify-between gap-3">
+    //       <div>
+    //         <div className="text-sm font-semibold">{formatSeconds(item?.starttime)}-{formatSeconds(item?.endtime)} </div>
+    //         <div className="text-xs text-muted-foreground">{item_index <= ((window_length / 3) * 1) ? "Early" : item_index <= ((window_length / 3) * 2) ? "Middle" : "Late"} phase</div>
+    //       </div>
+    //       {statusBadge(item?.trenddirection)}
+    //     </div>
+    //     <div className="mt-3 grid grid-cols-5 gap-2 text-[11px]">
+    //       <div className="rounded-xl bg-white/80 p-2">
+    //         <div className="text-muted-foreground">Focus</div>
+    //         <div className="font-semibold">{item?.focusscore}</div>
+    //       </div>
+    //       <div className="rounded-xl bg-white/80 p-2">
+    //         <div className="text-muted-foreground">Engagement</div>
+    //         <div className="font-semibold">{item?.engagementscore}</div>
+    //       </div>
+    //       <div className="rounded-xl bg-white/80 p-2">
+    //         <div className="text-muted-foreground">Ideas</div>
+    //         <div className="font-semibold">{item?.ideacontributionscore}</div>
+    //       </div>
+    //       <div className="rounded-xl bg-white/80 p-2">
+    //         <div className="text-muted-foreground">Reasoning</div>
+    //         <div className="font-semibold">{item?.reasoningscore}</div>
+    //       </div>
+    //       <div className="rounded-xl bg-white/80 p-2">
+    //         <div className="text-muted-foreground">Leader</div>
+    //         <div className="font-semibold">{item?.leadershipscore}</div>
+    //       </div>
+
+    //     </div>
+    //   </button>
+    // );
+    
     return (
       <button
         onClick={onClick}
@@ -204,29 +243,30 @@ function CollaborationFeedbackDashboard(props) {
         </div>
         <div className="mt-3 grid grid-cols-5 gap-2 text-[11px]">
           <div className="rounded-xl bg-white/80 p-2">
-            <div className="text-muted-foreground">Focus</div>
-            <div className="font-semibold">{item?.focusscore}</div>
+            <div className="text-muted-foreground">Partcipation</div>
+            <div className="font-semibold">{Math.round(item?.participationscore)}</div>
           </div>
           <div className="rounded-xl bg-white/80 p-2">
-            <div className="text-muted-foreground">Engagement</div>
-            <div className="font-semibold">{item?.engagementscore}</div>
+            <div className="text-muted-foreground">Responsivity</div>
+            <div className="font-semibold">{Math.round(item?.responsivityscore) }</div>
           </div>
           <div className="rounded-xl bg-white/80 p-2">
-            <div className="text-muted-foreground">Ideas</div>
-            <div className="font-semibold">{item?.ideacontributionscore}</div>
+            <div className="text-muted-foreground">Social-Impact</div>
+            <div className="font-semibold">{Math.round(item?.socialimpact)}</div>
           </div>
           <div className="rounded-xl bg-white/80 p-2">
-            <div className="text-muted-foreground">Reasoning</div>
-            <div className="font-semibold">{item?.reasoningscore}</div>
+            <div className="text-muted-foreground">Internal-Cohesion</div>
+            <div className="font-semibold">{Math.round(item?.internalcohesion)}</div>
           </div>
           <div className="rounded-xl bg-white/80 p-2">
-            <div className="text-muted-foreground">Leader</div>
-            <div className="font-semibold">{item?.leadershipscore}</div>
+            <div className="text-muted-foreground">Newness</div>
+            <div className="font-semibold">{Math.round(item?.newness)}</div>
           </div>
 
         </div>
       </button>
     );
+  
   }
 
   function ChatTrail({ question, response, selected }) {
@@ -702,7 +742,7 @@ function CollaborationFeedbackDashboard(props) {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-5">
-                    <div className="grid gap-3 md:grid-cols-4">
+                    {/* <div className="grid gap-3 md:grid-cols-4">
                       <div className="rounded-2xl bg-sky-50 p-4">
                         <div className="flex items-center gap-2 text-xs text-muted-foreground"><Eye className="h-3.5 w-3.5" />Focus</div>
                         <div className="mt-2 text-2xl font-semibold">{selectedMoment?.focusscore}</div>
@@ -723,9 +763,33 @@ function CollaborationFeedbackDashboard(props) {
                         <div className="flex items-center gap-2 text-xs text-muted-foreground"><Users className="h-3.5 w-3.5" />Leader</div>
                         <div className="mt-2 text-2xl font-semibold">{selectedMoment?.leadershipscore}</div>
                       </div>
+                    </div> */}
+
+
+                     <div className="grid gap-3 md:grid-cols-4">
+                      <div className="rounded-2xl bg-sky-50 p-4">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground"><Eye className="h-3.5 w-3.5" />Partcipation</div>
+                        <div className="mt-2 text-2xl font-semibold">{Math.round(selectedMoment?.participationscore)}</div>
+                      </div>
+                      <div className="rounded-2xl bg-violet-50 p-4">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground"><Mic className="h-3.5 w-3.5" />Responsivity</div>
+                        <div className="mt-2 text-2xl font-semibold">{Math.round(selectedMoment?.responsivityscore)}</div>
+                      </div>
+                      <div className="rounded-2xl bg-amber-50 p-4">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground"><Users className="h-3.5 w-3.5" />Social-Impact</div>
+                        <div className="mt-2 text-2xl font-semibold">{Math.round(selectedMoment?.socialimpact)}</div>
+                      </div>
+                      <div className="rounded-2xl bg-emerald-50 p-4">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground"><Brain className="h-3.5 w-3.5" />Internal-Cohesion</div>
+                        <div className="mt-2 text-2xl font-semibold">{Math.round(selectedMoment?.internalcohesion)}</div>
+                      </div>
+                      <div className="rounded-2xl bg-rose-50 p-4">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground"><Lightbulb className="h-3.5 w-3.5" />Newness</div>
+                        <div className="mt-2 text-2xl font-semibold">{Math.round(selectedMoment?.newness)}</div>
+                      </div>
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-[.9fr_1.1fr]">
+                    {/* <div className="grid gap-4 md:grid-cols-[.9fr_1.1fr]">
                       <div className="space-y-4 rounded-2xl border p-4">
                         <div>
                           <div className="text-sm font-medium">Transcript snippet</div>
@@ -745,6 +809,20 @@ function CollaborationFeedbackDashboard(props) {
                       </div>
 
                       <div className="space-y-4 rounded-2xl border p-4">
+                        <div className="flex items-center gap-2 font-medium"><Bot className="h-4 w-4" />Interpretation</div>
+                        <p className="text-sm leading-7 text-muted-foreground">{llmresponse_window_summary[props.selectedMomentIdAndIndex[1]]?.Summary}</p>
+                        <div className="rounded-2xl bg-muted p-4">
+                          <div className="flex items-center gap-2 text-sm font-medium"><HelpCircle className="h-4 w-4" />Suggestion</div>
+                          <p className="mt-2 text-sm leading-6 text-muted-foreground">{llmresponse_window_summary[props.selectedMomentIdAndIndex[1]]?.Action}</p>
+                        </div>
+                      </div>
+                    </div> */}
+
+                    <div className="grid gap-4 ">
+                      <div className="space-y-4 rounded-2xl border p-4">
+                          <div className="flex items-center gap-2 text-sm font-medium"><HelpCircle className="h-4 w-4" />Transcript snippet</div>
+                          <p className="mt-2 text-sm leading-6 text-muted-foreground">{selectedMoment?.transcript}</p>
+
                         <div className="flex items-center gap-2 font-medium"><Bot className="h-4 w-4" />Interpretation</div>
                         <p className="text-sm leading-7 text-muted-foreground">{llmresponse_window_summary[props.selectedMomentIdAndIndex[1]]?.Summary}</p>
                         <div className="rounded-2xl bg-muted p-4">

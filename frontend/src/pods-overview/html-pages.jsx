@@ -281,6 +281,7 @@ function PodsOverviewPages(props) {
                                 <option value="">Select data to export</option>
                                 <option value="individual-analytics">Individual Analytics</option>
                                 <option value="group-analytics">Group Analytics</option>
+                                <option value="LIWC-summary">Transcript's LIWC Summary</option>
                             </select>
 
                             <button

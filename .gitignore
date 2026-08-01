@@ -158,7 +158,7 @@ pyvenv.cfg
 
 # Keyword Detector Models
 audio_processing/keyword_detector/models
-
+audio_processing/LIWC_Model_training
 # asr credentials
 google-cloud-key.json
 

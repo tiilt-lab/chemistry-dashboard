@@ -52,8 +52,8 @@ class FacialBiometricProcessor:
         student_embedding[currAlias] = avg_embedding
         np.save(facial_biometric_file+".npy", student_embedding)
 
-        if os.path.isfile(video_file+'.'+mediaExt):
-            os.remove(video_file+'.'+mediaExt)
+        # if os.path.isfile(video_file+'.'+mediaExt):
+        #     os.remove(video_file+'.'+mediaExt)
 
         logging.info('video biometrics saved')
         self.send_json({'type': 'saved', 'message': "Biometric data captured successfully"})   
