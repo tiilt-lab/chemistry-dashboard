@@ -1,0 +1,1127 @@
+/* Add these styles to your existing concept-map.module.css */
+
+/* View Toggle Styles */
+.viewToggle {
+  display: flex;
+  gap: 10px;
+  margin-right: 20px;
+}
+
+.viewButton {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.viewButton:hover:not(:disabled) {
+  background: #f5f5f5;
+}
+
+.viewButton.active {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+.viewButton:disabled {
+  cursor: default;
+}
+
+/* Clustered View Styles */
+.clustersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
+}
+
+.clusterCard {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: box-shadow 0.2s;
+}
+
+.clusterCard:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.clusterHeader {
+  padding: 15px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 8px 8px 0 0;
+  user-select: none;
+}
+
+.clusterHeader:hover {
+  background: #e9ecef;
+}
+
+.clusterHeader h4 {
+  margin: 0;
+  font-size: 16px;
+  color: #2c3e50;
+}
+
+.nodeCount {
+  font-size: 13px;
+  color: #7f8c8d;
+  margin-top: 4px;
+  display: block;
+}
+
+.expandIcon {
+  font-size: 14px;
+  color: #7f8c8d;
+  transition: transform 0.2s;
+}
+
+.clusterSummary {
+  padding: 15px;
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.5;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.clusterGraph {
+  height: 350px;
+  width: 100%;
+  position: relative;
+  background: #fafafa;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* Control buttons for clusters */
+.controlButton {
+  padding: 6px 12px;
+  margin: 0 4px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.controlButton:hover:not(:disabled) {
+  background: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+.controlButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Lock View button active state */
+.lockButtonActive {
+  background-color: #3498db;
+  color: white;
+  border-color: #3498db;
+}
+
+.lockButtonActive:hover:not(:disabled) {
+  background-color: #2980b9;
+  border-color: #2980b9;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .clustersGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .viewToggle {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .viewButton {
+    width: 100%;
+    text-align: center;
+  }
+  
+  .clusterHeader {
+    padding: 12px;
+  }
+  
+  .clusterGraph {
+    height: 250px;
+  }
+}
+
+/* Add these styles to your concept-map.module.css */
+
+.conceptMapWrapper {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+.conceptMapContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* Prevent flex child from overflowing */
+  position: relative; /* Required for absolute positioned loading overlay */
+}
+
+/* cytoscapeContainer styles defined later in file with full styling */
+
+/* Ensure the header doesn't shrink */
+.header {
+  flex-shrink: 0;
+}
+
+/* Make sure the speaker panel appears properly */
+.conceptMapWrapper > :last-child {
+  flex-shrink: 0;
+}
+
+/* Legacy button styles removed - using actionButton and actionButtonPrimary instead */
+
+.info {
+  display: flex;
+  gap: 20px;
+  font-size: 14px;
+  color: #666;
+  align-items: center;
+}
+
+.info span {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+/* Zoom controls removed - using scroll-to-zoom only */
+
+/* Active View Style */
+.activeView {
+  background-color: #3498db;
+  color: white;
+  border: 1px solid #3498db;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* Controls container */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Loading and noData styles */
+.loading,
+.noData {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Header layout */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Expanded overlay */
+.expandedOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.expandedContainer {
+  width: 95vw;
+  height: 95vh;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.expandedHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.expandedCytoscapeContainer {
+  flex: 1;
+}
+
+/* Breadcrumb removed - semantic zoom uses in-graph visual feedback */
+
+/* ===== Hover Tooltip ===== */
+.nodeTooltip {
+  position: fixed;
+  z-index: 2000;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 12px 16px;
+  max-width: 300px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(5px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.nodeTooltip.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tooltipTitle {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1E293B;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.tooltipMeta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #64748B;
+  margin-bottom: 8px;
+}
+
+.tooltipType {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.tooltipTranscript {
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.5;
+  border-top: 1px solid #E2E8F0;
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+/* ===== Improved Transcript Panel ===== */
+.transcriptPanel {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 380px;
+  height: 100vh;
+  background: white;
+  border-left: 1px solid #E2E8F0;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+}
+
+.transcriptHeader {
+  padding: 20px;
+  border-bottom: 1px solid #E2E8F0;
+  background: linear-gradient(to bottom, #F8FAFC, #FFFFFF);
+}
+
+.transcriptHeader h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.transcriptConcept {
+  padding: 10px 14px;
+  background: #F1F5F9;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.transcriptTime {
+  font-size: 12px;
+  color: #64748B;
+}
+
+.transcriptCloseBtn {
+  padding: 8px 16px;
+  background: #EF4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 12px;
+  transition: background 0.2s;
+}
+
+.transcriptCloseBtn:hover {
+  background: #DC2626;
+}
+
+.transcriptList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.transcriptItem {
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background: #FAFAFA;
+  border-left: 3px solid transparent;
+  transition: all 0.2s;
+}
+
+.transcriptItem.highlighted {
+  background: #EFF6FF;
+  border-left-color: #3B82F6;
+}
+
+.transcriptItemMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #64748B;
+}
+
+.speakerDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94A3B8;
+}
+
+.transcriptItemText {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #334155;
+}
+
+/* ===== Updated View Toggle ===== */
+.viewToggle {
+  display: flex;
+  gap: 0;
+  margin-right: 20px;
+  background: #F1F5F9;
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.viewButton {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748B;
+}
+
+.viewButton:hover:not(:disabled) {
+  color: #334155;
+}
+
+.activeView {
+  background: white;
+  color: #1E293B;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== Updated Control Buttons ===== */
+.controlButton {
+  padding: 8px 14px;
+  margin: 0 4px;
+  border: 1px solid #E2E8F0;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  transition: all 0.2s;
+}
+
+.controlButton:hover:not(:disabled) {
+  background: #3B82F6;
+  color: white;
+  border-color: #3B82F6;
+}
+
+.lockButtonActive {
+  background: #3B82F6;
+  color: white;
+  border-color: #3B82F6;
+}
+
+/* ===== Improved Loading States ===== */
+.loading,
+.noData {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 40px;
+  color: #64748B;
+  font-size: 15px;
+  text-align: center;
+}
+
+.loadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #E2E8F0;
+  border-top-color: #3B82F6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loadingText {
+  color: #475569;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.loadingSubtext {
+  font-size: 13px;
+  color: #94A3B8;
+}
+
+/* ===== Pulse animation for processing state ===== */
+@keyframes pulse {
+  0%, 100% { opacity: 1; width: 30%; }
+  50% { opacity: 0.7; width: 70%; }
+}
+
+/* ===== Updated Header ===== */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  background: linear-gradient(to bottom, #FFFFFF, #F8FAFC);
+  border-bottom: 1px solid #E2E8F0;
+  flex-shrink: 0;
+}
+
+.info {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: #64748B;
+  align-items: center;
+}
+
+.info span {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.info strong {
+  color: #1E293B;
+  font-weight: 600;
+}
+
+/* ===== NEW HEADER LAYOUT ===== */
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Segmented Control (View Toggle) */
+.segmentedControl {
+  display: inline-flex;
+  background: #F3F4F6;
+  border-radius: 8px;
+  padding: 4px;
+  gap: 0;
+}
+
+.segmentedButton {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6B7280;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.segmentedButton:hover {
+  color: #374151;
+}
+
+.segmentedActive {
+  background: #FFFFFF;
+  color: #1F2937;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Compact Stats */
+.statsCompact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #6B7280;
+}
+
+.statsCompact strong {
+  color: #1F2937;
+  font-weight: 600;
+}
+
+.statsDivider {
+  color: #D1D5DB;
+}
+
+/* Toggle Buttons */
+.toggleButton {
+  padding: 8px 14px;
+  border: 1px solid #E5E7EB;
+  background: #FFFFFF;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4B5563;
+  transition: all 0.15s ease;
+}
+
+.toggleButton:hover {
+  background: #F9FAFB;
+  border-color: #D1D5DB;
+}
+
+.toggleButtonActive {
+  background: #EFF6FF;
+  border-color: #3B82F6;
+  color: #3B82F6;
+}
+
+/* Action Buttons */
+.actionButton {
+  padding: 8px 14px;
+  border: 1px solid #E5E7EB;
+  background: #FFFFFF;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4B5563;
+  transition: all 0.15s ease;
+}
+
+.actionButton:hover {
+  background: #F9FAFB;
+  border-color: #D1D5DB;
+  color: #1F2937;
+}
+
+.actionButtonPrimary {
+  padding: 8px 14px;
+  background: #3B82F6;
+  border: 1px solid #3B82F6;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #FFFFFF;
+  transition: all 0.15s ease;
+}
+
+.actionButtonPrimary:hover {
+  background: #2563EB;
+  border-color: #2563EB;
+}
+
+/* ===== SKELETON LOADING UI ===== */
+.loadingContainer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #FAFBFC;
+  z-index: 100;
+}
+
+.skeletonGraph {
+  width: 100%;
+  max-width: 400px;
+  height: 200px;
+  position: relative;
+  margin-bottom: 32px;
+}
+
+.skeletonNode {
+  position: absolute;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    #E5E7EB 0%,
+    #F3F4F6 50%,
+    #E5E7EB 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.skeletonNode:nth-child(1) {
+  width: 120px;
+  height: 36px;
+  top: 10%;
+  left: 15%;
+}
+
+.skeletonNode:nth-child(2) {
+  width: 140px;
+  height: 36px;
+  top: 5%;
+  right: 20%;
+}
+
+.skeletonNode:nth-child(3) {
+  width: 100px;
+  height: 36px;
+  top: 45%;
+  left: 35%;
+}
+
+.skeletonNode:nth-child(4) {
+  width: 130px;
+  height: 36px;
+  top: 50%;
+  right: 15%;
+}
+
+.skeletonNode:nth-child(5) {
+  width: 110px;
+  height: 36px;
+  bottom: 10%;
+  left: 40%;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.loadingContent {
+  text-align: center;
+}
+
+/* ===== RESPONSIVE CONTAINER ===== */
+.cytoscapeContainer {
+  flex: 1;
+  position: relative;
+  min-height: 450px;
+  max-height: calc(100vh - 200px);
+  background: #FAFBFC;
+  background-image: radial-gradient(circle at 1px 1px, #E5E7EB 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .headerLeft {
+    gap: 16px;
+  }
+
+  .statsCompact {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .headerLeft,
+  .headerRight {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .cytoscapeContainer {
+    min-height: 350px;
+  }
+}
+
+/* ===== TYPE FILTER PANEL ===== */
+.filterBar {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 10px 20px;
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+  flex-shrink: 0;
+}
+
+.filterGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filterLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  background: #FFFFFF;
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.filterChip:hover {
+  border-color: #94A3B8;
+  background: #F1F5F9;
+}
+
+.filterChipActive {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid #3B82F6;
+  border-radius: 14px;
+  background: #EFF6FF;
+  font-size: 12px;
+  font-weight: 500;
+  color: #2563EB;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.filterChipActive:hover {
+  background: #DBEAFE;
+}
+
+.filterChipDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.filterActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.filterHint {
+  font-size: 12px;
+  color: #3B82F6;
+  font-style: italic;
+}
+
+.filterResetBtn {
+  padding: 4px 10px;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  background: #FFFFFF;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filterResetBtn:hover {
+  background: #F1F5F9;
+  color: #334155;
+}
+
+/* ===== EDIT MODE PANEL ===== */
+.editModePanel {
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+  flex-shrink: 0;
+  animation: editSlideDown 0.2s ease-out;
+}
+
+@keyframes editSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.editModeHeader {
+  padding: 12px 20px 8px;
+  border-bottom: 1px solid #E2E8F0;
+  background: linear-gradient(to right, #EFF6FF, #F8FAFC);
+}
+
+.editModeTitle {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.editModeSubtitle {
+  font-size: 12px;
+  color: #64748B;
+  line-height: 1.4;
+}
+
+.editModeBody {
+  padding: 12px 20px;
+  display: flex;
+  gap: 32px;
+}
+
+.editTypeSection {
+  flex: 1;
+  min-width: 0;
+}
+
+.editTypeSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.editTypeLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.editTypeActions {
+  display: flex;
+  gap: 4px;
+}
+
+.editTypeActionBtn {
+  padding: 2px 8px;
+  border: 1px solid #E2E8F0;
+  border-radius: 4px;
+  background: white;
+  font-size: 11px;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.editTypeActionBtn:hover {
+  background: #EFF6FF;
+  border-color: #3B82F6;
+  color: #3B82F6;
+}
+
+.editTypeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 2px;
+}
+
+.editTypeCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  user-select: none;
+}
+
+.editTypeCheckbox:hover {
+  background: #EFF6FF;
+}
+
+.editTypeCheckbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #3B82F6;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.editTypeDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.editTypeText {
+  font-size: 13px;
+  color: #334155;
+  font-weight: 500;
+}
+
+.editTypeCount {
+  font-size: 11px;
+  color: #94A3B8;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* Three-state: checked but no instances = muted */
+.editTypeMuted {
+  opacity: 0.6;
+}
+
+.editTypeMuted .editTypeText {
+  color: #94A3B8;
+}
+
+.editTypeMuted .editTypeDot {
+  opacity: 0.5;
+}
+
+.editTypeMuted .editTypeCount {
+  color: #CBD5E1;
+  font-style: italic;
+}
+
+.editModeFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  border-top: 1px solid #E2E8F0;
+  background: #FFFFFF;
+}
+
+.editModeSummary {
+  font-size: 13px;
+  color: #64748B;
+}
+
+.editModeButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.actionButtonPrimary:disabled {
+  background: #93C5FD;
+  border-color: #93C5FD;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .editModeBody {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .editTypeGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

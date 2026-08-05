@@ -1,0 +1,164 @@
+/**
+ * Reference List Styles
+ *
+ * Displays grouped citations at the end of messages.
+ */
+
+.referenceList {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* Header */
+.header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.icon {
+    font-size: 16px;
+}
+
+.title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+/* Groups container */
+.groups {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Reference group */
+.group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.groupHeader {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #718096;
+}
+
+.groupIcon {
+    font-size: 14px;
+}
+
+.groupName {
+    font-weight: 500;
+}
+
+.groupCount {
+    padding: 1px 6px;
+    background: #edf2f7;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* Items container */
+.items {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-left: 8px;
+}
+
+/* Reference item */
+.item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 13px;
+    color: #4a5568;
+}
+
+.item:hover {
+    background: #f7fafc;
+}
+
+.item:focus {
+    outline: 2px solid #4299e1;
+    outline-offset: -2px;
+}
+
+/* Reference ID badge */
+.refId {
+    font-weight: 600;
+    color: #4299e1;
+    flex-shrink: 0;
+    font-size: 12px;
+}
+
+/* Reference text */
+.refText {
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Type-specific item colors */
+.item_transcript .refId {
+    color: #2b6cb0;
+}
+
+.item_concept .refId {
+    color: #805ad5;
+}
+
+.item_7c .refId {
+    color: #38a169;
+}
+
+.item_cluster .refId {
+    color: #dd6b20;
+}
+
+.item_session .refId {
+    color: #319795;
+}
+
+.item_speaker .refId {
+    color: #e53e3e;
+}
+
+/* Hover colors */
+.item_transcript:hover {
+    background: #ebf8ff;
+}
+
+.item_concept:hover {
+    background: #faf5ff;
+}
+
+.item_7c:hover {
+    background: #f0fff4;
+}
+
+.item_cluster:hover {
+    background: #fffaf0;
+}
+
+.item_session:hover {
+    background: #e6fffa;
+}
+
+.item_speaker:hover {
+    background: #fff5f5;
+}

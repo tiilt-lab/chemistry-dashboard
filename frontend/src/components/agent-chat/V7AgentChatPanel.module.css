@@ -1,0 +1,549 @@
+/* V7 Agent Chat Panel Styles */
+
+/* Main container - flex row with sidebar + chat */
+.chatPanel {
+    display: flex;
+    flex-direction: row;
+    height: 100vh;
+    height: 100dvh;
+    background: #f8f9fa;
+    overflow: hidden;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 230px;
+    background: #1a1a2e;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    border-right: 1px solid #2d2d44;
+}
+
+.sidebarHeader {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    gap: 12px;
+}
+
+.newChatButton {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: transparent;
+    border: 1px solid #3d3d5c;
+    border-radius: 8px;
+    color: #e0e0e0;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.newChatButton:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: #5d5d7c;
+}
+
+.sidebarList {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.conversationItem {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #b0b0b0;
+    font-size: 13px;
+    margin-bottom: 2px;
+    transition: all 0.15s;
+}
+
+.conversationItem:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #e0e0e0;
+}
+
+.conversationItem.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+.conversationTitle {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.conversationActions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.conversationItem:hover .conversationActions {
+    opacity: 1;
+}
+
+.conversationBtn {
+    background: transparent;
+    border: none;
+    color: #808080;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.conversationBtn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
+}
+
+.dateGroup {
+    padding: 8px 12px 4px;
+    font-size: 11px;
+    color: #606080;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Main chat area */
+.mainChat {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background: #ffffff;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 16px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #2d3748;
+    flex: 1;
+    text-align: center;
+}
+
+.closeButton {
+    position: absolute;
+    right: 16px;
+    background: transparent;
+    border: none;
+    color: #718096;
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.closeButton:hover {
+    color: #4a5568;
+}
+
+/* Messages Area */
+.messagesArea {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+}
+
+.messagesContainer {
+    width: 100%;
+    max-width: 768px;
+    margin: 0 auto;
+    padding: 16px 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1;
+}
+
+/* Loading Indicator */
+.loadingIndicator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #f7fafc;
+    border-radius: 12px;
+    align-self: flex-start;
+    max-width: 200px;
+}
+
+.typingDots {
+    display: flex;
+    gap: 4px;
+}
+
+.typingDots span {
+    width: 8px;
+    height: 8px;
+    background: #a0aec0;
+    border-radius: 50%;
+    animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.typingDots span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typingDots span:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+    0%, 80%, 100% {
+        transform: scale(0);
+    }
+    40% {
+        transform: scale(1);
+    }
+}
+
+.loadingText {
+    color: #718096;
+    font-size: 13px;
+}
+
+/* Error Message */
+.errorMessage {
+    background: #fed7d7;
+    color: #c53030;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+/* Input Area */
+.inputWrapper {
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    padding: 12px 16px;
+    flex-shrink: 0;
+}
+
+.inputContainer {
+    max-width: 768px;
+    margin: 0 auto;
+}
+
+.inputArea {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 14px;
+    resize: none;
+    min-height: 44px;
+    max-height: 120px;
+    font-family: inherit;
+    line-height: 1.5;
+    background: #f8f9fa;
+}
+
+.input:focus {
+    outline: none;
+    border-color: #4299e1;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.input:disabled {
+    background: #f7fafc;
+    cursor: not-allowed;
+}
+
+.sendButton {
+    padding: 12px 20px;
+    background: #4299e1;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.2s;
+    white-space: nowrap;
+    height: 44px;
+}
+
+.sendButton:hover:not(:disabled) {
+    background: #3182ce;
+}
+
+.sendButton:disabled {
+    background: #a0aec0;
+    cursor: not-allowed;
+}
+
+/* Steering Controls */
+.steeringToggle {
+    background: #edf2f7;
+    border: none;
+    border-radius: 8px;
+    width: 36px;
+    height: 44px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #718096;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.steeringToggle:hover {
+    background: #e2e8f0;
+    color: #4a5568;
+}
+
+.steeringToggle.active {
+    background: #4299e1;
+    color: white;
+}
+
+.steeringPanel {
+    background: #f7fafc;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.steeringHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.clearSteering {
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    color: #718096;
+    cursor: pointer;
+}
+
+.clearSteering:hover {
+    background: #edf2f7;
+    color: #4a5568;
+}
+
+.steeringSection {
+    margin-bottom: 12px;
+}
+
+.steeringSection:last-child {
+    margin-bottom: 0;
+}
+
+.steeringLabel {
+    display: block;
+    font-size: 12px;
+    color: #718096;
+    margin-bottom: 6px;
+}
+
+.modeButtons {
+    display: flex;
+    gap: 6px;
+}
+
+.modeButton {
+    flex: 1;
+    padding: 6px 10px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #4a5568;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.modeButton:hover {
+    background: #edf2f7;
+    border-color: #cbd5e0;
+}
+
+.modeButton.active {
+    background: #4299e1;
+    border-color: #3182ce;
+    color: white;
+}
+
+.repButtons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.repButton {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #4a5568;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.repButton:hover {
+    background: #edf2f7;
+    border-color: #cbd5e0;
+}
+
+.repButton.preferred {
+    background: #c6f6d5;
+    border-color: #68d391;
+    color: #276749;
+}
+
+.repButton.excluded {
+    background: #fed7d7;
+    border-color: #fc8181;
+    color: #c53030;
+    text-decoration: line-through;
+}
+
+.steeringHint {
+    display: block;
+    margin-top: 6px;
+    font-size: 10px;
+    color: #a0aec0;
+    font-style: italic;
+}
+
+.emptySidebar {
+    padding: 24px 16px;
+    text-align: center;
+    color: #606080;
+    font-size: 13px;
+}
+
+/* Embedded mode — fills its container, no fixed positioning */
+.chatPanelEmbedded {
+    display: flex;
+    flex-direction: row;
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    background: #f8f9fa;
+}
+
+/* Embedded sidebar — overlay on top of chat, not pushing layout */
+.sidebarEmbedded {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 10;
+    box-shadow: 4px 0 12px rgba(0, 0, 0, 0.3);
+    transition: transform 0.25s ease;
+    transform: translateX(0);
+}
+
+.sidebarHidden {
+    transform: translateX(-100%);
+    pointer-events: none;
+}
+
+/* History toggle button in header */
+.historyToggleBtn {
+    background: transparent;
+    border: none;
+    color: #718096;
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 16px;
+    line-height: 1;
+    border-radius: 4px;
+    margin-right: auto;
+}
+
+.historyToggleBtn:hover {
+    background: #edf2f7;
+    color: #4a5568;
+}
+
+/* Close button inside the sidebar header (embedded mode) */
+.sidebarCloseBtn {
+    background: transparent;
+    border: none;
+    color: #808090;
+    cursor: pointer;
+    padding: 4px 7px;
+    border-radius: 4px;
+    font-size: 13px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.sidebarCloseBtn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #e0e0e0;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.3s;
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .messagesContainer,
+    .inputContainer {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+}

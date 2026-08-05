@@ -1,0 +1,161 @@
+import { GenericDialogBox } from "../dialog/dialog-component";
+import { AppSpinner } from "../spinner/spinner-component";
+import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component";
+import { Appheader } from "../header/header-component";
+import style from "./pod.module.css";
+import React, { useState } from "react";
+import Select from "react-select";
+import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison";
+import { DiscussionPulsePanel } from "../components/discussion-pulse";
+
+function PodComponentPages(props) {
+  // Check if session is active (not ended)
+  const isSessionActive = props.session && !props.session.end_date;
+  const [pulseCollapsed, setPulseCollapsed] = useState(false);
+
+  return (
+    <>
+      <div className="main-container">
+        <Appheader
+          title={props.sessionDevice.name}
+          leftText={false}
+          rightText={"Option"}
+          rightEnabled={true}
+          rightTextClick={() => props.openDialog("Options")}
+          nav={props.navigateToSession}
+        />
+        <div className="toolbar-view-container">
+          {props.session ? (
+            <AppSessionToolbar
+              session={props.session}
+              closingSession={props.onSessionClosing}
+              menus={[]}
+            />
+          ) : null}
+
+          <div style={{ display: 'flex', width: '100%', gap: '16px' }}>
+            <div className="center-column-container" style={{ flex: 1 }}>
+              {/* Existing infographics sections (timeline, features, etc.) */}
+              <AppInfographicsComparison
+                displayTranscripts={props.displayTranscripts}
+                fromclient={false}
+                onClickedTimeline={props.onClickedTimeline}
+                radarTrigger={props.radarTrigger}
+                session={props.session}
+                sessionDevice={props.sessionDevice}
+                setRange={props.setRange}
+                showBoxes={props.showBoxes}
+                showFeatures={props.showFeatures}
+                startTime={props.startTime}
+                endTime={props.endTime}
+                speakers={props.speakers}
+                selectedSpkrId1={props.selectedSpkrId1}
+                setSelectedSpkrId1={props.setSelectedSpkrId1}
+                selectedSpkrId2={props.selectedSpkrId2}
+                setSelectedSpkrId2={props.setSelectedSpkrId2}
+                spkr1Transcripts={props.spkr1Transcripts}
+                spkr2Transcripts={props.spkr2Transcripts}
+                details={props.details}
+
+                // MULTI-DEVICE overlay into Features table
+                multiSeries={props.multiSeries}
+                deviceOptions={props.deviceOptions}
+                selectedDeviceIds={props.selectedDeviceIds}
+                onDeviceSelectionChange={props.onDeviceSelectionChange}
+                currentSessionDeviceId={props.currentSessionDeviceId}
+              />
+            </div>
+
+            {/* Discussion Pulse Panel - Right sidebar */}
+            {props.sessionDevice?.id && (
+              <DiscussionPulsePanel
+                sessionDeviceId={props.sessionDevice.id}
+                isSessionActive={isSessionActive}
+                isCollapsed={pulseCollapsed}
+                onToggleCollapse={() => setPulseCollapsed(c => !c)}
+              />
+            )}
+          </div>
+        </div>
+
+        {props.loading() ? <AppSpinner /> : null}
+      </div>
+
+      <GenericDialogBox show={props.currentForm !== ""} optionsCase={props.currentForm === "Options"}>
+        {props.currentForm === "Transcript" ? (
+          <div className={style["dialog-content"]}>
+            <div className={style["dialog-heading"]}>Transcript</div>
+            <div className={style["dialog-body"]}>{props.currentTranscript.transcript}</div>
+            <div className={style["dialog-button-container"]}>
+              <button className={`${style["dialog-button"]} ${style["right-button"]}`} onClick={props.closeDialog}>
+                Close
+              </button>
+              <button className={`${style["dialog-button"]} ${style["left-button"]}`} onClick={props.seeAllTranscripts}>
+                View All
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {props.currentForm === "Options" ? (
+          <div className={style["dialog-content"]}>
+            <div className={style["dialog-heading"]}>Section Boxes</div>
+            <div className={style["dialog-dropdown"]}>
+              <Select options={props.showBoxes} value={props.showBoxes.filter((f) => f["clicked"])} onChange={props.handleCheckBoxes} />
+            </div>
+            <div className={style["dialog-heading"]}>Discussion Features</div>
+            <div className={style["dialog-dropdown"]}>
+              <Select options={props.showFeatures} value={props.showFeatures.filter((f) => f["clicked"])} onChange={props.handleCheckFeats} />
+            </div>
+            <div className={style["dialog-heading"]}>Device Options</div>
+            <button className={style["basic-button"]} onClick={() => props.openDialog("RemoveDevice")}>
+              Disconnect Device
+            </button>
+            <button className={style["cancel-button"]} onClick={props.closeDialog}>
+              Cancel
+            </button>
+          </div>
+        ) : null}
+
+        {props.currentForm === "RemoveDevice" ? (
+          <div className={style["dialog-content"]}>
+            <div className={style["dialog-heading"]}>Disconnect Device</div>
+            {!props.deleteDeviceToggle ? (
+              <>
+                <div className={style["dialog-body"]}>Are you sure you want to remove this device?</div>
+                <div className={style["dialog-body"]}>All data will be saved, but the device will be disconnected from the discussion.</div>
+              </>
+            ) : (
+              <>
+                <div className={style["dialog-body"]}>Are you sure you want to delete this device?</div>
+                <div className={style["dialog-body"]}>All data for this device will be lost and the device will be disconnected.</div>
+              </>
+            )}
+            <label className={style["dc-checkbox"]}>
+              Delete device
+              <input
+                id="cbxDelete"
+                type="checkbox"
+                checked={props.deleteDeviceToggle}
+                value={props.deleteDeviceToggle}
+                onChange={() => props.setDeleteDeviceToggle(!props.deleteDeviceToggle)}
+              />
+              <span className={style["checkmark"]}></span>
+            </label>
+            <div className={style["dialog-button-container"]}>
+              <button className={style["basic-button"]} onClick={() => props.removeDeviceFromSession(props.deleteDeviceToggle)}>
+                Confirm
+              </button>
+              <button className={style["cancel-button"]} onClick={props.closeDialog}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </GenericDialogBox>
+    </>
+  );
+}
+
+export { PodComponentPages };
+

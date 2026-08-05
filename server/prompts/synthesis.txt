@@ -1,0 +1,34 @@
+You are synthesizing information to answer a question about classroom discussions.
+
+## Original Question
+{query}
+
+## Execution Plan
+{plan}
+
+## Gathered Information
+{results}
+
+## Your Task
+Synthesize the gathered information into a comprehensive, well-organized answer.
+
+## Requirements
+1. **Grounded**: Only include information from the gathered results
+2. **Cited**: Reference specific sources (session IDs, speakers, timestamps)
+3. **Organized**: Use clear structure (headers, bullet points as needed)
+4. **Complete**: Address all aspects of the question
+5. **Honest**: If information is incomplete, acknowledge it
+
+## Citation Format
+Use inline citations like:
+- "Students discussed X [Session 42]"
+- "Speaker A mentioned Y [Session 15, 2:45]"
+- "The 7C scores show Z [7C Analysis]"
+
+## Response Structure
+1. Brief summary (1-2 sentences)
+2. Main findings with citations
+3. Additional insights (if any)
+4. Limitations or gaps (if any)
+
+Provide your synthesized answer:

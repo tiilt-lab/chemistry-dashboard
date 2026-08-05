@@ -1,0 +1,260 @@
+1
+00:00:00,672 --> 00:00:05,438
+[SPEAKER_00]: violations on chatgpt's part.
+
+2
+00:00:06,860 --> 00:00:10,305
+[SPEAKER_00]: What is the intention, I guess.
+
+3
+00:00:10,325 --> 00:00:11,967
+[SPEAKER_00]: So is it a CFA violation?
+
+4
+00:00:19,618 --> 00:00:27,388
+[SPEAKER_00]: Intentionally accesses a computer.
+
+5
+00:00:28,702 --> 00:00:36,234
+[SPEAKER_01]: I trained on the data that chat, like as an ML engineer, has the engineer trained the data on the chat GPT?
+
+6
+00:00:36,374 --> 00:00:38,337
+[SPEAKER_01]: Is that data available on chat GPT?
+
+7
+00:00:38,578 --> 00:00:44,547
+[SPEAKER_02]: Yes, so they have your computer already trained in the event that you mistakenly had the data.
+
+8
+00:00:44,627 --> 00:00:46,310
+[SPEAKER_01]: And that data chat GPT gave?
+
+9
+00:00:46,330 --> 00:00:47,893
+[SPEAKER_02]: Yeah, has it.
+
+10
+00:00:47,913 --> 00:00:53,241
+[SPEAKER_02]: So, chat GPT, so they only have their reporter, use the reporter trained
+
+11
+00:00:53,761 --> 00:01:17,355
+[SPEAKER_01]: Wait, so how
+
+12
+00:01:17,909 --> 00:01:20,894
+[SPEAKER_00]: How did Chachapiti get the intellectual property?
+
+13
+00:01:21,415 --> 00:01:24,380
+[SPEAKER_00]: How did they come to have that in their training data?
+
+14
+00:01:25,221 --> 00:01:30,089
+[SPEAKER_00]: Well, if it's public available, why can't we just find it without prompting Chachapiti for it?
+
+15
+00:01:31,472 --> 00:01:31,892
+[SPEAKER_00]: Know what I mean?
+
+16
+00:01:33,595 --> 00:01:38,063
+[SPEAKER_01]: I think it was unlawfully obtained data by Chachapiti.
+
+17
+00:01:38,604 --> 00:01:40,206
+[SPEAKER_00]: That's possible, yeah.
+
+18
+00:01:40,226 --> 00:01:41,829
+[SPEAKER_00]: Otherwise, we could just find it.
+
+19
+00:01:41,849 --> 00:01:44,153
+[SPEAKER_01]: Why would it be like they were using Chachapiti?
+
+20
+00:01:44,639 --> 00:01:53,089
+[SPEAKER_01]: Yes, like the company was using it to like prompt it to things and then they uploaded that particular data.
+
+21
+00:01:53,109 --> 00:01:53,790
+[SPEAKER_01]: Makes sense.
+
+22
+00:01:53,810 --> 00:01:55,432
+That's a good idea.
+
+23
+00:01:55,452 --> 00:01:56,674
+[SPEAKER_01]: I could do that too.
+
+24
+00:01:56,774 --> 00:01:59,517
+[SPEAKER_01]: Do you think this is a violation?
+
+25
+00:01:59,537 --> 00:02:00,398
+[SPEAKER_00]: That's a good question.
+
+26
+00:02:00,598 --> 00:02:06,566
+[SPEAKER_00]: So did they intentionally access the computer without authorization or is this a blah blah blah?
+
+27
+00:02:07,126 --> 00:02:12,553
+[SPEAKER_00]: I mean, for at least section 1030 ATC, whatever.
+
+28
+00:02:14,626 --> 00:02:15,667
+[SPEAKER_00]: I'd say probably not.
+
+29
+00:02:16,708 --> 00:02:19,530
+[SPEAKER_00]: I mean, all they're doing is they're using JGPT within...
+
+30
+00:02:19,550 --> 00:02:32,762
+[SPEAKER_01]: The only cases where they have the data, either the employee has put in the data into the form or they have bypassed the firewalls into the data.
+
+31
+00:02:34,163 --> 00:02:37,646
+[SPEAKER_01]: But the second one is quite unlikely.
+
+32
+00:02:37,706 --> 00:02:38,887
+[SPEAKER_01]: Could you explain that again?
+
+33
+00:02:41,409 --> 00:02:44,532
+[SPEAKER_01]: So the second one is basically that
+
+34
+00:02:45,541 --> 00:03:08,511
+[SPEAKER_01]: like how these medical devices like medical apps basically take in a lot of information like you have to click on terms and conditions to agree it is either from that path or some employee has on its own uploaded that particular data but in either cases they're not allowed to reproduce it anywhere I guess
+
+35
+00:03:10,381 --> 00:03:15,608
+[SPEAKER_00]: But is us as a startup simply prompting chat GPT to give us XYZ information?
+
+36
+00:03:16,509 --> 00:03:19,954
+[SPEAKER_00]: Does that violate CFA on our part?
+
+37
+00:03:25,001 --> 00:03:26,523
+[SPEAKER_00]: I would say no.
+
+38
+00:03:26,823 --> 00:03:28,686
+[SPEAKER_00]: Okay, what about the second section?
+
+39
+00:03:29,247 --> 00:03:31,189
+[SPEAKER_00]: Who is anyone from knowingly transmitting?
+
+40
+00:03:33,152 --> 00:03:34,534
+[SPEAKER_00]: Okay, it doesn't say it there.
+
+41
+00:03:34,554 --> 00:03:35,275
+[SPEAKER_00]: It does say here.
+
+42
+00:03:36,335 --> 00:03:54,053
+[SPEAKER_00]: Would it be an impairment to the integrity or availability of data?
+
+43
+00:03:54,554 --> 00:03:56,116
+[SPEAKER_00]: Maybe the availability of data?
+
+44
+00:03:57,777 --> 00:04:03,203
+[SPEAKER_00]: Because you've obtained this IP that you may be including in
+
+45
+00:04:03,537 --> 00:04:08,103
+[SPEAKER_00]: to influence your development or releasing to the public.
+
+46
+00:04:08,123 --> 00:04:09,665
+[SPEAKER_00]: Kind of depends on what you do with it, maybe.
+
+47
+00:04:15,113 --> 00:04:29,933
+[SPEAKER_01]: You know what I mean?
+
+48
+00:04:30,301 --> 00:04:32,885
+[SPEAKER_01]: So here there are like three entities.
+
+49
+00:04:32,925 --> 00:04:38,253
+[SPEAKER_01]: So one is like the driving company, one is ChatGPT, one is the startup.
+
+50
+00:04:38,613 --> 00:04:39,695
+[SPEAKER_00]: Yeah, it's asking about us.
+
+51
+00:04:39,715 --> 00:04:40,496
+[SPEAKER_01]: Yeah.
+
+52
+00:04:40,576 --> 00:04:41,077
+[SPEAKER_00]: Right?
+
+53
+00:04:41,097 --> 00:04:41,337
+[SPEAKER_01]: Yeah.
+
+54
+00:04:41,978 --> 00:04:43,500
+[SPEAKER_01]: And then it is asking about us.
+
+55
+00:04:43,520 --> 00:04:53,255
+[SPEAKER_01]: But on like these two parts, like they're sharing the data, it's like user to, like the company to user interface.
+
+56
+00:04:53,275 --> 00:04:55,498
+[SPEAKER_01]: But ChatGPT should not,
+
+57
+00:04:57,200 --> 00:05:02,646
+[SPEAKER_01]: reduced information that it has got from another user to another user.
+
+58
+00:05:03,527 --> 00:05:04,748
+[SPEAKER_01]: You know what I mean?
+
+59
+00:05:05,189 --> 00:05:06,990
+[SPEAKER_01]: Like that net shouldn't go on further.
+
+60
+00:05:07,411 --> 00:05:14,118
+[SPEAKER_01]: It should just tell me information that is available on the web and not obtained from another user that it is at.
+
+61
+00:05:14,639 --> 00:05:22,988
+[SPEAKER_01]: If so, it can disclose all the images that we put in, like editing all the AI generated images.
+
+62
+00:05:23,048 --> 00:05:25,110
+[SPEAKER_01]: Yeah, that would be a problem.
+
+63
+00:05:25,250 --> 00:05:25,350
+[SPEAKER_00]: Yeah.
+
+64
+00:05:26,039 --> 00:05:27,977
+[SPEAKER_00]: But is it a CFA violation?
+
+65
+00:05:27,997 --> 00:05:30,177
+[SPEAKER_00]: Our part to request and get the information.
+

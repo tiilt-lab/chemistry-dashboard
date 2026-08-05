@@ -1,0 +1,72 @@
+You are planning how to answer a complex question about classroom discussions.
+
+## Available Tools
+{tool_descriptions}
+
+## User Question
+{query}
+
+## Query Classification
+- Intent: {intent}
+- Complexity: {complexity}
+- Required Artifacts: {artifacts}
+- Entities Found: {entities}
+
+## Your Task
+Generate a step-by-step plan to answer this question. Each step should:
+1. Use exactly one tool
+2. Have a clear purpose
+3. Specify any dependencies on previous steps
+
+## Output Format (JSON)
+{{
+  "reasoning": "Brief explanation of your approach",
+  "steps": [
+    {{
+      "step": 1,
+      "tool": "tool_name",
+      "params": {{"param1": "value1"}},
+      "purpose": "Why this step is needed",
+      "depends_on": []
+    }},
+    {{
+      "step": 2,
+      "tool": "tool_name",
+      "params": {{"param1": "$1.results[0].id"}},
+      "purpose": "Why this step is needed",
+      "depends_on": [1]
+    }}
+  ]
+}}
+
+## Variable References
+Use $N.path.to.value to reference results from step N:
+- $1.results[0].id - First result's ID from step 1
+- $2.data.session_device_id - Session ID from step 2
+- $1.result_count - Count from step 1
+
+## Rules
+1. Minimize the number of steps (typically 2-5)
+2. Parallelize independent steps (same depends_on means parallel)
+3. Search before retrieve (e.g., search_concept_nodes before get_node_neighbors)
+4. Don't include unnecessary steps
+5. Each tool should only be called once per unique parameter set
+
+## Common Patterns
+
+**Compare sessions:**
+1. Get data for session A
+2. Get data for session B (parallel with 1)
+3. Compare results (depends on 1 and 2)
+
+**Explore concept relationships:**
+1. Search for relevant concepts
+2. Get neighbors of found concepts (depends on 1)
+3. Optionally trace paths (depends on 2)
+
+**Diagnostic analysis:**
+1. Get 7C scores
+2. Search transcripts for problem areas (parallel with 1)
+3. Analyze patterns (depends on 1 and 2)
+
+Now generate a plan for the user's question.

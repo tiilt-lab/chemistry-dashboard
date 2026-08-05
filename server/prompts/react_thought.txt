@@ -1,0 +1,38 @@
+Based on the user's question and the information gathered so far, determine your next step.
+
+## User Question
+{query}
+
+## Information Gathered So Far
+{history}
+
+## Your Task
+Decide what to do next:
+1. If you need more information, specify which tool to use and why
+2. If you have enough information, provide your final answer
+
+Consider:
+- What specific information does the user need?
+- What have you learned from previous tool calls?
+- Is there missing information that would improve your answer?
+- Are there any gaps in your understanding?
+
+Respond with either:
+
+**If you need more information:**
+```
+Thought: [Your reasoning]
+Action: [tool_name]
+Action Input: {"param1": "value1"}
+```
+
+**If ready to answer:**
+```
+Thought: I have gathered sufficient information to answer the question.
+Final Answer: [Your complete response]
+```
+
+Remember to:
+- Ground all claims in the retrieved evidence
+- Include specific citations where possible
+- Be helpful and accurate

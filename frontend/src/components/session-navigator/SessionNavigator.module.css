@@ -1,0 +1,173 @@
+.navigator {
+    width: 240px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #1e293b;
+    border-right: 1px solid #334155;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.navCollapsed {
+    width: 44px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #1e293b;
+    border-right: 1px solid #334155;
+    padding-top: 8px;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.navHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 12px 10px;
+    border-bottom: 1px solid #334155;
+    flex-shrink: 0;
+}
+
+.navTitle {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #94a3b8;
+}
+
+.collapseBtn {
+    background: none;
+    border: none;
+    color: #64748b;
+    cursor: pointer;
+    padding: 2px 4px;
+    font-size: 1rem;
+    line-height: 1;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+}
+.collapseBtn:hover {
+    color: #cbd5e1;
+    background: #334155;
+}
+
+.sessionBadge {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: #334155;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: default;
+}
+
+.navList {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+}
+.navList::-webkit-scrollbar { width: 4px; }
+.navList::-webkit-scrollbar-track { background: transparent; }
+.navList::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+
+.loading {
+    padding: 12px 14px;
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+.sessionGroup {
+    margin-bottom: 2px;
+}
+
+.sessionHeader {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    color: #cbd5e1;
+    transition: background 0.15s;
+}
+.sessionHeader:hover {
+    background: #334155;
+}
+
+.chevron {
+    font-size: 0.65rem;
+    color: #64748b;
+    flex-shrink: 0;
+    width: 10px;
+}
+
+.sessionName {
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #cbd5e1;
+}
+
+.deviceList {
+    padding: 0 0 4px;
+}
+
+.noDevices {
+    padding: 4px 14px 4px 28px;
+    font-size: 0.72rem;
+    color: #475569;
+    font-style: italic;
+}
+
+.deviceItem {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px 5px 24px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    color: #94a3b8;
+    transition: background 0.15s, color 0.15s;
+}
+.deviceItem:hover {
+    background: #293548;
+    color: #e2e8f0;
+}
+
+.deviceItemActive {
+    background: #1d4ed8 !important;
+    color: #ffffff !important;
+}
+.deviceItemActive:hover {
+    background: #1e40af !important;
+}
+
+.deviceDot {
+    font-size: 1rem;
+    line-height: 1;
+    color: inherit;
+    flex-shrink: 0;
+}
+
+.deviceName {
+    font-size: 0.76rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

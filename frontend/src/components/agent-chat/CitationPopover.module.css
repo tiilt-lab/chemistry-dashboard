@@ -1,0 +1,433 @@
+/**
+ * Citation Popover Styles
+ *
+ * Consistent with existing BLINC design system.
+ */
+
+/* Main Popover Container */
+.popover {
+    position: fixed;
+    z-index: 10000;
+    min-width: 320px;
+    max-width: 450px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+    animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Header */
+.header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.icon {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.title {
+    flex: 1;
+    font-weight: 600;
+    font-size: 14px;
+    color: #2d3748;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.closeBtn {
+    background: none;
+    border: none;
+    font-size: 22px;
+    line-height: 1;
+    color: #718096;
+    cursor: pointer;
+    padding: 0 4px;
+    border-radius: 4px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.closeBtn:hover {
+    background: rgba(0, 0, 0, 0.08);
+    color: #2d3748;
+}
+
+/* Content Area */
+.content {
+    padding: 16px;
+    max-height: 300px;
+    overflow-y: auto;
+    font-size: 14px;
+    color: #4a5568;
+    line-height: 1.6;
+}
+
+/* Footer */
+.footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #f8f9fa;
+    border-top: 1px solid #e2e8f0;
+}
+
+.typeBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.typeBadge.transcript {
+    background: #ebf8ff;
+    color: #2b6cb0;
+}
+
+.typeBadge.concept {
+    background: #faf5ff;
+    color: #805ad5;
+}
+
+.typeBadge.7c {
+    background: #f0fff4;
+    color: #38a169;
+}
+
+.typeBadge.cluster {
+    background: #fffaf0;
+    color: #dd6b20;
+}
+
+.typeBadge.session {
+    background: #e6fffa;
+    color: #319795;
+}
+
+.typeBadge.speaker {
+    background: #fff5f5;
+    color: #e53e3e;
+}
+
+.sessionBadge {
+    margin-left: auto;
+    font-size: 12px;
+    color: #718096;
+}
+
+/* =================================
+   Type-Specific Preview Styles
+   ================================= */
+
+/* Transcript Preview */
+.transcriptPreview {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.speaker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.speakerIcon {
+    font-size: 16px;
+}
+
+.speakerName {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.quote {
+    margin: 0;
+    padding: 12px 16px;
+    background: #f7fafc;
+    border-left: 3px solid #4299e1;
+    border-radius: 0 8px 8px 0;
+    font-style: italic;
+    color: #4a5568;
+    line-height: 1.6;
+}
+
+.meta {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: #718096;
+}
+
+/* Concept Preview */
+.conceptPreview {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.conceptType {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    width: fit-content;
+}
+
+.conceptType.idea {
+    background: #e9d8fd;
+    color: #553c9a;
+}
+
+.conceptType.hypothesis {
+    background: #feebc8;
+    color: #c05621;
+}
+
+.conceptType.question {
+    background: #bee3f8;
+    color: #2a69ac;
+}
+
+.conceptType.conclusion {
+    background: #c6f6d5;
+    color: #276749;
+}
+
+.conceptText {
+    font-size: 15px;
+    color: #2d3748;
+    line-height: 1.5;
+}
+
+/* 7C Preview */
+.sevenCPreview {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dimensionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dimensionName {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.scoreCircle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 15px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.explanation {
+    color: #4a5568;
+    line-height: 1.6;
+}
+
+.evidence {
+    padding: 10px 12px;
+    background: #f7fafc;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #4a5568;
+}
+
+.evidence strong {
+    color: #2d3748;
+}
+
+/* Cluster Preview */
+.clusterPreview {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.clusterName {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.keyConcepts {
+    font-size: 13px;
+    color: #4a5568;
+}
+
+.keyConcepts ul {
+    margin: 8px 0 0 0;
+    padding-left: 20px;
+}
+
+.keyConcepts li {
+    margin-bottom: 4px;
+}
+
+/* Session Preview */
+.sessionPreview {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sessionTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.sessionSummary {
+    color: #4a5568;
+    line-height: 1.6;
+}
+
+.participants {
+    font-size: 13px;
+    color: #4a5568;
+}
+
+.participants strong {
+    color: #2d3748;
+}
+
+/* Speaker Preview */
+.speakerPreview {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.speakerHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.speakerAvatar {
+    font-size: 32px;
+    line-height: 1;
+}
+
+.speakerBio {
+    color: #4a5568;
+    line-height: 1.6;
+}
+
+/* Default Preview */
+.defaultPreview {
+    color: #4a5568;
+    line-height: 1.6;
+}
+
+/* =================================
+   Inline Citation Styles
+   (For use in MessageBubble)
+   ================================= */
+
+.inlineCitation {
+    display: inline;
+    background: #ebf8ff;
+    color: #2b6cb0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    font-weight: 500;
+}
+
+.inlineCitation:hover {
+    background: #bee3f8;
+    color: #2c5282;
+}
+
+/* Citation type-specific inline colors */
+.inlineCitation.transcript {
+    background: #ebf8ff;
+    color: #2b6cb0;
+}
+
+.inlineCitation.concept {
+    background: #faf5ff;
+    color: #805ad5;
+}
+
+.inlineCitation.7c {
+    background: #f0fff4;
+    color: #38a169;
+}
+
+.inlineCitation.cluster {
+    background: #fffaf0;
+    color: #dd6b20;
+}
+
+.inlineCitation.session {
+    background: #e6fffa;
+    color: #319795;
+}
+
+.inlineCitation.speaker {
+    background: #fff5f5;
+    color: #e53e3e;
+}
+
+/* Hover states for type-specific */
+.inlineCitation.transcript:hover {
+    background: #bee3f8;
+}
+
+.inlineCitation.concept:hover {
+    background: #e9d8fd;
+}
+
+.inlineCitation.7c:hover {
+    background: #c6f6d5;
+}
+
+.inlineCitation.cluster:hover {
+    background: #feebc8;
+}
+
+.inlineCitation.session:hover {
+    background: #b2f5ea;
+}
+
+.inlineCitation.speaker:hover {
+    background: #fed7d7;
+}

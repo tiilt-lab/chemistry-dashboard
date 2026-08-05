@@ -1,0 +1,112 @@
+/* Inline panel — fills the transcriptCol container */
+.panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+.panelHeader {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    flex-shrink: 0;
+}
+
+.panelTitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #1e293b;
+    flex-shrink: 0;
+}
+
+.utteranceCount {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: #94a3b8;
+    background: #e2e8f0;
+    padding: 2px 7px;
+    border-radius: 10px;
+}
+
+.searchInput {
+    flex: 1;
+    padding: 5px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    background: #ffffff;
+    color: #1e293b;
+    outline: none;
+    min-width: 0;
+    transition: border-color 0.15s;
+}
+.searchInput:focus { border-color: #3b82f6; }
+
+.panelBody {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+.panelBody::-webkit-scrollbar { width: 5px; }
+.panelBody::-webkit-scrollbar-track { background: transparent; }
+.panelBody::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 3px; }
+
+.statusMsg {
+    padding: 24px 16px;
+    font-size: 0.85rem;
+    color: #94a3b8;
+    text-align: center;
+}
+
+.errorMsg {
+    padding: 14px 16px;
+    font-size: 0.82rem;
+    color: #dc2626;
+    background: #fef2f2;
+    margin: 8px 12px;
+    border-radius: 6px;
+}
+
+.utterance {
+    padding: 7px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.1s;
+}
+.utterance:hover { background: #f8fafc; }
+
+.utteranceMeta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 3px;
+}
+
+.speakerTag {
+    font-size: 0.69rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-left: 3px solid currentColor;
+    padding-left: 5px;
+}
+
+.timestamp {
+    font-size: 0.68rem;
+    color: #94a3b8;
+    font-variant-numeric: tabular-nums;
+}
+
+.utteranceText {
+    margin: 0;
+    font-size: 0.83rem;
+    color: #334155;
+    line-height: 1.5;
+}

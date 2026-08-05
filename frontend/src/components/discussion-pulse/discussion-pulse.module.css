@@ -1,0 +1,252 @@
+/* Discussion Pulse Panel - Lyrics-style scrollable feed */
+
+.pulsePanel {
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  max-height: 500px;
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.collapsedPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 10px;
+  width: 84px;
+  background-color: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  text-align: center;
+}
+
+.collapsedPanel:hover {
+  background-color: #e9ecef;
+}
+
+.collapsedIcon {
+  font-weight: bold;
+  color: #3498db;
+  font-size: 18px;
+  letter-spacing: 2px;
+}
+
+.collapsedLabel {
+  font-weight: 600;
+  color: #333;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.badge {
+  background-color: #3498db;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-top: 2px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+}
+
+.refreshBtn,
+.collapseBtn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.refreshBtn {
+  background-color: #3498db;
+  color: white;
+}
+
+.refreshBtn:hover {
+  background-color: #2980b9;
+}
+
+.collapseBtn {
+  background-color: #e0e0e0;
+  color: #666;
+}
+
+.collapseBtn:hover {
+  background-color: #ccc;
+}
+
+.pulseList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.loading,
+.empty {
+  text-align: center;
+  padding: 24px;
+  color: #666;
+}
+
+.hint {
+  font-size: 12px;
+  color: #999;
+  margin-top: 8px;
+}
+
+/* Pulse Card Styles */
+.pulseCard {
+  padding: 12px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.pastPulse {
+  background-color: #f8f9fa;
+  opacity: 0.7;
+  border-left: 3px solid #ccc;
+}
+
+.pastPulse:hover {
+  opacity: 1;
+}
+
+.currentPulse {
+  background-color: rgba(52, 152, 219, 0.1);
+  border: 1px solid #3498db;
+  border-left: 4px solid #3498db;
+  opacity: 1;
+}
+
+.timeRange {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.currentBadge {
+  font-size: 10px;
+  background-color: #3498db;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.summary {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.topicTag {
+  font-size: 12px;
+  color: #3498db;
+  background-color: rgba(52, 152, 219, 0.1);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.metadata {
+  font-size: 11px;
+  color: #999;
+}
+
+.scrollToBottom {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  padding: 8px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s;
+}
+
+.scrollToBottom:hover {
+  background-color: #2980b9;
+}
+
+/* Animation for new pulses */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pulseCard {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Scrollbar styling */
+.pulseList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.pulseList::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.pulseList::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.pulseList::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}

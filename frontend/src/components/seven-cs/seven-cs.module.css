@@ -1,0 +1,1033 @@
+.container {
+    padding: 1rem;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    background: linear-gradient(135deg, #fafbfc 0%, #f1f5f9 100%);
+    border-radius: 12px;
+}
+
+/* Header Section */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.headerInfo h2 {
+    margin: 0;
+    font-size: 1.125rem;
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.headerActions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.lastUpdated {
+    display: block;
+    font-size: 0.7rem;
+    color: #94a3b8;
+    margin-top: 0;
+}
+
+.schemaSelect {
+    padding: 5px 10px;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: #4B5563;
+    background: white;
+    cursor: pointer;
+    outline: none;
+}
+
+.schemaSelect:focus {
+    border-color: #6366f1;
+}
+
+.schemaEditorBtn {
+    padding: 5px 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.schemaEditorBtn:hover {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #4338ca;
+}
+
+.updateButton, .analyzeButton, .retryButton {
+    padding: 6px 14px;
+    background: #FFFFFF;
+    color: #4B5563;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.updateButton:hover, .analyzeButton:hover, .retryButton:hover {
+    background: #F9FAFB;
+    border-color: #D1D5DB;
+}
+
+.updateButton:disabled, .analyzeButton:disabled {
+    background: #cbd5e1;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Dimension Grid */
+.dimensionGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+/* Single-column override (transcript panel open) */
+.dimensionGridSingleCol {
+    grid-template-columns: 1fr;
+}
+
+/* Dimension Card */
+.dimensionCard {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 4px solid;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.dimensionCard:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+    border-top-color: #cbd5e1;
+    border-right-color: #cbd5e1;
+    border-bottom-color: #cbd5e1;
+}
+
+.dimensionCard.selected {
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.15);
+    background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+    border-top-color: #a5b4fc;
+    border-right-color: #a5b4fc;
+    border-bottom-color: #a5b4fc;
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.cardTitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cardTitle h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.cardIcon {
+    font-size: 1.2rem;
+}
+
+.segmentCount {
+    background: #f0f0f0;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #666;
+}
+
+/* Score Section */
+.scoreSection {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.scoreCircle {
+    width: 48px;
+    height: 48px;
+    border: 2px solid;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: white;
+}
+
+.scoreValue {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1;
+}
+
+.scoreLabel {
+    font-size: 0.6rem;
+    color: #64748b;
+}
+
+.scoreBar {
+    flex-grow: 1;
+    height: 6px;
+    background-color: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.scoreProgress {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+.explanation {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #555;
+    line-height: 1.4;
+}
+
+/* Detail Section */
+.detailSection {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.detailHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.detailHeader h3 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.2rem;
+    color: #333;
+}
+
+.closeButton {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.closeButton:hover {
+    background-color: #f0f0f0;
+}
+
+.fullExplanation {
+    margin-bottom: 20px;
+}
+
+.fullExplanation h4 {
+    margin: 0 0 10px 0;
+    font-size: 1rem;
+    color: #555;
+}
+
+.fullExplanation p {
+    margin: 0;
+    line-height: 1.6;
+    color: #333;
+}
+
+.evidenceSection {
+    margin-bottom: 20px;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+}
+
+.evidenceSection h4 {
+    margin: 0 0 10px 0;
+    font-size: 1rem;
+    color: #555;
+}
+
+.evidenceList {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.evidenceList li {
+    margin-bottom: 8px;
+    color: #333;
+    line-height: 1.5;
+}
+
+/* Segment List */
+.segmentList {
+    margin-top: 20px;
+}
+
+.segmentList h4 {
+    margin: 0 0 15px 0;
+    font-size: 1rem;
+    color: #555;
+}
+
+.codedSegment {
+    background: #f8f9fa;
+    border-left: 3px solid #4CAF50;
+    padding: 12px;
+    margin-bottom: 12px;
+    border-radius: 4px;
+}
+
+.segmentMeta {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+}
+
+.timestamp {
+    color: #666;
+    font-weight: 600;
+}
+
+.speaker {
+    color: #4CAF50;
+    font-weight: 600;
+}
+
+.confidence {
+    color: #999;
+}
+
+.segmentText {
+    font-size: 0.95rem;
+    color: #333;
+    line-height: 1.5;
+    margin-bottom: 8px;
+    font-style: italic;
+}
+
+.codingReason {
+    font-size: 0.85rem;
+    color: #666;
+    line-height: 1.4;
+}
+
+/* Loading and Error States */
+.loading, .error, .noAnalysis {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    text-align: center;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #4CAF50;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.error p {
+    color: #d32f2f;
+    font-size: 1rem;
+    margin-bottom: 20px;
+}
+
+.noAnalysis h3 {
+    margin: 0 0 10px 0;
+    color: #333;
+}
+
+.noAnalysis p {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .dimensionGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .scoreSection {
+        gap: 10px;
+    }
+
+    .scoreCircle {
+        width: 50px;
+        height: 50px;
+    }
+
+    .scoreValue {
+        font-size: 1.1rem;
+    }
+
+    .segmentMeta {
+        flex-wrap: wrap;
+    }
+}
+
+
+.iconImage {
+  width: 1.5em;
+  height: 1.5em;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   EVIDENCE MODAL
+   ───────────────────────────────────────────────────────────────────────────── */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 24px;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modalContainer {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 700px;
+    max-height: calc(100vh - 48px);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.modalTitle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.modalTitle h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.modalDimensionBadge {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.modalScoreClickable {
+    cursor: pointer;
+    border-bottom: 1px dashed #6366f1;
+    color: #6366f1;
+    padding: 0 1px;
+}
+
+.modalScoreClickable:hover {
+    background: rgba(99, 102, 241, 0.08);
+    border-radius: 3px;
+}
+
+.modalCloseButton {
+    background: #f1f5f9;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.modalCloseButton:hover {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.modalContent {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+}
+
+/* Modal sections - reuse similar styles from detailSection */
+.modalExplanation {
+    margin-bottom: 24px;
+}
+
+.modalExplanation h4 {
+    margin: 0 0 12px 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.modalExplanation p {
+    margin: 0;
+    line-height: 1.7;
+    color: #334155;
+    font-size: 0.95rem;
+}
+
+.modalEvidence {
+    margin-bottom: 24px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.modalEvidence h4 {
+    margin: 0 0 12px 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.modalEvidenceList {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.modalEvidenceList li {
+    margin-bottom: 10px;
+    color: #334155;
+    line-height: 1.6;
+    font-size: 0.9rem;
+}
+
+.modalEvidenceList li:last-child {
+    margin-bottom: 0;
+}
+
+.modalSegments h4 {
+    margin: 0 0 16px 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.modalSegment {
+    background: #f8fafc;
+    border-left: 4px solid;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    border-radius: 0 8px 8px 0;
+}
+
+.modalSegment:last-child {
+    margin-bottom: 0;
+}
+
+.modalSegmentMeta {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+    font-size: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.modalTimestamp {
+    color: #64748b;
+    font-weight: 600;
+    background: #e2e8f0;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.modalSpeaker {
+    color: #059669;
+    font-weight: 600;
+}
+
+.modalConfidence {
+    color: #94a3b8;
+}
+
+.modalSegmentText {
+    font-size: 0.95rem;
+    color: #334155;
+    line-height: 1.6;
+    margin-bottom: 8px;
+    font-style: italic;
+}
+
+.modalCodingReason {
+    font-size: 0.85rem;
+    color: #64748b;
+    line-height: 1.5;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   INLINE EDITING
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.pendingCard {
+    opacity: 0.7;
+    cursor: default;
+    border-style: dashed;
+}
+
+.pendingBadge {
+    display: inline-block;
+    background: #e0f2fe;
+    color: #0369a1;
+    font-size: 0.6rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.editedBadge {
+    display: inline-block;
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.scoreEditWrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.scoreInput {
+    width: 56px;
+    height: 36px;
+    border: 2px solid #6366f1;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    outline: none;
+    -moz-appearance: textfield;
+}
+
+.scoreInput::-webkit-outer-spin-button,
+.scoreInput::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.editConfirm, .editCancel {
+    padding: 4px 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.editConfirm {
+    background: #6366f1;
+    color: white;
+    border-color: #6366f1;
+}
+
+.editConfirm:hover {
+    background: #4f46e5;
+}
+
+.editConfirm:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.editCancel {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.editCancel:hover {
+    background: #e2e8f0;
+}
+
+.editableText {
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+}
+
+.editableText:hover {
+    background: rgba(99, 102, 241, 0.06);
+}
+
+.editBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.editTextarea {
+    width: 100%;
+    border: 2px solid #6366f1;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #334155;
+    resize: vertical;
+    outline: none;
+    font-family: inherit;
+}
+
+.editActions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+.noEvidence {
+    color: #94a3b8;
+    font-style: italic;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SCORE SLIDER  (card + modal)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Wrapper that appears on the card when editing score */
+.cardSliderWrap {
+    padding: 4px 0 2px;
+}
+
+/* Row: slider + live number side-by-side */
+.sliderRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.scoreSlider {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.scoreSlider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #6366f1;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.scoreSlider::-webkit-slider-thumb:hover {
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+}
+
+.scoreSlider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #6366f1;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+}
+
+/* Live numeric value next to the slider */
+.sliderValue {
+    min-width: 32px;
+    text-align: right;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+/* OK / Cancel row under the slider on the card */
+.sliderActions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    justify-content: flex-end;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MODAL EDIT BUTTON + STATIC SCORE
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.editButton {
+    padding: 5px 12px;
+    background: #eef2ff;
+    color: #4338ca;
+    border: 1px solid #c7d2fe;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.editButton:hover {
+    background: #e0e7ff;
+    border-color: #a5b4fc;
+}
+
+/* Read-only score badge in the modal header (view mode) */
+.modalScoreStatic {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #64748b;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MODAL UNIFIED EDIT MODE
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Each editable section inside the modal edit mode */
+.modalEditSection {
+    margin-bottom: 20px;
+}
+
+.editFieldLabel {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.editFieldHint {
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: #94a3b8;
+}
+
+/* Save/Cancel bar at the bottom of modal edit mode */
+.modalEditBar {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 4px;
+}
+
+.modalHeaderActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.resetButton {
+    padding: 5px 10px;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fbbf24;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.resetButton:hover {
+    background: #fde68a;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   INLINE EDIT IN CARD (transcript open)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.inlineEditingCard {
+    cursor: default;
+    border-color: #a5b4fc;
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.12);
+    background: linear-gradient(135deg, #fefefe 0%, #f5f3ff 100%);
+}
+
+.inlineEditingCard:hover {
+    transform: none;
+}
+
+.inlineEditBody {
+    padding: 4px 0 0;
+}
+
+.inlineEditBody .editTextarea {
+    font-size: 0.82rem;
+    padding: 8px 10px;
+    border-width: 1px;
+}
+
+.inlineEditActions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 4px;
+}
+
+/* Responsive modal */
+@media (max-width: 640px) {
+    .modalOverlay {
+        padding: 16px;
+    }
+
+    .modalContainer {
+        max-height: calc(100vh - 32px);
+    }
+
+    .modalHeader {
+        padding: 16px;
+    }
+
+    .modalContent {
+        padding: 16px;
+    }
+
+    .modalTitle h3 {
+        font-size: 1.1rem;
+    }
+}

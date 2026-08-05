@@ -1,0 +1,297 @@
+/* Expert Concept Map Rating Panel Styles */
+
+.panel {
+  width: 380px;
+  min-width: 340px;
+  max-width: 420px;
+  height: 100%;
+  overflow-y: auto;
+  background-color: #f8f9fa;
+  border-left: 1px solid #dee2e6;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.panel::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.panel::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.panel::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #4a90d9;
+}
+
+.header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.submittedBadge {
+  background-color: #28a745;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Expert ID Section */
+.expertIdSection {
+  margin-bottom: 16px;
+}
+
+.expertIdSection label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #495057;
+}
+
+.expertIdRow {
+  display: flex;
+  gap: 8px;
+}
+
+.expertIdInput {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.expertIdInput:focus {
+  outline: none;
+  border-color: #4a90d9;
+  box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.2);
+}
+
+.loadButton,
+.changeButton {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.loadButton {
+  background-color: #4a90d9;
+  color: white;
+}
+
+.loadButton:hover:not(:disabled) {
+  background-color: #3a7bc8;
+}
+
+.loadButton:disabled {
+  background-color: #a0c4e8;
+  cursor: not-allowed;
+}
+
+.changeButton {
+  background-color: #6c757d;
+  color: white;
+}
+
+.changeButton:hover {
+  background-color: #5a6268;
+}
+
+/* Dimension List */
+.dimensionList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.dimensionBox {
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.dimensionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.dimensionName {
+  font-weight: 600;
+  font-size: 15px;
+  color: #333;
+}
+
+.dimensionDesc {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  color: #6c757d;
+  line-height: 1.4;
+}
+
+/* Likert Scale */
+.likertGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.likertOption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.likertOption:hover:not(.likertSelected) {
+  border-color: #4a90d9;
+  background-color: #eef4fc;
+}
+
+.likertSelected {
+  border-color: #4a90d9;
+  background-color: #4a90d9;
+}
+
+.likertSelected .likertLabel {
+  color: white;
+  font-weight: 600;
+}
+
+.likertRadio {
+  display: none;
+}
+
+.likertLabel {
+  font-size: 15px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.likertScale {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #adb5bd;
+}
+
+/* Textarea */
+.textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: #4a90d9;
+}
+
+.textarea:disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.draftButton,
+.submitButton {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.draftButton {
+  background-color: #6c757d;
+  color: white;
+}
+
+.draftButton:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.submitButton {
+  background-color: #28a745;
+  color: white;
+}
+
+.submitButton:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.draftButton:disabled,
+.submitButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Status */
+.statusSection {
+  text-align: center;
+}
+
+.saveMessage {
+  font-size: 13px;
+  color: #28a745;
+  margin: 0 0 8px 0;
+}
+
+.lastSaved {
+  font-size: 12px;
+  color: #6c757d;
+  margin: 0;
+}
+
+.instructions {
+  text-align: center;
+  color: #6c757d;
+  font-size: 14px;
+  margin-top: 20px;
+}

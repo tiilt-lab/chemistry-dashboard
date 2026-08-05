@@ -1,0 +1,55 @@
+/* Artifact Link Card */
+
+.card {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  text-align: left;
+}
+
+.card:hover {
+  background: #F8FAFC;
+  border-color: #94A3B8;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.sessionName {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1E293B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.artifactType {
+  font-size: 11px;
+  color: #64748B;
+}
+
+.arrow {
+  font-size: 14px;
+  color: #94A3B8;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.card:hover .arrow {
+  transform: translateX(2px);
+  color: #3B82F6;
+}

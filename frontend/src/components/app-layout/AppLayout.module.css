@@ -1,0 +1,26 @@
+.layout {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    background: #f8fafc;
+}
+
+.leftPanel {
+    flex: 1 1 0;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    overflow: hidden;
+    border-right: 1px solid #e2e8f0;
+}
+
+.rightPanel {
+    flex: 0 0 500px;
+    width: 500px;
+    max-width: 500px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+}

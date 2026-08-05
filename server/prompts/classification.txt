@@ -1,0 +1,100 @@
+You are analyzing a user query about classroom discussion data. Classify the query to determine the best approach for answering it.
+
+## Available Artifacts
+- **Transcripts**: Full conversation text with speaker attribution and timestamps
+- **Concept Maps**: Graph of ideas, questions, hypotheses with relationships
+- **7C Analysis**: Collaboration quality scores (Climate, Communication, Compatibility, Conflict, Context, Contribution, Constructive)
+- **LIWC Metrics**: Linguistic analysis (emotional tone, analytic thinking, clout, authenticity)
+- **Speakers**: Participant profiles with contribution patterns
+
+## Intent Categories
+
+1. **factual**: Direct retrieval of existing data
+   - "What was discussed?"
+   - "Show me the concept map"
+   - "What are the 7C scores?"
+
+2. **comparative**: Cross-session or cross-speaker analysis
+   - "Compare these two sessions"
+   - "Who contributed more?"
+   - "How did Group A differ from Group B?"
+
+3. **diagnostic**: Analysis requiring inference about quality/patterns
+   - "Why was collaboration low?"
+   - "What went wrong in the discussion?"
+   - "Where did the discussion get stuck?"
+
+4. **generative**: Creating new insights or recommendations
+   - "What improvements would you suggest?"
+   - "Summarize the key takeaways"
+   - "What questions remained unresolved?"
+
+5. **graph_traversal**: Queries about concept relationships
+   - "What concepts relate to X?"
+   - "How did idea A lead to idea B?"
+   - "What's the path between these concepts?"
+
+## Complexity Levels
+
+**simple**: Can be answered with 1-2 tool calls with no dependencies
+- Direct lookups
+- Single artifact retrieval
+- Simple searches
+
+**complex**: Requires 3+ tools or has dependencies between steps
+- Multi-session comparison
+- Cross-artifact analysis
+- Multi-step reasoning
+
+## Required Output Format (JSON)
+
+{
+  "intent": "factual|comparative|diagnostic|generative|graph_traversal",
+  "complexity": "simple|complex",
+  "required_artifacts": ["transcripts", "concept_maps", "seven_c", "liwc", "speakers"],
+  "suggested_tools": ["tool_name_1", "tool_name_2"],
+  "entities": {
+    "sessions": ["session_name_or_id"],
+    "speakers": ["speaker_name"],
+    "concepts": ["concept_text"],
+    "time_references": ["yesterday", "last week"]
+  },
+  "reasoning": "Brief explanation of classification"
+}
+
+## Examples
+
+Query: "What did students say about photosynthesis?"
+{
+  "intent": "factual",
+  "complexity": "simple",
+  "required_artifacts": ["transcripts"],
+  "suggested_tools": ["search_transcript_chunks"],
+  "entities": {"concepts": ["photosynthesis"]},
+  "reasoning": "Direct transcript search for specific topic"
+}
+
+Query: "Compare how Group A and Group B approached climate change"
+{
+  "intent": "comparative",
+  "complexity": "complex",
+  "required_artifacts": ["transcripts", "concept_maps", "seven_c"],
+  "suggested_tools": ["compare_sessions", "get_full_concept_map", "get_7c_analysis"],
+  "entities": {"sessions": ["Group A", "Group B"], "concepts": ["climate change"]},
+  "reasoning": "Multi-session comparison requiring multiple artifact types"
+}
+
+Query: "What concepts are related to the water cycle idea?"
+{
+  "intent": "graph_traversal",
+  "complexity": "simple",
+  "required_artifacts": ["concept_maps"],
+  "suggested_tools": ["search_concept_nodes", "get_node_neighbors"],
+  "entities": {"concepts": ["water cycle"]},
+  "reasoning": "Graph query to find related concepts"
+}
+
+Now classify the following query:
+
+Query: {query}
+Conversation context: {context}

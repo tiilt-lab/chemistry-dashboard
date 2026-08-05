@@ -1,0 +1,44 @@
+/* Follow-Up Suggestions Styles */
+
+.container {
+    padding: 8px 16px;
+    background: #f7fafc;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.label {
+    font-size: 12px;
+    color: #718096;
+    flex-shrink: 0;
+}
+
+.suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    overflow-x: auto;
+}
+
+.chip {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: #4a5568;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.chip:hover {
+    background: #edf2f7;
+    border-color: #cbd5e0;
+}
+
+.chip:active {
+    background: #e2e8f0;
+}

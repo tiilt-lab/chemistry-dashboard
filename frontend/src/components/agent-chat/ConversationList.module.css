@@ -1,0 +1,173 @@
+/* Conversation List Styles */
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 100;
+}
+
+.sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    background: white;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.closeBtn {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    color: #718096;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+}
+
+.closeBtn:hover {
+    color: #4a5568;
+}
+
+.newChatBtn {
+    margin: 12px 16px;
+    padding: 10px 16px;
+    background: #4299e1;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.newChatBtn:hover {
+    background: #3182ce;
+}
+
+.list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+}
+
+.group {
+    margin-bottom: 8px;
+}
+
+.dateHeader {
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #718096;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.item:hover {
+    background: #f7fafc;
+}
+
+.item.active {
+    background: #ebf8ff;
+}
+
+.itemContent {
+    flex: 1;
+    min-width: 0;
+}
+
+.itemTitle {
+    font-size: 13px;
+    color: #2d3748;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.itemMeta {
+    font-size: 11px;
+    color: #718096;
+    margin-top: 2px;
+}
+
+.itemActions {
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.item:hover .itemActions {
+    opacity: 1;
+}
+
+.editBtn,
+.deleteBtn {
+    background: transparent;
+    border: none;
+    color: #a0aec0;
+    cursor: pointer;
+    padding: 4px 6px;
+    font-size: 14px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.editBtn:hover {
+    color: #4299e1;
+    background: #ebf8ff;
+}
+
+.deleteBtn:hover {
+    color: #e53e3e;
+    background: #fed7d7;
+}
+
+.editInput {
+    width: 100%;
+    padding: 4px 8px;
+    font-size: 13px;
+    border: 1px solid #4299e1;
+    border-radius: 4px;
+    outline: none;
+    background: white;
+}
+
+.empty {
+    padding: 32px 16px;
+    text-align: center;
+    color: #718096;
+    font-size: 13px;
+}

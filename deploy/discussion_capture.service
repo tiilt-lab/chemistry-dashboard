@@ -1,0 +1,15 @@
+[Unit]
+Description=Discussion Capture Server
+After=network-online.target
+StartLimitIntervalSec=0
+[Service]
+Group=www-data
+Type=simple
+Restart=always
+RestartSec=1
+LimitRTPRIO=99
+LimitRTTIME=infinity
+WorkingDirectory=/home/ubuntu/chemistry-dashboard/server/
+ExecStart=/home/ubuntu/.pyenv/versions/blinc/bin/python discussion_capture.py
+[Install]
+WantedBy=multi-user.target

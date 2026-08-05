@@ -1,0 +1,514 @@
+.overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+    padding: 24px;
+}
+
+.container {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 780px;
+    max-height: calc(100vh - 48px);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #1e293b;
+}
+
+.closeBtn {
+    background: #f1f5f9;
+    border: none;
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    color: #64748b;
+}
+.closeBtn:hover { background: #e2e8f0; }
+
+.error {
+    background: #fef2f2;
+    color: #dc2626;
+    padding: 8px 24px;
+    font-size: 0.85rem;
+    border-bottom: 1px solid #fecaca;
+    flex-shrink: 0;
+}
+
+.placeholder {
+    text-align: center;
+    color: #94a3b8;
+    padding: 40px 20px;
+    font-size: 0.9rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   TWO-COLUMN LAYOUT
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.twoColLayout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    flex: 1;
+    overflow: hidden;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.poolColumn {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 16px;
+    gap: 8px;
+}
+
+.poolColumn:first-child {
+    border-right: 1px solid #e2e8f0;
+}
+
+.columnHeader {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.columnDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.columnCount {
+    margin-left: auto;
+    background: #e2e8f0;
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 10px;
+}
+
+.emptyCol {
+    color: #cbd5e1;
+    font-size: 0.82rem;
+    text-align: center;
+    padding: 20px 0;
+    font-style: italic;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   DIMENSION CARD  (used in two-column + single-column)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.dimCard {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 12px;
+    position: relative;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.dimCardActive {
+    cursor: pointer;
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+}
+.dimCardActive:hover {
+    border-color: #86efac;
+    background: #dcfce7;
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.15);
+}
+
+.dimCardInactive {
+    cursor: pointer;
+    opacity: 0.75;
+}
+.dimCardInactive:hover {
+    opacity: 1;
+    border-color: #a5b4fc;
+    background: #eef2ff;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.12);
+}
+
+.dimCardLoading {
+    opacity: 0.5;
+    cursor: wait;
+    pointer-events: none;
+}
+
+.dimCardHeader {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+
+.dimColorDot {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.dimCardName {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: #1e293b;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dimCardKey {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    font-family: monospace;
+    background: #e2e8f0;
+    padding: 1px 5px;
+    border-radius: 3px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.dimCardDesc {
+    margin: 5px 0 0;
+    font-size: 0.78rem;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+/* Indicator chips below the card name */
+.dimIndicators {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.dimIndicatorChip {
+    display: inline-block;
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 0.68rem;
+    padding: 1px 6px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+/* Pending changes bar */
+.pendingBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: #fffbeb;
+    border-top: 1px solid #fde68a;
+    flex-shrink: 0;
+}
+
+.pendingLabel {
+    font-size: 0.82rem;
+    color: #92400e;
+    font-weight: 500;
+}
+
+.pendingActions {
+    display: flex;
+    gap: 8px;
+}
+
+.applyBtn {
+    padding: 5px 14px;
+    background: #6366f1;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.applyBtn:hover { background: #4f46e5; }
+.applyBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.resetBtn {
+    padding: 5px 10px;
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    cursor: pointer;
+}
+.resetBtn:hover { background: #e2e8f0; }
+.resetBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Remove button — small ✕ in the corner */
+.removeBtn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: #cbd5e1;
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+    line-height: 1;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+.removeBtn:hover {
+    color: #ef4444;
+    background: #fee2e2;
+}
+.removeBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Deactivate button on active cards */
+.deactivateBtn {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    background: none;
+    border: 1px solid #fbbf24;
+    border-radius: 4px;
+    color: #92400e;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s ease, background 0.15s ease;
+}
+.dimCard:hover .deactivateBtn { opacity: 1; }
+.deactivateBtn:hover { background: #fef3c7; }
+.deactivateBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Confirmation state on a card */
+.dimCardConfirming {
+    border-color: #fbbf24 !important;
+    background: #fffbeb !important;
+    cursor: default !important;
+}
+
+.deactivateConfirm {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #fde68a;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.deactivateWarning {
+    font-size: 0.78rem;
+    color: #92400e;
+    line-height: 1.4;
+}
+
+.deactivateActions {
+    display: flex;
+    gap: 6px;
+}
+
+.deactivateConfirmBtn {
+    padding: 3px 10px;
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.deactivateConfirmBtn:hover { background: #b91c1c; }
+
+.deactivateCancelBtn {
+    padding: 3px 10px;
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+.deactivateCancelBtn:hover { background: #e2e8f0; }
+
+.loadingDot {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    display: block;
+    text-align: right;
+    margin-top: 4px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SINGLE-COLUMN FALLBACK (no analysis yet)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.poolList {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.noAnalysisNote {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    margin-top: 12px;
+    font-style: italic;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ADD DIMENSION FORM
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.addSection {
+    padding: 16px 24px;
+    border-top: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.addForm {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.addForm h3 {
+    margin: 0 0 12px 0;
+    font-size: 0.9rem;
+    color: #1e293b;
+}
+
+.addFormGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.formRow { margin-bottom: 0; }
+
+.formRow label, .formRowFull label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.formRowFull { grid-column: 1 / -1; }
+
+.input, .textarea {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: #334155;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+.input:focus, .textarea:focus { outline: none; border-color: #6366f1; }
+.textarea { resize: vertical; }
+
+.addFormActions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    justify-content: flex-end;
+}
+
+.saveBtn, .cancelBtn {
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid;
+}
+.saveBtn { background: #6366f1; color: white; border-color: #6366f1; }
+.saveBtn:hover { background: #4f46e5; }
+.saveBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+.cancelBtn { background: #f1f5f9; color: #64748b; border-color: #e2e8f0; }
+.cancelBtn:hover { background: #e2e8f0; }
+
+.addDimBtn {
+    width: 100%;
+    padding: 10px;
+    background: white;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: #6366f1;
+    cursor: pointer;
+}
+.addDimBtn:hover { border-color: #6366f1; background: #eef2ff; }
+
+/* Auto-generated key chip shown under the name field */
+.keyChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 5px;
+    font-size: 0.72rem;
+    color: #94a3b8;
+    font-family: monospace;
+}
+
+.keyEditBtn {
+    background: none;
+    border: none;
+    color: #6366f1;
+    font-size: 0.72rem;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+}
+.keyEditBtn:hover { color: #4338ca; }
+
+/* "(optional)" label in form */
+.optionalLabel {
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    color: #94a3b8;
+    font-size: 0.7rem;
+}

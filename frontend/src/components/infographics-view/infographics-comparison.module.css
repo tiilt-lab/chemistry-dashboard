@@ -1,0 +1,349 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   INFOGRAPHICS COMPARISON - 2-Column Layout
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Main Layout Grid */
+.layoutGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.5rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   TOP ROW: Discussion Timeline + Session Selector
+   ───────────────────────────────────────────────────────────────────────────── */
+.topRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  width: 100%;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .topRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Timeline Wrapper - matches left column */
+.timelineWrapper {
+  flex: 1;
+  min-width: 320px;
+}
+
+/* Timeline Content (slider + bars stacked) */
+.timelineContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.timelineSlider {
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+/* Session Selector Wrapper */
+.sessionSelectorWrapper {
+  min-width: 280px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SESSION SELECTOR COMPONENT (original style with Apply button)
+   ───────────────────────────────────────────────────────────────────────────── */
+.selectorContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-family: 'SST', sans-serif;
+}
+
+.selectorChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.selectorPlaceholder {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.selectorChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.75rem;
+  background: #eef2ff;
+  font-size: 0.75rem;
+  color: #4b5563;
+}
+
+.selectorChipCurrent {
+  background: #6366f1;
+  color: white;
+}
+
+.selectorChipRemove {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 700;
+  line-height: 1;
+  font-size: 0.875rem;
+  color: inherit;
+  opacity: 0.7;
+  padding: 0;
+}
+
+.selectorChipRemove:hover {
+  opacity: 1;
+}
+
+.selectorDropdownWrapper {
+  position: relative;
+}
+
+.selectorTrigger {
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  background: white;
+  font-size: 0.8rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.selectorTrigger:hover {
+  border-color: #9ca3af;
+}
+
+.selectorPanel {
+  position: absolute;
+  z-index: 10;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 0.5rem;
+  margin-top: 0.375rem;
+  padding: 0.5rem;
+  max-height: 280px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.selectorApplyRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.selectorApplyBtn {
+  padding: 0.375rem 0.75rem;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.selectorApplyBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+}
+
+.selectorNoOptions {
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+.selectorOption {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #374151;
+  border-radius: 0.25rem;
+}
+
+.selectorOption:hover {
+  background: #f9fafb;
+}
+
+.selectorOptionCurrent {
+  opacity: 0.8;
+  cursor: default;
+}
+
+.selectorOption input[type="checkbox"] {
+  accent-color: #6366f1;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   MAIN CONTENT: 2-Column Layout
+   ───────────────────────────────────────────────────────────────────────────── */
+.mainContent {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .mainContent {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Left Column */
+.leftColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 320px;
+}
+
+/* Right Column */
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 320px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   EXPRESSION SECTION (LIWC Radar + Legend side by side, Metrics below)
+   ───────────────────────────────────────────────────────────────────────────── */
+.expressionContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* LIWC Radar Section */
+.liwcRadarSection {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.5rem;
+  background: linear-gradient(135deg, #fafbfc 0%, #f1f5f9 100%);
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+/* Legend Section - displayed below radar chart (seamlessly integrated) */
+.legendSection {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.legendItems {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.7rem;
+  color: #475569;
+}
+
+.legendColor {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.metricsSection {
+  padding: 0.25rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   7C COLLABORATION ANALYSIS (Radar + Cards stacked)
+   ───────────────────────────────────────────────────────────────────────────── */
+.sevenCsContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sevenCsRadar {
+  display: flex;
+  justify-content: center;
+}
+
+.sevenCsCards {
+  /* Cards container - SevenCsPanel renders here */
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   BOTTOM SECTION: Visual Scaffolding (Full Width)
+   ───────────────────────────────────────────────────────────────────────────── */
+.bottomSection {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding-bottom: 1.5rem;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   RESPONSIVE ADJUSTMENTS
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Tablets */
+@media (max-width: 1200px) {
+  .leftColumn,
+  .rightColumn {
+    min-width: 100%;
+  }
+
+  .timelineWrapper,
+  .sessionSelectorWrapper {
+    min-width: 100%;
+  }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .layoutGrid {
+    padding: 0.25rem;
+    gap: 0.75rem;
+  }
+
+  .topRow {
+    gap: 0.75rem;
+  }
+
+  .expressionContent {
+    gap: 1rem;
+  }
+
+  .selectorChip {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.6875rem;
+  }
+}

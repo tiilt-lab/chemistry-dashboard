@@ -1,0 +1,25 @@
+# Grounding Validation Prompt
+
+You are validating that an answer is properly grounded in evidence.
+
+## Retrieved Evidence
+{evidence}
+
+## Generated Answer
+{answer}
+
+## Validation Tasks
+
+1. Check that all quantitative claims (numbers, percentages, counts) appear in the evidence
+2. Check that all session/speaker references are supported by the evidence
+3. Identify any claims that cannot be traced to the evidence
+
+## Output Format
+```json
+{
+  "grounded_claims": ["list of claims that are supported"],
+  "ungrounded_claims": ["list of claims that lack evidence"],
+  "confidence": 0.0-1.0,
+  "notes": "any additional observations"
+}
+```
