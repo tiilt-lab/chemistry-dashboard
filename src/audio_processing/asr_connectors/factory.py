@@ -17,6 +17,12 @@ def create_asr(name, audio_queue, transcript_queue, config, media_type, interval
         logging.info("ASR backend: Whisper")
         return WhisperASR(*args)
 
+    if key in ("crisperwhisper", "crisper-whisper", "crisperwhisper2"):
+        from .crisperwhisper_asr import CrisperWhisperASR
+
+        logging.info("ASR backend: CrisperWhisper 2.0")
+        return CrisperWhisperASR(*args)
+
     if key not in ("google-cloud-speech", "google", ""):
         logging.warning("Unknown asr '%s'; falling back to Google Cloud Speech", name)
 

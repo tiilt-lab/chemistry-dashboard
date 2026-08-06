@@ -102,6 +102,11 @@ function CreateSessionPage(props) {
                       desc: "More accurate on group audio; captions run a few seconds behind. Audio never leaves the machine.",
                     },
                     {
+                      value: "crisperwhisper",
+                      name: "CrisperWhisper 2.0 — verbatim, on this server",
+                      desc: "Keeps fillers, stutters and false starts with pause-accurate word timing. Best for disfluency/discourse research; captions run a few seconds behind.",
+                    },
+                    {
                       value: "google-cloud-speech",
                       name: "Google Cloud",
                       desc: "Fastest word-by-word captions; audio is sent to Google and billed per minute.",

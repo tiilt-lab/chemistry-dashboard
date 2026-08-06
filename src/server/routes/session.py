@@ -150,8 +150,8 @@ def create_session(user, **kwargs):
     # Live transcription engine, chosen at creation and locked for the
     # session's lifetime (it lives in the session's immutable Redis config).
     asr = request.json.get('asr', None)
-    if asr is not None and asr not in ('google-cloud-speech', 'whisper'):
-        return json_response({'message': 'asr must be google-cloud-speech or whisper.'}, 400)
+    if asr is not None and asr not in ('google-cloud-speech', 'whisper', 'crisperwhisper'):
+        return json_response({'message': 'asr must be google-cloud-speech, whisper or crisperwhisper.'}, 400)
     folder = request.json.get('folder', None)
     if folder == -1:
         folder = None

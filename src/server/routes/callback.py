@@ -400,6 +400,7 @@ _ASR_LABELS = {
     "whisperx": "WhisperX (open; batched + word-level alignment)",
     "qwen3": "Qwen3-ASR 1.7B + ForcedAligner (open)",
     "qwen3-0.6b": "Qwen3-ASR 0.6B + ForcedAligner (open, fast)",
+    "crisperwhisper": "CrisperWhisper 2.0 (verbatim: fillers, stutters, pause-true timing)",
 }
 _EMOTION_LABELS = {
     "resmasking": "ResMaskingNet (FER-2013, 7 emotions)",

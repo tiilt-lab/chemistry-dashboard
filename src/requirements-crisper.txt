@@ -1,0 +1,17 @@
+# CrisperWhisper 2.0 venv (src/venv-crisper) — deliberately ISOLATED from
+# venv-unified: the crisperwhisper package installs ctranslate2-crisperwhisper,
+# a CTranslate2 fork whose import path would shadow the real ctranslate2 that
+# faster-whisper and WhisperX depend on. All inference goes through
+# src/audio_processing/asr_connectors/crisper_worker.py subprocesses.
+#
+#   python3 -m venv src/venv-crisper
+#   src/venv-crisper/bin/pip install -r src/requirements-crisper.txt
+#
+# First model load converts the HF weights to CTranslate2 format once, which
+# needs torch+transformers; CPU torch suffices and both can be removed after:
+#   src/venv-crisper/bin/pip install torch --index-url https://download.pytorch.org/whl/cpu
+#   src/venv-crisper/bin/pip install "crisperwhisper[convert]==2.0.2"
+#
+# Model weights (nyralabs/CrisperWhisper2.0_large): non-commercial research
+# license. Inference code: MIT.
+crisperwhisper[ct2]==2.0.2

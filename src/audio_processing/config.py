@@ -99,6 +99,14 @@ def whisper_device():
 def whisper_compute_type():
     return str(config.get('whisper', 'compute_type', fallback='int8'))
 
+def crisperwhisper_model():
+    return str(config.get('crisperwhisper', 'model', fallback='nyralabs/CrisperWhisper2.0_large'))
+
+def crisperwhisper_mode():
+    # 'verbatim' keeps fillers/stutters/false starts (the model's point);
+    # 'intended' gives a cleaned Whisper-style transcript.
+    return str(config.get('crisperwhisper', 'mode', fallback='verbatim'))
+
 def keyword_model_limit():
     return int(config['processing']['keyword_model_limit'])
 

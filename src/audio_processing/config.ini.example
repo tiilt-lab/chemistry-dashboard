@@ -73,6 +73,15 @@ model_size=large-v3
 device=auto
 compute_type=float16
 
+[crisperwhisper]
+# CrisperWhisper 2.0 (nyra health): verbatim transcription — keeps fillers,
+# stutters and false starts, with pause-accurate word timestamps. Runs in
+# src/venv-crisper via asr_connectors/crisper_worker.py (its CTranslate2 fork
+# would shadow the real ctranslate2). Weights: non-commercial research license.
+# mode=verbatim | intended (intended = cleaned, Whisper-style)
+model=nyralabs/CrisperWhisper2.0_large
+mode=verbatim
+
 [output]
 processing_callback=http://127.0.0.1:5000/api/v1/callback/transcript
 connect_callback=http://127.0.0.1:5000/api/v1/callback/connect
