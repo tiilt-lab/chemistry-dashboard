@@ -32,6 +32,99 @@ import { AppInfographicsComparison } from "../components/infographics-view/infog
 
 const fieldLabel = "mb-1.5 block text-left text-sm font-semibold text-tiilt-ink"
 
+// Speaker name as an inline editor: click the name to type. While typing,
+// a green check appears when the name matches an enrolled profile — commit
+// (Enter/blur) then attaches that profile's saved fingerprint via the same
+// chain as the "Saved Fingerprint" menu option; other names just rename.
+function SpeakerNameEditor({ speaker, checkEnrolledName, onCommit }) {
+    const [editing, setEditing] = useState(false)
+    const [value, setValue] = useState("")
+    const [matched, setMatched] = useState(false)
+    const committed = React.useRef(false)
+
+    // Debounced enrollment lookup; the seq guard drops stale responses so a
+    // slow lookup for an earlier keystroke can't overwrite a newer result.
+    const seq = React.useRef(0)
+    useEffect(() => {
+        if (!editing) return undefined
+        const name = value.trim()
+        if (!name) {
+            setMatched(false)
+            return undefined
+        }
+        const mySeq = ++seq.current
+        const timer = setTimeout(() => {
+            checkEnrolledName(name).then((ok) => {
+                if (seq.current === mySeq) setMatched(ok)
+            })
+        }, 300)
+        return () => clearTimeout(timer)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [value, editing])
+
+    const commit = () => {
+        if (committed.current) return
+        committed.current = true
+        setEditing(false)
+        const name = value.trim()
+        if (name && name !== speaker.alias) onCommit(speaker, name)
+    }
+
+    if (!editing) {
+        return (
+            <button
+                type="button"
+                title="Tap to edit the name"
+                className="grow cursor-pointer rounded font-sans text-lg/loose font-bold text-tiilt-ink hover:bg-tiilt-ground/60"
+                onClick={() => {
+                    committed.current = false
+                    setValue(speaker.alias || "")
+                    setMatched(false)
+                    setEditing(true)
+                }}
+            >
+                {speaker.alias}
+            </button>
+        )
+    }
+    return (
+        <span className="flex grow items-center gap-1.5">
+            <input
+                autoFocus
+                aria-label={`Name for ${speaker.alias}`}
+                className={dlgInput + " grow text-center text-lg font-bold"}
+                value={value}
+                spellCheck="false"
+                onChange={(e) => setValue(e.target.value)}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter") commit()
+                    if (e.key === "Escape") {
+                        committed.current = true
+                        setEditing(false)
+                    }
+                }}
+                onBlur={commit}
+            />
+            <span
+                role="img"
+                aria-label={
+                    matched
+                        ? "Matches an enrolled name — saved fingerprint will be used"
+                        : "No enrolled name match"
+                }
+                title={
+                    matched
+                        ? "Enrolled — joins with the saved fingerprint"
+                        : "New name (no saved fingerprint)"
+                }
+                className={matched ? "text-green-600" : "text-tiilt-line"}
+            >
+                <Check size={24} />
+            </span>
+        </span>
+    )
+}
+
 function ByodJoinPage(props) {
     // Join-form niceties: prefer the prefilled code (link/QR) as a compact
     // chip; the Advanced disclosure starts open so the source/camera options
@@ -330,9 +423,11 @@ function ByodJoinPage(props) {
                                                             aria-hidden="true"
                                                         ></div>
                                                         <div className="flew-row flex grow text-center">
-                                                            <div className="grow font-sans text-lg/loose font-bold text-tiilt-ink">
-                                                                {speaker.alias}
-                                                            </div>
+                                                            <SpeakerNameEditor
+                                                                speaker={speaker}
+                                                                checkEnrolledName={props.checkEnrolledName}
+                                                                onCommit={props.inlineRenameSpeaker}
+                                                            />
                                                         </div>
                                                         <AppContextMenu
                                                             label={`Options for ${speaker.alias}`}
@@ -495,9 +590,11 @@ function ByodJoinPage(props) {
                                                             aria-hidden="true"
                                                         ></div>
                                                         <div className="flew-row flex grow text-center">
-                                                            <div className="grow font-sans text-lg/loose font-bold text-tiilt-ink">
-                                                                {speaker.alias}
-                                                            </div>
+                                                            <SpeakerNameEditor
+                                                                speaker={speaker}
+                                                                checkEnrolledName={props.checkEnrolledName}
+                                                                onCommit={props.inlineRenameSpeaker}
+                                                            />
                                                         </div>
                                                         <AppContextMenu
                                                             label={`Options for ${speaker.alias}`}
