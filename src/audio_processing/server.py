@@ -261,6 +261,16 @@ class ServerProtocol(WebSocketServerProtocol):
             out.writeframes(frames)
 
     def process_fingerprint_blob(self, data):
+            # Each incoming blob is a complete standalone recording, but the
+            # scratch file is per-alias and VidRecorder appends. Without a
+            # reset, a retake is appended after the previous take (ffmpeg then
+            # re-reads take 1), and a truncated earlier upload leaves garbage
+            # at byte 0 that makes ffmpeg reject every later attempt for that
+            # alias forever. Start every blob on a fresh file.
+            try:
+                os.remove(self.video_file + '.' + self.mediaExt)
+            except OSError:
+                pass
             self.vid_recorder.write(data)
             err = ""
             src = self.video_file+'.'+self.mediaExt
@@ -459,7 +469,10 @@ class ServerProtocol(WebSocketServerProtocol):
         self.transport.loseConnection()
 
         # Begin Post Processing
-        if cf.record_reduced():
+        # redu_recorder only exists on live audio connections (created in
+        # signal_start); fingerprint-enrollment connections close through
+        # here too and used to throw AttributeError into the log every time.
+        if cf.record_reduced() and getattr(self, 'redu_recorder', None):
             self.redu_recorder.close()
         # if self.stream_data == 'video':
         #     self.orig_vid_recorder.close()
