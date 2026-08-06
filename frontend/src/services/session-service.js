@@ -189,6 +189,24 @@ class SessionService {
     );
   }
 
+  // Heart-rate/RR batch from the join page's Polar straps (Web Bluetooth).
+  postHeartRateForClient(sessionDeviceId, samples, processingKey) {
+    return this.api.httpRequestCallWithHeader(
+      `api/v1/devices/${sessionDeviceId}/heartrate/client`,
+      "POST",
+      { client_now: Date.now(), samples },
+      this._clientKeyHeader(processingKey)
+    );
+  }
+
+  getPodHeartRate(sessionId, sessionDeviceId) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/heartrate`,
+      "GET",
+      {}
+    );
+  }
+
   getSessionDeviceVideoMetricsForClient(sessionDeviceId, startTime = 0, processingKey = null) {
     return this.api.httpRequestCallWithHeader(
       `api/v1/devices/${sessionDeviceId}/videometrics/client`,

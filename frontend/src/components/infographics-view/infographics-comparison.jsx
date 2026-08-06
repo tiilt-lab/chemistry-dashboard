@@ -12,6 +12,7 @@ import { AppGroupFeaturesComponent } from "../individualmetrics/group-features-c
 import { SessionVitals } from "../session-vitals/session-vitals"
 import { SpeakerCardsPanel } from "../speaker-cards/speaker-cards-panel"
 import { JointAttentionPanel } from "../joint-attention/joint-attention-panel"
+import { HeartRatePanel } from "../heart-rate/heart-rate-panel"
 import React, { useState, useEffect, lazy, Suspense } from "react"
 import { ApiService } from "../../services/api-service"
 
@@ -123,10 +124,30 @@ function AppInfographicsComparison(props) {
         "Verbal",
         "Gaze",
         "Head & facial",
+        "Physiological",
         "Record & logs",
         "Cross-modal",
         "Tools",
     ]
+
+    // Heart-rate/HRV rows (Polar straps assigned on the join page). Fetched
+    // here rather than in the panel so the whole section — and its modality
+    // header in by-sensor mode — only exists for pods that actually have
+    // strap data.
+    const [hrRows, setHrRows] = useState([])
+    useEffect(() => {
+        if (!isGroup) return
+        new ApiService()
+            .httpRequestCall(
+                `api/v1/sessions/${props.session.id}/device/${props.sessionDevice.id}/heartrate`,
+                "GET",
+                {},
+            )
+            .then((r) => (r.status === 200 ? r.json() : []))
+            .then((d) => setHrRows(Array.isArray(d) ? d : []))
+            .catch(() => setHrRows([]))
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isGroup, props.session && props.session.id, props.sessionDevice && props.sessionDevice.id])
     // Array order == the "by question" order.
     const groupSections = !isGroup
         ? []
@@ -263,6 +284,27 @@ function AppInfographicsComparison(props) {
                                         onSeek={setSelectedTime}
                                         sessionId={props.session.id}
                                         sessionDeviceId={props.sessionDevice.id}
+                                    />
+                                </AppSectionBoxComponent>
+                            ),
+                        },
+                    ]
+                  : []),
+              ...(hrRows.length > 0
+                  ? [
+                        {
+                            key: "heart-rate",
+                            modality: "Physiological",
+                            node: (
+                                <AppSectionBoxComponent
+                                    type={"w-full"}
+                                    heading={"Heart rate & HRV"}
+                                    badge={"polar strap · sensor data"}
+                                    badgeTone={"teal"}
+                                >
+                                    <HeartRatePanel
+                                        rows={hrRows}
+                                        speakers={props.speakers}
                                     />
                                 </AppSectionBoxComponent>
                             ),

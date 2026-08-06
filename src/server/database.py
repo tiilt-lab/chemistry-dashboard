@@ -24,6 +24,7 @@ from tables.topic_model import TopicModel
 from tables.speaker import Speaker
 from tables.speaker_transcript_metrics import SpeakerTranscriptMetrics
 from tables.speaker_video_metrics import SpeakerVideoMetrics
+from tables.speaker_hr_metrics import SpeakerHrMetrics
 from tables.llm_feedback_report import LLMFeedbackReport
 from tables.llm_question_answer import LLMQuestionAnswer
 from tables.rater import Rater
@@ -238,7 +239,35 @@ def add_speaker_video_metrics(session_device_id,student_username, time_stamp, fa
     return metrics
 
 # -------------------------
-# Get Speaker, Video and Transcript Metrics by session  
+# Heart-rate Metrics (Polar straps streamed from the join page)
+# -------------------------
+
+def get_speaker_hr_metrics(id=None, session_id=None, session_device_id=None, speaker_alias=None):
+    query = db.session.query(SpeakerHrMetrics).order_by(SpeakerHrMetrics.time_stamp.asc())
+    if session_id != None:
+        query = query.join(SessionDevice).filter(SessionDevice.session_id == session_id)
+    if id != None:
+        return query.filter(SpeakerHrMetrics.id == id).first()
+    if speaker_alias != None:
+        query = query.filter(SpeakerHrMetrics.speaker_alias == speaker_alias)
+    if session_device_id != None:
+        query = query.filter(SpeakerHrMetrics.session_device_id == session_device_id)
+    return query.all()
+
+def add_speaker_hr_metrics_batch(session_device_id, samples):
+    # samples: list of dicts with speaker_id, speaker_alias, sensor_name,
+    # time_stamp, heart_rate, rr_ms. One commit per POST batch, not per row.
+    rows = []
+    for s in samples:
+        row = SpeakerHrMetrics(session_device_id, s['speaker_id'], s['speaker_alias'],
+                               s['sensor_name'], s['time_stamp'], s['heart_rate'], s['rr_ms'])
+        db.session.add(row)
+        rows.append(row)
+    db.session.commit()
+    return rows
+
+# -------------------------
+# Get Speaker, Video and Transcript Metrics by session
 #-------------------------
 #  transcript_id=None
 def get_all_transcript_metrics_by_session(id = None, student_username=None, session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
@@ -557,11 +586,16 @@ def delete_session(session_id):
     sub_query2 = db.session.query(SpeakerVideoMetrics.id).\
         filter(SpeakerVideoMetrics.session_device_id == SessionDevice.id).\
         filter(SessionDevice.session_id == session_id).subquery()
-        
+
+    sub_query3 = db.session.query(SpeakerHrMetrics.id).\
+        filter(SpeakerHrMetrics.session_device_id == SessionDevice.id).\
+        filter(SessionDevice.session_id == session_id).subquery()
+
     db.session.query(KeywordUsage).filter(KeywordUsage.transcript_id.in_(sub_query)).delete(synchronize_session='fetch')
     db.session.query(Keyword).filter(Keyword.session_id == session_id).delete()
     db.session.query(Transcript).filter(Transcript.id.in_(sub_query)).delete(synchronize_session='fetch')
     db.session.query(SpeakerVideoMetrics).filter(SpeakerVideoMetrics.id.in_(sub_query2)).delete(synchronize_session='fetch')
+    db.session.query(SpeakerHrMetrics).filter(SpeakerHrMetrics.id.in_(sub_query3)).delete(synchronize_session='fetch')
     db.session.query(SessionDevice).filter(SessionDevice.session_id == session_id).delete()
     db.session.query(Session).filter(Session.id == session_id).delete()
     db.session.commit()
@@ -664,6 +698,7 @@ def delete_session_device(session_device_id):
     db.session.query(KeywordUsage).filter(KeywordUsage.transcript_id == Transcript.id).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')
     db.session.query(Transcript).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')
     db.session.query(SpeakerVideoMetrics).filter(SpeakerVideoMetrics.session_device_id == session_device_id).delete(synchronize_session='fetch')
+    db.session.query(SpeakerHrMetrics).filter(SpeakerHrMetrics.session_device_id == session_device_id).delete(synchronize_session='fetch')
     db.session.query(SessionDevice).filter(SessionDevice.id == session_device_id).delete()
     db.session.commit()
     return True

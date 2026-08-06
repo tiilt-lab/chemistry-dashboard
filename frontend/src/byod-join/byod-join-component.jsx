@@ -10,6 +10,7 @@ import { SpeakerModel } from "../models/speaker"
 import { StudentModel } from "../models/student"
 import { ApiService } from "../services/api-service"
 import { AuthService } from "../services/auth-service"
+import { PolarConnection, isBluetoothSupported } from "../services/polar-hr"
 import fixWebmDuration from "fix-webm-duration"
 
 /*
@@ -136,6 +137,13 @@ function JoinPage() {
     // doubles as visible confirmation that data is flowing). The tick
     // effect lives below the reducer declaration.
     const [recSeconds, setRecSeconds] = useState(0)
+
+    // Polar heart-rate straps (Web Bluetooth), one connection per speaker.
+    // polarInfo drives the speaker-card UI; raw samples buffer in a ref and
+    // flush to the server in batches so a strap can't spam the network.
+    const polarConns = useRef({})
+    const hrBuffer = useRef([])
+    const [polarInfo, setPolarInfo] = useState({})
 
     const navigate = useNavigate()
 
@@ -661,6 +669,13 @@ function JoinPage() {
             key.current = null
         }
 
+        if (permanent) {
+            Object.values(polarConns.current).forEach((c) => c.close())
+            polarConns.current = {}
+            hrBuffer.current = []
+            setPolarInfo({})
+        }
+
         if (wakeLock) releaseWakeLock()
 
         if (source.current != null) {
@@ -796,6 +811,86 @@ function JoinPage() {
         }
         setSelectedSpeaker(null)
     }
+
+    // Pair a Polar strap (or any BLE heart-rate sensor) with a speaker. The
+    // browser chooser shows each strap's printed ID (e.g. "Polar H10
+    // 8C0B2A2B"), so picking the strap IS the person↔sensor assignment.
+    const assignPolarSensor = async (speaker) => {
+        if (!isBluetoothSupported()) return
+        if (polarConns.current[speaker.id]) unassignPolarSensor(speaker)
+        const conn = new PolarConnection({
+            onSample: ({ hr, rr, t }) => {
+                // Alias resolved at sample time so a later rename sticks.
+                const cur = (speakers.current || []).find((s) => s.id === speaker.id)
+                hrBuffer.current.push({
+                    speaker_id: speaker.id,
+                    alias: (cur && cur.alias) || speaker.alias,
+                    sensor: (conn.device && conn.device.name) || "",
+                    t,
+                    hr,
+                    rr,
+                })
+                setPolarInfo((p) =>
+                    p[speaker.id]
+                        ? { ...p, [speaker.id]: { ...p[speaker.id], bpm: hr } }
+                        : p,
+                )
+            },
+            onStatus: (status) => {
+                setPolarInfo((p) =>
+                    p[speaker.id]
+                        ? { ...p, [speaker.id]: { ...p[speaker.id], status } }
+                        : p,
+                )
+            },
+        })
+        try {
+            const info = await conn.choose()
+            polarConns.current[speaker.id] = conn
+            setPolarInfo((p) => ({
+                ...p,
+                [speaker.id]: {
+                    name: info.name,
+                    battery: info.battery,
+                    status: "connected",
+                    bpm: null,
+                },
+            }))
+        } catch (ex) {
+            conn.close()
+            // NotFoundError just means the chooser was dismissed.
+            if (ex && ex.name !== "NotFoundError") {
+                console.log("polar connect failed", ex)
+            }
+        }
+    }
+
+    const unassignPolarSensor = (speaker) => {
+        const conn = polarConns.current[speaker.id]
+        if (conn) conn.close()
+        delete polarConns.current[speaker.id]
+        setPolarInfo((p) => {
+            const next = { ...p }
+            delete next[speaker.id]
+            return next
+        })
+    }
+
+    // Ship buffered heart-rate samples every 5 s while joined. Streaming
+    // isn't gated on "Start recording": pre-discussion baseline HR is
+    // useful, and timestamps are session-relative server-side either way.
+    useEffect(() => {
+        if (sessionDevice === null) return undefined
+        const timer = setInterval(() => {
+            if (!hrBuffer.current.length || !key.current) return
+            const batch = hrBuffer.current.splice(0, hrBuffer.current.length)
+            sessionService
+                .postHeartRateForClient(sessionDevice.id, batch, key.current)
+                .catch((ex) => console.log("hr flush failed", ex))
+        }, 5000)
+        return () => clearInterval(timer)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sessionDevice])
 
     const confirmSpeakers = () => {
         console.log(speakers.current)
@@ -1857,6 +1952,10 @@ function JoinPage() {
             addSpeakerSlot={addSpeakerSlot}
             inlineRenameSpeaker={inlineRenameSpeaker}
             checkEnrolledName={checkEnrolledName}
+            bluetoothSupported={isBluetoothSupported()}
+            polarInfo={polarInfo}
+            assignPolarSensor={assignPolarSensor}
+            unassignPolarSensor={unassignPolarSensor}
             openForms={openForms}
             selectedSpkrId1={selectedSpkrId1}
             setSelectedSpkrId1={setSelectedSpkrId1}

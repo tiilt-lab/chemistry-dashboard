@@ -125,6 +125,45 @@ function SpeakerNameEditor({ speaker, checkEnrolledName, onCommit }) {
     )
 }
 
+// Optional Polar heart-rate strap per speaker (Web Bluetooth, Chrome/Edge
+// only — hidden elsewhere). Pairing the strap is the person↔sensor
+// assignment: the chooser shows each strap's printed ID. Once connected the
+// card shows the sensor ID and live BPM.
+function PolarStrapControl({ speaker, supported, info, onAssign, onUnassign }) {
+    if (!supported) return null
+    if (!info) {
+        return (
+            <button
+                type="button"
+                className="mx-auto cursor-pointer rounded px-1 font-ahamono text-[11px] text-tiilt-muted hover:text-tiilt-ink"
+                onClick={() => onAssign(speaker)}
+            >
+                ♥ add heart-rate strap
+            </button>
+        )
+    }
+    const live = info.status === "connected"
+    return (
+        <span className="mx-auto flex items-center gap-1.5 font-ahamono text-[11px] text-tiilt-muted">
+            <span className={live ? "text-red-500" : "text-tiilt-line"}>♥</span>
+            <span className="font-semibold text-tiilt-ink">
+                {info.bpm != null ? info.bpm + " bpm" : "…"}
+            </span>
+            <span>{info.name}</span>
+            {info.battery != null && <span>{info.battery}%</span>}
+            {!live && <span className="text-amber-600">reconnecting…</span>}
+            <button
+                type="button"
+                aria-label={`Remove heart-rate strap for ${speaker.alias}`}
+                className="cursor-pointer px-1 hover:text-tiilt-ink"
+                onClick={() => onUnassign(speaker)}
+            >
+                ✕
+            </button>
+        </span>
+    )
+}
+
 function ByodJoinPage(props) {
     // Join-form niceties: prefer the prefilled code (link/QR) as a compact
     // chip; the Advanced disclosure starts open so the source/camera options
@@ -422,11 +461,18 @@ function ByodJoinPage(props) {
                                                             }
                                                             aria-hidden="true"
                                                         ></div>
-                                                        <div className="flew-row flex grow text-center">
+                                                        <div className="flex grow flex-col text-center">
                                                             <SpeakerNameEditor
                                                                 speaker={speaker}
                                                                 checkEnrolledName={props.checkEnrolledName}
                                                                 onCommit={props.inlineRenameSpeaker}
+                                                            />
+                                                            <PolarStrapControl
+                                                                speaker={speaker}
+                                                                supported={props.bluetoothSupported}
+                                                                info={(props.polarInfo || {})[speaker.id]}
+                                                                onAssign={props.assignPolarSensor}
+                                                                onUnassign={props.unassignPolarSensor}
                                                             />
                                                         </div>
                                                         <AppContextMenu
@@ -589,11 +635,18 @@ function ByodJoinPage(props) {
                                                             }
                                                             aria-hidden="true"
                                                         ></div>
-                                                        <div className="flew-row flex grow text-center">
+                                                        <div className="flex grow flex-col text-center">
                                                             <SpeakerNameEditor
                                                                 speaker={speaker}
                                                                 checkEnrolledName={props.checkEnrolledName}
                                                                 onCommit={props.inlineRenameSpeaker}
+                                                            />
+                                                            <PolarStrapControl
+                                                                speaker={speaker}
+                                                                supported={props.bluetoothSupported}
+                                                                info={(props.polarInfo || {})[speaker.id]}
+                                                                onAssign={props.assignPolarSensor}
+                                                                onUnassign={props.unassignPolarSensor}
                                                             />
                                                         </div>
                                                         <AppContextMenu

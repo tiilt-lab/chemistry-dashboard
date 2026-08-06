@@ -1,6 +1,6 @@
 from app import app, db, DATABASE_FILE, socketio, scheduler
 from routes import socket
-from tables import folder, device, session_device, session, transcript, keyword, keyword_usage, keyword_list, keyword_list_item, user,student,speaker_video_metrics
+from tables import folder, device, session_device, session, transcript, keyword, keyword_usage, keyword_list, keyword_list_item, user,student,speaker_video_metrics,speaker_hr_metrics
 import scheduled_tasks
 import config as cf
 import device_websockets
