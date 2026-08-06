@@ -753,6 +753,50 @@ function JoinPage() {
         )
     }
 
+    // Live lookup for the inline name editor's green check: does this name
+    // belong to an enrolled profile (i.e. has a saved fingerprint)?
+    const checkEnrolledName = async (username) => {
+        try {
+            const resp = await new AuthService().getStudentProfileByID(username)
+            return resp.status === 200
+        } catch (ex) {
+            return false
+        }
+    }
+
+    // Commit from the inline name editor on a speaker card. Same behavior as
+    // addSpeakerSlot's name handling: an enrolled username renames the slot
+    // and attaches the saved fingerprint (via the registeredStudentData
+    // effect chain); any other name is a plain rename.
+    const inlineRenameSpeaker = async (speaker, rawName) => {
+        const username = (rawName || "").trim()
+        if (!username || username === speaker.alias) return
+        setSelectedSpeaker(speaker)
+        try {
+            const resp = await new AuthService().getStudentProfileByID(username)
+            if (resp.status === 200) {
+                const studentJson = await resp.json()
+                setRegisteredStudentData(StudentModel.fromJson(studentJson))
+                return
+            }
+        } catch (ex) {
+            console.log("inline enrollment lookup failed", ex)
+        }
+        try {
+            const r = await sessionService.updateCollaborator(speaker.id, username)
+            if (r.status === 200) {
+                const renamed = SpeakerModel.fromJson(await r.json())
+                speakers.current = speakers.current.map((s) =>
+                    s.id === speaker.id ? { ...s, alias: renamed.alias } : s,
+                )
+                setSpeakerListTick((x) => x + 1)
+            }
+        } catch (ex) {
+            console.log("inline speaker rename failed", ex)
+        }
+        setSelectedSpeaker(null)
+    }
+
     const confirmSpeakers = () => {
         console.log(speakers.current)
         if (speakers.current.every((s) => s.fingerprinted)) {
@@ -1014,9 +1058,28 @@ function JoinPage() {
                         // Chrome ~2.5 Mbps, phone Safari 7-10 Mbps for the
                         // same 640x480) — uncapped, 20 pods fill ~60 GB/hour
                         // of disk and saturate classroom Wi-Fi uplinks.
+                        // Scale with the pixels actually captured (panorama
+                        // cams record at 1080p) — 2.5 Mbps spread over 6.75×
+                        // the pixels would crush faces below what the
+                        // processing pipeline's quality gates accept.
+                        const vSettings = (() => {
+                            const t = stream.getVideoTracks()[0]
+                            return t && t.getSettings ? t.getSettings() : {}
+                        })()
+                        const capturedPixels =
+                            (vSettings.width || 640) * (vSettings.height || 480)
+                        const videoRate = Math.min(
+                            8_000_000,
+                            Math.max(
+                                2_500_000,
+                                Math.round(
+                                    (2_500_000 * capturedPixels) / (640 * 480),
+                                ),
+                            ),
+                        )
                         const mediaRec = new MediaRecorder(stream, {
                             mimeType: mimetype,
-                            videoBitsPerSecond: 2_500_000,
+                            videoBitsPerSecond: videoRate,
                             audioBitsPerSecond: 128_000,
                         })
                         mediaRecorder.current = mediaRec
@@ -1132,11 +1195,27 @@ function JoinPage() {
             constraint.audio = true
         }
         if (l_joinwith === "Video" || l_joinwith === "Videocartoonify") {
-            constraint.video = {
-                facingMode: "user",
-                width: 640, //{ min: 640, ideal: 1280, max: 1920 },
-                height: 480, //{ min: 480, ideal: 720, max: 1080 }
-            }
+            // Resolution: an explicit device-check choice wins; otherwise
+            // 640×480, except panorama cams (360° conference cameras), which
+            // compose the whole ring view inside the requested frame — at
+            // 640×480 the panorama is downscaled to uselessness before a
+            // byte leaves the browser, so Auto records them at full 1080p.
+            constraint.video = sel.videoResolution
+                ? {
+                      facingMode: "user",
+                      width: { ideal: sel.videoResolution.width },
+                      height: { ideal: sel.videoResolution.height },
+                  }
+                : sel.videoPanorama
+                  ? {
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 },
+                    }
+                  : {
+                        facingMode: "user",
+                        width: 640, //{ min: 640, ideal: 1280, max: 1920 },
+                        height: 480, //{ min: 480, ideal: 720, max: 1080 }
+                    }
             if (sel.videoDeviceId) {
                 constraint.video.deviceId = { exact: sel.videoDeviceId }
                 delete constraint.video.facingMode
@@ -1776,6 +1855,8 @@ function JoinPage() {
             videoApiEndpoint={apiService.getVideoServerEndpoint()}
             speakers={speakers.current}
             addSpeakerSlot={addSpeakerSlot}
+            inlineRenameSpeaker={inlineRenameSpeaker}
+            checkEnrolledName={checkEnrolledName}
             openForms={openForms}
             selectedSpkrId1={selectedSpkrId1}
             setSelectedSpkrId1={setSelectedSpkrId1}

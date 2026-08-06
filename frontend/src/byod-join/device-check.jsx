@@ -14,6 +14,26 @@ import { dlgSelect, dlgPrimary, dlgError } from "../components/dialog-styles"
 // a mono downmix when they are on, which destroys channel separation.
 const MAX_CHANNELS = 8
 
+// 360° conference cameras (j5create JVCU360 "360 All Around", Jabra
+// PanaCast, ...) are plain UVC webcams that compose their dewarped panorama
+// inside whatever frame size the host requests. UVC exposes nothing more
+// structured than the device label, so panorama handling keys off it.
+const isPanoramaCamera = (label) => /360|panacast|panoram/i.test(label || "")
+
+// "auto" = 640×480 for ordinary webcams (the bitrate/processing sweet spot),
+// stepped up to 1080p for panorama cameras. Explicit choices override both.
+const RESOLUTIONS = [
+    { value: "auto", label: "Auto" },
+    { value: "640x480", label: "640 × 480" },
+    { value: "1280x720", label: "1280 × 720 (HD)" },
+    { value: "1920x1080", label: "1920 × 1080 (Full HD)" },
+]
+
+const parseResolution = (value) => {
+    const m = /^(\d+)x(\d+)$/.exec(value || "")
+    return m ? { width: Number(m[1]), height: Number(m[2]) } : null
+}
+
 const fieldLabel = "mb-1.5 block text-left text-sm font-semibold text-tiilt-ink"
 
 function DeviceCheckPage({ joinwith, onConfirm, onBack }) {
@@ -26,6 +46,8 @@ function DeviceCheckPage({ joinwith, onConfirm, onBack }) {
     const [channels, setChannels] = useState(1)
     const [levels, setLevels] = useState([])
     const [channelChoice, setChannelChoice] = useState("mix") // "mix" | index
+    const [resChoice, setResChoice] = useState("auto")
+    const [actualRes, setActualRes] = useState("")
     const videoRef = useRef(null)
     const cleanupRef = useRef(null)
     const streamRef = useRef(null)
@@ -41,6 +63,7 @@ function DeviceCheckPage({ joinwith, onConfirm, onBack }) {
     const openPreview = async (audioDeviceId, videoDeviceId) => {
         stopPreview()
         setError("")
+        const chosenRes = parseResolution(resChoice)
         try {
             const constraints = {
                 audio: {
@@ -53,14 +76,43 @@ function DeviceCheckPage({ joinwith, onConfirm, onBack }) {
                 video: wantsVideo
                     ? {
                           facingMode: "user",
-                          width: 640,
-                          height: 480,
+                          ...(chosenRes
+                              ? {
+                                    width: { ideal: chosenRes.width },
+                                    height: { ideal: chosenRes.height },
+                                }
+                              : { width: 640, height: 480 }),
                           ...(videoDeviceId ? { deviceId: { exact: videoDeviceId } } : {}),
                       }
                     : false,
             }
             const stream = await navigator.mediaDevices.getUserMedia(constraints)
             streamRef.current = stream
+
+            // At the default 640×480 request a panorama camera squeezes the
+            // whole ring view into that tiny frame — on "Auto", step it up to
+            // its full 1080p mode so the preview shows what would record. An
+            // explicit resolution choice always wins.
+            const vtrack = stream.getVideoTracks()[0]
+            if (vtrack && !chosenRes && isPanoramaCamera(vtrack.label)) {
+                const vset = vtrack.getSettings ? vtrack.getSettings() : {}
+                if ((vset.width || 0) < 1280) {
+                    await vtrack
+                        .applyConstraints({
+                            width: { ideal: 1920 },
+                            height: { ideal: 1080 },
+                        })
+                        .catch(() => {})
+                }
+            }
+            if (wantsVideo && vtrack) {
+                const vset = vtrack.getSettings ? vtrack.getSettings() : {}
+                setActualRes(
+                    vset.width && vset.height
+                        ? vset.width + " × " + vset.height
+                        : "",
+                )
+            }
 
             if (wantsVideo && videoRef.current) {
                 videoRef.current.srcObject = stream
@@ -129,7 +181,7 @@ function DeviceCheckPage({ joinwith, onConfirm, onBack }) {
         openPreview(micId || undefined, camId || undefined)
         return stopPreview
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [micId, camId])
+    }, [micId, camId, resChoice])
 
     const speaking = levels.some((l) => l > 0.02)
 
@@ -159,6 +211,11 @@ function DeviceCheckPage({ joinwith, onConfirm, onBack }) {
                         playsInline
                         className="w-full rounded-xl bg-black"
                     />
+                    {actualRes && (
+                        <div className="mt-1 text-right font-ahamono text-[11px] text-tiilt-muted">
+                            capturing at {actualRes}
+                        </div>
+                    )}
                     {cams.length > 1 && (
                         <select
                             aria-label="Camera"
@@ -174,6 +231,25 @@ function DeviceCheckPage({ joinwith, onConfirm, onBack }) {
                             ))}
                         </select>
                     )}
+                    <label className={fieldLabel + " mt-3"}>
+                        Recording resolution
+                    </label>
+                    <select
+                        aria-label="Recording resolution"
+                        className={dlgSelect}
+                        value={resChoice}
+                        onChange={(e) => setResChoice(e.target.value)}
+                    >
+                        {RESOLUTIONS.map((r) => (
+                            <option key={r.value} value={r.value}>
+                                {r.label}
+                            </option>
+                        ))}
+                    </select>
+                    <div className="mt-1 text-xs text-tiilt-muted">
+                        Auto records at 640 × 480 (1080p for 360° panorama
+                        cameras). Higher resolutions make larger recordings.
+                    </div>
                 </div>
             )}
 
@@ -249,10 +325,21 @@ function DeviceCheckPage({ joinwith, onConfirm, onBack }) {
                 <button
                     className={dlgPrimary + " w-full"}
                     onClick={() => {
+                        // Read the label before stopPreview clears the stream:
+                        // the active track (not the picker) knows which camera
+                        // the browser actually opened, default choice included.
+                        const vtrack =
+                            streamRef.current &&
+                            streamRef.current.getVideoTracks()[0]
+                        const panorama = !!(
+                            vtrack && isPanoramaCamera(vtrack.label)
+                        )
                         stopPreview()
                         onConfirm({
                             audioDeviceId: micId || null,
                             videoDeviceId: camId || null,
+                            videoPanorama: panorama,
+                            videoResolution: parseResolution(resChoice),
                             channelIndex:
                                 channelChoice === "mix" ? null : channelChoice,
                         })
