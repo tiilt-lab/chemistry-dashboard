@@ -40,7 +40,9 @@ logger.addHandler(log_console)
 app = Flask(__name__)
 
  
-app.config['SECRET_KEY'] = '\xf9\xc5_!\x9c^t\x80\xce\xee\xbc\x8c_\xd2\xd6\xf3\x92C\x9e\xcb\x88\xc7\xa9('
+# Session-signing key. Set DC_SECRET_KEY (e.g. in /etc/blinc/secrets.env) so
+# sessions survive restarts; the random fallback logs everyone out on reboot.
+app.config['SECRET_KEY'] = os.environ.get('DC_SECRET_KEY') or os.urandom(32)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = cf.https()
 app.config['SESSION_COOKIE_SAMESITE'] = 'Strict'
