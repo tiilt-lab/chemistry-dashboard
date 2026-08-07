@@ -48,6 +48,33 @@ from global_singleton_lock import get_attention_emotion_predictor, get_object_de
 
 STOP_SIGNAL = object()
 cm = ConnectionManager()
+
+# Recycle the process once the last client has been gone for a while.
+# Analysis memory cannot be returned to the OS (glibc arena fragmentation
+# under the pipeline's numpy frame churn), so RSS is a high-water mark that
+# only a fresh process resets — ~18 GB after one multi-pod afternoon.
+# systemd (Restart=always) brings the service straight back; the delay
+# keeps mid-session refreshes and reconnects safe, since a restart means
+# ~40 s of model loading with the port closed.
+IDLE_RECYCLE_SECONDS = 600
+_idle_recycle = None
+
+def cancel_idle_recycle():
+    global _idle_recycle
+    if _idle_recycle is not None and _idle_recycle.active():
+        _idle_recycle.cancel()
+    _idle_recycle = None
+
+def schedule_idle_recycle():
+    global _idle_recycle
+    cancel_idle_recycle()
+    _idle_recycle = reactor.callLater(IDLE_RECYCLE_SECONDS, _idle_recycle_fire)
+
+def _idle_recycle_fire():
+    if cm.get_number_of_connections() == 0:
+        logging.info('No clients for {0}s - exiting to reclaim analysis memory (systemd restarts the service).'.format(IDLE_RECYCLE_SECONDS))
+        reactor.stop()
+
 cartoon_model = VideoCartoonifyLoader()
 facial_emotion_detector = EmotionDetectionModel()
 # Gaze backend is config-selected: Gaze-LLE (open SOTA) or GazeFollow.
@@ -91,6 +118,7 @@ class ServerProtocol(WebSocketServerProtocol):
         # pods and older clients don't send the field).
         self.live_analytics = True
         cm.add(self)
+        cancel_idle_recycle()
         logging.info('New client connected...')
 
     def onMessage(self, payload, is_binary):
@@ -422,8 +450,9 @@ class ServerProtocol(WebSocketServerProtocol):
 
         if cm.get_number_of_connections() == 0:
             image_object_detection.stop()
-            video_metric_analytics.stop() 
-            logging.info("No more connected clients, stopping image detection and video metric analytics thread,  service.")  
+            video_metric_analytics.stop()
+            logging.info("No more connected clients, stopping image detection and video metric analytics thread,  service.")
+            schedule_idle_recycle()
         logging.info('Closing client connection...')
         self.transport.loseConnection()
 
