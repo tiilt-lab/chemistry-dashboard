@@ -1,12 +1,10 @@
 import {useState,useEffect} from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FileUploadService } from "../services/file-upload-service";
 import {TopicListPage} from './html-pages'
 import { TopicModelService } from "../services/topic-model-service";
-import { KeywordService } from "../services/keyword-service";
 
 function TopicListComponent(props){
-  const [user, setUser] = useState();
+  const [, setUser] = useState();
   const navigate = useNavigate();
   const location = useLocation();
   // Guard against direct navigation (no router state) so the page doesn't crash.
@@ -14,8 +12,8 @@ function TopicListComponent(props){
   const [showDialog, setShowDialog] = useState(false);
   const [currentDialog, setCurrentDialog] = useState("");
   const [showedInd, setShowedInd] = useState(-1);
-  const [editMode, setEditMode] = useState(st.names === undefined);
-  const [viewTitle, setViewTitle] = useState(st.title);
+  const [editMode] = useState(st.names === undefined);
+  const [viewTitle] = useState(st.title);
   
   //parses the inputted string for topic models into a data structure we can use
   const makeTopicListStruct = (topicStr) => {
@@ -29,7 +27,7 @@ function TopicListComponent(props){
         temptopic.tname = editMode ? ("Topic" + l) : allNames[i];
         temptopic.clicked = false;
     	let subTopics = allTopics[i].split("+");
-    	if (subTopics.length != SUBTOPICLEN) {
+    	if (subTopics.length !== SUBTOPICLEN) {
     	  continue;
     	}
     	let kwdprobs = [];
@@ -64,14 +62,8 @@ function TopicListComponent(props){
     }
   },[])
 
-  useEffect(()=>{
-    if(trigger > 0){
-      console.log('reloaded page')
-    }
-  },[trigger])
-
   const navigateToFileUpload = ()=> {
-    if (location.pathname == '/topic-list/new-session') {
+    if (location.pathname === '/topic-list/new-session') {
       navigate('/file_upload/new-session', {state: location.state});
     } else {
       navigate('/file_upload');
@@ -80,7 +72,7 @@ function TopicListComponent(props){
 
   const notDupeCurrInput = () => {
     for (let i = 0; i < topicListStruct.length; i++) {
-      if (topicListStruct[i].tname == currInput) {
+      if (topicListStruct[i].tname === currInput) {
         return false;
       }
     }
@@ -88,7 +80,7 @@ function TopicListComponent(props){
   }
 
   const setTopicName = () => {
-    if (currInput != '' && notDupeCurrInput()) {
+    if (currInput !== '' && notDupeCurrInput()) {
       //regex match
       if (currInput.match('^[A-Za-z0-9\u00C0-\u017F\']+$')) {
         let temparr = topicListStruct;
@@ -107,17 +99,17 @@ function TopicListComponent(props){
   const toggleDisplay = (bool, currDia, ind) => {
     setShowDialog(bool);
     setCurrentDialog(currDia);
-    if (currDia == "rename") {
+    if (currDia === "rename") {
       setShowedInd(ind);
       setChangedName(false);
       toggleClicked(ind);
     }
-    if (currDia == "rename" || currDia == "submit") {
+    if (currDia === "rename" || currDia === "submit") {
       setWrongInput(false);
     }
-    if (currDia == "submit") {
+    if (currDia === "submit") {
       setNoTopics(false);
-      setNoName(nameInput == "");
+      setNoName(nameInput === "");
     }
   }
 
@@ -165,28 +157,23 @@ function TopicListComponent(props){
   }
 
   const navTopicModels = () => {
-    if (location.pathname == '/topic-list/new-session') {
+    if (location.pathname === '/topic-list/new-session') {
       navigate('/sessions/new', {state: location.state});
     } else {
       navigate('/topic-models');
     }
   }
 
-  const isValid = () => {
-    //list of topics can't be empty, and neither can the name. add
-    return topicListStruct.filter(tlist => tlist.clicked) != [] && nameInput != "";
-  }
-
   const saveNewModel = () => {
     //const topics = topicListStruct.filter(tlist => tlist.clicked).map(tlist => tlist.tname);
     //so far only for creation, but need to update it soon (aka if (keywordListID === '-1'))
     let topicNames = getSelectNameList(false);
-    if (topicNames == "") {
+    if (topicNames === "") {
       setNoTopics(true);
       setWrongInput(false);
       return
     }
-    if (nameInput.trim() == "") {
+    if (nameInput.trim() === "") {
       setNoTopics(false);
       setWrongInput(true);
       return;
@@ -200,7 +187,7 @@ function TopicListComponent(props){
         }
       },
       apierror => {
-        console.log("Keyword-items-components func: saveKeywordList 2 ", apierror)
+        console.error("Keyword-items-components func: saveKeywordList 2 ", apierror)
       });
     /*
     } else {

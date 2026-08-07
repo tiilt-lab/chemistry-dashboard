@@ -1,6 +1,5 @@
 import { DeviceService } from '../services/device-service';
 import { SessionService } from '../services/session-service';
-import { formatDate } from '../globals';
 import { DeviceModel } from '../models/device'
 import { SessionModel } from '../models/session'
 import { FolderModel } from '../models/folder';
@@ -28,7 +27,7 @@ function CreateSessionComponent(props) {
   const prevState = location.state;
   const changedState = prevState != null;
   // Page Data
-  const [user, setUser] = useState(null);
+  const [, setUser] = useState(null);
   const [devices, setDevices] = useState([]);
 
   //menus = Menus;
@@ -46,7 +45,7 @@ function CreateSessionComponent(props) {
   // the only way pods can join at all (dedicated hardware pods are gone),
   // so the old "Allow participant devices" toggle was removed from the UI.
   const byod = true;
-  const [doa, setDoa] = useState(changedState ? prevState.doa : true);
+  const [doa] = useState(changedState ? prevState.doa : true);
   // Always on: live per-utterance feature scoring is nearly free, and the
   // toggle only ever produced sessions whose E&T charts sat empty until a
   // posthoc re-run. The UI option was removed alongside the byod one.
@@ -58,8 +57,8 @@ function CreateSessionComponent(props) {
     const chosen = prev || 'crisperwhisper';
     return chosen === 'whisper' ? 'crisperwhisper' : chosen;
   });
-  const [selectedKeywordList, setSelectedKeywordList] = useState(changedState ? prevState.selectedKeywordList : null);
-  const [selectedTopicModel, setSelectedTopicModel] = useState(changedState ? prevState.selectedTopicModel : null);
+  const [selectedKeywordList] = useState(changedState ? prevState.selectedKeywordList : null);
+  const [selectedTopicModel] = useState(changedState ? prevState.selectedTopicModel : null);
   const [selectedDevices, setSelectedDevices] = useState([]);
   const [folder, setFolder] = useState(changedState ? prevState.folder : -1);
   const [folderPath, setFolderPath] = useState(changedState ? prevState.folderPath : 'Home');
@@ -67,7 +66,7 @@ function CreateSessionComponent(props) {
   const [folderSelect, setFolderSelect] = useState(null)
   const [breadCrumbSelect, setBreadCrumbSelect] = useState(null)
   const navigate = useNavigate();
-  const [searchParam, setSearchParam] = useSearchParams()
+  const [searchParam] = useSearchParams()
   
   
 
@@ -76,7 +75,7 @@ function CreateSessionComponent(props) {
     const fetchData = new DeviceService().getDevices(false, true, false, true)
     fetchData.then(
       response => {
-        if (response == 200) {
+        if (Number(response) === 200) {
           const resp2 = response.json()
           resp2.then(
             respdevices => {
@@ -93,14 +92,14 @@ function CreateSessionComponent(props) {
         }
       },
       apierror => {
-        console.log("create-session-components func: useEffect 1 ", apierror)
+        console.error("create-session-components func: useEffect 1 ", apierror)
       }
     )
 
     const fetchData3 = new SessionService().getFolders()
     fetchData3.then(
       response => {
-        if (response.status == 200) {
+        if (response.status === 200) {
           const resp = response.json()
           resp.then(
             folderss => {
@@ -119,7 +118,7 @@ function CreateSessionComponent(props) {
         }
       },
       apierror => {
-        console.log("create-session-components func: useEffect 3 ", apierror)
+        console.error("create-session-components func: useEffect 3 ", apierror)
       }
     )
     
@@ -192,7 +191,7 @@ function CreateSessionComponent(props) {
           }
         },
         apierror=>{
-          console.log("create-session-components func: createSession 1 ", apierror)
+          console.error("create-session-components func: createSession 1 ", apierror)
         }
       )  
     }
@@ -237,7 +236,7 @@ function CreateSessionComponent(props) {
           }
         },
         apierror =>{
-          console.log("create-session-components func: blinkPad 1 ", apierror)
+          console.error("create-session-components func: blinkPad 1 ", apierror)
         }
       )
     } else {
@@ -252,7 +251,7 @@ function CreateSessionComponent(props) {
           }
         },
         apierror => {
-          console.log("create-session-components func: blinkPad 2 ", apierror)
+          console.error("create-session-components func: blinkPad 2 ", apierror)
         }
       )
     }

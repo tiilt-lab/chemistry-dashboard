@@ -1,6 +1,5 @@
 import { SessionService } from "../services/session-service";
 import { ApiService } from "../services/api-service";
-import { SessionModel } from "../models/session";
 import { DeviceService } from "../services/device-service";
 import { DeviceModel } from "../models/device";
 import { SpeakerModel } from "../models/speaker";
@@ -9,12 +8,10 @@ import { useNavigate, useOutletContext } from "react-router-dom";
 import { PodsOverviewPages } from "./html-pages";
 
 function PodsOverviewComponent(props) {
-  const [sessionClosing, setSessionClosing] = useState(false);
-  const [openingDialog, setOpeningDialog] = useState(false);
+  const [, setSessionClosing] = useState(false);
   const [sessionDevices, setSessionDevices] = useState(null);
   const [session, setSession] = useState(null);
   const [sessionSpeaker, setSessionSpeakers] = useState([])
-  const [selectedSessionDevice, setSelectedSessionDevice] = useState(null);
   //const [subscriptions, setSubscriptions] = useState([]);
   const [devices, setDevices] = useState([]);
   // Enriched per-pod info (duration, participants, has_data, analysis_running)
@@ -194,7 +191,7 @@ function PodsOverviewComponent(props) {
 
   const dismissToast = (id) =>
     setToasts((list) => list.filter((x) => x.id !== id));
-  const [activeSessionService, setActiveSessionService] = useOutletContext();
+  const [activeSessionService] = useOutletContext();
   // Join/leave toasts from the fast (2s) socket-backed device feed.
   const prevConnected = useRef(null); // null until the first real feed snapshot
   useEffect(() => {
@@ -296,7 +293,6 @@ function PodsOverviewComponent(props) {
 
   // so that the passcode renders in time
   useEffect(() => {
-    console.log("reload");
   }, [trigger]);
 
   const goToDevice = (sessionDevice) => {
@@ -318,7 +314,7 @@ function PodsOverviewComponent(props) {
         }
       },
       (apierror) => {
-        console.log("pods-overview func: renamePodInline ", apierror);
+        console.error("pods-overview func: renamePodInline ", apierror);
       },
     );
   };
@@ -364,7 +360,7 @@ function PodsOverviewComponent(props) {
           }
         },
         (apierror) => {
-          console.log("pods-overview-components func: openDialog 1 ", apierror);
+          console.error("pods-overview-components func: openDialog 1 ", apierror);
         }
       );
     } else if (form === "Passcode" && session.end_date == null) {
@@ -390,26 +386,6 @@ function PodsOverviewComponent(props) {
     return "";
   };
 
-  const addPodToSession = (deviceId) => {
-    const fetchData = new SessionService().addPodToSession(
-      this.session.id,
-      deviceId
-    );
-    fetchData.then(
-      (response) => {
-        if (response.status === 200) {
-          closeDialog();
-        }
-      },
-      (apierror) => {
-        console.log(
-          "pods-overview-components func: addPodToSession 1 ",
-          apierror
-        );
-      }
-    );
-  };
-
   const setPasscodeState = (state) => {
     const fetchData = new SessionService().setPasscodeStatus(session.id, state);
     fetchData.then(
@@ -421,7 +397,7 @@ function PodsOverviewComponent(props) {
         setTrigger(trigger + 1);
       },
       (apierror) => {
-        console.log(
+        console.error(
           "pods-overview-components func: setPasscodeState 1 ",
           apierror
         );
@@ -445,11 +421,11 @@ function PodsOverviewComponent(props) {
 
   const exportSessionMetricsData = (type,windowsize,format) => {
     let fetchData = null;
-    if (type == "audiometrics") {
+    if (type === "audiometrics") {
       fetchData = new SessionService().downloadSessionTranscriptMetrics(session.id, session.title,windowsize,format);
-    } else if (type == "videometrics") {
+    } else if (type === "videometrics") {
       fetchData = new SessionService().downloadSessionVideoMetrics(session.id, session.title,windowsize,format);
-    } else if (type == "transcriptvideometrics") {
+    } else if (type === "transcriptvideometrics") {
       fetchData = new SessionService().downloadSessionTranscriptVideoMetrics(session.id, session.title,windowsize,format);
     }
     if (fetchData != null) {
@@ -473,7 +449,7 @@ function PodsOverviewComponent(props) {
           }
         },
         (apierror) => {
-          console.log(
+          console.error(
             "pods-overview-components func: exportSessionTranscriptMetrics 1 ",
             apierror
           );
@@ -509,7 +485,7 @@ function PodsOverviewComponent(props) {
             const uniqueSpeakers = []
             if (input && input.length) {
               input.map((spkr, index) => {
-                if (identified_speakers.indexOf(spkr.alias) == -1) {
+                if (identified_speakers.indexOf(spkr.alias) === -1) {
                   uniqueSpeakers.push(spkr)
                   identified_speakers.push(spkr.alias)
                 }
@@ -519,7 +495,7 @@ function PodsOverviewComponent(props) {
           });
       },
       (apierror) => {
-        console.log("pod-overview-component func getspeakers 1", apierror);
+        console.error("pod-overview-component func getspeakers 1", apierror);
       }
     );
   };

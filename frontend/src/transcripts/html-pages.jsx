@@ -164,7 +164,7 @@ function TranscriptComponentPage(props) {
             </div>
 
             <GenericDialogBox onClose={props.closeDialog} show={props.currentForm !== ""}>
-                {props.currentForm == "Keyword" ? (
+                {props.currentForm === "Keyword" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Keyword Data</div>
                         <div className="text-sm text-tiilt-ink">

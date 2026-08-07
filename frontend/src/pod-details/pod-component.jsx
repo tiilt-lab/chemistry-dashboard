@@ -1,12 +1,5 @@
-import { Observable } from "rxjs";
-import { DeviceService } from "../services/device-service";
 import { SessionService } from "../services/session-service";
-import { ActiveSessionService } from "../services/active-session-service";
-import { SessionModel } from "../models/session";
 import { SessionDeviceModel } from "../models/session-device";
-import { DeviceModel } from "../models/device";
-import { TranscriptModel } from "../models/transcript";
-import { KeywordUsageModel } from "../models/keyword-usage";
 import { SpeakerModel } from "../models/speaker";
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
@@ -33,7 +26,6 @@ function PodComponent() {
   const [session, setSession] = useState({});
   const [transcripts, setTranscripts] = useState([]);
   const [videoMetrics, setVideoMetrics] = useState([])
-  const [speakerMetrics, setSpeakerMetrics] = useState([]);
   const [displayTranscripts, setDisplayTranscripts] = useState([]);
   const [displayVideoMetrics, setDisplayVideoMetrics] = useState([])
   const [currentTranscript, setCurrentTranscript] = useState({});
@@ -41,14 +33,14 @@ function PodComponent() {
   // Human-visible reason when the AI reflection can't load (LLM/api errors
   // used to fail silently — the toolbar button just did nothing).
   const [llmError, setLlmError] = useState("");
-  const [sessionClosing, setSessionClosing] = useState(false);
-  const [subscriptions, setSubscriptions] = useState([]);
+  const [, setSessionClosing] = useState(false);
+  const [subscriptions] = useState([]);
   const [deleteDeviceToggle, setDeleteDeviceToggle] = useState(false);
   const [timeRange, setTimeRange] = useState([0, 1]);
   const [startTime, setStartTime] = useState();
   const [endTime, setEndTime] = useState();
   const [intervalId, setIntervalId] = useState();
-  const [activeSessionService, setActiveSessionService] = useOutletContext();
+  const [activeSessionService] = useOutletContext();
   const [details, setDetails] = useState("Group");
   const [speakers, setSpeakers] = useState([]);
   const [selectedSpkrId1, setSelectedSpkrId1] = useState(-1);
@@ -132,12 +124,10 @@ function PodComponent() {
             response.json().then((jsonObj) => {
               synthesizedFeedbackMetrics.current = jsonObj;
               participants.current = Object.keys(synthesizedFeedbackMetrics.current["participants_level"])
-              console.log("Fetched synthesized feedback metrics onto pod component", jsonObj)
-              console.log("Participants for reflection dashboard", participants.current)
             });
         },
         (apierror) => {
-          console.log("podcomponent useEffect getSynthesizedFeedbackMetrics", apierror);
+          console.error("podcomponent useEffect getSynthesizedFeedbackMetrics", apierror);
         }
       );
     }
@@ -336,7 +326,7 @@ function PodComponent() {
           });
       },
       (apierror) => {
-        console.log("podcomponent func getspeakers 1", apierror);
+        console.error("podcomponent func getspeakers 1", apierror);
       }
     );
   };
@@ -357,7 +347,7 @@ function PodComponent() {
         }
       },
       (apierror) => {
-        console.log("podcomponent func removedevicesession 1", apierror);
+        console.error("podcomponent func removedevicesession 1", apierror);
       }
     );
   };
@@ -599,7 +589,7 @@ function PodComponent() {
         // console.log("LLM api response", response.message)
       }
     } catch (error) {
-      console.log(
+      console.error(
         "podcomponent loadprompthistory",
         error,
       )
@@ -656,10 +646,10 @@ function PodComponent() {
           }
           // console.log(jsonObj.answer)
         } else if (response.status === 400) {
-          console.log("LLM api response", response.message)
+          console.error("LLM api response", response.message)
         }
       } catch (error) {
-        console.log(
+        console.error(
           "podcomponent interactivePromptFnc",
           error,
         )

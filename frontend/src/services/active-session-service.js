@@ -1,5 +1,4 @@
 import { BehaviorSubject } from "rxjs"
-import { map } from "rxjs"
 import { SocketService } from "./socket-service"
 import { SessionService } from "./session-service"
 import { SessionModel } from "../models/session"
@@ -56,7 +55,7 @@ export class ActiveSessionService {
                                 }
                             },
                             (apierror) => {
-                                console.log(
+                                console.error(
                                     "file active-session-service: func initialize 1",
                                     apierror,
                                 )
@@ -66,7 +65,7 @@ export class ActiveSessionService {
                 }
             },
             (apiError) => {
-                console.log(
+                console.error(
                     "file active-session-service: func initialize 2",
                     apiError,
                 )
@@ -191,7 +190,7 @@ export class ActiveSessionService {
             const data = JSON.parse(e)
             const currentVideoMetrics = this.videoMetricSource.getValue()
             for(const metric of data["speaker_video_metrics"]){
-                const speaker_video_metrics = SpeakerVideoMetricsModel.fromJson(metric)
+                SpeakerVideoMetricsModel.fromJson(metric)
                 currentVideoMetrics.push(metric)
             }
             

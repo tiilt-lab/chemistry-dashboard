@@ -1,5 +1,4 @@
 import React from "react"
-import { AppSpinner } from "../../spinner/spinner-component"
 
 
 function CategoryDistributionPage(props) {

@@ -226,7 +226,6 @@ function JoinPage() {
             console.warn("join-machine: unknown transition", event)
             return
         }
-        console.log("join-machine transition:", event)
         dispatch(action)
     }
 
@@ -257,7 +256,7 @@ function JoinPage() {
             analyser.fftSize = 512
             src.connect(analyser)
         } catch (ex) {
-            console.log("mic watchdog unavailable", ex)
+            console.error("mic watchdog unavailable", ex)
             return
         }
         const buf = new Float32Array(analyser.fftSize)
@@ -314,7 +313,7 @@ function JoinPage() {
 
    // THIRD LEVEL: THIS EFFECT IS TRIGGERED ONCE THE CONNECTION TO THE AUDIO AND VIDEO WEBSOCKET SERVERS ARE OPENED. THIS THEN TRIGGERS THE START OF THE AUDIO AND VIDEO PROCESSING BY SENDING A MESSAGE TO THE SERVER TO START THE PROCESSING
     useEffect(() => {
-        if (joinwith.current == "Audio" && state.audioSocketOpen) {
+        if (joinwith.current === "Audio" && state.audioSocketOpen) {
             requestStartAudioProcessing()
             // The roster was confirmed before any socket existed: replay the
             // queued fingerprints right behind the start message (the
@@ -344,7 +343,6 @@ function JoinPage() {
                 audiows.current.send(
                     JSON.stringify({ type: "heartbeat", key: key.current })
                 );
-                console.log("sent audio heart beat")
             } else {
                 clearHeartbeat();
             }
@@ -434,7 +432,6 @@ function JoinPage() {
     // THE AUDIO NODES TO THE AUDIO WORKLET PROCESSOR AND STARTING THE MEDIA RECORDER FOR VIDEO
     useEffect(() => {
         if (state.startDiscussionStreaming) {
-            console.log("starting audio streaming ...")
             const loadWorklet = async () => {
                 // iOS Safari starts AudioContexts created outside a direct
                 // user gesture in the "suspended" state — the worklet then
@@ -442,9 +439,8 @@ function JoinPage() {
                 try {
                     await audioContext.current.resume()
                 } catch (ex) {
-                    console.log("audio context resume failed", ex)
+                    console.error("audio context resume failed", ex)
                 }
-                console.log("audio context state:", audioContext.current.state)
                 // Absolute path: a relative one resolves under /join/<code>
                 // on deep links, 404s into the SPA fallback HTML, and the
                 // worklet silently never loads — no audio ever reached the
@@ -452,7 +448,6 @@ function JoinPage() {
                 await audioContext.current.audioWorklet.addModule(
                     "/audio-sender-processor.js",
                 )
-                console.log("audio worklet module loaded")
                 const workletProcessor = new AudioWorkletNode(
                     audioContext.current,
                     "audio-sender-processor",
@@ -498,7 +493,7 @@ function JoinPage() {
 
                 mediaRecorder.current.ondataavailable = async function (ev) {
 
-                    const bufferdata = await ev.data.arrayBuffer()
+                    await ev.data.arrayBuffer()
 
                     if (ev.data && ev.data.size !== 0) {
                         if (ev.data.type.startsWith('video/webm')) {
@@ -529,7 +524,6 @@ function JoinPage() {
 
             if (joinwith.current === "Audio") {
                 loadWorklet().catch(console.error)
-                console.log("sending audio streaming ...")
             } else if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
                 loadWorklet().catch(console.error)
                 videoPlay()
@@ -588,7 +582,6 @@ function JoinPage() {
     // THE BUFFER TO THE VIDEO ELEMENT ONE BY ONE WITH A SMALL DELAY TO CREATE A SMOOTH VIDEO STREAMING EXPERIENCE
     useEffect(() => {
         if (frameBufferLength > 0) {
-            console.log('inside renderframe buffer useeffect ', frameBufferLength)
             renderFrameFromBuffer()
         }
     }, [frameBufferLength])
@@ -614,7 +607,6 @@ function JoinPage() {
 
     // Disconnects from websocket server and audio stream.
     const disconnect = (permanent = false) => {
-        console.log("disconnect called", permanent)
         if (ending.current)
             return
         if (permanent && session !== null) {
@@ -698,7 +690,7 @@ function JoinPage() {
                 await attachIdentity(speaker, name)
             }
         } catch (apierror) {
-            console.log("byod-join-component func: addSpeakerSlot ", apierror)
+            console.error("byod-join-component func: addSpeakerSlot ", apierror)
         }
     }
 
@@ -719,7 +711,7 @@ function JoinPage() {
             const resp = await new AuthService().getStudentProfileByID(username)
             if (resp.status === 200) profile = await resp.json()
         } catch (ex) {
-            console.log("enrollment lookup failed", ex)
+            console.error("enrollment lookup failed", ex)
             // Only the enrolled-only path must stop here; a plain rename
             // shouldn't fail because the lookup was unreachable.
             if (requireEnrolled) return "lookup-failed"
@@ -745,7 +737,7 @@ function JoinPage() {
                 ),
             )
         } catch (ex) {
-            console.log("speaker rename failed", ex)
+            console.error("speaker rename failed", ex)
             return "rename-failed"
         }
         if (!enrolled) return "renamed"
@@ -770,11 +762,11 @@ function JoinPage() {
         try {
             const r = await sessionService.removeSpeaker(sessionDevice.id, speaker.id)
             if (r.status !== 200) {
-                console.log("remove speaker refused", r.status)
+                console.error("remove speaker refused", r.status)
                 return
             }
         } catch (ex) {
-            console.log("remove speaker failed", ex)
+            console.error("remove speaker failed", ex)
             return
         }
         pendingFingerprints.current = pendingFingerprints.current.filter(
@@ -836,7 +828,7 @@ function JoinPage() {
             // NotFoundError just means the chooser was dismissed (possibly
             // because the ID filter matched no strap).
             if (ex && ex.name === "NotFoundError") return "dismissed"
-            console.log("polar connect failed", ex)
+            console.error("polar connect failed", ex)
             return "failed"
         }
     }
@@ -887,7 +879,7 @@ function JoinPage() {
             const batch = hrBuffer.current.splice(0, hrBuffer.current.length)
             sessionService
                 .postHeartRateForClient(sessionDevice.id, batch, key.current)
-                .catch((ex) => console.log("hr flush failed", ex))
+                .catch((ex) => console.error("hr flush failed", ex))
         }, 5000)
         return () => clearInterval(timer)
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -909,7 +901,6 @@ function JoinPage() {
     // replay and validation completes. Until this click, nothing was
     // capturing or connected.
     const confirmSpeakers = () => {
-        console.log(speakers.current)
         // The processing services get the group size in the start message;
         // slots are created on this page now, so count the actual roster.
         numSpeakers.current = (speakers.current || []).length
@@ -987,7 +978,7 @@ function JoinPage() {
             if (isVideo && videows.current) videows.current.send(done)
             next("speakers_validated")
         } catch (ex) {
-            console.log("fingerprint replay failed", ex)
+            console.error("fingerprint replay failed", ex)
         } finally {
             replaying.current = false
         }
@@ -1024,7 +1015,7 @@ function JoinPage() {
         } catch (ex) {
             // A probe failure must not block joining — length just goes
             // unchecked for this take.
-            console.log("fingerprint duration probe failed", ex)
+            console.error("fingerprint duration probe failed", ex)
         }
         if (duration !== null && duration < MIN_FINGERPRINT_SECONDS) {
             setFingerprintRecordError(
@@ -1082,7 +1073,6 @@ function JoinPage() {
                 source.current = context.createMediaStreamSource(stream)
                 audioContext.current = context
                 if (joinwith.current === "Audio") {
-                    console.log("connect to websocket");
                     audiows.current = new WebSocket(apiService.getAudioWebsocketEndpoint(),)
                     connect_audio_processor_service();
 
@@ -1145,7 +1135,7 @@ function JoinPage() {
                 disconnect(true)
             }
         } catch (ex) {
-            console.log(ex)
+            console.error(ex)
             // Say why, not just that it failed — on phones this is almost
             // always a permission or in-app-browser problem the user can fix.
             let msg = "Failed to get user audio source."
@@ -1199,7 +1189,7 @@ function JoinPage() {
                 await new Promise((resolve) => setTimeout(resolve, 1500))
             }
         } catch (ex) {
-            console.log("final flush failed", ex)
+            console.error("final flush failed", ex)
         }
         // Go straight to this pod's overview page instead of the dead-end
         // "recording ended" screen (which rendered as a mostly blank page).
@@ -1320,7 +1310,7 @@ function JoinPage() {
                 setDisplayText("Contact Administrator")
                 setCurrentForm("JoinError")
                 disconnect(true)
-                console.log(
+                console.error(
                     "byod-join-component error func : requestAccessKey 1",
                     apierror,
                 )
@@ -1372,8 +1362,6 @@ function JoinPage() {
         let opened = false
 
         audiows.current.onopen = (e) => {
-            console.log("[Connected audio processor service]")
-            console.log("speakers ", speakers.current)
             opened = true
             next("audio_socket_open")
             reconnectCounter.current = 0
@@ -1385,22 +1373,20 @@ function JoinPage() {
             const message = JSON.parse(e.data)
 
             if (message["type"] === "start") {
-                console.log("audio authenticated ....")
                 next("audio_ready")
                 closeDialog()
             } else if (message['type'] === 'registeredfingerprintadded') {
                 // Ack for a replayed saved-fingerprint attach — the card was
                 // already marked ready when the attach was queued.
-                console.log("saved fingerprint attached (audio)")
             } else if (message['type'] === 'registeredfingerprintfailed') {
-                console.log("saved fingerprint failed (audio): " + message["message"])
+                console.error("saved fingerprint failed (audio): " + message["message"])
                 onSavedFingerprintFailed(message["message"])
             } else if (message["type"] === "error") {
                 disconnect(true)
                 setDisplayText(
                     "The connection to the session has been closed by the audio server.",
                 )
-                console.log("message from the audio server is " + message["message"])
+                console.error("message from the audio server is " + message["message"])
                 setCurrentForm("ClosedSession")
             } else if (message["type"] === "end") {
                 disconnect(true)
@@ -1410,7 +1396,6 @@ function JoinPage() {
         }
 
         audiows.current.onclose = (e) => {
-            console.log("[Disconnected]", ending.current)
             if (!ending.current) {
                 // Retry a few times, then surface a real error. `opened` is
                 // socket-local truth about whether this connection ever came
@@ -1425,7 +1410,6 @@ function JoinPage() {
                     dispatch({ type: "SPEAKERS_VALIDATED", payload: false })
                     replayDone.current = false
                     reconnectCounter.current = reconnectCounter.current + 1
-                    console.log("reconnecting ....")
                     setTimeout(handleStream, 2000)
                 } else if (!opened) {
                     setDisplayText(
@@ -1438,8 +1422,6 @@ function JoinPage() {
                     setCurrentForm("ClosedSession")
                     disconnect(true)
                 }
-            } else {
-                console.log("ending ...")
             }
         }
     }
@@ -1449,7 +1431,6 @@ function JoinPage() {
         videows.current.binaryType = "blob"
 
         videows.current.onopen = (e) => {
-            console.log("[Connected to video processor services]")
             next("video_socket_open")
         }
 
@@ -1457,7 +1438,6 @@ function JoinPage() {
             if (typeof e.data === 'string') {
                 const message = JSON.parse(e.data);
                 if (message['type'] === 'start') {
-                    console.log("video authenticated ....")
                     next("video_ready")
                     closeDialog();
                 } else if (message['type'] === 'attention_data') {
@@ -1465,21 +1445,19 @@ function JoinPage() {
                 } else if (message['type'] === 'registeredfingerprintadded') {
                     // Ack for a replayed saved-fingerprint attach; nothing to
                     // update — the card was marked ready at queue time.
-                    console.log("saved fingerprint attached (video)")
                 } else if (message['type'] === 'registeredfingerprintfailed') {
-                    console.log("saved fingerprint failed (video): " + message["message"])
+                    console.error("saved fingerprint failed (video): " + message["message"])
                     onSavedFingerprintFailed(message["message"])
                 } else if (message['type'] === 'error') {
                     disconnect(true);
                     setDisplayText(message["message"]);
-                    console.log("message from the video server is " + message["message"])
+                    console.error("message from the video server is " + message["message"])
                     setCurrentForm('ClosedSession');
                 } else if (message['type'] === 'end') {
                     disconnect(true);
                     setDisplayText('The session has been closed by the owner.');
                     setCurrentForm('ClosedSession');
                 } else if (message['type'] === 'heartbeat') {
-                    console.log("got a a heattbeat response from video endpoint....")
                 }
             } else if (e.data instanceof Blob) {
                 const url = URL.createObjectURL(e.data);
@@ -1492,13 +1470,11 @@ function JoinPage() {
         };
 
         videows.current.onclose = e => {
-            console.log('[Disconnected]', ending.current);
         };
     }
 
     // Begin capturing and sending client audio.
     const requestStartAudioProcessing = () => {
-        console.log("Starting Audio Processing")
         let message = null
         if (audiows.current === null) {
             return
@@ -1523,7 +1499,6 @@ function JoinPage() {
     // Begin capturing and sending client video.
     const requestStartVideoProcessing = () => {
         let message = null
-        console.log('starting video processing')
         if (videows.current === null) {
             return
         }
@@ -1652,10 +1627,10 @@ function JoinPage() {
                 setStartTime(Math.round(sessionLen * timeRange.current[0] * 100) / 100)
                 setEndTime(Math.round(sessionLen * timeRange.current[1] * 100) / 100)
             } else if (response.status === 400 || response.status === 401) {
-                console.log(response, "no transcript obj")
+                console.error(response, "no transcript obj")
             }
         } catch (error) {
-            console.log(
+            console.error(
                 "byod-join-component error func : fetch transcript",
                 error,
             )
@@ -1676,10 +1651,10 @@ function JoinPage() {
 
                 videoMetrics.current = jsonObj //fetched_video_metrics
             } else if (response.status === 400 || response.status === 401) {
-                console.log(response, "no videometrics obj")
+                console.error(response, "no videometrics obj")
             }
         } catch (error) {
-            console.log(
+            console.error(
                 "byod-join-component error func : fetch video metrics",
                 error,
             )
@@ -1695,7 +1670,6 @@ function JoinPage() {
         const endIndex = cartoonImgBatch * 40;
 
         if (frameBufferLength < endIndex) return;
-        console.log("I am here 4")
 
         isPlayingBatchRef.current = true;
 
@@ -1851,9 +1825,7 @@ function JoinPage() {
 
         try {
             wakeLock = await navigator.wakeLock.request("screen")
-            console.log("Wake lock is activated.")
             wakeLock.addEventListener("release", () => {
-                console.log("Wake Lock has been released")
             })
             document.addEventListener("visibilitychange", async () => {
                 if (
@@ -1864,7 +1836,7 @@ function JoinPage() {
                 }
             })
         } catch (err) {
-            console.log(err)
+            console.error(err)
         }
     }
 
@@ -1874,7 +1846,7 @@ function JoinPage() {
                 wakeLock = null
             })
         } catch (err) {
-            console.log(`WakeLock release error: ${err}`)
+            console.error(`WakeLock release error: ${err}`)
         }
     }
 

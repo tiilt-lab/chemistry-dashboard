@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { formatHMS as formatSeconds } from "../globals";
 import { SessionService } from '../services/session-service';
-import { useNavigate, useOutletContext,useParams, useSearchParams } from 'react-router-dom';
 import {TranscriptComponentPage} from './html-pages'
 import { decorateTranscripts } from './transcript-utils'
 
@@ -10,9 +9,8 @@ function TranscriptsComponentClient(props){
   const [dialogKeywords, setDialogKeywords] = useState();
   const [currentForm, setCurrentForm] = useState("");
   const [displayTranscripts, setDisplayTranscripts] = useState([]);
-  const [showKeywords, setShowKeywords] = useState(true);
-  const [showDoA,setShowDoA] = useState(false);
-  const navigate = useNavigate()
+  const [showKeywords] = useState(true);
+  const [showDoA] = useState(false);
   const sessionService = new SessionService()
   
   
@@ -62,11 +60,11 @@ const fetchTranscript = async (deviceid) => {
           const data = jsonObj
           setTransripts(data);
       } else if (response.status === 400 || response.status === 401) {
-          console.log(response, 'no transcript obj fromtranscripts-Component-client.js')
+          console.error(response, 'no transcript obj fromtranscripts-Component-client.js')
       }
 
   } catch (error) {
-      console.log('Transript-component-client error func : requestAccessKey 1', error)
+      console.error('Transript-component-client error func : requestAccessKey 1', error)
   }
 
 }

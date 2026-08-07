@@ -39,7 +39,7 @@ function AppContextMenu(props) {
   }, [isOpen]);
 
   useEffect(() => {
-    if(props.setcallback!=undefined){
+    if(props.setcallback != null){
     props.setcallback(toggle)
     }
   }, [])
@@ -105,7 +105,7 @@ function AppContextMenu(props) {
     }
     setIsopen(!state);
     //prevent triggering click interaction
-    if (location.pathname == "/topic-list" || location.pathname == "/topic-list/new-session") {
+    if (location.pathname === "/topic-list" || location.pathname === "/topic-list/new-session") {
       props.reverseToggle();
     }
   }

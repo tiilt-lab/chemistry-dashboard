@@ -20,7 +20,6 @@ function SessionsComponent(props) {
     const [alertMessage, setAlertMessage] = useState("")
     const [breadcrumbs, setBreadCrumbs] = useState([])
     const [currentFolder, setCurrentFolder] = useState("")
-    const [folderPath, setFolderPath] = useState("")
     const [folderSelect, setFolderSelect] = useState(null)
     const [invalidName, setInvalidName] = useState(false)
     const [sortBy, setSortBy] = useState("date-desc")
@@ -75,7 +74,7 @@ function SessionsComponent(props) {
                                     }
                                 },
                                 (apierror2) => {
-                                    console.log(
+                                    console.error(
                                         "sessions-components func: useEffect 4 ",
                                         apierror2,
                                     )
@@ -83,7 +82,7 @@ function SessionsComponent(props) {
                             )
                         },
                         (error) => {
-                            console.log(
+                            console.error(
                                 "sessions-components func: useEffect 1 ",
                                 error,
                             )
@@ -92,7 +91,7 @@ function SessionsComponent(props) {
                 }
             },
             (apierror) => {
-                console.log("sessions-components func: useEffect 2 ", apierror)
+                console.error("sessions-components func: useEffect 2 ", apierror)
             },
         )
     }, [currentForm])
@@ -191,7 +190,7 @@ function SessionsComponent(props) {
                         }
                     },
                     (apierror) => {
-                        console.log(
+                        console.error(
                             "sessions-components func: addFolder 1 ",
                             apierror,
                         )
@@ -202,7 +201,7 @@ function SessionsComponent(props) {
     }
 
     const changeFolderName = (newName) => {
-        if (newName == "") {
+        if (newName === "") {
             setInvalidName(true)
             return
         }
@@ -230,7 +229,7 @@ function SessionsComponent(props) {
                     }
                 },
                 (apierror) => {
-                    console.log(
+                    console.error(
                         "sessions-components func: changefoldername 1 ",
                         apierror,
                     )
@@ -271,7 +270,7 @@ function SessionsComponent(props) {
                     }
                 },
                 (apierror) => {
-                    console.log(
+                    console.error(
                         "sessions-components func: movefolder 1 ",
                         apierror,
                     )
@@ -324,7 +323,7 @@ function SessionsComponent(props) {
                     }
                 },
                 (apierror) => {
-                    console.log(
+                    console.error(
                         "sessions-components func: movefolder 1 ",
                         apierror,
                     )
@@ -362,7 +361,7 @@ function SessionsComponent(props) {
                     }
                 },
                 (apierror) => {
-                    console.log(
+                    console.error(
                         "sessions-components func: endsession 1 ",
                         apierror,
                     )
@@ -374,7 +373,7 @@ function SessionsComponent(props) {
     }
 
     const changeSessionName = (newName) => {
-        if (newName == "") {
+        if (newName === "") {
             setInvalidName(true)
             return
         }
@@ -398,7 +397,7 @@ function SessionsComponent(props) {
                 }
             },
             (apierror) => {
-                console.log(
+                console.error(
                     "sessions-components func:changesesion 1 ",
                     apierror,
                 )
@@ -427,7 +426,7 @@ function SessionsComponent(props) {
                 }
             },
             (apierror) => {
-                console.log(
+                console.error(
                     "sessions-components func: renameSessionInline ",
                     apierror,
                 )
@@ -458,7 +457,7 @@ function SessionsComponent(props) {
                     }
                 },
                 (apierror) => {
-                    console.log(
+                    console.error(
                         "sessions-components func:movesession 1 ",
                         apierror,
                     )
@@ -477,9 +476,6 @@ function SessionsComponent(props) {
             .then(
                 async (response) => {
                     if (response.status === 200) {
-                        const parent = folders.find(
-                            (f) => f.id === selectedSession.folder,
-                        )
                         setSessions(sessions.filter((s) => s.id !== sessionId))
                     } else {
                         setShowAlert(true)
@@ -487,7 +483,7 @@ function SessionsComponent(props) {
                     }
                 },
                 (apierror) => {
-                    console.log(
+                    console.error(
                         "sessions-components func deletesession 1 ",
                         apierror,
                     )
@@ -560,7 +556,7 @@ function SessionsComponent(props) {
             try {
                 await svc.updateSessionFolder(id, newParentId)
             } catch (e) {
-                console.log("bulk move failed for session", id, e)
+                console.error("bulk move failed for session", id, e)
             }
         }
         window.location.reload()
@@ -573,7 +569,7 @@ function SessionsComponent(props) {
             try {
                 await svc.deleteSession(id)
             } catch (e) {
-                console.log("bulk delete failed for session", id, e)
+                console.error("bulk delete failed for session", id, e)
             }
         }
         window.location.reload()

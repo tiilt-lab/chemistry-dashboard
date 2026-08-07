@@ -131,7 +131,7 @@ function GenericDialogBox(props) {
       <></>
     )
   }
-  if (props.checkBox == "checkbox") {
+  if (props.checkBox === "checkbox") {
     return (
       <ModalShell onClose={props.onClose} label={props.label || "Dialog"} containerClass={style["dialog-container-expanded"]}>
         {props.displayDevices.map((device, index) => (

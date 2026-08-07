@@ -22,19 +22,18 @@ function ManageKeywordListsComponent(props) {
           const resp = response.json()
           resp.then(
             (result) => {
-              let keywordss = '';
               const kwordLists = KeywordListModel.fromJsonList(result)
               setKeywordLists(kwordLists)
-              
+
             },
-            (err) => { console.log('ManageKeywordListsComponent error func : useeffect 122' ,err) })
+            (err) => { console.error('ManageKeywordListsComponent error func : useeffect 122' ,err) })
 
         } else {
-          console.log('ManageKeywordListsComponent error func : useeffect 1', response)
+          console.error('ManageKeywordListsComponent error func : useeffect 1', response)
         }
       },
       (apierror) => {
-        console.log('ManageKeywordListsComponent error func : useeffect 2', apierror)
+        console.error('ManageKeywordListsComponent error func : useeffect 2', apierror)
       }
     )
   }, []);
@@ -80,7 +79,7 @@ function ManageKeywordListsComponent(props) {
         closeDeleteDialog();
       },
       (apierror) => {
-        console.log("ManageKeywordListsComponent error func: confirmDeleteKeywordList, Failed to delete keyword list.", apierror);
+        console.error("ManageKeywordListsComponent error func: confirmDeleteKeywordList, Failed to delete keyword list.", apierror);
         closeDeleteDialog();
       }
     );

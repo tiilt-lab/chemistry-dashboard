@@ -10,9 +10,9 @@ function AppSessionToolbar(props) {
     const [timeText, setTimeText] = useState('');
     const [sessionEnding, setSessionEnding] = useState();
     const [confirmingEnd, setConfirmingEnd] = useState(false);
-    const [intervalId, setInterValid] = useState();
-    const [searchParam, setSearchParam] = useSearchParams();
-    const [fromClient, setFromClient] = useState(false);
+    const [, setInterValid] = useState();
+    const [, setSearchParam] = useSearchParams();
+    const [, setFromClient] = useState(false);
     const navigate = useNavigate();
     const location = useLocation()
 
@@ -48,7 +48,7 @@ function AppSessionToolbar(props) {
     // On /join the button removes only this pod; anywhere else it ends the
     // whole session for every pod. endsDevice drives the button label and
     // confirmation copy so the two are never conflated.
-    const endsDevice = location.pathname == '/join';
+    const endsDevice = location.pathname === '/join';
 
     // Both variants are destructive, so the button only opens a
     // confirmation; onConfirmEndSession does the real work.

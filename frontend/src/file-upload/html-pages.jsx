@@ -70,7 +70,7 @@ function FileUploadPage(props) {
             View topic model
           </button>
 
-          {props.watchOutFlag == true ? (
+          {props.watchOutFlag === true ? (
             <p className="text-center text-sm text-tiilt-danger">
               Upload a file before proceeding.
             </p>

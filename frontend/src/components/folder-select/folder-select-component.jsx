@@ -9,8 +9,8 @@ function AppFolderSelectComponent(props){
   const [visibleFolders, setVisibleFolders] = useState([]);
   const [selectedFolder, setSelectFolder] = useState(null);
   const [breadcrumbs, setBreadCrumbs] = useState([]);
-  const [recentFolder, setRecentFolder] = useState(null) ;
-  const [searchParam, setSearchParam] = useSearchParams();
+  const [, setRecentFolder] = useState(null) ;
+  const [searchParam] = useSearchParams();
 
 
   useEffect(()=>{

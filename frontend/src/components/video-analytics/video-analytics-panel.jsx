@@ -2,7 +2,7 @@ import { useIsDark } from "../../myhooks/custom-hooks";
 import { applyChartTheme } from "../chart-theme"
 import { useState, useRef, useEffect } from "react"
 import { Line } from "react-chartjs-2"
-import { Chart as ChartJS } from "chart.js/auto"
+import "chart.js/auto"
 import { formatSeconds, speakerColorFor } from "../../globals"
 import { ModelNote } from "../model-note/model-note"
 import { ApiService, withClientKey } from "../../services/api-service"

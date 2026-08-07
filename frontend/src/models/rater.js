@@ -1,4 +1,3 @@
-import { mode } from 'd3';
 import { stringToDate } from '../globals';
 
 export class RaterModel {

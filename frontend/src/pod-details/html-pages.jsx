@@ -1,4 +1,4 @@
-import { GenericDialogBox, WaitingDialog } from "../dialog/dialog-component"
+import { GenericDialogBox } from "../dialog/dialog-component"
 import { ErrorDialog } from "../components/error-dialog"
 import { SpeakerReassign } from "../components/speaker-reassign"
 import { AppSpinner } from "../spinner/spinner-component"
@@ -117,7 +117,7 @@ function PodComponentPages(props) {
             </div>
             <GenericDialogBox onClose={props.closeDialog}
                 show={props.currentForm !== ""}
-                optionsCase={props.currentForm == "Options"}
+                optionsCase={props.currentForm === "Options"}
             >
                 {props.currentForm === "Transcript" ? (
                     <div className={style["dialog-content"]}>

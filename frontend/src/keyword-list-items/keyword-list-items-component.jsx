@@ -34,11 +34,11 @@ function KeywordListItemsComponent() {
           )
 
         } else {
-          console.log("Keyword-items-components func: useEffect 2 ", response)
+          console.error("Keyword-items-components func: useEffect 2 ", response)
         }
       },
         apierror => {
-          console.log("Keyword-items-components func: useEffect 2 ", apierror)
+          console.error("Keyword-items-components func: useEffect 2 ", apierror)
         });
     } else {
       //console.log("i am inside else")
@@ -63,9 +63,6 @@ function KeywordListItemsComponent() {
   },[keywordList.length])
   
   useEffect(() => {
-    if(trigger > 0){
-      console.log("Reloading page")
-    }
   },[trigger])
   
 
@@ -87,8 +84,6 @@ function KeywordListItemsComponent() {
       return;
     }
     const keywords = keywordListItems.filter(item => item.keyword != null).map(item => item.keyword);
-    console.log(keywordList.name);
-    console.log(keywords);
     if (keywordListID === '-1') {
       new KeywordService().createKeywordList(keywordList.name, keywords).then(
         async response => {
@@ -99,7 +94,7 @@ function KeywordListItemsComponent() {
           }
         },
         apierror => {
-          console.log("Keyword-items-components func: saveKeywordList 2 ", apierror)
+          console.error("Keyword-items-components func: saveKeywordList 2 ", apierror)
         });
     } else {
       new KeywordService().updateKeywordList(keywordListID, keywordList.name, keywords).then(
@@ -111,7 +106,7 @@ function KeywordListItemsComponent() {
           }
         },
         apierror => {
-          console.log("Keyword-items-components func: saveKeywordList 3 ", apierror)
+          console.error("Keyword-items-components func: saveKeywordList 3 ", apierror)
         });
     }
   }
@@ -194,7 +189,7 @@ function KeywordListItemsComponent() {
   }
 
   const goBackToKeywordLists = () => {
-    if (location.pathname == '/keyword-lists/new-session') {
+    if (location.pathname === '/keyword-lists/new-session') {
       //save keyword list too
       navigate('/sessions/new', {state: location.state});
     } else {

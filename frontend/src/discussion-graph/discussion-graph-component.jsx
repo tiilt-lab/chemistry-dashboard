@@ -12,7 +12,7 @@ function DiscussionGraphComponent() {
   const [transcripts, setTranscripts] = useState([]);
   const [sessionDevices, setSessionDevices] = useState([]);
   const [contributions, setContributions] = useState();
-  const [speakingTime, setSpeakingTime] = useState();
+  const [, setSpeakingTime] = useState();
   const [showQuestions, setShowQuestions] = useState(false);
   const [showGraph, setShowGraph] = useState(false);
   const [cumulativePercent, setCumulativePercent] = useState(0);
@@ -25,10 +25,9 @@ function DiscussionGraphComponent() {
   const [timestamps, setTimestamps] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState();
   const [selectedPercent, setSelectedPercent] = useState();
-  const [reload,setReload] = useState();
-  const [activeSessionService, setActiveSessionService] = useOutletContext();
+  const [activeSessionService] = useOutletContext();
   const navigate = useNavigate()
-  const [subscriptions, setSubscriptions] = useState([]);
+  const [, setSubscriptions] = useState([]);
   const [trigger, setTrigger] = useState(0)
 
   useEffect(() => {
@@ -75,9 +74,6 @@ function DiscussionGraphComponent() {
   }, [transcripts, sessionDevices])
 
   useEffect(()=>{
-    if(trigger > 0){
-      console.log('reloaded page')
-    }
   },[trigger])
 
   const openForms = (form, device = null) => {
@@ -150,7 +146,7 @@ function DiscussionGraphComponent() {
   }
   
   const getLastTime = (displayDev) => {
-    let times = displayDev.map(dev => (dev.transcripts.length == 0) ? [0, 0] : [(dev.transcripts[dev.transcripts.length - 1].start_time), (dev.transcripts[dev.transcripts.length - 1].length)]);
+    let times = displayDev.map(dev => (dev.transcripts.length === 0) ? [0, 0] : [(dev.transcripts[dev.transcripts.length - 1].start_time), (dev.transcripts[dev.transcripts.length - 1].length)]);
     let max = 0;
     let maxarr = [0, 0];
     for (const t of times) {
@@ -267,13 +263,6 @@ function DiscussionGraphComponent() {
       allDeviceContributions += transcript.length;
     }
     return allDeviceContributions;
-  }
-
-  const getDisplayPercent = (device) => {
-    const percent = getSpeakingPercent(device);
-    const roundedPercent = Math.floor(percent * 100);
-    setSelectedPercent(roundedPercent);
-    return roundedPercent;
   }
 
   const setPiePieceProperties = (device) => {

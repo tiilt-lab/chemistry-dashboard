@@ -336,10 +336,9 @@ function CategoricalDistributionChart({
 
     const CATEGORY_LABELS = computeCategoryObject(labels)
     const CATEGORY_COLORS = buildSpacedColorMap(labels)
-    const [computationCompleted, setComputationCompleted] = useState(false);
     const { distribution, duration } = useMemo(() => {
         // Reuse the timeline computation to ensure identical logic
-        const temp = CategoricalTimeline({
+        CategoricalTimeline({
             // @ts-expect-error invoke to reuse memo logic; we won't render this
             data,
             title,

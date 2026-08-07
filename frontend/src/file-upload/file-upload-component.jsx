@@ -6,10 +6,9 @@ import { TopicModelService } from "../services/topic-model-service";
 
 function FileUploadComponent(props){
   const location = useLocation();
-  const [user, setUser] = useState();
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [, setUser] = useState();
   const [myFiles, setMyfiles] = useState([]);
-  const [topics, setTopics] = useState([]);
+  const [, setTopics] = useState([]);
   const [fileStatus, setFileStatus] = useState({})
   const [selectStr, setSelectStr] = useState("No files selected")
   const [uploadStr, setUploadStr] = useState("No files uploaded")
@@ -21,7 +20,6 @@ function FileUploadComponent(props){
   useEffect(()=> {
     if (props.userdata !== undefined && Object.keys(props.userdata).length !==0) {
       setUser(props.userdata);
-      console.log("Current User: ", props.userdata);
     }
   },[])
 
@@ -44,7 +42,7 @@ function FileUploadComponent(props){
   }
 
   const navTopicModels = ()=> {
-    if (location.pathname == '/file_upload/new-session') {
+    if (location.pathname === '/file_upload/new-session') {
       navigate('/sessions/new', {state: location.state});
     } else if ((location.state != null) && (location.state.fromManagedList)) {
       navigate('/keyword-lists');
@@ -55,7 +53,7 @@ function FileUploadComponent(props){
 
   const createTopicModel = ()=> {
     // you have to upload something in order to proceed
-    if (uploadFlag == false){
+    if (uploadFlag === false){
       setWatchOutFlag(true);
       return
     }
@@ -69,10 +67,9 @@ function FileUploadComponent(props){
               var topicString = ""
               setTopics(topics);
               for (const topic of topics) {
-                console.log("Topic: ", topic);
                 topicString += topic + ",";
               }
-              if (location.pathname == '/file_upload/new-session') {
+              if (location.pathname === '/file_upload/new-session') {
                 const combinedState = {
                   ...location.state,
                   topics: topicString,
@@ -86,7 +83,7 @@ function FileUploadComponent(props){
         }
       },
       apierror=>{
-        console.log('Fileuploadcomponent error func : createTopicModel 1', apierror)
+        console.error('Fileuploadcomponent error func : createTopicModel 1', apierror)
         //should put some sort of alert here for the user
       }
     )
@@ -98,18 +95,15 @@ function FileUploadComponent(props){
     // upload only unuploaded things 
     let filesToUpload = myFiles.filter(file => !fileStatus[file['name']])
     for (var i = 0; i < filesToUpload.length; i++) {
-      console.log("My files: ", filesToUpload[i]);
       formData.append("fileUpload[]", filesToUpload[i]);
       changeFileStatus(filesToUpload[i]['name'], true);
     }
-    console.log("formData: ", formData.get("fileUpload[]"));
     const URL = `api/v1/uploads/${props.userdata.id}`;
     new FileUploadService().uploadFile(URL, formData).then(
       response=>{
         if(response.status === 200){
           response.json().then(
             (result) => {
-              console.log(result);
               updateFileStatusText();
               setUploadFlag(true);
               setWatchOutFlag(false);
@@ -118,7 +112,7 @@ function FileUploadComponent(props){
         }
       },
       apierror =>{
-        console.log('Fileuploadcomponent error func : onsubmit 1', apierror)
+        console.error('Fileuploadcomponent error func : onsubmit 1', apierror)
       }
     )
   }
@@ -135,13 +129,13 @@ function FileUploadComponent(props){
     let selectedFiles = Object.keys(fileStatus).filter(key => fileStatus[key] === false);
     let uploadedFiles = Object.keys(fileStatus).filter(key => fileStatus[key] === true);
     // update selected user feedback
-    if (selectedFiles.length == 0) {
+    if (selectedFiles.length === 0) {
       setSelectStr("No files selected");
     } else {
       setSelectStr("Selected: " + selectedFiles.join(', '));
     }
     // update uploaded user feedback
-    if (uploadedFiles.length == 0) {
+    if (uploadedFiles.length === 0) {
       setUploadStr("No files uploaded");
     } else {
       setUploadStr("Uploaded: " + uploadedFiles.join(', '));

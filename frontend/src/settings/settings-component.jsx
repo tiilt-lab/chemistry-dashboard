@@ -50,7 +50,7 @@ function SettingsComponent(props) {
           }
         },
         apierror => {
-          console.log("settingcomponent func : opendialog 2", apierror)
+          console.error("settingcomponent func : opendialog 2", apierror)
         }
       )
     } else {
@@ -75,7 +75,7 @@ function SettingsComponent(props) {
         }
       },
       apierror => {
-        console.log("settingcomponent func : changeemail", apierror)
+        console.error("settingcomponent func : changeemail", apierror)
       }
     )
   }
@@ -98,10 +98,10 @@ function SettingsComponent(props) {
         }
       },
       apierror => {
-        console.log("settingcomponent func : changepassword", apierror)
+        console.error("settingcomponent func : changepassword", apierror)
       }
     ).finally(
-      () => { console.log('i came here'); setCurrentForm("Status") }
+      () => { setCurrentForm("Status") }
     )
   }
 
@@ -139,7 +139,7 @@ function SettingsComponent(props) {
         setStatus(response !== null ? (await response.json())['message'] : 'The logs failed to download.');
       }
     } catch (e) {
-      console.log(e, 'downloadLogs', scope)
+      console.error(e, 'downloadLogs', scope)
       setStatusTitle('Logs Download Failed')
       setStatus('The logs failed to download.  Please try again later.');
     }
@@ -155,10 +155,10 @@ function SettingsComponent(props) {
         setStatus('The logs have been deleted successfully.');
       } else {
         setStatus(response !== null ? (await response.json())['message'] : 'The logs failed to delete.');
-        console.log("settingcomponent func : deleteLogs", scope)
+        console.error("settingcomponent func : deleteLogs", scope)
       }
     } catch (e) {
-      console.log(e, 'deleteLogs', scope)
+      console.error(e, 'deleteLogs', scope)
       setStatusTitle('Logs Delete Failed')
       setStatus('The logs failed to delete.  Please try again later.');
     }

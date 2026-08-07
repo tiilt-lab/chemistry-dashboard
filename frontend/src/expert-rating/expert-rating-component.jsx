@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom"
 import { ExpertRatingPage } from "./html-pages";
-import { AuthService } from "../services/auth-service"
 import { SessionService } from "../services/session-service";
 import { RaterModel } from "../models/rater"
 import { SessionModel } from "../models/session";
@@ -98,7 +97,6 @@ function ExpertRatingComponent() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const navigate = useNavigate()
   const sessionService = new SessionService()
-  const authService = new AuthService()
 
 
 
@@ -208,7 +206,7 @@ function ExpertRatingComponent() {
           }
         },
         (apierror) => {
-          console.log(
+          console.error(
             "Expert Rating: verifyExpertId 1 ",
             apierror,
           )
@@ -225,8 +223,8 @@ function ExpertRatingComponent() {
 
     loadSession(selecteditem.sessId)
     loadSessionDevice(selecteditem.sessDevId)
-    const evalopt = selecteditem.evalCat == "visualization" || selecteditem.evalCat == "reflection" ? evaluation_one : selecteditem.evalCat == "multimodal" || selecteditem.evalCat == "unimodal" ? evaluation_two : evaluation_three
-    const evaloptInt = evalopt == evaluation_one ? evaluation_one_instruction : evalopt == evaluation_two ? evaluation_two_instruction : evaluation_three_instruction
+    const evalopt = selecteditem.evalCat === "visualization" || selecteditem.evalCat === "reflection" ? evaluation_one : selecteditem.evalCat === "multimodal" || selecteditem.evalCat === "unimodal" ? evaluation_two : evaluation_three
+    const evaloptInt = evalopt === evaluation_one ? evaluation_one_instruction : evalopt === evaluation_two ? evaluation_two_instruction : evaluation_three_instruction
     setEvaluationOption(evalopt)
     setEvaluationOptionInstruction(evaloptInt)
     setSelectedItemForRating(selecteditem)
@@ -252,7 +250,7 @@ function ExpertRatingComponent() {
           }
         },
         (apierror) => {
-          console.log(
+          console.error(
             "Student dashboard func: loadSession 1 ",
             apierror,
           )
@@ -277,7 +275,7 @@ function ExpertRatingComponent() {
           }
         },
         (apierror) => {
-          console.log(
+          console.error(
             "Student dashboard func: loadSession 1 ",
             apierror,
           )
@@ -298,10 +296,10 @@ function ExpertRatingComponent() {
 
         setMetric(fetched_trancript_metrics)
       } else if (response !== null && (response.status === 400 || response.status === 401)) {
-        console.log(response, "no transcript obj")
+        console.error(response, "no transcript obj")
       }
     } catch (error) {
-      console.log(
+      console.error(
         "byod-join-component error func : fetch transcript",
         error,
       )
@@ -318,10 +316,10 @@ function ExpertRatingComponent() {
 
         setMetric(fetched_video_metrics)
       } else if (response.status === 400 || response.status === 401) {
-        console.log(response, "no videometrics obj")
+        console.error(response, "no videometrics obj")
       }
     } catch (error) {
-      console.log(
+      console.error(
         "byod-join-component error func : fetch video metrics",
         error,
       )
@@ -416,10 +414,10 @@ function ExpertRatingComponent() {
 
           // console.log(jsonObj.answer)
         } else if (response.status === 400) {
-          console.log("LLM api response", response.message)
+          console.error("LLM api response", response.message)
         }
       } catch (error) {
-        console.log(
+        console.error(
           "podcomponent interactivePromptFnc",
           error,
         )
@@ -515,7 +513,7 @@ function ExpertRatingComponent() {
         return null
       }
     } catch (error) {
-      console.log(
+      console.error(
         "Expert rating getSynthesizedMetric",
         error,
       )
@@ -531,11 +529,11 @@ function ExpertRatingComponent() {
         const jsonObj = await response.json()
         return jsonObj.answer
       } else if (response.status === 400) {
-        console.log("LLM api response", response.message)
+        console.error("LLM api response", response.message)
         return null
       }
     } catch (error) {
-      console.log(
+      console.error(
         "Expert ratingloadReflectiondashboard",
         error,
       )
@@ -554,7 +552,7 @@ function ExpertRatingComponent() {
         return null
       }
     } catch (error) {
-      console.log(
+      console.error(
         "Expert rating loadprompthistory",
         error,
       )
@@ -631,7 +629,7 @@ function ExpertRatingComponent() {
         setShowAlert(true);
       }
     } catch (error) {
-      console.log(
+      console.error(
         "Expert rating loadprompthistory",
         error,
       )

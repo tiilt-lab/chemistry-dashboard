@@ -1,5 +1,22 @@
 {
-    "extends": [
-      "react-app", "prettier"
-    ]
+  "extends": [
+    "react-app",
+    "prettier"
+  ],
+  "rules": {
+    "no-console": [
+      "error",
+      {
+        "allow": [
+          "warn",
+          "error"
+        ]
+      }
+    ],
+    "eqeqeq": [
+      "error",
+      "smart"
+    ],
+    "no-unused-vars": "error"
   }
+}

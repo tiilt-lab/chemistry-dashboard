@@ -1,10 +1,9 @@
-import { KeywordService } from "../services/keyword-service";
 import { TopicModelService } from "../services/topic-model-service";
 import { TopicModelModel } from '../models/topic-model';
 import { formatDate } from "../globals";
 import { unpackTopModels } from '../myhooks/custom-hooks';
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ManageTopicsPage } from './html-pages'
 
 
@@ -27,17 +26,16 @@ function ManageTopicModelsComponent(props) {
           resp.then(
             (result) => {
               const topModels = TopicModelModel.fromJsonList(result);
-              console.log(topModels);
               setTopicModels(unpackTopModels(topModels));
             },
-            (err) => { console.log('ManageTopicModelsComponent error func : useeffect 122' ,err) })
+            (err) => { console.error('ManageTopicModelsComponent error func : useeffect 122' ,err) })
 
         } else {
-          console.log('ManageTopicModelsComponent error func : useeffect 1', response)
+          console.error('ManageTopicModelsComponent error func : useeffect 1', response)
         }
       },
       (apierror) => {
-        console.log('ManageTopicModelsComponent error func : useeffect 2', apierror)
+        console.error('ManageTopicModelsComponent error func : useeffect 2', apierror)
       }
     )
   }, []);
@@ -52,7 +50,7 @@ function ManageTopicModelsComponent(props) {
     if (typeof dataToPrint !== "undefined") {
        navigate('/topic-list', {state: {topics:dataToPrint, names:topicNames.replace(/ /g, ''), title:title}});
     } else {
-      console.log("Can't load model");
+      console.error("Can't load model");
     }
   }
 
@@ -83,7 +81,7 @@ function ManageTopicModelsComponent(props) {
         closeDeleteDialog();
       },
       (apierror) => {
-        console.log("ManageTopicModelsComponent error func: confirmDeleteTopicModels, Failed to delete topic model.", apierror);
+        console.error("ManageTopicModelsComponent error func: confirmDeleteTopicModels, Failed to delete topic model.", apierror);
         closeDeleteDialog();
       }
     );

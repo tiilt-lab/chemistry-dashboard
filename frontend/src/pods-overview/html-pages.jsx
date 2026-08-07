@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react"
 import { SessionModel } from "../models/session"
-import { dlgHeading, dlgBody, dlgLabel, dlgSelect, dlgPrimary, dlgCancel, dlgDanger, btnPrimary, btnPrimarySm, btnDangerOutlineSm, btnSecondary } from "../components/dialog-styles"
+import { dlgHeading, dlgBody, dlgSelect, dlgPrimary, dlgCancel, dlgDanger, btnPrimary, btnPrimarySm, btnDangerOutlineSm, btnSecondary } from "../components/dialog-styles"
 import { Appheader } from "../header/header-component"
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"

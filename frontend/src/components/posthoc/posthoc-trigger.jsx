@@ -75,7 +75,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     const streamMetaRef = useRef({})
     const [, setTick] = useState(0) // re-render for the live elapsed timers
     const [action, setAction] = useState(null) // "full" | "pi" | "et" | null
-    const [message, setMessage] = useState("")
+    const [, setMessage] = useState("")
     const updateMeta = (label, patch) => {
         streamMetaRef.current = {
             ...streamMetaRef.current,

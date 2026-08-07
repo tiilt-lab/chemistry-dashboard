@@ -2,7 +2,6 @@ import React from "react"
 import { btnPrimaryTall } from "../components/dialog-styles"
 import { ErrorDialog } from "../components/error-dialog"
 import { Appheader } from "../header/header-component"
-import { DialogBox, WaitingDialog } from "../dialog/dialog-component"
 import { BrandCard } from "../components/brand-panel"
 import { RecordingCoach } from "./recording-coach"
 
@@ -114,12 +113,8 @@ function ProfileCreationPage(props) {
                     <RecordingCoach
                         maxDurationSec={60}
                         minDurationSec={30}
-                        onTestClip={(blob, diag) =>
-                            console.log("test", blob, diag)
-                        }
-                        onComplete={(blob, diag) =>
-                            console.log("full", blob, diag)
-                        }
+                        onTestClip={() => {}}
+                        onComplete={() => {}}
                         saveRecording={props.saveRecording}
                         enrollStatus={props.enrollStatus}
                         onDoneEnrolling={props.onDoneEnrolling}

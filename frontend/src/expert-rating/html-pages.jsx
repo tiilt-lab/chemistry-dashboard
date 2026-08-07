@@ -1,21 +1,17 @@
 import { GenericDialogBox } from "../dialog/dialog-component"
-import { POD_ON_COLOR, POD_OFF_COLOR, GLOW_COLOR } from "../components/pod-colors"
 import { ErrorDialog } from "../components/error-dialog"
 import { dlgInput, dlgPrimary } from "../components/dialog-styles"
 import { pageShell, formCard } from "../components/layout-styles"
 import { AppSpinner } from "../spinner/spinner-component"
-import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { Appheader } from "../header/header-component"
 import style from "./expert-rating.module.css"
 import style2 from "../pod-details/pod.module.css"
 import React from "react"
-import Select from "react-select"
 import { LikertRatingInterface } from "./left-pane"
 import { AppInfographicsSessionComparison } from "../components/infographics-view/infographics_session-comparison"
 import { CollaborationFeedbackDashboard } from "../components/reflection-dashboard-view/reflection-interactive-dashboard"
 import { TranscriptsComponentClient } from "../transcripts/transcripts-component_client"
 
-import MicIcon from "../Icons/Mic"
 
 function ExpertRatingPage(props) {
 

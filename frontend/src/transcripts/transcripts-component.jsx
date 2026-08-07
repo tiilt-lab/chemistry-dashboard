@@ -27,15 +27,14 @@ function TranscriptsComponent(){
   const [dialogKeywords, setDialogKeywords] = useState();
   const [currentForm, setCurrentForm] = useState("");
   const [displayTranscripts, setDisplayTranscripts] = useState([]);
-  const [subscriptions, setSubscriptions] = useState([]);
-  const [hasScrolled, setHasScrolled] = useState(false);
+  const [subscriptions] = useState([]);
   const [showKeywords, setShowKeywords] = useState(true);
   const [trigger, setTrigger] = useState(0)
-  const [showDoA,setShowDoA] = useState(false);
+  const [showDoA] = useState(false);
   const [roster, setRoster] = useState([])
-  const [activeSessionService, setActiveSessionService] = useOutletContext();
-  const { sessionDeviceId } = useParams(); 
-  const [searchParam, setSearchParam] = useSearchParams();
+  const [activeSessionService] = useOutletContext();
+  const { sessionDeviceId } = useParams();
+  const [searchParam] = useSearchParams();
   const navigate = useNavigate()
   
   const colorTopicDict = ['hsl(0, 100%, 100%)', 'hsl(151, 58%, 87%)', 'hsl(109, 67%, 92%)', 'hsl(49, 94%, 93%)', 'hsl(34, 100%, 89%)', 'hsl(30, 79%, 85%)'];

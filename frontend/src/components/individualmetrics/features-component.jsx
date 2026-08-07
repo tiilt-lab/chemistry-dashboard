@@ -156,7 +156,6 @@ function AppIndividualFeaturesComponent(props) {
           break;
         }
       default:
-        console.log("no text");
     }
     setFeatureHeader(featureName);
     setShowFeatureDialog(true);

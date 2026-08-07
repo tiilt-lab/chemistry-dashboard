@@ -3,7 +3,7 @@ import { applyChartTheme } from "../chart-theme";
 import { DialogBox } from "../../dialog/dialog-component"
 import { Line } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from "chart.js/auto";
-import { CategoricalTimeline, CategoricalDistributionChart } from "../graph-visualizations/categorical-data-visualization"
+import { CategoricalDistributionChart } from "../graph-visualizations/categorical-data-visualization"
 import React from "react"
 
 
@@ -12,16 +12,6 @@ function IndividualVideoMetricPage(props) {
     applyChartTheme()
     const __dark = useIsDark()
     ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
-    const emotionMap = {
-        angry: 0,
-        disgust: 1,
-        fear: 2,
-        happy: 3,
-        neutral: 4,
-        surprise: 5,
-        sad: 6
-    };
-    const emotionLabels = Object.keys(emotionMap);
 
     return (
         <>

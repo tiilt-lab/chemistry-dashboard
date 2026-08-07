@@ -7,7 +7,6 @@ import { SessionService } from "../services/session-service";
 import { StudentModel } from "../models/student"
 import { SessionModel } from "../models/session";
 import { SessionDeviceModel } from "../models/session-device";
-import { SpeakerModel } from "../models/speaker";
 import { FEATURE_LABELS, BOX_LABELS, buildChecklist } from "../utilities/checklist"
 
 const surveyquestion = [
@@ -72,9 +71,8 @@ function StudentSessionDashboard() {
   const [endTime, setEndTime] = useState()
   const [startTime2, setStartTime2] = useState()
   const [endTime2, setEndTime2] = useState()
-  const [radarTrigger, setRadarTrigger] = useState(0);
-  const [displayTranscripts, setDisplayTranscripts] = useState([])
-  const [displayVideoMetrics, setDisplayVideoMetrics] = useState([])
+  const [displayTranscripts] = useState([])
+  const [displayVideoMetrics] = useState([])
   const [currentTranscript, setCurrentTranscript] = useState(null)
   const [details, setDetails] = useState("Individual")
 
@@ -101,7 +99,7 @@ function StudentSessionDashboard() {
   const [videoMetricDoneLoading, setVideoMetricDoneLoading] = useState(false);
   const [currentSessionRunning, setCurrentSessionRunning] = useState(false);
 
-  const [sessionPart, setSessionPart] = useState("");
+  const [, setSessionPart] = useState("");
   const [loadedAfresh, setLoadedAfresh] = useState(true)
 
   const [reflectionDashboardDoneLoading, setReflectionDashboardDoneLoading] = useState(false);
@@ -208,7 +206,6 @@ function StudentSessionDashboard() {
   useEffect(() => {
     // fetch the transcript based on group selected
     if (selectedDeviceID > -1) {
-      console.log("tracking session and device ids inside useeffect  ", selectedSessionId1, selectedSessionDeviceId1,selectedDeviceID)
       //this is necessary if the first session and device were loaded from the entry page
       // and the user has not clicked on any session
       if (!firstLoadCompleted) {
@@ -261,7 +258,6 @@ function StudentSessionDashboard() {
       ///we maintain a store that keeps already fetched transcript base session and device id
       updateTranscriptVideoMetricStore(loadedAfresh, sessiontype, selectedSessionId1, selectedSessionDeviceId1, session1Transcripts, session1VideoMetrics)
 
-      console.log(loadedAfresh, session2Transcripts.length, session2VideoMetrics.length, selectedSessionId2)
       // if (loadedAfresh && (session2Transcripts.length > 0 || session2VideoMetrics.length > 0) && (selectedSessionId2 > -1)) {
       if (selectedSessionId2 > -1) {
         updateTranscriptVideoMetricStore(loadedAfresh, sessiontype, selectedSessionId2, selectedSessionDeviceId2, session2Transcripts, session2VideoMetrics)
@@ -327,7 +323,6 @@ function StudentSessionDashboard() {
           }
         }
       }
-      console.log("store ", sessionDataObjects.current)
     }
   }
 
@@ -367,7 +362,7 @@ function StudentSessionDashboard() {
           }
         },
         (apierror) => {
-          console.log(
+          console.error(
             "Student dashboard func: verifyUsername 1 ",
             apierror,
           )
@@ -407,7 +402,7 @@ function StudentSessionDashboard() {
             }
           },
           (apierror) => {
-            console.log(
+            console.error(
               "Student dashboard func: loadSession 1 ",
               apierror,
             )
@@ -447,40 +442,8 @@ function StudentSessionDashboard() {
           }
         },
         (apierror) => {
-          console.log(
+          console.error(
             "Student dashboard func: loadSession 1 ",
-            apierror,
-          )
-        },
-      )
-  }
-
-
-
-  // ___________________________________________________________ 
-  //   STEP 2.2: This is called inside step 2 if this student select to view current session           
-  // --------------------------------------------------------
-  const fetchSession = async (pcode) => {
-    const fetchData = sessionService.getSessionByPasscode(pcode)
-    fetchData
-      .then(
-        (response) => {
-          if (response.status === 200) {
-            response.json().then((jsonObj) => {
-              const session_data = SessionModel.fromJsonList(jsonObj)
-              session.current = session_data[0]
-              pageTitle.current = session_data[0].name + ": " + new Date(session_data[0].creation_date).toDateString()
-              setSessionId(session_data[0].id);
-              setReload(reload + 1)
-            })
-          } else {
-            setAlertMessage("Invalid Passcode or Session Expired");
-            setShowAlert(true);
-          }
-        },
-        (apierror) => {
-          console.log(
-            "Student dashboard func: fetchSession 1 ",
             apierror,
           )
         },
@@ -513,10 +476,10 @@ function StudentSessionDashboard() {
         setLoadedAfresh(true)
         setTranscriptDoneLoading(true);
       } else if (response !== null && (response.status === 400 || response.status === 401)) {
-        console.log(response, "no transcript obj")
+        console.error(response, "no transcript obj")
       }
     } catch (error) {
-      console.log(
+      console.error(
         "byod-join-component error func : fetch transcript",
         error,
       )
@@ -540,10 +503,10 @@ function StudentSessionDashboard() {
         setLoadedAfresh(true)
         setVideoMetricDoneLoading(true);
       } else if (response.status === 400 || response.status === 401) {
-        console.log(response, "no videometrics obj")
+        console.error(response, "no videometrics obj")
       }
     } catch (error) {
-      console.log(
+      console.error(
         "byod-join-component error func : fetch video metrics",
         error,
       )
@@ -566,11 +529,9 @@ function StudentSessionDashboard() {
     pageTitle.current = newSession.name + ": " + new Date(newSession.creation_date).toDateString()
     session.current = newSession
     loadSessionDevice(newSession.id, userDetail.username)
-    console.log("tracking session and device ids  ", selectedSessionId1, selectedSessionDeviceId1)
   }
 
   const loadSelectedSessionDeviceMetrics = (deviceId) => {
-    console.log("tracking session and device ids inside group click  ", selectedSessionId1, selectedSessionDeviceId1,deviceId,selectedDeviceID)
     setSelectedSessionDeviceId1(deviceId)
     setSelectedSessionDeviceId2(-1)
     setSelectedDeviceID(deviceId)
@@ -619,11 +580,8 @@ function StudentSessionDashboard() {
 
   const setSessionTranscripts = () => {
     if (selectedSessionId1 !== -1) {
-      console.log(selectedSessionId1, selectedSessionDeviceId1)
-      console.log(selectedSessionId2, selectedSessionDeviceId2)
       if (sessionDataObjects.current.hasOwnProperty(selectedSessionId1)) {
         if (sessionDataObjects.current[selectedSessionId1].hasOwnProperty(selectedSessionDeviceId1)) {
-          console.log("loading saved session transcript metrics for session 1")
           loadSavedSessionTranscriptMetrics(selectedSessionId1, sessionDataObjects.current[selectedSessionId1][selectedSessionDeviceId1].transcripts, setSession1Transcripts)
         } else {
           fetchTranscript(selectedSessionId1, setSession1Transcripts, selectedSessionDeviceId1)
@@ -636,14 +594,11 @@ function StudentSessionDashboard() {
     if (selectedSessionId2 !== -1) {
       if (sessionDataObjects.current.hasOwnProperty(selectedSessionId2)) {
         if (sessionDataObjects.current[selectedSessionId2].hasOwnProperty(selectedSessionDeviceId2)) {
-          console.log("loading saved session transcript metrics for session 2")
           loadSavedSessionTranscriptMetrics(selectedSessionId2, sessionDataObjects.current[selectedSessionId2][selectedSessionDeviceId2].transcripts, setSession1Transcripts)
         } else {
-          console.log("fetching transcript 2 level 1")
           fetchTranscript(selectedSessionId2, setSession2Transcripts, selectedSessionDeviceId2)
         }
       } else {
-        console.log("fetching transcript 2 level 2")
         fetchTranscript(selectedSessionId2, setSession2Transcripts, selectedSessionDeviceId2)
       }
     }
@@ -653,7 +608,6 @@ function StudentSessionDashboard() {
     if (selectedSessionId1 !== -1) {
       if (sessionDataObjects.current.hasOwnProperty(selectedSessionId1)) {
         if (sessionDataObjects.current[selectedSessionId1].hasOwnProperty(selectedSessionDeviceId1)) {
-          console.log("loading saved session video metrics for session 1")
           loadSavedSessionVideoMetrics(sessionDataObjects.current[selectedSessionId1][selectedSessionDeviceId1].videoMetrics, setSession1VideoMetrics)
         } else {
           fetchVideoMetric(selectedSessionId1, setSession1VideoMetrics, selectedSessionDeviceId1)
@@ -667,14 +621,11 @@ function StudentSessionDashboard() {
     if (selectedSessionId2 !== -1) {
       if (sessionDataObjects.current.hasOwnProperty(selectedSessionId2)) {
         if (sessionDataObjects.current[selectedSessionId2].hasOwnProperty(selectedSessionDeviceId2)) {
-          console.log("loading saved session video metrics for session 2")
           loadSavedSessionVideoMetrics(sessionDataObjects.current[selectedSessionId2][selectedSessionDeviceId2].videoMetrics, setSession2VideoMetrics)
         } else {
-          console.log("fetching video metric 2 level 1")
           fetchVideoMetric(selectedSessionId2, setSession2VideoMetrics, selectedSessionDeviceId2)
         }
       } else {
-        console.log("fetching video metric 2 level 2")
         fetchVideoMetric(selectedSessionId2, setSession2VideoMetrics, selectedSessionDeviceId2)
       }
     }
@@ -722,7 +673,7 @@ function StudentSessionDashboard() {
       try {
         actionstatus = await extractParticipantData(deviceId)
       } catch (error) {
-        console.log("loadReflectiondashboard", error)
+        console.error("loadReflectiondashboard", error)
       }
       if (actionstatus) {
         const sess = previousSessions.current.find((ses) => ses.id === selectedSessionId1);
@@ -746,7 +697,7 @@ function StudentSessionDashboard() {
     try {
       actionstatus = await extractParticipantData(newSessionDeviceID)
     } catch (error) {
-      console.log("loadReflectionDashboardForNewSelection", error)
+      console.error("loadReflectionDashboardForNewSelection", error)
     }
     if (actionstatus) {
       const sess = previousSessions.current.find((ses) => ses.id === selectedSessionId1);
@@ -776,11 +727,9 @@ function StudentSessionDashboard() {
     if (!respObj.participant_level_metric || !respObj.participant_level_metric.length) {
       return false;
     }
-    console.log("Synthesized feedback: ",respObj)
 
     const ret = await loadLLMAnalytics(respObj, deviceId)
     if (ret) {
-      console.log("llm response: ",llmSessionAnalysis.current[selectedSessionId1][deviceId])
       selectedLLMAnalysis.current = llmSessionAnalysis.current[selectedSessionId1][deviceId]
       selectedSynthesizedData.current = respObj
       await loadprompthistory(deviceId)
@@ -830,10 +779,10 @@ function StudentSessionDashboard() {
 
           // console.log(jsonObj.answer)
         } else if (response.status === 400) {
-          console.log("LLM api response", response.message)
+          console.error("LLM api response", response.message)
         }
       } catch (error) {
-        console.log(
+        console.error(
           "podcomponent interactivePromptFnc",
           error,
         )
@@ -958,7 +907,7 @@ function StudentSessionDashboard() {
         return null
       }
     } catch (error) {
-      console.log(
+      console.error(
         "student dashboard getSynthesizedMetric",
         error,
       )
@@ -977,10 +926,10 @@ function StudentSessionDashboard() {
       // Any non-200 (including 500s) must resolve to null — an undefined
       // return here slipped past the callers' null checks and stranded the
       // page on the loading dialog.
-      console.log("LLM api response status", response.status)
+      console.error("LLM api response status", response.status)
       return null
     } catch (error) {
-      console.log(
+      console.error(
         "student dashboard loadReflectiondashboard",
         error,
       )
@@ -999,7 +948,7 @@ function StudentSessionDashboard() {
         return null
       }
     } catch (error) {
-      console.log(
+      console.error(
         "student dashboard loadprompthistory",
         error,
       )
@@ -1146,7 +1095,7 @@ function StudentSessionDashboard() {
         setShowAlert(true);
       }
     } catch (error) {
-      console.log(
+      console.error(
         "Student dashboard handle submit",
         error,
       )

@@ -3,13 +3,13 @@ import { POD_ON_COLOR as POD_COLOR, GLOW_COLOR } from "../components/pod-colors"
 import { ProfileCreationPage } from "./html-pages"
 import { AuthService } from '../services/auth-service';
 import { ApiService } from "../services/api-service"
-import { useNavigate, useParams } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import fixWebmDuration from "fix-webm-duration"
 import { ensureGetUserMedia } from "../utilities/media"
 
 
 function SignupPage() {
-    const [pageTitle, setPageTitle] = useState("Create Account")
+    const [pageTitle] = useState("Create Account")
     const [nextPage, setNextPage] = useState("profile_creation")
     const [studentObject, setStudentObject] = useState(null);
     const [showAlert, setShowAlert] = useState(false)
@@ -26,7 +26,7 @@ function SignupPage() {
     const [videoBlob, setVideoBlob] = useState(null)
     const [videoData, setVideoData] = useState(null)
     const [currentForm, setCurrentForm] = useState("")
-    const [displayText, setDisplayText] = useState("")
+    const [displayText] = useState("")
     const video_captured = useRef(null)
     const [isRecordingStopped, setIsRecordingStopped] = useState(false);
     const [mimetype, setMimeType] = useState(null)
@@ -348,7 +348,7 @@ function SignupPage() {
             }
 
         } catch (ex) {
-            console.log(ex)
+            console.error(ex)
             setShowAlert(true)
             setAlertMessage("Failed to get user audio-visual source.")
         }
@@ -530,7 +530,6 @@ function SignupPage() {
 
         audiows.current.onclose = e => {
             setAudioDisconnected(true)
-            console.log('[audio Disconnected]');
         };
     }
 
@@ -539,7 +538,6 @@ function SignupPage() {
         videows.current.binaryType = "blob"
 
         videows.current.onopen = (e) => {
-            console.log("[Connected to video webscoket processor services]")
             setVideoSocketProcesorConnected(true)
         }
 
@@ -568,14 +566,12 @@ function SignupPage() {
 
         videows.current.onclose = e => {
             setVideoDisconnected(true)
-            console.log('[video Disconnected]');
         };
     }
 
     // Begin capturing and sending student video sample.
     const requestStartAudioVideoProcessing = async () => {
         let message = null
-        console.log('starting video processing')
         if (audiows.current === null) {
             return
         }
@@ -634,9 +630,7 @@ function SignupPage() {
 
         try {
             wakeLock = await navigator.wakeLock.request("screen")
-            console.log("Wake lock is activated.")
             wakeLock.addEventListener("release", () => {
-                console.log("Wake Lock has been released")
             })
             document.addEventListener("visibilitychange", async () => {
                 if (
@@ -647,7 +641,7 @@ function SignupPage() {
                 }
             })
         } catch (err) {
-            console.log(err)
+            console.error(err)
         }
     }
 
@@ -657,7 +651,7 @@ function SignupPage() {
                 wakeLock = null
             })
         } catch (err) {
-            console.log(`WakeLock release error: ${err}`)
+            console.error(`WakeLock release error: ${err}`)
         }
     }
 

@@ -27,8 +27,6 @@ function AppIndividualVideoFeaturesComponent(props) {
   //   this._transcripts = value;
   //   this.updateGraphs();
   // }
-  const svgWidth = 74;
-  const svgHeight = 39;
   //const [_transcripts, setTranscript] = useState([]);
   const [features, setFeatures] = useState([]);
   const [facialEmotionDataset, setFacialEmotionDataset] = useState([]);
@@ -113,7 +111,6 @@ function AppIndividualVideoFeaturesComponent(props) {
           break;
         }
       default:
-        console.log("no text");
     }
     setFeatureHeader(featureName);
     setShowFeatureDialog(true);

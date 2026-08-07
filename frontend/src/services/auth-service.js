@@ -118,7 +118,7 @@ class AuthService {
         if (response.status === 200) {
           response.json().then(
             userobj => {
-              const student = StudentModel.fromJson(userobj);
+              StudentModel.fromJson(userobj);
               setStudentUpdated(true)
             }
           )
