@@ -1328,10 +1328,19 @@ function JoinPage() {
         } catch (ex) {
             console.log("final flush failed", ex)
         }
+        // Go straight to this pod's overview page instead of the dead-end
+        // "recording ended" screen (which rendered as a mostly blank page).
+        // Capture the ids before disconnect clears the session state; if
+        // they're somehow gone, fall back to the old closed screen.
+        const sid = session && session.id
+        const did = sessionDevice && sessionDevice.id
+        disconnect(true)
+        if (sid && did) {
+            return navigate(`/sessions/${sid}/pods/${did}`)
+        }
         setDisplayText(
             "This pod's recording has ended. You can close this page, or join again to record more.",
         )
-        disconnect(true)
         setCurrentForm("ClosedSession")
     }
 
