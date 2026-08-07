@@ -6,6 +6,7 @@ import logging
 import os
 import database
 import wrappers
+import utility
 from utility import json_response
 
 api_routes = Blueprint('student', __name__)
@@ -20,16 +21,24 @@ _FACE_DIR = os.path.join(_SRC_DIR, 'video_processing', 'facial_embeddings')
 
 
 def _voice_paths(username):
-    base = os.path.join(_VOICE_DIR, username)
+    # Neutralize any traversal in a stored username before it hits disk (the
+    # /addstudent write path is public; this is the read-side belt-and-braces).
+    safe = utility.safe_name(username)
+    if safe is None:
+        raise ValueError('unsafe username')
+    base = os.path.join(_VOICE_DIR, safe)
     return base + '.wav', base + '.check.json'
 
 
 def _enrollment_fields(username):
-    wav, check = _voice_paths(username)
+    safe = utility.safe_name(username)
+    if safe is None:
+        return {'voice_enrolled': False, 'voice_check': None, 'face_enrolled': False}
+    wav, check = _voice_paths(safe)
     fields = {
         'voice_enrolled': os.path.isfile(wav),
         'voice_check': None,
-        'face_enrolled': os.path.isfile(os.path.join(_FACE_DIR, username + '.npy')),
+        'face_enrolled': os.path.isfile(os.path.join(_FACE_DIR, safe + '.npy')),
     }
     if fields['voice_enrolled'] and os.path.isfile(check):
         try:
@@ -80,7 +89,10 @@ def students_voice_overlaps(**kwargs):
     visible = {student.username for student, _c, _l in rows}
     embeddings = {}
     for username in visible:
-        path = os.path.join(_VOICE_DIR, username + '.emb.npy')
+        safe = utility.safe_name(username)
+        if safe is None:
+            continue
+        path = os.path.join(_VOICE_DIR, safe + '.emb.npy')
         if os.path.isfile(path):
             try:
                 embeddings[username] = np.load(path)
@@ -166,6 +178,11 @@ def add_students(**kwargs):
         return json_response({'message': 'Must provide First name.'}, 400)
     if not username:
         return json_response({'message': 'Must provide User name.'}, 400)
+    # The username becomes a filesystem path for the voice/face enrollment
+    # artifacts; reject anything that isn't a safe leaf name (this route is
+    # public, so it's the primary place to stop a poisoned username).
+    if utility.safe_name(username) != username:
+        return json_response({'message': 'Invalid characters in username.'}, 400)
     success, student = database.add_student(lastname, firstname,username)
     if success:
         database.save_changes()

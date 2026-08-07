@@ -17,6 +17,7 @@ from recorder import VidRecorder
 from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager  # also puts src/common on sys.path
 import audio_bytes
+import safe_names
 from audio_buffer import AudioBuffer
 from processor import AudioProcessor
 from twisted.internet import reactor, task
@@ -126,12 +127,19 @@ class ServerProtocol(WebSocketServerProtocol):
         if data['type'] == 'save-audio-video-fingerprinting':
             self.currStudent = data['id']
             self.stream_data  = data['streamdata']
-            self.mediaExt = data['mimeextension']
-            self.currAlias = data['alias']
+            # alias/extension come straight off the socket and build file
+            # paths — sanitize before any use, or reject the enrollment.
+            try:
+                self.currAlias = safe_names.safe_name(data['alias'])
+            except safe_names.UnsafeName:
+                logging.warning('rejected fingerprint enrollment: unsafe alias %r', data.get('alias'))
+                self.send_json({'type': 'error', 'message': 'Invalid name.'})
+                return
+            self.mediaExt = safe_names.safe_media_ext(data['mimeextension'])
             if self.stream_data == 'audio-video-fingerprint':
                 self.video_file = os.path.join(cf.video_recordings_folder(), "{0}".format(self.currAlias))
                 self.vid_recorder = VidRecorder(self.video_file,16000, 2, 1,self.mediaExt)
-                    
+
             logging.info('save-audio-video-fingerprinting: Audio process connected')
             self.send_json({'type':'saveaudiovideo'})
 
@@ -141,10 +149,11 @@ class ServerProtocol(WebSocketServerProtocol):
 
         if data['type'] == 'add-saved-fingerprint':
             currSpeaker = data['id']
-            currAlias = data['alias']
+            currAlias = data.get('alias')  # raw, for logging; validated below
             # Any failure must reach the client, otherwise the join dialog
             # waits forever for registeredfingerprintadded.
             try:
+                currAlias = safe_names.safe_name(data['alias'])
                 audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}".format(currAlias))
                 wavObj = wave.open(audio_fingerprint_file+'.wav')
                 byte_audio_data = self.read_bytes_from_wav(wavObj)

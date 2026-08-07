@@ -5,6 +5,7 @@ from collections import Counter,defaultdict
 import numpy as np
 from scipy.stats import median_abs_deviation
 import statistics
+import os
 import re
 import logging
 import json
@@ -45,6 +46,20 @@ def verify_characters(value, chars):
     if re.search(r'^[{0}]+\Z'.format(chars), value):
         return True
     return False
+
+
+def safe_name(value):
+    # Filesystem-safe leaf name for building enrollment/biometric paths from a
+    # username or alias. Strips any directory part, then allows only the app's
+    # own name charset (letters, digits, . _ : ' space -), which excludes / and
+    # \\. Returns None for anything unsafe so callers can 404 rather than touch
+    # a traversed path. Mirrors routes/session.py _face_thumb_path.
+    raw = str(value or '').strip()
+    if not raw or len(raw) > 64 or set(raw) <= {'.'} or not verify_characters(raw, "a-zA-Z0-9._:' -"):
+        return None
+    if os.path.basename(raw) != raw:
+        return None
+    return raw
 
 def participant_only_session_prompt(data):
     return f"""

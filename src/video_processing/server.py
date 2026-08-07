@@ -17,6 +17,7 @@ from recorder import VidRecorder
 from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager  # also puts src/common on sys.path
 import audio_bytes
+import safe_names
 # Cartoonify is optional (and disabled in this instance's config); its
 # vendored tree still uses the moviepy 1.x import path, so don't let it
 # take down the whole live video service.
@@ -163,9 +164,12 @@ class ServerProtocol(WebSocketServerProtocol):
 
         if data['type'] == 'add-saved-fingerprint':
             currSpeaker = data['id']
-            currAlias = data['alias']
-            facial_embedding_file = os.path.join(cf.facial_embedding_folder(), "{0}".format(currAlias))
+            currAlias = data.get('alias')  # raw, for logging; validated below
             try:
+                # Sanitize before it builds a path: np.load(allow_pickle=True)
+                # on an attacker-chosen path is an RCE primitive.
+                currAlias = safe_names.safe_name(data['alias'])
+                facial_embedding_file = os.path.join(cf.facial_embedding_folder(), "{0}".format(currAlias))
                 facials = np.load(facial_embedding_file+".npy", allow_pickle=True).item()
                 if self.facial_embeddings is None:
                     self.facial_embeddings = dict()

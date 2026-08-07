@@ -13,6 +13,7 @@ import base64
 import os
 import config as cf
 from redis_helper import RedisLogin
+import utility
 from utility import json_response, sanitize, sanitize_int_value
 
 api_routes = Blueprint('admin', __name__)
@@ -124,15 +125,20 @@ def merge_student(student_id, **kwargs):
     moved = database.merge_students(student_id, int(target_id))
     if moved is None:
         return json_response({'message': 'Student not found.'}, 404)
+    # Usernames build a path for os.remove/os.rename — basename them so a
+    # traversed name can't reach outside the biometrics dir.
     bio_dir = os.path.join(cf.root_dir(), "chemistry-dashboard/audio_processing/audiovideobiometrics")
-    dup_file = os.path.join(bio_dir, "{0}.webm".format(moved['duplicate_username']))
-    target_file = os.path.join(bio_dir, "{0}.webm".format(target.username))
+    dup_safe = utility.safe_name(moved['duplicate_username'])
+    target_safe = utility.safe_name(target.username)
     try:
-        if os.path.isfile(dup_file):
-            if os.path.isfile(target_file):
-                os.remove(dup_file)
-            else:
-                os.rename(dup_file, target_file)
+        if dup_safe and target_safe:
+            dup_file = os.path.join(bio_dir, "{0}.webm".format(dup_safe))
+            target_file = os.path.join(bio_dir, "{0}.webm".format(target_safe))
+            if os.path.isfile(dup_file):
+                if os.path.isfile(target_file):
+                    os.remove(dup_file)
+                else:
+                    os.rename(dup_file, target_file)
     except Exception as e:
         logging.info('Unable to move biometric file during merge: {0}'.format(e))
     return json_response({'moved': moved, 'target': target.json()})
@@ -143,12 +149,14 @@ def merge_student(student_id, **kwargs):
 def delete_student(student_id, **kwargs):
     student = database.delete_student(student_id)
     if student is not None:
-        biometric_file_path = os.path.join(cf.root_dir(), "chemistry-dashboard/audio_processing/audiovideobiometrics","{0}.webm".format(student.username))
+        safe_username = utility.safe_name(student.username)
         try:
-            if os.path.isfile(biometric_file_path):
-                os.remove(biometric_file_path)        
+            if safe_username:
+                biometric_file_path = os.path.join(cf.root_dir(), "chemistry-dashboard/audio_processing/audiovideobiometrics","{0}.webm".format(safe_username))
+                if os.path.isfile(biometric_file_path):
+                    os.remove(biometric_file_path)
         except Exception as e:
-            logging.info('Unable to delete biometric file: {0}'.format(e)) 
+            logging.info('Unable to delete biometric file: {0}'.format(e))
         return json_response()
     else:
         return json_response({'User not found.'}, 400)

@@ -14,6 +14,7 @@ from processor_speaker_metric import SpeakerMetricProcessor
 from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager  # also puts src/common on sys.path
 import audio_bytes
+import safe_names
 from audio_buffer import AudioBuffer
 from audio_stream_reader import AudioStreamReader
 from asr_connectors.google_asr_connector_posthoc import GoogleASR
@@ -187,9 +188,14 @@ class ServerProtocol(WebSocketServerProtocol):
 
                     #start processing
                     for speaker in data['speakers']:
-                        audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}".format(speaker["alias"]))
+                        try:
+                            alias = safe_names.safe_name(speaker["alias"])
+                        except safe_names.UnsafeName:
+                            logging.warning('skipping speaker with unsafe alias %r', speaker.get("alias"))
+                            continue
+                        audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}".format(alias))
                         wavObj = wave.open(audio_fingerprint_file+'.wav')
-                        byte_audio_data = self.read_bytes_from_wav(wavObj) 
+                        byte_audio_data = self.read_bytes_from_wav(wavObj)
                         self.speakers[speaker["id"]] = {"alias": speaker["alias"], "data": byte_audio_data}
 
                     self.signal_start()
@@ -337,9 +343,15 @@ class ServerProtocol(WebSocketServerProtocol):
         parent_dir = current_dir.parent
         # Go into sibling directory
         target_dir = parent_dir / "audio_processing" / "recordings"
-        # Find file starting with prefix
-        prefix = str(sessionDeviceId)
-        files = list(target_dir.glob(f"{prefix}*"))
+        # Coerce to int: the id comes off the socket untyped, and it's used as
+        # a glob prefix. int() blocks path-traversal patterns; the trailing "-"
+        # stops device 9 matching 91-/918- (recording names are "<id>-<uuid>...").
+        try:
+            prefix = str(int(sessionDeviceId))
+        except (TypeError, ValueError):
+            logging.warning("get_audio_file_path: non-integer device id %r", sessionDeviceId)
+            return None
+        files = list(target_dir.glob("{0}-*".format(prefix)))
 
         if files:
             file_path = files[0]

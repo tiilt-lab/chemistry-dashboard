@@ -19,7 +19,8 @@ torch.load = _torch_load_permissive
 from pathlib import Path
 from recorder import VidRecorder
 from processing_config import ProcessingConfig
-from connection_manager import ConnectionManager
+from connection_manager import ConnectionManager  # also puts src/common on sys.path
+import safe_names
 from video_cartoonizer.videoprocessor_posthoc import VideoProcessorPosthoc
 from twisted.internet import reactor, task
 from autobahn.twisted.websocket import WebSocketServerFactory
@@ -185,8 +186,14 @@ class ServerProtocol(WebSocketServerProtocol):
         if data['type'] == 'save-audio-video-fingerprinting':
             self.currStudent = data['id']
             self.stream_data = data['streamdata']
-            self.mediaExt = data['mimeextension']
-            self.currAlias = data['alias']
+            # alias/extension build file paths — sanitize or reject.
+            try:
+                self.currAlias = safe_names.safe_name(data['alias'])
+            except safe_names.UnsafeName:
+                logging.warning('rejected fingerprint enrollment: unsafe alias %r', data.get('alias'))
+                self.send_json({'type': 'error', 'message': 'Invalid name.'})
+                return
+            self.mediaExt = safe_names.safe_media_ext(data['mimeextension'])
             if self.stream_data == 'audio-video-fingerprint':
                     self.video_file = os.path.join(cf.video_recordings_folder(), "{0}".format(self.currAlias))
                     self.vid_recorder = VidRecorder(self.video_file,"none","none",cf.video_record_original(),16000, 2, 1,self.mediaExt)
@@ -265,8 +272,16 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_{1}_{2}_({3})".format(self.config.auth_key,self.config.sessionId,self.config.deviceId,  str(time.ctime())))
                     #start processing
                     for speaker in data['speakers']:
-                        facial_embedding_file = os.path.join(cf.facial_embedding_folder(), "{0}".format(speaker["alias"]))
                         try:
+                            alias = safe_names.safe_name(speaker["alias"])
+                        except safe_names.UnsafeName:
+                            logging.warning('skipping speaker with unsafe alias %r', speaker.get("alias"))
+                            continue
+                        facial_embedding_file = os.path.join(cf.facial_embedding_folder(), "{0}".format(alias))
+                        try:
+                            # Embeddings are written by our own enrollment pipeline;
+                            # allow_pickle is required to read the dict payload. The
+                            # path is now sanitized so it can't point off-tree.
                             facials = np.load(facial_embedding_file+".npy", allow_pickle=True).item()
                             self.facial_embeddings[speaker["id"]] = {"alias": speaker["alias"], "data": facials[speaker["alias"]]}
                         except Exception as e:
@@ -342,7 +357,13 @@ class ServerProtocol(WebSocketServerProtocol):
         # store *_orig.mp4, and the old *.webm-only glob made those pods
         # report "No video captured" with the file sitting right there. The
         # "-" after the id keeps 91 from matching 918-*. Newest by mtime.
-        prefix = str(sessionDeviceId)
+        # Coerce to int: the id arrives untyped off the socket and is used as a
+        # glob prefix, so int() blocks path-traversal patterns.
+        try:
+            prefix = str(int(sessionDeviceId))
+        except (TypeError, ValueError):
+            logging.warning("get_video_file_path: non-integer device id %r", sessionDeviceId)
+            return None
         for pattern in (f"{prefix}-*_orig.webm", f"{prefix}-*.webm",
                         f"{prefix}-*_orig.mp4", f"{prefix}-*.mp4"):
             files = sorted(target_dir.glob(pattern),

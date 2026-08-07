@@ -19,6 +19,7 @@ from flask import Blueprint
 
 import database
 import wrappers
+import utility
 from utility import json_response
 from routes.student import _enrollment_fields, _VOICE_DIR
 from analytics import pairwise_voice_overlaps
@@ -73,7 +74,10 @@ def _pod_report(device):
     for alias in roster:
         fields = _enrollment_fields(alias)
         enrollment[alias] = _voice_grade(fields)
-        emb_path = os.path.join(_VOICE_DIR, alias + '.emb.npy')
+        safe_alias = utility.safe_name(alias)
+        if safe_alias is None:
+            continue
+        emb_path = os.path.join(_VOICE_DIR, safe_alias + '.emb.npy')
         if os.path.isfile(emb_path):
             try:
                 embeddings[alias] = np.load(emb_path)

@@ -3,6 +3,7 @@ from flask import Blueprint, Response, request, abort
 from device_websockets import ConnectionManager
 from flask_socketio import emit
 from datetime import datetime
+import utility
 from utility import json_response
 import logging
 import database
@@ -356,7 +357,13 @@ def process_sync_student_data(**kwargs):
   logging.info("syncing {0} student records from peer".format(len(students_data)))
   try:
       for content in students_data:
-        database.sync_student(content.get("lastname"), content.get("firstname"), content.get("username"), content.get("biometric_captured"))
+        # A peer's usernames become enrollment file paths here too — skip any
+        # that aren't safe leaf names rather than store a traversable one.
+        username = content.get("username")
+        if utility.safe_name(username) != username:
+            logging.warning('sync: skipping unsafe username %r', username)
+            continue
+        database.sync_student(content.get("lastname"), content.get("firstname"), username, content.get("biometric_captured"))
   except Exception as e:
       logging.warning('student sync ingest failed: {0}'.format(e))
       return json_response({"message": "syncing failed"}, 400)
