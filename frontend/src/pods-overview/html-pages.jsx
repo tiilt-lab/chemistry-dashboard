@@ -845,6 +845,9 @@ function PodsOverviewPages(props) {
                         </div>
                     )) ||
                     (props.currentForm === "Passcode" && (
+                        // Mirrors the join hero exactly: passcode, QR,
+                        // clickable link, and the same simple actions —
+                        // not the old seven-button pile.
                         <div className={dlgBody}>
                             <div className={dlgHeading}>Share this session</div>
                             {props.passcode ? (
@@ -858,9 +861,14 @@ function PodsOverviewPages(props) {
                                         </div>
                                     </div>
                                     <QrCode value={props.joinLink} />
-                                    <div className="rounded-lg border border-tiilt-line bg-white px-3 py-2 text-center font-ahamono text-sm break-all text-tiilt-muted">
+                                    <a
+                                        href={props.joinLink}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-center font-ahamono text-sm break-all text-tiilt-muted underline decoration-tiilt-line underline-offset-2 transition hover:text-tiilt"
+                                    >
                                         {props.joinLink}
-                                    </div>
+                                    </a>
                                     <button
                                         className={dlgPrimary}
                                         onClick={() => props.copyJoinLink()}
@@ -868,40 +876,33 @@ function PodsOverviewPages(props) {
                                         Copy join link
                                     </button>
                                     <button
-                                        className={dlgCancel}
-                                        onClick={() => props.copyPasscode()}
+                                        className={btnSecondary}
+                                        onClick={() => props.setPasscodeState("lock")}
                                     >
-                                        Copy code only
+                                        Lock joining
+                                    </button>
+                                    <button
+                                        className="cursor-pointer text-xs text-tiilt-muted transition hover:text-tiilt"
+                                        onClick={() => props.setPasscodeState("refresh")}
+                                    >
+                                        Get a new code
                                     </button>
                                 </>
                             ) : (
-                                <div className="text-sm text-tiilt-muted">
-                                    The session is locked — unlock it to get a
-                                    passcode participants can join with.
-                                </div>
+                                <>
+                                    <div className="text-sm text-tiilt-muted">
+                                        Joining is locked. Unlock to get a
+                                        fresh passcode and let groups join
+                                        this session.
+                                    </div>
+                                    <button
+                                        className={dlgPrimary}
+                                        onClick={() => props.setPasscodeState("unlock")}
+                                    >
+                                        Unlock joining
+                                    </button>
+                                </>
                             )}
-                            <div className="flex gap-2">
-                                <button
-                                    className={btnSecondary + " flex-1"}
-                                    onClick={() => props.setPasscodeState("lock")}
-                                >
-                                    Lock
-                                </button>
-                                <button
-                                    className={btnSecondary + " flex-1"}
-                                    onClick={() => props.setPasscodeState("unlock")}
-                                >
-                                    Unlock
-                                </button>
-                                <button
-                                    className={btnSecondary + " flex-1"}
-                                    onClick={() =>
-                                        props.setPasscodeState("refresh")
-                                    }
-                                >
-                                    Refresh
-                                </button>
-                            </div>
                             <button
                                 className={dlgCancel}
                                 onClick={props.closeDialog}
