@@ -714,11 +714,29 @@ def delete_session_device(session_device_id):
     db.session.commit()
     return True
 
+def next_group_letter_name(session_id):
+    # First unused "Group A".."Group Z", then "Group AA".. within the session.
+    # Removed pods keep their letter (their data still carries the name).
+    taken = {device.name for device in get_session_devices(session_id=session_id)}
+    def letters(n): # bijective base 26: 0 -> A, 25 -> Z, 26 -> AA
+        s = ''
+        n += 1
+        while n:
+            n, r = divmod(n - 1, 26)
+            s = chr(65 + r) + s
+        return s
+    i = 0
+    while 'Group ' + letters(i) in taken:
+        i += 1
+    return 'Group ' + letters(i)
+
 def create_byod_session_device(passcode, name, collaborators):
     session = get_sessions(active=True, passcode=passcode, first=True)
     speakers = []
     if not session:
         return False, 'Session not found.', speakers
+    if not name:
+        name = next_group_letter_name(session.id)
     duplicate = get_session_devices(session_id=session.id, name=name, first=True)
     if duplicate:
         if duplicate.connected: # User signed into a device already in use.

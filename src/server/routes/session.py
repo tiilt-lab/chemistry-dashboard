@@ -171,11 +171,14 @@ def byod_join_session(**kwargs):
     name = request.json.get('name', None)
     passcode = sanitize(request.json.get('passcode', None))
     collaborators = request.json.get('collaborators', None)
-    if not name or not passcode:
-        return json_response({'message': 'Must supply name and passcode.'}, 400)
-    valid, message = SessionDevice.verify_fields(name=name)
-    if not valid:
-        return json_response({'message': message}, 400)
+    if not passcode:
+        return json_response({'message': 'Must supply a passcode.'}, 400)
+    # A blank name is allowed: the session assigns the next free letter
+    # ("Group A", "Group B", ...) in create_byod_session_device.
+    if name:
+        valid, message = SessionDevice.verify_fields(name=name)
+        if not valid:
+            return json_response({'message': message}, 400)
     success, data = session_handler.byod_join_session(name, passcode, collaborators)
     if success:
         return json_response(data)

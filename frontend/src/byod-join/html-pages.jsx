@@ -24,7 +24,6 @@ import MicIcon from "@icons/Mic"
 import Check from "@icons/Check"
 import Chevron from "@icons/Chevron"
 
-import { defaultGroupName as makeDefaultGroupName } from "../lib/utils"
 import { InlineDeviceCheck } from "./device-check"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
@@ -213,11 +212,10 @@ function ByodJoinPage(props) {
             delete document.body.dataset.joinPhase
         }
     }, [props.joinPhase])
-    // Prefilled group name so joining takes zero typing when the exact name
-    // doesn't matter. Random suffix keeps two groups in the same session from
-    // colliding (a duplicate name would silently take over the other group's
-    // device once it disconnects).
-    const [defaultGroupName] = useState(makeDefaultGroupName)
+    // The group name is optional: left blank, the server hands out the next
+    // free letter in the session (Group A, Group B, ...). After a join it is
+    // prefilled with the assigned name so backing out and rejoining resumes
+    // the same pod instead of minting a new letter.
     return (
         <>
             {(props.currentForm === "gottoselectedtranscript" &&
@@ -253,19 +251,23 @@ function ByodJoinPage(props) {
                             <div className={formCard}>
                                 <div className="mx-auto flex w-full max-w-md grow flex-col gap-4 px-4 py-6">
                                     <div className="text-sm leading-6 text-tiilt-muted">
-                                        Type your name and passcode to join a
-                                        session. If rejoining, use the same
-                                        name as before.
+                                        Enter the passcode to join a session
+                                        — your group gets the next free name
+                                        automatically. If rejoining, use the
+                                        same group name as before.
                                     </div>
                                     <div>
                                         <label htmlFor="name" className={fieldLabel}>
-                                            Group name
+                                            Group name{" "}
+                                            <span className="font-normal text-tiilt-muted">
+                                                (optional)
+                                            </span>
                                         </label>
                                         <input
                                             className={dlgInput}
                                             id="name"
-                                            defaultValue={defaultGroupName}
-                                            placeholder="e.g. Table 3"
+                                            defaultValue={props.savedName || ""}
+                                            placeholder="Leave blank to be named Group A, B, C…"
                                         />
                                     </div>
 

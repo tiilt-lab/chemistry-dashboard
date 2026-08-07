@@ -1410,7 +1410,10 @@ function JoinPage() {
                             ),
                         )
                         speakers.current = SpeakerModel.fromJsonList(jsonObj["speakers"])
-                        name.current = names
+                        // The server assigns "Group A/B/C..." when the name
+                        // was left blank — keep the assigned name so backing
+                        // out prefills it and rejoining resumes this pod.
+                        name.current = jsonObj["session_device"].name || names
                         key.current = jsonObj.key;
                         numSpeakers.current = collaborators
                         // Nothing captures or connects yet: the media plan
@@ -2050,6 +2053,7 @@ function JoinPage() {
             pageTitle={pageTitle}
             requestHelp={requestHelp}
             pcode={pcode}
+            savedName={name.current}
             wrongInput={wrongInput}
             changeTouppercase={changeTouppercase}
             joinwith={joinwith.current}
