@@ -436,6 +436,15 @@ class VideoProcessor:
             except Exception as e:
                 error_str = traceback.format_exc()
                 logging.warning('Exception thrown while extracting image subclib {0} {1}'.format(error_str, self.config.auth_key))
+            finally:
+                # The frame iterator owns a moviepy clip (ffmpeg reader
+                # subprocess); the early break above abandons it, so close
+                # explicitly or the reader leaks until process exit.
+                if hasattr(subclip_frames, 'close'):
+                    try:
+                        subclip_frames.close()
+                    except Exception:
+                        pass
 
         # drain remaining frames
         if self.frame_batch:

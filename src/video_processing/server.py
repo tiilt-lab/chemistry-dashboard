@@ -245,7 +245,8 @@ class ServerProtocol(WebSocketServerProtocol):
                         subclips = (vidclip.subclipped if hasattr(vidclip, 'subclipped') else vidclip.subclip)(
                             (self.analytics_chunk_count - 1) * self.interval,
                             min(self.analytics_chunk_count * self.interval, vidclip.duration))
-                        chunk_iter = subclips.iter_frames(fps=10, dtype="uint8", with_times=True)
+                        chunk_iter = self._frames_releasing_clip(
+                            vidclip, subclips.iter_frames(fps=10, dtype="uint8", with_times=True))
                         logging.info('CHUNK_DECODE_TIMING auth={0} chunk={1} (mp4) open_s={2:.2f} total_s={3:.2f}'.format(
                             self.config.auth_key, self.analytics_chunk_count,
                             _t_open - _t0, time.time() - _t0))
@@ -293,7 +294,8 @@ class ServerProtocol(WebSocketServerProtocol):
                         if os.path.isfile(temp_aud_file+'.wav'):
                             os.remove(temp_aud_file+'.wav')
 
-                    chunk_iter = subclips.iter_frames(fps=10, dtype="uint8", with_times=True)
+                    chunk_iter = self._frames_releasing_clip(
+                        vidclip, subclips.iter_frames(fps=10, dtype="uint8", with_times=True))
                     # Minimal growth probe: open_s is the only remaining
                     # O(session length) term (the ~7s audio extraction was
                     # removed). If open_s climbs with recording_mb on a real
@@ -312,6 +314,22 @@ class ServerProtocol(WebSocketServerProtocol):
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 
     
+    @staticmethod
+    def _frames_releasing_clip(clip, frames):
+        # Yield decoded frames, then ALWAYS release the underlying moviepy
+        # clip (its ffmpeg reader subprocess and buffers). The finally runs
+        # on exhaustion, on explicit generator .close(), and on GC; without
+        # it every 10-second chunk leaks one open reader for the life of the
+        # process (unbounded ffmpeg fleet + monotonic RSS growth).
+        try:
+            for item in frames:
+                yield item
+        finally:
+            try:
+                clip.close()
+            except Exception:
+                pass
+
     def enqueue_latest_video_chunk(self, chunk, timeout=0.05):
         """
         Keep only the most recent chunk in the queue.
@@ -323,13 +341,18 @@ class ServerProtocol(WebSocketServerProtocol):
         except Full:
             pass
 
-        # Queue is full: drop the old queued item
+        # Queue is full: drop the old queued item and release its clip
         try:
             old_item = self.video_queue.get_nowait()
             # optional: if you use task_done semantics elsewhere, call task_done here
             # self.video_queue.task_done()
         except Empty:
             old_item = None
+        if old_item is not None and hasattr(old_item, 'close'):
+            try:
+                old_item.close()
+            except Exception:
+                pass
 
         # Try again to insert the latest chunk
         try:
@@ -338,6 +361,11 @@ class ServerProtocol(WebSocketServerProtocol):
             return True
         except Full:
             logging.warning("Could not enqueue latest video chunk; dropping it.")
+            if hasattr(chunk, 'close'):
+                try:
+                    chunk.close()
+                except Exception:
+                    pass
             return False
     
     def send_json(self, message):

@@ -42,11 +42,22 @@ class _SessionHeadTracker:
     IOU_MATCH = 0.25
     MAX_MISSED = 15         # frames a track survives unseen (~15 s at 1 fps)
     LOCK_VOTES = 2          # confirmed sightings before an identity sticks
+    # Anonymous fallback (sessions with NO enrollment gallery, e.g. uploaded
+    # recordings): stable tracks earn generic "Person N" identities so gaze /
+    # emotion / joint-attention analytics still work, mirroring the audio
+    # side's SPEAKER_NN convention. A dead anonymous track leaves its alias
+    # in a positional graveyard; a new track appearing in the same place
+    # (seats are static on a fixed camera) inherits the alias instead of
+    # minting a new number.
+    GRAVE_IOU = 0.3
+    GRAVE_TTL = 900         # frames a dead track's seat is remembered (~15 min)
 
     def __init__(self):
         self.frame_no = 0
         self.next_id = 1
-        self.tracks = {}    # id -> {bbox, last_seen, alias, votes}
+        self.tracks = {}    # id -> {bbox, last_seen, alias, votes, hits}
+        self.anon_counter = 0
+        self.graveyard = []  # [{alias, bbox, died}] for anonymous aliases
 
     @staticmethod
     def _iou(a, b):
@@ -61,14 +72,37 @@ class _SessionHeadTracker:
                  + (bx2 - bx1) * (by2 - by1) - inter)
         return inter / union if union > 0 else 0.0
 
-    def update(self, heads):
+    def _revive_or_new_anon(self, bbox):
+        # Prefer inheriting a recently-dead anonymous identity whose last
+        # position overlaps this new track (same seat); else mint a new one.
+        self.graveyard = [g for g in self.graveyard
+                          if self.frame_no - g['died'] <= self.GRAVE_TTL]
+        best, best_iou = None, self.GRAVE_IOU
+        for g in self.graveyard:
+            iou = self._iou(bbox, g['bbox'])
+            if iou >= best_iou:
+                best, best_iou = g, iou
+        if best is not None:
+            self.graveyard.remove(best)
+            return best['alias']
+        self.anon_counter += 1
+        return 'Person {0}'.format(self.anon_counter)
+
+    def update(self, heads, allow_anonymous=False):
         """heads: [{'bbox': (x1,y1,x2,y2), 'dists': {alias: d} | None,
         'cutoff': float | None}] for one frame, in any order.
+        allow_anonymous: no enrollment gallery exists — stable tracks earn
+        generic "Person N" identities instead of staying unlabeled.
         Returns {head_idx: alias} — at most one head per alias."""
         self.frame_no += 1
         for tid in [t for t, tr in self.tracks.items()
                     if self.frame_no - tr['last_seen'] > self.MAX_MISSED]:
-            del self.tracks[tid]
+            tr = self.tracks.pop(tid)
+            if tr['alias'] and tr['alias'].startswith('Person '):
+                self.graveyard.append({'alias': tr['alias'],
+                                       'bbox': tr['bbox'],
+                                       'died': tr['last_seen']})
+                del self.graveyard[:-16]  # cap seat memory
 
         # Greedy IoU matching of this frame's heads to live tracks.
         iou_pairs = []
@@ -90,11 +124,12 @@ class _SessionHeadTracker:
                 tid = self.next_id
                 self.next_id += 1
                 self.tracks[tid] = {'bbox': h['bbox'], 'last_seen': 0,
-                                    'alias': None, 'votes': {}}
+                                    'alias': None, 'votes': {}, 'hits': 0}
                 head_track[h_idx] = tid
             tr = self.tracks[head_track[h_idx]]
             tr['bbox'] = h['bbox']
             tr['last_seen'] = self.frame_no
+            tr['hits'] = tr.get('hits', 0) + 1
 
         # Unique face-recognition assignment for identity-less tracks only;
         # aliases already locked to a live track are off the table.
@@ -122,6 +157,16 @@ class _SessionHeadTracker:
             if tr['votes'][alias] >= self.LOCK_VOTES:
                 tr['alias'] = alias
             out[h_idx] = alias
+
+        # Anonymous fallback: with no enrollment gallery, a track that has
+        # proven stable (seen LOCK_VOTES times) earns a generic identity,
+        # inheriting a dead neighbor's number when it reappears in the same
+        # seat. Never runs alongside enrolled matching.
+        if allow_anonymous:
+            for h_idx, tid in head_track.items():
+                tr = self.tracks[tid]
+                if tr['alias'] is None and tr['hits'] >= self.LOCK_VOTES:
+                    tr['alias'] = self._revive_or_new_anon(tr['bbox'])
 
         # Carry locked identities for tracked heads the face matcher missed.
         for h_idx, tid in head_track.items():
@@ -622,7 +667,12 @@ class ImageObjectDetection:
                     # independent matching, which duplicated one alias onto
                     # several heads in 85% of stored seconds for pod 918 and
                     # dropped every unrecognizable head.
-                    assignments = self._tracker_for(auth_key).update(head_candidates)
+                    # No enrollment gallery (uploaded recordings) -> stable
+                    # tracks get generic "Person N" identities so the video
+                    # analytics aren't empty, mirroring audio's SPEAKER_NN.
+                    assignments = self._tracker_for(auth_key).update(
+                        head_candidates,
+                        allow_anonymous=not facial_embeddings)
                     for h_idx, alias in assignments.items():
                         cand = head_candidates[h_idx]
                         if cand['quality_face'] is not None and cand['dists'] \
