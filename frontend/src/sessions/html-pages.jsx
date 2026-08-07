@@ -387,8 +387,11 @@ function UploadVideoButton() {
 // Folders live inside the sessions table, one row each above the session
 // rows: same anatomy as a session row (icon tile, name, context menu), and
 // clicking the row opens the folder to show the sessions within it.
-function FolderRow({ folder, count, onOpen, openFolderDialog }) {
+function FolderRow({ folder, sessions, onOpen, onOpenSession, openFolderDialog }) {
+    const [expanded, setExpanded] = useState(false)
+    const count = sessions.length
     return (
+        <>
         <tr
             onClick={() => onOpen(folder.id)}
             title={`Open folder ${folder.name}`}
@@ -418,12 +421,22 @@ function FolderRow({ folder, count, onOpen, openFolderDialog }) {
                 onClick={(e) => e.stopPropagation()}
             >
                 <span className="flex items-center justify-end gap-0.5">
-                    <span
-                        aria-hidden="true"
-                        className="flex h-7 w-7 flex-none items-center justify-center text-tiilt-muted"
-                    >
-                        <Chevron size={14} />
-                    </span>
+                    {count > 0 ? (
+                        <button
+                            onClick={() => setExpanded((v) => !v)}
+                            title={expanded ? "Hide sessions" : "Show sessions"}
+                            aria-expanded={expanded}
+                            className="flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-md text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
+                        >
+                            <Chevron
+                                direction="down"
+                                style={{
+                                    transform: expanded ? "rotate(180deg)" : "none",
+                                    transition: "transform 0.15s",
+                                }}
+                            />
+                        </button>
+                    ) : null}
                     <AppContextMenu label={`Options for folder ${folder.name}`}>
                         <button
                             role="menuitem"
@@ -450,6 +463,34 @@ function FolderRow({ folder, count, onOpen, openFolderDialog }) {
                 </span>
             </td>
         </tr>
+        {expanded ? (
+            <tr className="border-t border-tiilt-line bg-tiilt-ground/40">
+                <td colSpan={8} className="px-3 py-1">
+                    <ul className="flex flex-col gap-0.5 px-2 py-1.5 pl-[3rem]">
+                        {sessions.map((s) => (
+                            <li key={s.id}>
+                                <button
+                                    onClick={() => onOpenSession(s)}
+                                    className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-left text-xs transition hover:bg-tiilt-soft"
+                                >
+                                    <span className="min-w-0 grow truncate font-medium text-tiilt-ink">
+                                        {s.title}
+                                    </span>
+                                    <span className="flex-none text-tiilt-muted">
+                                        {formatDate(s.creation_date)}
+                                    </span>
+                                    <span className="flex-none font-ahamono tabular-nums text-tiilt-muted">
+                                        {s.lengthFormatted}
+                                    </span>
+                                    <Chevron size={12} className="flex-none text-tiilt-muted" />
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </td>
+            </tr>
+        ) : null}
+        </>
     )
 }
 
@@ -1041,8 +1082,9 @@ function DiscussionSessionPage(props) {
                                                               <FolderRow
                                                                   key={"folder-" + folder.id}
                                                                   folder={folder}
-                                                                  count={(props.sessions || []).filter((x) => x.folder === folder.id).length}
+                                                                  sessions={(props.sessions || []).filter((x) => x.folder === folder.id)}
                                                                   onOpen={props.displayFolder}
+                                                                  onOpenSession={props.goToSession}
                                                                   openFolderDialog={props.openFolderDialog}
                                                               />
                                                           ))
