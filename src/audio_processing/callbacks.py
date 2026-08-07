@@ -41,7 +41,7 @@ def post_transcripts(source, start_time, end_time, transcript, doa, questions, k
     if speaker_id:
         result['speaker_id'] = speaker_id
     try:
-        response = requests.post(config.processing_callback(), json=result)
+        response = requests.post(config.processing_callback(), json=result, timeout=callbacks_common.CALLBACK_TIMEOUT)
         transcript_id = response.json()['transcript_id'] if response.status_code == 200 else -1
         return response.status_code == 200, transcript_id
     except Exception as e:
@@ -68,7 +68,7 @@ def post_tagging(source, tag, embeddingsFile):
         'embeddingsFile': embeddingsFile
     }
     try:
-        response = requests.post(config.tagging_callback(),json=result)
+        response = requests.post(config.tagging_callback(), json=result, timeout=callbacks_common.CALLBACK_TIMEOUT)
         return response.status_code == 200
     except Exception as e:
         logging.info('Tagging callback failed: {0}'.format(e))
@@ -84,7 +84,7 @@ def post_transcript_features(source, updates):
     # (post-hoc style recomputation). `updates` = [{id, features:{...}}].
     payload = {'source': source, 'updates': updates}
     try:
-        response = requests.post(_callback_base() + '/transcript_features', json=payload)
+        response = requests.post(_callback_base() + '/transcript_features', json=payload, timeout=callbacks_common.CALLBACK_TIMEOUT)
         return response.status_code == 200
     except Exception as e:
         logging.warning('transcript features callback failed: {0}'.format(e))
@@ -120,7 +120,7 @@ def post_speaker_transcript_metrics(transcript_data, speakers, participation_sco
         'communication_density': communication_density
     }
     try:
-        response = requests.post(config.speaker_metrics_callback(), json=result)
+        response = requests.post(config.speaker_metrics_callback(), json=result, timeout=callbacks_common.CALLBACK_TIMEOUT)
         return response.status_code == 200
     except Exception as e:
         logging.warning('Speaker Metrics callback failed: {0}'.format(e))

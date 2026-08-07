@@ -534,7 +534,7 @@ def sync_student_table(**kwargs):
     try:
         students = database.get_students()
         result = {"Students_data": [student.json() for student in students]}
-        response = requests.post(url, json=result, headers={'X-Sync-Token': cf.sync_token()})
+        response = requests.post(url, json=result, headers={'X-Sync-Token': cf.sync_token()}, timeout=30)
         if response.status_code == 200:
           return json_response()
         else:

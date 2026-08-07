@@ -25,7 +25,7 @@ def get_redis_session_key(auth_key):
         'auth_key': auth_key
     }
     try:
-        response = requests.post(config.redis_session_key_callback(),json=payload)
+        response = requests.post(config.redis_session_key_callback(), json=payload, timeout=callbacks_common.CALLBACK_TIMEOUT)
         if response.status_code == 200:
             data = response.json()
             return data['redis_key']
@@ -42,7 +42,7 @@ def get_redis_session_config(session_key):
     'session_key': session_key
     }
     try:
-        response = requests.post(config.redis_session_config_callback(),json=payload)
+        response = requests.post(config.redis_session_config_callback(), json=payload, timeout=callbacks_common.CALLBACK_TIMEOUT)
         if response.status_code == 200:
             data = response.json()
             return data['redis_session_key']
@@ -72,7 +72,7 @@ def post_video_metrics(source, video_metrics):
         'video_metrics': video_metrics
     }
     try:
-        response = requests.post(config.video_metrics_callback(), json=result)
+        response = requests.post(config.video_metrics_callback(), json=result, timeout=callbacks_common.CALLBACK_TIMEOUT)
         return response.status_code == 200
     except Exception as e:
         logging.warning('video metric callback failed: {0}'.format(e))
@@ -85,7 +85,7 @@ def post_gaze_overlays(source, records, reset=False):
     # run's first batch replaces the previous run's file.
     try:
         response = requests.post(_callback_base() + '/gaze_overlays',
-                                 json={'source': source, 'records': records, 'reset': reset})
+                                 json={'source': source, 'records': records, 'reset': reset}, timeout=callbacks_common.CALLBACK_TIMEOUT)
         return response.status_code == 200
     except Exception as e:
         logging.warning('gaze overlay callback failed: {0}'.format(e))

@@ -11,10 +11,16 @@ from datetime import datetime
 
 import requests
 
+# Every callback runs on the websocket reactor/worker threads; without a
+# timeout a stalled or restarting Flask blocks that thread indefinitely,
+# pinning the pod's in-RAM buffers (the OOM profile the post-hoc service
+# was already fighting). requests defaults to no timeout, so set one always.
+CALLBACK_TIMEOUT = 30
+
 
 def _post_best_effort(url, payload, name):
     try:
-        requests.post(url, json=payload)
+        requests.post(url, json=payload, timeout=CALLBACK_TIMEOUT)
     except Exception as e:
         logging.warning('%s callback failed: %s', name, e)
 
@@ -25,7 +31,7 @@ def post_connect(connect_url, source):
         'time': str(datetime.utcnow())
     }
     try:
-        response = requests.post(connect_url, json=connection)
+        response = requests.post(connect_url, json=connection, timeout=CALLBACK_TIMEOUT)
         logging.info('connect callback for %s: %s', source, response.status_code)
         return response.status_code == 200
     except Exception as e:
