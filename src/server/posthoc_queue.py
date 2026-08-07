@@ -266,8 +266,28 @@ def clear_pending():
         return n
 
 
+# Once every job is settled the queue panel has said what it had to say —
+# prune the list so the panel (which renders whenever the list is non-empty)
+# goes away on its own instead of showing "Finished" until the next enqueue.
+# Errors linger longer so a failed overnight batch is still visible in the
+# morning-ish window rather than silently vanishing.
+_DONE_LINGER = 5 * 60
+_ERROR_LINGER = 30 * 60
+
+
+def _prune_settled_locked():
+    if not _jobs or any(j["state"] in ("queued", "running") for j in _jobs):
+        return
+    last = max((j.get("finished_at") or 0) for j in _jobs)
+    linger = _ERROR_LINGER if any(j["state"] == "error" for j in _jobs) else _DONE_LINGER
+    if last and time.time() - last > linger:
+        del _jobs[:]
+        _persist_locked()
+
+
 def status(session_id=None):
     with _lock:
+        _prune_settled_locked()
         return [{"session_id": j["session_id"], "device_id": j["device_id"],
                  "state": j["state"], "error": j["error"],
                  "started_at": j.get("started_at"),
