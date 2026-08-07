@@ -1,6 +1,8 @@
 import config
 import requests
 import os
+import time
+import threading
 from datetime import datetime
 import logging
 import base64
@@ -111,12 +113,23 @@ def post_disconnect(source):
         'source': source,
         'time': str(datetime.utcnow())
     }
-    try:
-        response = requests.post(config.disconnect_callback(), json=disconnection)
-        return response.status_code == 200
-    except Exception as e:
-        logging.info('disconnect callback failed: {0}'.format(e))
-        return False
+    # Retried from a background thread (the caller is the websocket reactor
+    # thread, which must not block): this callback races the exact moments
+    # the Flask server is down for a restart, and a lost disconnect leaves
+    # the pod shown as connected forever — nothing ever re-sends it.
+    def _send():
+        for attempt in range(8):
+            try:
+                response = requests.post(config.disconnect_callback(), json=disconnection, timeout=10)
+                if response.status_code == 200:
+                    return
+                logging.info('disconnect callback returned {0} (attempt {1})'.format(response.status_code, attempt + 1))
+            except Exception as e:
+                logging.info('disconnect callback failed (attempt {0}): {1}'.format(attempt + 1, e))
+            time.sleep(min(2 ** attempt, 30))
+        logging.warning('disconnect callback gave up for {0}'.format(source))
+    threading.Thread(target=_send, daemon=True).start()
+    return True
 #Post speaker metrics with transcript data
 def post_speaker_transcript_metrics(transcript_data, speakers, participation_scores, internal_cohesion, responsivity, social_impact, newness, communication_density):
     result = {
