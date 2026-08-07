@@ -761,10 +761,14 @@ function JoinPage() {
                             const resp = await new AuthService().getStudentProfileByID(username)
                             if (resp.status === 200) {
                                 const studentJson = await resp.json()
-                                // Kicks off the existing chain: rename to the
-                                // username, then attach the saved fingerprint.
-                                setRegisteredStudentData(StudentModel.fromJson(studentJson))
-                                return
+                                // Attach only when biometrics were actually
+                                // captured — a registered account without an
+                                // enrollment must fall through to a plain
+                                // rename (and show the red X).
+                                if (studentJson.biometric_captured) {
+                                    setRegisteredStudentData(StudentModel.fromJson(studentJson))
+                                    return
+                                }
                             }
                         } catch (ex) {
                             console.log("enrollment lookup failed", ex)
@@ -804,8 +808,12 @@ function JoinPage() {
             const resp = await new AuthService().getStudentProfileByID(username)
             if (resp.status === 200) {
                 const studentJson = await resp.json()
-                setRegisteredStudentData(StudentModel.fromJson(studentJson))
-                return
+                // Only a completed enrollment attaches a fingerprint; a mere
+                // account falls through to a plain rename (red X stays).
+                if (studentJson.biometric_captured) {
+                    setRegisteredStudentData(StudentModel.fromJson(studentJson))
+                    return
+                }
             }
         } catch (ex) {
             console.log("inline enrollment lookup failed", ex)
@@ -1034,6 +1042,12 @@ function JoinPage() {
                     if (response.status === 200) {
                         response.json().then((jsonObj) => {
                             console.log(jsonObj)
+                            if (!jsonObj.biometric_captured) {
+                                setSavedFingerprintError(
+                                    "That account exists but has no enrolled fingerprint — record one instead.",
+                                )
+                                return
+                            }
                             const student_data = StudentModel.fromJson(jsonObj)
                             setRegisteredStudentData(student_data)
                         })
