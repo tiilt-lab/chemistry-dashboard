@@ -382,13 +382,27 @@ function ProjectOverlay({ passcode, joinLink, onClose }) {
     )
 }
 
-function LobbyHero({ passcode, joinLink, copyJoinLink, onLock }) {
+function LobbyHero({ passcode, joinLink, copyJoinLink, onLock, deviceCount }) {
     const [projecting, setProjecting] = useState(false)
+    // Same card before and after the first group joins — only the status
+    // line changes, so the join info never jumps around mid-class.
+    const joined = deviceCount > 0
     return (
         <div className="mx-auto flex max-w-xl flex-col items-center gap-5 rounded-2xl border border-tiilt-line bg-white px-6 py-10 text-center shadow-pop">
             <div className="flex items-center gap-2 text-sm font-semibold text-tiilt-muted">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-tiilt-orange" />
-                Waiting for groups to join…
+                <span
+                    className={
+                        "h-2 w-2 rounded-full " +
+                        (joined
+                            ? "bg-tiilt-teal"
+                            : "animate-pulse bg-tiilt-orange")
+                    }
+                />
+                {joined
+                    ? deviceCount +
+                      (deviceCount === 1 ? " group has" : " groups have") +
+                      " joined — the code stays open for more"
+                    : "Waiting for groups to join…"}
             </div>
             <div className="rounded-xl bg-tiilt-soft/50 px-8 py-4">
                 <div className="font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
@@ -490,6 +504,43 @@ function PodsOverviewPages(props) {
                     )}
                     <div className="min-h-0 grow overflow-y-auto">
                         <div className="mx-auto w-full max-w-6xl px-4 py-8 lg:px-8">
+                            {/* Standardized join hero: identical card for a
+                                live session whether zero or many pods have
+                                joined; only its status line differs. */}
+                            {props.sessionDevices !== null &&
+                            props.initialized &&
+                            props.session &&
+                            !props.session.end_date ? (
+                                props.passcode ? (
+                                    <div className="mb-6">
+                                        <LobbyHero
+                                            passcode={props.passcode}
+                                            joinLink={props.joinLink}
+                                            copyJoinLink={props.copyJoinLink}
+                                            onLock={() => props.setPasscodeState("lock")}
+                                            deviceCount={props.sessionDevices.length}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="mx-auto mb-6 flex max-w-xl flex-col items-center gap-4 rounded-2xl border border-tiilt-line bg-white px-6 py-10 text-center shadow-pop">
+                                        <div className="text-base font-semibold text-tiilt-ink">
+                                            Joining is locked
+                                        </div>
+                                        <div className="text-sm text-tiilt-muted">
+                                            Unlock to get a fresh passcode and
+                                            let groups join this session.
+                                        </div>
+                                        <button
+                                            className={btnPrimary}
+                                            onClick={() => props.setPasscodeState("unlock")}
+                                        >
+                                            Unlock joining
+                                        </button>
+                                    </div>
+                                )
+                            ) : (
+                                <></>
+                            )}
                             {props.sessionDevices !== null && props.initialized ? (
                                 <SessionStats
                                     devices={props.sessionDevices}
@@ -541,41 +592,18 @@ function PodsOverviewPages(props) {
                             </div>
                             {props.sessionDevices !== null &&
                             props.initialized &&
-                            Object.keys(props.sessionDevices).length === 0 ? (
-                                props.passcode && props.session && !props.session.end_date ? (
-                                    <LobbyHero
-                                        passcode={props.passcode}
-                                        joinLink={props.joinLink}
-                                        copyJoinLink={props.copyJoinLink}
-                                        onLock={() => props.setPasscodeState("lock")}
-                                    />
-                                ) : props.session && !props.session.end_date ? (
-                                    <div className="mx-auto flex max-w-xl flex-col items-center gap-4 rounded-2xl border border-tiilt-line bg-white px-6 py-10 text-center shadow-pop">
-                                        <div className="text-base font-semibold text-tiilt-ink">
-                                            Joining is locked
-                                        </div>
-                                        <div className="text-sm text-tiilt-muted">
-                                            Unlock to get a fresh passcode and
-                                            let groups join this session.
-                                        </div>
-                                        <button
-                                            className={btnPrimary}
-                                            onClick={() => props.setPasscodeState("unlock")}
-                                        >
-                                            Unlock joining
-                                        </button>
+                            Object.keys(props.sessionDevices).length === 0 &&
+                            props.session &&
+                            props.session.end_date ? (
+                                <div className="rounded-xl border border-dashed border-tiilt-line py-16 text-center">
+                                    <div className="text-base font-semibold text-tiilt-ink">
+                                        No groups in this session
                                     </div>
-                                ) : (
-                                    <div className="rounded-xl border border-dashed border-tiilt-line py-16 text-center">
-                                        <div className="text-base font-semibold text-tiilt-ink">
-                                            No groups in this session
-                                        </div>
-                                        <div className="mt-1 text-sm text-tiilt-muted">
-                                            Participants and recording devices
-                                            will appear here once they join.
-                                        </div>
+                                    <div className="mt-1 text-sm text-tiilt-muted">
+                                        Participants and recording devices
+                                        will appear here once they join.
                                     </div>
-                                )
+                                </div>
                             ) : (
                                 <></>
                             )}
