@@ -46,7 +46,9 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
     const [channels, setChannels] = useState(1)
     const [levels, setLevels] = useState([])
     const [channelChoice, setChannelChoice] = useState("mix") // "mix" | index
-    const [resChoice, setResChoice] = useState("auto")
+    // 640×480 by default — the analytics pipeline's sweet spot. "Auto"
+    // (which steps panorama cameras up to 1080p) is an explicit choice.
+    const [resChoice, setResChoice] = useState("640x480")
     const [actualRes, setActualRes] = useState("")
     const videoRef = useRef(null)
     const cleanupRef = useRef(null)
