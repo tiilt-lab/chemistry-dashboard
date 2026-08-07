@@ -357,13 +357,12 @@ class SessionService {
   }
 
   removeDeviceFromSession(sessionId, sessionDeviceId, shouldDelete = false) {
-    const query = {
-      delete: shouldDelete,
-    };
+    // delete must ride the query string: the fetch wrapper drops bodies on
+    // DELETE, so passing it as data silently never deleted anything.
     return this.api.httpRequestCall(
-      `api/v1/sessions/${sessionId}/devices/${sessionDeviceId}`,
+      `api/v1/sessions/${sessionId}/devices/${sessionDeviceId}?delete=${shouldDelete ? "true" : "false"}`,
       "DELETE",
-      query
+      {}
     );
   }
 

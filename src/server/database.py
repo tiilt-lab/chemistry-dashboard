@@ -694,6 +694,17 @@ def get_Session_device_by_alias(session_id=None,alias=None):
     return query.all()
 
 
+def session_device_has_data(session_device_id):
+    # Cheap existence probes, not row loads — used to decide whether a
+    # non-admin may delete a pod (only pods that never recorded anything).
+    if db.session.query(Transcript.id).filter(Transcript.session_device_id == session_device_id).first():
+        return True
+    if db.session.query(SpeakerVideoMetrics.id).filter(SpeakerVideoMetrics.session_device_id == session_device_id).first():
+        return True
+    if db.session.query(SpeakerHrMetrics.id).filter(SpeakerHrMetrics.session_device_id == session_device_id).first():
+        return True
+    return False
+
 def delete_session_device(session_device_id):
     db.session.query(KeywordUsage).filter(KeywordUsage.transcript_id == Transcript.id).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')
     db.session.query(Transcript).filter(Transcript.session_device_id == session_device_id).delete(synchronize_session='fetch')

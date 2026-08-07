@@ -1121,6 +1121,12 @@ def set_session_passcode(session_id, **kwargs):
 @wrappers.verify_session_access
 def remove_device_from_session(session_id, session_device_id, **kwargs):
     delete = string_to_bool(request.args.get('delete', 'false'))
+    if delete:
+        # Admins/supers may delete any pod; everyone else only pods that
+        # never recorded anything (mis-joins, empty test pods).
+        user = kwargs.get('user') or {}
+        if user.get('role') not in ('admin', 'super') and database.session_device_has_data(session_device_id):
+            return json_response({'message': 'This pod has recorded data — only an admin can delete it.'}, 403)
     session_handler.remove_session_device(session_device_id)
     if delete:
         database.delete_session_device(session_device_id)

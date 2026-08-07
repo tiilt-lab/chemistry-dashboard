@@ -8,7 +8,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { PodsOverviewPages } from "./html-pages";
 
-function PodsOverviewComponent() {
+function PodsOverviewComponent(props) {
   const [sessionClosing, setSessionClosing] = useState(false);
   const [openingDialog, setOpeningDialog] = useState(false);
   const [sessionDevices, setSessionDevices] = useState(null);
@@ -114,6 +114,55 @@ function PodsOverviewComponent() {
     };
   }, [session]);
   const [currentForm, setCurrentForm] = useState("");
+  // Pod deletion: admins/supers may delete any pod; everyone else only pods
+  // that never recorded anything (the server enforces the same rule).
+  const [podToDelete, setPodToDelete] = useState(null);
+  const canDeletePod = (device) => {
+    const role = (props.userdata || {}).role;
+    if (role === "admin" || role === "super") return true;
+    const e = enriched[device.id] || {};
+    return e.has_data === false;
+  };
+  const confirmDeletePod = () => {
+    const device = podToDelete;
+    setPodToDelete(null);
+    if (!device || !session) return;
+    const label =
+      (device.name && String(device.name).trim()) || `Pod ${device.id}`;
+    new SessionService()
+      .removeDeviceFromSession(session.id, device.id, true)
+      .then(
+        (resp) => {
+          if (resp.status === 200) {
+            setSessionDevices((prev) =>
+              (prev || []).filter((d) => d.id !== device.id),
+            );
+            setToasts((t) => [
+              ...t,
+              { id: `poddel-${device.id}-${Date.now()}`, text: `${label} deleted` },
+            ]);
+          } else {
+            resp
+              .json()
+              .then((j) =>
+                setToasts((t) => [
+                  ...t,
+                  {
+                    id: `poddelerr-${Date.now()}`,
+                    text: (j && j.message) || `Could not delete ${label}.`,
+                  },
+                ]),
+              )
+              .catch(() => {});
+          }
+        },
+        () =>
+          setToasts((t) => [
+            ...t,
+            { id: `poddelerr-${Date.now()}`, text: `Could not delete ${label}.` },
+          ]),
+      );
+  };
   // Toasts for analysis completion: diff the 15s enrichment polls and
   // announce pods whose analysis_running flipped off (or hit an error).
   const [toasts, setToasts] = useState([]);
@@ -497,6 +546,11 @@ function PodsOverviewComponent() {
       navigateToSessions={navigateToSessions}
       sessionDevices={sessionDevices}
       renamePodInline={renamePodInline}
+      canDeletePod={canDeletePod}
+      podToDelete={podToDelete}
+      requestDeletePod={setPodToDelete}
+      cancelDeletePod={() => setPodToDelete(null)}
+      confirmDeletePod={confirmDeletePod}
       goToDevice={goToDevice}
       currentForm={currentForm}
       closeDialog={closeDialog}

@@ -84,7 +84,7 @@ function TriageBadges({ alerts, connected }) {
     ))
 }
 
-function PodRow({ device, enrich, alerts, onOpen, checked, onToggle, queue, index, lastSpoke, renameInline }) {
+function PodRow({ device, enrich, alerts, onOpen, checked, onToggle, queue, index, lastSpoke, renameInline, onDelete }) {
     const e = enrich || {}
     const name =
         device.name && String(device.name).trim()
@@ -223,7 +223,21 @@ function PodRow({ device, enrich, alerts, onOpen, checked, onToggle, queue, inde
             <td className="px-3 py-2 text-right font-ahamono tabular-nums whitespace-nowrap text-tiilt-ink">
                 {dur || <span className="text-tiilt-muted">—</span>}
             </td>
-            <td className="py-2 pr-3 pl-1 text-right">
+            <td className="py-2 pr-3 pl-1 text-right whitespace-nowrap">
+                {onDelete && (
+                    <button
+                        type="button"
+                        aria-label={`Delete ${name}`}
+                        title="Delete this pod"
+                        onClick={(ev) => {
+                            ev.stopPropagation()
+                            onDelete()
+                        }}
+                        className="mr-1.5 cursor-pointer rounded px-1.5 py-0.5 text-tiilt-muted transition hover:bg-tiilt-danger-soft hover:text-tiilt-danger"
+                    >
+                        ✕
+                    </button>
+                )}
                 <Chevron
                     size={12}
                     className={noData ? "text-transparent" : "text-tiilt-muted"}
@@ -623,6 +637,12 @@ function PodsOverviewPages(props) {
                                                         onToggle={() => props.toggleSelect(device.id)}
                                                         queue={props.queueState && props.queueState[device.id]}
                                                         renameInline={props.renamePodInline}
+                                                        onDelete={
+                                                            props.canDeletePod &&
+                                                            props.canDeletePod(device)
+                                                                ? () => props.requestDeletePod(device)
+                                                                : null
+                                                        }
                                                         onOpen={() =>
                                                             props.goToDevice(device)
                                                         }
@@ -641,6 +661,32 @@ function PodsOverviewPages(props) {
             </div>
 
             <ToastStack toasts={props.toasts} dismiss={props.dismissToast} />
+
+            <GenericDialogBox
+                onClose={props.cancelDeletePod}
+                show={!!props.podToDelete}
+            >
+                <div className={dlgBody}>
+                    <div className={dlgHeading}>Delete pod</div>
+                    <div className="text-sm text-tiilt-ink">
+                        Delete{" "}
+                        <span className="font-semibold">
+                            {(props.podToDelete &&
+                                props.podToDelete.name &&
+                                String(props.podToDelete.name).trim()) ||
+                                "this pod"}
+                        </span>
+                        ? The pod and anything it recorded are removed from
+                        the session permanently.
+                    </div>
+                    <button className={dlgDanger} onClick={props.confirmDeletePod}>
+                        Delete pod
+                    </button>
+                    <button className={dlgCancel} onClick={props.cancelDeletePod}>
+                        Cancel
+                    </button>
+                </div>
+            </GenericDialogBox>
 
             <GenericDialogBox onClose={props.closeDialog} show={props.currentForm !== ""}>
                 {(props.currentForm === "AddDevice" && (
