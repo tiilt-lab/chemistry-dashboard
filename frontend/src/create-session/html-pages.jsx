@@ -19,27 +19,6 @@ const fieldLabel = "mb-1.5 block text-sm font-semibold text-tiilt-ink";
 const footerBar = "w-full flex-none border-t border-tiilt-line bg-white";
 const footerRow = "mx-auto flex w-full max-w-lg gap-3 px-4 py-4";
 
-function Toggle({ label, checked, onChange }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={onChange}
-      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-tiilt-soft/40"
-    >
-      <span className="text-sm font-medium text-tiilt-ink">{label}</span>
-      <span
-        className={`relative inline-flex h-6 w-11 flex-none items-center rounded-full transition ${checked ? "bg-tiilt" : "bg-tiilt-line"}`}
-      >
-        <span
-          className={`inline-block h-5 w-5 transform rounded-full bg-[#fff] shadow transition ${checked ? "translate-x-[22px]" : "translate-x-0.5"}`}
-        />
-      </span>
-    </button>
-  );
-}
-
 function CreateSessionPage(props) {
   return (
     <>
@@ -79,13 +58,6 @@ function CreateSessionPage(props) {
                   <span className="truncate">{props.folderPath || "Home"}</span>
                   <img src={openFolderIcon} alt="" className="h-5 w-5 flex-none" />
                 </button>
-              </div>
-              <div className="divide-y divide-tiilt-line overflow-hidden rounded-lg border border-tiilt-line">
-                <Toggle
-                  label="Analyze session features"
-                  checked={props.features}
-                  onChange={() => props.setFeatures(!props.features)}
-                />
               </div>
               <div>
                 <label className={fieldLabel}>Live transcription</label>

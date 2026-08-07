@@ -47,7 +47,10 @@ function CreateSessionComponent(props) {
   // so the old "Allow participant devices" toggle was removed from the UI.
   const byod = true;
   const [doa, setDoa] = useState(changedState ? prevState.doa : true);
-  const [features, setFeatures] = useState(changedState ? prevState.features : true);
+  // Always on: live per-utterance feature scoring is nearly free, and the
+  // toggle only ever produced sessions whose E&T charts sat empty until a
+  // posthoc re-run. The UI option was removed alongside the byod one.
+  const features = true;
   // Live transcription engine, locked at creation (crisperwhisper = local GPU).
   // Legacy 'whisper' sessions fold into crisperwhisper (plain Whisper retired).
   const [asr, setAsr] = useState(() => {
@@ -286,7 +289,7 @@ function CreateSessionComponent(props) {
   
   
   const getStateInfo = () => {
-    return {state: {sessionName: sessionName, features: features, doa: doa, asr: asr, folder: folder, folderPath: folderPath, currentMenu: currentMenu, pageTitle: pageTitle, selectedKeywordList: selectedKeywordList, selectedTopicModel: selectedTopicModel}};
+    return {state: {sessionName: sessionName, doa: doa, asr: asr, folder: folder, folderPath: folderPath, currentMenu: currentMenu, pageTitle: pageTitle, selectedKeywordList: selectedKeywordList, selectedTopicModel: selectedTopicModel}};
   }
 
   const openDialog = (form, text)=> {
@@ -306,8 +309,6 @@ function CreateSessionComponent(props) {
     sessionName = {sessionName}
     setSessionName = {setSessionName}
     folderPath = {folderPath}
-    features = {features}
-    setFeatures = {setFeatures}
     asr = {asr}
     setAsr = {setAsr}
     goToSettings = {goToSettings}
