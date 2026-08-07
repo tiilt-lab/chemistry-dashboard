@@ -163,8 +163,12 @@ def create_speaker(session_device_id, alias=''):
         return None
     if not alias:
         # Friendly per-device default ("Speaker 3"), not the global row id.
+        # Number past the highest existing "Speaker N": len()+1 handed out
+        # duplicate names after a removal or when adds raced each other.
         existing = get_speakers(session_device_id=session_device_id)
-        alias = 'Speaker {0}'.format(len(existing) + 1)
+        used = [int(m.group(1)) for m in
+                (re.match(r'Speaker (\d+)$', s.alias or '') for s in existing) if m]
+        alias = 'Speaker {0}'.format(max(used, default=0) + 1)
     speaker = Speaker(session_device_id, alias)
     db.session.add(speaker)
     db.session.commit()
