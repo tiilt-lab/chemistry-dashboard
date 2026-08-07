@@ -1,18 +1,12 @@
 import os
 import json
 import time
-import glob
 import queue
-import shutil
 import logging
 import callbacks
 import enrollment_check
-import threading
-import weakref
 import wave
-import scipy.signal
 import config as cf
-import numpy as np
 try:
     import moviepy.editor as mp  # moviepy 1.x
 except ImportError:
@@ -21,19 +15,15 @@ from queue import Full, Empty
 from recorder import WaveRecorder
 from recorder import VidRecorder
 from processing_config import ProcessingConfig
-from connection_manager import ConnectionManager
+from connection_manager import ConnectionManager  # also puts src/common on sys.path
+import audio_bytes
 from audio_buffer import AudioBuffer
 from processor import AudioProcessor
-from datetime import datetime
-from redis_helper import RedisSessions
-from twisted.python import log
 from twisted.internet import reactor, task
 from autobahn.twisted.websocket import WebSocketServerFactory
 from autobahn.twisted.websocket import WebSocketServerProtocol
 from asr_connectors.factory import create_asr
-from features_detector import features_detector
 from keyword_detector import keyword_detector
-from speaker_tagging import speaker_tagging
 from speechbrain.inference import SpeakerRecognition
 from sentence_transformers import SentenceTransformer
 
@@ -102,7 +92,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     logging.warning('Error processing json: {0}'.format(e))
 
     def onClose(self, wasClean, code, reason):
-        logging.info("close was trigered externally..... wasclean {0}, code {1}, reason {2}".format( wasClean, code, reason))
+        logging.info("close was triggered externally..... wasclean {0}, code {1}, reason {2}".format( wasClean, code, reason))
         self.signal_end()
 
     def process_json(self, data):
@@ -250,13 +240,12 @@ class ServerProtocol(WebSocketServerProtocol):
 
     def _append_wavs(self, first_path, second_path, out_path):
         # Both are 16k mono pcm16 written by our own extraction.
-        import wave as _wave
-        with _wave.open(first_path, 'rb') as a:
+        with wave.open(first_path, 'rb') as a:
             params = a.getparams()
             frames = a.readframes(a.getnframes())
-        with _wave.open(second_path, 'rb') as b:
+        with wave.open(second_path, 'rb') as b:
             frames += b.readframes(b.getnframes())
-        with _wave.open(out_path, 'wb') as out:
+        with wave.open(out_path, 'wb') as out:
             out.setparams(params)
             out.writeframes(frames)
 
@@ -360,51 +349,34 @@ class ServerProtocol(WebSocketServerProtocol):
                                     'quality': verdict})
 
     def send_json(self, message):
-        payload = json.dumps(message).encode('utf8')
-        self.sendMessage(payload, isBinary = False)
+        # Best-effort: the socket may already be gone, and a raise here would
+        # abort the connection manager's periodic sweep for every later client.
+        try:
+            payload = json.dumps(message).encode('utf8')
+        except TypeError:
+            logging.warning('send_json: unserializable payload: %r', message)
+            return
+        try:
+            self.sendMessage(payload, isBinary = False)
+        except Exception as e:
+            logging.debug('send_json: transport send failed: %s', e)
 
-    # Changes the bit depth and encoding type.
+    # PCM helpers live in src/common/audio_bytes.py, shared with the other
+    # three WS servers; these delegates keep the config-bound call shape.
     def reformat_data(self, in_data):
-        if self.config.encoding == 'pcm_f32le':
-            out_data = np.frombuffer(in_data, np.float32, -1)
-            return (out_data * 32767.0).astype(np.int16, copy=False).tobytes()
-        else:
-            return in_data
+        return audio_bytes.reformat_data(in_data, self.config.encoding)
 
-    # Resampling leads to clicking in the output audio (scipy.signal.resample)
     def resample_data(self, in_data):
-        if self.config.sample_rate != 16000:
-            out_data = np.frombuffer(in_data, np.int16, -1)
-            secs = len(out_data) / self.config.sample_rate
-            samps = int(secs * 16000)
-            return scipy.signal.resample(out_data, samps).astype(np.int16, copy=False).tobytes()
-        else:
-            return in_data
+        return audio_bytes.resample_data(in_data, self.config.sample_rate)
 
-    # Reduces number of channels down to the desired amount.
     def reduce_channels(self, channels_wanted, in_data):
-        if channels_wanted < self.config.channels:
-            out_data = np.frombuffer(in_data, np.int16, -1)
-            return out_data[channels_wanted::self.config.channels].tobytes()
-        else:
-            return in_data
+        return audio_bytes.reduce_channels(channels_wanted, in_data, self.config.channels)
 
     def read_bytes_from_wav(self,wav):
-        wav.setpos(0)
-        sdata = wav.readframes(wav.getnframes())
-        data = np.frombuffer(sdata,dtype=np.dtype('int16'))
-        return data.tobytes()
+        return audio_bytes.read_bytes_from_wav(wav)
 
     def reduce_wav_channel(self,channels_wanted,wav):
-        if channels_wanted < self.config.channels:
-            nch = wav.getnchannels()
-            wav.setpos(0)
-            sdata = wav.readframes(wav.getnframes())
-            data = np.frombuffer(sdata,dtype=np.dtype('int16'))
-            ch_data = data[0::nch]
-            return ch_data.tobytes()
-        else:
-            return self.read_bytes_from_wav(wav)
+        return audio_bytes.reduce_wav_channel(channels_wanted, wav, self.config.channels)
 
     def enqueue_latest_audio_chunk(self, asr_data, timeout=0.05):
         """
@@ -469,26 +441,13 @@ class ServerProtocol(WebSocketServerProtocol):
         self.transport.loseConnection()
 
         # Begin Post Processing
-        # redu_recorder only exists on live audio connections (created in
+        # The recorders only exist on live audio connections (created in
         # signal_start); fingerprint-enrollment connections close through
         # here too and used to throw AttributeError into the log every time.
         if cf.record_reduced() and getattr(self, 'redu_recorder', None):
             self.redu_recorder.close()
-        # if self.stream_data == 'video':
-        #     self.orig_vid_recorder.close()
-        if cf.record_original():
+        if cf.record_original() and getattr(self, 'orig_recorder', None):
             self.orig_recorder.close()
-            '''
-            if self.config.tag:
-                logging.info('Performing speaker tagging...')
-                tagging_results = speaker_tagging.speaker_tagging(self.orig_recorder.wav_filename)
-                taggings_posted = callbacks.post_tagging(self.config.auth_key, tagging_results)
-
-                if taggings_posted:
-                    logging.info('Processing results posted successfully for tagging {0} '.format(self.config.auth_key))
-                else:
-                    logging.info('Processing results FAILED to post for {0} '.format(self.config.auth_key))
-            '''
 
 if __name__ == '__main__':
     cf.initialize()

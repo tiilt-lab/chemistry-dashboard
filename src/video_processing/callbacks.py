@@ -1,13 +1,25 @@
+import os
+import sys
 import config
 import requests
-import os
-import time
-import threading
-from datetime import datetime
 import logging
-import base64
 
-    
+# Shared payloads + retry policy live in src/common/callbacks_common.py
+# (same shim pattern as connection_manager.py / redis_helper.py).
+_COMMON = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "common"))
+if _COMMON not in sys.path:
+    sys.path.insert(0, _COMMON)
+import callbacks_common  # noqa: E402
+
+
+def _callback_base():
+    # .../api/v1/callback — derived once from the video-metrics callback URL.
+    # (Video config has no processing_callback accessor — a typo here once made
+    # the restart callback fail every time, leaving dead runs flagged as
+    # running for the 3h TTL.)
+    return config.video_metrics_callback().rsplit('/', 1)[0]
+
+
 def get_redis_session_key(auth_key):
     payload = {
         'auth_key': auth_key
@@ -18,12 +30,12 @@ def get_redis_session_key(auth_key):
             data = response.json()
             return data['redis_key']
         else:
-            logging.info('get_redis_device_key  failed: {0}'.format(response))  
-            return None 
+            logging.info('get_redis_device_key  failed: {0}'.format(response))
+            return None
     except Exception as e:
         logging.info('get_redis_device_key  failed: {0}'.format(e))
-        return None        
- 
+        return None
+
 
 def get_redis_session_config(session_key):
     payload = {
@@ -35,62 +47,25 @@ def get_redis_session_config(session_key):
             data = response.json()
             return data['redis_session_key']
         else:
-            logging.info('get_redis_session_config callback  failed: {0}'.format(response))  
-            return None 
+            logging.info('get_redis_session_config callback  failed: {0}'.format(response))
+            return None
     except Exception as e:
         logging.info('get_redis_session_config callback  failed: {0}'.format(e))
-        return None  
-    
+        return None
+
+
 def post_service_restarted(scope='video'):
-    # Announce a service (re)start so the server clears stale running flags
-    # from runs that died with the previous process. (Video config has no
-    # processing_callback accessor — that typo made this callback fail on
-    # every restart, leaving dead runs flagged as running for the 3h TTL.)
-    try:
-        base = config.video_metrics_callback().rsplit('/', 1)[0]
-        requests.post(base + '/posthoc_service_restarted', json={'scope': scope})
-    except Exception as e:
-        logging.warning('service_restarted callback failed: {0}'.format(e))
+    callbacks_common.post_service_restarted(_callback_base(), scope)
 
 
 def post_connect(source):
-    connection = {
-        'source': source,
-        'time': str(datetime.utcnow())
-    }
-    try:
-        logging.info('end point')
-        logging.info(config.connect_callback())
-        response = requests.post(config.connect_callback(), json=connection)
-        logging.info(response.status_code)
-        return response.status_code == 200
-    except Exception as e:
-        logging.info('connect callback failed: {0}'.format(e))
-        return False
+    return callbacks_common.post_connect(config.connect_callback(), source)
+
 
 def post_disconnect(source):
-    disconnection = {
-        'source': source,
-        'time': str(datetime.utcnow())
-    }
-    # Retried from a background thread (the caller is the websocket reactor
-    # thread, which must not block): this callback races the exact moments
-    # the Flask server is down for a restart, and a lost disconnect leaves
-    # the pod shown as connected forever — nothing ever re-sends it.
-    def _send():
-        for attempt in range(8):
-            try:
-                response = requests.post(config.disconnect_callback(), json=disconnection, timeout=10)
-                if response.status_code == 200:
-                    return
-                logging.info('disconnect callback returned {0} (attempt {1})'.format(response.status_code, attempt + 1))
-            except Exception as e:
-                logging.info('disconnect callback failed (attempt {0}): {1}'.format(attempt + 1, e))
-            time.sleep(min(2 ** attempt, 30))
-        logging.warning('disconnect callback gave up for {0}'.format(source))
-    threading.Thread(target=_send, daemon=True).start()
-    return True
-    
+    return callbacks_common.post_disconnect(config.disconnect_callback(), source)
+
+
 def post_video_metrics(source, video_metrics):
     result = {
         'source': source,
@@ -109,8 +84,7 @@ def post_gaze_overlays(source, records, reset=False):
     # overlay toggles. The server appends to a per-pod JSONL; reset=True on a
     # run's first batch replaces the previous run's file.
     try:
-        base = config.video_metrics_callback().rsplit('/', 1)[0]
-        response = requests.post(base + '/gaze_overlays',
+        response = requests.post(_callback_base() + '/gaze_overlays',
                                  json={'source': source, 'records': records, 'reset': reset})
         return response.status_code == 200
     except Exception as e:
@@ -119,19 +93,8 @@ def post_gaze_overlays(source, records, reset=False):
 
 
 def post_posthoc_reset(source, scope):
-    # Ask the server to wipe this pod's previous results before a full re-run.
-    try:
-        base = config.video_metrics_callback().rsplit('/', 1)[0]
-        requests.post(base + '/posthoc_reset', json={'source': source, 'scope': scope})
-    except Exception as e:
-        logging.warning('posthoc_reset callback failed: {0}'.format(e))
+    callbacks_common.post_posthoc_reset(_callback_base(), source, scope)
 
 
 def post_posthoc_completed(source, models=None, scope='video'):
-    # Mark a pod's post-hoc run complete server-side, so it persists even if the
-    # triggering browser disconnected. URL derived from the metrics callback base.
-    try:
-        base = config.video_metrics_callback().rsplit('/', 1)[0]
-        requests.post(base + '/posthoc_completed', json={'source': source, 'models': models, 'scope': scope})
-    except Exception as e:
-        logging.warning('posthoc_completed callback failed: {0}'.format(e))
+    callbacks_common.post_posthoc_completed(_callback_base(), source, models, scope)

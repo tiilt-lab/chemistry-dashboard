@@ -1,31 +1,22 @@
 import os
 import json
 import time
-import glob
 import queue
-import shutil
 import logging
 import callbacks
-import threading
 import traceback
-import weakref
 import wave
-import scipy.signal
 import config as cf
-import cv2
 import numpy as np
-import torch
-import torch.backends.cudnn as cudnn
 try:
     import moviepy.editor as mp  # moviepy 1.x
 except ImportError:
     import moviepy as mp  # moviepy 2.x dropped the .editor module
-import face_recognition
-# import ffmpeg
 
 from recorder import VidRecorder
 from processing_config import ProcessingConfig
-from connection_manager import ConnectionManager
+from connection_manager import ConnectionManager  # also puts src/common on sys.path
+import audio_bytes
 # Cartoonify is optional (and disabled in this instance's config); its
 # vendored tree still uses the moviepy 1.x import path, so don't let it
 # take down the whole live video service.
@@ -44,7 +35,6 @@ from emotion_detector.emotion_detection_model import EmotionDetectionModel, Emot
 from attention_tracking.detect import ImageObjectDetection
 from attention_tracking.attention_tracking import AttentionDetection
 from video_cartoonizer.VideoMetricProcessor import VideoMetricAnalytics
-from global_singleton_lock import get_attention_emotion_predictor, get_object_detector
 
 STOP_SIGNAL = object()
 cm = ConnectionManager()
@@ -145,7 +135,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     logging.warning('Error processing json: {0}'.format(error_str))
 
     def onClose(self, wasClean, code, reason):
-        logging.info("close was trigered externally..... wasclean {0}, code {1}, reason {2}".format( wasClean, code, reason))
+        logging.info("close was triggered externally..... wasclean {0}, code {1}, reason {2}".format( wasClean, code, reason))
         self.signal_end()
 
     def process_json(self, data):
@@ -404,25 +394,25 @@ class ServerProtocol(WebSocketServerProtocol):
             return False
     
     def send_json(self, message):
-        payload = json.dumps(message).encode('utf8')
-        self.sendMessage(payload, isBinary = False)
+        # Best-effort: the socket may already be gone, and a raise here would
+        # abort the connection manager's periodic sweep for every later client.
+        try:
+            payload = json.dumps(message).encode('utf8')
+        except TypeError:
+            logging.warning('send_json: unserializable payload: %r', message)
+            return
+        try:
+            self.sendMessage(payload, isBinary = False)
+        except Exception as e:
+            logging.debug('send_json: transport send failed: %s', e)
 
+    # PCM helpers live in src/common/audio_bytes.py, shared with the audio
+    # servers (the local copy of reduce_wav_channel had lost its return).
     def read_bytes_from_wav(self,wav):
-        wav.setpos(0)
-        sdata = wav.readframes(wav.getnframes())
-        data = np.frombuffer(sdata,dtype=np.dtype('int16'))
-        return data.tobytes()
+        return audio_bytes.read_bytes_from_wav(wav)
 
     def reduce_wav_channel(self,channels_wanted,wav):
-        if channels_wanted < self.config.channels:
-            nch = wav.getnchannels()
-            wav.setpos(0)
-            sdata = wav.readframes(wav.getnframes())
-            data = np.frombuffer(sdata,dtype=np.dtype('int16'))
-            ch_data = data[0::nch]
-            return ch_data.tobytes()
-        else:
-            self.read_bytes_from_wav(wav)
+        return audio_bytes.reduce_wav_channel(channels_wanted, wav, self.config.channels)
 
 
     def signal_start(self):

@@ -3,20 +3,17 @@ import json
 import time
 import logging
 import wave
-import scipy.signal
 import config as cf
 import callbacks
 import numpy as np
-import soundfile as sf
-import traceback
 from queue import Queue
 from pathlib import Path
 from scipy.io import wavfile
-from recorder import VidRecorder
 from processor_posthoc import AudioProcessorPosthoc
 from processor_speaker_metric import SpeakerMetricProcessor
 from processing_config import ProcessingConfig
-from connection_manager import ConnectionManager
+from connection_manager import ConnectionManager  # also puts src/common on sys.path
+import audio_bytes
 from audio_buffer import AudioBuffer
 from audio_stream_reader import AudioStreamReader
 from asr_connectors.google_asr_connector_posthoc import GoogleASR
@@ -104,7 +101,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     logging.warning('Error processing json: {0}'.format(e))
 
     def onClose(self, wasClean, code, reason):
-        logging.info("close was trigered externally..... wasclean {0}, code {1}, reason {2}".format( wasClean, code, reason))
+        logging.info("close was triggered externally..... wasclean {0}, code {1}, reason {2}".format( wasClean, code, reason))
         self.signal_end()
 
     def process_json(self, data):
@@ -159,9 +156,12 @@ class ServerProtocol(WebSocketServerProtocol):
                 key = file_path_split[0].split("/")[-1]
                 off_set_date = file_path_split[1].split(")")[0]
  
-                 #keep track of currently running posthoc video analytics
+                 #keep track of currently running posthoc audio analytics
                 if key in running_audio_processes:
+                    # Return, or a duplicate trigger clobbers the registry
+                    # entry and starts a second concurrent run on this pod.
                     self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
+                    return
 
                 running_audio_processes[key] = "running"
 
@@ -169,7 +169,7 @@ class ServerProtocol(WebSocketServerProtocol):
                             'tag': self.run_tagging, 'server_start':self.server_start,'keywords':self.keywords,'transcribe':self.run_transcribe,'features':self.run_features,'doa':self.run_doa,'topic_model':self.topic_model_choice,'owner':1,'off_set_date':off_set_date}
                 valid, result = ProcessingConfig.from_json(conf_val,source="posthoc processing")
                 if not valid:
-                    logging.info("Confgiration setting failed for audio posthoc processing")
+                    logging.info("Configuration setting failed for audio posthoc processing")
                 else:    
                     self.config = result
                     
@@ -218,17 +218,18 @@ class ServerProtocol(WebSocketServerProtocol):
                 key = "No key"
                 off_set_date = "Sat Jun 27 18:17:13 2026" #this is just a generic date
 
-                #keep track of currently running posthoc video analytics
+                #keep track of currently running posthoc audio analytics
             if key in running_audio_processes:
                 self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
+                return
 
-            running_audio_processes[key] = "running"    
+            running_audio_processes[key] = "running"
 
             conf_val = {'key':key,'encoding': "pcm_f32le", 'sample_rate': self.sample_rate,'channels': 1,'sessionid': self.sessionid,'deviceid': self.session_device_id,
                             'tag': True, 'server_start':self.server_start,'keywords':self.keywords,'transcribe':True,'features':True,'doa':True,'topic_model':None,'owner':1,'off_set_date':off_set_date}
             valid, result = ProcessingConfig.from_json(conf_val,source="posthoc processing")
             if not valid:
-                logging.info("Confgiration setting failed for audio posthoc processing")
+                logging.info("Configuration setting failed for audio posthoc processing")
             else:    
                 self.config = result
                 for speaker in data['speakers']:
@@ -257,17 +258,18 @@ class ServerProtocol(WebSocketServerProtocol):
                 key = file_path_split[0].split("/")[-1]
                 off_set_date = file_path_split[1].split(")")[0]
  
-                 #keep track of currently running posthoc video analytics
+                 #keep track of currently running posthoc audio analytics
                 if key in running_audio_processes:
                     self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
+                    return
 
-                running_audio_processes[key] = "running"    
+                running_audio_processes[key] = "running"
 
                 conf_val = {'key':key,'encoding': "pcm_f32le", 'sample_rate': self.sample_rate,'channels': 1,'sessionid': self.sessionid,'deviceid': self.session_device_id,
                                 'tag': True, 'server_start':self.server_start,'keywords':self.keywords,'transcribe':True,'features':True,'doa':True,'topic_model':None,'owner':1,'off_set_date':off_set_date}
                 valid, result = ProcessingConfig.from_json(conf_val,source="posthoc processing")
                 if not valid:
-                    logging.info("Confgiration setting failed for audio posthoc processing")
+                    logging.info("Configuration setting failed for audio posthoc processing")
                 else:    
                     self.config = result
                     for speaker in data['speakers']:
@@ -341,45 +343,14 @@ class ServerProtocol(WebSocketServerProtocol):
 
         if files:
             file_path = files[0]
-            logging.info("Found:".format(file_path))
+            logging.info("Found: {0}".format(file_path))
             return file_path
-            # with open(file_path, "r") as f:
-            #     content = f.read()
         else:
             logging.info("No file found")
             return None
-    
+
     def read_bytes_from_wav(self,wav):
-        wav.setpos(0)
-        sdata = wav.readframes(wav.getnframes())
-        data = np.frombuffer(sdata,dtype=np.dtype('int16'))
-        return data.tobytes()
-
-     # Changes the bit depth and encoding type.
-    def reformat_data(self, in_data):
-        if self.config.encoding == 'pcm_f32le':
-            out_data = np.frombuffer(in_data, np.float32, -1)
-            return (out_data * 32767.0).astype(np.int16, copy=False).tobytes()
-        else:
-            return in_data
-
-    # Resampling leads to clicking in the output audio (scipy.signal.resample)
-    def resample_data(self, in_data):
-        if self.config.sample_rate != 16000:
-            out_data = np.frombuffer(in_data, np.int16, -1)
-            secs = len(out_data) / self.config.sample_rate
-            samps = int(secs * 16000)
-            return scipy.signal.resample(out_data, samps).astype(np.int16, copy=False).tobytes()
-        else:
-            return in_data
-
-    # Reduces number of channels down to the desired amount.
-    def reduce_channels(self, channels_wanted, in_data):
-        if channels_wanted < self.config.channels:
-            out_data = np.frombuffer(in_data, np.int16, -1)
-            return out_data[channels_wanted::self.config.channels].tobytes()
-        else:
-            return in_data    
+        return audio_bytes.read_bytes_from_wav(wav)
 
     def send_json(self, message):
         # Best-effort: probes/idle closes mean the socket may already be gone.
@@ -535,19 +506,6 @@ class ServerProtocol(WebSocketServerProtocol):
         except Exception as e:
             logging.warning("on_run_complete worker teardown failed: %s", e)
 
-       
-        else:
-            cm.remove(self, None, None)
-        logging.info('Closing client connection...')
-        self.transport.loseConnection()
-
-        # Begin Post Processing
-        if cf.record_reduced():
-            self.redu_recorder.close()
-       
-        if cf.record_original():
-            self.orig_recorder.close()
-            
 
 if __name__ == '__main__':
     cf.initialize()

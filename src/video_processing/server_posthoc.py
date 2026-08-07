@@ -1,18 +1,11 @@
 import os
 import json
 import time
-import glob
-import queue
-import shutil
 import logging
 import callbacks
 import threading
-import weakref
-import wave
 import traceback
-import scipy.signal
 import config as cf
-import cv2
 import numpy as np
 import torch
 # torch>=2.6 defaults weights_only=True, which rejects several of the local
@@ -23,25 +16,14 @@ def _torch_load_permissive(*args, **kwargs):
     kwargs.setdefault('weights_only', False)
     return _torch_load_original(*args, **kwargs)
 torch.load = _torch_load_permissive
-import torch.backends.cudnn as cudnn
-try:
-    import moviepy.editor as mp  # moviepy 1.x
-except ImportError:
-    import moviepy as mp  # moviepy 2.x dropped the .editor module
-import face_recognition
-# import ffmpeg
-
 from pathlib import Path
 from recorder import VidRecorder
 from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager
 from video_cartoonizer.videoprocessor_posthoc import VideoProcessorPosthoc
-from datetime import datetime
 from twisted.internet import reactor, task
 from autobahn.twisted.websocket import WebSocketServerFactory
 from autobahn.twisted.websocket import WebSocketServerProtocol
-from queue import Full, Empty
-from video_cartoonizer.video_cartoonify_loader import VideoCartoonifyLoader
 from facial_biometric_processing_service import FacialBiometricProcessor
 from emotion_detector.emotion_detection_model import EmotionDetectionModelV1
 from attention_tracking.detect import ImageObjectDetection
@@ -192,7 +174,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     logging.warning('Error processing json: {0}'.format(e))
 
     def onClose(self, wasClean, code, reason):
-        logging.info("close was trigered externally..... wasclean {0}, code {1}, reason {2}".format( wasClean, code, reason))
+        logging.info("close was triggered externally..... wasclean {0}, code {1}, reason {2}".format( wasClean, code, reason))
         self.signal_end()
 
     def process_json(self, data):
@@ -234,7 +216,10 @@ class ServerProtocol(WebSocketServerProtocol):
 
                 #keep track of currently running posthoc video analytics
                 if key in running_video_processes:
+                    # Return, or a duplicate trigger clobbers the registry
+                    # entry and starts a second concurrent run on this pod.
                     self.send_json({'type': 'error', 'message': 'Video posthoc analytics for this group is already running'})
+                    return
 
                 running_video_processes[key] = "running"
 
@@ -242,7 +227,7 @@ class ServerProtocol(WebSocketServerProtocol):
                             'server_start':self.server_start,'off_set_date':off_set_date}
                 valid, result = ProcessingConfig.from_json(conf_val,source="posthoc processing")
                 if not valid:
-                    logging.info("Confgiration setting failed for video posthoc processing")
+                    logging.info("Configuration setting failed for video posthoc processing")
                 else:
                     self.config = result
                     # Optional per-run model choices from the trigger UI; fall
@@ -284,13 +269,6 @@ class ServerProtocol(WebSocketServerProtocol):
                         try:
                             facials = np.load(facial_embedding_file+".npy", allow_pickle=True).item()
                             self.facial_embeddings[speaker["id"]] = {"alias": speaker["alias"], "data": facials[speaker["alias"]]}
-                        # except Exception as e:
-                        #     try:
-                        #         data_d = facials.pop("ro.kludy")
-                        #         facials[speaker["alias"]] = data_d
-                        #         self.facial_embeddings[speaker["id"]] = {"alias": speaker["alias"], "data": data_d}
-                        #         # save back
-                        #         np.save(facial_embedding_file+".npy", facials)
                         except Exception as e:
                             error_str = traceback.format_exc()
                             logging.info("error loading facial embedding for {} : {}".format(speaker["alias"],error_str))
@@ -408,7 +386,6 @@ class ServerProtocol(WebSocketServerProtocol):
         # optional ASD subprocess so that pass gets the freed headroom.
         try:
             import gc
-            import torch
             self.video_processor = None
             gc.collect()
             if torch.cuda.is_available():

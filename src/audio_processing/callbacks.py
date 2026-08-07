@@ -1,11 +1,21 @@
+import os
+import sys
 import config
 import requests
-import os
-import time
-import threading
-from datetime import datetime
 import logging
-import base64
+
+# Shared payloads + retry policy live in src/common/callbacks_common.py
+# (same shim pattern as connection_manager.py / redis_helper.py).
+_COMMON = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "common"))
+if _COMMON not in sys.path:
+    sys.path.insert(0, _COMMON)
+import callbacks_common  # noqa: E402
+
+
+def _callback_base():
+    # .../api/v1/callback — derived once from the transcript callback URL.
+    return config.processing_callback().rsplit('/', 1)[0]
+
 
 def post_transcripts(source, start_time, end_time, transcript, doa, questions, keywords, features, topic_id, speaker_tag, speaker_id, voice_features=None):
     result = {
@@ -38,34 +48,17 @@ def post_transcripts(source, start_time, end_time, transcript, doa, questions, k
         logging.warning('Transcript callback failed: {0}'.format(e))
         return False, -1
 
+
 def post_posthoc_reset(source, scope):
-    # Ask the server to wipe this pod's previous results before a full re-run.
-    try:
-        base = config.processing_callback().rsplit('/', 1)[0]
-        requests.post(base + '/posthoc_reset', json={'source': source, 'scope': scope})
-    except Exception as e:
-        logging.warning('posthoc_reset callback failed: {0}'.format(e))
+    callbacks_common.post_posthoc_reset(_callback_base(), source, scope)
 
 
 def post_posthoc_completed(source, models=None, scope='audio'):
-    # Tell the server a pod's post-hoc run finished, so it's marked complete even
-    # if the triggering browser disconnected. URL derived from the transcript
-    # callback's base (.../api/v1/callback/).
-    try:
-        base = config.processing_callback().rsplit('/', 1)[0]
-        requests.post(base + '/posthoc_completed', json={'source': source, 'models': models, 'scope': scope})
-    except Exception as e:
-        logging.warning('posthoc_completed callback failed: {0}'.format(e))
+    callbacks_common.post_posthoc_completed(_callback_base(), source, models, scope)
 
 
 def post_service_restarted(scope='audio'):
-    # Announce a service (re)start so the server clears stale running flags
-    # from runs that died with the previous process.
-    try:
-        base = config.processing_callback().rsplit('/', 1)[0]
-        requests.post(base + '/posthoc_service_restarted', json={'scope': scope})
-    except Exception as e:
-        logging.warning('service_restarted callback failed: {0}'.format(e))
+    callbacks_common.post_service_restarted(_callback_base(), scope)
 
 
 def post_tagging(source, tag, embeddingsFile):
@@ -81,55 +74,27 @@ def post_tagging(source, tag, embeddingsFile):
         logging.info('Tagging callback failed: {0}'.format(e))
         return False
 
+
 def post_connect(source):
-    connection = {
-        'source': source,
-        'time': str(datetime.utcnow())
-    }
-    try:
-        logging.info('end point')
-        logging.info(config.connect_callback())
-        response = requests.post(config.connect_callback(), json=connection)
-        logging.info(response.status_code)
-        return response.status_code == 200
-    except Exception as e:
-        logging.info('connect callback failed: {0}'.format(e))
-        return False
+    return callbacks_common.post_connect(config.connect_callback(), source)
+
 
 def post_transcript_features(source, updates):
     # Persist re-scored E&T feature values onto existing transcript rows
     # (post-hoc style recomputation). `updates` = [{id, features:{...}}].
     payload = {'source': source, 'updates': updates}
     try:
-        url = config.processing_callback().replace('/callback/transcript', '/callback/transcript_features')
-        response = requests.post(url, json=payload)
+        response = requests.post(_callback_base() + '/transcript_features', json=payload)
         return response.status_code == 200
     except Exception as e:
         logging.warning('transcript features callback failed: {0}'.format(e))
         return False
 
+
 def post_disconnect(source):
-    disconnection = {
-        'source': source,
-        'time': str(datetime.utcnow())
-    }
-    # Retried from a background thread (the caller is the websocket reactor
-    # thread, which must not block): this callback races the exact moments
-    # the Flask server is down for a restart, and a lost disconnect leaves
-    # the pod shown as connected forever — nothing ever re-sends it.
-    def _send():
-        for attempt in range(8):
-            try:
-                response = requests.post(config.disconnect_callback(), json=disconnection, timeout=10)
-                if response.status_code == 200:
-                    return
-                logging.info('disconnect callback returned {0} (attempt {1})'.format(response.status_code, attempt + 1))
-            except Exception as e:
-                logging.info('disconnect callback failed (attempt {0}): {1}'.format(attempt + 1, e))
-            time.sleep(min(2 ** attempt, 30))
-        logging.warning('disconnect callback gave up for {0}'.format(source))
-    threading.Thread(target=_send, daemon=True).start()
-    return True
+    return callbacks_common.post_disconnect(config.disconnect_callback(), source)
+
+
 #Post speaker metrics with transcript data
 def post_speaker_transcript_metrics(transcript_data, speakers, participation_scores, internal_cohesion, responsivity, social_impact, newness, communication_density):
     result = {

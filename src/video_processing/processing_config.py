@@ -51,7 +51,7 @@ class ProcessingConfig:
 
         # Check if fields are missing.
         if not auth_key or not sample_rate or not encoding or not channels or not sessionId or not deviceId:
-            return False, "Start messege requires key, sample_rate, encoding, sessionid, deviceid and channels."
+            return False, "Start message requires key, sample_rate, encoding, sessionid, deviceid and channels."
         # Check if format is supported.
         if not encoding in ['pcm_i16le', 'pcm_f16le', 'pcm_f32le']:
             return False, "Unsupported encoding type."
