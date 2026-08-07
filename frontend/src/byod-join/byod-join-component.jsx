@@ -7,7 +7,6 @@ import { deriveJoinPhase } from "./join-machine"
 import { SessionModel } from "../models/session"
 import { SessionDeviceModel } from "../models/session-device"
 import { SpeakerModel } from "../models/speaker"
-import { StudentModel } from "../models/student"
 import { ApiService } from "../services/api-service"
 import { AuthService } from "../services/auth-service"
 import { PolarConnection, isBluetoothSupported } from "../services/polar-hr"
@@ -118,10 +117,6 @@ function JoinPage() {
     // const [sessionClosing, setSessionClosing] = useState(false)
 
     // Audio/video Fingerprint registration states
-    const [registeredStudentData, setRegisteredStudentData] = useState(null)
-    const [registeredUserAliasChanged, setRegisteredUserAliasChanged] = useState(false)
-    const [registeredAudioFingerprintAdded, setRegisteredAudioFingerprintAdded] = useState(false)
-    const [registeredVideoFingerprintAdded, setRegisteredVideoFingerprintAdded] = useState(false)
     const [savedFingerprintError, setSavedFingerprintError] = useState("")
 
     // Pre-join device check: pending join params while the check page is
@@ -344,51 +339,6 @@ function JoinPage() {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [state.audioSocketOpen, state.videoSocketOpen])
-
-    // FOURTH LEVEL: FOR FINGERPRINT ENROLLMENT/ ALIAS CHANGE: ONCE THE SPEAKER ENTERS USERNAME FOR ENROLLMENT OR ALIAS CHANGE, 
-    // THE REGISTERED STUDENT DATA IS SET, THIS THEN TRIGGERS THE CHANGE OF ALIAS NAME FOR THE SPEAKER FINGERPRINT BEING ENROLLED/CHANGED. 
-    useEffect(() => {
-        if (registeredStudentData != null) {
-            changeAliasName(registeredStudentData.username)
-        }
-    }, [registeredStudentData])
-
-    //FOURTH LEVEL: ONCE THE ALIAS NAME FOR THE REGISTERED FINGERPRINT IS CHANGED, THIS THEN TRIGGERS THE ADDING OF THE FINGERPRINT TO THE SPEAKER
-    useEffect(() => {
-        if (registeredUserAliasChanged) {
-            addSavedSpeakerFingerprint()
-        }
-    }, [registeredUserAliasChanged])
-
-    //FOURTH LEVEL: THIS IS TRIGGERED ONCE THE AUDIO AND VIDEO FINGERPRINTS ARE ADDED FOR THE SPEAKER BEING ENROLLED, THIS THEN MARKS THE SPEAKER AS FINGERPRINTED AND CLOSES THE FINGERPRINT ENROLLMENT DIALOG
-    useEffect(() => {
-        let proceed = false
-        if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
-            if (registeredAudioFingerprintAdded && registeredVideoFingerprintAdded) {
-                proceed = true
-            }
-        } else {
-            if (registeredAudioFingerprintAdded) {
-                proceed = true
-            }
-        }
-        // selectedSpeaker guard: stray fingerprint-added replies (e.g. from
-        // the post-confirm replay) must not run the interactive completion.
-        if (proceed && selectedSpeaker) {
-
-            const updatedSpeakers = speakers.current.map((s) =>
-                s.id === selectedSpeaker.id ? { ...s, fingerprinted: true } : s,)
-            speakers.current = updatedSpeakers
-            setSelectedSpeaker(null)
-            setCurrentForm("")
-            // console.log("register fingerprint for " + registeredStudentData.username + " Added")
-            setRegisteredStudentData(null)
-            setRegisteredUserAliasChanged(false)
-            setRegisteredAudioFingerprintAdded(false)
-            setRegisteredVideoFingerprintAdded(false)
-            closeDialog()
-        }
-    }, [registeredAudioFingerprintAdded, registeredVideoFingerprintAdded])
 
     //FOURTH LEVEL: THIS IS TRIGGERED ONCE AUDIO AND VIDEO IS OPEN AND READY AND WHEN THE SPEAKERS ARE ENROLLING THEIR FINGERPRINTS, 
     // THIS THEN STARTS THE HEARTBEAT TO KEEP THE CONNECTION TO THE AUDIO AND VIDEO WEBSOCKET SERVERS ALIVE UNTIL THE SPEAKERS ARE VALIDATED, ONCE VALIDATED, THE HEARTBEAT STOPS AND THE STREAMING STARTS
@@ -757,39 +707,9 @@ function JoinPage() {
                         const speaker = SpeakerModel.fromJson(jsonObj)
                         speakers.current = [...(speakers.current || []), speaker]
                         setSpeakerListTick((x) => x + 1)
-                        const username = (name || "").trim()
-                        if (!username) return
-                        setSelectedSpeaker(speaker)
-                        try {
-                            const resp = await new AuthService().getStudentProfileByID(username)
-                            if (resp.status === 200) {
-                                const studentJson = await resp.json()
-                                // Attach only when biometrics were actually
-                                // captured — a registered account without an
-                                // enrollment must fall through to a plain
-                                // rename (and show the red X).
-                                if (studentJson.biometric_captured) {
-                                    setRegisteredStudentData(StudentModel.fromJson(studentJson))
-                                    return
-                                }
-                            }
-                        } catch (ex) {
-                            console.log("enrollment lookup failed", ex)
+                        if ((name || "").trim()) {
+                            await attachIdentity(speaker, name)
                         }
-                        // Not enrolled — keep the entered name, no fingerprint.
-                        try {
-                            const r = await sessionService.updateCollaborator(speaker.id, username)
-                            if (r.status === 200) {
-                                const renamed = SpeakerModel.fromJson(await r.json())
-                                speakers.current = speakers.current.map((s) =>
-                                    s.id === speaker.id ? { ...s, alias: renamed.alias } : s,
-                                )
-                                setSpeakerListTick((x) => x + 1)
-                            }
-                        } catch (ex) {
-                            console.log("speaker rename failed", ex)
-                        }
-                        setSelectedSpeaker(null)
                     })
                 }
             },
@@ -799,41 +719,64 @@ function JoinPage() {
         )
     }
 
-    // Commit from the inline name editor on a speaker card. Same behavior as
-    // addSpeakerSlot's name handling: an enrolled username renames the slot
-    // and attaches the saved fingerprint (via the registeredStudentData
-    // effect chain); any other name is a plain rename.
+    // The one path for putting a typed name on a speaker slot, shared by
+    // every entry point (add-with-name, the inline card editor, the dialogs).
+    // An enrolled username (biometrics on file) renames the slot to the
+    // canonical username, queues the saved-fingerprint attach for replay
+    // after the roster is confirmed, and marks the card ready; a registered
+    // account WITHOUT biometrics or an unknown name is a plain rename (the
+    // red X stays). Returns the outcome so dialog callers can show errors:
+    // "enrolled" | "renamed" | "not-enrolled" | "unknown" | "lookup-failed"
+    // | "rename-failed" | "empty".
+    const attachIdentity = async (speaker, rawName, { requireEnrolled = false } = {}) => {
+        const username = (rawName || "").trim()
+        if (!username) return "empty"
+        let profile = null
+        try {
+            const resp = await new AuthService().getStudentProfileByID(username)
+            if (resp.status === 200) profile = await resp.json()
+        } catch (ex) {
+            console.log("enrollment lookup failed", ex)
+            // Only the enrolled-only path must stop here; a plain rename
+            // shouldn't fail because the lookup was unreachable.
+            if (requireEnrolled) return "lookup-failed"
+        }
+        const enrolled = !!(profile && profile.biometric_captured)
+        if (requireEnrolled && !enrolled) {
+            return profile ? "not-enrolled" : "unknown"
+        }
+        const alias = enrolled ? profile.username : username
+        try {
+            const r = await sessionService.updateCollaborator(speaker.id, alias)
+            if (r.status !== 200) return "rename-failed"
+            const renamed = SpeakerModel.fromJson(await r.json())
+            speakers.current = (speakers.current || []).map((s) =>
+                s.id === speaker.id
+                    ? {
+                          ...s,
+                          alias: renamed.alias,
+                          fingerprinted: enrolled ? true : s.fingerprinted,
+                      }
+                    : s,
+            )
+            setSpeakerListTick((x) => x + 1)
+        } catch (ex) {
+            console.log("speaker rename failed", ex)
+            return "rename-failed"
+        }
+        if (!enrolled) return "renamed"
+        // Re-attaching replaces any earlier queued fingerprint for this slot.
+        pendingFingerprints.current = pendingFingerprints.current
+            .filter((f) => f.id !== speaker.id)
+            .concat({ type: "saved", id: speaker.id, alias })
+        return "enrolled"
+    }
+
+    // Commit from the inline name editor on a speaker card.
     const inlineRenameSpeaker = async (speaker, rawName) => {
         const username = (rawName || "").trim()
         if (!username || username === speaker.alias) return
-        setSelectedSpeaker(speaker)
-        try {
-            const resp = await new AuthService().getStudentProfileByID(username)
-            if (resp.status === 200) {
-                const studentJson = await resp.json()
-                // Only a completed enrollment attaches a fingerprint; a mere
-                // account falls through to a plain rename (red X stays).
-                if (studentJson.biometric_captured) {
-                    setRegisteredStudentData(StudentModel.fromJson(studentJson))
-                    return
-                }
-            }
-        } catch (ex) {
-            console.log("inline enrollment lookup failed", ex)
-        }
-        try {
-            const r = await sessionService.updateCollaborator(speaker.id, username)
-            if (r.status === 200) {
-                const renamed = SpeakerModel.fromJson(await r.json())
-                speakers.current = speakers.current.map((s) =>
-                    s.id === speaker.id ? { ...s, alias: renamed.alias } : s,
-                )
-                setSpeakerListTick((x) => x + 1)
-            }
-        } catch (ex) {
-            console.log("inline speaker rename failed", ex)
-        }
-        setSelectedSpeaker(null)
+        await attachIdentity(speaker, username)
     }
 
     // Pair a Polar strap (or any BLE heart-rate sensor) with a speaker. The
@@ -1036,6 +979,8 @@ function JoinPage() {
         closeDialog()
     }
 
+    // "Saved Fingerprint" dialog: unlike the name paths, this one requires
+    // an actual enrollment and reports why it couldn't attach one.
     const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
         const username = (registeredUsername || "").trim()
         if (username === "") {
@@ -1043,39 +988,21 @@ function JoinPage() {
             return
         }
         setSavedFingerprintError("")
-        const fetchData = new AuthService().getStudentProfileByID(username)
-        fetchData
-            .then(
-                (response) => {
-                    if (response.status === 200) {
-                        response.json().then((jsonObj) => {
-                            console.log(jsonObj)
-                            if (!jsonObj.biometric_captured) {
-                                setSavedFingerprintError(
-                                    "That account exists but has no enrolled fingerprint — record one instead.",
-                                )
-                                return
-                            }
-                            const student_data = StudentModel.fromJson(jsonObj)
-                            setRegisteredStudentData(student_data)
-                        })
-                    } else {
-                        setSavedFingerprintError(
-                            "No enrollment found for that username.",
-                        )
-                    }
-                },
-                (apierror) => {
-                    console.log(
-                        "byod-join-components func: startProcessingSavedSpeakerFingerprint 1 ",
-                        apierror,
-                    )
-                    setSavedFingerprintError(
-                        "Could not look up that username. Please try again.",
-                    )
-                },
-            )
-
+        const outcome = await attachIdentity(selectedSpeaker, username, {
+            requireEnrolled: true,
+        })
+        if (outcome === "enrolled") {
+            setSelectedSpeaker(null)
+            closeDialog()
+            return
+        }
+        setSavedFingerprintError(
+            outcome === "not-enrolled"
+                ? "That account exists but has no enrolled fingerprint — record one instead."
+                : outcome === "unknown"
+                  ? "No enrollment found for that username."
+                  : "Could not look up that username. Please try again.",
+        )
     }
 
     // A processing service reported it couldn't load a saved fingerprint at
@@ -1086,69 +1013,20 @@ function JoinPage() {
         console.warn("saved fingerprint failed:", message)
     }
 
-    // Queue the saved-fingerprint attach and complete the enrollment chain
-    // locally — the actual add-saved-fingerprint messages are replayed once
-    // the connection starts after the roster is confirmed.
-    const addSavedSpeakerFingerprint = () => {
-        pendingFingerprints.current.push({
-            type: "saved",
-            id: selectedSpeaker.id,
-            alias: registeredStudentData.username,
-        })
-        setRegisteredAudioFingerprintAdded(true)
-        if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
-            setRegisteredVideoFingerprintAdded(true)
-        }
-    }
-
-    const changeAliasName = (newAlias) => {
-        if (newAlias === "") {
+    // "Rename Alias" dialog: same shared path as the inline editor, so an
+    // enrolled username typed here also attaches its saved fingerprint.
+    const changeAliasName = async (newAlias) => {
+        if ((newAlias || "").trim() === "") {
             setInvalidName(true)
             return
         }
-        console.log(
-            `Speaker ID: ${selectedSpeaker.id} with new alias: ${newAlias}`,
-        )
         setInvalidName(false)
-        const speakerId = selectedSpeaker.id
-        const fetchData = new SessionService().updateCollaborator(
-            speakerId,
-            newAlias,
-        )
-        fetchData
-            .then(
-                (response) => {
-                    if (response.status === 200) {
-                        response.json().then((jsonObj) => {
-                            console.log(jsonObj)
-                            const speaker = SpeakerModel.fromJson(jsonObj)
-                            console.log(speaker)
-                            const updatedSpeakers = speakers.current.map((s) =>
-                                s.id === selectedSpeaker.id
-                                    ? { ...s, alias: speaker.alias }
-                                    : s,
-                            )
-                            speakers.current = updatedSpeakers
-                            //only set to null when change alias is invoked by cicking the change alias option 
-                            if (registeredStudentData === null) {
-                                setSelectedSpeaker(null)
-                            }
-                            if (registeredStudentData !== null) {
-                                setRegisteredUserAliasChanged(true)
-                            }
-                        })
-                    }
-                },
-                (apierror) => {
-                    console.log(
-                        "byod-join-components func: changealiasname 1 ",
-                        apierror,
-                    )
-                },
-            )
-            .finally(() => {
-                closeDialog()
-            })
+        try {
+            await attachIdentity(selectedSpeaker, newAlias)
+        } finally {
+            setSelectedSpeaker(null)
+            closeDialog()
+        }
     }
 
     const handleStream = async () => {
@@ -1511,9 +1389,9 @@ function JoinPage() {
                 next("audio_ready")
                 closeDialog()
             } else if (message['type'] === 'registeredfingerprintadded') {
-                console.log("got a response from audio endpoint....")
-                setRegisteredAudioFingerprintAdded(true)
-
+                // Ack for a replayed saved-fingerprint attach — the card was
+                // already marked ready when the attach was queued.
+                console.log("saved fingerprint attached (audio)")
             } else if (message['type'] === 'registeredfingerprintfailed') {
                 console.log("saved fingerprint failed (audio): " + message["message"])
                 onSavedFingerprintFailed(message["message"])
@@ -1585,8 +1463,9 @@ function JoinPage() {
                 } else if (message['type'] === 'attention_data') {
 
                 } else if (message['type'] === 'registeredfingerprintadded') {
-                    console.log("got a response from video endpoint....")
-                    setRegisteredVideoFingerprintAdded(true)
+                    // Ack for a replayed saved-fingerprint attach; nothing to
+                    // update — the card was marked ready at queue time.
+                    console.log("saved fingerprint attached (video)")
                 } else if (message['type'] === 'registeredfingerprintfailed') {
                     console.log("saved fingerprint failed (video): " + message["message"])
                     onSavedFingerprintFailed(message["message"])
