@@ -384,49 +384,72 @@ function UploadVideoButton() {
     )
 }
 
-// Folders are navigation, not content: one wrapping row of compact chips
-// instead of a full-width row per folder.
-function FolderChip({ folder, count, onOpen, openFolderDialog }) {
+// Folders live inside the sessions table, one row each above the session
+// rows: same anatomy as a session row (icon tile, name, context menu), and
+// clicking the row opens the folder to show the sessions within it.
+function FolderRow({ folder, count, onOpen, openFolderDialog }) {
     return (
-        <span className="flex items-center gap-0.5 rounded-full border border-tiilt-line bg-white py-1 pr-1 pl-3 transition hover:border-tiilt">
-            <button
-                onClick={() => onOpen(folder.id)}
-                className="flex min-w-0 cursor-pointer items-center gap-1.5 text-sm font-semibold text-tiilt-ink transition hover:text-tiilt"
-            >
-                <span className="flex-none text-tiilt">
-                    <FolderIcon className="h-4 w-4" />
+        <tr
+            onClick={() => onOpen(folder.id)}
+            title={`Open folder ${folder.name}`}
+            className="group cursor-pointer border-t border-tiilt-line bg-white transition first:border-t-0 hover:bg-tiilt-soft/50"
+        >
+            <td className="py-2 pr-1 pl-3" />
+            <td className="px-3 py-2">
+                <span className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-tiilt-soft text-tiilt">
+                    <FolderIcon className="h-5 w-5" />
                 </span>
-                <span className="max-w-40 truncate">{folder.name}</span>
-                {count != null ? (
-                    <span className="font-normal text-tiilt-muted">
-                        {count}
+            </td>
+            <td colSpan={5} className="max-w-0 overflow-hidden px-3 py-2">
+                <span className="flex min-w-0 items-center gap-2">
+                    <span
+                        title={folder.name}
+                        className="truncate font-semibold text-tiilt-ink"
+                    >
+                        {folder.name}
                     </span>
-                ) : null}
-            </button>
-            <AppContextMenu label={`Options for folder ${folder.name}`}>
-                <button
-                    role="menuitem"
-                    className={menuItemClass}
-                    onClick={() => openFolderDialog("RenameFolder", folder)}
-                >
-                    Edit Name
-                </button>
-                <button
-                    role="menuitem"
-                    className={menuItemClass}
-                    onClick={() => openFolderDialog("MoveFolder", folder)}
-                >
-                    Move To...
-                </button>
-                <button
-                    role="menuitem"
-                    className={menuDangerClass}
-                    onClick={() => openFolderDialog("DeleteFolder", folder)}
-                >
-                    Delete
-                </button>
-            </AppContextMenu>
-        </span>
+                    <span className="flex-none text-xs text-tiilt-muted">
+                        {count === 1 ? "1 session" : `${count} sessions`}
+                    </span>
+                </span>
+            </td>
+            <td
+                className="py-2 pr-3 pl-1 text-right whitespace-nowrap"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <span className="flex items-center justify-end gap-0.5">
+                    <AppContextMenu label={`Options for folder ${folder.name}`}>
+                        <button
+                            role="menuitem"
+                            className={menuItemClass}
+                            onClick={() => openFolderDialog("RenameFolder", folder)}
+                        >
+                            Edit Name
+                        </button>
+                        <button
+                            role="menuitem"
+                            className={menuItemClass}
+                            onClick={() => openFolderDialog("MoveFolder", folder)}
+                        >
+                            Move To...
+                        </button>
+                        <button
+                            role="menuitem"
+                            className={menuDangerClass}
+                            onClick={() => openFolderDialog("DeleteFolder", folder)}
+                        >
+                            Delete
+                        </button>
+                    </AppContextMenu>
+                    <span
+                        aria-hidden="true"
+                        className="flex h-7 w-7 flex-none items-center justify-center text-tiilt-muted"
+                    >
+                        <Chevron size={14} />
+                    </span>
+                </span>
+            </td>
+        </tr>
     )
 }
 
@@ -874,6 +897,13 @@ function DiscussionSessionPage(props) {
                                 </span>
                             </nav>
                             <div className="flex flex-wrap justify-end gap-2">
+                                <button
+                                    className={btnSecondary + " flex items-center gap-1.5"}
+                                    onClick={() => props.openFolderDialog("NewFolder")}
+                                >
+                                    <FolderIcon className="h-4 w-4" />
+                                    New folder
+                                </button>
                                 <UploadVideoButton />
                                 <button
                                     className={btnPrimary + " flex items-center gap-1.5"}
@@ -891,31 +921,9 @@ function DiscussionSessionPage(props) {
 
                         {!props.isLoading ? <AnalysisQueuePanel /> : null}
 
-                        {!props.isLoading ? (
-                            <div className="mb-4 flex flex-wrap items-center gap-2">
-                                {props.displayedFolders.map((folder, index) => (
-                                    <FolderChip
-                                        key={index}
-                                        folder={folder}
-                                        count={(props.sessions || []).filter((x) => x.folder === folder.id).length}
-                                        onOpen={props.displayFolder}
-                                        openFolderDialog={
-                                            props.openFolderDialog
-                                        }
-                                    />
-                                ))}
-                                <button
-                                    onClick={() => props.openFolderDialog("NewFolder")}
-                                    className="flex cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-tiilt-line px-3 py-1.5 text-sm font-semibold text-tiilt-muted transition hover:border-tiilt hover:text-tiilt"
-                                >
-                                    <span aria-hidden="true">+</span>
-                                    New folder
-                                </button>
-                            </div>
-                        ) : null}
-
                         {!props.isLoading &&
                         (props.videoCount + props.audioCount > 0 ||
+                            props.displayedFolders.length > 0 ||
                             props.searchingAll) ? (
                             <div className="mt-4">
                                 <SortControl
@@ -952,7 +960,9 @@ function DiscussionSessionPage(props) {
                                         </button>
                                     </div>
                                 ) : null}
-                                {props.displayedSessions.length > 0 ? (
+                                {props.displayedSessions.length > 0 ||
+                                (!props.searchingAll &&
+                                    props.displayedFolders.length > 0) ? (
                                     <div className="overflow-x-auto rounded-xl border border-tiilt-line bg-white">
                                         <table className="w-full border-collapse text-left text-sm">
                                             <thead>
@@ -1022,6 +1032,21 @@ function DiscussionSessionPage(props) {
                                                 </tr>
                                             </thead>
                                             <tbody>
+                                                {/* Folder rows come first; a global search spans
+                                                    every folder, so they hide while searching. */}
+                                                {!props.searchingAll
+                                                    ? [...props.displayedFolders]
+                                                          .sort((a, b) => a.name.localeCompare(b.name))
+                                                          .map((folder) => (
+                                                              <FolderRow
+                                                                  key={"folder-" + folder.id}
+                                                                  folder={folder}
+                                                                  count={(props.sessions || []).filter((x) => x.folder === folder.id).length}
+                                                                  onOpen={props.displayFolder}
+                                                                  openFolderDialog={props.openFolderDialog}
+                                                              />
+                                                          ))
+                                                    : null}
                                                 {props.displayedSessions.map(
                                                     (session, rowIndex) => (
                                                         <SessionRow
