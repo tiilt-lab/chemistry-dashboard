@@ -120,6 +120,7 @@ function JoinPage() {
     const [showFeatures, setShowFeatures] = useState([])
     const [showBoxes, setShowBoxes] = useState([])
     const [selectedSpeaker, setSelectedSpeaker] = useState(null)
+    const [fingerprintRecordError, setFingerprintRecordError] = useState("")
 
     // const [sessionClosing, setSessionClosing] = useState(false)
 
@@ -624,6 +625,8 @@ function JoinPage() {
         setCurrentForm(form)
         if (form === "fingerprintAudio") {
             setSelectedSpeaker(speaker)
+            currBlob.current = null
+            setFingerprintRecordError("")
         }
     }
 
@@ -989,15 +992,50 @@ function JoinPage() {
         currBlob.current = audioblob
     }
 
-    // Queued locally; sent when the connection starts after the roster is
-    // confirmed (no sockets exist on the speaker page anymore).
+    // Confirm from the record dialog. Queued locally; sent when the
+    // connection starts after the roster is confirmed (no sockets exist on
+    // the speaker page anymore). Mirrors the enrollment coach's floor: a
+    // usable print needs sustained natural speech, so a take shorter than
+    // the coach's 10-second minimum is rejected with a retry hint instead
+    // of silently producing a fingerprint too thin to match against.
+    const MIN_FINGERPRINT_SECONDS = 10
     const addSpeakerFingerprint = async () => {
-        pendingFingerprints.current.push({
-            type: "blob",
-            id: selectedSpeaker.id,
-            alias: selectedSpeaker.alias,
-            blob: currBlob.current,
-        })
+        const blob = currBlob.current
+        if (!blob) {
+            setFingerprintRecordError("Record a take first, then confirm.")
+            return
+        }
+        let duration = null
+        try {
+            const Ctx = window.AudioContext || window.webkitAudioContext
+            const probe = new Ctx()
+            try {
+                const buf = await probe.decodeAudioData(await blob.arrayBuffer())
+                duration = buf.duration
+            } finally {
+                probe.close()
+            }
+        } catch (ex) {
+            // A probe failure must not block joining — length just goes
+            // unchecked for this take.
+            console.log("fingerprint duration probe failed", ex)
+        }
+        if (duration !== null && duration < MIN_FINGERPRINT_SECONDS) {
+            setFingerprintRecordError(
+                `That take was only ${Math.max(1, Math.round(duration))} second${Math.round(duration) === 1 ? "" : "s"} — keep talking for at least ${MIN_FINGERPRINT_SECONDS}.`,
+            )
+            return
+        }
+        setFingerprintRecordError("")
+        // Re-recording replaces any fingerprint already queued for this slot.
+        pendingFingerprints.current = pendingFingerprints.current
+            .filter((f) => f.id !== selectedSpeaker.id)
+            .concat({
+                type: "blob",
+                id: selectedSpeaker.id,
+                alias: selectedSpeaker.alias,
+                blob,
+            })
         setSpeakers(
             speakers.current.map((s) =>
                 s.id === selectedSpeaker.id ? { ...s, fingerprinted: true } : s,
@@ -1961,6 +1999,7 @@ function JoinPage() {
             spkr1Transcripts={spkr1Transcripts}
             spkr2Transcripts={spkr2Transcripts}
             selectedSpeaker={selectedSpeaker}
+            fingerprintRecordError={fingerprintRecordError}
             spkr1VideoMetrics={spkr1VideoMetrics}
             spkr2VideoMetrics={spkr2VideoMetrics}
             saveAudioFingerprint={saveAudioFingerprint}

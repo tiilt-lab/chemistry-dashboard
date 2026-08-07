@@ -461,14 +461,12 @@ function ByodJoinPage(props) {
                                                 for each speaker
                                             </div>
                                             <div className="my-1.5 font-sans text-xs/normal font-normal text-tiilt-muted">
-                                                Each speaker records a short
-                                                3-5 second voice sample, used
-                                                to track their metrics during
-                                                the session and deleted when
-                                                it ends. Enrolled speakers can
-                                                skip recording — typing their
-                                                username as the name attaches
-                                                their saved fingerprint.
+                                                Every speaker needs a voice
+                                                fingerprint so the session can
+                                                tell who is talking. Record
+                                                one from each card, or type an
+                                                enrolled username as the name
+                                                to use a saved fingerprint.
                                             </div>
                                         </div>
                                         <div className="mt-2 h-fit w-[300px] sm:w-[400px] lg:w-3xl">
@@ -911,9 +909,20 @@ function ByodJoinPage(props) {
                         </div>
                     )) ||
                     (props.currentForm === "fingerprintAudio" && (
-                        <div className="min-w-{300px} flex h-60 flex-col items-center justify-around text-center sm:h-70">
+                        <div className="flex w-[min(26rem,80vw)] flex-col items-center gap-3 text-center">
                             <div className="sans text-base/normal font-bold sm:text-xl/loose">
-                                Record Speaker Fingerprint:
+                                Record voice fingerprint
+                                {props.selectedSpeaker
+                                    ? ` — ${props.selectedSpeaker.alias}`
+                                    : ""}
+                            </div>
+                            <div className="px-2 text-left text-xs leading-relaxed text-tiilt-muted">
+                                Talk naturally for at least 15 seconds — say
+                                your name, what you&apos;re working on, or how
+                                your day is going, in your normal speaking
+                                voice. Don&apos;t read from a script: natural
+                                talking matches discussion speech best, and
+                                pauses and &quot;um&quot;s are fine.
                             </div>
                             <VoiceRecorder
                                 onAudioDownload={props.saveAudioFingerprint}
@@ -926,6 +935,11 @@ function ByodJoinPage(props) {
                                 }}
                                 controllerContainerStyle={{ height: "3rem" }}
                             />
+                            {props.fingerprintRecordError && (
+                                <div className={dlgError}>
+                                    {props.fingerprintRecordError}
+                                </div>
+                            )}
                             <button
                                 className={btnPrimary + " z-40"}
                                 onClick={props.addSpeakerFingerprint}
