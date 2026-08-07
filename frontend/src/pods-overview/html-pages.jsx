@@ -875,18 +875,20 @@ function PodsOverviewPages(props) {
                                     >
                                         Copy join link
                                     </button>
-                                    <button
-                                        className={btnSecondary}
-                                        onClick={() => props.setPasscodeState("lock")}
-                                    >
-                                        Lock joining
-                                    </button>
-                                    <button
-                                        className="cursor-pointer text-xs text-tiilt-muted transition hover:text-tiilt"
-                                        onClick={() => props.setPasscodeState("refresh")}
-                                    >
-                                        Get a new code
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button
+                                            className={btnSecondary + " flex-1"}
+                                            onClick={() => props.setPasscodeState("lock")}
+                                        >
+                                            Lock joining
+                                        </button>
+                                        <button
+                                            className={btnSecondary + " flex-1"}
+                                            onClick={() => props.setPasscodeState("refresh")}
+                                        >
+                                            Get a new code
+                                        </button>
+                                    </div>
                                 </>
                             ) : (
                                 <>
