@@ -23,13 +23,13 @@ const fieldLabel = "mb-1.5 block text-left text-sm font-semibold text-tiilt-ink"
 // structured than the device label, so panorama handling keys off it.
 const isPanoramaCamera = (label) => /360|panacast|panoram/i.test(label || "")
 
-// "auto" = 640×480 for ordinary webcams (the bitrate/processing sweet spot),
-// stepped up to 1080p for panorama cameras. Explicit choices override both.
+// 640×480 is the default (the analytics pipeline's sweet spot); higher
+// resolutions are explicit choices — 360° panorama cameras need 1080p or
+// their whole ring view gets squeezed into the small frame.
 const RESOLUTIONS = [
-    { value: "auto", label: "Auto" },
-    { value: "640x480", label: "640 × 480" },
+    { value: "640x480", label: "640 × 480 (default)" },
     { value: "1280x720", label: "1280 × 720 (HD)" },
-    { value: "1920x1080", label: "1920 × 1080 (Full HD)" },
+    { value: "1920x1080", label: "1920 × 1080 (Full HD, 360° cameras)" },
 ]
 
 const parseResolution = (value) => {
@@ -46,8 +46,6 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
     const [channels, setChannels] = useState(1)
     const [levels, setLevels] = useState([])
     const [channelChoice, setChannelChoice] = useState("mix") // "mix" | index
-    // 640×480 by default — the analytics pipeline's sweet spot. "Auto"
-    // (which steps panorama cameras up to 1080p) is an explicit choice.
     const [resChoice, setResChoice] = useState("640x480")
     const [actualRes, setActualRes] = useState("")
     const videoRef = useRef(null)
@@ -108,22 +106,7 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
             const stream = await navigator.mediaDevices.getUserMedia(constraints)
             streamRef.current = stream
 
-            // At the default 640×480 request a panorama camera squeezes the
-            // whole ring view into that tiny frame — on "Auto", step it up to
-            // its full 1080p mode so the preview shows what would record. An
-            // explicit resolution choice always wins.
             const vtrack = stream.getVideoTracks()[0]
-            if (vtrack && !chosenRes && isPanoramaCamera(vtrack.label)) {
-                const vset = vtrack.getSettings ? vtrack.getSettings() : {}
-                if ((vset.width || 0) < 1280) {
-                    await vtrack
-                        .applyConstraints({
-                            width: { ideal: 1920 },
-                            height: { ideal: 1080 },
-                        })
-                        .catch(() => {})
-                }
-            }
             if (wantsVideo && vtrack) {
                 const vset = vtrack.getSettings ? vtrack.getSettings() : {}
                 setActualRes(
@@ -256,8 +239,9 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
                         ))}
                     </select>
                     <div className="mt-1 text-xs text-tiilt-muted">
-                        Auto records at 640 × 480 (1080p for 360° panorama
-                        cameras). Higher resolutions make larger recordings.
+                        Higher resolutions make larger recordings. Pick Full
+                        HD for 360° panorama cameras, or their ring view gets
+                        squeezed into the small frame.
                     </div>
                 </div>
             )}
