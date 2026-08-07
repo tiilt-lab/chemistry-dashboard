@@ -3,7 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import {AppFolderPage} from './html-pages'
 
 function AppFolderSelectComponent(props){
-  const [_folders, setFolders] = useState(props.selectableFolders);
+  // The folder list comes straight from props; useState(props.x) froze it at
+  // first mount because nothing ever called the setter.
+  const _folders = props.selectableFolders;
   const [visibleFolders, setVisibleFolders] = useState([]);
   const [selectedFolder, setSelectFolder] = useState(null);
   const [breadcrumbs, setBreadCrumbs] = useState([]);

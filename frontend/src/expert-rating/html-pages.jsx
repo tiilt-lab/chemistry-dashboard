@@ -212,7 +212,7 @@ function ExpertRatingPage(props) {
                 }
                 optionsCase={props.currentForm === "Options"}
             >
-                {(props.currentForm === "Transcript" && (
+                {props.currentForm === "Transcript" && (
                     <div className={style2["dialog-content"]}>
                         <div className={style2["dialog-heading"]}>
                             Transcript
@@ -235,31 +235,7 @@ function ExpertRatingPage(props) {
                             </button>
                         </div>
                     </div>
-                )) ||
-                    props.currentForm === "Transcript" && (
-                        <div className={style["dialog-content"]}>
-                            <div className={style["dialog-heading"]}>
-                                Transcript
-                            </div>
-                            <div className={style["dialog-body"]}>
-                                {props.currentTranscript.transcript}
-                            </div>
-                            <div className={style["dialog-button-container"]}>
-                                <button
-                                    className={`${style["dialog-button"]} ${style["right-button"]}`}
-                                    onClick={props.closeDialog}
-                                >
-                                    Close
-                                </button>
-                                <button
-                                    className={`${style["dialog-button"]} ${style["left-button"]}`}
-                                    onClick={props.seeAllTranscripts}
-                                >
-                                    View All
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                )}
             </GenericDialogBox>
             <ErrorDialog message={props.alertMessage} show={props.showAlert} onClose={props.closeAlert} />
         </>

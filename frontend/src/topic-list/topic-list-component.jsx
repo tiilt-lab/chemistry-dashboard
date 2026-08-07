@@ -192,11 +192,11 @@ function TopicListComponent(props){
       return;
     }
     new TopicModelService().saveTopicModel(nameInput, (location.state === null) ? "Nothing here" : (topicNames + "\n" + getUnparsedSubtopics(location.state.topics))).then(
-      response => {
+      async response => {
         if (response.status === 200) {
           navTopicModels();
         } else {
-          alert(response.json()['message']);
+          alert((await response.json())['message']);
         }
       },
       apierror => {
@@ -205,11 +205,11 @@ function TopicListComponent(props){
     /*
     } else {
       new KeywordService().updateKeywordList(keywordListID, keywordList.name, keywords).then(
-        response => {
+        async response => {
           if (response.status === 200) {
             navTopicModels();
           } else {
-            alert(response.json()['message']);
+            alert((await response.json())['message']);
           }
         },
         apierror => {

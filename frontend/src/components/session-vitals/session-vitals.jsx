@@ -9,6 +9,9 @@ function SessionVitals({ sessionId, sessionDeviceId }) {
 
     useEffect(() => {
         if (!sessionId || !sessionDeviceId) return
+        // Guard against a slow response for a previous pod overwriting the
+        // current pod's data after a quick switch.
+        let alive = true
         new ApiService()
             .httpRequestCall(
                 `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/dynamics`,
@@ -16,8 +19,9 @@ function SessionVitals({ sessionId, sessionDeviceId }) {
                 {},
             )
             .then((r) => (r.status === 200 ? r.json() : null))
-            .then((d) => d && setData(d))
+            .then((d) => alive && d && setData(d))
             .catch(() => {})
+        return () => { alive = false }
     }, [sessionId, sessionDeviceId])
 
     if (!data || !data.speakers || data.speakers.length === 0) return null

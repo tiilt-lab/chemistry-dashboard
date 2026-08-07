@@ -143,15 +143,6 @@ function CreateSessionComponent(props) {
     closeDialog();
   }
   
-  const receiveEmmitedFolder = (e) =>{
-    if (e === -1) {
-      setFolder(null);
-    } else {
-      setFolder(e);
-    }
-    setCurrentForm("");
-  }
-
   const buildBreadcrumbs = (folderId)=> {
     const breadcrumbs = [];
     let folderB = folders.find(f => f.id === folderId);
@@ -288,10 +279,6 @@ function CreateSessionComponent(props) {
   
   
   
-  const getStateInfo = () => {
-    return {state: {sessionName: sessionName, doa: doa, asr: asr, folder: folder, folderPath: folderPath, currentMenu: currentMenu, pageTitle: pageTitle, selectedKeywordList: selectedKeywordList, selectedTopicModel: selectedTopicModel}};
-  }
-
   const openDialog = (form, text)=> {
     setCurrentForm(form);
     setDisplayText(text);

@@ -11,6 +11,8 @@ import { ApiService } from "../services/api-service"
 import { AuthService } from "../services/auth-service"
 import { PolarConnection, isBluetoothSupported } from "../services/polar-hr"
 import fixWebmDuration from "fix-webm-duration"
+import { FEATURE_LABELS, BOX_LABELS, buildChecklist } from "../utilities/checklist"
+import { ensureGetUserMedia } from "../utilities/media"
 
 /*
 BYOD Connection Order
@@ -297,39 +299,10 @@ function JoinPage() {
 
     let wakeLock = null
 
-    // FIRST EFFECT THAT RENDERS THE PAGE WITH MERIC OPTIONS INTIALIZATION
+    // FIRST EFFECT THAT RENDERS THE PAGE WITH METRIC OPTIONS INITIALIZATION
     useEffect(() => {
-        // initialize the options toolbar
-        let featuresArr = [
-            "Emotional tone",
-            "Analytic thinking",
-            "Clout",
-            "Authenticity",
-            "Confusion",
-            "Participation",
-            "Social Impact",
-            "Responsivity",
-            "Internal Cohesion",
-            "Newness",
-            "Communication Density",
-            "Attention Level",
-            "Facial Emotions",
-            "Object Focused On"
-        ]
-        initChecklistData(featuresArr, setShowFeatures)
-        // initialize the components toolbar
-        let boxArr = [
-            "Timeline control",
-            "Participation",
-            "Social Impact",
-            "Responsivity",
-            "Internal Cohesion",
-            "Newness",
-            "Communication Density",
-            "Video Metrics"
-        ]
-        initChecklistData(boxArr, setShowBoxes)
-
+        setShowFeatures(buildChecklist(FEATURE_LABELS))
+        setShowBoxes(buildChecklist(BOX_LABELS))
     }, [])
 
 
@@ -1091,42 +1064,7 @@ function JoinPage() {
             await acquireWakeLock()
             //handle older browsers that might implement getUserMedia in some way
 
-            if (navigator.mediaDevices === undefined) {
-                navigator.mediaDevices = {}
-                navigator.mediaDevices.getUserMedia = function (constraintObj) {
-                    let getUserMedia =
-                        navigator.webkitGetUserMedia ||
-                        navigator.mozGetUserMedia
-                    if (!getUserMedia) {
-                        return Promise.reject(
-                            new Error(
-                                "getUserMedia is not implemented in this browser",
-                            ),
-                        )
-                    }
-                    return new Promise(function (resolve, reject) {
-                        getUserMedia.call(
-                            navigator,
-                            constraintObj,
-                            resolve,
-                            reject,
-                        )
-                    })
-                }
-            } else {
-                navigator.mediaDevices
-                    .enumerateDevices()
-                    .then((devices) => {
-                        devices.forEach((device) => {
-
-                            // console.log(device.kind.toUpperCase(), device.label);
-                            //, device.deviceId
-                        })
-                    })
-                    .catch((err) => {
-                        console.log(err.name, err.message)
-                    })
-            }
+            ensureGetUserMedia()
 
             if (navigator.mediaDevices != null) {
                 const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
@@ -1934,16 +1872,6 @@ function JoinPage() {
         } catch (err) {
             console.log(`WakeLock release error: ${err}`)
         }
-    }
-
-    const initChecklistData = (featuresArr, setFn) => {
-        let valueInd = 0
-        let showFeats = []
-        for (const feature of featuresArr) {
-            showFeats.push({ label: feature, value: valueInd, clicked: true })
-            valueInd++
-        }
-        setFn(showFeats)
     }
 
     const viewComparison = () => {

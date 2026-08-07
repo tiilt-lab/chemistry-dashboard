@@ -7,6 +7,7 @@ import { SessionService } from "../services/session-service";
 import { RaterModel } from "../models/rater"
 import { SessionModel } from "../models/session";
 import { SessionDeviceModel } from "../models/session-device";
+import { FEATURE_LABELS, BOX_LABELS, buildChecklist } from "../utilities/checklist"
 
 const likertOptions = [1, 2, 3, 4, 5];
 const evaluation_one = [
@@ -45,7 +46,7 @@ const evaluation_two_instruction = [
 
 const evaluation_three_instruction = [
   "Interact with each dashboard as needed (click, navigate, expand) to understand the feedback.",
-  "Focus on the consistency, accuracy and level of halucination observed during your interaction"
+  "Focus on the consistency, accuracy and level of hallucination observed during your interaction"
 ]
 function ExpertRatingComponent() {
 
@@ -102,38 +103,11 @@ function ExpertRatingComponent() {
 
 
   useEffect(() => {
-    let featuresArr = [
-      "Emotional tone",
-      "Analytic thinking",
-      "Clout",
-      "Authenticity",
-      "Confusion",
-      "Participation",
-      "Social Impact",
-      "Responsivity",
-      "Internal Cohesion",
-      "Newness",
-      "Communication Density",
-      "Attention Level",
-      "Facial Emotions",
-      "Object Focused On"
-    ]
-    initChecklistData(featuresArr, setShowFeatures)
-    // initialize the components toolbar
-    let boxArr = [
-      "Timeline control",
-      "Participation",
-      "Social Impact",
-      "Responsivity",
-      "Internal Cohesion",
-      "Newness",
-      "Communication Density",
-      "Video Metrics"
-    ]
-    initChecklistData(boxArr, setShowBoxes)
+    setShowFeatures(buildChecklist(FEATURE_LABELS))
+    setShowBoxes(buildChecklist(BOX_LABELS))
   }, []);
 
-  // first useEffect to be called one the evalutor class is selected
+  // first useEffect to be called once the evaluator class is selected
   useEffect(() => {
     if (evaluatorType === "student" && aliasExpertId !== "") {
       setItemsForRating([{ rating_item_id: -1, sessId: 158, sessDevId: 443, speaker: "dklee1004", raterId: aliasExpertId, dashboardType: "quantitative", evalCat: "visualization" },
@@ -203,11 +177,11 @@ function ExpertRatingComponent() {
     if (evaluatorType === '') {
       setAlertMessage("Please Select Your Role");
       setShowAlert(true);
-      document.getElementById("evaluaortype").focus();
+      document.getElementById("evaluatortype").focus();
     } else if (alias_expertid === '') {
       setAlertMessage("Please Enter Your Expert ID");
       setShowAlert(true);
-      document.getElementById("expertid").focus();
+      document.getElementById("expertid-alias").focus();
     } else {
       setAliasExpertId(alias_expertid)
     }
@@ -684,16 +658,6 @@ function ExpertRatingComponent() {
   // const loading = () => {
   //   return session.current === null || transcripts.length === 0
   // }
-
-  const initChecklistData = (featuresArr, setFn) => {
-    let valueInd = 0
-    let showFeats = []
-    for (const feature of featuresArr) {
-      showFeats.push({ label: feature, value: valueInd, clicked: true })
-      valueInd++
-    }
-    setFn(showFeats)
-  }
 
   const closeAlert = () => {
     setShowAlert(false)

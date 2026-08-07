@@ -130,7 +130,7 @@ function AppIndividualFeaturesComponent(props) {
           setFeatureDescription("How much you participate above or below the average.");
           break;
         }
-      case "Social mpact":
+      case "Social Impact":
         {
           setFeatureDescription("How much your speech is related to the following response.");
           break;

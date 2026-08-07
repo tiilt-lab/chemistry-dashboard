@@ -36,7 +36,7 @@ function SessionsComponent(props) {
     useEffect(() => {
         const t = setInterval(() => {
             new SessionService().getSessions().then(
-                (response) => {
+                async (response) => {
                     if (response.status === 200)
                         response.json().then((data) =>
                             setSessions(SessionModel.fromJsonList(data)),
@@ -51,7 +51,7 @@ function SessionsComponent(props) {
     useEffect(() => {
         const fetchData = new SessionService().getSessions()
         fetchData.then(
-            (response) => {
+            async (response) => {
                 if (response.status === 200) {
                     const resp = response.json()
                     resp.then(
@@ -61,7 +61,7 @@ function SessionsComponent(props) {
                             setSessions(sessresult)
                             const fetchData2 = new SessionService().getFolders()
                             fetchData2.then(
-                                (response) => {
+                                async (response) => {
                                     if (response.status === 200) {
                                         const resp2 = response.json()
                                         resp2.then((folders) => {
@@ -156,14 +156,6 @@ function SessionsComponent(props) {
         setBreadCrumbs(bread)
     }
 
-    const buildBreadcrumbString = () => {
-        if (breadcrumbs.length > 0) {
-            const crumbnames = breadcrumbs.map((b) => b.name)
-            crumbnames.unshift("Home")
-            setFolderPath(crumbnames.join("/"))
-        }
-    }
-
     const goBackToPrevious = () => {
         if (breadcrumbs.length > 1) {
             displayFolder(breadcrumbs[breadcrumbs.length - 2].id)
@@ -184,9 +176,9 @@ function SessionsComponent(props) {
             )
             fetchData
                 .then(
-                    (response) => {
+                    async (response) => {
                         if (response.status === 200) {
-                            const folder = FolderModel.fromJson(response.json())
+                            const folder = FolderModel.fromJson(await response.json())
                             folders.push(folder)
                             if (locationId) {
                                 displayFolder(folder.parent)
@@ -195,7 +187,7 @@ function SessionsComponent(props) {
                             }
                         } else {
                             setShowAlert(true)
-                            setAlertMessage(response.json()["message"])
+                            setAlertMessage((await response.json())["message"])
                         }
                     },
                     (apierror) => {
@@ -224,9 +216,9 @@ function SessionsComponent(props) {
         )
         fetchData
             .then(
-                (response) => {
+                async (response) => {
                     if (response.status === 200) {
-                        const folder = FolderModel.fromJson(response.json())
+                        const folder = FolderModel.fromJson(await response.json())
                         const folderIndex = folders.findIndex(
                             (s) => s.id === folder.id,
                         )
@@ -234,7 +226,7 @@ function SessionsComponent(props) {
                         displayFolder(folder.parent)
                     } else {
                         setShowAlert(true)
-                        setAlertMessage(response.json()["message"])
+                        setAlertMessage((await response.json())["message"])
                     }
                 },
                 (apierror) => {
@@ -257,10 +249,10 @@ function SessionsComponent(props) {
         )
         fetchData
             .then(
-                (response) => {
+                async (response) => {
                     if (response.status === 200) {
                         const updatedFolder = FolderModel.fromJson(
-                            response.json(),
+                            await response.json(),
                         )
                         const index = folders.findIndex(
                             (f) => f.id === updatedFolder.id,
@@ -275,7 +267,7 @@ function SessionsComponent(props) {
                         displayFolder(updatedFolder.parent)
                     } else {
                         setShowAlert(true)
-                        setAlertMessage(response.json()["message"])
+                        setAlertMessage((await response.json())["message"])
                     }
                 },
                 (apierror) => {
@@ -297,9 +289,9 @@ function SessionsComponent(props) {
         const fetchData = new SessionService().deleteFolder(folderId)
         fetchData
             .then(
-                (response) => {
+                async (response) => {
                     if (response.status === 200) {
-                        //const updatedFolder = FolderModel.fromJson(response.json());
+                        //const updatedFolder = FolderModel.fromJson(await response.json());
                         const foldersToRemove = [folderId]
                         const children = folders.filter(
                             (f) => f.parent === folderId,
@@ -328,7 +320,7 @@ function SessionsComponent(props) {
                         }
                     } else {
                         setShowAlert(true)
-                        setAlertMessage(response.json()["message"])
+                        setAlertMessage((await response.json())["message"])
                     }
                 },
                 (apierror) => {
@@ -354,7 +346,7 @@ function SessionsComponent(props) {
         const fetchData = new SessionService().endSession(sessionId)
         fetchData
             .then(
-                (response) => {
+                async (response) => {
                     if (response.status === 200) {
                         response.json().then((json) => {
                             const endedSession = SessionModel.fromJson(json)
@@ -366,7 +358,7 @@ function SessionsComponent(props) {
                         })
                     } else {
                         setShowAlert(true)
-                        setAlertMessage(response.json()["message"])
+                        setAlertMessage((await response.json())["message"])
                     }
                 },
                 (apierror) => {
@@ -391,7 +383,7 @@ function SessionsComponent(props) {
         const sessionId = selectedSession.id
         const fetchData = new SessionService().updateSession(sessionId, newName)
         fetchData.then(
-            (response) => {
+            async (response) => {
                 if (response.status === 200) {
                     response.json().then((json) => {
                         const session = SessionModel.fromJson(json)
@@ -420,7 +412,7 @@ function SessionsComponent(props) {
         const trimmed = (newName || "").trim()
         if (!trimmed || trimmed === session.title) return
         new SessionService().updateSession(session.id, trimmed).then(
-            (response) => {
+            async (response) => {
                 if (response.status === 200) {
                     response.json().then((json) => {
                         const updated = SessionModel.fromJson(json)
@@ -450,7 +442,7 @@ function SessionsComponent(props) {
         )
         fetchData
             .then(
-                (response) => {
+                async (response) => {
                     if (response.status === 200) {
                         response.json().then((json) => {
                             const updatedSession = SessionModel.fromJson(json)
@@ -462,7 +454,7 @@ function SessionsComponent(props) {
                         })
                     } else {
                         setShowAlert(true)
-                        setAlertMessage(response.json()["message"])
+                        setAlertMessage((await response.json())["message"])
                     }
                 },
                 (apierror) => {
@@ -483,7 +475,7 @@ function SessionsComponent(props) {
         const fetchData = new SessionService().deleteSession(sessionId)
         fetchData
             .then(
-                (response) => {
+                async (response) => {
                     if (response.status === 200) {
                         const parent = folders.find(
                             (f) => f.id === selectedSession.folder,
@@ -491,7 +483,7 @@ function SessionsComponent(props) {
                         setSessions(sessions.filter((s) => s.id !== sessionId))
                     } else {
                         setShowAlert(true)
-                        setAlertMessage(response.json()["message"])
+                        setAlertMessage((await response.json())["message"])
                     }
                 },
                 (apierror) => {

@@ -28,6 +28,7 @@ import {
     VoiceQualityCard,
 } from "../components/voice-quality"
 import contextStyle from "../components/context-menu/context-menu.module.css"
+import { downloadBlob } from "../utilities/download"
 
 // "2026-06-18 14:35:58 UTC" -> Date (or null).
 const parseDate = (s) => {
@@ -457,12 +458,7 @@ function StudentsComponent(props) {
                 ].join(","),
             ),
         ]
-        const blob = new Blob([lines.join("\n")], { type: "text/csv" })
-        const link = document.createElement("a")
-        link.href = URL.createObjectURL(blob)
-        link.download = "students.csv"
-        link.click()
-        URL.revokeObjectURL(link.href)
+        downloadBlob(new Blob([lines.join("\n")], { type: "text/csv" }), "students.csv")
     }
 
     const filterChip = (value, label) => (

@@ -8,6 +8,7 @@ import { StudentModel } from "../models/student"
 import { SessionModel } from "../models/session";
 import { SessionDeviceModel } from "../models/session-device";
 import { SpeakerModel } from "../models/speaker";
+import { FEATURE_LABELS, BOX_LABELS, buildChecklist } from "../utilities/checklist"
 
 const surveyquestion = [
   ["communication rate","How would you rate the level of communication?"],
@@ -143,35 +144,8 @@ function StudentSessionDashboard() {
   // USEEFFECTS AND INIT FUNCTIONS
 
   useEffect(() => {
-    let featuresArr = [
-      "Emotional tone",
-      "Analytic thinking",
-      "Clout",
-      "Authenticity",
-      "Confusion",
-      "Participation",
-      "Social Impact",
-      "Responsivity",
-      "Internal Cohesion",
-      "Newness",
-      "Communication Density",
-      "Attention Level",
-      "Facial Emotions",
-      "Object Focused On"
-    ]
-    initChecklistData(featuresArr, setShowFeatures)
-    // initialize the components toolbar
-    let boxArr = [
-      "Timeline control",
-      "Participation",
-      "Social Impact",
-      "Responsivity",
-      "Internal Cohesion",
-      "Newness",
-      "Communication Density",
-      "Video Metrics"
-    ]
-    initChecklistData(boxArr, setShowBoxes)
+    setShowFeatures(buildChecklist(FEATURE_LABELS))
+    setShowBoxes(buildChecklist(BOX_LABELS))
   }, []);
 
 
@@ -251,16 +225,9 @@ function StudentSessionDashboard() {
   //  THIRD USEEFFECT:  THIS IS TRIGGERED ONCE THE TRANSCRIPT AND VIDEO METRIC IS PULLED FROM THE DB            
   // --------------------------------------------------------
   useEffect(() => {
-    if (session.current !== null && !firstLoadCompleted) {
-      const sessionLen =
-        Object.keys(session.current).length > 0 ? session.current.length : 0
-      const sTime = Math.round(sessionLen * timeRange[0] * 100) / 100
-      const eTime = Math.round(sessionLen * timeRange[1] * 100) / 100
-      setStartTime(sTime)
-      setEndTime(eTime)
-      generateDisplayTranscripts(transcripts, sTime, eTime)
-      generateDisplayVideoMetrics(videoMetrics, sTime, eTime)
-    } else if (session.current !== null && firstLoadCompleted && currentSessionRunning) {
+    // Before the first load completes, and again on every update while the
+    // session is still running (the two branches used to be identical bodies).
+    if (session.current !== null && (!firstLoadCompleted || currentSessionRunning)) {
       const sessionLen =
         Object.keys(session.current).length > 0 ? session.current.length : 0
       const sTime = Math.round(sessionLen * timeRange[0] * 100) / 100
@@ -362,16 +329,6 @@ function StudentSessionDashboard() {
       }
       console.log("store ", sessionDataObjects.current)
     }
-  }
-
-  const initChecklistData = (featuresArr, setFn) => {
-    let valueInd = 0
-    let showFeats = []
-    for (const feature of featuresArr) {
-      showFeats.push({ label: feature, value: valueInd, clicked: true })
-      valueInd++
-    }
-    setFn(showFeats)
   }
 
 
@@ -1100,7 +1057,7 @@ function StudentSessionDashboard() {
   }
 
   const seeAllTranscripts = () => {
-    if (Object.keys(currentTranscript) > 0) { //&& sessionDevice !== null
+    if (Object.keys(currentTranscript).length > 0) { //&& sessionDevice !== null
       setCurrentForm("gottoselectedtranscript")
     }
     // else if (sessionDevice !== null) {

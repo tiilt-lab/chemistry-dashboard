@@ -22,7 +22,7 @@ function KeywordListItemsComponent() {
 
   useEffect(() => {
     if (keywordListID !== undefined && keywordListID !== '-1') {
-      new KeywordService().getKeywordList(keywordListID).then(response => {
+      new KeywordService().getKeywordList(keywordListID).then(async response => {
         if (response.status === 200) {
           const data = response.json()
           data.then(
@@ -91,11 +91,11 @@ function KeywordListItemsComponent() {
     console.log(keywords);
     if (keywordListID === '-1') {
       new KeywordService().createKeywordList(keywordList.name, keywords).then(
-        response => {
+        async response => {
           if (response.status === 200) {
             goBackToKeywordLists();
           } else {
-            alert(response.json()['message']);
+            alert((await response.json())['message']);
           }
         },
         apierror => {
@@ -103,11 +103,11 @@ function KeywordListItemsComponent() {
         });
     } else {
       new KeywordService().updateKeywordList(keywordListID, keywordList.name, keywords).then(
-        response => {
+        async response => {
           if (response.status === 200) {
             goBackToKeywordLists();
           } else {
-            alert(response.json()['message']);
+            alert((await response.json())['message']);
           }
         },
         apierror => {

@@ -129,7 +129,7 @@ def delete_session(session_id, **kwargs):
     try:
         success = database.delete_session(session_id) 
     except Exception as e:
-        logging.info("error occured while deleting session: {0}".format(e))    
+        logging.info("error occurred while deleting session: {0}".format(e))    
     if success:
         return json_response()
     else:
@@ -1352,7 +1352,7 @@ def stream_cartonized_images(session_id, device_id,auth_id, **kwargs):
         return Response(gen(loading_frame,queue_key),
                         mimetype='multipart/x-mixed-replace; boundary=frame')
     except Exception as e:
-        logging.error('Error occured while streaming cartoonized image: {0}'.format(e))
+        logging.error('Error occurred while streaming cartoonized image: {0}'.format(e))
         return json_response({'message': 'Streaming failed.'}, 500)
 
 

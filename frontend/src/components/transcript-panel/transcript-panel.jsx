@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { formatSeconds, speakerColorFor } from "../../globals"
 import { SpeakerReassign } from "../speaker-reassign"
 import { sessionToVideo } from "../video-player/video-time"
+import { downloadBlob } from "../../utilities/download"
 
 const FEATURE_FIELDS = [
     ["Emotional tone", "emotional_tone_value"],
@@ -98,17 +99,10 @@ function TranscriptPanel({
     const downloadCsv = () => {
         const csv = transcriptsToCsv(list, displayTime)
         // BOM so Excel reads UTF-8 (accented names, smart quotes) correctly.
-        const blob = new Blob(["﻿" + csv], {
-            type: "text/csv;charset=utf-8",
-        })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = "transcript.csv"
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
-        URL.revokeObjectURL(url)
+        downloadBlob(
+            new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }),
+            "transcript.csv",
+        )
     }
     const scrollRef = useRef(null)
     const selectedRef = useRef(null)

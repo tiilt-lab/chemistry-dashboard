@@ -21,7 +21,7 @@ function AppInfographicsSessionComparison(props) {
                 <>
                     <div className="flex flex-col @sm:flex-row relative box-border wide-section justify-center my-2 max-h-12">
                         <select
-                            id="session1"
+                            id="compare-session1"
                             className="dropdown small-section"
                             value={props.selectedSessionId1}
                             onChange={(e) => props.getSessionDevices(parseInt(e.target.value, 10),"sessionOne")}
@@ -39,7 +39,7 @@ function AppInfographicsSessionComparison(props) {
 
                         {props.details === "Comparison" && (
                             <select
-                                id="speaker2"
+                                id="compare-session2"
                                 className="dropdown small-section"
                                 value={props.selectedSessionId2}
                                 onChange={(e) => props.getSessionDevices(parseInt(e.target.value, 10),"sessionTwo")}
@@ -59,7 +59,7 @@ function AppInfographicsSessionComparison(props) {
 
                     <div className="flex flex-col @sm:flex-row relative box-border wide-section justify-center my-2 max-h-12">
                         <select
-                            id="session1"
+                            id="compare-group1"
                             className="dropdown small-section"
                             value={props.selectedSessionDeviceId1}
                             onChange={(e) => props.loadComparedSessionDeviceMetrics(parseInt(e.target.value, 10),"sessionOne")}
@@ -77,7 +77,7 @@ function AppInfographicsSessionComparison(props) {
 
                         {props.details === "Comparison" && (
                             <select
-                                id="speaker2"
+                                id="compare-group2"
                                 className="dropdown small-section"
                                 value={props.selectedSessionDeviceId2}
                                 onChange={(e) => props.loadComparedSessionDeviceMetrics(parseInt(e.target.value, 10),"sessionTwo")}

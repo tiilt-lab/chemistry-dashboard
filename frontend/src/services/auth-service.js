@@ -100,7 +100,7 @@ class AuthService {
       },
       (apiError) => {
         apiError.status = 600
-        setAlertMessage("A fatal error occured!!!");
+        setAlertMessage("A fatal error occurred!!!");
         setShowAlert(true);
       })
   }
@@ -139,7 +139,7 @@ class AuthService {
       },
       (apiError) => {
         apiError.status = 600
-        setAlertMessage("A fatal error occured!!!");
+        setAlertMessage("A fatal error occurred!!!");
         setShowAlert(true);
       })
   }

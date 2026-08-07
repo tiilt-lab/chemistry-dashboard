@@ -75,7 +75,7 @@ class AudioStreamReader:
               
         except Exception as e:
             error_str = traceback.format_exc()
-            logging.info('exception occured while reading wav : {0}'.format(error_str))
+            logging.info('exception occurred while reading wav : {0}'.format(error_str))
         finally:
             try:
                 self.asr_audio_queue.put(self.STOP_SIGNAL, timeout=self.queue_put_timeout)

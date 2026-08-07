@@ -5,6 +5,7 @@ import { AuthService } from '../services/auth-service';
 import { ApiService } from "../services/api-service"
 import { useNavigate, useParams } from "react-router-dom"
 import fixWebmDuration from "fix-webm-duration"
+import { ensureGetUserMedia } from "../utilities/media"
 
 
 function SignupPage() {
@@ -326,42 +327,7 @@ function SignupPage() {
             resetForRecording()
 
             //handle older browsers that might implement getUserMedia in some way
-            if (navigator.mediaDevices === undefined) {
-                navigator.mediaDevices = {}
-                navigator.mediaDevices.getUserMedia = function (constraintObj) {
-                    let getUserMedia =
-                        navigator.webkitGetUserMedia ||
-                        navigator.mozGetUserMedia
-                    if (!getUserMedia) {
-                        return Promise.reject(
-                            new Error(
-                                "getUserMedia is not implemented in this browser",
-                            ),
-                        )
-                    }
-                    return new Promise(function (resolve, reject) {
-                        getUserMedia.call(
-                            navigator,
-                            constraintObj,
-                            resolve,
-                            reject,
-                        )
-                    })
-                }
-            } else {
-                navigator.mediaDevices
-                    .enumerateDevices()
-                    .then((devices) => {
-                        devices.forEach((device) => {
-
-                            // console.log(device.kind.toUpperCase(), device.label);
-                            //, device.deviceId
-                        })
-                    })
-                    .catch((err) => {
-                        console.log(err.name, err.message)
-                    })
-            }
+            ensureGetUserMedia()
 
             if (navigator.mediaDevices != null) {
                 const stream = await navigator.mediaDevices.getUserMedia(constraintObj)

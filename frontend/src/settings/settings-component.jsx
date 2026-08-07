@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DeviceModel } from '../models/device'
 import { SettingComponentPage } from './html-pages'
+import { downloadBlob } from "../utilities/download"
 
 function SettingsComponent(props) {
 
@@ -104,111 +105,70 @@ function SettingsComponent(props) {
     )
   }
 
-  const downloadServerLogs = async (type) => {
+  // One implementation for both log scopes; the four exported names below
+  // keep the page props stable. (These were four near-identical copies, and
+  // the delete pair crashed on a null response.)
+  const fetchLogs = (scope, id) =>
+    scope === "server"
+      ? new AuthService().getServerLogs(id)
+      : new AuthService().getDeviceLogs(+id)
+
+  const removeLogs = (scope, id) =>
+    scope === "server"
+      ? new AuthService().deleteServerLogs(id)
+      : new AuthService().deleteDeviceLogs(+id)
+
+  const downloadLogs = async (scope, id) => {
     setCurrentForm("Loading");
     try {
-      const fetchData = await new AuthService().getServerLogs(type)
-      if (fetchData !== null && fetchData.status === 200) {
-        const respJson = await fetchData.json()
+      const response = await fetchLogs(scope, id)
+      if (response !== null && response.status === 200) {
+        const respJson = await response.json()
         if (respJson !== null) {
-          const dataUrl = respJson["data"];
-          const res = await fetch(dataUrl)
-          const blob = await res.blob()
-          const blobUrl = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = blobUrl;
-          link.download = type + "_logs.txt";
-          link.click();
+          const res = await fetch(respJson["data"])
+          downloadBlob(await res.blob(),
+            scope === "server" ? id + "_logs.txt" : "pod_" + id + "_logs.txt")
           setStatusTitle('Logs Downloaded');
           setStatus('The logs have been downloaded successfully.');
-          setCurrentForm("Status")
         } else {
           setStatusTitle('Logs Download Failed')
           setStatus('The logs failed to download.  Please try again later.');
-          setCurrentForm("Status")
         }
       } else {
-        setCurrentForm("Status")
-        console.log("settingcomponent func : downloadServerLogs")
+        setStatusTitle('Logs Download Failed')
+        setStatus(response !== null ? (await response.json())['message'] : 'The logs failed to download.');
       }
     } catch (e) {
-      setCurrentForm("Status")
-      console.log(e, 'downloadserverlogs')
+      console.log(e, 'downloadLogs', scope)
+      setStatusTitle('Logs Download Failed')
+      setStatus('The logs failed to download.  Please try again later.');
     }
-
+    setCurrentForm("Status")
   }
 
-  const downloadDeviceLogs = async (deviceId) => {
-    deviceId = +deviceId;
+  const deleteLogs = async (scope, id) => {
     setCurrentForm('Loading');
     try {
-      const fetchData = await new AuthService().getDeviceLogs(deviceId)
-      if (fetchData !== null && fetchData.status === 200) {
-        const respJson = await fetchData.json()
-        if (respJson !== null) {
-          const dataUrl = respJson["data"];
-          const res = await fetch(dataUrl)
-          const blob = await res.blob()
-          const blobUrl = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = blobUrl;
-          link.download = "pod_" + deviceId + "_logs.txt";
-          link.click();
-          setStatusTitle('Logs Downloaded');
-          setStatus('The logs have been downloaded successfully.');
-          setCurrentForm("Status")
-        } else {
-          setStatusTitle('Logs Download Failed')
-          setStatus('The logs failed to download.  Please try again later.');
-          setCurrentForm("Status")
-        }
+      const response = await removeLogs(scope, id)
+      setStatusTitle('Logs Deleted');
+      if (response !== null && response.status === 200) {
+        setStatus('The logs have been deleted successfully.');
       } else {
-        const respJson = await fetchData.json()
-        setStatus(respJson['message']);
-        setStatusTitle('Logs Download Failed')
-        setCurrentForm("Status")
-        console.log("settingcomponent func : downloadDeviceLogs")
+        setStatus(response !== null ? (await response.json())['message'] : 'The logs failed to delete.');
+        console.log("settingcomponent func : deleteLogs", scope)
       }
     } catch (e) {
-      setCurrentForm("Status")
-      console.log(e, 'downloadserverlogs')
+      console.log(e, 'deleteLogs', scope)
+      setStatusTitle('Logs Delete Failed')
+      setStatus('The logs failed to delete.  Please try again later.');
     }
-
+    setCurrentForm("Status")
   }
 
-  const deleteServerLogs = async (type) => {
-    setCurrentForm('Loading');
-    const fetchData = await new AuthService().deleteServerLogs(type)
-    if (fetchData != null && fetchData.status === 200) {
-      setStatusTitle('Logs Deleted');
-      setStatus('The logs have been deleted successfully.');
-      setCurrentForm("Status")
-    } else {
-      const respJson = await fetchData.json()
-      setStatus(respJson['message']);
-      setStatusTitle('Logs Deleted');
-      setCurrentForm("Status")
-      console.log("settingcomponent func : deleteServerLogs")
-    }
-  }
-
-  const deleteDeviceLogs = async (deviceId) => {
-    deviceId = +deviceId;
-    setCurrentForm('Loading');
-    const fetchData = await new AuthService().deleteDeviceLogs(deviceId)
-    if (fetchData != null && fetchData.status === 200) {
-      setStatusTitle('Logs Deleted');
-      setStatus('The logs have been deleted successfully.');
-      setCurrentForm("Status")
-    } else {
-      const respJson = await fetchData.json()
-      setStatus(respJson['message']);
-      setStatusTitle('Logs Deleted');
-      setCurrentForm("Status")
-      console.log("settingcomponent func : delete devicelog")
-    }
-
-  }
+  const downloadServerLogs = (type) => downloadLogs("server", type)
+  const downloadDeviceLogs = (deviceId) => downloadLogs("device", deviceId)
+  const deleteServerLogs = (type) => deleteLogs("server", type)
+  const deleteDeviceLogs = (deviceId) => deleteLogs("device", deviceId)
 
   return (
     <SettingComponentPage

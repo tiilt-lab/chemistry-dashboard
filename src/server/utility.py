@@ -46,7 +46,7 @@ def verify_characters(value, chars):
         return True
     return False
 
-def particiapant_only_session_prompt(data):
+def participant_only_session_prompt(data):
     return f"""
         You are a collaborative learning analytics assistant.
         Your task is to analyze collaboration quality metrics data and return structured feedback.
@@ -114,7 +114,7 @@ def particiapant_only_session_prompt(data):
         - Note that all the values for the metrics are scaled to 100 percent except for trendingdirection,gazeontask,word count. This should be considered during the analysis 
         """
         
-def particiapant_interactive_prompt(data):
+def participant_interactive_prompt(data):
     return f"""
         You are a collaborative learning analytics assistant.
         Your task is to analyze collaboration quality metrics data and return structured feedback.
@@ -173,10 +173,10 @@ def particiapant_interactive_prompt(data):
 
 def build_prompt(data, type):
     if type == "Session_level analysis for participant":
-        return particiapant_only_session_prompt(data)
+        return participant_only_session_prompt(data)
     
     if type == "Interactive question answer":
-        return particiapant_interactive_prompt(data)
+        return participant_interactive_prompt(data)
 
 def compute_median_and_mad(values):
     median = np.median(values)

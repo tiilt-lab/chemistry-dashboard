@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { ApiService } from "../../services/api-service"
+import { fmtClock } from "../../lib/utils"
 
 // A student's per-session participation across the term. Each bar carries a
 // fair-share tick (1/group size) so over/under-participation reads at a
@@ -16,10 +17,7 @@ export const trendOf = (values) => {
 }
 
 // seconds -> "m:ss" (talk time is minutes-scale, not hours)
-export const fmtMins = (sec) => {
-    const s = Math.max(0, Math.round(sec || 0))
-    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`
-}
+const fmtMins = (sec) => fmtClock(sec || 0)
 
 // Open-question ratio per session (only sessions where they asked any).
 export const openRatios = (rows) =>

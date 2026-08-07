@@ -47,6 +47,9 @@ function SpeakerCardsPanel({
 
     useEffect(() => {
         if (!sessionId || !sessionDeviceId) return
+        // Guard against a slow response for a previous pod overwriting the
+        // current pod's data after a quick switch.
+        let alive = true
         new ApiService()
             .httpRequestCall(
                 `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/dynamics`,
@@ -54,8 +57,9 @@ function SpeakerCardsPanel({
                 {},
             )
             .then((r) => (r.status === 200 ? r.json() : null))
-            .then((d) => d && setDynamics(d))
+            .then((d) => alive && d && setDynamics(d))
             .catch(() => {})
+        return () => { alive = false }
     }, [sessionId, sessionDeviceId])
 
     if (!speakers || speakers.length === 0)

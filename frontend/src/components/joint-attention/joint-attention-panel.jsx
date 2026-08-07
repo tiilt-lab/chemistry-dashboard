@@ -15,6 +15,9 @@ function JointAttentionPanel({ sessionId, sessionDeviceId }) {
 
     useEffect(() => {
         if (!sessionId || !sessionDeviceId) return
+        // Guard against a slow response for a previous pod overwriting the
+        // current pod's data after a quick switch.
+        let alive = true
         new ApiService()
             .httpRequestCall(
                 `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/joint_attention`,
@@ -22,8 +25,9 @@ function JointAttentionPanel({ sessionId, sessionDeviceId }) {
                 {},
             )
             .then((r) => (r.status === 200 ? r.json() : Promise.reject()))
-            .then((d) => setData(d))
-            .catch(() => setError(true))
+            .then((d) => alive && setData(d))
+            .catch(() => alive && setError(true))
+        return () => { alive = false }
     }, [sessionId, sessionDeviceId])
 
     if (error)
