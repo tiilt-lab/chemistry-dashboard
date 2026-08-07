@@ -23,10 +23,9 @@ import style5 from "../sessions/sessions.module.css"
 import MicIcon from "@icons/Mic"
 import Check from "@icons/Check"
 import Chevron from "@icons/Chevron"
-import { MicChannelProbe } from "./mic-channel-probe"
 
 import { defaultGroupName as makeDefaultGroupName } from "../lib/utils"
-import { DeviceCheckPage } from "./device-check"
+import { InlineDeviceCheck } from "./device-check"
 import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
 
@@ -170,6 +169,9 @@ function ByodJoinPage(props) {
     // and mic check are visible without an extra tap.
     const [editCode, setEditCode] = useState(false)
     const [showAdvanced, setShowAdvanced] = useState(true)
+    // Controlled so the inline device check can follow the selection (a
+    // camera preview only when joining with video).
+    const [joinwithSel, setJoinwithSel] = useState("Video")
     // Reflect the derived join phase (join-machine.ts) onto the body so E2E
     // and debugging have one signal for "where in the flow are we". Purely
     // observational — no behavior depends on it yet.
@@ -214,17 +216,6 @@ function ByodJoinPage(props) {
                             }
                             nav={() => props.navigateToLogin()}
                         />
-                        {props.joinPhase === "device_check" && (
-                            <div className={pageShell}>
-                                <div className={formCard}>
-                                    <DeviceCheckPage
-                                        joinwith={props.deviceCheck.joinswith}
-                                        onConfirm={props.confirmDeviceCheck}
-                                        onBack={props.cancelDeviceCheck}
-                                    />
-                                </div>
-                            </div>
-                        )}
                         {props.joinPhase === "form" && (
                             <div className={pageShell}>
                             <div className={formCard}>
@@ -308,7 +299,12 @@ function ByodJoinPage(props) {
                                                 <select
                                                     id="joinwith"
                                                     className={dlgSelect}
-                                                    defaultValue="Video"
+                                                    value={joinwithSel}
+                                                    onChange={(e) =>
+                                                        setJoinwithSel(
+                                                            e.target.value,
+                                                        )
+                                                    }
                                                 >
                                                     <option value="Audio">Audio</option>
                                                     <option value="Video">Video</option>
@@ -336,7 +332,14 @@ function ByodJoinPage(props) {
                                                     <option value="8">8</option>
                                                 </select>
                                             </div>
-                                            <MicChannelProbe />
+                                            <InlineDeviceCheck
+                                                wantsVideo={
+                                                    joinwithSel !== "Audio"
+                                                }
+                                                selectionRef={
+                                                    props.deviceSelectionRef
+                                                }
+                                            />
                                         </div>
                                     </div>
                                 </div>

@@ -1,18 +1,21 @@
-import React, { useEffect, useRef, useState } from "react"
-import { dlgSelect, dlgPrimary, dlgError } from "../components/dialog-styles"
+import { useEffect, useRef, useState } from "react"
+import { dlgSelect, dlgError } from "../components/dialog-styles"
 
-// Pre-join device check: after the join form and before connecting, show
-// what the chosen camera and microphone actually capture — live camera
+// Inline device check, embedded in the join form (it used to be a separate
+// "Check your devices" page between the form and joining): live camera
 // preview, a level meter per audio channel, and (for multi-channel rigs
 // like 2-transmitter lav receivers) a picker for which channel to record.
-// The selections feed the real capture: deviceIds go into getUserMedia and
-// the channel choice is applied by a ChannelSplitter before the audio
-// worklet.
+// The current selection is continuously mirrored into `selectionRef` so the
+// form's "Connect to server" click can read it synchronously — deviceIds go
+// into getUserMedia and the channel choice is applied by a ChannelSplitter
+// before the audio worklet.
 //
 // Echo cancellation / noise suppression are disabled here and during the
 // session whenever a specific channel is chosen — several platforms force
 // a mono downmix when they are on, which destroys channel separation.
 const MAX_CHANNELS = 8
+
+const fieldLabel = "mb-1.5 block text-left text-sm font-semibold text-tiilt-ink"
 
 // 360° conference cameras (j5create JVCU360 "360 All Around", Jabra
 // PanaCast, ...) are plain UVC webcams that compose their dewarped panorama
@@ -34,10 +37,7 @@ const parseResolution = (value) => {
     return m ? { width: Number(m[1]), height: Number(m[2]) } : null
 }
 
-const fieldLabel = "mb-1.5 block text-left text-sm font-semibold text-tiilt-ink"
-
-function DeviceCheckPage({ joinwith, onConfirm, onBack }) {
-    const wantsVideo = joinwith === "Video" || joinwith === "Videocartoonify"
+function InlineDeviceCheck({ wantsVideo, selectionRef }) {
     const [error, setError] = useState("")
     const [mics, setMics] = useState([])
     const [cams, setCams] = useState([])
@@ -59,6 +59,23 @@ function DeviceCheckPage({ joinwith, onConfirm, onBack }) {
         }
         streamRef.current = null
     }
+
+    // Mirror the live selection (and a way to release the devices) into the
+    // parent's ref on every render, so the join click reads fresh values.
+    useEffect(() => {
+        const vtrack =
+            streamRef.current && streamRef.current.getVideoTracks
+                ? streamRef.current.getVideoTracks()[0]
+                : null
+        selectionRef.current = {
+            audioDeviceId: micId || null,
+            videoDeviceId: camId || null,
+            videoResolution: parseResolution(resChoice),
+            videoPanorama: !!(vtrack && isPanoramaCamera(vtrack.label)),
+            channelIndex: channelChoice === "mix" ? null : channelChoice,
+            stopPreview,
+        }
+    })
 
     const openPreview = async (audioDeviceId, videoDeviceId) => {
         stopPreview()
@@ -181,22 +198,12 @@ function DeviceCheckPage({ joinwith, onConfirm, onBack }) {
         openPreview(micId || undefined, camId || undefined)
         return stopPreview
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [micId, camId, resChoice])
+    }, [micId, camId, resChoice, wantsVideo])
 
     const speaking = levels.some((l) => l > 0.02)
 
     return (
-        <div className="mx-auto flex w-full max-w-md grow flex-col gap-4 overflow-y-auto px-4 py-6">
-            <div>
-                <div className="text-lg font-semibold text-tiilt-ink">
-                    Check your devices
-                </div>
-                <div className="mt-1 text-sm text-tiilt-muted">
-                    Make sure the recording will look and sound right before
-                    joining.
-                </div>
-            </div>
-
+        <div className="flex flex-col gap-4">
             {error ? (
                 <div className={dlgError}>{error}</div>
             ) : null}
@@ -320,45 +327,8 @@ function DeviceCheckPage({ joinwith, onConfirm, onBack }) {
                     </div>
                 </div>
             </div>
-
-            <div className="mt-2 flex flex-col gap-2">
-                <button
-                    className={dlgPrimary + " w-full"}
-                    onClick={() => {
-                        // Read the label before stopPreview clears the stream:
-                        // the active track (not the picker) knows which camera
-                        // the browser actually opened, default choice included.
-                        const vtrack =
-                            streamRef.current &&
-                            streamRef.current.getVideoTracks()[0]
-                        const panorama = !!(
-                            vtrack && isPanoramaCamera(vtrack.label)
-                        )
-                        stopPreview()
-                        onConfirm({
-                            audioDeviceId: micId || null,
-                            videoDeviceId: camId || null,
-                            videoPanorama: panorama,
-                            videoResolution: parseResolution(resChoice),
-                            channelIndex:
-                                channelChoice === "mix" ? null : channelChoice,
-                        })
-                    }}
-                >
-                    Looks good — join session
-                </button>
-                <button
-                    className="w-full cursor-pointer rounded-lg border border-tiilt-line bg-white px-3 py-2.5 text-sm font-semibold text-tiilt-ink transition hover:border-tiilt"
-                    onClick={() => {
-                        stopPreview()
-                        onBack()
-                    }}
-                >
-                    Back
-                </button>
-            </div>
         </div>
     )
 }
 
-export { DeviceCheckPage }
+export { InlineDeviceCheck }

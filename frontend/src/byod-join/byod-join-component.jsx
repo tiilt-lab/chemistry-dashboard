@@ -126,8 +126,10 @@ function JoinPage() {
 
     // Pre-join device check: pending join params while the check page is
     // shown, and the confirmed device/channel selection used for capture.
-    const [deviceCheck, setDeviceCheck] = useState(null)
     const deviceSelection = useRef({ audioDeviceId: null, videoDeviceId: null, channelIndex: null })
+    // Continuously mirrored by the join form's InlineDeviceCheck (the old
+    // separate "Check your devices" page is folded into the form).
+    const inlineSelection = useRef({})
 
     // Recording is started explicitly: after speaker validation the client
     // holds (heartbeating) until "Start recording" is pressed. armed stays
@@ -1229,7 +1231,19 @@ function JoinPage() {
         if (names === null) {
             names = "User Device"
         }
-        setDeviceCheck({ names, passcode, collaborators, joinswith })
+        // The join form's inline device check owns the current selection;
+        // release its preview devices before the real capture opens them.
+        const inline = inlineSelection.current || {}
+        if (inline.stopPreview) inline.stopPreview()
+        deviceSelection.current = {
+            audioDeviceId: inline.audioDeviceId || null,
+            videoDeviceId: inline.videoDeviceId || null,
+            videoResolution: inline.videoResolution || null,
+            videoPanorama: !!inline.videoPanorama,
+            channelIndex:
+                inline.channelIndex === undefined ? null : inline.channelIndex,
+        }
+        requestAccessKey(names, passcode, collaborators, joinswith)
     }
 
     // End this pod's recording cleanly: flush the recorder's buffered
@@ -1254,18 +1268,6 @@ function JoinPage() {
         setCurrentForm("ClosedSession")
     }
 
-    // Called by the device check page once the user confirms their devices.
-    const confirmDeviceCheck = (selection) => {
-        const pending = deviceCheck
-        setDeviceCheck(null)
-        deviceSelection.current = selection
-        requestAccessKey(
-            pending.names,
-            pending.passcode,
-            pending.collaborators,
-            pending.joinswith,
-        )
-    }
 
     // Requests session access from the server.
     const requestAccessKey = async (names, passcode, collaborators, l_joinwith) => {
@@ -1911,7 +1913,10 @@ function JoinPage() {
     // exposed as data-join-phase for tests/debugging; rendering and effects
     // migrate onto it incrementally in later steps.
     const joinPhase = deriveJoinPhase(state, {
-        deviceCheck: !!deviceCheck,
+        // The separate device-check page is folded into the join form, so
+        // this phase flag is permanently false (the machine keeps the state
+        // for compatibility; it is simply unreachable now).
+        deviceCheck: false,
         armed,
         currentForm,
         ending: ending.current,
@@ -1984,9 +1989,7 @@ function JoinPage() {
             cartoonImgUrl={cartoonImgUrl}
             invalidName={invalidName}
             savedFingerprintError={savedFingerprintError}
-            deviceCheck={deviceCheck}
-            confirmDeviceCheck={confirmDeviceCheck}
-            cancelDeviceCheck={() => setDeviceCheck(null)}
+            deviceSelectionRef={inlineSelection}
             armed={armed}
             micSilent={micSilent}
             recSeconds={recSeconds}
