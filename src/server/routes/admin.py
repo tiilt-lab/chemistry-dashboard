@@ -43,15 +43,6 @@ def get_raters(**kwargs):
     else:
         return json_response({'message': 'No Records found.'}, 400)        
 
-@api_routes.route('/api/v1/admin/raters/<string:rater_id>', methods=['GET'])
-def get_rater_by_id(rater_id, **kwargs):
-    raters = database.get_raters(raterid=rater_id,completed=0)
-    if raters:
-        return json_response([rater.json() for rater in raters])
-    else:
-        return json_response({'message': 'No Records found.'}, 400)
-    
-        
 @api_routes.route('/api/v1/admin/users', methods=['POST'])
 @wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
 @wrappers.verify_valid_role

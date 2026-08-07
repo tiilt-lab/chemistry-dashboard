@@ -465,6 +465,7 @@ def prewarm_video_cache():
 
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/video', methods=['GET'])
+@wrappers.verify_device_read_access
 def get_session_device_video(session_id, session_device_id, **kwargs):
     # Stream a pod's recorded video for playback beside the transcript.
     # conditional=True lets Flask honor HTTP Range requests so the player can
@@ -478,6 +479,7 @@ def get_session_device_video(session_id, session_device_id, **kwargs):
 
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/video/info', methods=['GET'])
+@wrappers.verify_device_read_access
 def get_session_device_video_info(session_id, session_device_id, **kwargs):
     # Playback metadata: real duration (ffprobe of the remuxed copy) and the
     # session-relative start offset, so the player can map video time <->
@@ -504,6 +506,7 @@ def get_session_device_video_info(session_id, session_device_id, **kwargs):
 
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/video_attribution', methods=['GET'])
+@wrappers.verify_device_read_access
 def get_video_attribution(session_id, session_device_id, **kwargs):
     # Fuse the TalkNCE active-speaker artifact (written by the video posthoc's
     # optional ASD pass) with the pod's transcripts: for each utterance, which
@@ -623,9 +626,11 @@ def speaker_id_transcripts_for(device_id, speaker_id, **kwargs):
     transcripts = database.get_transcripts(speaker_id=speaker_id)
     return json_response([transcript.json() for transcript in transcripts])
 
+# Open by design: the anonymous student-dashboard and expert-rating flows
+# (no accounts, no processing key) read transcripts through this route. Any
+# gate here must come with a credential those flows can hold — a product
+# decision, not a missing decorator.
 @api_routes.route('/api/v1/devices/<int:device_id>/transcripts/client', methods=['GET'])
-# @wrappers.verify_login(public=True)
-# @wrappers.verify_session_access
 def session_device_transcripts_for_client(device_id, **kwargs):
     transcripts = database.get_transcripts(session_device_id=device_id)
     return json_response([transcript.json() for transcript in transcripts])
@@ -666,13 +671,16 @@ def session_videometrics_for_client(session_id, alias, device_id=None, **kwargs)
 
 
 @api_routes.route('/api/v1/devices/<int:device_id>/transcripts/speaker_metrics', methods=['GET'])
+@wrappers.verify_device_read_access
 def session_device_speaker_metrics(device_id, **kwargs):
     speaker_metrics = database.get_speaker_transcript_metrics(session_device_id=device_id)
     # logging.info(f'Received speaker metrics from database{speaker_metrics}')
     return json_response([speaker_metric.json() for speaker_metric in speaker_metrics])
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/transcripts/speaker_metrics', methods=['POST'])
-def session_transcript_speaker_metrics(session_id):
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_read_access
+def session_transcript_speaker_metrics(session_id, **kwargs):
     transcripts = database.get_transcripts(session_id=session_id)
     return json_response(json.dumps(_with_speaker_metrics(transcripts)))
 
@@ -767,6 +775,7 @@ def get_session_triage(session_id, **kwargs):
 
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/dynamics', methods=['GET'])
+@wrappers.verify_device_read_access
 def get_pod_dynamics(session_id, session_device_id, **kwargs):
     # Conversation dynamics for a pod: per-speaker turns/speaking-share (equity)
     # + the who-follows-whom response network + Tier-1 talk metrics
@@ -777,6 +786,7 @@ def get_pod_dynamics(session_id, session_device_id, **kwargs):
 
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/posthoc_running', methods=['GET'])
+@wrappers.verify_device_read_access
 def get_posthoc_running(session_id, session_device_id, **kwargs):
     # Reliable "is an analysis running for this pod" for the dashboard. The
     # trigger panel's websocket probes ask the processing services directly,
@@ -787,6 +797,7 @@ def get_posthoc_running(session_id, session_device_id, **kwargs):
 
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/gaze_overlays', methods=['GET'])
+@wrappers.verify_device_read_access
 def get_gaze_overlays(session_id, session_device_id, **kwargs):
     # Gaze-model overlay geometry (head boxes / gaze points / focused-object
     # boxes, normalized coords) for the video player's overlay toggles. Only
@@ -848,6 +859,7 @@ def add_device_heart_rate(device_id, **kwargs):
 
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/heartrate', methods=['GET'])
+@wrappers.verify_device_read_access
 def get_pod_heart_rate(session_id, session_device_id, **kwargs):
     # Same open-read trust level as the joint_attention endpoint below.
     rows = database.get_speaker_hr_metrics(session_device_id=session_device_id)
@@ -855,6 +867,7 @@ def get_pod_heart_rate(session_id, session_device_id, **kwargs):
 
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/joint_attention', methods=['GET'])
+@wrappers.verify_device_read_access
 def get_pod_joint_attention(session_id, session_device_id, **kwargs):
     # Joint visual attention: >=2 members' gaze on the same target, computed
     # from the per-person Gaze-LLE focus targets the video pipeline stores.
@@ -1000,9 +1013,14 @@ def get_student_longitudinal(username, **kwargs):
     # caller, and verify_login(public=True) still 401s without a session.
     return json_response(database.get_student_longitudinal(username))
 
+# Open by design: the anonymous expert-rating flow resolves its assigned pod
+# through this route with no login and no processing key. It returns only
+# device metadata (name, session id), not recorded data.
 @api_routes.route('/api/v1/devices/<int:session_device_id>/session_device', methods=['GET'])
 def session_device_by_id(session_device_id, **kwargs):
     device = database.get_session_devices(id=session_device_id)
+    if device is None:
+        return json_response({'message': 'Does not exist.'}, 404)
     return json_response(device.json())
 
 
@@ -1016,6 +1034,7 @@ def _face_thumb_path(alias):
 
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/facethumb/<alias>', methods=['GET'])
+@wrappers.verify_device_read_access
 def get_face_thumbnail(session_id, session_device_id, alias, **kwargs):
     # Face crop for a recognized student, scoped to a session+device path (same
     # access model as the pod video). 404 until the pod is (re)processed.
@@ -1284,9 +1303,9 @@ def export_session_transcript_video_metrics(session_id,windowsize, format, **kwa
 
     return _metrics_export_response(si, all_participants_metrics, format)
 
+# Open by design: the anonymous student-dashboard and expert-rating flows
+# call this with no credential (students have no accounts).
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/synthesized_feedback_metrics',methods=['GET'])
-# @wrappers.verify_login(public=True)
-# @wrappers.verify_session_access
 def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
     session_device = database.get_session_devices(id=session_device_id)
     
@@ -1308,7 +1327,10 @@ def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
 
     return json_response(combine_metric_level)
     
+# Only the video processing service on this host calls these two (its
+# config.ini points at 127.0.0.1); the frontend never does.
 @api_routes.route('/api/v1/sessions/getredissessionkey', methods=['POST'])
+@wrappers.verify_local
 def get_device_key(**kwargs):
     content = request.get_json()
     redis_key = RedisSessions.get_device_key(content['auth_key'])
@@ -1318,6 +1340,7 @@ def get_device_key(**kwargs):
         return json_response({'message': "key cannot be authenticated"}, 400)
 
 @api_routes.route('/api/v1/sessions/getredissessionconfig', methods=['POST'])
+@wrappers.verify_local
 def get_session_config(**kwargs):
     content = request.get_json()
     redis_session = RedisSessions.get_session_config(content['session_key'])

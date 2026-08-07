@@ -1,3 +1,34 @@
+// The BYOD join flow has no login cookie; its credential is the pod's
+// processing key from the join response. Stored once here (per tab), it is
+// attached to every API call as X-Processing-Key, and appended as ?key= to
+// media URLs (<video>/<img> cannot send headers). Logged-in pages never set
+// it and keep authenticating with their session cookie.
+const CLIENT_KEY_STORAGE = "blinc-processing-key"
+
+export function setClientProcessingKey(key) {
+    try {
+        if (key) sessionStorage.setItem(CLIENT_KEY_STORAGE, key)
+        else sessionStorage.removeItem(CLIENT_KEY_STORAGE)
+    } catch {
+        /* storage unavailable (private mode) — API calls just go keyless */
+    }
+}
+
+export function clientProcessingKey() {
+    try {
+        return sessionStorage.getItem(CLIENT_KEY_STORAGE) || null
+    } catch {
+        return null
+    }
+}
+
+// Append the key to a media URL when present: "url" -> "url?key=..."
+export function withClientKey(url) {
+    const key = clientProcessingKey()
+    if (!key) return url
+    return url + (url.includes("?") ? "&" : "?") + "key=" + encodeURIComponent(key)
+}
+
 export class ApiService {
     getWSSProtocol() {
         return window.location.protocol === "https:" ? "wss:" : "ws:"
@@ -43,6 +74,10 @@ export class ApiService {
         "Content-Type": "application/json",
         "Accept": "application/json"
       };
+    }
+    const clientKey = clientProcessingKey()
+    if (clientKey) {
+      h["X-Processing-Key"] = clientKey;
     }
 
         let key = '';

@@ -123,6 +123,19 @@ verify_session_access = _verify_session_guard(write=True)
 # cannot read another pod's transcripts. Without either, the device id alone
 # proves nothing: ids are sequential, so an unguarded endpoint hands any
 # passer-by every group's speech by counting upwards.
+def device_access_allowed(session_device, user=None):
+    # The key may arrive as a header (API calls) or as ?key= — media loaded
+    # through <video>/<img> tags cannot set headers, and the key is a secret
+    # capability either way.
+    processing_key = (request.headers.get('X-Processing-Key', None)
+                      or request.args.get('key', None))
+    if processing_key and processing_key == session_device.processing_key:
+        return True
+    if user is None:
+        user = session.get('user', None)
+    return bool(user and _session_for(session_device.session_id, user, write=False))
+
+
 def verify_device_read_access(f):
     @wraps(f)
     def verify_function(*args, **kwargs):
@@ -130,17 +143,9 @@ def verify_device_read_access(f):
         session_device = database.get_session_devices(id=device_id)
         if not session_device:
             return json_response({'message': _NOT_FOUND}, 404)
-
-        processing_key = request.headers.get('X-Processing-Key', None)
-        if processing_key and processing_key == session_device.processing_key:
+        if device_access_allowed(session_device, user=kwargs.get('user')):
             kwargs['session_device'] = session_device
             return f(*args, **kwargs)
-
-        user = kwargs.get('user', session.get('user', None))
-        if user and _session_for(session_device.session_id, user, write=False):
-            kwargs['session_device'] = session_device
-            return f(*args, **kwargs)
-
         return json_response({'message': _NOT_FOUND}, 404)
 
     return verify_function

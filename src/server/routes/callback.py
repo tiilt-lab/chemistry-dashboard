@@ -15,8 +15,11 @@ import posthoc_state
 
 api_routes = Blueprint('callback', __name__)
 
+# The processing services on this host are the only callers (their config
+# points at 127.0.0.1:5001); ProxyFix pins remote_addr to the real client for
+# proxied traffic, so verify_local cannot be spoofed via X-Forwarded-For.
 @api_routes.route('/api/v1/callback/connect', methods=['POST'])
-# @wrappers.verify_local
+@wrappers.verify_local
 def device_connected(**kwargs):
   # EXPECTED FORMAT
   # {
@@ -37,7 +40,7 @@ def device_connected(**kwargs):
   return json_response()
 
 @api_routes.route('/api/v1/callback/disconnect', methods=['POST'])
-# @wrappers.verify_local
+@wrappers.verify_local
 def device_disconnected(**kwargs):
   # EXPECTED FORMAT
   # {
@@ -64,6 +67,7 @@ def device_disconnected(**kwargs):
   return json_response()
 
 @api_routes.route('/api/v1/callback/transcript_features', methods=['POST'])
+@wrappers.verify_local
 def update_transcript_features(**kwargs):
     # Post-hoc E&T recomputation posts re-scored feature values for existing
     # transcript rows. Authenticated the same way as the other processing
@@ -264,6 +268,7 @@ def _gaze_overlay_path(session_device_id):
 
 
 @api_routes.route('/api/v1/callback/gaze_overlays', methods=['POST'])
+@wrappers.verify_local
 def add_gaze_overlays(**kwargs):
     # Overlay geometry from the video pipeline: per person per timestamp, the
     # head box, gaze point, and focused-object box in normalized coordinates.
@@ -286,6 +291,7 @@ def add_gaze_overlays(**kwargs):
 
 
 @api_routes.route('/api/v1/callback/speakervideometrics', methods=['POST'])
+@wrappers.verify_local
 def add_speaker_video_metrics(**kwargs):
   # EXPECTED FORMAT
   # {

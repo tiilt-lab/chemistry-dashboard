@@ -7,7 +7,7 @@ import { deriveJoinPhase } from "./join-machine"
 import { SessionModel } from "../models/session"
 import { SessionDeviceModel } from "../models/session-device"
 import { SpeakerModel } from "../models/speaker"
-import { ApiService } from "../services/api-service"
+import { ApiService, setClientProcessingKey } from "../services/api-service"
 import { AuthService } from "../services/auth-service"
 import { PolarConnection, isBluetoothSupported } from "../services/polar-hr"
 import fixWebmDuration from "fix-webm-duration"
@@ -631,6 +631,7 @@ function JoinPage() {
             setSession(null)
             setSessionDevice(null)
             key.current = null
+            setClientProcessingKey(null)
         }
 
         if (permanent) {
@@ -1289,6 +1290,9 @@ function JoinPage() {
                         // out prefills it and rejoining resumes this pod.
                         name.current = jsonObj["session_device"].name || names
                         key.current = jsonObj.key;
+                        // From here every API call and media URL carries the
+                        // pod key — the guarded device endpoints need it.
+                        setClientProcessingKey(jsonObj.key)
                         numSpeakers.current = collaborators
                         // Nothing captures or connects yet: the media plan
                         // waits until the roster is confirmed on the speaker

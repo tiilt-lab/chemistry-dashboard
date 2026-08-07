@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useMemo } from "react"
-import { ApiService } from "../../services/api-service"
+import { ApiService, withClientKey } from "../../services/api-service"
 import { speakerColorFor } from "../../globals"
 import { sessionToVideo, videoToSession } from "./video-time"
 
@@ -97,15 +97,20 @@ function VideoPlayer({
             return next
         })
 
-    const base =
+    // withClientKey appends the pod key for the BYOD join page, whose <video>
+    // element has no login cookie; on logged-in pages it's a no-op.
+    const base = withClientKey(
         new ApiService().getEndpoint() +
-        `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/video`
+        `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/video`)
 
     // Real duration + session offset. The first call also triggers the
     // server-side remux, so the <video> that loads after it seeks correctly.
     useEffect(() => {
         let cancelled = false
-        fetch(base + "/info", { credentials: "include" })
+        fetch(withClientKey(
+            new ApiService().getEndpoint() +
+            `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/video/info`),
+            { credentials: "include" })
             .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
             .then((d) => {
                 if (cancelled) return

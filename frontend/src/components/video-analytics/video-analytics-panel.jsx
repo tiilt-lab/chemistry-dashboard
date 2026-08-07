@@ -5,7 +5,7 @@ import { Line } from "react-chartjs-2"
 import { Chart as ChartJS } from "chart.js/auto"
 import { formatSeconds, speakerColorFor } from "../../globals"
 import { ModelNote } from "../model-note/model-note"
-import { ApiService } from "../../services/api-service"
+import { ApiService, withClientKey } from "../../services/api-service"
 
 // Large face card for the participants strip (photo with initials fallback).
 function ParticipantCard({ name, color, imgUrl }) {
@@ -381,8 +381,9 @@ function VideoAnalyticsPanel({ videometrics, start, end, models, playbackTime, o
     const [zoom, setZoom] = useState(1)
     const thumbUrl = (alias) =>
         sessionId && sessionDeviceId
-            ? new ApiService().getEndpoint() +
-              `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/facethumb/${encodeURIComponent(alias)}`
+            ? withClientKey(
+                  new ApiService().getEndpoint() +
+                  `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/facethumb/${encodeURIComponent(alias)}`)
             : null
     const metrics = (videometrics || []).filter((m) => inRange(m, start, end))
 

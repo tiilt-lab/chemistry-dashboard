@@ -11,8 +11,11 @@ api_routes = Blueprint('speaker', __name__)
 
 # Create a speaker slot on a device after joining. Byod clients can join with
 # a collaborator count of 0 ("detect automatically"), so the fingerprint
-# screen needs a way to add slots; same open trust level as the rename route.
+# screen needs a way to add slots. Guarded by the device's processing key
+# (the join response hands it to the client) or a logged-in session — a bare
+# device id proves nothing, since ids are sequential.
 @api_routes.route('/api/v1/devices/<int:session_device_id>/speakers', methods=['GET', 'POST'])
+@wrappers.verify_device_read_access
 def create_speaker(session_device_id, **kwargs):
     # GET: the pod's roster (used by the transcript speaker picker).
     if request.method == 'GET':
@@ -32,6 +35,7 @@ def create_speaker(session_device_id, **kwargs):
 # Remove a mis-added slot from the fingerprint screen. Same trust level as
 # create/rename; database.delete_speaker refuses once the speaker has data.
 @api_routes.route('/api/v1/devices/<int:session_device_id>/speakers/<int:speaker_id>', methods=['DELETE'])
+@wrappers.verify_device_read_access
 def delete_speaker(session_device_id, speaker_id, **kwargs):
     ok, message = database.delete_speaker(session_device_id, speaker_id)
     if not ok:
@@ -39,8 +43,22 @@ def delete_speaker(session_device_id, speaker_id, **kwargs):
     return json_response({'deleted': speaker_id})
 
 
+# The URL names only a speaker, so resolve their pod and apply the same
+# key-or-login check as the device-scoped routes above.
+def _speaker_device_or_none(speaker_id):
+    speaker = database.get_speakers(id=speaker_id)
+    if not speaker:
+        return None
+    device = database.get_session_devices(id=speaker.session_device_id)
+    if not device or not wrappers.device_access_allowed(device):
+        return None
+    return speaker
+
+
 @api_routes.route('/api/speakers/<int:speaker_id>', methods=['POST'])
 def update_speaker(speaker_id, **kwargs):
+    if _speaker_device_or_none(speaker_id) is None:
+        return json_response({'message': 'Does not exist.'}, 404)
     alias = request.json.get('alias', None)
     if alias:
         valid, message = Speaker.verify_fields(alias=alias)
@@ -52,6 +70,15 @@ def update_speaker(speaker_id, **kwargs):
 
 @api_routes.route('/api/v1/transcripts/<int:transcript_id>/speaker_metrics', methods=['GET'])
 def get_transcript_speaker_metrics(transcript_id, **kwargs):
+    # Scope through the transcript's pod: key or logged-in session required.
+    from tables.transcript import Transcript
+    from app import db
+    row = db.session.query(Transcript).filter(Transcript.id == transcript_id).first()
+    if row is None:
+        return json_response({'message': 'Does not exist.'}, 404)
+    device = database.get_session_devices(id=row.session_device_id)
+    if not device or not wrappers.device_access_allowed(device):
+        return json_response({'message': 'Does not exist.'}, 404)
     speaker_metrics = database.get_speaker_transcript_metrics(transcript_id=transcript_id)
     return json_response([speaker_metric.json() for speaker_metric in speaker_metrics])
 

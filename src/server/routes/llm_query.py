@@ -6,6 +6,7 @@ import database
 from google import genai
 from dotenv import load_dotenv
 from utility import json_response, build_prompt
+import wrappers
 import os
 import time
 import numpy as np
@@ -133,6 +134,9 @@ def _llm_error_response(e):
                    "Please try again in a few minutes.",
     }, 502)
 
+# Open by design: called from the anonymous student-dashboard and
+# expert-rating flows as well as the logged-in pod view. Costs LLM quota,
+# so if abuse ever shows up, add a rate limit rather than a login gate.
 @api_routes.route('/api/v1/llmqueries/generate_llm_feedback_based_on_metrics', methods=['POST'])
 def generate_llm_feedback_based_on_metrics(**kwargs):
     metricObj = request.json
@@ -249,7 +253,11 @@ def get_llm_question_answer_interactions(session_id,session_device_id,username, 
         return json_response([])
 
 
+# Callers are the pod Group view (logged-in) and the BYOD join page (holds
+# the pod's processing key), so the device guard covers both — and keeps
+# anonymous traffic from burning LLM quota on arbitrary pods.
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/summary', methods=['GET'])
+@wrappers.verify_device_read_access
 def generate_discussion_summary(session_id, session_device_id, **kwargs):
     # LLM summary of a pod's discussion: overview, key moments, participation
     # read, and actionable suggestions, from the diarized transcript.
