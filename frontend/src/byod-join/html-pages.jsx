@@ -326,9 +326,12 @@ function ByodJoinPage(props) {
                                                         )
                                                     }
                                                 >
+                                                    {/* "Video (cartoon)" was dropped: the
+                                                        deployment has cartoonize=false, so it
+                                                        behaved identically to plain Video. The
+                                                        backend still accepts the value. */}
                                                     <option value="Audio">Audio</option>
                                                     <option value="Video">Video</option>
-                                                    <option value="Videocartoonify">Video (cartoon)</option>
                                                 </select>
                                             </div>
                                             <InlineDeviceCheck
