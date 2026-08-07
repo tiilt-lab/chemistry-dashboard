@@ -9,6 +9,18 @@ import {CreateSessionPage} from './html-pages'
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 
 
+// Date-stamped default name, e.g. "Session Aug 7 14:05" (chars limited to
+// the backend's allowed set — letters/digits/space/colon).
+function defaultSessionName() {
+  const now = new Date();
+  return (
+    "Session " +
+    now.toLocaleString("en-US", { month: "short", day: "numeric" }) +
+    " " +
+    now.toTimeString().slice(0, 5)
+  ).replace(",", "");
+}
+
 function CreateSessionComponent(props) {
   const BLINK_DELAY = 15000;
   //Previous state
@@ -27,7 +39,9 @@ function CreateSessionComponent(props) {
   const [displayText, setDisplayText] = useState('');
 
   // Session Data
-  const [sessionName, setSessionName] = useState(changedState ? prevState.sessionName : '');
+  // Pre-filled with the date-stamped default so the field is never blank;
+  // still editable, and createSession keeps its own fallback for safety.
+  const [sessionName, setSessionName] = useState(changedState ? prevState.sessionName : defaultSessionName());
   const [byod, setByod] = useState(changedState ? prevState.byod : true);
   const [doa, setDoa] = useState(changedState ? prevState.doa : true);
   const [features, setFeatures] = useState(changedState ? prevState.features : true);
@@ -151,16 +165,10 @@ function CreateSessionComponent(props) {
 
   const createSession = ()=> {
     {
-      // Name is optional: default to a date-stamped one (chars limited to
-      // the backend's allowed set — letters/digits/space/colon).
+      // Name is pre-filled with the date-stamped default; if the user
+      // clears it, fall back to a fresh one rather than sending blank.
       const trimmed = (sessionName || "").trim()
-      const now = new Date()
-      const autoName =
-        "Session " +
-        now.toLocaleString("en-US", { month: "short", day: "numeric" }) +
-        " " +
-        now.toTimeString().slice(0, 5)
-      const finalName = trimmed !== "" ? trimmed : autoName.replace(",", "")
+      const finalName = trimmed !== "" ? trimmed : defaultSessionName()
       const deviceIds = selectedDevices.map(d => d.id);
       const keywordListId = (selectedKeywordList) ? selectedKeywordList.id : null;
       const topicModelId = (selectedTopicModel) ? selectedTopicModel.id : null;

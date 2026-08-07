@@ -308,6 +308,7 @@ function ByodJoinPage(props) {
                                                 <select
                                                     id="joinwith"
                                                     className={dlgSelect}
+                                                    defaultValue="Video"
                                                 >
                                                     <option value="Audio">Audio</option>
                                                     <option value="Video">Video</option>
