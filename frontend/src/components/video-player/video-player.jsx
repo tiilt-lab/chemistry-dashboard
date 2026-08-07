@@ -73,12 +73,29 @@ function VideoPlayer({
     const [segments, setSegments] = useState([])
     // Gaze overlay records, indexed by whole session-second for fast lookup.
     const [overlays, setOverlays] = useState(null)
-    const [show, setShow] = useState({
-        heads: false,
-        gaze: false,
-        objects: false,
-        names: false,
+    // Toggle choices persist per browser — resetting to all-off on every
+    // reload made freshly analyzed overlays look missing.
+    const [show, setShow] = useState(() => {
+        const defaults = { heads: false, gaze: false, objects: false, names: false }
+        try {
+            return {
+                ...defaults,
+                ...JSON.parse(window.localStorage.getItem("gazeOverlayShow") || "{}"),
+            }
+        } catch (e) {
+            return defaults
+        }
     })
+    const toggleShow = (key) =>
+        setShow((s) => {
+            const next = { ...s, [key]: !s[key] }
+            try {
+                window.localStorage.setItem("gazeOverlayShow", JSON.stringify(next))
+            } catch (e) {
+                // private mode: preference just doesn't persist
+            }
+            return next
+        })
 
     const base =
         new ApiService().getEndpoint() +
@@ -320,9 +337,7 @@ function VideoPlayer({
                         <button
                             key={t.key}
                             type="button"
-                            onClick={() =>
-                                setShow((s) => ({ ...s, [t.key]: !s[t.key] }))
-                            }
+                            onClick={() => toggleShow(t.key)}
                             className={
                                 "rounded-full border px-2.5 py-0.5 text-xs transition " +
                                 (show[t.key]

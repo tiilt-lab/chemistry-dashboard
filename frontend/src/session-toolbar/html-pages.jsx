@@ -2,7 +2,7 @@ import style from "./session-toolbar.module.css"
 import { btnPrimary, btnSecondary, btnDanger } from "../components/dialog-styles"
 import { Chevron } from "@/Icons"
 import style2 from "../dialog/dialog.module.css"
-import { GenericDialogBox } from "../dialog/dialog-component"
+import { GenericDialogBox, DialogBoxTwoOption } from "../dialog/dialog-component"
 import { AppSpinner } from "../spinner/spinner-component"
 import React, { useState } from "react"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -125,16 +125,27 @@ function AppSessionPage(props) {
                         onClick={props.onEndSession}
                         disabled={!props.session.recording || props.fromClient}
                     >
-                        End
+                        {props.endsDevice ? "End Pod" : "End Session"}
                     </button>
                 </div>
                 </div>
             </div>
 
+            <DialogBoxTwoOption
+                itsclass={"add-dialog"}
+                heading={props.endsDevice ? "End this pod?" : "End this session?"}
+                body={props.endsDevice
+                    ? "Only this pod leaves the session and stops recording. The session keeps running for everyone else."
+                    : "This ends the session for every connected pod and cannot be undone."}
+                show={props.confirmingEnd}
+                deletebuttonaction={props.onConfirmEndSession}
+                cancelbuttonaction={props.onCancelEndSession}
+            />
+
             <GenericDialogBox show={props.sessionEnding}>
                 <div className={style["dialog-content"]}>
                     <div className={style2["dialog-heading"]}>
-                        Session Ending...
+                        {props.endsDevice ? "Ending Pod..." : "Ending Session..."}
                     </div>
                     <div className={style["dialog-spinner"]}>
                         <AppSpinner></AppSpinner>

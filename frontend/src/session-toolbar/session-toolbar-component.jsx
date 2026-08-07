@@ -9,6 +9,7 @@ function AppSessionToolbar(props) {
     
     const [timeText, setTimeText] = useState('');
     const [sessionEnding, setSessionEnding] = useState();
+    const [confirmingEnd, setConfirmingEnd] = useState(false);
     const [intervalId, setInterValid] = useState();
     const [searchParam, setSearchParam] = useSearchParams();
     const [fromClient, setFromClient] = useState(false);
@@ -44,9 +45,20 @@ function AppSessionToolbar(props) {
         setTimeText(m + ':' + secs_text);
     }
 
+    // On /join the button removes only this pod; anywhere else it ends the
+    // whole session for every pod. endsDevice drives the button label and
+    // confirmation copy so the two are never conflated.
+    const endsDevice = location.pathname == '/join';
+
+    // Both variants are destructive, so the button only opens a
+    // confirmation; onConfirmEndSession does the real work.
     const onEndSession = () => {
-        // do smth diff for just deleting one thing, I think I have it tho
-        let deleteDevice = location.pathname == '/join';
+        setConfirmingEnd(true);
+    }
+
+    const onConfirmEndSession = () => {
+        setConfirmingEnd(false);
+        let deleteDevice = endsDevice;
         setSessionEnding(true);
         props.closingSession(true);
         const fetchData = deleteDevice ? (new SessionService().removeDeviceFromSession(props.session.id, props.sessionDevice.id, true)) : (new SessionService().endSession(props.session.id));
@@ -75,6 +87,10 @@ function AppSessionToolbar(props) {
             innerhtml={props.children}
             session={props.session}
             onEndSession={onEndSession}
+            endsDevice={endsDevice}
+            confirmingEnd={confirmingEnd}
+            onConfirmEndSession={onConfirmEndSession}
+            onCancelEndSession={() => setConfirmingEnd(false)}
             menus={props.menus}
             speakers = {props.participants}
             seesions={props.seesions}

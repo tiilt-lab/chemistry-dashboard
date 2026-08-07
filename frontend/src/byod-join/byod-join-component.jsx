@@ -656,8 +656,9 @@ function JoinPage() {
             return
         if (permanent && session !== null) {
             setPageTitle("Join Session")
-            name.current = ""
-            setPcode("")
+            // Keep name.current and the passcode: a session ending must not
+            // log the pod out — the device returns to the join screen with
+            // its identity intact so it can rejoin the next session directly.
             ending.current = true
             setArmed(false)
             setRecSeconds(0)

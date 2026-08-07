@@ -4,6 +4,7 @@ from flask_socketio import join_room, leave_room, send, emit, disconnect
 import logging
 import database
 import json
+import wrappers
 
 # ------------------------------
 # /session
@@ -24,7 +25,11 @@ def join_session(message):
         emit('room_joined', json.dumps({'success': False}))
         return
 
-    session_model = database.get_sessions(id=room, owner_id=user['id'])
+    # Same reach as the REST read guard (wrappers._session_for): owners see
+    # their own sessions, admins read everyone's, supers see all. The old
+    # owner-only check made the pod page's transcript/metrics digest silently
+    # empty for admins even though every REST endpoint answered them.
+    session_model = wrappers._session_for(room, user, write=False)
     if not session_model:
         emit('room_joined', json.dumps({'success': False}))
         return
