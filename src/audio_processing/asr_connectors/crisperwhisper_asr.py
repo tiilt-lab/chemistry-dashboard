@@ -126,6 +126,10 @@ class CrisperWhisperASR(BaseASR):
                 self._flush()
         self._flush()
         self.transcript_queue.put(None)
+        # The audio server ends a session by closing the stream, not by
+        # calling stop() — without this, every finished session leaks a
+        # ~4GB-GPU worker process.
+        self.stop()
 
     def _ask_worker(self, wav_path):
         if self._proc is None or self._proc.poll() is not None:
