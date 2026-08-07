@@ -11,7 +11,8 @@ const S = (o = {}) => ({
     ...o,
 })
 const C = (o = {}) => ({
-    deviceCheck: false,
+    joined: false,
+    connectRequested: false,
     armed: false,
     currentForm: "",
     ending: false,
@@ -23,54 +24,46 @@ describe("deriveJoinPhase", () => {
     it("starts on the form", () => {
         expect(deriveJoinPhase(S(), C())).toBe("form")
     })
-    it("shows device check when one is pending pre-connect", () => {
-        expect(deriveJoinPhase(S(), C({ deviceCheck: true }))).toBe("device_check")
-    })
-    it("pre-socket 'Connecting' still shows the form (dialog overlays it)", () => {
+    it("pre-join 'Connecting' still shows the form (dialog overlays it)", () => {
         expect(deriveJoinPhase(S(), C({ currentForm: "Connecting" }))).toBe("form")
     })
-    it("connecting once the socket is open but not yet ready to enroll", () => {
-        expect(deriveJoinPhase(S({ audioSocketOpen: true }), C())).toBe("connecting")
+    it("enrolling right after the REST join, with no sockets at all", () => {
+        expect(deriveJoinPhase(S(), C({ joined: true }))).toBe("enrolling")
+    })
+    it("stays enrolling while sockets are closed until the roster is confirmed", () => {
+        expect(
+            deriveJoinPhase(S({ audioSocketOpen: false }), C({ joined: true })),
+        ).toBe("enrolling")
+    })
+    it("connecting once the roster is confirmed, until validation", () => {
+        const ctx = C({ joined: true, connectRequested: true })
+        expect(deriveJoinPhase(S(), ctx)).toBe("connecting")
+        expect(
+            deriveJoinPhase(S({ audioSocketOpen: true, audioReady: true }), ctx),
+        ).toBe("connecting") // still connecting: validation happens via replay
     })
     it("connecting if audio drops after validation (live screen tolerates video drop)", () => {
+        const ctx = C({ joined: true, connectRequested: true })
         const validated = S({ audioSocketOpen: true, speakersValidated: true })
         // audio down -> connecting
-        expect(deriveJoinPhase(validated, C())).toBe("connecting")
+        expect(deriveJoinPhase(validated, ctx)).toBe("connecting")
         // audio up, video down -> still live (ready), matching the live gate
         expect(
             deriveJoinPhase(
                 { ...validated, audioReady: true, videoReady: false },
-                C({ joinwith: "Video" }),
+                { ...ctx, joinwith: "Video" },
             ),
         ).toBe("ready")
     })
-    it("enrolling once ready but speakers not validated", () => {
-        expect(
-            deriveJoinPhase(S({ audioSocketOpen: true, audioReady: true }), C()),
-        ).toBe("enrolling")
-    })
-    it("video join needs both sockets ready before enrolling", () => {
-        const ctx = C({ joinwith: "Video" })
-        expect(
-            deriveJoinPhase(S({ audioSocketOpen: true, audioReady: true }), ctx),
-        ).toBe("connecting") // video not ready yet
+    it("ready after validation, recording only once armed + streaming", () => {
+        const ctx = C({ joined: true, connectRequested: true })
+        const base = S({ audioSocketOpen: true, audioReady: true, speakersValidated: true })
+        expect(deriveJoinPhase(base, ctx)).toBe("ready")
         expect(
             deriveJoinPhase(
-                S({
-                    audioSocketOpen: true,
-                    audioReady: true,
-                    videoSocketOpen: true,
-                    videoReady: true,
-                }),
-                ctx,
+                { ...base, startDiscussionStreaming: true },
+                { ...ctx, armed: true },
             ),
-        ).toBe("enrolling")
-    })
-    it("ready after validation, recording only once armed + streaming", () => {
-        const base = S({ audioSocketOpen: true, audioReady: true, speakersValidated: true })
-        expect(deriveJoinPhase(base, C())).toBe("ready")
-        expect(
-            deriveJoinPhase({ ...base, startDiscussionStreaming: true }, C({ armed: true })),
         ).toBe("recording")
     })
     it("ended is reached from teardown or a closed session", () => {
@@ -81,9 +74,13 @@ describe("deriveJoinPhase", () => {
 
 describe("isLegalTransition", () => {
     it("allows the happy path", () => {
-        expect(isLegalTransition("form", "device_check")).toBe(true)
+        expect(isLegalTransition("form", "enrolling")).toBe(true)
+        expect(isLegalTransition("enrolling", "connecting")).toBe(true)
         expect(isLegalTransition("ready", "recording")).toBe(true)
         expect(isLegalTransition("recording", "connecting")).toBe(true) // reconnect
+    })
+    it("backing out of speaker setup returns to the form", () => {
+        expect(isLegalTransition("enrolling", "form")).toBe(true)
     })
     it("rejects illegal jumps and escapes from terminal", () => {
         expect(isLegalTransition("form", "recording")).toBe(false)

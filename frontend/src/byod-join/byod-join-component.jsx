@@ -130,6 +130,17 @@ function JoinPage() {
     // Continuously mirrored by the join form's InlineDeviceCheck (the old
     // separate "Check your devices" page is folded into the form).
     const inlineSelection = useRef({})
+    // Deferred connection: Connect-to-server only does the REST join. The
+    // media constraints/mimetype computed at that point wait here, and
+    // fingerprints recorded on the speaker page queue here; confirming the
+    // roster opens the devices + sockets and replays the queue. Until then
+    // NOTHING is capturing or connected, so backing out is trivially safe.
+    const pendingMedia = useRef(null)
+    const pendingFingerprints = useRef([])
+    const replaying = useRef(false)
+    // Latch: fingerprints replay at most once per connection (the socket
+    // flags can flip more than once while both channels come up).
+    const replayDone = useRef(false)
 
     // Recording is started explicitly: after speaker validation the client
     // holds (heartbeating) until "Start recording" is pressed. armed stays
@@ -318,11 +329,17 @@ function JoinPage() {
     useEffect(() => {
         if (joinwith.current == "Audio" && state.audioSocketOpen) {
             requestStartAudioProcessing()
+            // The roster was confirmed before any socket existed: replay the
+            // queued fingerprints right behind the start message (the
+            // service processes each connection in order) and validate.
+            replayFingerprintsAndValidate()
         }
         if ((joinwith.current === "Video" || joinwith.current === "Videocartoonify") && state.audioSocketOpen && state.videoSocketOpen) {
             requestStartAudioProcessing()
             requestStartVideoProcessing()
+            replayFingerprintsAndValidate()
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [state.audioSocketOpen, state.videoSocketOpen])
 
     // FOURTH LEVEL: FOR FINGERPRINT ENROLLMENT/ ALIAS CHANGE: ONCE THE SPEAKER ENTERS USERNAME FOR ENROLLMENT OR ALIAS CHANGE, 
@@ -352,7 +369,9 @@ function JoinPage() {
                 proceed = true
             }
         }
-        if (proceed) {
+        // selectedSpeaker guard: stray fingerprint-added replies (e.g. from
+        // the post-confirm replay) must not run the interactive completion.
+        if (proceed && selectedSpeaker) {
 
             const updatedSpeakers = speakers.current.map((s) =>
                 s.id === selectedSpeaker.id ? { ...s, fingerprinted: true } : s,)
@@ -695,7 +714,9 @@ function JoinPage() {
         }
 
         if (streamReference.current != null) {
-            streamReference.current.getAudioTracks().forEach((track) => track.stop())
+            // ALL tracks — stopping only audio left the camera light on
+            // after leaving a video pod.
+            streamReference.current.getTracks().forEach((track) => track.stop())
             streamReference.current = null
         }
 
@@ -901,30 +922,91 @@ function JoinPage() {
         for (let i = 0; i < Math.max(0, Math.min(8, n)); i++) addSpeakerSlot()
     }
 
+    // Confirming the roster is what actually starts everything: apply the
+    // media plan stored at the REST join, which triggers handleStream (get
+    // devices, open sockets); once the sockets open, the queued fingerprints
+    // replay and validation completes. Until this click, nothing was
+    // capturing or connected.
     const confirmSpeakers = () => {
         console.log(speakers.current)
         // The processing services get the group size in the start message;
         // slots are created on this page now, so count the actual roster.
         numSpeakers.current = (speakers.current || []).length
-        if (speakers.current.every((s) => s.fingerprinted)) {
-            let message = null
-            message = {
-                type: "speaker",
-                id: "done",
-                speakers: speakers.current,
-            }
-            audiows.current.send(JSON.stringify(message))
-
-            if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
-                videows.current.send(JSON.stringify(message))
-            }
-            next("speakers_validated")
-
-        } else {
+        if (!speakers.current.every((s) => s.fingerprinted)) {
             setDisplayText(
                 "Not all added speakers have a fingerprint. Please record one for each speaker",
             )
             setCurrentForm("FingerprintingError")
+            return
+        }
+        const pm = pendingMedia.current
+        if (!pm) {
+            setDisplayText("The join expired — please rejoin the session.")
+            setCurrentForm("JoinError")
+            return
+        }
+        ending.current = false
+        replayDone.current = false
+        setCurrentForm("Connecting")
+        setMimeExtension(pm.mediaExt)
+        setMimeType(pm.mediaType)
+        setConstraintObj(pm.constraint)
+    }
+
+    // Replays the queued fingerprints over the freshly opened sockets (in
+    // order, right behind the start messages — the services process each
+    // connection sequentially) and then validates the roster. Also runs on
+    // reconnects, so a dropped connection re-enrolls automatically instead
+    // of bouncing the group back to the speaker page.
+    const replayFingerprintsAndValidate = async () => {
+        if (replaying.current || replayDone.current || audiows.current === null) return
+        replaying.current = true
+        replayDone.current = true
+        try {
+            const isVideo =
+                joinwith.current === "Video" ||
+                joinwith.current === "Videocartoonify"
+            for (const item of pendingFingerprints.current) {
+                if (item.type === "saved") {
+                    const msg = JSON.stringify({
+                        type: "add-saved-fingerprint",
+                        id: item.id,
+                        alias: item.alias,
+                    })
+                    audiows.current.send(msg)
+                    if (isVideo && videows.current) videows.current.send(msg)
+                } else {
+                    const data = await item.blob.arrayBuffer()
+                    const audiodata =
+                        await audioContext.current.decodeAudioData(data)
+                    audiows.current.send(
+                        JSON.stringify({
+                            type: "speaker",
+                            id: item.id,
+                            alias: item.alias,
+                            size: item.blob.size,
+                            blob_type: item.blob.type,
+                        }),
+                    )
+                    audiows.current.send(audiodata.getChannelData(0))
+                }
+            }
+            speakers.current = (speakers.current || []).map((s) => ({
+                ...s,
+                fingerprinted: true,
+            }))
+            const done = JSON.stringify({
+                type: "speaker",
+                id: "done",
+                speakers: speakers.current,
+            })
+            audiows.current.send(done)
+            if (isVideo && videows.current) videows.current.send(done)
+            next("speakers_validated")
+        } catch (ex) {
+            console.log("fingerprint replay failed", ex)
+        } finally {
+            replaying.current = false
         }
     }
 
@@ -933,31 +1015,18 @@ function JoinPage() {
         currBlob.current = audioblob
     }
 
+    // Queued locally; sent when the connection starts after the roster is
+    // confirmed (no sockets exist on the speaker page anymore).
     const addSpeakerFingerprint = async () => {
-        if (audiows.current === null) {
-            return
-        }
-
-        let message = null
-        message = {
-            type: "speaker",
+        pendingFingerprints.current.push({
+            type: "blob",
             id: selectedSpeaker.id,
             alias: selectedSpeaker.alias,
-            size: currBlob.current.size,
-            blob_type: currBlob.current.type,
-        }
-        let data = await currBlob.current.arrayBuffer()
-        let audiodata = await audioContext.current.decodeAudioData(data)
-        console.log(speakers.current)
-
-        const updatedSpeakers = speakers.current.map((s) =>
+            blob: currBlob.current,
+        })
+        speakers.current = speakers.current.map((s) =>
             s.id === selectedSpeaker.id ? { ...s, fingerprinted: true } : s,
         )
-
-        speakers.current = updatedSpeakers
-        audiows.current.send(JSON.stringify(message))
-        audiows.current.send(audiodata.getChannelData(0))
-        console.log("sent speaker fingerprint")
         currBlob.current = null
         closeDialog()
     }
@@ -998,49 +1067,27 @@ function JoinPage() {
 
     }
 
-    // A processing service reported it couldn't load the saved fingerprint
-    // (e.g. no voice/face file on disk for that alias). Reset the chained
-    // enrollment state and reopen the username dialog with the reason —
-    // previously the reply was never sent and the dialog hung forever.
+    // A processing service reported it couldn't load a saved fingerprint at
+    // replay time (after the roster was confirmed — there is no enrollment
+    // dialog to reopen anymore). The speaker still exists; their utterances
+    // are matched posthoc instead.
     const onSavedFingerprintFailed = (message) => {
-        setRegisteredStudentData(null)
-        setRegisteredUserAliasChanged(false)
-        setRegisteredAudioFingerprintAdded(false)
-        setRegisteredVideoFingerprintAdded(false)
-        setSavedFingerprintError(
-            message || "No saved fingerprint found for that username.",
-        )
-        setCurrentForm("savedAudioVideoFingerprint")
+        console.warn("saved fingerprint failed:", message)
     }
 
-    const addSavedSpeakerFingerprint =  () => {
-
-        let message = null
-        message = {
-            type: "add-saved-fingerprint",
+    // Queue the saved-fingerprint attach and complete the enrollment chain
+    // locally — the actual add-saved-fingerprint messages are replayed once
+    // the connection starts after the roster is confirmed.
+    const addSavedSpeakerFingerprint = () => {
+        pendingFingerprints.current.push({
+            type: "saved",
             id: selectedSpeaker.id,
-            alias: registeredStudentData.username
-        }
-
-        console.log(speakers.current)
-
+            alias: registeredStudentData.username,
+        })
+        setRegisteredAudioFingerprintAdded(true)
         if (joinwith.current === "Video" || joinwith.current === "Videocartoonify") {
-
-            if (videows.current === null || audiows.current === null) {
-                return
-            }
-            audiows.current.send(JSON.stringify(message))
-            videows.current.send(JSON.stringify(message))
-            setCurrentForm("processing")
-        } else {
-            if (audiows.current === null) {
-                return
-            }
-
-            audiows.current.send(JSON.stringify(message))
+            setRegisteredVideoFingerprintAdded(true)
         }
-
-
     }
 
     const changeAliasName = (newAlias) => {
@@ -1346,11 +1393,19 @@ function JoinPage() {
                         name.current = names
                         key.current = jsonObj.key;
                         numSpeakers.current = collaborators
-                        setConstraintObj(constraint)
-                        setMimeType(mediaType)
-                        setMimeExtension(mediaExt)
+                        // Nothing captures or connects yet: the media plan
+                        // waits until the roster is confirmed on the speaker
+                        // page (confirmSpeakers applies it, which triggers
+                        // handleStream via the constraintObj effect).
+                        pendingMedia.current = {
+                            constraint,
+                            mediaType,
+                            mediaExt,
+                        }
+                        pendingFingerprints.current = []
                         setPcode(passcode)
                         joinwith.current = l_joinwith
+                        setCurrentForm("")
                     })
                 } else if (response.status === 400 || response.status === 401) {
                     response.json().then((jsonObj) => {
@@ -1463,15 +1518,11 @@ function JoinPage() {
                     setCurrentForm("Connecting")
                     disconnect()
                     // The new server connection starts with no speaker
-                    // fingerprints — streaming into it before re-enrolling
-                    // triggers 'Binary audio data sent before start
-                    // message'. Drop back to the fingerprint step; armed
-                    // survives, so recording resumes after re-validation.
+                    // fingerprints — but they are all queued client-side
+                    // now, so the reconnect replays them automatically
+                    // (no bouncing the group back to the speaker page).
                     dispatch({ type: "SPEAKERS_VALIDATED", payload: false })
-                    speakers.current = (speakers.current || []).map((s) => ({
-                        ...s,
-                        fingerprinted: false,
-                    }))
+                    replayDone.current = false
                     reconnectCounter.current = reconnectCounter.current + 1
                     console.log("reconnecting ....")
                     setTimeout(handleStream, 2000)
@@ -1621,22 +1672,34 @@ function JoinPage() {
         )
     }
 
+    // The header back arrow. In-app navigation only (never browser
+    // history): from a joined pod it returns to the join form with the
+    // passcode and name kept; from the plain form it leaves to the landing
+    // page. A live connection still gets the NavGuard confirmation.
     const navigateToLogin = (confirmed = false) => {
         if (!confirmed && (state.audioSocketOpen || state.videoSocketOpen)) {
             setCurrentForm("NavGuard")
             return
         }
         if (session !== null) {
-            // Back from a joined pod (speaker setup / holding) returns to
-            // the join form with the passcode and name kept — leaving the
-            // route entirely looked like being signed out.
             const keepName = name.current
             const keepCode = pcode
+            const sockets = [audiows.current, videows.current]
+            // Detach the socket handlers BEFORE closing: their onclose
+            // logic would otherwise read the cleared `ending` flag and
+            // mistake this intentional leave for a mid-session drop,
+            // launching the reconnect loop over the join form (the
+            // "Something went wrong" crash).
+            for (const w of sockets) {
+                if (w) {
+                    w.onclose = null
+                    w.onmessage = null
+                    w.onerror = null
+                }
+            }
             disconnect(true)
-            // ending stays true: the socket onclose events fire AFTER this
-            // handler, and resetting it here made them mistake the leave for
-            // a mid-session drop and launch the reconnect loop over the join
-            // form. requestAccessKey clears it when the user actually rejoins.
+            ending.current = false
+            constraintObjRefReset()
             name.current = keepName
             setPcode(keepCode)
             setCurrentForm("")
@@ -1644,13 +1707,18 @@ function JoinPage() {
         }
         disconnect(true)
         setCurrentForm("")
-        // Back means back: dumping everyone on the public landing page
-        // made logged-in users think they had been signed out (no
-        // sign-out ever happens — the landing just looks logged-out).
-        // Fall back to the landing only when there is no history to
-        // return to (e.g. a QR code straight into /join).
-        if (window.history.length > 1) return navigate(-1)
         return navigate("/")
+    }
+
+    // Returning to the form must also clear the connect request, or the
+    // phase machine would still derive "connecting" after a back.
+    const constraintObjRefReset = () => {
+        setConstraintObj(null)
+        setMimeType(null)
+        setMimeExtension(null)
+        pendingMedia.current = null
+        pendingFingerprints.current = []
+        replayDone.current = false
     }
 
     const getSpeakerAliasFromID = (selectedSpkrId) => {
@@ -1938,10 +2006,10 @@ function JoinPage() {
     // exposed as data-join-phase for tests/debugging; rendering and effects
     // migrate onto it incrementally in later steps.
     const joinPhase = deriveJoinPhase(state, {
-        // The separate device-check page is folded into the join form, so
-        // this phase flag is permanently false (the machine keeps the state
-        // for compatibility; it is simply unreachable now).
-        deviceCheck: false,
+        joined: session !== null,
+        // Set when the roster is confirmed: the media plan is applied and
+        // handleStream opens devices + sockets.
+        connectRequested: constraintObj !== null,
         armed,
         currentForm,
         ending: ending.current,
