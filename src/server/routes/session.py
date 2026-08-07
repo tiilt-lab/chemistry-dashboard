@@ -156,7 +156,11 @@ def create_session(user, **kwargs):
     if folder == -1:
         folder = None
     if folder:
-        owned_folder = database.get_folders(id=folder, owner_id=user['id'], first =True)
+        # Admins/supers see every account's folders in GET /api/folders (so
+        # the picker offers them), so creation must accept the same set —
+        # owner-only here made every non-owned pick fail as "Invalid Session".
+        sees_all = user.get('role') in ['admin', 'super']
+        owned_folder = database.get_folders(id=folder, owner_id=None if sees_all else user['id'], first=True)
         if not owned_folder:
             return json_response({'message': 'Either the folder does not exist or invalid access'}, 404)
     new_session = session_handler.create_session(user['id'], name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder, asr=asr)

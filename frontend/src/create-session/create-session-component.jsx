@@ -31,8 +31,13 @@ function CreateSessionComponent(props) {
   const [byod, setByod] = useState(changedState ? prevState.byod : true);
   const [doa, setDoa] = useState(changedState ? prevState.doa : true);
   const [features, setFeatures] = useState(changedState ? prevState.features : true);
-  // Live transcription engine, locked at creation (whisper = local GPU).
-  const [asr, setAsr] = useState(changedState ? (prevState.asr || 'whisper') : 'whisper');
+  // Live transcription engine, locked at creation (crisperwhisper = local GPU).
+  // Legacy 'whisper' sessions fold into crisperwhisper (plain Whisper retired).
+  const [asr, setAsr] = useState(() => {
+    const prev = changedState ? prevState.asr : null;
+    const chosen = prev || 'crisperwhisper';
+    return chosen === 'whisper' ? 'crisperwhisper' : chosen;
+  });
   const [selectedKeywordList, setSelectedKeywordList] = useState(changedState ? prevState.selectedKeywordList : null);
   const [selectedTopicModel, setSelectedTopicModel] = useState(changedState ? prevState.selectedTopicModel : null);
   const [selectedDevices, setSelectedDevices] = useState([]);
@@ -172,7 +177,12 @@ function CreateSessionComponent(props) {
               }
             )
           }else{
-            openDialog("Error", response.json()['message']);
+            // response.json() is a Promise — indexing it directly showed an
+            // empty dialog for every server-side rejection.
+            response.json().then(
+              (j) => openDialog("Error", (j && j.message) || "The session could not be created."),
+              () => openDialog("Error", "The session could not be created."),
+            );
             goToSettings();
           }
         },
