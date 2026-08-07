@@ -347,9 +347,14 @@ function ProjectOverlay({ passcode, joinLink, onClose }) {
             >
                 ✕
             </button>
-            <div className="text-center font-ahamono text-2xl tracking-wide text-tiilt-muted">
+            <a
+                href={joinLink}
+                target="_blank"
+                rel="noreferrer"
+                className="text-center font-ahamono text-2xl tracking-wide text-tiilt-muted transition hover:text-tiilt"
+            >
                 {joinLink.replace(/^https?:\/\//, "")}
-            </div>
+            </a>
             <QrCode value={joinLink} size={340} />
             <div className="text-center">
                 <div className="font-ahamono text-sm tracking-[0.3em] text-tiilt-muted uppercase">
@@ -380,9 +385,14 @@ function LobbyHero({ passcode, joinLink, copyJoinLink, onLock }) {
                 </div>
             </div>
             <QrCode value={joinLink} size={190} />
-            <div className="font-ahamono text-sm break-all text-tiilt-muted">
+            <a
+                href={joinLink}
+                target="_blank"
+                rel="noreferrer"
+                className="font-ahamono text-sm break-all text-tiilt-muted underline decoration-tiilt-line underline-offset-2 transition hover:text-tiilt"
+            >
                 {joinLink}
-            </div>
+            </a>
             <div className="flex flex-wrap justify-center gap-2">
                 <button className={btnPrimary} onClick={copyJoinLink}>
                     Copy join link
