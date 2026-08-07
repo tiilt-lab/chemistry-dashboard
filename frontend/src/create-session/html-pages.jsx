@@ -92,14 +92,9 @@ function CreateSessionPage(props) {
                 <div className="divide-y divide-tiilt-line overflow-hidden rounded-lg border border-tiilt-line">
                   {[
                     {
-                      value: "whisper",
-                      name: "Whisper — on this server",
-                      desc: "More accurate on group audio; captions run a few seconds behind. Audio never leaves the machine.",
-                    },
-                    {
                       value: "crisperwhisper",
                       name: "CrisperWhisper 2.0 — verbatim, on this server",
-                      desc: "Keeps fillers, stutters and false starts with pause-accurate word timing. Best for disfluency/discourse research; captions run a few seconds behind.",
+                      desc: "Keeps fillers, stutters and false starts with pause-accurate word timing. Audio never leaves the machine; captions run a few seconds behind.",
                     },
                     {
                       value: "google-cloud-speech",

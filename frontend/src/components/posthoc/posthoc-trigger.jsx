@@ -37,7 +37,6 @@ const STARTED_ACKS = new Set([
 // locked) so it is explicit what computes each result.
 const ASR_OPTIONS = [
     { id: "google-cloud-speech", label: "Google Cloud Speech-to-Text" },
-    { id: "whisper", label: "Whisper (open, offline)" },
     { id: "whisperx", label: "WhisperX (open SOTA: batched + word-aligned)" },
     { id: "qwen3", label: "Qwen3-ASR 1.7B (open; leaderboard-best WER, slower)" },
     { id: "qwen3-0.6b", label: "Qwen3-ASR 0.6B (open; fast variant)" },

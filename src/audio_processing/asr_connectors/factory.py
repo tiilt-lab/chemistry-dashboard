@@ -11,16 +11,16 @@ def create_asr(name, audio_queue, transcript_queue, config, media_type, interval
     key = (name or "google-cloud-speech").strip().lower()
     args = (audio_queue, transcript_queue, config, media_type, interval)
 
-    if key in ("whisper", "faster-whisper", "local-whisper"):
-        from .whisper_asr import WhisperASR
-
-        logging.info("ASR backend: Whisper")
-        return WhisperASR(*args)
-
-    if key in ("crisperwhisper", "crisper-whisper", "crisperwhisper2"):
+    # Plain Whisper was retired in favour of CrisperWhisper; the old keys stay
+    # as aliases so sessions created before the switch keep transcribing.
+    if key in ("crisperwhisper", "crisper-whisper", "crisperwhisper2",
+               "whisper", "faster-whisper", "local-whisper"):
         from .crisperwhisper_asr import CrisperWhisperASR
 
-        logging.info("ASR backend: CrisperWhisper 2.0")
+        if key.startswith(("whisper", "faster", "local")):
+            logging.info("ASR backend: legacy '%s' now runs CrisperWhisper 2.0", key)
+        else:
+            logging.info("ASR backend: CrisperWhisper 2.0")
         return CrisperWhisperASR(*args)
 
     if key not in ("google-cloud-speech", "google", ""):

@@ -395,7 +395,7 @@ class ServerProtocol(WebSocketServerProtocol):
     def signal_start(self):
         # WhisperX transcribes the whole file before emitting results, so the
         # buffer must retain the entire recording (2h cap ≈ 230MB PCM).
-        buffer_seconds = 7200 if getattr(self, 'asr_choice', None) in ('whisperx', 'qwen3', 'qwen3-0.6b', 'crisperwhisper') else None
+        buffer_seconds = 7200 if getattr(self, 'asr_choice', None) in ('whisperx', 'qwen3', 'qwen3-0.6b', 'crisperwhisper', 'whisper') else None
         self.audio_buffer = AudioBuffer(self.config, max_seconds=buffer_seconds)
         self.asr_audio_queue = Queue()
         self.asr_transcript_queue = Queue()
@@ -425,14 +425,13 @@ class ServerProtocol(WebSocketServerProtocol):
                                    diarizer=(getattr(self, 'diarizer_choice', None)
                                              if getattr(self, 'diarizer_choice', None) in ('pyannote', 'sortformer') else None),
                                    max_speakers=_max_spk, enrolled=_enr, speaker_model=_spk_model)
-        elif getattr(self, 'asr_choice', None) == 'crisperwhisper':
+        elif getattr(self, 'asr_choice', None) in ('crisperwhisper', 'whisper'):
+            # 'whisper' is a legacy alias: plain Whisper was retired in
+            # favour of CrisperWhisper.
             from asr_connectors.crisperwhisper_asr import CrisperWhisperPosthocASR
             self.asr = CrisperWhisperPosthocASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval,
                                                 audio_file=self.audio_file, model_id=cf.crisperwhisper_model(),
                                                 mode=cf.crisperwhisper_mode())
-        elif getattr(self, 'asr_choice', None) == 'whisper':
-            from asr_connectors.whisper_asr import WhisperASR
-            self.asr = WhisperASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval)
         else:
             self.asr = GoogleASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data,self.interval,STOP_SIGNAL)
         self.asr.start()
@@ -444,7 +443,7 @@ class ServerProtocol(WebSocketServerProtocol):
         # Store the processor (not just a flag) so a reconnecting client can
         # re-attach to it and resume receiving progress.
         running_audio_processes[self.config.auth_key] = self.processor
-        batch_asr = getattr(self, 'asr_choice', None) in ('whisperx', 'qwen3', 'qwen3-0.6b', 'crisperwhisper')
+        batch_asr = getattr(self, 'asr_choice', None) in ('whisperx', 'qwen3', 'qwen3-0.6b', 'crisperwhisper', 'whisper')
         self.audioreader = AudioStreamReader(self.audio_buffer, self.asr_audio_queue, self.audio_file, self.queue_put_timeout,self.config,STOP_SIGNAL,running_audio_processes, realtime=not batch_asr)
         
 
