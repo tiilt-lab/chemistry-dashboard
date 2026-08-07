@@ -799,7 +799,7 @@ function ByodJoinPage(props) {
                                             <br />
                                             {/* Explicit start/stop for this pod's recording. */}
                                             {!props.armed ? (
-                                                <div className="mx-auto w-full max-w-xl shrink-0 rounded-xl border border-tiilt-line bg-white p-4 text-center">
+                                                <div className="mx-auto w-full max-w-3xl shrink-0 rounded-xl border border-tiilt-line bg-white p-4 text-center">
                                                     <div className="text-sm font-semibold text-tiilt-ink">
                                                         Connected — not recording yet
                                                     </div>
@@ -816,7 +816,7 @@ function ByodJoinPage(props) {
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <div className="mx-auto flex w-full max-w-xl shrink-0 flex-col gap-2 rounded-xl border border-tiilt-line bg-white px-4 py-3">
+                                                <div className="mx-auto flex w-full max-w-3xl shrink-0 flex-col gap-2 rounded-xl border border-tiilt-line bg-white px-4 py-3">
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-2 text-sm font-semibold text-tiilt-ink">
                                                         <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500"></span>
@@ -851,7 +851,7 @@ function ByodJoinPage(props) {
                                             {props.joinwith === "Audio" && (
                                                 <AppSectionBoxComponent
                                                     heading={"Audio control:"}
-                                                    type="mx-auto w-full max-w-xl shrink-0"
+                                                    type="mx-auto mt-4 w-full max-w-3xl shrink-0"
                                                 >
                                                     <button
                                                         type="button"
@@ -892,7 +892,7 @@ function ByodJoinPage(props) {
                                             {props.joinwith === "Video" && (
                                                 <AppSectionBoxComponent
                                                     heading={"Camera preview:"}
-                                                    type="mx-auto w-full max-w-xl shrink-0"
+                                                    type="mx-auto mt-4 w-full max-w-3xl shrink-0"
                                                 >
                                                     {/* The <video> must stay mounted even when hidden —
                                                         recording attaches to it and starts in its
@@ -924,7 +924,7 @@ function ByodJoinPage(props) {
                                                 "Videocartoonify" && (
                                                     <AppSectionBoxComponent
                                                         heading={"Camera preview:"}
-                                                        type="mx-auto w-full max-w-xl shrink-0"
+                                                        type="mx-auto mt-4 w-full max-w-3xl shrink-0"
                                                     >
                                                         <div
                                                             className={
