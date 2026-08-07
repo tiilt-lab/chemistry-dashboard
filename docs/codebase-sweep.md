@@ -4,87 +4,7 @@ A rolling record of the antipattern/security sweep so it can continue across
 sessions. Top section is what's left to do (start here); the bottom records
 what's already shipped.
 
-**Do the P0 items first — they are live, unauthenticated vulnerabilities.**
-
----
-
-## P0 — Critical, live security holes (path traversal)
-
-Found by audit 2026-08-07. The biometric-enrollment WebSocket handlers take an
-`alias` (and `mimeextension`) straight off the socket JSON and interpolate it
-into filesystem paths with **no validation and no auth** — the handlers run
-before any Redis auth-key check, and the WS ports are proxied publicly
-(`/audio_socket`, `/video_socket`). An `alias` like `../../foo` yields arbitrary
-file **write, delete, and rename**; combined with the `allow_pickle=True` loads
-below it is an RCE primitive.
-
-The app's own alias charset is `a-zA-Z0-9._:' -` (max 64), defined at
-`src/server/tables/speaker.py:18` (`NAME_CHARS`) and enforced by
-`verify_characters` (`src/server/utility.py:44`). It excludes `/` and `\`, so
-enforcing it at the socket boundary closes the traversal while still allowing
-real names (e.g. "Evan Le"). The known-good reference is
-`_face_thumb_path` at `src/server/routes/session.py:1029` (`os.path.basename`).
-
-### Fix plan
-1. Add `src/common/safe_names.py` with:
-   - `safe_name(value)` → `os.path.basename(str(value).strip())`, then require
-     it to match `^[A-Za-z0-9._:' -]{1,64}$` and reject `.`/`..`; raise on fail.
-   - `safe_media_ext(value, default='webm')` → lowercase, strip leading dot,
-     allowlist to `{webm, mp4, ogg, wav}`, else default.
-   (`src/common` is already on the services' `sys.path` via the
-   `connection_manager` import shim.)
-2. Apply at each sink, rejecting the WS message (send an error) rather than
-   crashing the handler.
-3. Add a server-side helper too (`src/server/utility.py`) — `safe_name` for the
-   Flask routes below — or reuse basename inline like `_face_thumb_path`.
-
-### Sinks to fix (file:line — from the audit)
-- **`src/audio_processing/server.py:126-134`** (`save-audio-video-fingerprinting`):
-  `currAlias`/`mediaExt` → `video_file`; reaches `open(...,'ab')`
-  (`recorder.py:50`), `os.remove` (`server.py:260`), wav write
-  (`server.py:268`), and the `os.remove`/`os.replace` chain at
-  `server.py:292,309,333,335,337,345`. Sanitize `currAlias` at 130 and re-check
-  in `process_fingerprint_blob` (255-347). Allowlist `mediaExt` at 129.
-- **`src/audio_processing/server.py:144-149`** (`add-saved-fingerprint`):
-  `currAlias` → `wave.open(...+'.wav')`. Sanitize.
-- **`src/video_processing/server_posthoc.py:185-196`** (same message on the
-  video side): `currAlias` → `recorder.py:37` write / `recorder.py:46` delete,
-  and `facial_biometric_processing_service.py:118,122` `np.save`. Sanitize
-  `currAlias` at 189, allowlist `mediaExt` at 188.
-- **`src/video_processing/server.py:164-169`** (`add-saved-fingerprint`):
-  `currAlias` → `np.load(...+'.npy', allow_pickle=True)`. Sanitize **and** drop
-  `allow_pickle=True` (or gate on a realpath-containment assert) — pickle load
-  on an attacker-influenced path is RCE.
-- **`src/video_processing/server_posthoc.py:268-270`**: `speaker["alias"]` →
-  `np.load(..., allow_pickle=True)`. Same treatment.
-- **`src/audio_processing/server_posthoc.py:190-191`**: `speaker["alias"]` →
-  `wave.open(...+'.wav')`. Sanitize.
-
-### Second-order (unauth write of a poisoned name → later file op)
-- **`src/server/routes/student.py`** `/addstudent` (`:157`), `/updatestudent`
-  (`:189`), `sync_student` ingress: **no `verify_login`, no charset check** on
-  `username`. That username later builds paths at `_voice_paths` (`:22`), `:32`,
-  `:83`, `:108` (`send_file` — arbitrary `.wav` read exfil). Add a
-  `re.fullmatch(r'[A-Za-z0-9._-]{1,10}', username)` gate on write, and
-  `os.path.basename` in `_voice_paths`/`:32`/`:83` to neutralize already-stored
-  bad rows.
-- **`src/server/routes/data_quality.py:74-76`**: `Speaker.alias` →
-  `_enrollment_fields` / `os.path.join(_VOICE_DIR, alias+'.emb.npy')`. basename.
-- **`src/server/routes/admin.py:127-135,146-149`**: student merge/delete does
-  `os.remove`/`os.rename` on `{username}.webm`. Admin-triggered (so second
-  order), extension fixed to `.webm`, but still unsanitized. basename; fixing
-  the `/addstudent` input closes the source.
-
-### Medium — untyped `sessiondeviceid` used as a glob prefix
-- **`src/audio_processing/server_posthoc.py:341-342`** and message-parse sites
-  `:114,203,244`; **`src/video_processing/server_posthoc.py:345`** parse-site
-  `:202`. `data['sessiondeviceid']` is used raw as a `glob` prefix (never
-  `int()`-cast, unlike `ProcessingConfig.from_json`). Currently *not* reachable
-  as traversal only because of a `pathlib.Path.glob` implementation detail that
-  changed in Python 3.13 — coerce to `int()` at the parse sites and add a
-  `realpath().startswith(recordings_dir)` check. Same change fixes the audio
-  glob's missing-separator bug (`"{id}*"` matches `9`→`91`,`918`; the video side
-  already uses a trailing `-`).
+**P0 (path traversal) is DONE — see the Done section. Start at P1.**
 
 ---
 
@@ -98,7 +18,7 @@ injection vector. Only defense-in-depth items remain:
   pinned to *exactly* that unit, not `systemctl *` or `ALL`. Add `check=True`
   (or inspect `returncode`) so a sudoers misconfig logs instead of silently
   falling into the 240s port-poll timeout.
-- **`int()`-coerce `sessiondeviceid`** — same as the P0 medium item above.
+- ~~`int()`-coerce `sessiondeviceid`~~ — done in `a1273f7`.
 - **`asr_connectors/sortformer_diar.py:25`** uses deprecated, TOCTOU-racy
   `tempfile.mktemp()`; the sibling connectors use `NamedTemporaryFile`. Switch.
 - **ASD `--candidates`** (`src/video_processing/server_posthoc.py:428`): aliases
@@ -141,6 +61,13 @@ Also open, tracked in `README.md`'s TODO section:
 
 ## Done (most recent first)
 
+- **Security: path-traversal / name sanitization (P0)** (`a1273f7`) — new
+  `src/common/safe_names.py` + `utility.safe_name`; every enrollment WS handler,
+  post-hoc speaker loop, and server route that builds a path from an alias/
+  username now sanitizes or rejects. `sessiondeviceid` coerced to int before
+  glob use (also fixed the audio glob's missing `-` separator). Note for P1: the
+  int-coercion covers the glob-prefix concern the subprocess audit raised, so
+  that P1 bullet is effectively closed too.
 - **Auth: HTTP callback timeouts** (`f45c845`) — every first-party callback POST
   now has a 30s timeout; a stalled Flask can no longer block a processing worker
   thread and pin the pod's in-RAM buffers.
