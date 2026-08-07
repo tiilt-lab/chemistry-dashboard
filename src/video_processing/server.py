@@ -86,6 +86,10 @@ class ServerProtocol(WebSocketServerProtocol):
         self.awaitingSpeakers = True
         self.facial_embeddings = None
         self.video_files_accum = []
+        # Per-pod toggle from the join form: when off, this connection only
+        # records — no frame decode, no VideoProcessor. Default on (hardware
+        # pods and older clients don't send the field).
+        self.live_analytics = True
         cm.add(self)
         logging.info('New client connected...')
 
@@ -131,7 +135,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.awaitingSpeakers = False
                 for speaker in data['speakers']:
                     self.facial_embeddings[speaker["id"]]["alias"] = speaker["alias"]
-                if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()):     
+                if self.video_processor and (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()):
                     self.video_processor.setParticpantFacialEmbeddings(self.facial_embeddings)
                 logging.info("Done awaiting all speakers info")
             else:
@@ -161,9 +165,9 @@ class ServerProtocol(WebSocketServerProtocol):
             auth_key = data.get('key', None)
             logging.info("Recieved Heartbeat from client with authkey {0}".format(auth_key))
             if auth_key != "no key":
-                if (self.config.videocartoonify or self.config.video) and not cf.video_cartoonize() and not cf.process_video_analytics(): 
-                    self.send_json({'type':'heartbeat'}) 
-                    logging.info("Sent Heartbeat response to client with authkey {0}".format(auth_key))   
+                if (self.config.videocartoonify or self.config.video) and not (self.live_analytics and (cf.video_cartoonize() or cf.process_video_analytics())):
+                    self.send_json({'type':'heartbeat'})
+                    logging.info("Sent Heartbeat response to client with authkey {0}".format(auth_key))
 
         if data['type'] == 'start':
             valid, result = ProcessingConfig.from_json(data)
@@ -174,6 +178,9 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.config = result
                 cm.associate_keys(self, self.config.session_key, self.config.auth_key)
                 self.stream_data = data['streamdata']
+                self.live_analytics = bool(data.get('liveAnalytics', True))
+                if not self.live_analytics:
+                    logging.info('Live analytics disabled by join form for {0} (record-only)'.format(self.config.auth_key))
 
                 if(data['numSpeakers'] != 0):
                     self.facial_embeddings = dict()
@@ -187,7 +194,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_{1}_{2}_({3})".format(self.config.auth_key,self.config.sessionId,self.config.deviceId,  str(time.ctime())))
                     self.orig_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1,self.config.mimeExtension)
                     
-                    if self.config.videocartoonify or cf.process_video_analytics():
+                    if (self.config.videocartoonify or cf.process_video_analytics()) and self.live_analytics:
                         self.video_queue = queue.Queue(maxsize=4)#maxsize=2
                         self.frame_queue = None
                         self.cartoon_image_queue = None
@@ -202,7 +209,7 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.frame_dir = os.path.join(cf.video_recordings_folder(), "vid_img_frames_{0}_{1}_{2}_({3})".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, datetime.today().strftime('%Y-%m-%d')))
                     self.redu_vid_recorder = VidRecorder(self.filename,aud_filename,self.frame_dir,cf.video_record_original(),16000, 2, 1,self.config.mimeExtension)
 
-                if (self.config.videocartoonify or self.config.video) and not cf.video_cartoonize() and not cf.process_video_analytics(): 
+                if (self.config.videocartoonify or self.config.video) and not (self.live_analytics and (cf.video_cartoonize() or cf.process_video_analytics())):
                     self.running = True
                     self.send_json({'type':'start','message':'Video processing not activated to start video processor'})
                     logging.info('Video process connected but video processing not activated')
@@ -234,7 +241,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 # interval approach as the webm path below, on the accumulated
                 # fragmented-mp4 (video_count never increments on this path,
                 # so every chunk appends into _1.mp4).
-                if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()):
+                if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()) and self.live_analytics:
                     try:
                         if not hasattr(self, 'analytics_chunk_count'):
                             self.analytics_chunk_count = 0
@@ -258,7 +265,7 @@ class ServerProtocol(WebSocketServerProtocol):
                                         getattr(self, 'analytics_chunk_count', '?'), e)
 
             if self.config.mimeExtension == "webm":
-                if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()):
+                if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()) and self.live_analytics:
                     _t0 = time.time()
                     try:
                         _recording_bytes = os.path.getsize(self.filename+'.'+self.config.mimeExtension)

@@ -377,6 +377,30 @@ function ByodJoinPage(props) {
                                                     Advanced options
                                                 </button>
                                                 <div className={showAdvanced ? "mt-3 flex flex-col gap-4" : "hidden"}>
+                                                    {joinwithSel !== "Audio" && (
+                                                        <div>
+                                                            <Toggle
+                                                                label="Live video analytics"
+                                                                checked={!!props.liveAnalytics}
+                                                                onChange={() =>
+                                                                    props.setLiveAnalytics(
+                                                                        !props.liveAnalytics,
+                                                                    )
+                                                                }
+                                                            />
+                                                            <p className="mt-1 text-xs text-tiilt-muted">
+                                                                Gaze, attention and
+                                                                facial-emotion models run
+                                                                during the session. Turn
+                                                                off to lighten server
+                                                                load when many groups
+                                                                record at once — the
+                                                                video is still recorded
+                                                                and can be analyzed
+                                                                afterwards.
+                                                            </p>
+                                                        </div>
+                                                    )}
                                                     <div>
                                                         <Toggle
                                                             label="Add Polar H10 heart-rate straps"

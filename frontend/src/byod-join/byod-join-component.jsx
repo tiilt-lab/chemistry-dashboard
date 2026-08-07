@@ -162,6 +162,15 @@ function JoinPage() {
     // Advanced-options toggle: when on, each speaker card on the
     // participants page shows a Polar H10 ID field + pair button.
     const [polarEnabled, setPolarEnabled] = useState(false)
+    // Live video analytics (gaze/emotion/attention) per pod, default on.
+    // Mirrored into a ref because the value is read when the video socket's
+    // start message is built, long after the join form set it.
+    const [liveAnalytics, setLiveAnalyticsState] = useState(true)
+    const liveAnalyticsRef = useRef(true)
+    const setLiveAnalytics = (v) => {
+        liveAnalyticsRef.current = v
+        setLiveAnalyticsState(v)
+    }
 
     const navigate = useNavigate()
 
@@ -1592,6 +1601,7 @@ function JoinPage() {
                 Video: true,
                 sessionid: session.id,
                 numSpeakers: numSpeakers.current,
+                liveAnalytics: liveAnalyticsRef.current,
             }
         } else if (joinwith.current === "Videocartoonify") {
             message = {
@@ -1609,6 +1619,7 @@ function JoinPage() {
                 sessionid: session.id,
                 Video_cartoonify: true,
                 numSpeakers: numSpeakers.current,
+                liveAnalytics: liveAnalyticsRef.current,
             }
         }
         videows.current.send(JSON.stringify(message))
@@ -2011,6 +2022,8 @@ function JoinPage() {
             inlineRenameSpeaker={inlineRenameSpeaker}
             bluetoothSupported={isBluetoothSupported()}
             polarEnabled={polarEnabled}
+            liveAnalytics={liveAnalytics}
+            setLiveAnalytics={setLiveAnalytics}
             setPolarEnabled={setPolarEnabled}
             polarInfo={polarInfo}
             assignPolarSensor={assignPolarSensor}
