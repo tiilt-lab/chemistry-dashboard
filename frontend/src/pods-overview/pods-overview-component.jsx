@@ -4,7 +4,7 @@ import { SessionModel } from "../models/session";
 import { DeviceService } from "../services/device-service";
 import { DeviceModel } from "../models/device";
 import { SpeakerModel } from "../models/speaker";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { PodsOverviewPages } from "./html-pages";
 
@@ -525,6 +525,19 @@ function PodsOverviewComponent(props) {
   };
 
 
+  // Alphabetical pod order (numeric-aware, so "Group 2" < "Group 10"). The
+  // store's list is join-order and the 2s poll would reshuffle any sort done
+  // downstream, so sort the copy handed to the page each render.
+  const sortedDevices = useMemo(() => {
+    if (sessionDevices === null) return null;
+    return [...sessionDevices].sort((a, b) =>
+      String(a.name || "").localeCompare(String(b.name || ""), undefined, {
+        numeric: true,
+        sensitivity: "base",
+      }),
+    );
+  }, [sessionDevices]);
+
   return (
     <PodsOverviewPages
       enriched={enriched}
@@ -544,7 +557,7 @@ function PodsOverviewComponent(props) {
       session={session}
       openDialog={openDialog}
       navigateToSessions={navigateToSessions}
-      sessionDevices={sessionDevices}
+      sessionDevices={sortedDevices}
       renamePodInline={renamePodInline}
       canDeletePod={canDeletePod}
       podToDelete={podToDelete}
