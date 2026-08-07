@@ -264,6 +264,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 # fragmented-mp4 (video_count never increments on this path,
                 # so every chunk appends into _1.mp4).
                 if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()) and self.live_analytics:
+                    vidclip = None
                     try:
                         if not hasattr(self, 'analytics_chunk_count'):
                             self.analytics_chunk_count = 0
@@ -282,7 +283,14 @@ class ServerProtocol(WebSocketServerProtocol):
                         self.enqueue_latest_video_chunk(chunk_iter)
                         logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
                     except Exception as e:
-                        # analytics must never break recording
+                        # analytics must never break recording; release the
+                        # reader if we failed before handing it to
+                        # _frames_releasing_clip
+                        if vidclip is not None:
+                            try:
+                                vidclip.close()
+                            except Exception:
+                                pass
                         logging.warning('mp4 analytics decode failed (chunk %s): %s',
                                         getattr(self, 'analytics_chunk_count', '?'), e)
 
@@ -316,8 +324,8 @@ class ServerProtocol(WebSocketServerProtocol):
                         temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
                         subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=16000,bitrate='50k',logger=None) #nbytes=2,codec='pcm_s16le',
                         _t_audio = time.time()
-                        wavObj = wave.open(temp_aud_file+'.wav')
-                        audiobyte = self.reduce_wav_channel(1,wavObj)
+                        with wave.open(temp_aud_file+'.wav') as wavObj:
+                            audiobyte = self.reduce_wav_channel(1,wavObj)
                         if (cf.video_record_original or cf.video_record_reduced):
                             self.orig_vid_recorder.write_audio(audiobyte)
                         if os.path.isfile(temp_aud_file+'.wav'):

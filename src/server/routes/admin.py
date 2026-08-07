@@ -254,15 +254,22 @@ def get_server_logs(**kwargs):
         log_path = os.path.join(base_dir, 'discussion_capture_server.log')
         if log_type == 'aps':
             log_path = os.path.join(base_dir, '../audio_processing/audio_processing_service.log')
-        log_data = None
-        with open(log_path, 'r') as f:
+        # Tail, don't slurp: the log grows without bound between rotations and
+        # the base64 JSON response holds ~2.7x the read size in memory at once.
+        tail_bytes = 5 * 1024 * 1024
+        with open(log_path, 'rb') as f:
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            f.seek(max(0, size - tail_bytes))
             log_data = f.read()
-        mem = BytesIO()
-        mem.write(log_data.encode('utf-8'))
-        mem.seek(0)
+        if size > tail_bytes:
+            # Drop the partial first line and say what was omitted.
+            log_data = log_data.split(b'\n', 1)[-1]
+            log_data = '[truncated: showing last {0} of {1} bytes]\n'.format(
+                len(log_data), size).encode('utf-8') + log_data
         return json_response({
             'type': log_type,
-            'data': 'data:application/log;base64,' + base64.b64encode(mem.getvalue()).decode("utf-8")
+            'data': 'data:application/log;base64,' + base64.b64encode(log_data).decode("utf-8")
         })
     return json_response({'message': 'Log type does not exist.'}, 400)
 

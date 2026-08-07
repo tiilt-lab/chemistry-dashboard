@@ -65,8 +65,9 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=cf.proxy_count(), x_proto=1)
 # Redis
 r = redis.Redis(host=cf.redis_host(), port=cf.redis_port(), db=cf.redis_db())
 
-# Set API Limiter
-limiter = Limiter(get_remote_address, app=app)
+# Set API Limiter. Redis-backed so counters survive restarts and are shared
+# if the app ever runs more than one worker.
+limiter = Limiter(get_remote_address, app=app, storage_uri=cf.redis_url())
 
 # Create SocketIO app (engineio_logger=True for advance debug)
 # threading mode (simple-websocket) replaces deprecated eventlet; the

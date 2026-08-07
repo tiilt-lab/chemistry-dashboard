@@ -16,9 +16,12 @@ def _sample_frames(video_path, max_frames):
     """RGB frames spread across the whole clip (head turns from every part of
     the recording contribute)."""
     vidclip = mp.VideoFileClip(video_path)
-    duration = float(vidclip.duration or 0)
-    fps = 2 if duration <= 0 else min(2.0, max_frames / max(duration, 1.0))
-    frames = list(vidclip.iter_frames(fps=max(fps, 0.5), dtype="uint8"))
+    try:
+        duration = float(vidclip.duration or 0)
+        fps = 2 if duration <= 0 else min(2.0, max_frames / max(duration, 1.0))
+        frames = list(vidclip.iter_frames(fps=max(fps, 0.5), dtype="uint8"))
+    finally:
+        vidclip.close()
     if len(frames) > max_frames:
         step = len(frames) / max_frames
         frames = [frames[int(i * step)] for i in range(max_frames)]

@@ -50,6 +50,10 @@ image_object_detection = ImageObjectDetection(STOP_SIGNAL,source="post_hoc")
 video_metric_analytics = VideoMetricAnalytics(attention_detection, facial_emotion_detector, image_object_detection,STOP_SIGNAL,source="post_hoc")
 batch_size = 40
 running_video_processes = {}
+# Serializes the check-then-claim on running_video_processes: an unlocked
+# membership test followed by an insert lets two concurrent triggers both
+# pass the "already running" check.
+_running_guard = threading.Lock()
 
 # Exit once the analysis queue drains (and systemd restarts us fresh):
 # glibc never returns the per-run allocation churn to the OS, so RSS only
@@ -222,18 +226,20 @@ class ServerProtocol(WebSocketServerProtocol):
                 logging.info("key is {} and offset date is {}".format(key,off_set_date))
 
                 #keep track of currently running posthoc video analytics
-                if key in running_video_processes:
-                    # Return, or a duplicate trigger clobbers the registry
-                    # entry and starts a second concurrent run on this pod.
-                    self.send_json({'type': 'error', 'message': 'Video posthoc analytics for this group is already running'})
-                    return
-
-                running_video_processes[key] = "running"
+                with _running_guard:
+                    if key in running_video_processes:
+                        # Return, or a duplicate trigger clobbers the registry
+                        # entry and starts a second concurrent run on this pod.
+                        self.send_json({'type': 'error', 'message': 'Video posthoc analytics for this group is already running'})
+                        return
+                    running_video_processes[key] = "running"
 
                 conf_val = {'key':key,'encoding': "pcm_f16le", 'sample_rate': self.sample_rate,'channels': 2,'sessionid': self.sessionid,'deviceid': self.session_device_id,
                             'server_start':self.server_start,'off_set_date':off_set_date}
                 valid, result = ProcessingConfig.from_json(conf_val,source="posthoc processing")
                 if not valid:
+                    # Release the claim or this pod is blocked until restart.
+                    running_video_processes.pop(key, None)
                     logging.info("Configuration setting failed for video posthoc processing")
                 else:
                     self.config = result

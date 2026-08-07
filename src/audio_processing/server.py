@@ -155,8 +155,8 @@ class ServerProtocol(WebSocketServerProtocol):
             try:
                 currAlias = safe_names.safe_name(data['alias'])
                 audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}".format(currAlias))
-                wavObj = wave.open(audio_fingerprint_file+'.wav')
-                byte_audio_data = self.read_bytes_from_wav(wavObj)
+                with wave.open(audio_fingerprint_file+'.wav') as wavObj:
+                    byte_audio_data = self.read_bytes_from_wav(wavObj)
                 if currSpeaker and currAlias:
                     if self.speakers is None:
                         self.speakers = dict()

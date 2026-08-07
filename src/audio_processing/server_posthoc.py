@@ -2,6 +2,7 @@ import os
 import json
 import time
 import logging
+import threading
 import wave
 import config as cf
 import callbacks
@@ -52,6 +53,10 @@ semantic_model.share_memory()
 STOP_SIGNAL = object()
 
 running_audio_processes = {}
+# Serializes the check-then-claim on running_audio_processes: the guards run on
+# both reactor and worker threads, and an unlocked membership test followed by
+# an insert lets two concurrent triggers both pass the "already running" check.
+_running_guard = threading.Lock()
 
 class ServerProtocol(WebSocketServerProtocol):
 
@@ -158,18 +163,20 @@ class ServerProtocol(WebSocketServerProtocol):
                 off_set_date = file_path_split[1].split(")")[0]
  
                  #keep track of currently running posthoc audio analytics
-                if key in running_audio_processes:
-                    # Return, or a duplicate trigger clobbers the registry
-                    # entry and starts a second concurrent run on this pod.
-                    self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
-                    return
-
-                running_audio_processes[key] = "running"
+                with _running_guard:
+                    if key in running_audio_processes:
+                        # Return, or a duplicate trigger clobbers the registry
+                        # entry and starts a second concurrent run on this pod.
+                        self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
+                        return
+                    running_audio_processes[key] = "running"
 
                 conf_val = {'key':key,'encoding': "pcm_f32le", 'sample_rate': self.sample_rate,'channels': 1,'sessionid': self.sessionid,'deviceid': self.session_device_id,
                             'tag': self.run_tagging, 'server_start':self.server_start,'keywords':self.keywords,'transcribe':self.run_transcribe,'features':self.run_features,'doa':self.run_doa,'topic_model':self.topic_model_choice,'owner':1,'off_set_date':off_set_date}
                 valid, result = ProcessingConfig.from_json(conf_val,source="posthoc processing")
                 if not valid:
+                    # Release the claim or this pod is blocked until restart.
+                    running_audio_processes.pop(key, None)
                     logging.info("Configuration setting failed for audio posthoc processing")
                 else:    
                     self.config = result
@@ -194,8 +201,8 @@ class ServerProtocol(WebSocketServerProtocol):
                             logging.warning('skipping speaker with unsafe alias %r', speaker.get("alias"))
                             continue
                         audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}".format(alias))
-                        wavObj = wave.open(audio_fingerprint_file+'.wav')
-                        byte_audio_data = self.read_bytes_from_wav(wavObj)
+                        with wave.open(audio_fingerprint_file+'.wav') as wavObj:
+                            byte_audio_data = self.read_bytes_from_wav(wavObj)
                         self.speakers[speaker["id"]] = {"alias": speaker["alias"], "data": byte_audio_data}
 
                     self.signal_start()
@@ -225,16 +232,18 @@ class ServerProtocol(WebSocketServerProtocol):
                 off_set_date = "Sat Jun 27 18:17:13 2026" #this is just a generic date
 
                 #keep track of currently running posthoc audio analytics
-            if key in running_audio_processes:
-                self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
-                return
-
-            running_audio_processes[key] = "running"
+            with _running_guard:
+                if key in running_audio_processes:
+                    self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
+                    return
+                running_audio_processes[key] = "running"
 
             conf_val = {'key':key,'encoding': "pcm_f32le", 'sample_rate': self.sample_rate,'channels': 1,'sessionid': self.sessionid,'deviceid': self.session_device_id,
                             'tag': True, 'server_start':self.server_start,'keywords':self.keywords,'transcribe':True,'features':True,'doa':True,'topic_model':None,'owner':1,'off_set_date':off_set_date}
             valid, result = ProcessingConfig.from_json(conf_val,source="posthoc processing")
             if not valid:
+                # Release the claim or this pod is blocked until restart.
+                running_audio_processes.pop(key, None)
                 logging.info("Configuration setting failed for audio posthoc processing")
             else:    
                 self.config = result
@@ -265,16 +274,18 @@ class ServerProtocol(WebSocketServerProtocol):
                 off_set_date = file_path_split[1].split(")")[0]
  
                  #keep track of currently running posthoc audio analytics
-                if key in running_audio_processes:
-                    self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
-                    return
-
-                running_audio_processes[key] = "running"
+                with _running_guard:
+                    if key in running_audio_processes:
+                        self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
+                        return
+                    running_audio_processes[key] = "running"
 
                 conf_val = {'key':key,'encoding': "pcm_f32le", 'sample_rate': self.sample_rate,'channels': 1,'sessionid': self.sessionid,'deviceid': self.session_device_id,
                                 'tag': True, 'server_start':self.server_start,'keywords':self.keywords,'transcribe':True,'features':True,'doa':True,'topic_model':None,'owner':1,'off_set_date':off_set_date}
                 valid, result = ProcessingConfig.from_json(conf_val,source="posthoc processing")
                 if not valid:
+                    # Release the claim or this pod is blocked until restart.
+                    running_audio_processes.pop(key, None)
                     logging.info("Configuration setting failed for audio posthoc processing")
                 else:    
                     self.config = result
