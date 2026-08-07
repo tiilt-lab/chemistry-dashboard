@@ -278,3 +278,5 @@ insecure origins. Add your server's address at
 
 - [ ] Audit and update outdated dependencies across all components (frontend npm packages, server/audio/video Python packages). Stale Dependabot PRs were closed — dependency updates will be handled as a coordinated batch effort.
 - [ ] Set up CI/CD pipeline (testing, linting, automated checks).
+- [ ] Decide whether the anonymous student-dashboard / expert-rating surface needs a credential. Those flows (no accounts, no processing key) still read transcripts, synthesized feedback, and LLM answers through the passcode/alias routes — each is marked "open by design" in the route comments. Tightening it means minting a token from the passcode (or similar) that those flows can hold; a login gate would break them.
+- [ ] Pod processing keys appear in nginx access logs via the `?key=` query param that `<video>`/`<img>` tags use to authenticate against the guarded device endpoints. Either accept (keys are per-pod and short-lived), scrub the param from nginx's log format, or rotate keys on session end.
