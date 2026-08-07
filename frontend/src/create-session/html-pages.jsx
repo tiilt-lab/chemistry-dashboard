@@ -82,11 +82,6 @@ function CreateSessionPage(props) {
               </div>
               <div className="divide-y divide-tiilt-line overflow-hidden rounded-lg border border-tiilt-line">
                 <Toggle
-                  label="Allow participant devices"
-                  checked={props.byod}
-                  onChange={() => props.setByod(!props.byod)}
-                />
-                <Toggle
                   label="Analyze session features"
                   checked={props.features}
                   onChange={() => props.setFeatures(!props.features)}

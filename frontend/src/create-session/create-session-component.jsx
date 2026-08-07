@@ -42,7 +42,10 @@ function CreateSessionComponent(props) {
   // Pre-filled with the date-stamped default so the field is never blank;
   // still editable, and createSession keeps its own fallback for safety.
   const [sessionName, setSessionName] = useState(changedState ? prevState.sessionName : defaultSessionName());
-  const [byod, setByod] = useState(changedState ? prevState.byod : true);
+  // Participant devices are always allowed: the passcode this generates is
+  // the only way pods can join at all (dedicated hardware pods are gone),
+  // so the old "Allow participant devices" toggle was removed from the UI.
+  const byod = true;
   const [doa, setDoa] = useState(changedState ? prevState.doa : true);
   const [features, setFeatures] = useState(changedState ? prevState.features : true);
   // Live transcription engine, locked at creation (crisperwhisper = local GPU).
@@ -283,7 +286,7 @@ function CreateSessionComponent(props) {
   
   
   const getStateInfo = () => {
-    return {state: {sessionName: sessionName, byod: byod, features: features, doa: doa, asr: asr, folder: folder, folderPath: folderPath, currentMenu: currentMenu, pageTitle: pageTitle, selectedKeywordList: selectedKeywordList, selectedTopicModel: selectedTopicModel}};
+    return {state: {sessionName: sessionName, features: features, doa: doa, asr: asr, folder: folder, folderPath: folderPath, currentMenu: currentMenu, pageTitle: pageTitle, selectedKeywordList: selectedKeywordList, selectedTopicModel: selectedTopicModel}};
   }
 
   const openDialog = (form, text)=> {
@@ -303,8 +306,6 @@ function CreateSessionComponent(props) {
     sessionName = {sessionName}
     setSessionName = {setSessionName}
     folderPath = {folderPath}
-    setByod = {setByod}
-    byod = {byod}
     features = {features}
     setFeatures = {setFeatures}
     asr = {asr}
