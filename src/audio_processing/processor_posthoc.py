@@ -34,6 +34,11 @@ class AudioProcessorPosthoc:
         self.scorer = scorer
         self.audio_buffer = audio_buffer
         self.transcript_queue = transcript_queue
+        # Serializes append + np.save on self.embeddings: per-utterance
+        # threads appending while another thread ran np.array(self.embeddings)
+        # raised numpy's "content of sequences changed" RuntimeError, killing
+        # every utterance of a pod before its transcript was posted.
+        self._embeddings_lock = threading.Lock()
         self.mt_feats = np.array([])
         self.speakers = np.array([])
         self.signal = np.array([])
@@ -327,17 +332,18 @@ class AudioProcessorPosthoc:
                         self.embeddings_file = time.strftime(
                             "%Y%m%d-%H%M%S")+".npy"
                     embedding = embedSignal(audio_data, self.diarization_model)
-                    self.embeddings.append({
-                        'embedding': embedding,
-                        'start': start_time,
-                        'end': end_time,
-                        # Carried pyannote 3.1 cluster label from batch ASR
-                        # (WhisperX/Qwen3), if any — used by send_speaker_taggings
-                        # when diarization_fallback='pyannote' to skip clustering.
-                        'speaker_tag': getattr(transcript_data, 'speaker_tag', None),
-                    })
-                    
-                    np.save(self.embeddings_file, np.array(self.embeddings))
+                    with self._embeddings_lock:
+                        self.embeddings.append({
+                            'embedding': embedding,
+                            'start': start_time,
+                            'end': end_time,
+                            # Carried pyannote 3.1 cluster label from batch ASR
+                            # (WhisperX/Qwen3), if any — used by send_speaker_taggings
+                            # when diarization_fallback='pyannote' to skip clustering.
+                            'speaker_tag': getattr(transcript_data, 'speaker_tag', None),
+                        })
+                        np.save(self.embeddings_file,
+                                np.array(self.embeddings, dtype=object))
                 
                 # Per-utterance voice features: prosody (#6) and/or vocal
                 # emotion (#5) from the segment audio, when enabled.
@@ -376,8 +382,11 @@ class AudioProcessorPosthoc:
             #   source_seperation = source_seperation_pre_trained(audio_data)
 
         except Exception as e:
-            logging.error("Processing FAILED for client %s: %s",
-                          self.config.auth_key, e)
+            # logging.exception, not error: the bare str(e) hid the origin of
+            # a per-utterance numpy ragged-array crash that zeroed out an
+            # entire pod's transcripts across multiple runs.
+            logging.exception("Processing FAILED for client %s: %s",
+                              self.config.auth_key, e)
 
         # Check if this was the final process of the transmission.
         self.running_processes -= 1

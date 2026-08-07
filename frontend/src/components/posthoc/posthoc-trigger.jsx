@@ -465,6 +465,19 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
         return m > 0 ? `${m}m ${s % 60}s` : `${s}s`
     }
 
+    // "9m 12s" from a plain seconds count (persisted module durations).
+    const fmtSecs = (s) => {
+        const m = Math.floor(s / 60)
+        return m > 0 ? `${m}m ${s % 60}s` : `${s}s`
+    }
+    // Persisted per-module durations of the last completed run, stamped
+    // server-side at each scope's completion callback.
+    const lastDurations = podModels.durations || {}
+    const durationSummary = ["audio", "video"]
+        .filter((s) => lastDurations[s])
+        .map((s) => `${s} ${fmtSecs(lastDurations[s])}`)
+        .join(" · ")
+
     // tqdm-style remaining-time estimate from elapsed and percent complete.
     const fmtEta = (meta) => {
         if (
@@ -583,6 +596,11 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                     <div className="flex items-center gap-1.5 text-xs font-semibold text-tiilt-teal-text">
                         <Refresh />
                         Last full analysis: {lastAnalyzed}
+                    </div>
+                ) : null}
+                {durationSummary && !running ? (
+                    <div className="mt-1 text-xs text-tiilt-muted">
+                        Previous run took {durationSummary}
                     </div>
                 ) : null}
                 <details className="mt-1.5">

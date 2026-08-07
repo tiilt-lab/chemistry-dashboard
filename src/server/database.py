@@ -1718,17 +1718,35 @@ def clear_session_device_posthoc(session_device_id):
     return True
 
 
-def mark_session_device_posthoc(session_device_id, models=None):
+def mark_session_device_posthoc(session_device_id, models=None, durations=None):
     device = get_session_devices(id=session_device_id)
     if device is None:
         return False
     device.posthoc_analyzed_date = datetime.utcnow()
-    if models is not None:
-        # Persist the per-run model provenance blob. Guard so a missing column
-        # (pre-migration) or bad value never blocks the completion timestamp.
+    if models is not None or durations:
+        # Persist the per-run model provenance blob. Audio and video complete
+        # separately (and the browser posts its own summary), so MERGE into
+        # the existing blob rather than replace — a replace made whichever
+        # completion arrived last drop the other scope's fields. `durations`
+        # merges per scope under its own key ({'audio': secs, 'video': secs}).
+        # Guard so a missing column (pre-migration) or bad value never blocks
+        # the completion timestamp.
         try:
             import json as _json
-            device.posthoc_models = _json.dumps(models)
+            blob = {}
+            raw = getattr(device, 'posthoc_models', None)
+            if raw:
+                try:
+                    blob = _json.loads(raw) or {}
+                except Exception:
+                    blob = {}
+            if models is not None:
+                blob.update(models)
+            if durations:
+                merged = dict(blob.get('durations') or {})
+                merged.update({k: v for k, v in durations.items() if v})
+                blob['durations'] = merged
+            device.posthoc_models = _json.dumps(blob)
         except Exception as e:
             logging.warning("Could not persist posthoc_models: %s", e)
     db.session.commit()

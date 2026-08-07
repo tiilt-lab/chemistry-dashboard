@@ -131,11 +131,18 @@ def posthoc_completed(**kwargs):
     content = request.get_json() or {}
     key = content.get('source', '')
     models = content.get('models')
+    scope = content.get('scope')
     device = database.get_session_devices(processing_key=key)
     if device:
-        database.mark_session_device_posthoc(device.id, models=models)
-        posthoc_state.mark_done(device.id, content.get('scope'))
-        logging.info('Post-hoc marked complete for device %d (server-side).', device.id)
+        # How long this module took, measured from posthoc_reset to now —
+        # read before mark_done clears the running entry.
+        elapsed = posthoc_state.elapsed_seconds(device.id, scope)
+        database.mark_session_device_posthoc(
+            device.id, models=models,
+            durations={scope or 'audio': elapsed} if elapsed else None)
+        posthoc_state.mark_done(device.id, scope)
+        logging.info('Post-hoc marked complete for device %d (server-side, %s: %ss).',
+                     device.id, scope or 'audio', elapsed)
     return json_response()
 
 

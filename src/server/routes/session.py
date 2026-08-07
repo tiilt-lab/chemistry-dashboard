@@ -923,8 +923,18 @@ def upload_video_session(user, **kwargs):
                        check=True, timeout=600)
     except Exception as e:
         return json_response({'message': 'audio extraction failed: %s' % e}, 400)
-    # close the session (uploads are not live) and queue the analysis
-    database.update_session_status(session_obj.id) if hasattr(database, 'update_session_status') else None
+    # close the session (uploads are not live) and queue the analysis. The
+    # old hasattr(database, 'update_session_status') guard referenced a
+    # function that never existed, silently leaving every uploaded session
+    # "live" (no end_date, redis config present).
+    from datetime import datetime as _dt
+    session_obj.end_date = _dt.utcnow()
+    database.save_changes()
+    try:
+        from redis_helper import RedisSessions as _RS
+        _RS.delete_session(session_obj.id)
+    except Exception as e:
+        logging.warning('upload session redis cleanup failed: %s', e)
     import posthoc_queue
     posthoc_queue.enqueue(session_obj.id, [device.id])
     return json_response({'session_id': session_obj.id, 'device_id': device.id, 'queued': True})
