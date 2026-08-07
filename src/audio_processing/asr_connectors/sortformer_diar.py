@@ -22,7 +22,10 @@ _TIMEOUT_SECONDS = 45 * 60
 def run_sortformer(audio_file, model="nvidia/diar_streaming_sortformer_4spk-v2.1"):
     if not os.path.isfile(_NEMO_PYTHON):
         raise RuntimeError("NeMo venv missing at {0}".format(_NEMO_PYTHON))
-    out_path = tempfile.mktemp(suffix=".json", prefix="sortformer_")
+    # NamedTemporaryFile reserves a unique name atomically (no mktemp TOCTOU
+    # race); the CLI overwrites the empty file with its JSON output.
+    with tempfile.NamedTemporaryFile(suffix=".json", prefix="sortformer_", delete=False) as tf:
+        out_path = tf.name
     cmd = [_NEMO_PYTHON, _CLI, audio_file, "--out", out_path, "--model", model]
     logging.info("Sortformer: launching diarization subprocess for %s", audio_file)
     try:

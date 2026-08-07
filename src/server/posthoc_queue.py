@@ -189,7 +189,15 @@ def _maybe_recycle_audio_service():
     logging.info("posthoc queue: audio service at %.1f GiB — recycling between pods",
                  rss / 2 ** 30)
     try:
-        subprocess.run(["sudo", "-n", "systemctl", "restart", _AUDIO_UNIT], timeout=90)
+        # sudo is pinned to exactly this command in /etc/sudoers.d/blinc-posthoc.
+        # Inspect the result: a sudoers/unit misconfig otherwise fails silently
+        # and we'd waste the 240s port-poll below before continuing.
+        proc = subprocess.run(["sudo", "-n", "systemctl", "restart", _AUDIO_UNIT],
+                              capture_output=True, text=True, timeout=90)
+        if proc.returncode != 0:
+            logging.warning("posthoc queue: audio service recycle exited %s: %s",
+                            proc.returncode, (proc.stderr or "").strip())
+            return
     except Exception as e:
         logging.warning("posthoc queue: audio service recycle failed: %s", e)
         return
