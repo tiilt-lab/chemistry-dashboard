@@ -792,17 +792,6 @@ function JoinPage() {
         )
     }
 
-    // Live lookup for the inline name editor's green check: does this name
-    // belong to an enrolled profile (i.e. has a saved fingerprint)?
-    const checkEnrolledName = async (username) => {
-        try {
-            const resp = await new AuthService().getStudentProfileByID(username)
-            return resp.status === 200
-        } catch (ex) {
-            return false
-        }
-    }
-
     // Commit from the inline name editor on a speaker card. Same behavior as
     // addSpeakerSlot's name handling: an enrolled username renames the slot
     // and attaches the saved fingerprint (via the registeredStudentData
@@ -2057,7 +2046,6 @@ function JoinPage() {
             addSpeakerSlot={addSpeakerSlot}
             addSpeakerSlots={addSpeakerSlots}
             inlineRenameSpeaker={inlineRenameSpeaker}
-            checkEnrolledName={checkEnrolledName}
             bluetoothSupported={isBluetoothSupported()}
             polarInfo={polarInfo}
             assignPolarSensor={assignPolarSensor}
