@@ -44,7 +44,15 @@ function JoinPage() {
     const timeRange = useRef([0, 1])
     const joinwith = useRef("")
     const name = useRef("")
+    // The speaker roster lives in a ref (socket callbacks and the replay
+    // read it without re-binding) mirrored into state for rendering. All
+    // mutations go through setSpeakers so the two can never drift.
     const speakers = useRef([])
+    const [roster, setRoster] = useState([])
+    const setSpeakers = (next) => {
+        speakers.current = next
+        setRoster(next)
+    }
     const numSpeakers = useRef(0)
     const currBlob = useRef(null)
     const heartbeatIntervalRef = useRef(null)
@@ -112,12 +120,10 @@ function JoinPage() {
     const [showFeatures, setShowFeatures] = useState([])
     const [showBoxes, setShowBoxes] = useState([])
     const [selectedSpeaker, setSelectedSpeaker] = useState(null)
-    const [invalidName, setInvalidName] = useState(false)
 
     // const [sessionClosing, setSessionClosing] = useState(false)
 
     // Audio/video Fingerprint registration states
-    const [savedFingerprintError, setSavedFingerprintError] = useState("")
 
     // Pre-join device check: pending join params while the check page is
     // shown, and the confirmed device/channel selection used for capture.
@@ -616,10 +622,8 @@ function JoinPage() {
 
     const openForms = (form, speaker = null) => {
         setCurrentForm(form)
-        if (form === "fingerprintAudio" || form === "renameAlias" || form === "savedAudioVideoFingerprint") {
+        if (form === "fingerprintAudio") {
             setSelectedSpeaker(speaker)
-            setInvalidName(false)
-            setSavedFingerprintError("")
         }
     }
 
@@ -637,7 +641,7 @@ function JoinPage() {
             setArmed(false)
             setRecSeconds(0)
             dispatch({ type: "SPEAKERS_VALIDATED", payload: false })
-            speakers.current = null
+            setSpeakers(null)
             setPrevSessionId(session.id)
             setSession(null)
             setSessionDevice(null)
@@ -693,7 +697,6 @@ function JoinPage() {
 
     // Add a speaker slot after joining (needed when the group joined with
     // "detect automatically", i.e. zero pre-created slots).
-    const [, setSpeakerListTick] = useState(0)
     // Adds a speaker slot. When a name is given, enrolled speakers default
     // to their saved fingerprint: an exact username match renames the slot
     // and attaches the stored voice print automatically; anyone else just
@@ -705,8 +708,7 @@ function JoinPage() {
                 if (response.status === 200) {
                     response.json().then(async (jsonObj) => {
                         const speaker = SpeakerModel.fromJson(jsonObj)
-                        speakers.current = [...(speakers.current || []), speaker]
-                        setSpeakerListTick((x) => x + 1)
+                        setSpeakers([...(speakers.current || []), speaker])
                         if ((name || "").trim()) {
                             await attachIdentity(speaker, name)
                         }
@@ -750,16 +752,17 @@ function JoinPage() {
             const r = await sessionService.updateCollaborator(speaker.id, alias)
             if (r.status !== 200) return "rename-failed"
             const renamed = SpeakerModel.fromJson(await r.json())
-            speakers.current = (speakers.current || []).map((s) =>
-                s.id === speaker.id
-                    ? {
-                          ...s,
-                          alias: renamed.alias,
-                          fingerprinted: enrolled ? true : s.fingerprinted,
-                      }
-                    : s,
+            setSpeakers(
+                (speakers.current || []).map((s) =>
+                    s.id === speaker.id
+                        ? {
+                              ...s,
+                              alias: renamed.alias,
+                              fingerprinted: enrolled ? true : s.fingerprinted,
+                          }
+                        : s,
+                ),
             )
-            setSpeakerListTick((x) => x + 1)
         } catch (ex) {
             console.log("speaker rename failed", ex)
             return "rename-failed"
@@ -777,6 +780,27 @@ function JoinPage() {
         const username = (rawName || "").trim()
         if (!username || username === speaker.alias) return
         await attachIdentity(speaker, username)
+    }
+
+    // Remove a mis-added slot. The server refuses once the speaker has any
+    // recorded data; here that can only happen after a reconnect mid-session.
+    const removeSpeakerSlot = async (speaker) => {
+        if (!sessionDevice) return
+        try {
+            const r = await sessionService.removeSpeaker(sessionDevice.id, speaker.id)
+            if (r.status !== 200) {
+                console.log("remove speaker refused", r.status)
+                return
+            }
+        } catch (ex) {
+            console.log("remove speaker failed", ex)
+            return
+        }
+        pendingFingerprints.current = pendingFingerprints.current.filter(
+            (f) => f.id !== speaker.id,
+        )
+        unassignPolarSensor(speaker)
+        setSpeakers((speakers.current || []).filter((s) => s.id !== speaker.id))
     }
 
     // Pair a Polar strap (or any BLE heart-rate sensor) with a speaker. The
@@ -939,10 +963,12 @@ function JoinPage() {
                     audiows.current.send(audiodata.getChannelData(0))
                 }
             }
-            speakers.current = (speakers.current || []).map((s) => ({
-                ...s,
-                fingerprinted: true,
-            }))
+            setSpeakers(
+                (speakers.current || []).map((s) => ({
+                    ...s,
+                    fingerprinted: true,
+                })),
+            )
             const done = JSON.stringify({
                 type: "speaker",
                 id: "done",
@@ -972,37 +998,13 @@ function JoinPage() {
             alias: selectedSpeaker.alias,
             blob: currBlob.current,
         })
-        speakers.current = speakers.current.map((s) =>
-            s.id === selectedSpeaker.id ? { ...s, fingerprinted: true } : s,
+        setSpeakers(
+            speakers.current.map((s) =>
+                s.id === selectedSpeaker.id ? { ...s, fingerprinted: true } : s,
+            ),
         )
         currBlob.current = null
         closeDialog()
-    }
-
-    // "Saved Fingerprint" dialog: unlike the name paths, this one requires
-    // an actual enrollment and reports why it couldn't attach one.
-    const startProcessingSavedSpeakerFingerprint = async (registeredUsername) => {
-        const username = (registeredUsername || "").trim()
-        if (username === "") {
-            setSavedFingerprintError("Please enter a username.")
-            return
-        }
-        setSavedFingerprintError("")
-        const outcome = await attachIdentity(selectedSpeaker, username, {
-            requireEnrolled: true,
-        })
-        if (outcome === "enrolled") {
-            setSelectedSpeaker(null)
-            closeDialog()
-            return
-        }
-        setSavedFingerprintError(
-            outcome === "not-enrolled"
-                ? "That account exists but has no enrolled fingerprint — record one instead."
-                : outcome === "unknown"
-                  ? "No enrollment found for that username."
-                  : "Could not look up that username. Please try again.",
-        )
     }
 
     // A processing service reported it couldn't load a saved fingerprint at
@@ -1011,22 +1013,6 @@ function JoinPage() {
     // are matched posthoc instead.
     const onSavedFingerprintFailed = (message) => {
         console.warn("saved fingerprint failed:", message)
-    }
-
-    // "Rename Alias" dialog: same shared path as the inline editor, so an
-    // enrolled username typed here also attaches its saved fingerprint.
-    const changeAliasName = async (newAlias) => {
-        if ((newAlias || "").trim() === "") {
-            setInvalidName(true)
-            return
-        }
-        setInvalidName(false)
-        try {
-            await attachIdentity(selectedSpeaker, newAlias)
-        } finally {
-            setSelectedSpeaker(null)
-            closeDialog()
-        }
     }
 
     const handleStream = async () => {
@@ -1287,7 +1273,7 @@ function JoinPage() {
                                 jsonObj["session_device"],
                             ),
                         )
-                        speakers.current = SpeakerModel.fromJsonList(jsonObj["speakers"])
+                        setSpeakers(SpeakerModel.fromJsonList(jsonObj["speakers"]))
                         // The server assigns "Group A/B/C..." when the name
                         // was left blank — keep the assigned name so backing
                         // out prefills it and rejoining resumes this pod.
@@ -1956,7 +1942,7 @@ function JoinPage() {
             showBoxes={showBoxes}
             showFeatures={showFeatures}
             videoApiEndpoint={apiService.getVideoServerEndpoint()}
-            speakers={speakers.current}
+            speakers={roster}
             addSpeakerSlot={addSpeakerSlot}
             addSpeakerSlots={addSpeakerSlots}
             inlineRenameSpeaker={inlineRenameSpeaker}
@@ -1980,13 +1966,11 @@ function JoinPage() {
             saveAudioFingerprint={saveAudioFingerprint}
             addSpeakerFingerprint={addSpeakerFingerprint}
             confirmSpeakers={confirmSpeakers}
-            changeAliasName={changeAliasName}
+            removeSpeakerSlot={removeSpeakerSlot}
             details={details}
             viewComparison={viewComparison}
             viewGroup={viewGroup}
             cartoonImgUrl={cartoonImgUrl}
-            invalidName={invalidName}
-            savedFingerprintError={savedFingerprintError}
             deviceSelectionRef={inlineSelection}
             armed={armed}
             micSilent={micSilent}
@@ -1999,7 +1983,6 @@ function JoinPage() {
             }}
             requestEndRecording={() => setCurrentForm("ConfirmEndRec")}
             confirmEndRecording={endRecording}
-            startProcessingSavedSpeakerFingerprint={startProcessingSavedSpeakerFingerprint}
             loadSpeakerMetrics={loadSpeakerMetrics}
             prevSessionId={prevSessionId}
         />

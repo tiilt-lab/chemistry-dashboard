@@ -330,6 +330,13 @@ class SessionService {
     );
   }
 
+  removeSpeaker(sessionDeviceId, speakerId) {
+    return this.api.httpRequestCall(
+      `api/v1/devices/${sessionDeviceId}/speakers/${speakerId}`,
+      "DELETE"
+    );
+  }
+
   updateCollaborator(speakerId, alias) {
     const body = {
       alias: alias,

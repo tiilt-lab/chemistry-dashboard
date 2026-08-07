@@ -29,6 +29,16 @@ def create_speaker(session_device_id, **kwargs):
     return json_response(speaker.json())
 
 
+# Remove a mis-added slot from the fingerprint screen. Same trust level as
+# create/rename; database.delete_speaker refuses once the speaker has data.
+@api_routes.route('/api/v1/devices/<int:session_device_id>/speakers/<int:speaker_id>', methods=['DELETE'])
+def delete_speaker(session_device_id, speaker_id, **kwargs):
+    ok, message = database.delete_speaker(session_device_id, speaker_id)
+    if not ok:
+        return json_response({'message': message}, 400)
+    return json_response({'deleted': speaker_id})
+
+
 @api_routes.route('/api/speakers/<int:speaker_id>', methods=['POST'])
 def update_speaker(speaker_id, **kwargs):
     alias = request.json.get('alias', None)

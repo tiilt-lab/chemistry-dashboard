@@ -759,6 +759,24 @@ def create_byod_session_device(passcode, name, collaborators):
           db.session.commit()
         return True, session_device, speakers
 
+def delete_speaker(session_device_id, speaker_id):
+    # Same open trust level as create/rename (the pod client is not signed
+    # in), so only ever data-free slots: once anything references the
+    # speaker, deletion is refused.
+    speaker = get_speakers(id=speaker_id)
+    if not speaker or speaker.session_device_id != session_device_id:
+        return False, 'Speaker not found.'
+    has_data = (
+        db.session.query(Transcript).filter(Transcript.session_device_id == session_device_id, Transcript.speaker_id == speaker_id).first()
+        or db.session.query(SpeakerTranscriptMetrics).filter(SpeakerTranscriptMetrics.speaker_id == speaker_id).first()
+        or db.session.query(SpeakerHrMetrics).filter(SpeakerHrMetrics.speaker_id == speaker_id).first()
+    )
+    if has_data:
+        return False, 'This speaker already has recorded data.'
+    db.session.delete(speaker)
+    db.session.commit()
+    return True, None
+
 def create_session_device(session_id, name):
     session = get_sessions(id=session_id, active=True)
     if not session:

@@ -18,23 +18,21 @@ import { TranscriptsComponentClient } from "../transcripts/transcripts-component
 import style from "./byod-join.module.css"
 import style2 from "../pod-details/pod.module.css"
 import style3 from "../manage-keyword-lists/manage-keyword-lists.module.css"
-import style4 from "../components/context-menu/context-menu.module.css"
 import style5 from "../sessions/sessions.module.css"
 import MicIcon from "@icons/Mic"
 import Check from "@icons/Check"
 import Chevron from "@icons/Chevron"
 
 import { InlineDeviceCheck } from "./device-check"
-import { AppContextMenu } from "../components/context-menu/context-menu-component"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
 
 const fieldLabel = "mb-1.5 block text-left text-sm font-semibold text-tiilt-ink"
 
 // Speaker name as an inline editor: click the name to type. Committing
 // (Enter/blur) a name that matches an enrolled profile attaches that
-// profile's saved fingerprint via the same chain as the "Saved
-// Fingerprint" menu option; other names just rename. The card's single
-// left-side status icon (check/X) is the only fingerprint indicator.
+// profile's saved fingerprint automatically; other names just rename. The
+// card's single left-side status icon (check/X) is the only fingerprint
+// indicator.
 function SpeakerNameEditor({ speaker, onCommit }) {
     const [editing, setEditing] = useState(false)
     const [value, setValue] = useState("")
@@ -187,6 +185,51 @@ function GroupSizeQuickAdd({ visible, onAdd }) {
                 onClick={() => onAdd(count)}
             >
                 Add
+            </button>
+        </div>
+    )
+}
+
+// "Add speaker" dialog body. Controlled input (no getElementById); Enter
+// adds, same as the button. An empty name still adds an unnamed slot
+// ("Speaker N"), matching the quick-add path.
+function AddSpeakerForm({ onAdd, onClose }) {
+    const [name, setName] = useState("")
+    const add = () => {
+        onAdd(name)
+        onClose()
+    }
+    return (
+        <div
+            className={style5["dialog-window"]}
+            style={{ minWidth: "min(20rem, 76vw)" }}
+        >
+            <div className={style5["dialog-heading"]}>Add speaker</div>
+            <input
+                aria-label="Speaker name"
+                autoFocus
+                className={style5["field-input"]}
+                maxLength={64}
+                placeholder="Username or name"
+                autoCapitalize="off"
+                spellCheck="false"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter") add()
+                }}
+            />
+            <div className="px-2 text-left text-xs leading-relaxed text-tiilt-muted">
+                Enrolled speakers: enter the username they enrolled with and
+                their saved voice fingerprint attaches automatically. Anyone
+                else is added by name and records one with their card&apos;s
+                Record button.
+            </div>
+            <button className={style5["basic-button"]} onClick={add}>
+                Add
+            </button>
+            <button className={style5["cancel-button"]} onClick={onClose}>
+                Cancel
             </button>
         </div>
     )
@@ -418,13 +461,14 @@ function ByodJoinPage(props) {
                                                 for each speaker
                                             </div>
                                             <div className="my-1.5 font-sans text-xs/normal font-normal text-tiilt-muted">
-                                                Each speaker must record and
-                                                temporarily save a short 3-5
-                                                second sample of their voice.
-                                                This is used to track each
-                                                speaker's metrics throughout a
-                                                session and is deleted upon
-                                                ending the session.
+                                                Each speaker records a short
+                                                3-5 second voice sample, used
+                                                to track their metrics during
+                                                the session and deleted when
+                                                it ends. Enrolled speakers can
+                                                skip recording — typing their
+                                                username as the name attaches
+                                                their saved fingerprint.
                                             </div>
                                         </div>
                                         <div className="mt-2 h-fit w-[300px] sm:w-[400px] lg:w-3xl">
@@ -501,14 +545,6 @@ function ByodJoinPage(props) {
                                                                 ✕
                                                             </span>
                                                         )}
-                                                        <div
-                                                            className={
-                                                                style3[
-                                                                "click-mask"
-                                                                ]
-                                                            }
-                                                            aria-hidden="true"
-                                                        ></div>
                                                         <div className="flex grow flex-col text-center">
                                                             <SpeakerNameEditor
                                                                 speaker={speaker}
@@ -523,53 +559,43 @@ function ByodJoinPage(props) {
                                                                 onUnassign={props.unassignPolarSensor}
                                                             />
                                                         </div>
-                                                        <AppContextMenu
-                                                            label={`Options for ${speaker.alias}`}
-                                                            className={
-                                                                style3[
-                                                                "keyword-list-options"
-                                                                ]
-                                                            }
-                                                        >
+                                                        <div className="flex flex-none flex-col items-center gap-0.5">
                                                             <button
-                                                                role="menuitem"
-                                                                className={`${style4["menu-item"]} ${style4["black"]}`}
-                                                                onClick={() => {
+                                                                type="button"
+                                                                title={
+                                                                    speaker.fingerprinted
+                                                                        ? "Re-record this speaker's fingerprint"
+                                                                        : "Record this speaker's fingerprint"
+                                                                }
+                                                                className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-tiilt-line px-2.5 py-1.5 text-sm font-semibold text-tiilt-ink transition hover:bg-tiilt-ground"
+                                                                onClick={() =>
                                                                     props.openForms(
                                                                         "fingerprintAudio",
                                                                         speaker,
                                                                     )
-                                                                }}
+                                                                }
                                                             >
+                                                                <MicIcon
+                                                                    width={11}
+                                                                    height={17}
+                                                                    fill="currentColor"
+                                                                />
                                                                 Record
-                                                                Fingerprint
                                                             </button>
                                                             <button
-                                                                role="menuitem"
-                                                                className={`${style4["menu-item"]} ${style4["black"]}`}
-                                                                onClick={() => {
-                                                                    props.openForms(
-                                                                        "renameAlias",
+                                                                type="button"
+                                                                title="Remove this speaker"
+                                                                aria-label={`Remove ${speaker.alias}`}
+                                                                className="cursor-pointer rounded px-1.5 text-xs font-medium text-tiilt-muted transition hover:text-tiilt-danger"
+                                                                onClick={() =>
+                                                                    props.removeSpeakerSlot(
                                                                         speaker,
                                                                     )
-                                                                }}
+                                                                }
                                                             >
-                                                                Rename Alias
+                                                                Remove
                                                             </button>
-
-                                                            <button
-                                                                role="menuitem"
-                                                                className={`${style4["menu-item"]} ${style4["black"]}`}
-                                                                onClick={() => {
-                                                                    props.openForms(
-                                                                        "savedAudioVideoFingerprint",
-                                                                        speaker,
-                                                                    )
-                                                                }}
-                                                            >
-                                                                Saved Fingerprint
-                                                            </button>
-                                                        </AppContextMenu>
+                                                        </div>
                                                     </div>
                                                 ),
                                             )}
@@ -914,128 +940,11 @@ function ByodJoinPage(props) {
                             </button>
                         </div>
                     )) ||
-                    (props.currentForm === "renameAlias" && (
-                        <div
-                            className={style5["dialog-window"]}
-                            style={{ minWidth: "min(20rem, 76vw)" }}
-                        >
-                            <div className={style5["dialog-heading"]}>
-                                Update Alias Name:
-                            </div>
-                            <input
-                                aria-label="Alias name"
-                                id="txtAlias"
-                                defaultValue={props.selectedSpeaker.alias}
-                                className={style5["field-input"]}
-                                maxLength="64"
-                            />
-                            <div>
-                                {props.invalidName
-                                    ? "Your proposed rename is invalid."
-                                    : ""}
-                            </div>
-                            <button
-                                className={style5["basic-button"]}
-                                onClick={() => {
-                                    props.changeAliasName(
-                                        document.getElementById("txtAlias")
-                                            .value,
-                                    )
-                                }}
-                            >
-                                {" "}
-                                Confirm
-                            </button>
-                            <button
-                                className={style5["cancel-button"]}
-                                onClick={props.closeDialog}
-                            >
-                                {" "}
-                                Cancel
-                            </button>
-                        </div>
-                    )) ||
                     (props.currentForm === "addSpeaker" && (
-                        <div
-                            className={style5["dialog-window"]}
-                            style={{ minWidth: "min(20rem, 76vw)" }}
-                        >
-                            <div className={style5["dialog-heading"]}>
-                                Add speaker
-                            </div>
-                            <input
-                                aria-label="Speaker name"
-                                id="newspeakername"
-                                className={style5["field-input"]}
-                                maxLength="64"
-                                placeholder="Username or name"
-                                autoCapitalize="off"
-                                spellCheck="false"
-                            />
-                            <div className="px-2 text-left text-xs leading-relaxed text-tiilt-muted">
-                                Enrolled speakers: enter the username they
-                                enrolled with and their saved voice
-                                fingerprint attaches automatically. Anyone
-                                else is added by name and can record one
-                                from the speaker menu.
-                            </div>
-                            <button
-                                className={style5["basic-button"]}
-                                onClick={() => {
-                                    props.addSpeakerSlot(
-                                        document.getElementById("newspeakername")
-                                            .value,
-                                    )
-                                    props.closeDialog()
-                                }}
-                            >
-                                Add
-                            </button>
-                            <button
-                                className={style5["cancel-button"]}
-                                onClick={props.closeDialog}
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    )) ||
-                    (props.currentForm === "savedAudioVideoFingerprint" && (
-                        <div
-                            className={style5["dialog-window"]}
-                            style={{ minWidth: "min(20rem, 76vw)" }}
-                        >
-                            <div className={style5["dialog-heading"]}>
-                                Enter Username:
-                            </div>
-                            <input
-                                aria-label="Username"
-                                id="registeredusername"
-                                className={style5["field-input"]}
-                                maxLength="64"
-                            />
-                            <div className={props.savedFingerprintError ? dlgError : ""}>
-                                {props.savedFingerprintError}
-                            </div>
-                            <button
-                                className={style5["basic-button"]}
-                                onClick={() => {
-                                    props.startProcessingSavedSpeakerFingerprint(
-                                        document.getElementById("registeredusername")
-                                            .value,
-                                    )
-                                }}
-                            >
-                                {" "}
-                                Confirm
-                            </button>
-                            <button
-                                className={style5["cancel-button"]}
-                                onClick={props.closeDialog}
-                            >
-                                {" "}
-                                Cancel
-                            </button>
-                        </div>
+                        <AddSpeakerForm
+                            onAdd={props.addSpeakerSlot}
+                            onClose={props.closeDialog}
+                        />
                     ))
 
                 }
