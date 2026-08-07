@@ -12,7 +12,7 @@ import logging
 import database
 import json
 import watchers
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from handlers import session_handler
 import wrappers
 import config as cf
@@ -636,10 +636,15 @@ def session_device_transcripts_for_client(device_id, **kwargs):
     return json_response([transcript.json() for transcript in transcripts])
 
 
-# Shared assembly for the transcript+metrics endpoints below.
+# Shared assembly for the transcript+metrics endpoints below. One batched
+# query instead of one per transcript.
 def _with_speaker_metrics(transcripts):
+    metrics_by_transcript = {}
+    if transcripts:
+        for m in database.get_speaker_transcript_metrics(transcript_ids=[t.id for t in transcripts]):
+            metrics_by_transcript.setdefault(m.transcript_id, []).append(m.json())
     return [{'transcript': transcript.json(),
-             'speaker_metrics': [m.json() for m in database.get_speaker_transcript_metrics(transcript_id=transcript.id)]}
+             'speaker_metrics': metrics_by_transcript.get(transcript.id, [])}
             for transcript in transcripts]
 
 
@@ -834,7 +839,7 @@ def add_device_heart_rate(device_id, **kwargs):
     parent_session = database.get_sessions(id=session_device.session_id)
     session_start_ms = parent_session.creation_date.timestamp() * 1000.0
     try:
-        skew_ms = datetime.utcnow().timestamp() * 1000.0 - float(content.get('client_now'))
+        skew_ms = datetime.now(timezone.utc).replace(tzinfo=None).timestamp() * 1000.0 - float(content.get('client_now'))
     except (TypeError, ValueError):
         skew_ms = 0.0
     rows = []
@@ -909,8 +914,7 @@ def upload_video_session(user, **kwargs):
     # old hasattr(database, 'update_session_status') guard referenced a
     # function that never existed, silently leaving every uploaded session
     # "live" (no end_date, redis config present).
-    from datetime import datetime as _dt
-    session_obj.end_date = _dt.utcnow()
+    session_obj.end_date = datetime.now(timezone.utc).replace(tzinfo=None)
     database.save_changes()
     try:
         from redis_helper import RedisSessions as _RS

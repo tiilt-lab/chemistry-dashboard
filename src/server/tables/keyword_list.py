@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 from .keyword_list_item import KeywordListItem
 from utility import verify_characters
 
@@ -20,7 +20,7 @@ class KeywordList(db.Model):
 
     def __init__(self, owner_id):
         self.owner_id = owner_id
-        self.creation_date = datetime.utcnow()
+        self.creation_date = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def get_name(self):
         if not self.name:
@@ -39,14 +39,14 @@ class KeywordList(db.Model):
     @staticmethod
     def verify_fields(name=None, keywords=None):
         message = None
-        if name != None:
+        if name is not None:
             if len(name) > KeywordList.NAME_MAX_LENGTH:
                 message = 'Name must not exceed {0} characters.'.format(KeywordList.NAME_MAX_LENGTH)
             if not verify_characters(name, KeywordList.NAME_CHARS):
                 message = 'Invalid characters in list name.'
-        if keywords != None:
+        if keywords is not None:
             for keyword in keywords:
                 valid, keyword_message = KeywordListItem.verify_fields(keyword=keyword)
                 if not valid:
                     message = keyword_message
-        return message == None, message
+        return message is None, message

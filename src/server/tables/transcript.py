@@ -85,4 +85,4 @@ class Transcript(db.Model):
     def verify_fields(name=None):
         message = None
         # Not implemented
-        return message == None, message
+        return message is None, message

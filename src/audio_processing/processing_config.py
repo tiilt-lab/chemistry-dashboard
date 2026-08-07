@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from redis_helper import RedisSessions
 import json
 import logging
@@ -83,7 +83,7 @@ class ProcessingConfig:
             RedisSessions.get_session_config(session_key)
             session_config = json.loads(RedisSessions.get_session_config(session_key))
             server_start = datetime.strptime(session_config.get('server_start', None), "%Y-%m-%d %H:%M:%S")
-            start_offset = max((datetime.utcnow() - server_start).total_seconds() - offset, 0.0)
+            start_offset = max((datetime.now(timezone.utc).replace(tzinfo=None) - server_start).total_seconds() - offset, 0.0)
             transcribe = session_config.get('transcribe', True)
             features = session_config.get('features', False)
             keywords = session_config.get('keywords', [])

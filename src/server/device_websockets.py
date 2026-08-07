@@ -33,7 +33,7 @@ class ConnectionManager:
 
     def remove_connection(self, device_id, socket):
         match = next((conn for conn in self.connections if conn['id'] == device_id and conn['socket'] == socket), None)
-        if match != None:
+        if match is not None:
             from app import app
             with app.app_context():
                 database.set_device_connected(device_id, False)
@@ -83,7 +83,7 @@ class Job:
         self.response_data = data
 
     def is_complete(self):
-        return self.response_time != None
+        return self.response_time is not None
 
     def is_timed_out(self):
         return time.time() > self.request_time + self.timeout

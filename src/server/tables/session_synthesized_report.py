@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 from utility import verify_characters
 from sqlalchemy.dialects.mysql import LONGTEXT
 import hashlib
@@ -27,7 +27,7 @@ class SessionSynthesizedReport(db.Model):
         self.session_id = session_id
         self.session_device_id = session_device_id
         self.synthesized_feedback = synthesized_feedback
-        self.creation_date = datetime.utcnow()
+        self.creation_date = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def json(self):
         return dict(

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from redis_helper import RedisSessions
 import callbacks
 import json
@@ -74,7 +74,7 @@ class ProcessingConfig:
             if session_key:
                 session_config = json.loads(callbacks.get_redis_session_config(session_key))
                 server_start = datetime.strptime(session_config.get('server_start', None), "%Y-%m-%d %H:%M:%S")
-                start_offset = max((datetime.utcnow() - server_start).total_seconds() - offset, 0.0)
+                start_offset = max((datetime.now(timezone.utc).replace(tzinfo=None) - server_start).total_seconds() - offset, 0.0)
             elif not session_key and source == "posthoc processing":
                 server_start = datetime.strptime(data.get('server_start', None), "%Y-%m-%dT%H:%M:%S.%fZ")
                 convert_off_set = datetime.strptime(data.get('off_set_date', None), "%a %b %d %H:%M:%S %Y")
@@ -88,5 +88,5 @@ class ProcessingConfig:
             return False, "could not verify auth_key"
 
     def is_valid_key(self):
-        return callbacks.get_redis_session_key(self.auth_key) != None
+        return callbacks.get_redis_session_key(self.auth_key) is not None
 

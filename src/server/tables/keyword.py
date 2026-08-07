@@ -25,7 +25,7 @@ class Keyword(db.Model):
     @staticmethod
     def verify_fields(keyword=None):
         message = None
-        if keyword != None:
+        if keyword is not None:
             if len(keyword) > Keyword.KEYWORD_MAX_LENGTH:
                 message = 'Keyword must not exceed {0} characters.'.format(Keyword.KEYWORD_MAX_LENGTH)
-        return message == None, message
+        return message is None, message

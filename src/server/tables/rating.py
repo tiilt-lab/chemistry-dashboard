@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 from utility import verify_characters
 import hashlib
 import os
@@ -29,7 +29,7 @@ class Rating(db.Model):
         self.raterid = raterid
         self.evaluation_category = evaluation_category
         self.response = response
-        self.creation_date = datetime.utcnow()
+        self.creation_date = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def json(self):
         return dict(

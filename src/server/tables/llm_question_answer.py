@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 from utility import verify_characters
 import hashlib
 import os
@@ -32,7 +32,7 @@ class LLMQuestionAnswer(db.Model):
         self.default_question_id = default_question_id
         self.question = question
         self.answer = answer
-        self.creation_date = datetime.utcnow()
+        self.creation_date = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def json(self):
         return dict(

@@ -46,18 +46,18 @@ class Device(db.Model):
     @staticmethod
     def verify_fields(name=None, mac_address=None, ip_address=None):
         message = None
-        if name != None:
+        if name is not None:
             if len(name) > Device.NAME_MAX_LENGTH:
                 message = 'Device name must not exceed {0} characters.'.format(Device.NAME_MAX_LENGTH)
             if not verify_characters(name, Device.NAME_CHARS):
                 message = 'Invalid characters in device name.'
-        if mac_address != None:
+        if mac_address is not None:
             if len(mac_address) > Device.MAC_MAX_LENGTH:
                 message = 'Device mac address must not exceed {0} characters.'.format(Device.MAC_MAX_LENGTH)
-            elif mac_address == None:
+            elif mac_address is None:
                 message = 'Device mac address cannot be empty.'
-        if ip_address != None:
+        if ip_address is not None:
             if len(ip_address) > Device.IP_MAX_LENGTH:
                 message = 'Device ip address must not exceed {0} characters.'.format(Device.IP_MAX_LENGTH)
-        return message == None, message
+        return message is None, message
 

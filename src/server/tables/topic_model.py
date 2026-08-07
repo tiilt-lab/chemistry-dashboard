@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 from utility import verify_characters
 
 class TopicModel(db.Model):
@@ -18,7 +18,7 @@ class TopicModel(db.Model):
 
     def __init__(self, owner_id, name, summary):
         self.owner_id = owner_id
-        self.creation_date = datetime.utcnow()
+        self.creation_date = datetime.now(timezone.utc).replace(tzinfo=None)
         self.name = name
         self.summary = summary
 
@@ -39,9 +39,9 @@ class TopicModel(db.Model):
     @staticmethod
     def verify_fields(name=None):
         message = None
-        if name != None:
+        if name is not None:
             if len(name) > TopicModel.NAME_MAX_LENGTH:
                 message = 'Name must not exceed {0} characters.'.format(TopicModel.NAME_MAX_LENGTH)
             if not verify_characters(name, TopicModel.NAME_CHARS):
                 message = 'Invalid characters in list name.'
-        return message == None, message
+        return message is None, message

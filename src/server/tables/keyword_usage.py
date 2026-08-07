@@ -34,10 +34,10 @@ class KeywordUsage(db.Model):
     @staticmethod
     def verify_fields(word=None, keyword=None):
         message = None
-        if word != None:
+        if word is not None:
             if len(word) > KeywordUsage.WORD_MAX_LENGTH:
                 message = 'Word must not exceed {0} characters.'.format(KeywordUsage.WORD_MAX_LENGTH)
-        if keyword != None:
+        if keyword is not None:
             if len(keyword) > KeywordUsage.KEYWORD_MAX_LENGTH:
                 message = 'Keyword must not exceed {0} characters.'.format(KeywordUsage.KEYWORD_MAX_LENGTH)
-        return message == None, message
+        return message is None, message

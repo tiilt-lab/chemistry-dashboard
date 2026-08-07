@@ -65,7 +65,7 @@ def save_topic_model(user, **kwargs):
     name=new_name)
   if not valid:
     return json_response({'message': message}, 400)
-  if new_name != None:
+  if new_name is not None:
     new_topic_model = database.add_topic_model(user['id'], new_name, summary)
     file_name = "{}_{}".format(new_topic_model.owner_id, new_topic_model.id)
     os.rename(os.path.join("topicModels", "tempModel"), os.path.join("topicModels", file_name))

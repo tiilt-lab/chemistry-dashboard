@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 from utility import verify_characters
 import hashlib
 import os
@@ -30,7 +30,7 @@ class Student(db.Model):
         self.firstname = firstname
         self.username = username
         self.biometric_captured = biometric_captured
-        self.creation_date = datetime.utcnow()
+        self.creation_date = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def json(self):
         return dict(
@@ -45,14 +45,14 @@ class Student(db.Model):
     @staticmethod
     def verify_fields(lastname=None,firstname=None, username=None):
         message = None
-        if lastname != None:
+        if lastname is not None:
             if len(lastname) > Student.LAST_NAME_MAX_LENGTH:
                 message = 'Last Name must not exceed {0} characters.'.format(Student.LAST_NAME_MAX_LENGTH)
-        if firstname != None:
+        if firstname is not None:
             if len(firstname) > Student.FIRST_NAME_MAX_LENGTH:
                 message = 'Frst Name must not exceed {0} characters.'.format(Student.FIRST_NAME_MAX_LENGTH)
 
-        if username != None:
+        if username is not None:
             if len(username) > Student.USER_NAME_MAX_LENGTH:
                 message = 'Username must not exceed {0} characters.'.format(Student.USER_NAME_MAX_LENGTH)
-        return message == None, message
+        return message is None, message

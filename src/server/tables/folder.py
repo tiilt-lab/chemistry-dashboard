@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 from utility import verify_characters
 
 
@@ -21,7 +21,7 @@ class Folder(db.Model):
         self.owner_id = owner_id
         self.name = name
         self.parent = parent
-        self.creation_date = datetime.utcnow()
+        self.creation_date = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def json(self):
         return dict(
@@ -34,9 +34,9 @@ class Folder(db.Model):
     @staticmethod
     def verify_fields(name=None):
         message = None
-        if name != None:
+        if name is not None:
             if len(name) > Folder.NAME_MAX_LENGTH:
                 message = 'Name must not exceed {0} characters.'.format(Folder.NAME_MAX_LENGTH)
             if not verify_characters(name, Folder.NAME_CHARS):
                 message = 'Invalid characters in name.'
-        return message == None, message
+        return message is None, message

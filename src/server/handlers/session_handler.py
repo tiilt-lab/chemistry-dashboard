@@ -3,7 +3,7 @@ import logging
 import database
 import requests
 import socketio_helper
-from datetime import datetime
+from datetime import datetime, timezone
 from app import socketio
 import json
 from device_websockets import ConnectionManager
@@ -37,9 +37,9 @@ def end_session(session_id):
     session = database.get_sessions(id=session_id)
     if not session:
         return False, 'Session does not exist.'
-    if session.end_date != None:
+    if session.end_date is not None:
         return False, 'Session is already closed.'
-    session.end_date = datetime.utcnow()
+    session.end_date = datetime.now(timezone.utc).replace(tzinfo=None)
     database.save_changes()
     RedisSessions.delete_session(session.id)
     socketio_helper.update_session(session)
@@ -54,7 +54,7 @@ def end_session(session_id):
     database.save_changes()
 
     # Ping pod devices to stop session
-    devices_to_ping = database.get_devices(ids=[session_device.device_id for session_device in session_devices if session_device.device_id != None])
+    devices_to_ping = database.get_devices(ids=[session_device.device_id for session_device in session_devices if session_device.device_id is not None])
     for device in devices_to_ping:
         try:
             sent = ConnectionManager.instance.send_command(device.id, {'cmd': 'end'})

@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import hashlib
 import os
 import binascii
@@ -35,7 +35,7 @@ class APIClient(db.Model):
         new_token = hashlib.sha256(os.urandom(64)).hexdigest()
         token_hash = hashlib.pbkdf2_hmac('sha512', new_token.encode('utf-8'), salt_bytes, 100000)
         self.client_token_hash = binascii.hexlify(token_hash).decode('ascii')
-        self.expiration_date = datetime.utcnow() + timedelta(minutes=30)
+        self.expiration_date = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=30)
         return new_token
 
     def verify_secret(self, provided_secret):
@@ -48,11 +48,11 @@ class APIClient(db.Model):
         salt_bytes = self.salt.encode('ascii')
         token_hash = hashlib.pbkdf2_hmac('sha512', provided_token.encode('utf-8'), salt_bytes, 100000)
         token_hash = binascii.hexlify(token_hash).decode('ascii')
-        return token_hash == self.client_token_hash and datetime.utcnow() < self.expiration_date
+        return token_hash == self.client_token_hash and datetime.now(timezone.utc).replace(tzinfo=None) < self.expiration_date
 
     def json(self):
         return dict(
             client_id=self.client_id,
             user_id=self.user_id,
-            expiration_date= None if self.expiration_date == None else str(self.expiration_date) + ' UTC'
+            expiration_date= None if self.expiration_date is None else str(self.expiration_date) + ' UTC'
         )

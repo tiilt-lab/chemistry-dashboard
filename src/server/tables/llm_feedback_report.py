@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 from utility import verify_characters
 import hashlib
 import os
@@ -28,7 +28,7 @@ class LLMFeedbackReport(db.Model):
         self.session_device_id = session_device_id
         self.speaker_username = speaker_username
         self.feedback_analysis = feedback_analysis
-        self.creation_date = datetime.utcnow()
+        self.creation_date = datetime.now(timezone.utc).replace(tzinfo=None)
 
     def json(self):
         return dict(

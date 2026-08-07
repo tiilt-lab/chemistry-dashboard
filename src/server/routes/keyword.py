@@ -25,7 +25,7 @@ def add_keyword_list(user, **kwargs):
         name=new_name, keywords=new_keywords)
     if not valid:
         return json_response({'message': message}, 400)
-    if new_name != None or new_keywords != None:
+    if new_name is not None or new_keywords is not None:
         new_keyword_list = database.add_keyword_list(user['id'])
         new_keyword_list = database.update_keyword_list(
             new_keyword_list.id, new_name, new_keywords)
@@ -55,7 +55,7 @@ def update_keyword_list(keyword_list_id, **kwargs):
         name=new_name, keywords=new_keywords)
     if not valid:
         return json_response({'message': message}, 400)
-    if new_name != None or new_keywords != None:
+    if new_name is not None or new_keywords is not None:
         keyword_list = database.update_keyword_list(
             keyword_list_id, new_name, new_keywords)
         return json_response(keyword_list.json())

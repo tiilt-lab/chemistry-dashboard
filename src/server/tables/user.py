@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 from utility import verify_characters
 import hashlib
 import os
@@ -36,11 +36,11 @@ class User(db.Model):
         self.role = role
         self.salt = hashlib.sha256(os.urandom(60)).hexdigest()
         self.change_password = False
-        if password != None:
+        if password is not None:
             self.set_password(password, validate=False)
         else:
             self.reset_password(16)
-        self.creation_date = datetime.utcnow()
+        self.creation_date = datetime.now(timezone.utc).replace(tzinfo=None)
         self.locked = False
 
     def json(self):
@@ -52,7 +52,7 @@ class User(db.Model):
             last_login=self.last_login,
             locked=self.locked,
             change_password=self.change_password,
-            api_access=(self.api_client != None)
+            api_access=(self.api_client is not None)
         )
 
     def verify_password(self, provided_password):
@@ -105,12 +105,12 @@ class User(db.Model):
     @staticmethod
     def verify_fields(email=None, role=None):
         message = None
-        if email != None:
+        if email is not None:
             if len(email) > User.EMAIL_MAX_LENGTH:
                 message = 'Username must not exceed {0} characters.'.format(User.EMAIL_MAX_LENGTH)
             if not verify_characters(email, User.EMAIL_CHARS):
                 message = 'Invalid characters in email.'
-        if role != None:
+        if role is not None:
             if not role in ['user', 'admin', 'super']:
                 message = 'Invalid role.'
-        return message == None, message
+        return message is None, message

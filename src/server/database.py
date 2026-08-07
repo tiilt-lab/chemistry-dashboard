@@ -2,7 +2,7 @@ from app import db
 import re
 from sqlalchemy import and_, desc
 from sqlalchemy.sql.expression import func
-from datetime import datetime
+from datetime import datetime, timezone
 import random
 import passcode_words
 import logging
@@ -45,11 +45,11 @@ def close_session():
 
 def get_speakers(session_id=None, session_device_id=None, id = None):
     query = db.session.query(Speaker)
-    if session_id != None:
+    if session_id is not None:
         query = query.join(SessionDevice).filter(SessionDevice.session_id == session_id)
-    if session_device_id != None:
+    if session_device_id is not None:
         query = query.filter(Speaker.session_device_id == session_device_id)    
-    if id != None:
+    if id is not None:
         return query.filter(Speaker.id == id).first()
     
     return query.all()
@@ -178,17 +178,19 @@ def create_speaker(session_device_id, alias=''):
 # Speaker Transcript Metrics
 # -------------------------
 
-def get_speaker_transcript_metrics(id = None, speaker_id=None, transcript_id=None, session_device_id=None, session_id=None):
+def get_speaker_transcript_metrics(id = None, speaker_id=None, transcript_id=None, transcript_ids=None, session_device_id=None, session_id=None):
     query = db.session.query(SpeakerTranscriptMetrics)
-    if id != None:
+    if id is not None:
         return query.filter(SpeakerTranscriptMetrics.id == id).first()
-    if speaker_id != None:
+    if speaker_id is not None:
         query = query.filter(SpeakerTranscriptMetrics.speaker_id == speaker_id)
-    if transcript_id != None:
+    if transcript_id is not None:
         query = query.filter(SpeakerTranscriptMetrics.transcript_id == transcript_id)
-    if session_device_id != None:
+    if transcript_ids is not None:
+        query = query.filter(SpeakerTranscriptMetrics.transcript_id.in_(transcript_ids))
+    if session_device_id is not None:
         query = query.join(Transcript, SpeakerTranscriptMetrics.transcript_id == Transcript.id).filter(Transcript.session_device_id == session_device_id)
-    if session_id != None:
+    if session_id is not None:
         query = query.join(Transcript, SpeakerTranscriptMetrics.transcript_id == Transcript.id) \
                      .join(SessionDevice, Transcript.session_device_id == SessionDevice.id) \
                      .filter(SessionDevice.session_id == session_id)
@@ -206,26 +208,26 @@ def add_speaker_transcript_metrics(speaker_id, transcript_id, participation_scor
 
 def get_speaker_video_metrics(id = None, student_username=None, session_id=None, session_device_id=None):
     query = db.session.query(SpeakerVideoMetrics).order_by(SpeakerVideoMetrics.time_stamp.asc())
-    if session_id != None:
+    if session_id is not None:
         query = query.join(SessionDevice).filter(SessionDevice.session_id == session_id)
-    if id != None:
+    if id is not None:
         return query.filter(SpeakerVideoMetrics.id == id).first()
-    if student_username != None:
+    if student_username is not None:
         query = query.filter(SpeakerVideoMetrics.student_username == student_username)
-    if session_device_id != None:
+    if session_device_id is not None:
         query = query.filter(SpeakerVideoMetrics.session_device_id == session_device_id)
     return query.all()
 
 def get_speaker_video_metrics_by_session_alias(session_id=None, student_username=None,device_id=None):
     query = db.session.query(SpeakerVideoMetrics).order_by(SpeakerVideoMetrics.time_stamp.asc()) 
-    if session_id != None:
+    if session_id is not None:
         query = query.join(SessionDevice).filter(SpeakerVideoMetrics.session_device_id == SessionDevice.id)
         query = query.filter(SessionDevice.session_id == session_id) 
 
-    if student_username != None:
+    if student_username is not None:
         query = query.filter(SpeakerVideoMetrics.student_username == student_username)
 
-    if device_id != None:
+    if device_id is not None:
         query = query.filter(SpeakerVideoMetrics.session_device_id == device_id)
 
     return query.all()
@@ -242,13 +244,13 @@ def add_speaker_video_metrics(session_device_id,student_username, time_stamp, fa
 
 def get_speaker_hr_metrics(id=None, session_id=None, session_device_id=None, speaker_alias=None):
     query = db.session.query(SpeakerHrMetrics).order_by(SpeakerHrMetrics.time_stamp.asc())
-    if session_id != None:
+    if session_id is not None:
         query = query.join(SessionDevice).filter(SessionDevice.session_id == session_id)
-    if id != None:
+    if id is not None:
         return query.filter(SpeakerHrMetrics.id == id).first()
-    if speaker_alias != None:
+    if speaker_alias is not None:
         query = query.filter(SpeakerHrMetrics.speaker_alias == speaker_alias)
-    if session_device_id != None:
+    if session_device_id is not None:
         query = query.filter(SpeakerHrMetrics.session_device_id == session_device_id)
     return query.all()
 
@@ -273,7 +275,7 @@ def get_all_transcript_metrics_by_session(id = None, student_username=None, sess
     query = query.join(SpeakerTranscriptMetrics).filter((Transcript.id == SpeakerTranscriptMetrics.transcript_id) &
                                                         (Transcript.speaker_id == SpeakerTranscriptMetrics.speaker_id))
 
-    if session_device_id != None:
+    if session_device_id is not None:
         query = query.filter(Transcript.session_device_id == session_device_id) 
 
     if speaker_id != -1:
@@ -289,7 +291,7 @@ def get_all_transcript_metrics_by_session_by_timeline(id = None, student_usernam
     query = query.join(SpeakerTranscriptMetrics).filter((Transcript.id == SpeakerTranscriptMetrics.transcript_id) &
                                                         (Transcript.speaker_id == SpeakerTranscriptMetrics.speaker_id))
 
-    if session_device_id != None:
+    if session_device_id is not None:
         query = query.filter(Transcript.session_device_id == session_device_id) 
      
     query = query.filter(Transcript.speaker_id != -1)
@@ -303,7 +305,7 @@ def get_all_metrics_by_session(id = None, student_username=None, session_id=None
     query = query.join(SpeakerVideoMetrics,(Transcript.start_time == SpeakerVideoMetrics.time_stamp)&
                        (Transcript.speaker_tag == SpeakerVideoMetrics.student_username))
 
-    if session_device_id != None:
+    if session_device_id is not None:
         query = query.filter(Transcript.session_device_id == session_device_id) 
 
     query = query.distinct()
@@ -313,7 +315,7 @@ def get_all_metrics_by_session(id = None, student_username=None, session_id=None
 def get_video_metrics_by_session(id = None, student_username=None, session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
     query = db.session.query(SpeakerVideoMetrics)
 
-    if session_device_id != None:
+    if session_device_id is not None:
         query = query.filter(SpeakerVideoMetrics.session_device_id == session_device_id) 
     query = query.distinct().order_by(SpeakerVideoMetrics.student_username.asc())
     query = query.order_by(SpeakerVideoMetrics.time_stamp.asc())
@@ -324,11 +326,11 @@ def get_video_metrics_by_session(id = None, student_username=None, session_id=No
 
 def get_topic_models(owner_id = None, id = None, name = None):
   query = db.session.query(TopicModel)
-  if owner_id != None:
+  if owner_id is not None:
       query = query.filter(TopicModel.owner_id == owner_id)
-  if id != None:
+  if id is not None:
       return query.filter(TopicModel.id == id).first()
-  if name != None:
+  if name is not None:
       return query.filter(TopicModel.name == name).first()
   return query.all()
 
@@ -363,7 +365,7 @@ def get_keyword_usages(session_id=None, session_device_id=None, start_time=0, en
     # joins, the same latent-bug class get_transcripts already had fixed.
     query = db.session.query(KeywordUsage).\
         join(Transcript, Transcript.id == KeywordUsage.transcript_id)
-    if session_id != None:
+    if session_id is not None:
         query = query.join(SessionDevice, Transcript.session_device_id == SessionDevice.id).\
             filter(SessionDevice.session_id == session_id)
     if session_device_id:
@@ -380,11 +382,11 @@ def get_keyword_usages(session_id=None, session_device_id=None, start_time=0, en
 
 def get_keyword_lists(id=None, name=None, owner_id=None):
     query = db.session.query(KeywordList)
-    if owner_id != None:
+    if owner_id is not None:
         query = query.filter(KeywordList.owner_id == owner_id)
-    if id != None:
+    if id is not None:
         return query.filter(KeywordList.id == id).first()
-    if name != None:
+    if name is not None:
         return query.filter(KeywordList.name == name).first()
     return query.all()
 
@@ -397,9 +399,9 @@ def add_keyword_list(user_id):
 def update_keyword_list(keyword_list_id, name=None, keywords=None):
     keyword_list = get_keyword_lists(id=keyword_list_id)
     if keyword_list:
-        if name != None:
+        if name is not None:
             keyword_list.name = name
-        if keywords != None:
+        if keywords is not None:
             db.session.query(KeywordListItem).filter(KeywordListItem.keyword_list_id == keyword_list_id).delete()
             for keyword in keywords:
                 add_keyword_list_item(keyword_list_id, keyword)
@@ -422,7 +424,7 @@ def get_keyword_list_item(keyword_list_id, keyword):
 
 def get_keyword_list_items(keyword_list_id, owner_id=None):
     query = db.session.query(KeywordListItem).filter(KeywordListItem.keyword_list_id == keyword_list_id)
-    if owner_id != None:
+    if owner_id is not None:
         query = query.filter(KeywordListItem.keyword_list_id == KeywordList.id).filter(KeywordList.owner_id == owner_id)
     return query.all()
 
@@ -442,31 +444,31 @@ def add_keyword_list_item(keyword_list_id, keyword):
 
 def get_devices(id=None, ids=None, ip=None, mac_addr=None, archived=None, connected=None, in_use=None, is_pod=None):
     query = db.session.query(Device)
-    if is_pod != None:
+    if is_pod is not None:
         query = query.filter(Device.is_pod == is_pod)
-    if connected != None:
+    if connected is not None:
         query = query.filter(Device.connected == connected)
-    if archived != None:
+    if archived is not None:
         query = query.filter(Device.archived == archived)
-    if in_use != None:
+    if in_use is not None:
         device_ids_in_session = [Device.id for Device in get_devices_in_session()]
         if in_use:
             query = query.filter(Device.id.in_(device_ids_in_session))
         else:
             query = query.filter(Device.id.notin_(device_ids_in_session))
-    if ids != None:
+    if ids is not None:
         query = query.filter(Device.id.in_(ids))
-    if ip != None:
+    if ip is not None:
         return query.filter(Device.ip_address == ip).first()
-    if id != None:
+    if id is not None:
         return query.filter(Device.id == id).first()
-    if mac_addr != None:
+    if mac_addr is not None:
         return query.filter(Device.mac_address == mac_addr).first()
     return query.all()
 
 def get_device_active_session_device(device_id):
     return db.session.query(SessionDevice).\
-        filter(Session.end_date == None).\
+        filter(Session.end_date.is_(None)).\
         filter(Session.id == SessionDevice.session_id).\
         filter(SessionDevice.removed == False).\
         filter(SessionDevice.device_id == device_id).first()
@@ -504,10 +506,10 @@ def edit_device(deivce_id, name=None, connected=None):
     device = get_devices(id=deivce_id)
     if device:
         db_change = False
-        if name != None and name != device.name:
+        if name is not None and name != device.name:
             device.name = name
             db_change = True
-        if connected != None and connected != device.connected:
+        if connected is not None and connected != device.connected:
             device.connected = connected
             db_change = True
         if db_change:
@@ -530,17 +532,17 @@ def get_devices_in_session():
 
 def get_sessions(id=None, owner_id=None, active=None, folder_ids=None, passcode=None, first=False):
     query = db.session.query(Session).order_by(Session.creation_date.desc())
-    if owner_id != None:
+    if owner_id is not None:
         query = query.filter(Session.owner_id == owner_id)
     if active == True:
-        query = query.filter(Session.end_date == None)
+        query = query.filter(Session.end_date.is_(None))
     if active == False:
-        query = query.filter(Session.end_date != None)
-    if passcode != None:
+        query = query.filter(Session.end_date.is_not(None))
+    if passcode is not None:
         query = query.filter(Session.passcode == passcode)
-    if folder_ids != None:
+    if folder_ids is not None:
         query = query.filter(Session.folder.in_(folder_ids))
-    if id != None:
+    if id is not None:
         return query.filter(Session.id == id).first()
     if first:
         return query.first()
@@ -551,7 +553,7 @@ def get_Session_by_alias(alias=None):
     query = query.join(SessionDevice).filter(SessionDevice.session_id == Session.id)
     query = query.join(Speaker).filter(Speaker.session_device_id == SessionDevice.id)
 
-    if alias != None:
+    if alias is not None:
         query = query.filter(Speaker.alias == alias) 
 
     query = query.distinct().order_by(Session.creation_date.desc())
@@ -656,25 +658,25 @@ def generate_session_passcode(session_id):
 
 def get_session_devices(id=None, session_id=None, device_id=None, name=None, processing_key=None, connected=None, in_session=None, first=None):
     query = db.session.query(SessionDevice)
-    if session_id != None:
+    if session_id is not None:
         query = query.filter(SessionDevice.session_id == session_id)
-    if device_id != None:
+    if device_id is not None:
         query = query.filter(SessionDevice.device_id == device_id)
-    if in_session != None:
+    if in_session is not None:
         query = query.filter(SessionDevice.session_id == Session.id)
         if in_session:
-            query = query.filter(Session.end_date == None)
+            query = query.filter(Session.end_date.is_(None))
         else:
-            query = query.filter(Session.end_date != None)
-    if name != None:
+            query = query.filter(Session.end_date.is_not(None))
+    if name is not None:
         query = query.filter(SessionDevice.name == name)
-    if connected != None:
+    if connected is not None:
         query = query.filter(SessionDevice.connected == connected)
-    if processing_key != None:
+    if processing_key is not None:
         return query.filter(SessionDevice.processing_key == processing_key).first()
-    if id != None:
+    if id is not None:
         return query.filter(SessionDevice.id == id).first()
-    if first != None:
+    if first is not None:
         return query.first()
     return query.all()
 
@@ -683,7 +685,7 @@ def get_Session_device_by_alias(session_id=None,alias=None):
     query = query.join(Speaker).filter(Speaker.session_device_id == SessionDevice.id)
     if session_id!=None:
         query = query.filter(SessionDevice.session_id == session_id)
-    if alias != None:
+    if alias is not None:
         query = query.filter(Speaker.alias == alias) 
     # query = query.filter(SessionDevice.connected == False)
     query = query.distinct()
@@ -848,12 +850,12 @@ def set_speaker_tag(transcript, tag):
 
 def get_transcripts(session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
     query = db.session.query(Transcript).order_by(Transcript.start_time.asc())
-    if session_id != None:
+    if session_id is not None:
         # Join is required: filtering on SessionDevice without it produces a
         # cartesian product (every transcript x every device in the session).
         query = query.join(SessionDevice, Transcript.session_device_id == SessionDevice.id)
         query = query.filter(SessionDevice.session_id == session_id)
-    if session_device_id != None:
+    if session_device_id is not None:
         query = query.filter(Transcript.session_device_id == session_device_id)
     if start_time > 0:
         query = query.filter(Transcript.start_time >= start_time)
@@ -866,16 +868,16 @@ def get_transcripts(session_id=None, session_device_id=None, start_time=0, end_t
 
 def get_transcripts_by_session_alias(session_id=None, speaker_tag=None,device_id = None):
     query = db.session.query(Transcript).order_by(Transcript.start_time.asc()) 
-    if session_id != None:
+    if session_id is not None:
         query = query.join(SessionDevice).filter(Transcript.session_device_id == SessionDevice.id)
         query = query.filter(SessionDevice.session_id == session_id) 
 
     # Plain filters — the argless .join() this used to chain crashes on
     # SQLAlchemy 2 (join() requires a target) and never added anything.
-    if speaker_tag != None:
+    if speaker_tag is not None:
         query = query.filter(Transcript.speaker_tag == speaker_tag)
 
-    if device_id != None:
+    if device_id is not None:
         query = query.filter(Transcript.session_device_id == device_id)
 
     return query.all()
@@ -888,11 +890,11 @@ def get_transcripts_by_session_alias(session_id=None, speaker_tag=None,device_id
 
 def get_users(id=None, email=None, roles=None):
     query = db.session.query(User)
-    if roles != None:
+    if roles is not None:
         query = query.filter(User.role.in_(roles))
-    if id != None:
+    if id is not None:
         return query.filter(User.id == id).first()
-    if email != None:
+    if email is not None:
         return query.filter(User.email == email).first()
     return query.all()
 
@@ -963,23 +965,23 @@ def _update_row(row, fields):
 
 def get_raters(id=None,sessionid=None,sessiondeviceid=None,speakerid=None,speakertag=None,raterid=None,type=None,evaluationcategory=None,completed=None):
     query = db.session.query(Rater)
-    if id != None:
+    if id is not None:
         return query.filter(Rater.id == id).first()
-    if sessionid != None:
+    if sessionid is not None:
         query = query.filter(Rater.sessionid == sessionid)
-    if sessiondeviceid != None:
+    if sessiondeviceid is not None:
         query = query.filter(Rater.sessiondeviceid == sessiondeviceid)
-    if speakerid != None:
+    if speakerid is not None:
         query = query.filter(Rater.speakerid == speakerid)
-    if speakertag != None:
+    if speakertag is not None:
         query = query.filter(Rater.speakertag == speakertag)  
-    if raterid != None:
+    if raterid is not None:
         query = query.filter(Rater.raterid == raterid)
-    if type != None:
+    if type is not None:
         query = query.filter(Rater.type == type)        
-    if evaluationcategory != None:
+    if evaluationcategory is not None:
         query = query.filter(Rater.evaluation_category == evaluationcategory)
-    if completed != None:
+    if completed is not None:
         query = query.filter(Rater.completed == completed)    
     return query.all()
 
@@ -1014,17 +1016,17 @@ def delete_rater(id):
 
 def get_ratings(id=None,sessionid=None,sessiondeviceid=None,speakertag=None,raterid=None,evaluationcategory=None):
     query = db.session.query(Rating)
-    if id != None:
+    if id is not None:
         return query.filter(Rating.id == id).first()
-    if sessionid != None:
+    if sessionid is not None:
         query = query.filter(Rating.sessionid == sessionid)
-    if sessiondeviceid != None:
+    if sessiondeviceid is not None:
         query = query.filter(Rating.sessiondeviceid == sessiondeviceid)
-    if speakertag != None:
+    if speakertag is not None:
         query = query.filter(Rating.speakertag == speakertag)  
-    if raterid != None:
+    if raterid is not None:
         query = query.filter(Rating.raterid == raterid)      
-    if evaluationcategory != None:
+    if evaluationcategory is not None:
         query = query.filter(Rating.evaluation_category == evaluationcategory)
     return query.all()
 
@@ -1049,13 +1051,13 @@ def update_rating(id,sessionid=None,sessiondeviceid=None,speakertag=None,raterid
 
 def get_survey_response(id=None,sessionid=None,sessiondeviceid=None,username=None):
     query = db.session.query(SurveyResponse)
-    if id != None:
+    if id is not None:
         return query.filter(SurveyResponse.id == id).first()
-    if sessionid != None:
+    if sessionid is not None:
         query = query.filter(SurveyResponse.sessionid == sessionid)
-    if sessiondeviceid != None:
+    if sessiondeviceid is not None:
         query = query.filter(SurveyResponse.sessiondeviceid == sessiondeviceid)
-    if username != None:
+    if username is not None:
         query = query.filter(SurveyResponse.username == username)  
     return query.all()
 
@@ -1079,9 +1081,9 @@ def update_survey_response(id,sessionid=None,sessiondeviceid=None,username=None,
 
 def get_students(id=None, username=None):
     query = db.session.query(Student)
-    if id != None:
+    if id is not None:
         return query.filter(Student.id == id).first()
-    if username != None:
+    if username is not None:
         return query.filter(Student.username == username).first()
     return query.all()
 
@@ -1165,9 +1167,9 @@ def update_student(id, lastname=None, firstname=None,biometric_captured=None):
 
 def get_api_clients(client_id=None, user_id=None):
     query = db.session.query(APIClient)
-    if user_id != None:
+    if user_id is not None:
         query = query.filter(APIClient.user_id == user_id)
-    if client_id != None:
+    if client_id is not None:
         return query.filter(APIClient.client_id == client_id).first()
     return query.all()
 
@@ -1180,13 +1182,13 @@ def create_api_client(user_id):
     return api_client, client_secret
 
 def delete_api_client(user_id=None, client_id=None):
-    if user_id != None:
+    if user_id is not None:
         existing_clients = get_api_clients(user_id=user_id)
         if existing_clients:
             for client in existing_clients:
                 db.session.delete(client)
             db.session.commit()
-    elif client_id != None:
+    elif client_id is not None:
         existing_client = get_api_clients(client_id=client_id)
         if existing_client:
             db.session.delete(existing_client)
@@ -1198,11 +1200,11 @@ def delete_api_client(user_id=None, client_id=None):
 
 def get_folders(id=None, owner_id=None, parent=None, first=False):
     query = db.session.query(Folder)
-    if id != None:
+    if id is not None:
         query = query.filter(Folder.id == id)
-    if owner_id != None:
+    if owner_id is not None:
         query = query.filter(Folder.owner_id == owner_id)
-    if parent != None:
+    if parent is not None:
         query = query.filter(Folder.parent == parent)
     if first:
         return query.first()
@@ -1216,10 +1218,10 @@ def add_folder(owner_id, name=None, parent=None):
 
 def update_folder(folder_id, name=None, parent=None):
     folder = db.session.query(Folder).filter(Folder.id == folder_id).first()
-    if name != None:
+    if name is not None:
         folder.name = name
     # -1 means root folder, none means no change.
-    if parent != None:
+    if parent is not None:
         if parent == -1:
             folder.parent = None
         else:
@@ -1238,7 +1240,7 @@ def delete_folder(folder_id):
 
     folder_ids = [folder.id for folder in folders_to_delete]
     sessions_to_delete = get_sessions(folder_ids=folder_ids)
-    if len([session for session in sessions_to_delete if session.end_date == None]) > 0:
+    if len([session for session in sessions_to_delete if session.end_date is None]) > 0:
         return False, 'Cannot delete folder that contains an active discussion.'
 
     for session in sessions_to_delete:
@@ -1272,13 +1274,13 @@ def get_dependents(folder_id = None):
 
 def get_speaker_session_device_llm_report(id=None,username=None, sessionId=None, sessionDeviceId = None):
     query = db.session.query(LLMFeedbackReport)
-    if id != None:
+    if id is not None:
         return query.filter(LLMFeedbackReport.id == id).first()
-    if sessionId != None:
+    if sessionId is not None:
         query =query.filter(LLMFeedbackReport.session_id == sessionId)
-    if sessionDeviceId != None:
+    if sessionDeviceId is not None:
         query =query.filter(LLMFeedbackReport.session_device_id == sessionDeviceId)
-    if username != None:
+    if username is not None:
         return query.filter(LLMFeedbackReport.speaker_username == username).first()
     return query.all()
 
@@ -1301,15 +1303,15 @@ def update_speaker_session_device_llm_report(id, username=None, sessionId=None, 
 
 def get_speaker_session_device_llm_question_answer(id=None,username=None, sessionId=None, sessionDeviceId = None,default_question_id=None):
     query = db.session.query(LLMQuestionAnswer)
-    if id != None:
+    if id is not None:
         return query.filter(LLMQuestionAnswer.id == id).first()
-    if sessionId != None:
+    if sessionId is not None:
         query = query.filter(LLMQuestionAnswer.session_id == sessionId)
-    if sessionDeviceId != None:
+    if sessionDeviceId is not None:
         query = query.filter(LLMQuestionAnswer.session_device_id == sessionDeviceId)
-    if username != None:
+    if username is not None:
         query = query.filter(LLMQuestionAnswer.speaker_username == username)
-    if default_question_id != None:
+    if default_question_id is not None:
         return query.filter(LLMQuestionAnswer.default_question_id == default_question_id).first() 
     return query.all()
 
@@ -1338,11 +1340,11 @@ def update_speaker_session_device_llm_question_answer(id, username=None, session
 
 def get_synthesized_feedback_report(id=None, sessionId=None, sessionDeviceId = None):
     query = db.session.query(SessionSynthesizedReport)
-    if id != None:
+    if id is not None:
         return query.filter(SessionSynthesizedReport.id == id).first()
-    if sessionId != None:
+    if sessionId is not None:
         query =query.filter(SessionSynthesizedReport.session_id == sessionId)
-    if sessionDeviceId != None:
+    if sessionDeviceId is not None:
         query =query.filter(SessionSynthesizedReport.session_device_id == sessionDeviceId)
     return query.all()
 
@@ -1462,12 +1464,12 @@ def get_session_triage(session_id):
     session = get_sessions(id=session_id, first=True)
     if session is None or session.creation_date is None:
         return []
-    # creation_date is stored naive-UTC (datetime.utcnow); subtract another
-    # naive utcnow so the delta is timezone-independent. (time.time() -
+    # creation_date is stored naive-UTC; subtract another naive-UTC now so
+    # the delta is timezone-independent. (time.time() -
     # creation_date.timestamp() would treat the naive UTC value as LOCAL time
     # and be wrong by the server's tz offset on a non-UTC host — same reason
     # Session.length uses naive subtraction.)
-    session_now = max(0.0, (datetime.utcnow() - session.creation_date).total_seconds())
+    session_now = max(0.0, (datetime.now(timezone.utc).replace(tzinfo=None) - session.creation_date).total_seconds())
     out = []
     for d in get_session_devices(session_id=session_id):
         if not getattr(d, 'connected', False):
@@ -1672,7 +1674,7 @@ def mark_session_device_posthoc(session_device_id, models=None, durations=None):
     device = get_session_devices(id=session_device_id)
     if device is None:
         return False
-    device.posthoc_analyzed_date = datetime.utcnow()
+    device.posthoc_analyzed_date = datetime.now(timezone.utc).replace(tzinfo=None)
     if models is not None or durations:
         # Persist the per-run model provenance blob. Audio and video complete
         # separately (and the browser posts its own summary), so MERGE into

@@ -7,7 +7,7 @@ copy-pasted per tree.
 import time
 import threading
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 import requests
 
@@ -28,7 +28,7 @@ def _post_best_effort(url, payload, name):
 def post_connect(connect_url, source):
     connection = {
         'source': source,
-        'time': str(datetime.utcnow())
+        'time': str(datetime.now(timezone.utc).replace(tzinfo=None))
     }
     try:
         response = requests.post(connect_url, json=connection, timeout=CALLBACK_TIMEOUT)
@@ -42,7 +42,7 @@ def post_connect(connect_url, source):
 def post_disconnect(disconnect_url, source):
     disconnection = {
         'source': source,
-        'time': str(datetime.utcnow())
+        'time': str(datetime.now(timezone.utc).replace(tzinfo=None))
     }
     # Retried from a background thread (the caller is the websocket reactor
     # thread, which must not block): this callback races the exact moments

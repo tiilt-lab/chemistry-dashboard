@@ -1,6 +1,6 @@
 from flask import Blueprint, Response, request, abort, session
 from utility import json_response
-from datetime import datetime
+from datetime import datetime, timezone
 from app import limiter
 import json
 import logging
@@ -44,7 +44,7 @@ def login():
                 if system_user.locked:
                     message = 'Your account has been locked. \nPlease contact your IT department to unlock your account.'
                 else:
-                    system_user.last_login = datetime.utcnow()
+                    system_user.last_login = datetime.now(timezone.utc).replace(tzinfo=None)
                     database.save_changes()
                     user = system_user.json()
                     session['user'] = user
@@ -99,7 +99,7 @@ def register():
         logging.info('Registration attempt for existing account {0} from {1}.'.format(email, ip))
         return json_response({'message': 'An account with that email already exists.'}, 400)
 
-    user.last_login = datetime.utcnow()
+    user.last_login = datetime.now(timezone.utc).replace(tzinfo=None)
     database.save_changes()
     # Signed in immediately, exactly as a successful login would.
     session['user'] = user.json()

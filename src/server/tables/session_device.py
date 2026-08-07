@@ -79,9 +79,9 @@ class SessionDevice(db.Model):
     @staticmethod
     def verify_fields(name=None):
         message = None
-        if name != None:
+        if name is not None:
             if len(name) > SessionDevice.NAME_MAX_LENGTH:
                 message = 'Name must not exceed {0} characters.'.format(SessionDevice.NAME_MAX_LENGTH)
             if not verify_characters(name, SessionDevice.NAME_CHARS):
                 message = 'Invalid characters in device name.'
-        return message == None, message
+        return message is None, message

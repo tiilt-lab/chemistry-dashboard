@@ -1,5 +1,5 @@
 from app import db
-from datetime import datetime
+from datetime import datetime, timezone
 from utility import verify_characters
 
 class Session(db.Model):
@@ -25,13 +25,13 @@ class Session(db.Model):
     def __init__(self, owner_id, name="Unnamed", folder=None, topic_model=None):
         self.owner_id = owner_id
         self.name = name
-        self.creation_date = datetime.utcnow()
+        self.creation_date = datetime.now(timezone.utc).replace(tzinfo=None)
         self.folder = folder
         self.topic_model_id = topic_model
 
 
     def get_length(self):
-        return max((self.end_date - self.creation_date).total_seconds() if self.end_date else (datetime.utcnow() - self.creation_date).total_seconds(), 0.0)
+        return max((self.end_date - self.creation_date).total_seconds() if self.end_date else (datetime.now(timezone.utc).replace(tzinfo=None) - self.creation_date).total_seconds(), 0.0)
 
     def json(self):
         return dict(
@@ -49,9 +49,9 @@ class Session(db.Model):
     @staticmethod
     def verify_fields(name=None):
         message = None
-        if name != None:
+        if name is not None:
             if len(name) > Session.NAME_MAX_LENGTH:
                 message = 'Name must not exceed {0} characters.'.format(Session.NAME_MAX_LENGTH)
             if not verify_characters(name, Session.NAME_CHARS):
                 message = 'Invalid characters in name.'
-        return message == None, message
+        return message is None, message
