@@ -19,12 +19,31 @@ const RR_MAX = 2000
 const HRV_WINDOW_S = 60
 const HR_SMOOTH_S = 5
 
-function bySpeaker(rows) {
-    const map = new Map()
+// One series per person, keyed by speaker_id: rows carry the alias current
+// at sample time, so a mid-session rename ("Speaker 1" → its real username)
+// used to split one strap's stream into two lines that read as two people.
+// Each series is labeled with the roster's current name for that id. Rows
+// whose speaker_id isn't in this pod's roster are stray flushes from an
+// earlier session in the same browser tab — dropped, not phantom people.
+function bySpeaker(rows, speakers) {
+    const roster = new Map((speakers || []).map((s) => [s.id, s.alias]))
+    const byKey = new Map()
     for (const r of rows || []) {
-        const key = r.speaker_alias || "Unknown"
-        if (!map.has(key)) map.set(key, [])
-        map.get(key).push(r)
+        if (r.speaker_id != null && roster.size > 0 && !roster.has(r.speaker_id)) continue
+        const key = r.speaker_id != null ? "id:" + r.speaker_id : "alias:" + (r.speaker_alias || "Unknown")
+        if (!byKey.has(key)) byKey.set(key, [])
+        byKey.get(key).push(r)
+    }
+    const map = new Map()
+    for (const list of byKey.values()) {
+        list.sort((a, b) => a.time_stamp - b.time_stamp)
+        const last = list[list.length - 1]
+        const alias =
+            (last.speaker_id != null && roster.get(last.speaker_id)) ||
+            last.speaker_alias ||
+            "Unknown"
+        if (!map.has(alias)) map.set(alias, [])
+        map.get(alias).push(...list)
     }
     for (const list of map.values()) list.sort((a, b) => a.time_stamp - b.time_stamp)
     return map
@@ -51,9 +70,16 @@ function rrSequence(rows) {
     const seq = []
     for (const r of rows) {
         if (!r.rr_ms) continue
+        // A notification can carry several beats; space them out by their
+        // own intervals instead of stacking them on one timestamp, which
+        // drew vertical zigzags on the tachogram.
+        let off = 0
         for (const part of String(r.rr_ms).split(",")) {
             const v = parseInt(part, 10)
-            if (v >= RR_MIN && v <= RR_MAX) seq.push({ t: r.time_stamp, rr: v })
+            if (v >= RR_MIN && v <= RR_MAX) {
+                seq.push({ t: r.time_stamp + off, rr: v })
+                off += v / 1000
+            }
         }
     }
     return seq
@@ -125,9 +151,9 @@ const chartOptions = (yTitle) => ({
     },
 })
 
-function ChartCard({ title, note, datasets, yTitle, dark }) {
+function ChartCard({ title, note, datasets, yTitle, dark, className = "" }) {
     return (
-        <div className="rounded-lg border border-tiilt-line bg-white p-3" title={note}>
+        <div className={"rounded-lg border border-tiilt-line bg-white p-3 " + className} title={note}>
             <div className="truncate text-sm font-semibold text-tiilt-ink">{title}</div>
             <div className="mt-2 h-36">
                 {datasets.length === 0 ? (
@@ -145,7 +171,7 @@ function ChartCard({ title, note, datasets, yTitle, dark }) {
 function HeartRatePanel({ rows, speakers }) {
     applyChartTheme()
     const dark = useIsDark()
-    const grouped = bySpeaker(rows)
+    const grouped = bySpeaker(rows, speakers)
     if (grouped.size === 0)
         return (
             <div className="py-6 text-center text-sm text-tiilt-muted">
@@ -166,6 +192,10 @@ function HeartRatePanel({ rows, speakers }) {
             alias,
             hr: smoothHr(list),
             hrv: rollingRmssd(seq),
+            // Raw tachogram: every plausible beat interval, unsmoothed — the
+            // beat-to-beat jitter is exactly what HRV summarizes, so
+            // averaging it away here would defeat the chart.
+            rr: seq.map((p) => ({ x: p.t, y: p.rr })),
             stats: summarize(list, seq),
         }
     })
@@ -210,6 +240,14 @@ function HeartRatePanel({ rows, speakers }) {
                     yTitle="ms"
                     dark={dark}
                     datasets={series.filter((s) => s.hrv.length > 0).map((s) => line(s.hrv, s.alias))}
+                />
+                <ChartCard
+                    title="RR intervals"
+                    note="Raw beat-to-beat intervals (tachogram), milliseconds per beat. This is the stream HRV is computed from — the wiggle itself is the variability."
+                    yTitle="ms"
+                    dark={dark}
+                    className="sm:col-span-2"
+                    datasets={series.filter((s) => s.rr.length > 0).map((s) => line(s.rr, s.alias))}
                 />
             </div>
             <div className="flex flex-wrap gap-2">
