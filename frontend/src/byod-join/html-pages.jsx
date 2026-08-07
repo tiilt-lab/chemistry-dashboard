@@ -163,12 +163,44 @@ function PolarStrapControl({ speaker, supported, info, onAssign, onUnassign }) {
     )
 }
 
+// One-tap group sizing on the speaker page (the join form no longer asks):
+// creates N speaker slots at once; each then records or attaches a
+// fingerprint. Hidden as soon as any slot exists.
+function GroupSizeQuickAdd({ visible, onAdd }) {
+    const [count, setCount] = useState(4)
+    if (!visible) return null
+    return (
+        <div className="m-0.5 flex w-60 items-end gap-2 @sm:m-3 @sm:w-80">
+            <div className="grow text-left">
+                <label className={fieldLabel}>People in your group</label>
+                <select
+                    aria-label="Number of people in your group"
+                    className={dlgSelect}
+                    value={count}
+                    onChange={(e) => setCount(parseInt(e.target.value, 10))}
+                >
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                        <option key={n} value={n}>
+                            {n}
+                        </option>
+                    ))}
+                </select>
+            </div>
+            <button
+                className={dlgPrimary + " mt-0 flex-none px-4"}
+                onClick={() => onAdd(count)}
+            >
+                Add
+            </button>
+        </div>
+    )
+}
+
 function ByodJoinPage(props) {
     // Join-form niceties: prefer the prefilled code (link/QR) as a compact
     // chip; the Advanced disclosure starts open so the source/camera options
     // and mic check are visible without an extra tap.
     const [editCode, setEditCode] = useState(false)
-    const [showAdvanced, setShowAdvanced] = useState(true)
     // Controlled so the inline device check can follow the selection (a
     // camera preview only when joining with video).
     const [joinwithSel, setJoinwithSel] = useState("Video")
@@ -279,19 +311,7 @@ function ByodJoinPage(props) {
                                         ) : null}
                                     </div>
                                     <div>
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowAdvanced(!showAdvanced)}
-                                            aria-expanded={showAdvanced}
-                                            className="flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-tiilt transition hover:text-tiilt-deep"
-                                        >
-                                            <Chevron
-                                                direction={showAdvanced ? "down" : "right"}
-                                                size={12}
-                                            />
-                                            Advanced options
-                                        </button>
-                                        <div className={showAdvanced ? "mt-3 flex flex-col gap-4" : "hidden"}>
+                                        <div className="flex flex-col gap-4">
                                             <div>
                                                 <label htmlFor="joinwith" className={fieldLabel}>
                                                     Join with
@@ -309,27 +329,6 @@ function ByodJoinPage(props) {
                                                     <option value="Audio">Audio</option>
                                                     <option value="Video">Video</option>
                                                     <option value="Videocartoonify">Video (cartoon)</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label htmlFor="collaborators" className={fieldLabel}>
-                                                    Number of people in your group
-                                                </label>
-                                                <select
-                                                    id="collaborators"
-                                                    className={dlgSelect}
-                                                >
-                                                    <option value="0">
-                                                        Detect automatically
-                                                    </option>
-                                                    <option value="1">1</option>
-                                                    <option value="2">2</option>
-                                                    <option value="3">3</option>
-                                                    <option value="4">4</option>
-                                                    <option value="5">5</option>
-                                                    <option value="6">6</option>
-                                                    <option value="7">7</option>
-                                                    <option value="8">8</option>
                                                 </select>
                                             </div>
                                             <InlineDeviceCheck
@@ -358,13 +357,9 @@ function ByodJoinPage(props) {
                                                     document
                                                         .getElementById("joinwith")
                                                         .value.trim(),
-                                                    parseInt(
-                                                        document
-                                                            .getElementById(
-                                                                "collaborators",
-                                                            )
-                                                            .value.trim(),
-                                                    ),
+                                                    // Group size is chosen on
+                                                    // the speaker page now.
+                                                    0,
                                                 )
                                             }
                                         >
@@ -531,6 +526,13 @@ function ByodJoinPage(props) {
                                             )}
                                         </div>
                                         <div className="flex flex-col items-center">
+                                            <GroupSizeQuickAdd
+                                                visible={
+                                                    !!props.speakers &&
+                                                    props.speakers.length === 0
+                                                }
+                                                onAdd={props.addSpeakerSlots}
+                                            />
                                             <button
                                                 className={btnSecondaryTall + " m-0.5 w-60 @sm:m-3 @sm:w-80"}
                                                 onClick={() => props.openForms("addSpeaker")}
@@ -705,6 +707,13 @@ function ByodJoinPage(props) {
                                             )}
                                         </div>
                                         <div className="flex flex-col items-center">
+                                            <GroupSizeQuickAdd
+                                                visible={
+                                                    !!props.speakers &&
+                                                    props.speakers.length === 0
+                                                }
+                                                onAdd={props.addSpeakerSlots}
+                                            />
                                             <button
                                                 className={btnSecondaryTall + " m-0.5 w-60 @sm:m-3 @sm:w-80"}
                                                 onClick={() => props.openForms("addSpeaker")}

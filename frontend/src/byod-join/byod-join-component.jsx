@@ -895,8 +895,17 @@ function JoinPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionDevice])
 
+    // Bulk version for the speaker page's group-size picker (the join form
+    // no longer asks for a count; groups size themselves here).
+    const addSpeakerSlots = (n) => {
+        for (let i = 0; i < Math.max(0, Math.min(8, n)); i++) addSpeakerSlot()
+    }
+
     const confirmSpeakers = () => {
         console.log(speakers.current)
+        // The processing services get the group size in the start message;
+        // slots are created on this page now, so count the actual roster.
+        numSpeakers.current = (speakers.current || []).length
         if (speakers.current.every((s) => s.fingerprinted)) {
             let message = null
             message = {
@@ -1615,17 +1624,30 @@ function JoinPage() {
     const navigateToLogin = (confirmed = false) => {
         if (!confirmed && (state.audioSocketOpen || state.videoSocketOpen)) {
             setCurrentForm("NavGuard")
-        } else {
-            disconnect(true)
-            setCurrentForm("")
-            // Back means back: dumping everyone on the public landing page
-            // made logged-in users think they had been signed out (no
-            // sign-out ever happens — the landing just looks logged-out).
-            // Fall back to the landing only when there is no history to
-            // return to (e.g. a QR code straight into /join).
-            if (window.history.length > 1) return navigate(-1)
-            return navigate("/")
+            return
         }
+        if (session !== null) {
+            // Back from a joined pod (speaker setup / holding) returns to
+            // the join form with the passcode and name kept — leaving the
+            // route entirely looked like being signed out.
+            const keepName = name.current
+            const keepCode = pcode
+            disconnect(true)
+            ending.current = false
+            name.current = keepName
+            setPcode(keepCode)
+            setCurrentForm("")
+            return
+        }
+        disconnect(true)
+        setCurrentForm("")
+        // Back means back: dumping everyone on the public landing page
+        // made logged-in users think they had been signed out (no
+        // sign-out ever happens — the landing just looks logged-out).
+        // Fall back to the landing only when there is no history to
+        // return to (e.g. a QR code straight into /join).
+        if (window.history.length > 1) return navigate(-1)
+        return navigate("/")
     }
 
     const getSpeakerAliasFromID = (selectedSpkrId) => {
@@ -1962,6 +1984,7 @@ function JoinPage() {
             videoApiEndpoint={apiService.getVideoServerEndpoint()}
             speakers={speakers.current}
             addSpeakerSlot={addSpeakerSlot}
+            addSpeakerSlots={addSpeakerSlots}
             inlineRenameSpeaker={inlineRenameSpeaker}
             checkEnrolledName={checkEnrolledName}
             bluetoothSupported={isBluetoothSupported()}
