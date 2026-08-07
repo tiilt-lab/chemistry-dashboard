@@ -1616,6 +1616,12 @@ function JoinPage() {
         } else {
             disconnect(true)
             setCurrentForm("")
+            // Back means back: dumping everyone on the public landing page
+            // made logged-in users think they had been signed out (no
+            // sign-out ever happens — the landing just looks logged-out).
+            // Fall back to the landing only when there is no history to
+            // return to (e.g. a QR code straight into /join).
+            if (window.history.length > 1) return navigate(-1)
             return navigate("/")
         }
     }

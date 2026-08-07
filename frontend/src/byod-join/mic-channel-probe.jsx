@@ -37,6 +37,14 @@ function MicChannelProbe() {
 
     useEffect(() => () => cleanupRef.current && cleanupRef.current(), [])
 
+    // Auto-start so the join form shows live mic levels without an extra
+    // tap — joining always needs the mic, so the permission prompt is
+    // inevitable anyway. Denial just leaves the manual retry button.
+    useEffect(() => {
+        start()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
     const start = async () => {
         setMessage("")
         try {
