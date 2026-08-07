@@ -68,6 +68,33 @@ video_metric_analytics = VideoMetricAnalytics(attention_detection, facial_emotio
 batch_size = 40
 running_video_processes = {}
 
+# Exit once the analysis queue drains (and systemd restarts us fresh):
+# glibc never returns the per-run allocation churn to the OS, so RSS only
+# resets with a new process. Armed from on_run_complete when the last run
+# pops off running_video_processes; a new run starting simply makes the
+# timer a no-op (its own completion re-arms it). Dashboard status probes
+# connect every couple of minutes, so a busy socket at fire time just
+# defers the check rather than abandoning it.
+IDLE_RECYCLE_SECONDS = 600
+_idle_recycle = None
+
+def schedule_idle_recycle(delay=IDLE_RECYCLE_SECONDS):
+    global _idle_recycle
+    if _idle_recycle is not None and _idle_recycle.active():
+        _idle_recycle.cancel()
+    _idle_recycle = reactor.callLater(delay, _idle_recycle_fire)
+
+def _idle_recycle_fire():
+    global _idle_recycle
+    _idle_recycle = None
+    if running_video_processes:
+        return
+    if cm.get_number_of_connections() > 0:
+        schedule_idle_recycle(60)
+        return
+    logging.info('Analysis queue empty for {0}s - exiting to reclaim run memory (systemd restarts the service).'.format(IDLE_RECYCLE_SECONDS))
+    reactor.stop()
+
 # Lazy per-run model caches so a post-hoc run can request a different emotion /
 # attention backend than the deployment default without reloading each run
 # (mirrors the audio server's get_semantic_model). Seeded with the
@@ -404,6 +431,10 @@ class ServerProtocol(WebSocketServerProtocol):
                 callbacks.post_posthoc_completed(self.config.auth_key, getattr(self, 'model_choices', None))
         except Exception as e:
             logging.warning("video on_run_complete cleanup failed: %s", e)
+        # Called from the processor's worker thread; callLater must happen on
+        # the reactor thread.
+        if not running_video_processes:
+            reactor.callFromThread(schedule_idle_recycle)
 
     def run_asd_pass(self):
         import subprocess
