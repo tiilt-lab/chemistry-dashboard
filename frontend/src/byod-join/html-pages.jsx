@@ -18,7 +18,6 @@ import { TranscriptsComponentClient } from "../transcripts/transcripts-component
 import style from "./byod-join.module.css"
 import style2 from "../pod-details/pod.module.css"
 import style3 from "../manage-keyword-lists/manage-keyword-lists.module.css"
-import style5 from "../sessions/sessions.module.css"
 import MicIcon from "@icons/Mic"
 import Check from "@icons/Check"
 import Chevron from "@icons/Chevron"
@@ -106,32 +105,54 @@ function Toggle({ label, checked, onChange }) {
     )
 }
 
-// Optional Polar heart-rate strap per speaker (Web Bluetooth, Chrome/Edge
-// only — hidden elsewhere), shown only when the join form's "Add Polar H10"
-// toggle is on. The participant's strap ID is typed HERE, on their card;
-// pairing opens the Bluetooth chooser pre-filtered to that strap. Once
-// connected the card shows the sensor ID and live BPM.
+// Optional Polar heart-rate strap per speaker, shown only when the join
+// form's "Add Polar H10" toggle is on. Pairing opens the browser's
+// Bluetooth chooser, which lists every heart-rate strap advertising nearby
+// by its printed ID (e.g. "Polar H10 8C0B2A2B") — picking the strap on
+// this person's chest IS the assignment. Once connected the card shows the
+// sensor ID and live BPM. Needs Web Bluetooth (Chrome/Edge on desktop or
+// Android; no iOS browser has it) — say so rather than silently hiding.
 function PolarStrapControl({ speaker, supported, enabled, info, onAssign, onUnassign }) {
-    const [id, setId] = useState("")
-    if (!supported || !enabled) return null
-    if (!info) {
+    const [notice, setNotice] = useState("")
+    if (!enabled) return null
+    if (!supported) {
         return (
-            <span className="mx-auto mt-1 flex items-center gap-1.5">
-                <input
-                    value={id}
-                    spellCheck="false"
-                    onChange={(e) => setId(e.target.value)}
-                    placeholder="Polar H10 ID"
-                    aria-label={`Polar H10 ID for ${speaker.alias}`}
-                    className="w-32 rounded-lg border border-tiilt-line px-2 py-1 text-center font-ahamono text-[11px] text-tiilt-ink placeholder:text-tiilt-muted"
-                />
+            <span className="mx-auto mt-1 max-w-56 font-ahamono text-[11px] leading-snug text-tiilt-muted">
+                Heart-rate pairing isn&apos;t available in this browser — use
+                Chrome or Edge on a laptop or Android device (iPhones
+                don&apos;t support Web Bluetooth).
+            </span>
+        )
+    }
+    if (!info) {
+        const pair = async () => {
+            setNotice("")
+            const outcome = await onAssign(speaker)
+            if (outcome === "dismissed") {
+                setNotice(
+                    "No strap picked. Straps only show up in the list while worn — the electrodes need skin contact (moisten them if needed), then try again.",
+                )
+            } else if (outcome === "failed") {
+                setNotice(
+                    "Pairing failed — check that Bluetooth is on and the strap isn't connected to another app or phone, then try again.",
+                )
+            }
+        }
+        return (
+            <span className="mx-auto mt-1 flex flex-col items-center gap-1">
                 <button
                     type="button"
+                    aria-label={`Pair a heart-rate strap for ${speaker.alias}`}
                     className="cursor-pointer rounded px-1 font-ahamono text-[11px] text-tiilt-muted hover:text-tiilt-ink"
-                    onClick={() => onAssign(speaker, id.trim() || undefined)}
+                    onClick={pair}
                 >
-                    ♥ pair
+                    ♥ pair strap
                 </button>
+                {notice && (
+                    <span className="max-w-56 text-[11px] leading-snug text-amber-600">
+                        {notice}
+                    </span>
+                )}
             </span>
         )
     }
@@ -190,51 +211,6 @@ function GroupSizeQuickAdd({ visible, onAdd }) {
     )
 }
 
-// "Add speaker" dialog body. Controlled input (no getElementById); Enter
-// adds, same as the button. An empty name still adds an unnamed slot
-// ("Speaker N"), matching the quick-add path.
-function AddSpeakerForm({ onAdd, onClose }) {
-    const [name, setName] = useState("")
-    const add = () => {
-        onAdd(name)
-        onClose()
-    }
-    return (
-        <div
-            className={style5["dialog-window"]}
-            style={{ minWidth: "min(20rem, 76vw)" }}
-        >
-            <div className={style5["dialog-heading"]}>Add speaker</div>
-            <input
-                aria-label="Speaker name"
-                autoFocus
-                className={style5["field-input"]}
-                maxLength={64}
-                placeholder="Username or name"
-                autoCapitalize="off"
-                spellCheck="false"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => {
-                    if (e.key === "Enter") add()
-                }}
-            />
-            <div className="px-2 text-left text-xs leading-relaxed text-tiilt-muted">
-                Enrolled speakers: enter the username they enrolled with and
-                their saved voice fingerprint attaches automatically. Anyone
-                else is added by name and records one with their card&apos;s
-                Record button.
-            </div>
-            <button className={style5["basic-button"]} onClick={add}>
-                Add
-            </button>
-            <button className={style5["cancel-button"]} onClick={onClose}>
-                Cancel
-            </button>
-        </div>
-    )
-}
-
 function ByodJoinPage(props) {
     // Join-form niceties: prefer the prefilled code (link/QR) as a compact
     // chip; the Advanced disclosure starts open so the source/camera options
@@ -243,7 +219,7 @@ function ByodJoinPage(props) {
     // Controlled so the inline device check can follow the selection (a
     // camera preview only when joining with video).
     const [joinwithSel, setJoinwithSel] = useState("Video")
-    // Collapsed extras (Polar H10 strap IDs); everything essential is
+    // Collapsed extras (the Polar H10 toggle); everything essential is
     // visible without it.
     const [showAdvanced, setShowAdvanced] = useState(false)
     // Reflect the derived join phase (join-machine.ts) onto the body so E2E
@@ -412,11 +388,13 @@ function ByodJoinPage(props) {
                                                             }
                                                         />
                                                         <p className="mt-1 text-xs text-tiilt-muted">
-                                                            Each participant&apos;s
-                                                            strap ID (printed on the
-                                                            sensor) is entered on
-                                                            their card on the next
-                                                            page.
+                                                            Pair each strap from
+                                                            its wearer&apos;s card
+                                                            on the next page:
+                                                            nearby straps are
+                                                            listed by the ID
+                                                            printed on the
+                                                            sensor.
                                                         </p>
                                                     </div>
                                                 </div>
@@ -508,11 +486,11 @@ function ByodJoinPage(props) {
                                                             }
                                                         >
                                                             {" "}
-                                                            Tap Add speaker to
-                                                            enroll each group
-                                                            member, or Join
-                                                            Session to detect
-                                                            speakers
+                                                            Pick your group
+                                                            size below to add a
+                                                            card per member, or
+                                                            Join Session to
+                                                            detect speakers
                                                             automatically (less
                                                             accurate).{" "}
                                                         </div>
@@ -606,12 +584,20 @@ function ByodJoinPage(props) {
                                                 }
                                                 onAdd={props.addSpeakerSlots}
                                             />
-                                            <button
-                                                className={btnSecondaryTall + " m-0.5 w-60 @sm:m-3 @sm:w-80"}
-                                                onClick={() => props.openForms("addSpeaker")}
-                                            >
-                                                + Add speaker
-                                            </button>
+                                            {/* Hidden while the group-size
+                                                quick-add above covers the
+                                                empty page; once slots exist
+                                                (quick-add gone) this is how
+                                                a late arrival gets added. */}
+                                            {!!props.speakers &&
+                                                props.speakers.length > 0 && (
+                                                    <button
+                                                        className={btnSecondaryTall + " m-0.5 w-60 @sm:m-3 @sm:w-80"}
+                                                        onClick={() => props.addSpeakerSlot()}
+                                                    >
+                                                        + Add speaker
+                                                    </button>
+                                                )}
                                             <button
                                                 className={btnPrimaryTall + " m-0.5 w-60 @sm:m-3 @sm:w-80"}
                                                 onClick={props.confirmSpeakers}
@@ -862,7 +848,6 @@ function ByodJoinPage(props) {
                     "fingerprintAudio",
                     "renameAlias",
                     "savedAudioVideoFingerprint",
-                    "addSpeaker",
                 ].includes(props.currentForm)}
             >
                 {(props.currentForm === "Transcript" && (
@@ -953,14 +938,7 @@ function ByodJoinPage(props) {
                                 Cancel
                             </button>
                         </div>
-                    )) ||
-                    (props.currentForm === "addSpeaker" && (
-                        <AddSpeakerForm
-                            onAdd={props.addSpeakerSlot}
-                            onClose={props.closeDialog}
-                        />
                     ))
-
                 }
             </GenericDialogBox>
 

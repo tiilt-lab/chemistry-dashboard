@@ -704,24 +704,19 @@ function JoinPage() {
     // to their saved fingerprint: an exact username match renames the slot
     // and attaches the stored voice print automatically; anyone else just
     // gets the name (fingerprint recordable from the speaker menu).
-    const addSpeakerSlot = (name = "") => {
+    const addSpeakerSlot = async (name = "") => {
         if (!sessionDevice) return
-        sessionService.addSpeaker(sessionDevice.id).then(
-            (response) => {
-                if (response.status === 200) {
-                    response.json().then(async (jsonObj) => {
-                        const speaker = SpeakerModel.fromJson(jsonObj)
-                        setSpeakers([...(speakers.current || []), speaker])
-                        if ((name || "").trim()) {
-                            await attachIdentity(speaker, name)
-                        }
-                    })
-                }
-            },
-            (apierror) => {
-                console.log("byod-join-component func: addSpeakerSlot ", apierror)
-            },
-        )
+        try {
+            const response = await sessionService.addSpeaker(sessionDevice.id)
+            if (response.status !== 200) return
+            const speaker = SpeakerModel.fromJson(await response.json())
+            setSpeakers([...(speakers.current || []), speaker])
+            if ((name || "").trim()) {
+                await attachIdentity(speaker, name)
+            }
+        } catch (apierror) {
+            console.log("byod-join-component func: addSpeakerSlot ", apierror)
+        }
     }
 
     // The one path for putting a typed name on a speaker slot, shared by
@@ -807,16 +802,13 @@ function JoinPage() {
     }
 
     // Pair a Polar strap (or any BLE heart-rate sensor) with a speaker. The
-    // browser chooser shows each strap's printed ID (e.g. "Polar H10
-    // 8C0B2A2B"), so picking the strap IS the person↔sensor assignment.
-    const assignPolarSensor = async (speaker, idHint) => {
-        if (!isBluetoothSupported()) return
+    // browser chooser lists every advertising strap by its printed ID (e.g.
+    // "Polar H10 8C0B2A2B"), so picking the strap IS the person↔sensor
+    // assignment. Returns "paired" | "dismissed" | "failed" so the card can
+    // explain an empty or cancelled chooser instead of silently doing nothing.
+    const assignPolarSensor = async (speaker) => {
+        if (!isBluetoothSupported()) return "failed"
         if (polarConns.current[speaker.id]) unassignPolarSensor(speaker)
-        // A strap ID typed under Advanced options narrows the Bluetooth
-        // chooser to exactly that sensor.
-        const nameHint = idHint
-            ? (/^polar/i.test(idHint) ? idHint : "Polar H10 " + idHint)
-            : undefined
         const conn = new PolarConnection({
             onSample: ({ hr, rr, t }) => {
                 // Alias resolved at sample time so a later rename sticks.
@@ -844,7 +836,7 @@ function JoinPage() {
             },
         })
         try {
-            const info = await conn.choose(nameHint)
+            const info = await conn.choose()
             polarConns.current[speaker.id] = conn
             setPolarInfo((p) => ({
                 ...p,
@@ -855,12 +847,14 @@ function JoinPage() {
                     bpm: null,
                 },
             }))
+            return "paired"
         } catch (ex) {
             conn.close()
-            // NotFoundError just means the chooser was dismissed.
-            if (ex && ex.name !== "NotFoundError") {
-                console.log("polar connect failed", ex)
-            }
+            // NotFoundError just means the chooser was dismissed (possibly
+            // because the ID filter matched no strap).
+            if (ex && ex.name === "NotFoundError") return "dismissed"
+            console.log("polar connect failed", ex)
+            return "failed"
         }
     }
 
@@ -873,6 +867,31 @@ function JoinPage() {
             delete next[speaker.id]
             return next
         })
+    }
+
+    // Drop Polar state that doesn't belong to the roster just returned by a
+    // join. A device idling on the enrolling page has no sockets open, so it
+    // never hears its old session end — without this, straps paired there
+    // showed up as still paired in the next session, and their buffered
+    // samples would flush into the new session's data. A reconnect to the
+    // same session device returns the same speaker ids, so live straps
+    // survive it untouched.
+    const prunePolarToRoster = (freshSpeakers) => {
+        const ids = new Set((freshSpeakers || []).map((s) => s.id))
+        Object.entries(polarConns.current).forEach(([sid, conn]) => {
+            if (!ids.has(Number(sid))) {
+                conn.close()
+                delete polarConns.current[sid]
+            }
+        })
+        setPolarInfo((p) => {
+            const next = {}
+            Object.keys(p).forEach((sid) => {
+                if (ids.has(Number(sid))) next[sid] = p[sid]
+            })
+            return next
+        })
+        hrBuffer.current = hrBuffer.current.filter((s) => ids.has(s.speaker_id))
     }
 
     // Ship buffered heart-rate samples every 5 s while joined. Streaming
@@ -892,9 +911,13 @@ function JoinPage() {
     }, [sessionDevice])
 
     // Bulk version for the speaker page's group-size picker (the join form
-    // no longer asks for a count; groups size themselves here).
-    const addSpeakerSlots = (n) => {
-        for (let i = 0; i < Math.max(0, Math.min(8, n)); i++) addSpeakerSlot()
+    // no longer asks for a count; groups size themselves here). Sequential
+    // on purpose: parallel adds raced the server's per-device numbering and
+    // every slot came back named "Speaker 1".
+    const addSpeakerSlots = async (n) => {
+        for (let i = 0; i < Math.max(0, Math.min(8, n)); i++) {
+            await addSpeakerSlot()
+        }
     }
 
     // Confirming the roster is what actually starts everything: apply the
@@ -1311,7 +1334,9 @@ function JoinPage() {
                                 jsonObj["session_device"],
                             ),
                         )
-                        setSpeakers(SpeakerModel.fromJsonList(jsonObj["speakers"]))
+                        const freshSpeakers = SpeakerModel.fromJsonList(jsonObj["speakers"])
+                        setSpeakers(freshSpeakers)
+                        prunePolarToRoster(freshSpeakers)
                         // The server assigns "Group A/B/C..." when the name
                         // was left blank — keep the assigned name so backing
                         // out prefills it and rejoining resumes this pod.
