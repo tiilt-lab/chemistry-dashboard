@@ -157,6 +157,8 @@ function JoinPage() {
     const polarConns = useRef({})
     const hrBuffer = useRef([])
     const [polarInfo, setPolarInfo] = useState({})
+    // Strap IDs typed under Advanced options, in speaker order.
+    const polarIdHints = useRef([])
 
     const navigate = useNavigate()
 
@@ -836,9 +838,14 @@ function JoinPage() {
     // Pair a Polar strap (or any BLE heart-rate sensor) with a speaker. The
     // browser chooser shows each strap's printed ID (e.g. "Polar H10
     // 8C0B2A2B"), so picking the strap IS the person↔sensor assignment.
-    const assignPolarSensor = async (speaker) => {
+    const assignPolarSensor = async (speaker, idHint) => {
         if (!isBluetoothSupported()) return
         if (polarConns.current[speaker.id]) unassignPolarSensor(speaker)
+        // A strap ID typed under Advanced options narrows the Bluetooth
+        // chooser to exactly that sensor.
+        const nameHint = idHint
+            ? (/^polar/i.test(idHint) ? idHint : "Polar H10 " + idHint)
+            : undefined
         const conn = new PolarConnection({
             onSample: ({ hr, rr, t }) => {
                 // Alias resolved at sample time so a later rename sticks.
@@ -866,7 +873,7 @@ function JoinPage() {
             },
         })
         try {
-            const info = await conn.choose()
+            const info = await conn.choose(nameHint)
             polarConns.current[speaker.id] = conn
             setPolarInfo((p) => ({
                 ...p,
@@ -1286,10 +1293,16 @@ function JoinPage() {
     // Verifies the users connection input, then routes through the device
     // check page (camera preview, mic levels, channel choice) before the
     // actual join.
-    const verifyInputAndAudio = (names, passcode, joinswith, collaborators) => {
+    const verifyInputAndAudio = (names, passcode, joinswith, collaborators, polarIdsRaw) => {
         if (names === null) {
             names = "User Device"
         }
+        // Optional Polar H10 strap IDs from Advanced options, in speaker
+        // order; each speaker card offers its strap for one-tap pairing.
+        polarIdHints.current = (polarIdsRaw || "")
+            .split(/[\s,;]+/)
+            .map((s) => s.trim())
+            .filter(Boolean)
         // The join form's inline device check owns the current selection;
         // release its preview devices before the real capture opens them.
         const inline = inlineSelection.current || {}
@@ -2061,6 +2074,7 @@ function JoinPage() {
             addSpeakerSlots={addSpeakerSlots}
             inlineRenameSpeaker={inlineRenameSpeaker}
             bluetoothSupported={isBluetoothSupported()}
+            polarIdHints={polarIdHints.current}
             polarInfo={polarInfo}
             assignPolarSensor={assignPolarSensor}
             unassignPolarSensor={unassignPolarSensor}

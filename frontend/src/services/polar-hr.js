@@ -67,10 +67,13 @@ export class PolarConnection {
     }
 
     // Must be called from a user gesture (button click): opens the browser's
-    // device chooser filtered to heart-rate devices.
-    async choose() {
+    // device chooser filtered to heart-rate devices. A nameHint (e.g.
+    // "Polar H10 8C0B2A2B") narrows the chooser to that exact strap.
+    async choose(nameHint) {
         this.device = await navigator.bluetooth.requestDevice({
-            filters: [{ services: [HEART_RATE_SERVICE] }],
+            filters: nameHint
+                ? [{ services: [HEART_RATE_SERVICE], namePrefix: nameHint }]
+                : [{ services: [HEART_RATE_SERVICE] }],
             optionalServices: [BATTERY_SERVICE],
         })
         this.device.addEventListener("gattserverdisconnected", this._disconnectHandler)

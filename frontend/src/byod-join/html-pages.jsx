@@ -91,16 +91,18 @@ function SpeakerNameEditor({ speaker, onCommit }) {
 // only — hidden elsewhere). Pairing the strap is the person↔sensor
 // assignment: the chooser shows each strap's printed ID. Once connected the
 // card shows the sensor ID and live BPM.
-function PolarStrapControl({ speaker, supported, info, onAssign, onUnassign }) {
+function PolarStrapControl({ speaker, supported, info, onAssign, onUnassign, idHint }) {
     if (!supported) return null
     if (!info) {
         return (
             <button
                 type="button"
                 className="mx-auto cursor-pointer rounded px-1 font-ahamono text-[11px] text-tiilt-muted hover:text-tiilt-ink"
-                onClick={() => onAssign(speaker)}
+                onClick={() => onAssign(speaker, idHint)}
             >
-                ♥ add heart-rate strap
+                {idHint
+                    ? "♥ pair Polar H10 " + idHint
+                    : "♥ add heart-rate strap"}
             </button>
         )
     }
@@ -167,6 +169,9 @@ function ByodJoinPage(props) {
     // Controlled so the inline device check can follow the selection (a
     // camera preview only when joining with video).
     const [joinwithSel, setJoinwithSel] = useState("Video")
+    // Collapsed extras (Polar H10 strap IDs); everything essential is
+    // visible without it.
+    const [showAdvanced, setShowAdvanced] = useState(false)
     // Reflect the derived join phase (join-machine.ts) onto the body so E2E
     // and debugging have one signal for "where in the flow are we". Purely
     // observational — no behavior depends on it yet.
@@ -305,6 +310,43 @@ function ByodJoinPage(props) {
                                                     props.deviceSelectionRef
                                                 }
                                             />
+                                            <div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowAdvanced(!showAdvanced)}
+                                                    aria-expanded={showAdvanced}
+                                                    className="flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-tiilt transition hover:text-tiilt-deep"
+                                                >
+                                                    <Chevron
+                                                        direction={showAdvanced ? "down" : "right"}
+                                                        size={12}
+                                                    />
+                                                    Advanced options
+                                                </button>
+                                                <div className={showAdvanced ? "mt-3 flex flex-col gap-4" : "hidden"}>
+                                                    <div>
+                                                        <label htmlFor="polarids" className={fieldLabel}>
+                                                            Add Polar H10 heart-rate straps
+                                                        </label>
+                                                        <input
+                                                            id="polarids"
+                                                            className={dlgInput}
+                                                            spellCheck="false"
+                                                            placeholder="Strap IDs in speaker order, e.g. 8C0B2A2B, 7F1D3C4E"
+                                                        />
+                                                        <p className="mt-1 text-xs text-tiilt-muted">
+                                                            Optional. Enter each
+                                                            participant&apos;s Polar H10
+                                                            ID (printed on the sensor),
+                                                            comma-separated, in the same
+                                                            order as the speakers on the
+                                                            next page — each speaker card
+                                                            then offers its strap for
+                                                            one-tap pairing.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -326,6 +368,9 @@ function ByodJoinPage(props) {
                                                     // Group size is chosen on
                                                     // the speaker page now.
                                                     0,
+                                                    document.getElementById("polarids")
+                                                        ? document.getElementById("polarids").value
+                                                        : "",
                                                 )
                                             }
                                         >
@@ -445,6 +490,7 @@ function ByodJoinPage(props) {
                                                                 speaker={speaker}
                                                                 supported={props.bluetoothSupported}
                                                                 info={(props.polarInfo || {})[speaker.id]}
+                                                                idHint={(props.polarIdHints || [])[count]}
                                                                 onAssign={props.assignPolarSensor}
                                                                 onUnassign={props.unassignPolarSensor}
                                                             />
@@ -635,6 +681,7 @@ function ByodJoinPage(props) {
                                                                 speaker={speaker}
                                                                 supported={props.bluetoothSupported}
                                                                 info={(props.polarInfo || {})[speaker.id]}
+                                                                idHint={(props.polarIdHints || [])[count]}
                                                                 onAssign={props.assignPolarSensor}
                                                                 onUnassign={props.unassignPolarSensor}
                                                             />
