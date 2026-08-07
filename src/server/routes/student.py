@@ -35,15 +35,15 @@ def _enrollment_fields(username):
         try:
             with open(check) as f:
                 fields['voice_check'] = json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.debug('enrollment fields: unreadable %s: %s', check, e)
     return fields
 
 
 def _student_in_scope(user, username):
     # Admins see everyone; users only students who appeared in their sessions
     # (same linkage the Students page overview uses).
-    if user.get('role') in ['admin', 'super']:
+    if user.get('role') in wrappers.ADMIN_ROLES:
         return True
     return len(database.get_student_activity(username, owner_id=user['id'])) > 0
 
@@ -54,7 +54,7 @@ def _student_in_scope(user, username):
 @wrappers.verify_login()
 def students_overview(**kwargs):
     user = kwargs['user']
-    is_admin = user.get('role') in ['admin', 'super']
+    is_admin = user.get('role') in wrappers.ADMIN_ROLES
     rows = database.get_students_overview(owner_id=None if is_admin else user['id'])
     result = []
     for student, session_count, last_active in rows:
@@ -75,7 +75,7 @@ def students_overview(**kwargs):
 def students_voice_overlaps(**kwargs):
     import numpy as np
     user = kwargs['user']
-    is_admin = user.get('role') in ['admin', 'super']
+    is_admin = user.get('role') in wrappers.ADMIN_ROLES
     rows = database.get_students_overview(owner_id=None if is_admin else user['id'])
     visible = {student.username for student, _c, _l in rows}
     embeddings = {}
@@ -84,8 +84,10 @@ def students_voice_overlaps(**kwargs):
         if os.path.isfile(path):
             try:
                 embeddings[username] = np.load(path)
-            except Exception:
-                pass
+            except Exception as e:
+                # An unreadable embedding silently changes the overlap result;
+                # leave a trace.
+                logging.warning('voice overlaps: could not load %s: %s', path, e)
     from analytics import pairwise_voice_overlaps
     THRESHOLD = 0.50
     pairs = pairwise_voice_overlaps(embeddings, threshold=THRESHOLD)
@@ -119,7 +121,7 @@ def student_activity(student_id, **kwargs):
     student = database.get_students(id=student_id)
     if not student:
         return json_response({'message': 'Student not found.'}, 404)
-    is_admin = user.get('role') in ['admin', 'super']
+    is_admin = user.get('role') in wrappers.ADMIN_ROLES
     owner_id = None if is_admin else user['id']
     rows = database.get_student_activity(student.username, owner_id=owner_id)
     sessions = []
@@ -219,6 +221,7 @@ def post_rating(**kwargs):
     raterid = content.get('raterid',None)
     evaluationCategory = content.get('evaluationCategory',None)
     response = content.get('response',None)
+    success = False
     rating = database.get_ratings(sessionid=sessionid,sessiondeviceid=sessionDeviceId,speakertag=speakerTag,raterid=None,evaluationcategory=evaluationCategory)
     if rating and response:
         resp = json.dumps(response)
@@ -241,13 +244,14 @@ def post_survey_response(**kwargs):
     sessionDeviceId = content.get('sessionDeviceId',None)
     username = content.get('username',None)
     response = content.get('response',None)
-    survey = database.get_survey_reponse(sessionid=sessionid,sessiondeviceid=sessionDeviceId,username=username)
+    success = False
+    survey = database.get_survey_response(sessionid=sessionid,sessiondeviceid=sessionDeviceId,username=username)
     if survey and response:
         resp = json.dumps(response)
-        success, _ = database.update_survey_reponse(survey[0].id,response=resp)
+        success, _ = database.update_survey_response(survey[0].id,response=resp)
     elif sessionid and sessionDeviceId and username and response:
         resp = json.dumps(response)
-        success, _ = database.add_survey_reponse(sessionid,sessionDeviceId, username,resp) 
+        success, _ = database.add_survey_response(sessionid,sessionDeviceId, username,resp) 
     if success:
         return json_response({'message': "success"})
     else:

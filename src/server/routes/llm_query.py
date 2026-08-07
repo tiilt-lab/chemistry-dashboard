@@ -147,10 +147,10 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
     if missing:
         return json_response({'message': 'Missing fields: %s' % ', '.join(missing)}, 400)
 
-    exisiting_feedback = database.get_speaker_session_device_llm_report(username=metricObj['participant_name'], sessionId=metricObj['sessionid'], sessionDeviceId = metricObj['sessiondeviceid'])
+    existing_feedback = database.get_speaker_session_device_llm_report(username=metricObj['participant_name'], sessionId=metricObj['sessionid'], sessionDeviceId = metricObj['sessiondeviceid'])
     
-    if exisiting_feedback and metricObj['retrieve_existing_report'] == 'true':
-        raw = str(exisiting_feedback.feedback_analysis)
+    if existing_feedback and metricObj['retrieve_existing_report'] == 'true':
+        raw = str(existing_feedback.feedback_analysis)
     else:
         prompt = build_prompt(metricObj,"Session_level analysis for participant")
 
@@ -169,9 +169,9 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
             raw = _stamp_provenance(raw, response.model)
 
             #add to the database
-            if metricObj['retrieve_existing_report'] != 'true' and exisiting_feedback:
+            if metricObj['retrieve_existing_report'] != 'true' and existing_feedback:
                 #update the database
-                database.update_speaker_session_device_llm_report(id=exisiting_feedback.id,feedback_analysis=raw)
+                database.update_speaker_session_device_llm_report(id=existing_feedback.id,feedback_analysis=raw)
             else:
                 #insert to database
                 database.add_speaker_session_device_llm_report(metricObj['participant_name'], metricObj['sessionid'], metricObj['sessiondeviceid'],raw)  
@@ -191,16 +191,16 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
 @api_routes.route('/api/v1/llmqueries/fetch_response_for_question', methods=['POST'])
 def fetch_response_for_question(**kwargs):
     questionObj = request.json
-    exisiting_response = None
+    existing_response = None
     raw = ""
     if not questionObj:
         return json_response({'message': 'Missing data.'}, 400)
     
     if int(questionObj['default_question_id']) > -1 :
-        exisiting_response = database.get_speaker_session_device_llm_question_answer(username=questionObj['participant_name'], sessionId=questionObj['sessionid'], sessionDeviceId = questionObj['sessiondeviceid'],default_question_id=int(questionObj['default_question_id']))
+        existing_response = database.get_speaker_session_device_llm_question_answer(username=questionObj['participant_name'], sessionId=questionObj['sessionid'], sessionDeviceId = questionObj['sessiondeviceid'],default_question_id=int(questionObj['default_question_id']))
     
-    if exisiting_response and questionObj['retrieve_existing_answer'] == 'true':
-        raw = str(exisiting_response.answer)
+    if existing_response and questionObj['retrieve_existing_answer'] == 'true':
+        raw = str(existing_response.answer)
     else:
         prompt = build_prompt(questionObj,"Interactive question answer")
 
@@ -214,9 +214,9 @@ def fetch_response_for_question(**kwargs):
             raw = _stamp_provenance(raw, response.model)
 
             #add to the database
-            if questionObj['retrieve_existing_answer'] != 'true' and exisiting_response:
+            if questionObj['retrieve_existing_answer'] != 'true' and existing_response:
                 #update the database
-                database.update_speaker_session_device_llm_question_answer(id=exisiting_response.id,question=questionObj['question'],answer=raw)
+                database.update_speaker_session_device_llm_question_answer(id=existing_response.id,question=questionObj['question'],answer=raw)
             else:
                 #insert to database
                 database.add_speaker_session_device_llm_question_answer(questionObj['participant_name'], questionObj['sessionid'], questionObj['sessiondeviceid'],questionObj['default_question_id'],questionObj['question'],raw)  

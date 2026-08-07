@@ -5,6 +5,16 @@ import database
 import utility
 from utility import json_response
 
+# Roles that can see across accounts. Routes import this instead of spelling
+# out the pair, so a future role rename touches one line.
+ADMIN_ROLES = ('admin', 'super')
+
+_UNAUTHORIZED = 'You are not authorized to use this endpoint.'
+# Denied and nonexistent look identical on purpose: distinguishing them lets a
+# caller probe sequential ids for other people's resources.
+_NOT_FOUND = 'Does not exist.'
+
+
 def verify_login(roles=None, allow_key=False, public=False):
     def verify_login_decorator(f):
         @wraps(f)
@@ -21,14 +31,14 @@ def verify_login(roles=None, allow_key=False, public=False):
                 system_user = database.get_users(id=stale_user.get('id'))
                 if not system_user or system_user.locked:
                     session.clear()
-                    return json_response({'message': 'You are not authorized to use this endpoint.'}, 401)
+                    return json_response({'message': _UNAUTHORIZED}, 401)
                 user = system_user.json()
                 session['user'] = user
                 kwargs['user'] = user
                 if (not roles) or (roles and user.get('role', '') in roles):
                     return f(*args, **kwargs)
                 else:
-                    return json_response({'message': 'You are not authorized to use this endpoint.'}, 401)
+                    return json_response({'message': _UNAUTHORIZED}, 401)
 
             # Allow devices communicating with processing keys.
             if allow_key and request.headers.get('X-Processing-Key', None):
@@ -51,8 +61,8 @@ def verify_login(roles=None, allow_key=False, public=False):
                         if (not roles) or (roles and user.role in roles):
                             return f(*args, **kwargs)
                         else:
-                            return json_response({'message': 'You are not authorized to use this endpoint.'}, 401)
-            return json_response({'message': 'You are not authorized to use this endpoint.'}, 401)
+                            return json_response({'message': _UNAUTHORIZED}, 401)
+            return json_response({'message': _UNAUTHORIZED}, 401)
 
         return verify_function
     return verify_login_decorator
@@ -83,36 +93,24 @@ def _session_for(session_id, user, write):
         return database.get_sessions(id=session_id)
     return database.get_sessions(id=session_id, owner_id=user['id'])
 
-# Read guard: attach the session for endpoints that only report on it.
-def verify_session_read_access(f):
-    @wraps(f)
-    def verify_function(*args, **kwargs):
-        session_id = kwargs['session_id']
-        user = kwargs['user']
-        session_model = _session_for(session_id, user, write=False)
-        if session_model:
-            kwargs['session'] = session_model
-            return f(*args, **kwargs)
-        else:
-            return json_response({'message': 'Does not exist.'}, 404)
+def _verify_session_guard(write):
+    def decorator(f):
+        @wraps(f)
+        def verify_function(*args, **kwargs):
+            session_model = _session_for(kwargs['session_id'], kwargs['user'], write=write)
+            if session_model:
+                kwargs['session'] = session_model
+                return f(*args, **kwargs)
+            return json_response({'message': _NOT_FOUND}, 404)
+        return verify_function
+    return decorator
 
-    return verify_function
+# Read guard: attach the session for endpoints that only report on it.
+verify_session_read_access = _verify_session_guard(write=False)
 
 # Write guard: mutating a session (rename, delete, stop, re-run analysis)
 # stays with its owner, or a super.
-def verify_session_access(f):
-    @wraps(f)
-    def verify_function(*args, **kwargs):
-        session_id = kwargs['session_id']
-        user = kwargs['user']
-        session_model = _session_for(session_id, user, write=True)
-        if session_model:
-            kwargs['session'] = session_model
-            return f(*args, **kwargs)
-        else:
-            return json_response({'message': 'Does not exist.'}, 404)
-
-    return verify_function
+verify_session_access = _verify_session_guard(write=True)
 
 # Read access to one pod's data (transcripts, metrics) for endpoints that name
 # a session device rather than a session. Two callers are legitimate:
@@ -131,7 +129,7 @@ def verify_device_read_access(f):
         device_id = kwargs.get('device_id', kwargs.get('session_device_id'))
         session_device = database.get_session_devices(id=device_id)
         if not session_device:
-            return json_response({'message': 'Does not exist.'}, 404)
+            return json_response({'message': _NOT_FOUND}, 404)
 
         processing_key = request.headers.get('X-Processing-Key', None)
         if processing_key and processing_key == session_device.processing_key:
@@ -143,7 +141,7 @@ def verify_device_read_access(f):
             kwargs['session_device'] = session_device
             return f(*args, **kwargs)
 
-        return json_response({'message': 'Does not exist.'}, 404)
+        return json_response({'message': _NOT_FOUND}, 404)
 
     return verify_function
 
@@ -153,13 +151,13 @@ def verify_session_access_json(f):
         session_id = request.json.get('sessionId', None)
         user = kwargs['user']
         if not session_id or not user:
-            return json_response({'message': 'You are not authorized to use this endpoint.'}, 403)
+            return json_response({'message': _UNAUTHORIZED}, 403)
         session_model = _session_for(session_id, user, write=True)
         if session_model:
             kwargs['session'] = session_model
             return f(*args, **kwargs)
         else:
-            return json_response({'message': 'Does not exist.'}, 404)
+            return json_response({'message': _NOT_FOUND}, 404)
 
     return verify_function
 
@@ -179,7 +177,7 @@ def verify_folder_access(f):
             kwargs['folder'] = folder_model
             return f(*args, **kwargs)
         else:
-            return json_response({'message': 'Does not exist.'}, 404)
+            return json_response({'message': _NOT_FOUND}, 404)
 
     return verify_function
 

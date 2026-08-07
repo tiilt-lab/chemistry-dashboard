@@ -11,6 +11,7 @@ Read-only. Reports, per ended session and pod:
   - whether the raw recording survives on disk for reprocessing
 """
 import glob
+import logging
 import os
 
 import numpy as np
@@ -76,8 +77,10 @@ def _pod_report(device):
         if os.path.isfile(emb_path):
             try:
                 embeddings[alias] = np.load(emb_path)
-            except Exception:
-                pass
+            except Exception as e:
+                # An unreadable embedding silently changes the overlap result;
+                # leave a trace.
+                logging.warning('data quality: could not load %s: %s', emb_path, e)
     collisions = pairwise_voice_overlaps(embeddings,
                                          threshold=CONFUSABLE_THRESHOLD)
 
@@ -114,7 +117,7 @@ def _pod_report(device):
 
 
 @api_routes.route('/api/v1/data_quality', methods=['GET'])
-@wrappers.verify_login(roles=['admin', 'super'])
+@wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
 def data_quality(**kwargs):
     sessions = [s for s in database.get_sessions()
                 if s.end_date is not None]

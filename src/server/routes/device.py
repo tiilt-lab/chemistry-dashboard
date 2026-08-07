@@ -45,7 +45,7 @@ def get_devices(**kwargs):
 
 
 @api_routes.route('/api/v1/devices', methods=['POST'])
-@wrappers.verify_login(roles=['admin', 'super'], public=True)
+@wrappers.verify_login(roles=wrappers.ADMIN_ROLES, public=True)
 def add_device(**kwargs):
     mac_address = sanitize(request.json.get('macAddress', None))
     if not mac_address:
@@ -61,7 +61,7 @@ def add_device(**kwargs):
 
 
 @api_routes.route('/api/v1/devices/<int:device_id>', methods=['DELETE'])
-@wrappers.verify_login(roles=['admin', 'super'], public=True)
+@wrappers.verify_login(roles=wrappers.ADMIN_ROLES, public=True)
 def remove_device(device_id, **kwargs):
     success = database.delete_device(device_id)
     if success:

@@ -1,31 +1,12 @@
-from apscheduler.schedulers.background import BackgroundScheduler
+# Jobs here run on the scheduler app.py creates and starts (registered in
+# discussion_capture.py). This module holds only the job functions.
 from handlers import session_handler
 import database
-import requests
-import datetime
 import logging
 import watchers
 
 TIMEOUT = 10 * 60 # Time in seconds without transcripts before timeout occurs
 WATCH_TIMEOUT = 5 * 60 # Dashboard poll recency that still counts as "watched"
-
-# Create scheduler
-scheduler = BackgroundScheduler({
-	'apscheduler.jobstores.default': {
-		'type': 'memory',
-	},
-	'apscheduler.executors.default': {
-		'class': 'apscheduler.executors.pool:ThreadPoolExecutor',
-		'max_workers': '20'
-	},
-	'apscheduler.executors.processpool': {
-		'type': 'processpool',
-		'max_workers': '5'
-	},
-	'apscheduler.job_defaults.coalesce': 'false',
-	'apscheduler.job_defaults.max_instances': '3',
-	'apscheduler.timezone': 'UTC',
-})
 
 # Verifies if session is still active.
 def check_transcripts():

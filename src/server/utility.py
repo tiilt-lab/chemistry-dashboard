@@ -32,8 +32,8 @@ def sanitize_int_value(value):
 def get_client_ip(request):
     return request.remote_addr
 
-def json_response(payload={}, status=200):
-    resp = jsonify(payload)
+def json_response(payload=None, status=200):
+    resp = jsonify(payload if payload is not None else {})
     resp.status_code = status
     # API responses are per-user (Vary: Cookie) and must never be served stale
     # from the browser's heuristic cache — otherwise flags like has_video /

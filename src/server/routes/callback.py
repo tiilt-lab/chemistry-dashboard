@@ -146,148 +146,112 @@ def posthoc_completed(**kwargs):
     return json_response()
 
 
+# Both transcript callbacks receive the same base payload:
+# {
+#     'source': str
+#     'start_time': int
+#     'end_time': int
+#     'transcript': str
+#     'direction': int
+#     'questions': [str]
+#     'keywords': [keyword]
+#     'features': features object
+#     'topic_id': int
+#     'speaker_tag': str
+#     'speaker_id': int
+# }
+def _parse_transcript_payload(content):
+    # Features (and questions/keywords) arrive as an explicit null when
+    # scoring is off — .get's default only covers a missing key.
+    features = content.get('features') or {}
+    return {
+        'key': content.get('source', ''),
+        'start_time': content.get('start_time', 0),
+        'end_time': content.get('end_time', 0),
+        'transcript': content.get('transcript', ''),
+        'direction': content.get('direction', -1),
+        'questions': content.get('questions') or [],
+        'keywords': content.get('keywords') or [],
+        'topic_id': content.get('topic_id', -1),
+        'emotional_tone': features.get('emotional_tone_value', 0),
+        'analytic_thinking': features.get('analytic_thinking_value', 0),
+        'clout': features.get('clout_value', 0),
+        'authenticity': features.get('authenticity_value', 0),
+        'certainty': features.get('certainty_value', 0),
+        'speaker_tag': content.get('speaker_tag', ''),
+        'speaker_id': content.get('speaker_id', -1),
+        'voice_features': content.get('voice_features', None),
+    }
+
+
+def _persist_transcript(session_device, p):
+    # Store the transcript row plus its keyword usages; returns the transcript.
+    transcript = database.add_transcript(
+        session_device.id, p['start_time'], p['end_time'] - p['start_time'],
+        p['transcript'], len(p['questions']) > 0, p['direction'],
+        p['emotional_tone'], p['analytic_thinking'], p['clout'],
+        p['authenticity'], p['certainty'], p['topic_id'],
+        p['speaker_tag'], p['speaker_id'], voice_features=p['voice_features'])
+    for keyword in p['keywords']:
+        database.add_keyword_usage(transcript.id, keyword['word'],
+                                   keyword['keyword'], keyword['similarity'])
+    return transcript
+
+
 @api_routes.route('/api/v1/callback/transcript', methods=['POST'])
 @wrappers.verify_local
 def add_transcript(**kwargs):
-  # EXPECTED FORMAT
-  # {
-  #     'source': str
-  #     'start_time': int
-  #     'end_time': int
-  #     'transcript': str
-  #     'direction': int
-  #     'questions': [str]
-  #     'keywords': [keyword]
-  #     'features': features object
-  #     'topic_id': int
-  #     'speaker_tag':str
-  #     'speaker_id': int
-  # }
-  content = request.get_json()
-  key = content.get('source', '')
-  start_time = content.get('start_time', 0)
-  end_time = content.get('end_time', 0)
-  transcript = content.get('transcript', '')
-  direction = content.get('direction', -1)
-  questions = content.get('questions', [])
-  if questions is None:
-    questions = []
-  keywords = content.get('keywords', [])
-  if keywords is None:
-    keywords = []
-  # Arrives as an explicit null when feature scoring is off — .get's
-  # default only covers a missing key.
-  features = content.get('features') or {}
-  topic_id = content.get('topic_id', -1)
-  emotional_tone = features.get('emotional_tone_value', 0)
-  analytic_thinking = features.get('analytic_thinking_value', 0)
-  clout = features.get('clout_value', 0)
-  authenticity = features.get('authenticity_value', 0)
-  certainty = features.get('certainty_value', 0)
-  speaker_tag = content.get('speaker_tag', '')
-  speaker_id = content.get('speaker_id', -1)
-  voice_features = content.get('voice_features', None)
-  res = {}
+    p = _parse_transcript_payload(request.get_json())
+    res = {}
+    session_device = database.get_session_devices(processing_key=p['key'])
+    if session_device:
+        logging.info('Transcript received for session device {0} on session {1}.'.format(session_device.id, session_device.session_id))
+        transcript = _persist_transcript(session_device, p)
+        room_name = str(session_device.session_id)
+        socketio.emit('transcript_update', json.dumps(transcript.json()), room=room_name, namespace="/session")
+        res = {'transcript_id': transcript.__hash__()}
+    return json_response(payload=res)
 
-  session_device = database.get_session_devices(processing_key=key)
-  if session_device:
-    logging.info('Transcript received for session device {0} on session {1}.'.format(session_device.id, session_device.session_id))
-    # Add data to database.
-    transcript = database.add_transcript(session_device.id, start_time, end_time - start_time, transcript, len(questions) > 0, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id, speaker_tag, speaker_id, voice_features=voice_features)
-    added_keywords = []
-    for keyword in keywords:
-      added_keywords.append(database.add_keyword_usage(transcript.id, keyword['word'], keyword['keyword'], keyword['similarity']))
-    # Emit data on sockets.
-    room_name = str(session_device.session_id)
-    socketio.emit('transcript_update', json.dumps(transcript.json()), room=room_name, namespace="/session")
-    res = {'transcript_id':transcript.__hash__()}
-  return json_response(payload=res)
 
 @api_routes.route('/api/v1/callback/speaker_transcript_metrics', methods=['POST'])
 @wrappers.verify_local
 def add_speaker_transcript_metrics(**kwargs):
-  # EXPECTED FORMAT
-  # {
-  #     'source': str
-  #     'start_time': int
-  #     'end_time': int
-  #     'transcript': str
-  #     'direction': int
-  #     'questions': [str]
-  #     'keywords': [keyword]
-  #     'features': features object
-  #     'topic_id': int
-  #     'speaker_tag':str
-  #     'speaker_id': int
-  #     'speakers': [str]
-  #     'participation_scores': [float]
-  #     'internal_cohesion': [float]
-  #     'responsivity': [float]
-  #     'social_impact': [float]
-  #     'newness': [float]
-  #     'communication_density': [float]
-  # }
-  content = request.get_json()
-  key = content.get('source', '')
-  start_time = content.get('start_time', 0)
-  end_time = content.get('end_time', 0)
-  transcript = content.get('transcript', '')
-  direction = content.get('direction', -1)
-  questions = content.get('questions', [])
-  if questions is None:
-    questions = []
-  keywords = content.get('keywords', [])
-  if keywords is None:
-    keywords = []
-  # Arrives as an explicit null when feature scoring is off — .get's
-  # default only covers a missing key.
-  features = content.get('features') or {}
-  topic_id = content.get('topic_id', -1)
-  emotional_tone = features.get('emotional_tone_value', 0)
-  analytic_thinking = features.get('analytic_thinking_value', 0)
-  clout = features.get('clout_value', 0)
-  authenticity = features.get('authenticity_value', 0)
-  certainty = features.get('certainty_value', 0)
-  speaker_tag = content.get('speaker_tag', '')
-  speaker_id = content.get('speaker_id', -1)
-  voice_features = content.get('voice_features', None)
+    # Base transcript payload plus per-speaker metric arrays:
+    # 'speakers': [str], 'participation_scores' / 'internal_cohesion' /
+    # 'responsivity' / 'social_impact' / 'newness' /
+    # 'communication_density': [float] — index 0 is the group-level row.
+    content = request.get_json()
+    p = _parse_transcript_payload(content)
+    speakers = content.get('speakers', [])
+    participation_scores = content.get('participation_scores', [])
+    internal_cohesion = content.get('internal_cohesion', [])
+    responsivity = content.get('responsivity', [])
+    social_impact = content.get('social_impact', [])
+    newness = content.get('newness', [])
+    communication_density = content.get('communication_density', [])
 
-  speakers = content.get('speakers', [])
-  participation_scores = content.get('participation_scores', [])
-  internal_cohesion = content.get('internal_cohesion', [])
-  responsivity = content.get('responsivity', [])
-  social_impact = content.get('social_impact', [])
-  newness = content.get('newness', [])
-  communication_density = content.get('communication_density', [])
-
-  res = {}
-
-  session_device = database.get_session_devices(processing_key=key)
-  if session_device:
-    logging.info("Speaker Metrics received for session device %s for session %s." %
-                 (session_device.id, session_device.session_id))
-
-    transcript = database.add_transcript(session_device.id, start_time, end_time - start_time, transcript, len(questions) > 0, direction, emotional_tone, analytic_thinking, clout, authenticity, certainty, topic_id, speaker_tag, speaker_id, voice_features=voice_features)
-    added_keywords = []
-    for keyword in keywords:
-      added_keywords.append(database.add_keyword_usage(transcript.id, keyword['word'], keyword['keyword'], keyword['similarity']))
-
-    room_name = str(session_device.session_id)
-    metrics = []
-    for i in range(0, len(participation_scores)):
-      speaker_id = speakers[i-1] if i != 0 else None
-      metric = database.add_speaker_transcript_metrics(speaker_id=speaker_id,
-                                              transcript_id=transcript.id,
-                                              participation_score=participation_scores[i],
-                                              internal_cohesion=internal_cohesion[i],
-                                              responsivity=responsivity[i],
-                                              social_impact=social_impact[i],
-                                              newness=newness[i],
-                                              communication_density=communication_density[i])
-      metrics.append(metric.json())
-    socketio.emit('transcript_metrics_update', json.dumps({'transcript':transcript.json(), 'speaker_metrics':metrics}), room=room_name, namespace="/session")
-    res = {'transcript_id':transcript.__hash__()}
-  return json_response(payload=res)
+    res = {}
+    session_device = database.get_session_devices(processing_key=p['key'])
+    if session_device:
+        logging.info("Speaker Metrics received for session device %s for session %s." %
+                     (session_device.id, session_device.session_id))
+        transcript = _persist_transcript(session_device, p)
+        room_name = str(session_device.session_id)
+        metrics = []
+        for i in range(0, len(participation_scores)):
+            row_speaker_id = speakers[i-1] if i != 0 else None
+            metric = database.add_speaker_transcript_metrics(speaker_id=row_speaker_id,
+                                                    transcript_id=transcript.id,
+                                                    participation_score=participation_scores[i],
+                                                    internal_cohesion=internal_cohesion[i],
+                                                    responsivity=responsivity[i],
+                                                    social_impact=social_impact[i],
+                                                    newness=newness[i],
+                                                    communication_density=communication_density[i])
+            metrics.append(metric.json())
+        socketio.emit('transcript_metrics_update', json.dumps({'transcript':transcript.json(), 'speaker_metrics':metrics}), room=room_name, namespace="/session")
+        res = {'transcript_id': transcript.__hash__()}
+    return json_response(payload=res)
 
 def _gaze_overlay_path(session_device_id):
     # Same location scheme as routes/session.py _video_dirs(): the pipeline's

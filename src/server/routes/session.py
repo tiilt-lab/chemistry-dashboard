@@ -25,6 +25,7 @@ import io
 import os
 import base64
 import queue
+import time
 
 api_routes = Blueprint('session', __name__)
 image_queue_dict = {}
@@ -36,7 +37,7 @@ def get_sessions(user, **kwargs):
     # asked for all owners (they treat owner_id=None as unfiltered). Each row
     # carries 'owner' and 'owned' so the list can label whose session it is and
     # the UI can hide actions an admin may look at but not perform.
-    sees_all = user.get('role') in ['admin', 'super']
+    sees_all = user.get('role') in wrappers.ADMIN_ROLES
     scope = None if sees_all else user['id']
     sessions = database.get_sessions(owner_id=scope)
     video_ids = database.get_session_ids_with_video(owner_id=scope)
@@ -159,7 +160,7 @@ def create_session(user, **kwargs):
         # Admins/supers see every account's folders in GET /api/folders (so
         # the picker offers them), so creation must accept the same set —
         # owner-only here made every non-owned pick fail as "Invalid Session".
-        sees_all = user.get('role') in ['admin', 'super']
+        sees_all = user.get('role') in wrappers.ADMIN_ROLES
         owned_folder = database.get_folders(id=folder, owner_id=None if sees_all else user['id'], first=True)
         if not owned_folder:
             return json_response({'message': 'Either the folder does not exist or invalid access'}, 404)
@@ -569,8 +570,7 @@ def mark_posthoc_completed(session_id, session_device_id, user, **kwargs):
         return json_response({'message': 'Session not found.'}, 404)
     # Optional per-run model provenance blob (e.g. {asr, embedder, diarizer,
     # scorer, emotion, attention, ...}); absent for older callers.
-    from flask import request as _request
-    body = _request.get_json(silent=True) or {}
+    body = request.get_json(silent=True) or {}
     models = body.get('models')
     if database.mark_session_device_posthoc(session_device_id, models=models):
         return json_response({'ok': True})
@@ -610,7 +610,10 @@ def session_device_transcripts(session_id, device_id, **kwargs):
 
 # Guarded by device rather than session: the URL names no session_id, so the
 # session guard raised KeyError on every call and this returned 500.
+# The /client variant is the same endpoint for the BYOD client, which calls it
+# with its pod key rather than a login.
 @api_routes.route('/api/v1/sessions/devices/<int:device_id>/speakers/<int:speaker_id>/transcripts', methods=['GET'])
+@api_routes.route('/api/v1/sessions/devices/<int:device_id>/speakers/<int:speaker_id>/transcripts/client', methods=['GET'])
 @wrappers.verify_device_read_access
 def speaker_id_transcripts_for(device_id, speaker_id, **kwargs):
     # The guard authorises the pod, so the speaker must belong to it — otherwise
@@ -624,21 +627,22 @@ def speaker_id_transcripts_for(device_id, speaker_id, **kwargs):
 # @wrappers.verify_login(public=True)
 # @wrappers.verify_session_access
 def session_device_transcripts_for_client(device_id, **kwargs):
-    transcript_speaker_metrics = []
     transcripts = database.get_transcripts(session_device_id=device_id)
-    
     return json_response([transcript.json() for transcript in transcripts])
+
+
+# Shared assembly for the transcript+metrics endpoints below.
+def _with_speaker_metrics(transcripts):
+    return [{'transcript': transcript.json(),
+             'speaker_metrics': [m.json() for m in database.get_speaker_transcript_metrics(transcript_id=transcript.id)]}
+            for transcript in transcripts]
+
 
 @api_routes.route('/api/v1/devices/<int:device_id>/transcriptspeakermetrics/client', methods=['GET'])
 @wrappers.verify_device_read_access
 def session_device_transcript_speaker_metrics_for_client(device_id, **kwargs):
-    transcript_speaker_metrics = []
     transcripts = database.get_transcripts(session_device_id=device_id)
-    for transcript in transcripts:
-        speaker_metrics = database.get_speaker_transcript_metrics(transcript_id=transcript.id)
-        transcript_speaker_metrics.append({'transcript': transcript.json(),
-                                            'speaker_metrics': [speaker_metric.json() for speaker_metric in speaker_metrics]})
-    return json_response(transcript_speaker_metrics)
+    return json_response(_with_speaker_metrics(transcripts))
 
 @api_routes.route('/api/v1/devices/<int:device_id>/videometrics/client', methods=['GET'])
 @wrappers.verify_device_read_access
@@ -648,35 +652,15 @@ def session_device_videometrics_for_client(device_id, **kwargs):
 
 
 @api_routes.route('/api/v1/session/<int:session_id>/transcripts/student/<string:alias>', methods=['GET'])
-def session_transcripts_for_client(session_id, alias, **kwargs):
-    transcript_speaker_metrics = []
-    transcripts = database.get_transcripts_by_session_alias(session_id=session_id,speaker_tag=alias)
-    for transcript in transcripts:
-        speaker_metrics = database.get_speaker_transcript_metrics(transcript_id=transcript.id)
-        transcript_speaker_metrics.append({'transcript': transcript.json(),
-                                            'speaker_metrics': [speaker_metric.json() for speaker_metric in speaker_metrics]})
-    
-    return json_response(transcript_speaker_metrics) 
-    
 @api_routes.route('/api/v1/session/<int:session_id>/sessiondevice/<int:device_id>/transcripts/student/<string:alias>', methods=['GET'])
-def session_device_transcripts_by_alias(session_id,device_id, alias, **kwargs):
-    transcript_speaker_metrics = []
+def session_transcripts_for_client(session_id, alias, device_id=None, **kwargs):
     transcripts = database.get_transcripts_by_session_alias(session_id=session_id,speaker_tag=alias,device_id=device_id)
-    for transcript in transcripts:
-        speaker_metrics = database.get_speaker_transcript_metrics(transcript_id=transcript.id)
-        transcript_speaker_metrics.append({'transcript': transcript.json(),
-                                            'speaker_metrics': [speaker_metric.json() for speaker_metric in speaker_metrics]})
-    
-    return json_response(transcript_speaker_metrics) 
+    return json_response(_with_speaker_metrics(transcripts))
 
 
 @api_routes.route('/api/v1/session/<int:session_id>/videometrics/student/<string:alias>', methods=['GET'])
-def session_videometrics_for_client(session_id,alias, **kwargs):
-    videoMetrics = database.get_speaker_video_metrics_by_session_alias(session_id=session_id,student_username=alias)
-    return json_response([videometric.json() for videometric in videoMetrics])
-
 @api_routes.route('/api/v1/session/<int:session_id>/sessiondevice/<int:device_id>/videometrics/student/<string:alias>', methods=['GET'])
-def session_device_videometrics_by_alias(session_id,device_id,alias, **kwargs):
+def session_videometrics_for_client(session_id, alias, device_id=None, **kwargs):
     videoMetrics = database.get_speaker_video_metrics_by_session_alias(session_id=session_id,student_username=alias,device_id=device_id)
     return json_response([videometric.json() for videometric in videoMetrics])
 
@@ -690,24 +674,7 @@ def session_device_speaker_metrics(device_id, **kwargs):
 @api_routes.route('/api/v1/sessions/<int:session_id>/transcripts/speaker_metrics', methods=['POST'])
 def session_transcript_speaker_metrics(session_id):
     transcripts = database.get_transcripts(session_id=session_id)
-    transcripts_metrics = []
-    for transcript in transcripts:
-        speaker_metrics = database.get_speaker_transcript_metrics(transcript_id=transcript.id)
-        transcripts_metrics.append({'transcript' : transcript.json(),
-                                    'speaker_metrics' : [speaker_metric.json() for speaker_metric in speaker_metrics]})
-    return json_response(json.dumps(transcripts_metrics))
-
-# Same body as speaker_id_transcripts_for above; kept because the BYOD client
-# may call it with its pod key rather than a login. Guarded by device: a bare
-# speaker_id proved nothing, so anyone could read any speaker's transcripts by
-# counting upwards.
-@api_routes.route('/api/v1/sessions/devices/<int:device_id>/speakers/<int:speaker_id>/transcripts/client', methods=['GET'])
-@wrappers.verify_device_read_access
-def speaker_id_transcripts_for_client(device_id, speaker_id, **kwargs):
-    if not database.get_speakers(id=speaker_id, session_device_id=device_id):
-        return json_response({'message': 'Does not exist.'}, 404)
-    transcripts = database.get_transcripts(speaker_id=speaker_id)
-    return json_response([transcript.json() for transcript in transcripts])
+    return json_response(json.dumps(_with_speaker_metrics(transcripts)))
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/speakers', methods=['GET'])
 @wrappers.verify_login(public=True)
@@ -901,7 +868,6 @@ def upload_video_session(user, **kwargs):
     # video (and an extracted 16k mono f32 wav) exactly where the post-hoc
     # services look for pod recordings, then auto-queue the full analysis.
     # No enrolled speakers, so diarization yields generic SPEAKER_NN labels.
-    import time as _time
     f = request.files.get('video')
     if f is None:
         return json_response({'message': 'video file required'}, 400)
@@ -911,7 +877,7 @@ def upload_video_session(user, **kwargs):
     if not ok:
         return json_response({'message': str(device)}, 400)
     key = device.processing_key
-    ctime = _time.ctime()
+    ctime = time.ctime()
     base = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '..')
     vid_dir = os.path.join(base, 'video_processing', 'videorecordings')
     aud_dir = os.path.join(base, 'audio_processing', 'recordings')
@@ -938,7 +904,6 @@ def upload_video_session(user, **kwargs):
         _RS.delete_session(session_obj.id)
     except Exception as e:
         logging.warning('upload session redis cleanup failed: %s', e)
-    import posthoc_queue
     posthoc_queue.enqueue(session_obj.id, [device.id])
     return json_response({'session_id': session_obj.id, 'device_id': device.id, 'queued': True})
 
@@ -950,7 +915,7 @@ def upload_video_session(user, **kwargs):
 @wrappers.verify_login()
 def global_posthoc_queue(**kwargs):
     user = kwargs['user']
-    is_admin = user.get('role') in ['admin', 'super']
+    is_admin = user.get('role') in wrappers.ADMIN_ROLES
     jobs = posthoc_queue.status()
     session_cache = {}
     result = []
@@ -1000,17 +965,16 @@ def enqueue_posthoc(session_id, **kwargs):
 def stop_posthoc_queue(session_id, **kwargs):
     # Cancel: drop queued jobs and tell the services to stop this session's
     # running pods (best-effort; services also apply on their next restart).
-    import posthoc_queue, posthoc_state, json as _json, os as _os
     cleared = posthoc_queue.clear_pending()
     cancelled = 0
     try:
         import asyncio, websockets
         async def _cancel(port, did):
             async with websockets.connect('ws://127.0.0.1:%s' % port, open_timeout=5) as ws:
-                await ws.send(_json.dumps({'type': 'cancel_posthoc', 'sessiondeviceid': did}))
+                await ws.send(json.dumps({'type': 'cancel_posthoc', 'sessiondeviceid': did}))
                 await asyncio.wait_for(ws.recv(), timeout=5)
         for did in list(posthoc_state.running_device_ids()):
-            for port in (_os.getenv('DC_AUDIO_POSTHOC_WS_PORT', '9015'), _os.getenv('DC_VIDEO_POSTHOC_WS_PORT', '9014')):
+            for port in (os.getenv('DC_AUDIO_POSTHOC_WS_PORT', '9015'), os.getenv('DC_VIDEO_POSTHOC_WS_PORT', '9014')):
                 try:
                     asyncio.run(_cancel(port, did)); cancelled += 1
                 except Exception:
@@ -1128,7 +1092,7 @@ def remove_device_from_session(session_id, session_device_id, **kwargs):
         # Admins/supers may delete any pod; everyone else only pods that
         # never recorded anything (mis-joins, empty test pods).
         user = kwargs.get('user') or {}
-        if user.get('role') not in ('admin', 'super') and database.session_device_has_data(session_device_id):
+        if user.get('role') not in wrappers.ADMIN_ROLES and database.session_device_has_data(session_device_id):
             return json_response({'message': 'This pod has recorded data — only an admin can delete it.'}, 403)
     session_handler.remove_session_device(session_device_id)
     if delete:
@@ -1149,6 +1113,8 @@ def _metrics_export_response(si, json_payload, format):
         output = make_response(json_data)
         output.headers["Content-Disposition"] = "attachment; filename=export.json"
         output.headers["Content-type"] = "application/json"
+    else:
+        output = json_response({'message': 'Unsupported export format.'}, 400)
     return output
 
 
@@ -1160,7 +1126,7 @@ def export_session_transcript_metrics(session_id,windowsize, format, **kwargs):
     field_names = None  
     fwrite = None 
     session_devices = database.get_session_devices(session_id=session_id)
-    All_particiapants_video_metrics = []
+    all_participants_metrics = {}
     if windowsize == 0:
         field_names = ['Device ID', 'Device Name', 'Start Time', 'Transcript Id','Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
                     'Clout', 'Emotional Tone', 'Direction',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness','communication_density','Word Count', 'Speaker Tag', 'Speaker ID', 'Topic ID']
@@ -1207,11 +1173,11 @@ def export_session_transcript_metrics(session_id,windowsize, format, **kwargs):
                 transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session(session_device_id=session_device.id,speaker_id=speaker.id)
                 speaker_data = batch_transcript_metrics(transcriptSpeakerMetric,windowsize,fwrite,speaker,session_device,keywords,format)
                 if format == 'json':
-                    All_particiapants_video_metrics[speaker.alias] = [dict(zip(field_names, row)) for row in speaker_data]
-                    # All_particiapants_video_metrics.extend(speaker_data)
+                    all_participants_metrics[speaker.alias] = [dict(zip(field_names, row)) for row in speaker_data]
+                    # all_participants_metrics.extend(speaker_data)
                         
 
-    return _metrics_export_response(si, All_particiapants_video_metrics, format)
+    return _metrics_export_response(si, all_participants_metrics, format)
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/exportvideometrics/<int:windowsize>/<string:format>',methods=['GET'])
 @wrappers.verify_login(public=True)
@@ -1221,7 +1187,7 @@ def export_session_video_metrics(session_id, windowsize, format, **kwargs):
     fwrite = None  
     si = io.StringIO()
     session_devices = database.get_session_devices(session_id=session_id)
-    All_particiapants_video_metrics = []
+    all_participants_metrics = {}
     if windowsize == 0:
         field_names = ['Device ID', 'Device Name', 'Start Time', 'Facial Emotion', 'Object Focus On', 'Attention Level', 'Speaker Tag']
         fwrite = csv.DictWriter(si, fieldnames = field_names)
@@ -1248,9 +1214,9 @@ def export_session_video_metrics(session_id, windowsize, format, **kwargs):
                 videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device.id,student_username=speaker.alias)
                 speaker_data = batch_video_metrics(videoMetrics,windowsize,fwrite,speaker,session_device,format)
                 if format == 'json':
-                    All_particiapants_video_metrics[speaker.alias] = [dict(zip(field_names, row)) for row in speaker_data]
-                    # All_particiapants_video_metrics.extend(speaker_data)  
-    return _metrics_export_response(si, All_particiapants_video_metrics, format)
+                    all_participants_metrics[speaker.alias] = [dict(zip(field_names, row)) for row in speaker_data]
+                    # all_participants_metrics.extend(speaker_data)  
+    return _metrics_export_response(si, all_participants_metrics, format)
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/exporttranscriptvideometrics/<int:windowsize>/<string:format>',methods=['GET'])
 @wrappers.verify_login(public=True)
@@ -1260,7 +1226,7 @@ def export_session_transcript_video_metrics(session_id,windowsize, format, **kwa
     field_names = None
     fwrite = None
     session_devices = database.get_session_devices(session_id=session_id)
-    All_particiapants_video_metrics = {}
+    all_participants_metrics = {}
     if windowsize == 0:
         field_names = ['Device ID', 'Device Name', 'Start Time', 'Transcript', 'Keywords', 'Keywords Detected', 'Similarity', 'Analytic Thinking', 'Authenticity', 'Certainty',
                     'Clout', 'Emotional Tone', 'Direction',  'participation_score', 'internal_cohesion', 'responsivity', 'social_impact','newness','communication_density',
@@ -1312,11 +1278,11 @@ def export_session_transcript_video_metrics(session_id,windowsize, format, **kwa
                 transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session(session_device_id=session_device.id,speaker_id=speaker.id)
                 speaker_data = batch_transcript_video_metrics(transcriptSpeakerMetric,videoMetrics,windowsize,fwrite,speaker,session_device,keywords,format)
                 if format == 'json':
-                    All_particiapants_video_metrics[speaker.alias] = [dict(zip(field_names, row)) for row in speaker_data]
-                    # All_particiapants_video_metrics.extend(speaker_data) 
+                    all_participants_metrics[speaker.alias] = [dict(zip(field_names, row)) for row in speaker_data]
+                    # all_participants_metrics.extend(speaker_data) 
                    
 
-    return _metrics_export_response(si, All_particiapants_video_metrics, format)
+    return _metrics_export_response(si, all_participants_metrics, format)
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/synthesized_feedback_metrics',methods=['GET'])
 # @wrappers.verify_login(public=True)
@@ -1326,28 +1292,18 @@ def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
     
     combine_metric_level = {'group_id': session_device.id, 'group_name': session_device.name, 'window_level':{}, 'participants_level':{}, 'session_level':{}, 'group_level':{}}
     
-    exisiting_synthesis = database.get_synthesized_feedback_report(sessionId=session_id, sessionDeviceId = session_device_id)
-
-    # if exisiting_synthesis:
-    #     raw = str(exisiting_synthesis[0].synthesized_feedback)
-    #     combine_metric_level = json.loads(raw)
-    # else:
+    existing_synthesis = database.get_synthesized_feedback_report(sessionId=session_id, sessionDeviceId = session_device_id)
 
     keywords = database.get_keyword_usages(session_device_id=session_device_id)
-    # speakers = database.get_speakers(session_device_id=session_device_id)
-
     videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device_id)
     transcriptSpeakerMetric = database.get_all_transcript_metrics_by_session_by_timeline(session_device_id=session_device.id)
-    combine_metric_level = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,windowsize=10)#speakers,
+    combine_metric_level = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,windowsize=10)
 
     combine_metric_dump = json.dumps(combine_metric_level)
-    # add to the database
-    if exisiting_synthesis:
-        #update the database
-        database.update_synthesized_feedback_report(id=exisiting_synthesis[0].id,synthesized_feedback=combine_metric_dump)
+    if existing_synthesis:
+        database.update_synthesized_feedback_report(id=existing_synthesis[0].id,synthesized_feedback=combine_metric_dump)
     else:
-        #insert to database
-        database.add_synthesized_feedback_report(sessionId=session_id,sessionDeviceId=session_device_id,synthesized_feedback=json.dumps(combine_metric_level))
+        database.add_synthesized_feedback_report(sessionId=session_id,sessionDeviceId=session_device_id,synthesized_feedback=combine_metric_dump)
 
 
     return json_response(combine_metric_level)
@@ -1387,33 +1343,45 @@ def add_cartoonized_image(**kwargs):
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/auth/<auth_id>/streamimages')
 def stream_cartonized_images(session_id, device_id,auth_id, **kwargs):
     try:
-        filePath  = os.path.dirname(os.path.abspath(__file__))
-        os.chdir(filePath)
-        os.chdir("../../video_processing/videorecordings")
-        loading_img_Path = os.path.join(os.getcwd(),'loading_img')
-        loading_frame = read_image(os.path.join(loading_img_Path,'loading.png'))
+        # Absolute path — this used to os.chdir() from a request thread, which
+        # mutates the whole process's cwd under every other request.
+        recordings = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  '..', '..', 'video_processing', 'videorecordings')
+        loading_frame = read_image(os.path.join(recordings, 'loading_img', 'loading.png'))
         queue_key = '{0}_{1}_{2}'.format(auth_id,session_id,device_id)
         return Response(gen(loading_frame,queue_key),
                         mimetype='multipart/x-mixed-replace; boundary=frame')
     except Exception as e:
         logging.error('Error occured while streaming cartoonized image: {0}'.format(e))
+        return json_response({'message': 'Streaming failed.'}, 500)
 
 
 def gen(loading_frame,queue_key):
-    start = False
-    while True:
-        if not start:
-            if  queue_key in  image_queue_dict.keys():
-                logging.info('qsize is {0}'.format(image_queue_dict[queue_key].qsize()))
-                if image_queue_dict[queue_key].qsize() >= 1:
-                    start = True
-            yield (b'--frame\r\n'
-                    b'Content-Type: image/png\r\n\r\n' + loading_frame + b'\r\n')
-
-        elif not image_queue_dict[queue_key].empty():
-            data = image_queue_dict[queue_key].get(block=False)
-            yield (b'--frame\r\n'
-            b'Content-Type: image/png\r\n\r\n' +  base64.b64decode(data['image']) + b'\r\n')
+    try:
+        started = False
+        while True:
+            image_queue = image_queue_dict.get(queue_key)
+            if not started:
+                if image_queue is not None and image_queue.qsize() >= 1:
+                    started = True
+                    continue
+                yield (b'--frame\r\n'
+                        b'Content-Type: image/png\r\n\r\n' + loading_frame + b'\r\n')
+                time.sleep(0.2)
+            else:
+                # Block instead of spinning; a drained queue no longer pegs a
+                # core while the client stays connected.
+                try:
+                    data = image_queue.get(timeout=1)
+                except queue.Empty:
+                    continue
+                yield (b'--frame\r\n'
+                b'Content-Type: image/png\r\n\r\n' +  base64.b64decode(data['image']) + b'\r\n')
+    finally:
+        # Client gone (GeneratorExit lands here): drop the queue so
+        # image_queue_dict does not grow forever across sessions.
+        image_queue_dict.pop(queue_key, None)
 
 def read_image(filepath):
-    return  open(filepath , 'rb').read()
+    with open(filepath, 'rb') as f:
+        return f.read()

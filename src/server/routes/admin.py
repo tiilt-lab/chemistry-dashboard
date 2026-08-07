@@ -18,7 +18,7 @@ from utility import json_response, sanitize, sanitize_int_value
 api_routes = Blueprint('admin', __name__)
 
 @api_routes.route('/api/v1/admin/users', methods=['GET'])
-@wrappers.verify_login(roles=['admin', 'super'])
+@wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
 def get_users(user, **kwargs):
     roles = ['user', 'admin']
     if user['role'] == 'super':
@@ -26,7 +26,7 @@ def get_users(user, **kwargs):
     return json_response([user.json() for user in database.get_users(roles=roles)])
 
 @api_routes.route('/api/v1/admin/students', methods=['GET'])
-@wrappers.verify_login(roles=['admin', 'super'])
+@wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
 def get_students(**kwargs):
     students = database.get_students()
     if students:
@@ -35,7 +35,7 @@ def get_students(**kwargs):
         return json_response({'message': 'No Records found.'}, 400)
 
 @api_routes.route('/api/v1/admin/raters', methods=['GET'])
-@wrappers.verify_login(roles=['admin', 'super'])
+@wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
 def get_raters(**kwargs):
     raters = database.get_raters()
     if raters:
@@ -53,7 +53,7 @@ def get_rater_by_id(rater_id, **kwargs):
     
         
 @api_routes.route('/api/v1/admin/users', methods=['POST'])
-@wrappers.verify_login(roles=['admin', 'super'])
+@wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
 @wrappers.verify_valid_role
 def add_user(**kwargs):
     content = request.json
@@ -75,7 +75,7 @@ def add_user(**kwargs):
         return json_response({'message': user}, 400)
     
 @api_routes.route('/api/v1/admin/raters', methods=['POST'])
-@wrappers.verify_login(roles=['admin', 'super'])
+@wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
 def add_rater(**kwargs):
     content = request.json
     sessionid = sanitize_int_value(content.get('sessionid', None))
@@ -106,7 +106,7 @@ def add_rater(**kwargs):
         return json_response({'message': rater}, 400)    
 
 @api_routes.route('/api/v1/admin/users/<int:user_id>', methods=['DELETE'])
-@wrappers.verify_login(roles=['admin', 'super'])
+@wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
 @wrappers.avoid_self
 @wrappers.verify_user_authority
 def delete_user(user_id, **kwargs):
@@ -122,7 +122,7 @@ def delete_user(user_id, **kwargs):
 # duplicate's biometric recording is renamed to the target when the target
 # has none, so their saved fingerprint keeps working.
 @api_routes.route('/api/v1/admin/students/<int:student_id>/merge', methods=['POST'])
-@wrappers.verify_login(roles=['admin', 'super'])
+@wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
 def merge_student(student_id, **kwargs):
     target_id = request.json.get('targetId', None)
     if not target_id:
@@ -148,7 +148,7 @@ def merge_student(student_id, **kwargs):
 
 
 @api_routes.route('/api/v1/admin/students/<int:student_id>', methods=['DELETE'])
-@wrappers.verify_login(roles=['admin', 'super'])
+@wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
 def delete_student(student_id, **kwargs):
     student = database.delete_student(student_id)
     if student is not None:
@@ -163,7 +163,7 @@ def delete_student(student_id, **kwargs):
         return json_response({'User not found.'}, 400)
     
 @api_routes.route('/api/v1/admin/raters/<int:id>', methods=['DELETE'])
-@wrappers.verify_login(roles=['admin', 'super'])
+@wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
 def delete_rater(id, **kwargs):
     rater = database.delete_rater(id)
     if rater is not None:
@@ -172,7 +172,7 @@ def delete_rater(id, **kwargs):
         return json_response({'Rater not found.'}, 400)
 
 @api_routes.route('/api/v1/admin/users/<int:user_id>/lock', methods=['POST'])
-@wrappers.verify_login(roles=['admin', 'super'])
+@wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
 @wrappers.avoid_self
 @wrappers.verify_user_authority
 def lock_user(user_id, **kwargs):
@@ -183,7 +183,7 @@ def lock_user(user_id, **kwargs):
         return json_response({'message': 'User not found.'}, 400)
 
 @api_routes.route('/api/v1/admin/users/<int:user_id>/unlock', methods=['POST'])
-@wrappers.verify_login(roles=['admin', 'super'])
+@wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
 @wrappers.avoid_self
 @wrappers.verify_user_authority
 def unlock_user(user_id, **kwargs):
@@ -195,7 +195,7 @@ def unlock_user(user_id, **kwargs):
         return json_response({'message': 'User not found.'}, 400)
 
 @api_routes.route('/api/v1/admin/users/<int:user_id>/role', methods=['POST'])
-@wrappers.verify_login(roles=['admin', 'super'])
+@wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
 @wrappers.avoid_self
 @wrappers.verify_user_authority
 @wrappers.verify_valid_role
@@ -211,7 +211,7 @@ def change_user_role(user_id, **kwargs):
         return json_response({'message': 'User not found.'}, 400)
 
 @api_routes.route('/api/v1/admin/users/<int:user_id>/reset', methods=['POST'])
-@wrappers.verify_login(roles=['admin', 'super'])
+@wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
 @wrappers.avoid_self
 @wrappers.verify_user_authority
 def reset_password(user_id, **kwargs):

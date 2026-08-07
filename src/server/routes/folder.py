@@ -16,7 +16,7 @@ def get_folders(user, **kwargs):
     # see. Without this the sessions list returned another owner's sessions but
     # the page filed them under a folder it had never heard of, and they simply
     # never appeared. Writes stay owner-or-super via verify_folder_access.
-    sees_all = user.get('role') in ['admin', 'super']
+    sees_all = user.get('role') in wrappers.ADMIN_ROLES
     folders = database.get_folders(owner_id=None if sees_all else user['id'])
     owner_emails = database.get_user_emails() if sees_all else {}
     result = []

@@ -80,10 +80,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
-# Scheduled tasks
-TIMEOUT = 10 * 60 # Time in seconds without transcripts before timeout occurs
-
-# Create scheduler
+# Create scheduler (job functions live in scheduled_tasks.py; jobs are
+# registered in discussion_capture.py)
 scheduler = BackgroundScheduler({
 	'apscheduler.jobstores.default': {
 		'type': 'memory',

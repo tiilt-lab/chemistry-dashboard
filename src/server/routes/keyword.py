@@ -16,16 +16,6 @@ def get_keyword_lists(user, **kwargs):
     return json_response([keyword_list.json() for keyword_list in database.get_keyword_lists(owner_id=user['id'])])
 
 
-# @api_routes.route('/api/v1/topics', methods=['GET'])
-# @wrappers.verify_login(public=True)
-# def get_topics(user, **kwargs):
-#     id2word, texts, corpus = topicmodeling.generate_corpus(
-#         "/vagrant/uploads/{}".format(user['id']), [""])
-#     topicModel = topicmodeling.generate_topic_model(id2word, texts, corpus, 5)
-#     response = [topic[1] for topic in topicModel.print_topics()]
-#     return json_response(response)
-
-
 @api_routes.route('/api/v1/keyword_lists', methods=['POST'])
 @wrappers.verify_login(public=True)
 def add_keyword_list(user, **kwargs):
