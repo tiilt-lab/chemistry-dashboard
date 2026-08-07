@@ -7,11 +7,15 @@ words. Weights are non-commercial-research licensed; inference code is MIT.
 
 The package needs its own CTranslate2 fork, so it lives in src/venv-crisper
 and all inference goes through crisper_worker.py subprocesses:
-  - CrisperWhisperASR (live): persistent --serve worker, one job per
-    12-second window; the model stays loaded between windows.
-  - CrisperWhisperPosthocASR: --oneshot on the whole recording, then emits
-    gap-segmented Google-shaped AsrResults (same contract as Qwen3ASR;
-    speaker attribution happens downstream via fingerprint matching).
+  - CrisperWhisperASR (live): all pods share ONE persistent --serve worker
+    (one ~4GB model copy on the GPU instead of one per pod). A window
+    transcribes in ~1s and each pod produces one per 12s, so serialized
+    requests stay far under budget; the worker is reaped after 15 idle
+    minutes to give the GPU memory back between sessions.
+  - CrisperWhisperPosthocASR: --oneshot on the whole recording in its own
+    process (so a long file can never head-of-line-block live captions),
+    then emits gap-segmented Google-shaped AsrResults (same contract as
+    Qwen3ASR; speaker attribution happens downstream via fingerprints).
 """
 import json
 import logging
@@ -21,6 +25,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import wave
 
 from .base_asr import BaseASR, AsrResult
@@ -64,50 +69,132 @@ def _emit_segments(transcript_queue, words, offset=0.0):
             transcript_queue.put(AsrResult(text, triples))
 
 
-class CrisperWhisperASR(BaseASR):
-    """Live connector: fixed windows against a persistent worker process."""
+class _SharedWorker:
+    """Process-wide CrisperWhisper worker shared by every live pod.
 
-    WINDOW_SECONDS = 12.0
+    The model is identical and read-only across pods, so one subprocess
+    (one ~4GB GPU copy, one ~7s load) serves them all. Requests are
+    serialized under a lock — the worker is single-threaded anyway, and
+    doing send+readline as one unit keeps the pipe protocol in sync with
+    no request-ID bookkeeping. A dead worker is respawned and the request
+    retried once. After IDLE_SHUTDOWN_SECONDS without a window the worker
+    is shut down to give the GPU memory back; the next window relaunches
+    it transparently.
+    """
 
-    def __init__(self, audio_queue, transcript_queue, config, media_type, interval):
-        super().__init__(audio_queue, transcript_queue, config, media_type, interval)
+    IDLE_SHUTDOWN_SECONDS = 900
+
+    def __init__(self):
+        self._lock = threading.Lock()
         self._proc = None
-        self._buffer = bytearray()
-        self._window_start = 0.0
+        self._last_used = 0.0
+        self._reaper_started = False
 
-    def _spawn_worker(self):
+    # -- lifecycle (all callers hold self._lock) ---------------------------
+
+    def _ensure_proc(self):
+        if self._proc is not None and self._proc.poll() is None:
+            return
         import config as cf
         model = cf.crisperwhisper_model()
         mode = cf.crisperwhisper_mode()
-        logging.info("Starting CrisperWhisper worker (model=%s, mode=%s)", model, mode)
+        logging.info("Starting shared CrisperWhisper worker (model=%s, mode=%s)",
+                     model, mode)
         self._proc = subprocess.Popen(
             [_worker_python(), _WORKER, "--serve", "--model", model, "--mode", mode],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL, text=True, bufsize=1)
         ready = self._proc.stdout.readline()
         if not ready or not json.loads(ready).get("ready"):
+            self._kill()
             raise RuntimeError("CrisperWhisper worker failed to start")
+        if not self._reaper_started:
+            self._reaper_started = True
+            threading.Thread(target=self._reap_idle, daemon=True,
+                             name="crisper-idle-reaper").start()
 
-    def start(self):
-        self.running = True
-        self._spawn_worker()
-        self.asr_thread = threading.Thread(target=self._processing, name="crisper-asr")
-        self.asr_thread.daemon = True
-        self.asr_thread.start()
-
-    def stop(self):
-        self.running = False
+    def _kill(self):
         proc, self._proc = self._proc, None
         if proc:
             try:
-                proc.stdin.write(json.dumps({"exit": True}) + "\n")
-                proc.stdin.flush()
+                proc.kill()
             except Exception:
                 pass
-            try:
-                proc.wait(timeout=5)
-            except Exception:
-                proc.kill()
+
+    def _shutdown(self):
+        if self._proc is None:
+            return
+        try:
+            self._proc.stdin.write(json.dumps({"exit": True}) + "\n")
+            self._proc.stdin.flush()
+            self._proc.wait(timeout=5)
+            self._proc = None
+        except Exception:
+            self._kill()
+
+    def _reap_idle(self):
+        while True:
+            time.sleep(60)
+            with self._lock:
+                if (self._proc is not None
+                        and time.time() - self._last_used > self.IDLE_SHUTDOWN_SECONDS):
+                    logging.info("Shared CrisperWhisper worker idle >%ds — "
+                                 "shutting down to free GPU memory",
+                                 self.IDLE_SHUTDOWN_SECONDS)
+                    self._shutdown()
+
+    # -- API ----------------------------------------------------------------
+
+    def warm(self):
+        """Preload the model so a session's first window isn't slow."""
+        try:
+            with self._lock:
+                self._ensure_proc()
+        except Exception as e:
+            logging.warning("CrisperWhisper warm-up failed: %s", e)
+
+    def transcribe(self, wav_path):
+        with self._lock:
+            self._last_used = time.time()
+            for attempt in (1, 2):
+                try:
+                    self._ensure_proc()
+                    self._proc.stdin.write(json.dumps({"audio": wav_path}) + "\n")
+                    self._proc.stdin.flush()
+                    line = self._proc.stdout.readline()
+                    if not line:
+                        raise RuntimeError("worker closed its pipe")
+                    self._last_used = time.time()
+                    return json.loads(line)
+                except Exception:
+                    self._kill()
+                    if attempt == 2:
+                        raise
+                    logging.warning("Shared CrisperWhisper worker died — respawning")
+
+
+_shared_worker = _SharedWorker()
+
+
+class CrisperWhisperASR(BaseASR):
+    """Live connector: fixed windows against the shared worker."""
+
+    WINDOW_SECONDS = 12.0
+
+    def __init__(self, audio_queue, transcript_queue, config, media_type, interval):
+        super().__init__(audio_queue, transcript_queue, config, media_type, interval)
+        self._buffer = bytearray()
+        self._window_start = 0.0
+
+    def start(self):
+        self.running = True
+        # Warm in the background so joining a pod doesn't block ~7s on the
+        # model load when the shared worker isn't up yet.
+        threading.Thread(target=_shared_worker.warm, daemon=True,
+                         name="crisper-warm").start()
+        self.asr_thread = threading.Thread(target=self._processing, name="crisper-asr")
+        self.asr_thread.daemon = True
+        self.asr_thread.start()
 
     def _window_full(self):
         samples = len(self._buffer) / self.DEPTH
@@ -126,21 +213,6 @@ class CrisperWhisperASR(BaseASR):
                 self._flush()
         self._flush()
         self.transcript_queue.put(None)
-        # The audio server ends a session by closing the stream, not by
-        # calling stop() — without this, every finished session leaks a
-        # ~4GB-GPU worker process.
-        self.stop()
-
-    def _ask_worker(self, wav_path):
-        if self._proc is None or self._proc.poll() is not None:
-            logging.warning("CrisperWhisper worker died — restarting")
-            self._spawn_worker()
-        self._proc.stdin.write(json.dumps({"audio": wav_path}) + "\n")
-        self._proc.stdin.flush()
-        line = self._proc.stdout.readline()
-        if not line:
-            raise RuntimeError("CrisperWhisper worker closed its pipe")
-        return json.loads(line)
 
     def _flush(self):
         if len(self._buffer) < self.DEPTH:
@@ -153,7 +225,7 @@ class CrisperWhisperASR(BaseASR):
                 wf.setsampwidth(self.DEPTH)
                 wf.setframerate(self.SAMPLE_RATE)
                 wf.writeframes(bytes(self._buffer))
-            data = self._ask_worker(tmp.name)
+            data = _shared_worker.transcribe(tmp.name)
             if data.get("error"):
                 logging.warning("CrisperWhisper window failed: %s", data["error"])
             else:
