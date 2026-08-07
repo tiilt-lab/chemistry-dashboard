@@ -1633,7 +1633,10 @@ function JoinPage() {
             const keepName = name.current
             const keepCode = pcode
             disconnect(true)
-            ending.current = false
+            // ending stays true: the socket onclose events fire AFTER this
+            // handler, and resetting it here made them mistake the leave for
+            // a mid-session drop and launch the reconnect loop over the join
+            // form. requestAccessKey clears it when the user actually rejoins.
             name.current = keepName
             setPcode(keepCode)
             setCurrentForm("")

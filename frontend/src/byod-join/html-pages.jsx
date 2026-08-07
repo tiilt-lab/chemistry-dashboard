@@ -440,7 +440,7 @@ function ByodJoinPage(props) {
                                                         </div>
                                                     </div>
                                                 )}
-                                            {props.speakers.map(
+                                            {(props.speakers || []).map(
                                                 (speaker, count) => (
                                                     <div
                                                         key={"speaker" + count}
@@ -621,7 +621,7 @@ function ByodJoinPage(props) {
                                                         </div>
                                                     </div>
                                                 )}
-                                            {props.speakers.map(
+                                            {(props.speakers || []).map(
                                                 (speaker, count) => (
                                                     <div
                                                         key={"speaker" + count}
