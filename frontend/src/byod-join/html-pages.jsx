@@ -87,23 +87,55 @@ function SpeakerNameEditor({ speaker, onCommit }) {
     )
 }
 
+// iOS-style switch, same look as the create-session toggles once had.
+function Toggle({ label, checked, onChange }) {
+    return (
+        <button
+            type="button"
+            role="switch"
+            aria-checked={checked}
+            onClick={onChange}
+            className="flex w-full items-center justify-between gap-3 rounded-lg border border-tiilt-line bg-white px-4 py-3 text-left transition hover:bg-tiilt-soft/40"
+        >
+            <span className="text-sm font-medium text-tiilt-ink">{label}</span>
+            <span
+                className={`relative inline-flex h-6 w-11 flex-none items-center rounded-full transition ${checked ? "bg-tiilt" : "bg-tiilt-line"}`}
+            >
+                <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-[#fff] shadow transition ${checked ? "translate-x-[22px]" : "translate-x-0.5"}`}
+                />
+            </span>
+        </button>
+    )
+}
+
 // Optional Polar heart-rate strap per speaker (Web Bluetooth, Chrome/Edge
-// only — hidden elsewhere). Pairing the strap is the person↔sensor
-// assignment: the chooser shows each strap's printed ID. Once connected the
-// card shows the sensor ID and live BPM.
-function PolarStrapControl({ speaker, supported, info, onAssign, onUnassign, idHint }) {
-    if (!supported) return null
+// only — hidden elsewhere), shown only when the join form's "Add Polar H10"
+// toggle is on. The participant's strap ID is typed HERE, on their card;
+// pairing opens the Bluetooth chooser pre-filtered to that strap. Once
+// connected the card shows the sensor ID and live BPM.
+function PolarStrapControl({ speaker, supported, enabled, info, onAssign, onUnassign }) {
+    const [id, setId] = useState("")
+    if (!supported || !enabled) return null
     if (!info) {
         return (
-            <button
-                type="button"
-                className="mx-auto cursor-pointer rounded px-1 font-ahamono text-[11px] text-tiilt-muted hover:text-tiilt-ink"
-                onClick={() => onAssign(speaker, idHint)}
-            >
-                {idHint
-                    ? "♥ pair Polar H10 " + idHint
-                    : "♥ add heart-rate strap"}
-            </button>
+            <span className="mx-auto mt-1 flex items-center gap-1.5">
+                <input
+                    value={id}
+                    spellCheck="false"
+                    onChange={(e) => setId(e.target.value)}
+                    placeholder="Polar H10 ID"
+                    aria-label={`Polar H10 ID for ${speaker.alias}`}
+                    className="w-32 rounded-lg border border-tiilt-line px-2 py-1 text-center font-ahamono text-[11px] text-tiilt-ink placeholder:text-tiilt-muted"
+                />
+                <button
+                    type="button"
+                    className="cursor-pointer rounded px-1 font-ahamono text-[11px] text-tiilt-muted hover:text-tiilt-ink"
+                    onClick={() => onAssign(speaker, id.trim() || undefined)}
+                >
+                    ♥ pair
+                </button>
+            </span>
         )
     }
     const live = info.status === "connected"
@@ -325,24 +357,21 @@ function ByodJoinPage(props) {
                                                 </button>
                                                 <div className={showAdvanced ? "mt-3 flex flex-col gap-4" : "hidden"}>
                                                     <div>
-                                                        <label htmlFor="polarids" className={fieldLabel}>
-                                                            Add Polar H10 heart-rate straps
-                                                        </label>
-                                                        <input
-                                                            id="polarids"
-                                                            className={dlgInput}
-                                                            spellCheck="false"
-                                                            placeholder="Strap IDs in speaker order, e.g. 8C0B2A2B, 7F1D3C4E"
+                                                        <Toggle
+                                                            label="Add Polar H10 heart-rate straps"
+                                                            checked={!!props.polarEnabled}
+                                                            onChange={() =>
+                                                                props.setPolarEnabled(
+                                                                    !props.polarEnabled,
+                                                                )
+                                                            }
                                                         />
                                                         <p className="mt-1 text-xs text-tiilt-muted">
-                                                            Optional. Enter each
-                                                            participant&apos;s Polar H10
-                                                            ID (printed on the sensor),
-                                                            comma-separated, in the same
-                                                            order as the speakers on the
-                                                            next page — each speaker card
-                                                            then offers its strap for
-                                                            one-tap pairing.
+                                                            Each participant&apos;s
+                                                            strap ID (printed on the
+                                                            sensor) is entered on
+                                                            their card on the next
+                                                            page.
                                                         </p>
                                                     </div>
                                                 </div>
@@ -368,9 +397,6 @@ function ByodJoinPage(props) {
                                                     // Group size is chosen on
                                                     // the speaker page now.
                                                     0,
-                                                    document.getElementById("polarids")
-                                                        ? document.getElementById("polarids").value
-                                                        : "",
                                                 )
                                             }
                                         >
@@ -490,7 +516,7 @@ function ByodJoinPage(props) {
                                                                 speaker={speaker}
                                                                 supported={props.bluetoothSupported}
                                                                 info={(props.polarInfo || {})[speaker.id]}
-                                                                idHint={(props.polarIdHints || [])[count]}
+                                                                enabled={props.polarEnabled}
                                                                 onAssign={props.assignPolarSensor}
                                                                 onUnassign={props.unassignPolarSensor}
                                                             />
@@ -681,7 +707,7 @@ function ByodJoinPage(props) {
                                                                 speaker={speaker}
                                                                 supported={props.bluetoothSupported}
                                                                 info={(props.polarInfo || {})[speaker.id]}
-                                                                idHint={(props.polarIdHints || [])[count]}
+                                                                enabled={props.polarEnabled}
                                                                 onAssign={props.assignPolarSensor}
                                                                 onUnassign={props.unassignPolarSensor}
                                                             />

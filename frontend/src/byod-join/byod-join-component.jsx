@@ -157,8 +157,9 @@ function JoinPage() {
     const polarConns = useRef({})
     const hrBuffer = useRef([])
     const [polarInfo, setPolarInfo] = useState({})
-    // Strap IDs typed under Advanced options, in speaker order.
-    const polarIdHints = useRef([])
+    // Advanced-options toggle: when on, each speaker card on the
+    // participants page shows a Polar H10 ID field + pair button.
+    const [polarEnabled, setPolarEnabled] = useState(false)
 
     const navigate = useNavigate()
 
@@ -1293,16 +1294,10 @@ function JoinPage() {
     // Verifies the users connection input, then routes through the device
     // check page (camera preview, mic levels, channel choice) before the
     // actual join.
-    const verifyInputAndAudio = (names, passcode, joinswith, collaborators, polarIdsRaw) => {
+    const verifyInputAndAudio = (names, passcode, joinswith, collaborators) => {
         if (names === null) {
             names = "User Device"
         }
-        // Optional Polar H10 strap IDs from Advanced options, in speaker
-        // order; each speaker card offers its strap for one-tap pairing.
-        polarIdHints.current = (polarIdsRaw || "")
-            .split(/[\s,;]+/)
-            .map((s) => s.trim())
-            .filter(Boolean)
         // The join form's inline device check owns the current selection;
         // release its preview devices before the real capture opens them.
         const inline = inlineSelection.current || {}
@@ -2074,7 +2069,8 @@ function JoinPage() {
             addSpeakerSlots={addSpeakerSlots}
             inlineRenameSpeaker={inlineRenameSpeaker}
             bluetoothSupported={isBluetoothSupported()}
-            polarIdHints={polarIdHints.current}
+            polarEnabled={polarEnabled}
+            setPolarEnabled={setPolarEnabled}
             polarInfo={polarInfo}
             assignPolarSensor={assignPolarSensor}
             unassignPolarSensor={unassignPolarSensor}
