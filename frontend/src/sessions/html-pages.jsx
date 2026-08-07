@@ -418,6 +418,12 @@ function FolderRow({ folder, count, onOpen, openFolderDialog }) {
                 onClick={(e) => e.stopPropagation()}
             >
                 <span className="flex items-center justify-end gap-0.5">
+                    <span
+                        aria-hidden="true"
+                        className="flex h-7 w-7 flex-none items-center justify-center text-tiilt-muted"
+                    >
+                        <Chevron size={14} />
+                    </span>
                     <AppContextMenu label={`Options for folder ${folder.name}`}>
                         <button
                             role="menuitem"
@@ -441,12 +447,6 @@ function FolderRow({ folder, count, onOpen, openFolderDialog }) {
                             Delete
                         </button>
                     </AppContextMenu>
-                    <span
-                        aria-hidden="true"
-                        className="flex h-7 w-7 flex-none items-center justify-center text-tiilt-muted"
-                    >
-                        <Chevron size={14} />
-                    </span>
                 </span>
             </td>
         </tr>
