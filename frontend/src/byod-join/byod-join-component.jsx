@@ -192,6 +192,16 @@ function JoinPage() {
     // recording looks fine from the pod, so the pod's own screen is the
     // only place a warning reaches the people who can act on it.
     const [streamWarning, setStreamWarning] = useState(null)
+    // iOS pins the capture shape to the WINDOW orientation, not the phone's
+    // physical one: with the portrait rotation lock on, a phone propped
+    // sideways still delivers an upright portrait crop — the wide field of
+    // view is gone at capture and nothing downstream can restore it
+    // (session 412, pods 1310/1311). So in "wide" mode the Start-recording
+    // tap gates on the track actually being landscape-shaped, holding with
+    // this prompt until it is (or the group explicitly picks portrait).
+    const [rotatePrompt, setRotatePrompt] = useState(false)
+    const rotateGateActive = useRef(false)
+    const portraitOverride = useRef(false)
     const liveAnalyticsRef = useRef(true)
     const setLiveAnalytics = (v) => {
         liveAnalyticsRef.current = v
@@ -695,6 +705,9 @@ function JoinPage() {
             ending.current = true
             setArmed(false)
             setStreamWarning(null)
+            // The rotate-gate loop notices the stopped track and exits on
+            // its own; dropping the overlay here just makes it immediate.
+            setRotatePrompt(false)
             setRecSeconds(0)
             dispatch({ type: "SPEAKERS_VALIDATED", payload: false })
             setSpeakers(null)
@@ -1144,6 +1157,109 @@ function JoinPage() {
     // are matched posthoc instead.
     const onSavedFingerprintFailed = (message) => {
         console.warn("saved fingerprint failed:", message)
+    }
+
+    // Delivered shape of the camera track feeding the recorder ({w, h},
+    // zeros when unknown). Read fresh each time: modern iOS rotates a LIVE
+    // track when the phone turns (dimensions swap in place).
+    const recordingTrackShape = () => {
+        const t = rawStreamReference.current?.getVideoTracks?.()[0]
+        const s = t && t.getSettings ? t.getSettings() : {}
+        return { w: s.width || 0, h: s.height || 0 }
+    }
+
+    // Fallback for pipelines that never rotate an open track: re-open the
+    // camera (which adopts the now-landscape window orientation), swap the
+    // video track into the live stream, and rebuild the not-yet-started
+    // recorder over it. Audio tracks and the on-screen preview are
+    // untouched — they ride the same MediaStream object.
+    const swapInLandscapeTrack = async () => {
+        const videoConstraint = constraintObj && constraintObj.video
+        if (!videoConstraint || !recorderOptions.current) return false
+        let fresh
+        try {
+            fresh = await navigator.mediaDevices.getUserMedia({
+                video: videoConstraint,
+                audio: false,
+            })
+        } catch (e) {
+            console.warn("landscape re-acquire failed:", e)
+            return false
+        }
+        const track = fresh.getVideoTracks()[0]
+        const s = track && track.getSettings ? track.getSettings() : {}
+        const stream = rawStreamReference.current
+        if (!track || !stream || !s.width || !s.height || s.width < s.height) {
+            fresh.getTracks().forEach((t) => t.stop())
+            return false
+        }
+        stream.getVideoTracks().forEach((t) => {
+            t.stop()
+            stream.removeTrack(t)
+        })
+        stream.addTrack(track)
+        try {
+            if (mediaRecorder.current.state !== "inactive") {
+                mediaRecorder.current.stop()
+            }
+        } catch (e) {
+            console.warn("recorder stop before track swap failed", e)
+        }
+        mediaRecorder.current = new MediaRecorder(
+            stream,
+            recorderOptions.current,
+        )
+        return true
+    }
+
+    // The Start-recording tap. Arms immediately except when "wide" mode is
+    // about to record a portrait-shaped track — then hold behind the rotate
+    // prompt until the track turns landscape: first by waiting (iOS rotates
+    // live tracks once the rotation lock is off), then by re-opening the
+    // camera when the window says landscape but the track stays tall.
+    const startRecordingGate = async () => {
+        if (rotateGateActive.current) return
+        const isVideo =
+            joinwith.current === "Video" ||
+            joinwith.current === "Videocartoonify"
+        const shape = isVideo ? recordingTrackShape() : { w: 0, h: 0 }
+        if (
+            !isVideo ||
+            orientationMode.current !== "wide" ||
+            !shape.h ||
+            shape.w >= shape.h
+        ) {
+            setArmed(true)
+            return
+        }
+        rotateGateActive.current = true
+        portraitOverride.current = false
+        setRotatePrompt(true)
+        let landscapeWindowPolls = 0
+        try {
+            for (;;) {
+                await new Promise((resolve) => setTimeout(resolve, 1000))
+                if (portraitOverride.current) break
+                const t = rawStreamReference.current?.getVideoTracks?.()[0]
+                if (!t || t.readyState === "ended") return // torn down mid-wait
+                const { w, h } = recordingTrackShape()
+                if (h && w >= h) break
+                const windowLandscape =
+                    typeof window.matchMedia === "function" &&
+                    window.matchMedia("(orientation: landscape)").matches
+                landscapeWindowPolls = windowLandscape
+                    ? landscapeWindowPolls + 1
+                    : 0
+                if (landscapeWindowPolls >= 4) {
+                    landscapeWindowPolls = 0
+                    await swapInLandscapeTrack()
+                }
+            }
+        } finally {
+            rotateGateActive.current = false
+            setRotatePrompt(false)
+        }
+        setArmed(true)
     }
 
     const handleStream = async () => {
@@ -2160,7 +2276,7 @@ function JoinPage() {
                 // Resume inside the tap itself — this is the user gesture
                 // iOS requires before an AudioContext may run.
                 audioContext.current?.resume?.().catch(() => {})
-                setArmed(true)
+                startRecordingGate()
             }}
             requestEndRecording={() => setCurrentForm("ConfirmEndRec")}
             confirmEndRecording={endRecording}
@@ -2184,6 +2300,53 @@ function JoinPage() {
                 }}
             >
                 {streamWarning}
+            </div>
+        )}
+        {rotatePrompt && (
+            <div
+                style={{
+                    position: "fixed",
+                    inset: 0,
+                    zIndex: 10000,
+                    background: "rgba(0, 0, 0, 0.88)",
+                    color: "#fff",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    textAlign: "center",
+                    padding: "24px",
+                    gap: "16px",
+                }}
+            >
+                <div style={{ fontSize: "48px" }}>📱⟳</div>
+                <div style={{ fontSize: "20px", fontWeight: 700 }}>
+                    Turn your phone sideways
+                </div>
+                <div style={{ fontSize: "15px", maxWidth: "420px", lineHeight: 1.5 }}>
+                    The camera is capturing a tall (portrait) picture. Rotate
+                    the phone to landscape — if the screen doesn&apos;t
+                    rotate with it, turn off the orientation lock in Control
+                    Center, then rotate again. Recording starts automatically
+                    once the picture is wide.
+                </div>
+                <button
+                    type="button"
+                    onClick={() => {
+                        portraitOverride.current = true
+                    }}
+                    style={{
+                        marginTop: "8px",
+                        background: "none",
+                        border: "1px solid rgba(255,255,255,0.5)",
+                        borderRadius: "8px",
+                        color: "rgba(255,255,255,0.8)",
+                        padding: "8px 16px",
+                        fontSize: "13px",
+                    }}
+                >
+                    Record in portrait anyway
+                </button>
             </div>
         )}
         </>

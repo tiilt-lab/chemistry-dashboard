@@ -324,6 +324,16 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
 
     const speaking = levels.some((l) => l > 0.02)
 
+    // "Wide" was asked for but the camera delivered portrait — on iPhones
+    // this means the rotation lock is pinning the capture to a portrait
+    // window (the wide field of view is cropped away before recording).
+    // Warn here, where there's still time to fix it before joining.
+    const portraitCapture = (() => {
+        if (orientMode !== "wide") return false
+        const m = /^(\d+) × (\d+)$/.exec(actualRes)
+        return m != null && Number(m[2]) > Number(m[1])
+    })()
+
     return (
         <div className="flex flex-col gap-4">
             {error ? (
@@ -350,6 +360,14 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
                                     {camMax.h}
                                 </>
                             )}
+                        </div>
+                    )}
+                    {portraitCapture && (
+                        <div className="mt-1 rounded-lg bg-amber-100 px-3 py-2 text-xs font-semibold text-amber-900">
+                            The camera is delivering a tall (portrait)
+                            picture. To record wide, turn off the phone&apos;s
+                            rotation lock and hold it sideways — the recording
+                            screen will ask again before it starts.
                         </div>
                     )}
                     <div className="mt-2 flex items-center justify-between gap-3">
