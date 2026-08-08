@@ -63,6 +63,14 @@ const dimsForMode = (mode, res) => {
 
 const orientStorageKey = (camId) => "blinc.orient." + (camId || "default")
 
+// Session capture points AWAY from whoever set the pod up: a phone or
+// tablet propped on the table should record the group with its back camera,
+// which on every such device has the better sensor and optics. (Enrollment
+// stays on "user" — there you are recording your own face.) Plain string =
+// "ideal", so laptops and single-camera devices fall back to what they have
+// instead of failing; an explicit camera pick overrides it entirely.
+export const SESSION_FACING = "environment"
+
 // Width/height constraints oriented to how the device is actually held. A
 // phone held upright delivers portrait frames; asking that camera for a
 // landscape-shaped box (or a sideways-mounted phone for a portrait one)
@@ -145,12 +153,15 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
                 },
                 video: wantsVideo
                     ? {
-                          facingMode: "user",
+                          // An explicit camera pick replaces the facing hint
+                          // rather than competing with it.
+                          ...(videoDeviceId
+                              ? { deviceId: { exact: videoDeviceId } }
+                              : { facingMode: SESSION_FACING }),
                           ...dimsForMode(
                               orientMode,
                               chosenRes || { width: 1920, height: 1080 },
                           ),
-                          ...(videoDeviceId ? { deviceId: { exact: videoDeviceId } } : {}),
                       }
                     : false,
             }

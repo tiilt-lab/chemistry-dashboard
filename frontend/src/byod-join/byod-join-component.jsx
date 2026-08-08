@@ -3,7 +3,7 @@ import { POD_ON_COLOR as POD_COLOR } from "../components/pod-colors"
 import { useNavigate, useParams } from "react-router-dom"
 import { SessionService } from "../services/session-service"
 import { ByodJoinPage } from "./html-pages"
-import { dimsForMode } from "./device-check"
+import { dimsForMode, SESSION_FACING } from "./device-check"
 import {
     neededRotation,
     correctedStream,
@@ -1294,7 +1294,7 @@ function JoinPage() {
             orientationMode.current = sel.orientationMode || "auto"
             constraint.video = sel.videoResolution
                 ? {
-                      facingMode: "user",
+                      facingMode: SESSION_FACING,
                       ...dimsForMode(orientationMode.current, sel.videoResolution),
                   }
                 : sel.videoPanorama
@@ -1303,7 +1303,7 @@ function JoinPage() {
                         height: { ideal: 1080 },
                     }
                   : {
-                        facingMode: "user",
+                        facingMode: SESSION_FACING,
                         ...dimsForMode(orientationMode.current, {
                             width: 1920,
                             height: 1080,
