@@ -1208,13 +1208,14 @@ function JoinPage() {
                         // Chrome ~2.5 Mbps, phone Safari 7-10 Mbps for the
                         // same 640x480) — uncapped, 20 pods fill ~60 GB/hour
                         // of disk and saturate classroom Wi-Fi uplinks.
-                        // Hard ceiling 2.5 Mbps: the earlier 8 Mbps cap let
-                        // five Full-HD pods push ~40 Mbps of sustained uplink
-                        // from one room — video chunks queued on the phones
-                        // for minutes and were lost at teardown (sessions
-                        // with full audio but a fraction of their video).
-                        // Scale with the pixels actually captured, referenced
-                        // to 720p, which the pipeline's quality gates accept.
+                        // Hard ceiling 5 Mbps (good Full HD), scaled with
+                        // the pixels actually captured against a 720p
+                        // reference at 2.5 Mbps. Keep the ceiling honest
+                        // against measured venue capacity: the throughput
+                        // gauge's saturated readings are the budget N pods
+                        // must fit inside (2026-08-08: an 8 Mbps cap plus a
+                        // server-side ingest stall queued minutes of video
+                        // on the phones, lost at teardown).
                         const vSettings = (() => {
                             const t = stream.getVideoTracks()[0]
                             return t && t.getSettings ? t.getSettings() : {}
@@ -1222,7 +1223,7 @@ function JoinPage() {
                         const capturedPixels =
                             (vSettings.width || 640) * (vSettings.height || 480)
                         const videoRate = Math.min(
-                            2_500_000,
+                            5_000_000,
                             Math.max(
                                 1_250_000,
                                 Math.round(
