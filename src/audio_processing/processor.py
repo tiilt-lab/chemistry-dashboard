@@ -33,6 +33,10 @@ class AudioProcessor:
                  semantic_model, config):
         self.audio_buffer = audio_buffer
         self.transcript_queue = transcript_queue
+        # Serializes appends on self.embeddings: per-utterance threads
+        # appending while completion runs np.array(self.embeddings) raises
+        # numpy's "content of sequences changed" (same fix as posthoc).
+        self._embeddings_lock = threading.Lock()
         self.mt_feats = np.array([])
         self.speakers = np.array([])
         self.signal = np.array([])
@@ -98,9 +102,15 @@ class AudioProcessor:
     def send_speaker_taggings(self):
         processing_timer = time.time()
         results = []
+        if self.embeddings_file is not None and self.embeddings:
+            try:
+                np.save(self.embeddings_file, np.array(self.embeddings, dtype=object))
+            except Exception as e:
+                logging.warning('could not save embeddings file %s: %s',
+                                self.embeddings_file, e)
         spectralEmbeddings, n_speakers = getSpectralEmbeddings(self.embeddings)
         self.speakers, speaker_class_names, cls_ctrs = clusterSpectralEmbeddings(
-            spectralEmbeddings, n_speakers)
+            spectralEmbeddings, n_speakers, raw_list=self.embeddings)
         for i in range(0, len(self.speakers)):
             results.append({
                 'speaker': 'Speaker {0}'.format(self.speakers[i]),
@@ -279,13 +289,15 @@ class AudioProcessor:
                         self.embeddings_file = time.strftime(
                             "%Y%m%d-%H%M%S")+".npy"
                     embedding = embedSignal(audio_data, self.diarization_model)
-                    self.embeddings.append({
-                        'embedding': embedding,
-                        'start': start_time,
-                        'end': end_time,
-                    })
-                    
-                    np.save(self.embeddings_file, np.array(self.embeddings))
+                    # Saved once at completion (send_speaker_taggings) — the
+                    # old per-utterance re-save of the whole array was O(n²)
+                    # disk writes and raced concurrent appends.
+                    with self._embeddings_lock:
+                        self.embeddings.append({
+                            'embedding': embedding,
+                            'start': start_time,
+                            'end': end_time,
+                        })
                 success, transcript_id = callbacks.post_transcripts(
                     self.config.auth_key, start_time, end_time,
                     transcript_text, doa, questions, keywords,

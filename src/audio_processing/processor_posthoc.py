@@ -134,6 +134,13 @@ class AudioProcessorPosthoc:
     def send_speaker_taggings(self):
         processing_timer = time.time()
         results = []
+        if self.embeddings_file is not None and self.embeddings:
+            try:
+                np.save(self.embeddings_file,
+                        np.array(self.embeddings, dtype=object))
+            except Exception as e:
+                logging.warning('could not save embeddings file %s: %s',
+                                self.embeddings_file, e)
 
         # Fallback clustering selection (config.py diarization_fallback(),
         # default 'spectral'). Not to be confused with the per-run payload
@@ -162,7 +169,7 @@ class AudioProcessorPosthoc:
         else:
             spectralEmbeddings, n_speakers = getSpectralEmbeddings(self.embeddings)
             self.speakers, speaker_class_names, cls_ctrs = clusterSpectralEmbeddings(
-                spectralEmbeddings, n_speakers)
+                spectralEmbeddings, n_speakers, raw_list=self.embeddings)
             for i in range(0, len(self.speakers)):
                 results.append({
                     'speaker': 'Speaker {0}'.format(self.speakers[i]),
@@ -332,6 +339,9 @@ class AudioProcessorPosthoc:
                         self.embeddings_file = time.strftime(
                             "%Y%m%d-%H%M%S")+".npy"
                     embedding = embedSignal(audio_data, self.diarization_model)
+                    # Saved once at completion (send_speaker_taggings) — the
+                    # old per-utterance re-save of the whole array was O(n²)
+                    # disk writes.
                     with self._embeddings_lock:
                         self.embeddings.append({
                             'embedding': embedding,
@@ -342,8 +352,6 @@ class AudioProcessorPosthoc:
                             # when diarization_fallback='pyannote' to skip clustering.
                             'speaker_tag': getattr(transcript_data, 'speaker_tag', None),
                         })
-                        np.save(self.embeddings_file,
-                                np.array(self.embeddings, dtype=object))
                 
                 # Per-utterance voice features: prosody (#6) and/or vocal
                 # emotion (#5) from the segment audio, when enabled.

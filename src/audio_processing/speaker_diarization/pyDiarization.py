@@ -259,6 +259,18 @@ def clusterEmbeddings(embeddings_list, max_speakers = 10, n_speakers = 0):
 
   return cls, class_names, cluster_centers
 
+# Auto-tuned spectral clustering (NME-SC, Park et al. 2019) for the
+# no-fingerprint fallback: build a p-nearest-neighbor similarity graph over
+# the per-utterance embeddings, read the speaker count from the eigengap of
+# the graph Laplacian's ascending spectrum, and k-means the corresponding
+# low eigenvectors. p is auto-tuned by the Normalized Maximum Eigengap.
+#
+# The eigengap search is capped: a pod is a handful of people around a
+# table, so a "gap" suggesting dozens of speakers is a degenerate graph,
+# not signal (an unbounded search once yielded 146 "speakers" for 148
+# utterances).
+MAX_AUTO_SPEAKERS = 8
+
 def getSpectralEmbeddings(embeddings_list):
   embeddings = np.array([])
   for emb in embeddings_list:
@@ -269,72 +281,121 @@ def getSpectralEmbeddings(embeddings_list):
 
   logging.info("Embeddings shape")
   logging.info(embeddings.shape)
-  cos_sim = sp.distance.cdist(embeddings, embeddings, "cosine")
-  r = []
-  U = []
-  S = []
-  e = []
+  n = embeddings.shape[0]
+  if n < 4:
+    # Too few utterances for eigengap analysis — call it one speaker.
+    return np.zeros((n, 1)), 1
 
-  logging.info("cos_sim calculated")
-  #attempt to find best p
-  for p in range(1, max(2,int(cos_sim.shape[0]/4))):
+  # Cosine SIMILARITY (cdist returns distance = 1 - similarity; the graph
+  # below must connect the most similar utterances, not the least).
+  sim = 1.0 - sp.distance.cdist(embeddings, embeddings, "cosine")
+  logging.info("similarity calculated")
 
-    Ap = np.zeros(cos_sim.shape)
+  best = None  # (r_p, eigengap vector, eigenvectors)
+  #attempt to find best p (up to n/2 — the old n/4 cap left single-cluster
+  #pods with only fragmented graphs to choose from)
+  for p in range(1, max(2, int(n / 2))):
 
-    #p-neighbor row-binarization
-    for row in range(0, cos_sim.shape[0]):
-      indices = np.argsort(cos_sim[row])[-p:]
+    # p-neighbor row-binarization: connect each utterance to its p MOST
+    # similar peers (self included — sim[i][i] == 1 is always in the top p).
+    Ap = np.zeros((n, n))
+    for row in range(0, n):
+      indices = np.argsort(sim[row])[-p:]
       Ap[row][indices] = 1
 
     # Symmetrization
     avgAp = np.divide(np.add(Ap, Ap.T), 2)
 
-    # Laplacian
-    Dp = np.diag(np.sum(cos_sim, axis=1))
-    Lp = np.subtract(Dp, avgAp)
+    # Graph Laplacian — the degree matrix comes from the binarized affinity
+    # itself, not from the raw similarity matrix.
+    Lp = np.subtract(np.diag(np.sum(avgAp, axis=1)), avgAp)
 
-    # Singular Value Decomposition
-    Up, Sp, Vhp = np.linalg.svd(Lp)
-    U.append(Up)
-    # Ascending order
-    Sp = np.flip(Sp)
-    S.append(Sp)
+    # eigh: symmetric input, eigenvalues ASCENDING with eigenvectors
+    # aligned to them — the k smallest carry the cluster structure. (The
+    # old SVD returned everything descending; flipping the values but not
+    # the vectors fed k-means the noise directions.)
+    evals, evecs = np.linalg.eigh(Lp)
 
+    # A graph shattered into more connected components (near-zero
+    # eigenvalues) than plausible speakers is under-connected for this p —
+    # its "gaps" reflect fragmentation, not cluster structure.
+    if np.sum(evals < 1e-8) > MAX_AUTO_SPEAKERS:
+      continue
 
-    # eigengap Vector
-    ep = []
-    for i in range(1, len(Sp)):
-      ep.append(Sp[i] - Sp[i - 1])
-
-    e.append(ep)
-    # Normalized Maximum Eigengap(NME)
-    gp = np.max(ep) / Sp[-1]
+    # Eigengap vector over the plausible speaker range: gaps[j] is the
+    # jump after eigenvalue j+1, i.e. the evidence for j+1 clusters.
+    gaps = np.diff(evals[:min(n, MAX_AUTO_SPEAKERS + 1)])
+    if gaps.size == 0 or evals[-1] <= 1e-9:
+      continue
+    # Normalized Maximum Eigengap (NME)
+    gp = np.max(gaps) / evals[-1]
+    if gp <= 0:
+      continue
     rp = p / gp
-    r.append(rp)
+    if best is None or rp < best[0]:
+      best = (rp, gaps, evecs)
 
-  bestP = np.argmin(r)
-  n_speakers = np.argmax(e[bestP])
+  if best is None:
+    # Every candidate graph was degenerate (e.g. fully disconnected).
+    return np.zeros((n, 1)), 1
+  _, gaps, evecs = best
+  # A maximal gap after the (j+1)-th ascending eigenvalue means j+1
+  # clusters (argmax alone is off by one and can return 0).
+  n_speakers = int(np.argmax(gaps)) + 1
 
-  spectralEmbeddings = U[bestP][:, :n_speakers].T
+  # Rows = utterances, columns = the n_speakers smallest eigenvectors.
+  spectralEmbeddings = evecs[:, :n_speakers]
 
   logging.info("got spectral embeddings")
   return spectralEmbeddings, n_speakers
 
-def clusterSpectralEmbeddings(embeddings, n_speakers):
-  cluster_labels = []
-  sil_all = []
-  cluster_centers = []
+# Same-speaker sub-clusters sit far closer in raw ECAPA space than different
+# speakers do (measured on enrollment audio: centroid cosine ~0.7 within one
+# voice vs ~0.04-0.2 across voices), so clusters whose raw centroids exceed
+# this similarity are one voice split by within-speaker variation.
+MERGE_CENTROID_SIM = 0.45
 
+def clusterSpectralEmbeddings(embeddings, n_speakers, raw_list=None):
+  # embeddings: (n_utterances, n_speakers) spectral coordinates from
+  # getSpectralEmbeddings — one row per utterance, k-meaned directly.
+  # raw_list: the original embeddings_list; when given, clusters that are
+  # near-identical in raw space are merged (the eigengap can over-split a
+  # single talkative speaker into sub-styles).
+  n_speakers = max(1, int(n_speakers))
 
   k_means = sklearn.cluster.KMeans(n_clusters=n_speakers, n_init=10, init='random')
-  k_means.fit(embeddings.T)
-  cls = k_means.labels_
+  k_means.fit(embeddings)
+  cls = np.asarray(k_means.labels_)
   means = k_means.cluster_centers_
 
-  cluster_labels.append(cls)
-  cluster_centers.append(means)
+  if raw_list is not None and len(set(cls.tolist())) > 1:
+    raw = np.vstack([np.asarray(e['embedding'][0], dtype=np.float64)
+                     for e in raw_list])
+    raw = raw / (np.linalg.norm(raw, axis=1, keepdims=True) + 1e-9)
+    while True:
+      ids = sorted(set(cls.tolist()))
+      if len(ids) < 2:
+        break
+      cents = {}
+      for c in ids:
+        v = raw[cls == c].mean(axis=0)
+        cents[c] = v / (np.linalg.norm(v) + 1e-9)
+      best = None
+      for i in range(len(ids)):
+        for j in range(i + 1, len(ids)):
+          s = float(np.dot(cents[ids[i]], cents[ids[j]]))
+          if best is None or s > best[0]:
+            best = (s, ids[i], ids[j])
+      if best[0] < MERGE_CENTROID_SIM:
+        break
+      logging.info('merging clusters %s and %s (centroid sim %.2f)',
+                   best[1], best[2], best[0])
+      cls[cls == best[2]] = best[1]
+    remap = {c: i for i, c in enumerate(sorted(set(cls.tolist())))}
+    cls = np.array([remap[c] for c in cls])
+    n_speakers = len(remap)
 
   class_names = ["speaker{0:d}".format(c) for c in range(n_speakers)]
 
-  return cls, class_names, cluster_centers
+  return cls, class_names, [means]
 
