@@ -3,6 +3,8 @@ import json
 import time
 import queue
 import logging
+import threading
+import subprocess
 import callbacks
 import traceback
 import wave
@@ -91,6 +93,192 @@ def _idle_recycle_fire():
         logging.info('No clients for {0}s - exiting to reclaim analysis memory (systemd restarts the service).'.format(IDLE_RECYCLE_SECONDS))
         reactor.stop()
 
+class StreamingChunkDecoder:
+    """Incremental analytics decoder.
+
+    The old path re-opened the pod's ENTIRE accumulated recording with
+    moviepy for every 10-second chunk, on the reactor thread. Cost grew
+    linearly with the file (~0.25s/MB — 28s per chunk at 100MB), the
+    reactor starved, socket reads stopped, and ingest collapsed to
+    1.5-6 Mbps total while pods queued minutes of video in their tabs.
+
+    This decoder holds ONE long-lived ffmpeg per connection and feeds it
+    each websocket blob as it arrives, so every byte is decoded exactly
+    once — O(chunk) per chunk, O(recording) total — and nothing runs on
+    the reactor thread. Frames stream to the consumer through a bounded
+    queue-backed generator: if the consumer lags, frames are dropped
+    (analytics degrades to sampling); nothing ever blocks the feed path.
+
+    A pod's recorder can restart mid-connection (client watchdog): the
+    new stream opens with a fresh container header (EBML magic for webm,
+    ftyp for mp4), which we detect and answer with a fresh ffmpeg.
+    """
+
+    FPS = 10
+    FEED_QUEUE_BLOBS = 64
+
+    def __init__(self, interval, sink, label):
+        self.interval = interval
+        self.sink = sink            # callable(iterable of (ts, frame))
+        self.label = label
+        self.feed_queue = queue.Queue(maxsize=self.FEED_QUEUE_BLOBS)
+        self.dead = False
+        self.proc = None
+        self.width = None
+        self.height = None
+        self.reader = None
+        self.batches_done = 0
+        self.pump = threading.Thread(
+            target=self._pump, name='chunkdec-' + label[:12], daemon=True)
+        self.pump.start()
+
+    @staticmethod
+    def _is_header(blob):
+        return (blob[:4] == b'\x1a\x45\xdf\xa3' or          # webm/EBML
+                (len(blob) > 8 and blob[4:8] == b'ftyp'))   # fragmented mp4
+
+    # ---- reactor-thread side: must never block ----
+    def feed(self, blob):
+        if self.dead:
+            return
+        try:
+            self.feed_queue.put_nowait(bytes(blob))
+        except Full:
+            logging.warning(
+                'analytics decoder behind for %s - dropping a blob '
+                '(recording on disk is unaffected)', self.label)
+
+    def stop(self):
+        self.dead = True
+        try:
+            self.feed_queue.put_nowait(None)
+        except Full:
+            # Pump is wedged on a full queue; it checks self.dead anyway.
+            pass
+
+    # ---- worker threads ----
+    def _pump(self):
+        try:
+            while True:
+                blob = self.feed_queue.get()
+                if blob is None or self.dead:
+                    break
+                if self.proc is None or self._is_header(blob):
+                    if not self._respawn(blob):
+                        continue
+                try:
+                    self.proc.stdin.write(blob)
+                except Exception as e:
+                    logging.warning(
+                        'analytics decoder pipe broke for %s (%s) - '
+                        'waiting for the next header to restart',
+                        self.label, e)
+                    self._kill_proc()
+        finally:
+            self._kill_proc()
+
+    def _respawn(self, header_blob):
+        self._kill_proc()
+        dims = self._probe_dims(header_blob)
+        if not dims:
+            logging.warning(
+                'analytics decoder could not probe dimensions for %s - '
+                'skipping until the next header', self.label)
+            return False
+        self.width, self.height = dims
+        self.proc = subprocess.Popen(
+            ['ffmpeg', '-v', 'error', '-i', 'pipe:0',
+             '-vf', 'fps={0}'.format(self.FPS), '-pix_fmt', 'rgb24',
+             '-f', 'rawvideo', 'pipe:1'],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL)
+        self.reader = threading.Thread(
+            target=self._read_frames, args=(self.proc, self.width, self.height),
+            name='chunkrd-' + self.label[:12], daemon=True)
+        self.reader.start()
+        logging.info('analytics decoder started for %s (%dx%d)',
+                     self.label, self.width, self.height)
+        return True
+
+    def _probe_dims(self, header_blob):
+        try:
+            out = subprocess.run(
+                ['ffprobe', '-v', 'error', '-select_streams', 'v:0',
+                 '-show_entries', 'stream=width,height', '-of', 'csv=p=0',
+                 'pipe:0'],
+                input=header_blob, capture_output=True, timeout=10)
+            w, h = out.stdout.decode().strip().split(',')[:2]
+            w, h = int(w), int(h)
+            return (w, h) if w > 0 and h > 0 else None
+        except Exception:
+            return None
+
+    def _kill_proc(self):
+        p, self.proc = self.proc, None
+        if p is not None:
+            try:
+                p.stdin.close()
+            except Exception:
+                pass
+            try:
+                p.wait(timeout=5)
+            except Exception:
+                try:
+                    p.kill()
+                except Exception:
+                    pass
+
+    def _read_frames(self, proc, width, height):
+        frame_bytes = width * height * 3
+        batch_frames = self.interval * self.FPS
+        SENTINEL = object()
+
+        def drain(q):
+            while True:
+                item = q.get()
+                if item is SENTINEL:
+                    return
+                yield item
+
+        batch_q = None
+        n_in_batch = 0
+        while True:
+            buf = proc.stdout.read(frame_bytes)
+            if len(buf) < frame_bytes:
+                break
+            if self.dead:
+                continue  # keep the pipe drained so ffmpeg can exit
+            if batch_q is None:
+                # Announce the batch as it STARTS so the consumer streams
+                # it live instead of waiting 10s for a complete list.
+                batch_q = queue.Queue(maxsize=batch_frames + 1)
+                self.sink(drain(batch_q))
+                n_in_batch = 0
+            frame = np.frombuffer(buf, dtype=np.uint8).reshape(
+                (height, width, 3))
+            try:
+                batch_q.put_nowait((n_in_batch / float(self.FPS), frame))
+            except Full:
+                pass  # consumer lagging: analytics samples, never blocks
+            n_in_batch += 1
+            if n_in_batch >= batch_frames:
+                try:
+                    batch_q.put_nowait(SENTINEL)
+                except Full:
+                    pass
+                batch_q = None
+                self.batches_done += 1
+                if self.batches_done % 6 == 1:
+                    logging.info(
+                        'analytics decoder for %s delivered batch %d',
+                        self.label, self.batches_done)
+        if batch_q is not None:
+            try:
+                batch_q.put_nowait(SENTINEL)
+            except Full:
+                pass
+
+
 cartoon_model = VideoCartoonifyLoader()
 facial_emotion_detector = EmotionDetectionModel()
 # Gaze backend is config-selected: Gaze-LLE (open SOTA) or GazeFollow.
@@ -150,6 +338,7 @@ class ServerProtocol(WebSocketServerProtocol):
         self.first_binary_at = None
         self.lag_check = None
         self.lag_warned = False
+        self.chunk_decoder = None
         cm.add(self)
         cancel_idle_recycle()
         logging.info('New client connected...')
@@ -355,10 +544,20 @@ class ServerProtocol(WebSocketServerProtocol):
                         self.video_queue = queue.Queue(maxsize=4)#maxsize=2
                         self.frame_queue = None
                         self.cartoon_image_queue = None
-                         
+
                         self.video_processor = VideoProcessor(self.cartoon_model,self.facial_emotion_detector,self.image_object_detection,self.attention_detection, \
                                                                 self.video_queue,self.frame_queue,self.cartoon_image_queue,self.config,cf,self.frame_dir,self.filename,aud_filename,16000, 2,1,self.interval)
                         self.video_processor.add_websocket_connection(self)
+                        # Incremental decode of the live stream, replacing
+                        # the per-chunk whole-file moviepy reopen that
+                        # starved the reactor (see StreamingChunkDecoder).
+                        self.chunk_decoder = StreamingChunkDecoder(
+                            self.interval, self.enqueue_latest_video_chunk,
+                            self.config.auth_key)
+                        if cf.video_cartoonize():
+                            logging.warning(
+                                'cartoonify audio sidecar is not produced by '
+                                'the streaming decoder path')
                         
                 if cf.video_record_reduced():
                     aud_filename = os.path.join(cf.video_recordings_folder(), "{0}_{1}_{2}_({3})_audio".format(self.config.auth_key,self.config.sessionId,self.config.deviceId, datetime.today().strftime("%Y-%m-%d")))
@@ -405,93 +604,21 @@ class ServerProtocol(WebSocketServerProtocol):
                 # self.remux_mp4(temp_file_name, fixed)
                 self.video_files_accum.append(fixed)
 
-                # Live frame analytics for mp4 pods. This branch only existed
-                # for webm — mp4-sending browsers recorded fine but silently
-                # got no facial analytics at all. Same slice-the-newest-
-                # interval approach as the webm path below, on the accumulated
-                # fragmented-mp4 (video_count never increments on this path,
-                # so every chunk appends into _1.mp4).
-                if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()) and self.live_analytics:
-                    vidclip = None
-                    try:
-                        if not hasattr(self, 'analytics_chunk_count'):
-                            self.analytics_chunk_count = 0
-                        self.analytics_chunk_count += 1
-                        _t0 = time.time()
-                        vidclip = mp.VideoFileClip(fixed)
-                        _t_open = time.time()
-                        subclips = (vidclip.subclipped if hasattr(vidclip, 'subclipped') else vidclip.subclip)(
-                            (self.analytics_chunk_count - 1) * self.interval,
-                            min(self.analytics_chunk_count * self.interval, vidclip.duration))
-                        chunk_iter = self._frames_releasing_clip(
-                            vidclip, subclips.iter_frames(fps=10, dtype="uint8", with_times=True))
-                        logging.info('CHUNK_DECODE_TIMING auth={0} chunk={1} (mp4) open_s={2:.2f} total_s={3:.2f}'.format(
-                            self.config.auth_key, self.analytics_chunk_count,
-                            _t_open - _t0, time.time() - _t0))
-                        self.enqueue_latest_video_chunk(chunk_iter)
-                        logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
-                    except Exception as e:
-                        # analytics must never break recording; release the
-                        # reader if we failed before handing it to
-                        # _frames_releasing_clip
-                        if vidclip is not None:
-                            try:
-                                vidclip.close()
-                            except Exception:
-                                pass
-                        logging.warning('mp4 analytics decode failed (chunk %s): %s',
-                                        getattr(self, 'analytics_chunk_count', '?'), e)
+                # Live frame analytics for mp4 pods: same streaming decoder
+                # as webm — fragmented mp4 decodes from a pipe just as well,
+                # and the init segment (ftyp) is the header the decoder
+                # detects to (re)spawn ffmpeg.
+                if self.chunk_decoder is not None:
+                    self.chunk_decoder.feed(data)
 
             if self.config.mimeExtension == "webm":
-                if (self.config.videocartoonify or self.config.video) and (cf.video_cartoonize() or cf.process_video_analytics()) and self.live_analytics:
-                    _t0 = time.time()
-                    try:
-                        _recording_bytes = os.path.getsize(self.filename+'.'+self.config.mimeExtension)
-                    except OSError:
-                        _recording_bytes = -1
-                    # Open the accumulated recording and slice the newest
-                    # chunk. This is the only step the frame-analytics path
-                    # needs; the open cost grows with session length (watch
-                    # open_s vs recording_mb — the remaining candidate for
-                    # incremental decode on very long sessions).
-                    vidclip = mp.VideoFileClip(self.filename+'.'+self.config.mimeExtension)
-                    _t_open = time.time()
-                    subclips = (vidclip.subclipped if hasattr(vidclip, 'subclipped') else vidclip.subclip)((self.video_count-1)*self.interval,self.video_count*self.interval)  # moviepy 2 rename
-                    _t_sub = time.time()
-
-                    # Extract audio ONLY for the cartoonify remux, which is
-                    # the sole consumer of the _audio.dat sidecar. This
-                    # ~7s/chunk write_audiofile used to run for every
-                    # analytics session too — pointlessly: the audio is
-                    # already captured by the live transcription socket and
-                    # by the saved webm's own opus track, and analytics
-                    # (video frames) never uses it. Cheapest 10x win in the
-                    # live path.
-                    _t_audio = _t_sub
-                    if cf.video_cartoonize():
-                        temp_aud_file = os.path.join(cf.video_recordings_folder(), "{0} ({1})_tempvid".format(self.config.auth_key, str(time.ctime())))
-                        subclips.audio.write_audiofile(temp_aud_file+'.wav',fps=16000,bitrate='50k',logger=None) #nbytes=2,codec='pcm_s16le',
-                        _t_audio = time.time()
-                        with wave.open(temp_aud_file+'.wav') as wavObj:
-                            audiobyte = self.reduce_wav_channel(1,wavObj)
-                        if (cf.video_record_original or cf.video_record_reduced):
-                            self.orig_vid_recorder.write_audio(audiobyte)
-                        if os.path.isfile(temp_aud_file+'.wav'):
-                            os.remove(temp_aud_file+'.wav')
-
-                    chunk_iter = self._frames_releasing_clip(
-                        vidclip, subclips.iter_frames(fps=10, dtype="uint8", with_times=True))
-                    # Minimal growth probe: open_s is the only remaining
-                    # O(session length) term (the ~7s audio extraction was
-                    # removed). If open_s climbs with recording_mb on a real
-                    # long session, revisit incremental decode; so far it is
-                    # flat ~0.5s up to the short recordings tested.
-                    logging.info('CHUNK_DECODE_TIMING auth={0} chunk={1} recording_mb={2:.1f} open_s={3:.2f} total_s={4:.2f}'.format(
-                        self.config.auth_key, self.video_count,
-                        (_recording_bytes / 2**20) if _recording_bytes >= 0 else -1.0,
-                        _t_open - _t0, time.time() - _t0))
-                    self.enqueue_latest_video_chunk(chunk_iter)
-                    logging.info('i just inserted video data  for {0}'.format(self.config.auth_key))
+                # Live analytics: hand the raw blob to the streaming
+                # decoder. Constant cost per chunk and nothing on the
+                # reactor thread — the old whole-file moviepy reopen here
+                # grew ~0.25s per recorded MB and starved ingest for every
+                # connected pod.
+                if self.chunk_decoder is not None:
+                    self.chunk_decoder.feed(data)
 
                 self.video_count = self.video_count + 1
             
@@ -499,22 +626,6 @@ class ServerProtocol(WebSocketServerProtocol):
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 
     
-    @staticmethod
-    def _frames_releasing_clip(clip, frames):
-        # Yield decoded frames, then ALWAYS release the underlying moviepy
-        # clip (its ffmpeg reader subprocess and buffers). The finally runs
-        # on exhaustion, on explicit generator .close(), and on GC; without
-        # it every 10-second chunk leaks one open reader for the life of the
-        # process (unbounded ffmpeg fleet + monotonic RSS growth).
-        try:
-            for item in frames:
-                yield item
-        finally:
-            try:
-                clip.close()
-            except Exception:
-                pass
-
     def enqueue_latest_video_chunk(self, chunk, timeout=0.05):
         """
         Keep only the most recent chunk in the queue.
@@ -598,6 +709,9 @@ class ServerProtocol(WebSocketServerProtocol):
         if self.config and self.bytes_received == 0:
             logging.error('pod %s disconnected having sent NO video data at all',
                           self.config.auth_key)
+
+        if self.chunk_decoder is not None:
+            self.chunk_decoder.stop()
 
         if  self.video_processor:
             self.video_processor.stop()
