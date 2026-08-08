@@ -1281,10 +1281,10 @@ function JoinPage() {
         }
         if (l_joinwith === "Video" || l_joinwith === "Videocartoonify") {
             // Resolution: an explicit device-check choice wins; otherwise
-            // 640×480, except panorama cams (360° conference cameras), which
-            // compose the whole ring view inside the requested frame — at
-            // 640×480 the panorama is downscaled to uselessness before a
-            // byte leaves the browser, so Auto records them at full 1080p.
+            // Full HD — the same default the device-check panel shows, so a
+            // pod that skipped the panel records identically. Panorama cams
+            // (360° conference cameras) compose their whole ring view inside
+            // the requested frame, so they need the full 1080p too.
             // Phone paths go through dimsForMode: the device-check
             // orientation choice decides the requested frame shape ("wide"
             // asks for landscape outright; the rest request screen-oriented
@@ -1305,8 +1305,8 @@ function JoinPage() {
                   : {
                         facingMode: "user",
                         ...dimsForMode(orientationMode.current, {
-                            width: 640,
-                            height: 480,
+                            width: 1920,
+                            height: 1080,
                         }),
                     }
             if (sel.videoDeviceId) {

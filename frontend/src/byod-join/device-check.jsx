@@ -29,13 +29,16 @@ const fieldLabel = "mb-1.5 block text-left text-sm font-semibold text-tiilt-ink"
 // structured than the device label, so panorama handling keys off it.
 const isPanoramaCamera = (label) => /360|panacast|panoram/i.test(label || "")
 
-// 640×480 is the default (the analytics pipeline's sweet spot); higher
-// resolutions are explicit choices — 360° panorama cameras need 1080p or
-// their whole ring view gets squeezed into the small frame.
+// Full HD is the default: phone cameras deliver it natively, faces stay
+// legible across a whole table (the analytics face detector downscales its
+// own input, so the extra pixels cost decode time, not accuracy), and 360°
+// panorama cameras need it or their whole ring view is squeezed into a
+// small frame. The lower options remain for constrained uplinks — the
+// bitrate cap scales with the pixels actually captured either way.
 const RESOLUTIONS = [
-    { value: "640x480", label: "640 × 480 (default)" },
+    { value: "1920x1080", label: "1920 × 1080 (Full HD, default)" },
     { value: "1280x720", label: "1280 × 720 (HD)" },
-    { value: "1920x1080", label: "1920 × 1080 (Full HD, 360° cameras)" },
+    { value: "640x480", label: "640 × 480 (low bandwidth)" },
 ]
 
 const parseResolution = (value) => {
@@ -84,7 +87,7 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
     const [channels, setChannels] = useState(1)
     const [levels, setLevels] = useState([])
     const [channelChoice, setChannelChoice] = useState("mix") // "mix" | index
-    const [resChoice, setResChoice] = useState("640x480")
+    const [resChoice, setResChoice] = useState("1920x1080")
     const [actualRes, setActualRes] = useState("")
     const [orientMode, setOrientMode] = useState(
         () => localStorage.getItem(orientStorageKey("")) || "auto",
@@ -145,7 +148,7 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
                           facingMode: "user",
                           ...dimsForMode(
                               orientMode,
-                              chosenRes || { width: 640, height: 480 },
+                              chosenRes || { width: 1920, height: 1080 },
                           ),
                           ...(videoDeviceId ? { deviceId: { exact: videoDeviceId } } : {}),
                       }
