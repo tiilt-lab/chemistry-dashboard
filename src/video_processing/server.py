@@ -40,6 +40,31 @@ from video_cartoonizer.VideoMetricProcessor import VideoMetricAnalytics
 STOP_SIGNAL = object()
 cm = ConnectionManager()
 
+# Aggregate throughput gauge. Sums video bytes actually delivered across all
+# connections (a monotonic module-level counter, so disconnects can't skew
+# the delta) and logs the rate every GAUGE_SECONDS. While any pod is
+# lag-warned the link is running flat-out, so the logged rate approximates
+# the venue's usable uplink capacity — measured passively, per venue, with
+# no one in the room doing anything. (Tonight's incident: six pods offered
+# ~17 Mbps into a room that delivered ~5.)
+GAUGE_SECONDS = 30
+_rx_total = {'bytes': 0}
+_gauge_last = {'bytes': 0}
+_lagging = set()
+
+def _throughput_gauge():
+    delta = _rx_total['bytes'] - _gauge_last['bytes']
+    _gauge_last['bytes'] = _rx_total['bytes']
+    n = cm.get_number_of_connections()
+    if n == 0 or delta <= 0:
+        return
+    mbps = (delta * 8.0) / GAUGE_SECONDS / 1e6
+    logging.info(
+        'AGGREGATE_VIDEO_THROUGHPUT mbps=%.2f pods=%d lagging=%d%s',
+        mbps, n, len(_lagging),
+        ' — link saturated; this approximates venue uplink capacity'
+        if _lagging else '')
+
 # Recycle the process once the last client has been gone for a while.
 # Analysis memory cannot be returned to the OS (glibc arena fragmentation
 # under the pipeline's numpy frame churn), so RSS is a high-water mark that
@@ -195,10 +220,12 @@ class ServerProtocol(WebSocketServerProtocol):
                                    'point.'.format(int(behind)),
                     })
                     self.lag_warned = True
+                    _lagging.add(key)
                 elif self.lag_warned:
                     logging.info('video lag cleared for pod %s', key)
                     self.send_json({'type': 'video_lag_cleared'})
                     self.lag_warned = False
+                    _lagging.discard(key)
         finally:
             if not self.end_signaled:
                 self.arm_lag_check()
@@ -362,6 +389,7 @@ class ServerProtocol(WebSocketServerProtocol):
             logging.info('first video bytes from %s',
                          self.config.auth_key if self.config else 'unknown')
         self.bytes_received += len(data)
+        _rx_total['bytes'] += len(data)
         if self.running and not self.awaitingSpeakers:
             self.binary_chunks += 1
             # if cf.video_record_original():
@@ -565,6 +593,8 @@ class ServerProtocol(WebSocketServerProtocol):
         self.end_signaled = True
         self.cancel_silent_check()
         self.cancel_lag_check()
+        if self.config:
+            _lagging.discard(self.config.auth_key)
         if self.config and self.bytes_received == 0:
             logging.error('pod %s disconnected having sent NO video data at all',
                           self.config.auth_key)
@@ -624,6 +654,8 @@ if __name__ == '__main__':
     poll_connections.start(10.0)
     auth_connections = task.LoopingCall(cm.check_connection_authentication)
     auth_connections.start(5.0)
+    throughput_gauge = task.LoopingCall(_throughput_gauge)
+    throughput_gauge.start(GAUGE_SECONDS, now=False)
     factory = WebSocketServerFactory()
     factory.protocol = ServerProtocol
     reactor.listenTCP(int(os.environ.get("DC_VIDEO_WS_PORT", 9003)), factory)
