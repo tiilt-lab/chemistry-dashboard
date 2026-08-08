@@ -32,30 +32,6 @@ export const ORIENTATION_MODES = [
 export const rotationForMode = (id) =>
     ({ cw: 90, ccw: -90, flip: 180 })[id] || 0
 
-// How to satisfy an orientation mode: ask the CAMERA for a landscape frame
-// (`wide`), and/or rotate captured frames through a canvas (`rotation`).
-//
-// Auto never rotates. When gravity says the mount is sideways it asks the
-// camera for landscape instead — same upright result, no canvas in the
-// recording path. That matters because the canvas has now failed twice on
-// real hardware in ways no pre-flight check caught (pod 1221 recorded one
-// byte; pods 1244/1245 recorded nothing for 25 minutes). Rotation is still
-// available, but only when someone picks it explicitly against a preview
-// they can see.
-export async function orientationPlan(mode) {
-    if (mode === "wide") return { wide: true, rotation: 0 }
-    if (mode === "cw" || mode === "ccw" || mode === "flip") {
-        return { wide: false, rotation: rotationForMode(mode) }
-    }
-    let sideways = false
-    try {
-        sideways = (await neededRotation()) !== 0
-    } catch {
-        sideways = false
-    }
-    return { wide: sideways, rotation: 0 }
-}
-
 // One gravity sample from devicemotion, or null when unavailable (iOS
 // permission-gated, no sensor, or no event within the timeout).
 const readGravity = (timeoutMs = 700) =>
@@ -159,10 +135,6 @@ export async function correctedStream(rawStream, rotationDeg) {
     vid.playsInline = true
     vid.setAttribute("playsinline", "")
     vid.srcObject = new MediaStream([track])
-    // Marked so the join page's document.querySelector("video") can exclude
-    // it — pointing the app's preview at this decoder would starve the
-    // canvas it feeds.
-    vid.setAttribute("data-orient-decoder", "")
     // Detached <video> elements are not guaranteed to decode on Android
     // Chrome — keep it in the DOM, invisible.
     vid.style.cssText =

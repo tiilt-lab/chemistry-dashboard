@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react"
 import { dlgSelect, dlgError } from "../components/dialog-styles"
 import {
     ORIENTATION_MODES,
-    orientationPlan,
+    rotationForMode,
+    neededRotation,
     correctedStream,
 } from "./orientation-correct"
 
@@ -50,8 +51,8 @@ const parseResolution = (value) => {
 // content upright themselves — rotating their portrait crop can never
 // recover the wide field of view); every other mode requests the
 // screen-oriented shape and fixes rotation after capture if needed.
-const dimsForPlan = (plan, res) => {
-    if (plan && plan.wide) {
+const dimsForMode = (mode, res) => {
+    if (mode === "wide") {
         return {
             width: { ideal: Math.max(res.width, res.height) },
             height: { ideal: Math.min(res.width, res.height) },
@@ -141,7 +142,6 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
         stopPreview()
         setError("")
         const chosenRes = parseResolution(resChoice)
-        const plan = await orientationPlan(orientMode)
         try {
             const constraints = {
                 audio: {
@@ -158,8 +158,8 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
                           ...(videoDeviceId
                               ? { deviceId: { exact: videoDeviceId } }
                               : { facingMode: SESSION_FACING }),
-                          ...dimsForPlan(
-                              plan,
+                          ...dimsForMode(
+                              orientMode,
                               chosenRes || { width: 1920, height: 1080 },
                           ),
                       }
@@ -183,10 +183,16 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
             // the same corrected-canvas path the recorder uses.
             let previewStream = stream
             let orientFix = null
-            if (wantsVideo && plan.rotation !== 0) {
+            if (wantsVideo) {
                 try {
-                    orientFix = await correctedStream(stream, plan.rotation)
-                    previewStream = orientFix.stream
+                    const rot =
+                        orientMode === "auto"
+                            ? await neededRotation()
+                            : rotationForMode(orientMode)
+                    if (rot !== 0) {
+                        orientFix = await correctedStream(stream, rot)
+                        previewStream = orientFix.stream
+                    }
                 } catch {
                     previewStream = stream
                 }
@@ -417,4 +423,4 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
     )
 }
 
-export { InlineDeviceCheck, orientedDims, dimsForPlan }
+export { InlineDeviceCheck, orientedDims, dimsForMode }
