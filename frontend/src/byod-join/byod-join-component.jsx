@@ -3,6 +3,7 @@ import { POD_ON_COLOR as POD_COLOR } from "../components/pod-colors"
 import { useNavigate, useParams } from "react-router-dom"
 import { SessionService } from "../services/session-service"
 import { ByodJoinPage } from "./html-pages"
+import { orientedDims } from "./device-check"
 import { deriveJoinPhase } from "./join-machine"
 import { SessionModel } from "../models/session"
 import { SessionDeviceModel } from "../models/session-device"
@@ -1237,11 +1238,18 @@ function JoinPage() {
             // compose the whole ring view inside the requested frame — at
             // 640×480 the panorama is downscaled to uselessness before a
             // byte leaves the browser, so Auto records them at full 1080p.
+            // Phone paths go through orientedDims so a sideways-mounted phone
+            // records landscape and an upright one portrait, instead of the
+            // browser cropping to a box shaped for the other orientation.
+            // Panorama cams compose their ring view landscape regardless of
+            // the host device, so they keep a fixed landscape frame.
             constraint.video = sel.videoResolution
                 ? {
                       facingMode: "user",
-                      width: { ideal: sel.videoResolution.width },
-                      height: { ideal: sel.videoResolution.height },
+                      ...orientedDims(
+                          sel.videoResolution.width,
+                          sel.videoResolution.height,
+                      ),
                   }
                 : sel.videoPanorama
                   ? {
@@ -1250,8 +1258,7 @@ function JoinPage() {
                     }
                   : {
                         facingMode: "user",
-                        width: 640, //{ min: 640, ideal: 1280, max: 1920 },
-                        height: 480, //{ min: 480, ideal: 720, max: 1080 }
+                        ...orientedDims(640, 480),
                     }
             if (sel.videoDeviceId) {
                 constraint.video.deviceId = { exact: sel.videoDeviceId }

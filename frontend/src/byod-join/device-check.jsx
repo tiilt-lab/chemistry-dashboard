@@ -37,6 +37,21 @@ const parseResolution = (value) => {
     return m ? { width: Number(m[1]), height: Number(m[2]) } : null
 }
 
+// Width/height constraints oriented to how the device is actually held. A
+// phone held upright delivers portrait frames; asking that camera for a
+// landscape-shaped box (or a sideways-mounted phone for a portrait one)
+// makes the browser crop or squeeze before a byte is encoded. Desktops
+// report landscape and keep the classic shapes. `ideal` lets the browser
+// fall back to the camera's nearest native mode instead of failing.
+const orientedDims = (w, h) => {
+    const portrait =
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(orientation: portrait)").matches
+    return portrait
+        ? { width: { ideal: Math.min(w, h) }, height: { ideal: Math.max(w, h) } }
+        : { width: { ideal: Math.max(w, h) }, height: { ideal: Math.min(w, h) } }
+}
+
 function InlineDeviceCheck({ wantsVideo, selectionRef }) {
     const [error, setError] = useState("")
     const [mics, setMics] = useState([])
@@ -94,11 +109,8 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
                     ? {
                           facingMode: "user",
                           ...(chosenRes
-                              ? {
-                                    width: { ideal: chosenRes.width },
-                                    height: { ideal: chosenRes.height },
-                                }
-                              : { width: 640, height: 480 }),
+                              ? orientedDims(chosenRes.width, chosenRes.height)
+                              : orientedDims(640, 480)),
                           ...(videoDeviceId ? { deviceId: { exact: videoDeviceId } } : {}),
                       }
                     : false,
@@ -317,4 +329,4 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
     )
 }
 
-export { InlineDeviceCheck }
+export { InlineDeviceCheck, orientedDims }

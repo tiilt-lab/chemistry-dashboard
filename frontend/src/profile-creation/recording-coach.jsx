@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { orientedDims } from "../byod-join/device-check";
 
 /**
  * RecordingCoach
@@ -128,8 +129,9 @@ function RecordingCoach({
         const constraints = {
             video: {
                 deviceId: camId ? { exact: camId } : undefined,
-                width: { ideal: 1280 },
-                height: { ideal: 720 },
+                // Oriented to how the phone is held, so an upright phone
+                // records portrait instead of a cropped landscape box.
+                ...orientedDims(1280, 720),
                 frameRate: { ideal: 30, max: 30 },
                 facingMode: 'user',
             },
