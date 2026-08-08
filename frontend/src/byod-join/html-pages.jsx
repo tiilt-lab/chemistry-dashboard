@@ -1020,6 +1020,14 @@ function ByodJoinPage(props) {
             />
             <WaitingDialog
                 itsclass={"add-dialog"}
+                heading={"Saving recording..."}
+                message={
+                    "Uploading the last of this pod's video. Keep this page open."
+                }
+                show={props.currentForm === "FinishingUpload"}
+            />
+            <WaitingDialog
+                itsclass={"add-dialog"}
                 heading={"Processing..."}
                 message={"Please wait..."}
                 show={props.currentForm === "processing"}

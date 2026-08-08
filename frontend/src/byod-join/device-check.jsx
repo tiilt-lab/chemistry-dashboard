@@ -36,8 +36,8 @@ const isPanoramaCamera = (label) => /360|panacast|panoram/i.test(label || "")
 // small frame. The lower options remain for constrained uplinks — the
 // bitrate cap scales with the pixels actually captured either way.
 const RESOLUTIONS = [
-    { value: "1920x1080", label: "1920 × 1080 (Full HD, default)" },
-    { value: "1280x720", label: "1280 × 720 (HD)" },
+    { value: "1280x720", label: "1280 × 720 (HD, default)" },
+    { value: "1920x1080", label: "1920 × 1080 (Full HD)" },
     { value: "640x480", label: "640 × 480 (low bandwidth)" },
 ]
 
@@ -95,7 +95,9 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
     const [channels, setChannels] = useState(1)
     const [levels, setLevels] = useState([])
     const [channelChoice, setChannelChoice] = useState("mix") // "mix" | index
-    const [resChoice, setResChoice] = useState("1920x1080")
+    // Default 720p: enough for the face pipeline, and five pods at the
+    // 2.5 Mbps cap fit a classroom uplink where Full HD at 8 Mbps did not.
+    const [resChoice, setResChoice] = useState("1280x720")
     const [actualRes, setActualRes] = useState("")
     const [orientMode, setOrientMode] = useState(
         // Default "wide": the camera itself delivers a landscape frame, so

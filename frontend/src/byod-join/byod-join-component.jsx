@@ -718,7 +718,16 @@ function JoinPage() {
             audioContext.current = null
         }
         if (mediaRecorder.current != null) {
-            mediaRecorder.current.stop()
+            // endRecording stops the recorder before draining the socket;
+            // stop() on an inactive recorder throws and would abort the
+            // rest of this teardown.
+            try {
+                if (mediaRecorder.current.state !== "inactive") {
+                    mediaRecorder.current.stop()
+                }
+            } catch (ex) {
+                console.warn("recorder stop during disconnect failed", ex)
+            }
             mediaRecorder.current = null
         }
 
@@ -1194,10 +1203,13 @@ function JoinPage() {
                         // Chrome ~2.5 Mbps, phone Safari 7-10 Mbps for the
                         // same 640x480) — uncapped, 20 pods fill ~60 GB/hour
                         // of disk and saturate classroom Wi-Fi uplinks.
-                        // Scale with the pixels actually captured (panorama
-                        // cams record at 1080p) — 2.5 Mbps spread over 6.75×
-                        // the pixels would crush faces below what the
-                        // processing pipeline's quality gates accept.
+                        // Hard ceiling 2.5 Mbps: the earlier 8 Mbps cap let
+                        // five Full-HD pods push ~40 Mbps of sustained uplink
+                        // from one room — video chunks queued on the phones
+                        // for minutes and were lost at teardown (sessions
+                        // with full audio but a fraction of their video).
+                        // Scale with the pixels actually captured, referenced
+                        // to 720p, which the pipeline's quality gates accept.
                         const vSettings = (() => {
                             const t = stream.getVideoTracks()[0]
                             return t && t.getSettings ? t.getSettings() : {}
@@ -1205,11 +1217,11 @@ function JoinPage() {
                         const capturedPixels =
                             (vSettings.width || 640) * (vSettings.height || 480)
                         const videoRate = Math.min(
-                            8_000_000,
+                            2_500_000,
                             Math.max(
-                                2_500_000,
+                                1_250_000,
                                 Math.round(
-                                    (2_500_000 * capturedPixels) / (640 * 480),
+                                    (2_500_000 * capturedPixels) / (1280 * 720),
                                 ),
                             ),
                         )
@@ -1288,21 +1300,65 @@ function JoinPage() {
         requestAccessKey(names, passcode, collaborators, joinswith)
     }
 
-    // End this pod's recording cleanly: flush the recorder's buffered
-    // media while the sockets are still open (the video recorder only
-    // ships a chunk every `interval` ms — without this, a recording
-    // shorter than that saved nothing at all), then close so the
-    // processing services finalize the pod's artifacts.
-    const endRecording = async () => {
-        setArmed(false)
+    // Stop the recorder so its buffered media flushes while the sockets
+    // are still open (the video recorder only ships a chunk every
+    // `interval` ms — without this, a recording shorter than that saved
+    // nothing at all), then DRAIN the video socket. On a congested uplink
+    // the websocket can be holding minutes of queued video; tearing down
+    // after a fixed 1.5s abandoned all of it — sessions ended with full
+    // audio but a fraction of their video, unrecoverably (the backlog
+    // exists only in this tab's memory). Bounded twice: a hard deadline,
+    // and a no-progress cutoff so a dead link doesn't trap the user on a
+    // spinner.
+    const flushAndDrainVideo = async () => {
         try {
             if (mediaRecorder.current && mediaRecorder.current.state === "recording") {
-                mediaRecorder.current.requestData()
+                // stop(), not requestData(): the recorder must not keep
+                // producing chunks while the backlog below drains.
+                mediaRecorder.current.stop()
                 await new Promise((resolve) => setTimeout(resolve, 1500))
             }
         } catch (ex) {
             console.error("final flush failed", ex)
         }
+        // bufferedAmount is what this tab has queued but not yet
+        // transmitted; it reaches 0 when the last chunk is on the wire.
+        try {
+            const backlog = () =>
+                videows.current && videows.current.readyState === WebSocket.OPEN
+                    ? videows.current.bufferedAmount
+                    : 0
+            if (backlog() > 65536) {
+                setCurrentForm("FinishingUpload")
+                const deadline = Date.now() + 5 * 60 * 1000
+                let lastBytes = backlog()
+                let lastProgress = Date.now()
+                while (backlog() > 0 && Date.now() < deadline) {
+                    await new Promise((resolve) => setTimeout(resolve, 500))
+                    const now = backlog()
+                    if (now < lastBytes) {
+                        lastBytes = now
+                        lastProgress = Date.now()
+                    } else if (Date.now() - lastProgress > 30000) {
+                        console.error(
+                            "upload stalled with",
+                            now,
+                            "bytes queued — giving up",
+                        )
+                        break
+                    }
+                }
+            }
+        } catch (ex) {
+            console.error("drain before close failed", ex)
+        }
+    }
+
+    // End this pod's recording cleanly, waiting for queued video to reach
+    // the server before the sockets close.
+    const endRecording = async () => {
+        setArmed(false)
+        await flushAndDrainVideo()
         // Go straight to this pod's overview page instead of the dead-end
         // "recording ended" screen (which rendered as a mostly blank page).
         // Capture the ids before disconnect clears the session state; if
@@ -1345,10 +1401,10 @@ function JoinPage() {
         }
         if (l_joinwith === "Video" || l_joinwith === "Videocartoonify") {
             // Resolution: an explicit device-check choice wins; otherwise
-            // Full HD — the same default the device-check panel shows, so a
+            // 720p — the same default the device-check panel shows, so a
             // pod that skipped the panel records identically. Panorama cams
             // (360° conference cameras) compose their whole ring view inside
-            // the requested frame, so they need the full 1080p too.
+            // the requested frame, so they keep the full 1080p.
             // Phone paths go through dimsForMode: the device-check
             // orientation choice decides the requested frame shape ("wide"
             // asks for landscape outright; the rest request screen-oriented
@@ -1369,8 +1425,8 @@ function JoinPage() {
                   : {
                         facingMode: SESSION_FACING,
                         ...dimsForMode(orientationMode.current, {
-                            width: 1920,
-                            height: 1080,
+                            width: 1280,
+                            height: 720,
                         }),
                     }
             if (sel.videoDeviceId) {
@@ -1509,9 +1565,13 @@ function JoinPage() {
                 console.error("message from the audio server is " + message["message"])
                 setCurrentForm("ClosedSession")
             } else if (message["type"] === "end") {
-                disconnect(true)
-                setDisplayText("The session has been closed by the owner.")
-                setCurrentForm("ClosedSession")
+                // Ship any queued video before tearing down — the session
+                // ending must not discard footage already recorded.
+                flushAndDrainVideo().finally(() => {
+                    disconnect(true)
+                    setDisplayText("The session has been closed by the owner.")
+                    setCurrentForm("ClosedSession")
+                })
             }
         }
 
@@ -1574,9 +1634,11 @@ function JoinPage() {
                     console.error("message from the video server is " + message["message"])
                     setCurrentForm('ClosedSession');
                 } else if (message['type'] === 'end') {
-                    disconnect(true);
-                    setDisplayText('The session has been closed by the owner.');
-                    setCurrentForm('ClosedSession');
+                    flushAndDrainVideo().finally(() => {
+                        disconnect(true);
+                        setDisplayText('The session has been closed by the owner.');
+                        setCurrentForm('ClosedSession');
+                    });
                 } else if (message['type'] === 'heartbeat') {
                 }
             } else if (e.data instanceof Blob) {
