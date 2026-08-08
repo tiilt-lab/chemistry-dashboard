@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom"
 import { SessionService } from "../services/session-service"
 import { ByodJoinPage } from "./html-pages"
 import { orientedDims } from "./device-check"
+import { neededRotation, correctedStream } from "./orientation-correct"
 import { deriveJoinPhase } from "./join-machine"
 import { SessionModel } from "../models/session"
 import { SessionDeviceModel } from "../models/session-device"
@@ -33,6 +34,11 @@ function JoinPage() {
     const audiows = useRef(null)
     const videows = useRef(null)
     const streamReference = useRef(null)
+    // Camera stream as delivered by getUserMedia, kept separately when the
+    // recorded stream is the rotated-canvas correction of it (sideways
+    // phone under rotation lock) — both need stopping on leave.
+    const rawStreamReference = useRef(null)
+    const orientationFix = useRef(null)
     const audioContext = useRef(null)
     const mediaRecorder = useRef(null)
     const source = useRef(null)
@@ -649,6 +655,14 @@ function JoinPage() {
             mediaRecorder.current = null
         }
 
+        if (orientationFix.current != null) {
+            orientationFix.current.stop()
+            orientationFix.current = null
+        }
+        if (rawStreamReference.current != null) {
+            rawStreamReference.current.getTracks().forEach((track) => track.stop())
+            rawStreamReference.current = null
+        }
         if (streamReference.current != null) {
             // ALL tracks — stopping only audio left the camera light on
             // after leaving a video pod.
@@ -1060,7 +1074,28 @@ function JoinPage() {
             ensureGetUserMedia()
 
             if (navigator.mediaDevices != null) {
-                const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
+                let stream = await navigator.mediaDevices.getUserMedia(constraintObj)
+                rawStreamReference.current = stream
+
+                if (
+                    joinwith.current === "Video" ||
+                    joinwith.current === "Videocartoonify"
+                ) {
+                    // A rotation-locked phone mounted sideways delivers a
+                    // portrait buffer with the scene on its side; gravity
+                    // (not any screen API) reveals it. Record the rotated-
+                    // canvas correction so the encoded video is upright.
+                    try {
+                        const rot = await neededRotation()
+                        if (rot !== 0) {
+                            const fix = await correctedStream(stream, rot)
+                            orientationFix.current = fix
+                            stream = fix.stream
+                        }
+                    } catch (e) {
+                        console.warn("orientation correction unavailable:", e)
+                    }
+                }
 
                 // media.then(function (stream) {
                 streamReference.current = stream
