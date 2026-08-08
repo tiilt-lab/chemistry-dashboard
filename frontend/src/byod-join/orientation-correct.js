@@ -14,6 +14,24 @@
 // and iOS Safari already rotates capture buffers to match the physical
 // device, so there is nothing to fix.
 
+// User-selectable orientation modes for the device-check preview. Android
+// camera pipelines disagree about who compensates rotation — some orient
+// the buffer to the screen (sideways content under rotation lock), some to
+// gravity (upright content in whatever frame satisfied the constraints),
+// and no API distinguishes them. "auto" applies the gravity heuristic;
+// the rest force a specific handling, chosen by eye against the preview
+// and remembered per camera.
+export const ORIENTATION_MODES = [
+    { id: "auto", label: "Auto" },
+    { id: "ccw", label: "Rotate left" },
+    { id: "cw", label: "Rotate right" },
+    { id: "wide", label: "Wide (ask camera for landscape)" },
+    { id: "flip", label: "Upside-down" },
+]
+
+export const rotationForMode = (id) =>
+    ({ cw: 90, ccw: -90, flip: 180 })[id] || 0
+
 // One gravity sample from devicemotion, or null when unavailable (iOS
 // permission-gated, no sensor, or no event within the timeout).
 const readGravity = (timeoutMs = 700) =>
@@ -91,56 +109,104 @@ export async function neededRotation() {
     return 0
 }
 
+const withTimeout = (promise, ms, what) =>
+    Promise.race([
+        promise,
+        new Promise((_res, rej) =>
+            setTimeout(() => rej(new Error("timeout: " + what)), ms),
+        ),
+    ])
+
 // Wrap the stream's video track in a rotated-canvas re-rasterization.
 // Returns { stream, stop }: `stream` carries the corrected video plus the
 // ORIGINAL audio tracks; `stop` ends the draw loop (camera tracks are the
 // caller's to stop). Frame pacing uses requestVideoFrameCallback when the
 // browser has it (one draw per camera frame), falling back to rAF.
+//
+// FAIL-OPEN by design: every stage is bounded and the function proves
+// frames are actually flowing before returning — on any doubt it throws so
+// the caller records the raw stream instead. A sideways recording is
+// recoverable; a silently empty one is not (pod 1221 recorded exactly one
+// byte of video when an early version hung here).
 export async function correctedStream(rawStream, rotationDeg) {
     const track = rawStream.getVideoTracks()[0]
-    const s = track.getSettings()
     const vid = document.createElement("video")
     vid.muted = true
     vid.playsInline = true
+    vid.setAttribute("playsinline", "")
     vid.srcObject = new MediaStream([track])
-    await vid.play()
-
-    const w = s.width
-    const h = s.height
-    const swap = Math.abs(rotationDeg) === 90
-    const canvas = document.createElement("canvas")
-    canvas.width = swap ? h : w
-    canvas.height = swap ? w : h
-    const ctx = canvas.getContext("2d")
-
-    let running = true
-    const draw = () => {
-        ctx.save()
-        ctx.translate(canvas.width / 2, canvas.height / 2)
-        ctx.rotate((rotationDeg * Math.PI) / 180)
-        ctx.drawImage(vid, -w / 2, -h / 2, w, h)
-        ctx.restore()
+    // Detached <video> elements are not guaranteed to decode on Android
+    // Chrome — keep it in the DOM, invisible.
+    vid.style.cssText =
+        "position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none;"
+    document.body.appendChild(vid)
+    const dropVid = () => {
+        vid.srcObject = null
+        vid.remove()
     }
-    const useVFC = typeof vid.requestVideoFrameCallback === "function"
-    const loop = () => {
-        if (!running) return
-        draw()
-        if (useVFC) {
-            vid.requestVideoFrameCallback(loop)
-        } else {
-            requestAnimationFrame(loop)
+
+    try {
+        await withTimeout(vid.play(), 2000, "camera preview play")
+        if (!vid.videoWidth) {
+            await withTimeout(
+                new Promise((res) =>
+                    vid.addEventListener("loadedmetadata", res, { once: true }),
+                ),
+                2000,
+                "camera metadata",
+            )
         }
-    }
-    loop()
+        const w = vid.videoWidth
+        const h = vid.videoHeight
+        if (!w || !h) throw new Error("camera reported no dimensions")
 
-    const out = canvas.captureStream(s.frameRate || 30)
-    rawStream.getAudioTracks().forEach((t) => out.addTrack(t))
-    return {
-        stream: out,
-        stop: () => {
+        const swap = Math.abs(rotationDeg) === 90
+        const canvas = document.createElement("canvas")
+        canvas.width = swap ? h : w
+        canvas.height = swap ? w : h
+        const ctx = canvas.getContext("2d")
+
+        let running = true
+        let framesDrawn = 0
+        const draw = () => {
+            ctx.save()
+            ctx.translate(canvas.width / 2, canvas.height / 2)
+            ctx.rotate((rotationDeg * Math.PI) / 180)
+            ctx.drawImage(vid, -w / 2, -h / 2, w, h)
+            ctx.restore()
+            framesDrawn += 1
+        }
+        const useVFC = typeof vid.requestVideoFrameCallback === "function"
+        const loop = () => {
+            if (!running) return
+            draw()
+            if (useVFC) {
+                vid.requestVideoFrameCallback(loop)
+            } else {
+                requestAnimationFrame(loop)
+            }
+        }
+        loop()
+
+        // Prove the pipeline is live before anyone records from it.
+        await new Promise((res) => setTimeout(res, 700))
+        if (framesDrawn === 0) {
             running = false
-            out.getVideoTracks().forEach((t) => t.stop())
-            vid.srcObject = null
-        },
+            throw new Error("no frames drawn")
+        }
+
+        const out = canvas.captureStream(30)
+        rawStream.getAudioTracks().forEach((t) => out.addTrack(t))
+        return {
+            stream: out,
+            stop: () => {
+                running = false
+                out.getVideoTracks().forEach((t) => t.stop())
+                dropVid()
+            },
+        }
+    } catch (e) {
+        dropVid()
+        throw e
     }
 }

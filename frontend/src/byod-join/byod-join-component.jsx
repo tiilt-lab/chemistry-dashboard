@@ -3,8 +3,12 @@ import { POD_ON_COLOR as POD_COLOR } from "../components/pod-colors"
 import { useNavigate, useParams } from "react-router-dom"
 import { SessionService } from "../services/session-service"
 import { ByodJoinPage } from "./html-pages"
-import { orientedDims } from "./device-check"
-import { neededRotation, correctedStream } from "./orientation-correct"
+import { dimsForMode } from "./device-check"
+import {
+    neededRotation,
+    correctedStream,
+    rotationForMode,
+} from "./orientation-correct"
 import { deriveJoinPhase } from "./join-machine"
 import { SessionModel } from "../models/session"
 import { SessionDeviceModel } from "../models/session-device"
@@ -39,6 +43,9 @@ function JoinPage() {
     // phone under rotation lock) — both need stopping on leave.
     const rawStreamReference = useRef(null)
     const orientationFix = useRef(null)
+    // Orientation mode chosen in the device-check preview ("auto" =
+    // gravity heuristic), captured at join time for handleStream.
+    const orientationMode = useRef("auto")
     const audioContext = useRef(null)
     const mediaRecorder = useRef(null)
     const source = useRef(null)
@@ -1081,12 +1088,17 @@ function JoinPage() {
                     joinwith.current === "Video" ||
                     joinwith.current === "Videocartoonify"
                 ) {
-                    // A rotation-locked phone mounted sideways delivers a
-                    // portrait buffer with the scene on its side; gravity
-                    // (not any screen API) reveals it. Record the rotated-
-                    // canvas correction so the encoded video is upright.
+                    // Apply the orientation choice from the device-check
+                    // preview; "auto" falls back to the gravity heuristic
+                    // (a rotation-locked phone mounted sideways delivers a
+                    // buffer with the scene on its side, and only gravity —
+                    // no screen API — reveals it).
                     try {
-                        const rot = await neededRotation()
+                        const mode = orientationMode.current
+                        const rot =
+                            mode === "auto"
+                                ? await neededRotation()
+                                : rotationForMode(mode)
                         if (rot !== 0) {
                             const fix = await correctedStream(stream, rot)
                             orientationFix.current = fix
@@ -1273,18 +1285,17 @@ function JoinPage() {
             // compose the whole ring view inside the requested frame — at
             // 640×480 the panorama is downscaled to uselessness before a
             // byte leaves the browser, so Auto records them at full 1080p.
-            // Phone paths go through orientedDims so a sideways-mounted phone
-            // records landscape and an upright one portrait, instead of the
-            // browser cropping to a box shaped for the other orientation.
-            // Panorama cams compose their ring view landscape regardless of
-            // the host device, so they keep a fixed landscape frame.
+            // Phone paths go through dimsForMode: the device-check
+            // orientation choice decides the requested frame shape ("wide"
+            // asks for landscape outright; the rest request screen-oriented
+            // dims and fix rotation after capture). Panorama cams compose
+            // their ring view landscape regardless of the host device, so
+            // they keep a fixed landscape frame.
+            orientationMode.current = sel.orientationMode || "auto"
             constraint.video = sel.videoResolution
                 ? {
                       facingMode: "user",
-                      ...orientedDims(
-                          sel.videoResolution.width,
-                          sel.videoResolution.height,
-                      ),
+                      ...dimsForMode(orientationMode.current, sel.videoResolution),
                   }
                 : sel.videoPanorama
                   ? {
@@ -1293,7 +1304,10 @@ function JoinPage() {
                     }
                   : {
                         facingMode: "user",
-                        ...orientedDims(640, 480),
+                        ...dimsForMode(orientationMode.current, {
+                            width: 640,
+                            height: 480,
+                        }),
                     }
             if (sel.videoDeviceId) {
                 constraint.video.deviceId = { exact: sel.videoDeviceId }

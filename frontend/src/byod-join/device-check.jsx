@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react"
 import { dlgSelect, dlgError } from "../components/dialog-styles"
+import {
+    ORIENTATION_MODES,
+    rotationForMode,
+    neededRotation,
+    correctedStream,
+} from "./orientation-correct"
 
 // Inline device check, embedded in the join form (it used to be a separate
 // "Check your devices" page between the form and joining): live camera
@@ -37,6 +43,23 @@ const parseResolution = (value) => {
     return m ? { width: Number(m[1]), height: Number(m[2]) } : null
 }
 
+// Constraint dims for an orientation mode: "wide" explicitly asks the
+// camera for a landscape frame (the right move for pipelines that keep the
+// content upright themselves — rotating their portrait crop can never
+// recover the wide field of view); every other mode requests the
+// screen-oriented shape and fixes rotation after capture if needed.
+const dimsForMode = (mode, res) => {
+    if (mode === "wide") {
+        return {
+            width: { ideal: Math.max(res.width, res.height) },
+            height: { ideal: Math.min(res.width, res.height) },
+        }
+    }
+    return orientedDims(res.width, res.height)
+}
+
+const orientStorageKey = (camId) => "blinc.orient." + (camId || "default")
+
 // Width/height constraints oriented to how the device is actually held. A
 // phone held upright delivers portrait frames; asking that camera for a
 // landscape-shaped box (or a sideways-mounted phone for a portrait one)
@@ -63,6 +86,9 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
     const [channelChoice, setChannelChoice] = useState("mix") // "mix" | index
     const [resChoice, setResChoice] = useState("640x480")
     const [actualRes, setActualRes] = useState("")
+    const [orientMode, setOrientMode] = useState(
+        () => localStorage.getItem(orientStorageKey("")) || "auto",
+    )
     const videoRef = useRef(null)
     const cleanupRef = useRef(null)
     const streamRef = useRef(null)
@@ -88,9 +114,18 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
             videoResolution: parseResolution(resChoice),
             videoPanorama: !!(vtrack && isPanoramaCamera(vtrack.label)),
             channelIndex: channelChoice === "mix" ? null : channelChoice,
+            orientationMode: orientMode,
             stopPreview,
         }
     })
+
+    // Remember the orientation choice per camera, so a rig only needs
+    // dialing in once.
+    useEffect(() => {
+        const saved = localStorage.getItem(orientStorageKey(camId))
+        if (saved) setOrientMode(saved)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [camId])
 
     const openPreview = async (audioDeviceId, videoDeviceId) => {
         stopPreview()
@@ -108,9 +143,10 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
                 video: wantsVideo
                     ? {
                           facingMode: "user",
-                          ...(chosenRes
-                              ? orientedDims(chosenRes.width, chosenRes.height)
-                              : orientedDims(640, 480)),
+                          ...dimsForMode(
+                              orientMode,
+                              chosenRes || { width: 640, height: 480 },
+                          ),
                           ...(videoDeviceId ? { deviceId: { exact: videoDeviceId } } : {}),
                       }
                     : false,
@@ -128,8 +164,28 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
                 )
             }
 
+            // Preview exactly what will be recorded: rotate modes (and
+            // auto, when gravity says the mount is sideways) run through
+            // the same corrected-canvas path the recorder uses.
+            let previewStream = stream
+            let orientFix = null
+            if (wantsVideo) {
+                try {
+                    const rot =
+                        orientMode === "auto"
+                            ? await neededRotation()
+                            : rotationForMode(orientMode)
+                    if (rot !== 0) {
+                        orientFix = await correctedStream(stream, rot)
+                        previewStream = orientFix.stream
+                    }
+                } catch {
+                    previewStream = stream
+                }
+            }
+
             if (wantsVideo && videoRef.current) {
-                videoRef.current.srcObject = stream
+                videoRef.current.srcObject = previewStream
                 videoRef.current.play().catch(() => {})
             }
 
@@ -177,6 +233,7 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
 
             cleanupRef.current = () => {
                 if (raf) cancelAnimationFrame(raf)
+                if (orientFix) orientFix.stop()
                 stream.getTracks().forEach((t) => t.stop())
                 ctx.close().catch(() => {})
             }
@@ -195,7 +252,14 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
         openPreview(micId || undefined, camId || undefined)
         return stopPreview
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [micId, camId, resChoice, wantsVideo])
+    }, [micId, camId, resChoice, wantsVideo, orientMode])
+
+    const cycleOrientMode = () => {
+        const ids = ORIENTATION_MODES.map((m) => m.id)
+        const next = ids[(ids.indexOf(orientMode) + 1) % ids.length]
+        setOrientMode(next)
+        localStorage.setItem(orientStorageKey(camId), next)
+    }
 
     const speaking = levels.some((l) => l > 0.02)
 
@@ -220,6 +284,22 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
                             capturing at {actualRes}
                         </div>
                     )}
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                        <span className="text-left text-xs text-tiilt-muted">
+                            Orientation:{" "}
+                            <span className="font-semibold">
+                                {(ORIENTATION_MODES.find((m) => m.id === orientMode) || ORIENTATION_MODES[0]).label}
+                            </span>
+                            {" — mount the phone as it will record; if this preview is sideways or narrow, change until it looks right."}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={cycleOrientMode}
+                            className="shrink-0 rounded-lg border border-tiilt-muted/40 px-3 py-1.5 text-xs font-semibold text-tiilt-ink"
+                        >
+                            Change
+                        </button>
+                    </div>
                     {cams.length > 1 && (
                         <select
                             aria-label="Camera"
@@ -329,4 +409,4 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
     )
 }
 
-export { InlineDeviceCheck, orientedDims }
+export { InlineDeviceCheck, orientedDims, dimsForMode }
