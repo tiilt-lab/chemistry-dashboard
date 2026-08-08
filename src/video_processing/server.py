@@ -115,6 +115,16 @@ class ServerProtocol(WebSocketServerProtocol):
         # complain loudly if it never comes.
         self.bytes_received = 0
         self.silent_check = None
+        # Lag detection: under a saturated uplink a pod keeps the socket
+        # open and sends chunks in bursts minutes apart — the recording
+        # looks alive but is quietly falling behind, and everything still
+        # queued on the phone dies with the tab at teardown. Track chunk
+        # arrivals against wall time and warn the pod while there is still
+        # time to fix it (move the phone, lower the resolution).
+        self.binary_chunks = 0
+        self.first_binary_at = None
+        self.lag_check = None
+        self.lag_warned = False
         cm.add(self)
         cancel_idle_recycle()
         logging.info('New client connected...')
@@ -137,6 +147,61 @@ class ServerProtocol(WebSocketServerProtocol):
             except Exception:
                 pass
             self.silent_check = None
+
+    LAG_CHECK_SECONDS = 30
+    LAG_ALERT_BEHIND_SECONDS = 45
+
+    def arm_lag_check(self):
+        self.cancel_lag_check()
+        try:
+            self.lag_check = reactor.callLater(
+                self.LAG_CHECK_SECONDS, self._lag_check_fire)
+        except Exception as e:
+            logging.debug('could not arm lag check: %s', e)
+
+    def cancel_lag_check(self):
+        if self.lag_check is not None:
+            try:
+                if self.lag_check.active():
+                    self.lag_check.cancel()
+            except Exception:
+                pass
+            self.lag_check = None
+
+    def _lag_check_fire(self):
+        self.lag_check = None
+        try:
+            # Zero-bytes-ever is the silent-video alarm's case, not ours.
+            if self.bytes_received > 0 and self.first_binary_at is not None:
+                elapsed = time.time() - self.first_binary_at
+                expected = elapsed / float(self.interval)
+                behind = (expected - self.binary_chunks) * float(self.interval)
+                key = self.config.auth_key if self.config else 'unknown'
+                if behind > self.LAG_ALERT_BEHIND_SECONDS:
+                    logging.error(
+                        'VIDEO LAGGING: pod %s upload is ~%ds behind '
+                        '(%d chunks in %ds; one expected every %ds). '
+                        'Likely a saturated or weak uplink; footage still '
+                        'queued on the phone is lost if the page closes '
+                        'before it drains.',
+                        key, int(behind), self.binary_chunks, int(elapsed),
+                        int(self.interval))
+                    self.send_json({
+                        'type': 'video_lagging',
+                        'message': 'Weak Wi-Fi: this device\'s video upload '
+                                   'is about {0} seconds behind. Audio is '
+                                   'unaffected. Keep this page open, and if '
+                                   'possible move closer to the Wi-Fi access '
+                                   'point.'.format(int(behind)),
+                    })
+                    self.lag_warned = True
+                elif self.lag_warned:
+                    logging.info('video lag cleared for pod %s', key)
+                    self.send_json({'type': 'video_lag_cleared'})
+                    self.lag_warned = False
+        finally:
+            if not self.end_signaled:
+                self.arm_lag_check()
 
     def _silent_video_fire(self):
         self.silent_check = None
@@ -276,6 +341,11 @@ class ServerProtocol(WebSocketServerProtocol):
 
                 if (self.config.videocartoonify or self.config.video) and not (self.live_analytics and (cf.video_cartoonize() or cf.process_video_analytics())):
                     self.running = True
+                    # Record-only connections skip signal_start, but they
+                    # record video all the same — they need the silent-video
+                    # and lag watchdogs too.
+                    self.arm_silent_check()
+                    self.arm_lag_check()
                     self.send_json({'type':'start','message':'Video processing not activated to start video processor'})
                     logging.info('Video process connected but video processing not activated')
                     callbacks.post_connect(self.config.auth_key)
@@ -288,10 +358,12 @@ class ServerProtocol(WebSocketServerProtocol):
     def process_binary(self, data):
         if not self.bytes_received:
             self.cancel_silent_check()
+            self.first_binary_at = time.time()
             logging.info('first video bytes from %s',
                          self.config.auth_key if self.config else 'unknown')
         self.bytes_received += len(data)
         if self.running and not self.awaitingSpeakers:
+            self.binary_chunks += 1
             # if cf.video_record_original():
             if self.config.mimeExtension == "webm":
                 self.orig_vid_recorder.write(data,self.filename+'.'+self.config.mimeExtension)
@@ -479,6 +551,7 @@ class ServerProtocol(WebSocketServerProtocol):
         # Recording has begun as far as the client is concerned — from here a
         # pod with nothing to send is a fault, not a slow start.
         self.arm_silent_check()
+        self.arm_lag_check()
         if self.video_processor and (cf.video_cartoonize() or cf.process_video_analytics()):
             self.video_processor.start()
             self.running = True
@@ -491,6 +564,7 @@ class ServerProtocol(WebSocketServerProtocol):
             return
         self.end_signaled = True
         self.cancel_silent_check()
+        self.cancel_lag_check()
         if self.config and self.bytes_received == 0:
             logging.error('pod %s disconnected having sent NO video data at all',
                           self.config.auth_key)

@@ -63,6 +63,16 @@ const dimsForMode = (mode, res) => {
 
 const orientStorageKey = (camId) => "blinc.orient." + (camId || "default")
 
+// Orientation-agnostic "can this camera deliver this resolution" test —
+// portrait phone cameras report their maximums swapped (1080×1920).
+const resFitsCamera = (res, camMax) => {
+    if (!res || !camMax) return true
+    return (
+        Math.max(res.width, res.height) <= Math.max(camMax.w, camMax.h) &&
+        Math.min(res.width, res.height) <= Math.min(camMax.w, camMax.h)
+    )
+}
+
 // Session capture points AWAY from whoever set the pod up: a phone or
 // tablet propped on the table should record the group with its back camera,
 // which on every such device has the better sensor and optics. (Enrollment
@@ -99,6 +109,11 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
     // 2.5 Mbps cap fit a classroom uplink where Full HD at 8 Mbps did not.
     const [resChoice, setResChoice] = useState("1280x720")
     const [actualRes, setActualRes] = useState("")
+    // What the current camera can deliver at most ({w, h} or null when the
+    // browser doesn't expose it) — drives the "up to ..." line and greys
+    // out resolution choices the camera can't honor (the browser would
+    // otherwise silently downgrade and record less than the label promises).
+    const [camMax, setCamMax] = useState(null)
     const [orientMode, setOrientMode] = useState(
         // Default "wide": the camera itself delivers a landscape frame, so
         // no rotation canvas ever sits between the camera and the recorder
@@ -145,6 +160,20 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [camId])
 
+    // If the camera can't deliver the selected resolution, drop to the
+    // best one it can — otherwise the browser silently downgrades and the
+    // recording is smaller than the picker claims.
+    useEffect(() => {
+        if (!camMax) return
+        if (!resFitsCamera(parseResolution(resChoice), camMax)) {
+            const best = RESOLUTIONS.find((r) =>
+                resFitsCamera(parseResolution(r.value), camMax),
+            )
+            if (best) setResChoice(best.value)
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [camMax])
+
     const openPreview = async (audioDeviceId, videoDeviceId) => {
         stopPreview()
         setError("")
@@ -182,6 +211,14 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
                     vset.width && vset.height
                         ? vset.width + " × " + vset.height
                         : "",
+                )
+                const caps = vtrack.getCapabilities
+                    ? vtrack.getCapabilities()
+                    : {}
+                setCamMax(
+                    caps.width && caps.width.max && caps.height && caps.height.max
+                        ? { w: caps.width.max, h: caps.height.max }
+                        : null,
                 )
             }
 
@@ -300,9 +337,16 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
                         playsInline
                         className="w-full rounded-xl bg-black"
                     />
-                    {actualRes && (
+                    {(actualRes || camMax) && (
                         <div className="mt-1 text-right font-ahamono text-[11px] text-tiilt-muted">
-                            capturing at {actualRes}
+                            {actualRes && <>capturing at {actualRes}</>}
+                            {actualRes && camMax && " — "}
+                            {camMax && (
+                                <>
+                                    camera supports up to {camMax.w} ×{" "}
+                                    {camMax.h}
+                                </>
+                            )}
                         </div>
                     )}
                     <div className="mt-2 flex items-center justify-between gap-3">
@@ -345,11 +389,24 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
                         value={resChoice}
                         onChange={(e) => setResChoice(e.target.value)}
                     >
-                        {RESOLUTIONS.map((r) => (
-                            <option key={r.value} value={r.value}>
-                                {r.label}
-                            </option>
-                        ))}
+                        {RESOLUTIONS.map((r) => {
+                            const unsupported = !resFitsCamera(
+                                parseResolution(r.value),
+                                camMax,
+                            )
+                            return (
+                                <option
+                                    key={r.value}
+                                    value={r.value}
+                                    disabled={unsupported}
+                                >
+                                    {r.label +
+                                        (unsupported
+                                            ? " — not supported by this camera"
+                                            : "")}
+                                </option>
+                            )
+                        })}
                     </select>
                     <div className="mt-1 text-xs text-tiilt-muted">
                         Higher resolutions make larger recordings. Pick Full

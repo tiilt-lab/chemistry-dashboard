@@ -188,6 +188,10 @@ function JoinPage() {
     // Mirrored into a ref because the value is read when the video socket's
     // start message is built, long after the join form set it.
     const [liveAnalytics, setLiveAnalyticsState] = useState(true)
+    // Server-side watchdog verdicts (silent video / upload lagging): the
+    // recording looks fine from the pod, so the pod's own screen is the
+    // only place a warning reaches the people who can act on it.
+    const [streamWarning, setStreamWarning] = useState(null)
     const liveAnalyticsRef = useRef(true)
     const setLiveAnalytics = (v) => {
         liveAnalyticsRef.current = v
@@ -690,6 +694,7 @@ function JoinPage() {
             // its identity intact so it can rejoin the next session directly.
             ending.current = true
             setArmed(false)
+            setStreamWarning(null)
             setRecSeconds(0)
             dispatch({ type: "SPEAKERS_VALIDATED", payload: false })
             setSpeakers(null)
@@ -1639,6 +1644,13 @@ function JoinPage() {
                         setDisplayText('The session has been closed by the owner.');
                         setCurrentForm('ClosedSession');
                     });
+                } else if (message['type'] === 'no_video_data' ||
+                           message['type'] === 'video_lagging') {
+                    // Server-side watchdogs: the recording looks fine from
+                    // the pod, so the pod itself must say otherwise.
+                    setStreamWarning(message['message']);
+                } else if (message['type'] === 'video_lag_cleared') {
+                    setStreamWarning(null);
                 } else if (message['type'] === 'heartbeat') {
                 }
             } else if (e.data instanceof Blob) {
@@ -2065,6 +2077,7 @@ function JoinPage() {
     })
 
     return (
+        <>
         <ByodJoinPage
             joinPhase={joinPhase}
             state={state}
@@ -2149,6 +2162,26 @@ function JoinPage() {
             loadSpeakerMetrics={loadSpeakerMetrics}
             prevSessionId={prevSessionId}
         />
+        {streamWarning && (
+            <div
+                style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    zIndex: 9999,
+                    background: "#b91c1c",
+                    color: "#fff",
+                    padding: "10px 14px",
+                    textAlign: "center",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                }}
+            >
+                {streamWarning}
+            </div>
+        )}
+        </>
     )
 }
 
