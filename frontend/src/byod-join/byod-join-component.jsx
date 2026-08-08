@@ -1410,7 +1410,7 @@ function JoinPage() {
         }
         if (l_joinwith === "Video" || l_joinwith === "Videocartoonify") {
             // Resolution: an explicit device-check choice wins; otherwise
-            // 720p — the same default the device-check panel shows, so a
+            // 640×480 — the same default the device-check panel shows, so a
             // pod that skipped the panel records identically. Panorama cams
             // (360° conference cameras) compose their whole ring view inside
             // the requested frame, so they keep the full 1080p.
@@ -1434,8 +1434,8 @@ function JoinPage() {
                   : {
                         facingMode: SESSION_FACING,
                         ...dimsForMode(orientationMode.current, {
-                            width: 1280,
-                            height: 720,
+                            width: 640,
+                            height: 480,
                         }),
                     }
             if (sel.videoDeviceId) {
