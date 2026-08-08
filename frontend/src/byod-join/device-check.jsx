@@ -36,9 +36,9 @@ const isPanoramaCamera = (label) => /360|panacast|panoram/i.test(label || "")
 // small frame. The lower options remain for constrained uplinks — the
 // bitrate cap scales with the pixels actually captured either way.
 const RESOLUTIONS = [
-    { value: "640x480", label: "640 × 480 (low bandwidth, default)" },
+    { value: "1920x1080", label: "1920 × 1080 (Full HD, default)" },
     { value: "1280x720", label: "1280 × 720 (HD)" },
-    { value: "1920x1080", label: "1920 × 1080 (Full HD)" },
+    { value: "640x480", label: "640 × 480 (low bandwidth)" },
 ]
 
 const parseResolution = (value) => {
@@ -105,11 +105,12 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
     const [channels, setChannels] = useState(1)
     const [levels, setLevels] = useState([])
     const [channelChoice, setChannelChoice] = useState("mix") // "mix" | index
-    // Default 640×480 (~1.25 Mbps): classroom uplinks measured as low as
-    // ~5 Mbps total tonight — even 720p at 2.5 Mbps oversubscribed the
-    // room and pods fell minutes behind. Higher resolutions are explicit
-    // choices for venues known to have the bandwidth.
-    const [resChoice, setResChoice] = useState("640x480")
+    // Default Full HD. The low-bandwidth defaults from the 2026-08-08
+    // incident treated a server-side ingest stall as a network limit; with
+    // the streaming decoder fix the service ingests at line speed, venue
+    // uplinks measured 79+ Mbps, and the 2.5 Mbps bitrate cap bounds each
+    // pod's bandwidth regardless of the resolution chosen here.
+    const [resChoice, setResChoice] = useState("1920x1080")
     const [actualRes, setActualRes] = useState("")
     // What the current camera can deliver at most ({w, h} or null when the
     // browser doesn't expose it) — drives the "up to ..." line and greys
