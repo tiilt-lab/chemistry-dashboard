@@ -149,6 +149,25 @@ export class ActiveSessionService {
             this.transcriptSource.next(currentTranscripts)
         })
 
+        // Live transcripts from pods with NO enrolled speakers: that path
+        // posts to /callback/transcript, which emits the bare transcript row
+        // on 'transcript_update' (no speaker metrics). Without this listener
+        // those rows reached the DB but never the open panel — the pod looked
+        // dead until a reload.
+        this.socket.on("transcript_update", (e) => {
+            const transcript_model = TranscriptModel.fromJson(JSON.parse(e), [])
+            const currentTranscripts = this.transcriptSource.getValue()
+            const index = currentTranscripts.findIndex(
+                (t) => t.id === transcript_model.id,
+            )
+            if (index !== -1) {
+                currentTranscripts[index] = transcript_model
+            } else {
+                currentTranscripts.push(transcript_model)
+            }
+            this.transcriptSource.next(currentTranscripts)
+        })
+
         // Initial digest of transcripts and speaker metrics (paged; several
         // events per join). Skip ids already present so replays and races
         // can never duplicate rows.
