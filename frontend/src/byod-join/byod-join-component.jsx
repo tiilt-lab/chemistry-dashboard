@@ -1312,9 +1312,9 @@ function JoinPage() {
     // the websocket can be holding minutes of queued video; tearing down
     // after a fixed 1.5s abandoned all of it — sessions ended with full
     // audio but a fraction of their video, unrecoverably (the backlog
-    // exists only in this tab's memory). Bounded twice: a hard deadline,
-    // and a no-progress cutoff so a dead link doesn't trap the user on a
-    // spinner.
+    // exists only in this tab's memory). Bounded by a no-progress cutoff
+    // so a dead link doesn't trap the user on a spinner; while bytes are
+    // moving it waits as long as it takes.
     const flushAndDrainVideo = async () => {
         try {
             if (mediaRecorder.current && mediaRecorder.current.state === "recording") {
@@ -1335,10 +1335,14 @@ function JoinPage() {
                     : 0
             if (backlog() > 65536) {
                 setCurrentForm("FinishingUpload")
-                const deadline = Date.now() + 5 * 60 * 1000
+                // No hard deadline: on a starved uplink a long session's
+                // backlog can legitimately need many minutes, and cutting
+                // it off discards footage. The no-progress cutoff below is
+                // the only exit — a transfer that is moving keeps going; a
+                // dead link still releases the user within 30s.
                 let lastBytes = backlog()
                 let lastProgress = Date.now()
-                while (backlog() > 0 && Date.now() < deadline) {
+                while (backlog() > 0) {
                     await new Promise((resolve) => setTimeout(resolve, 500))
                     const now = backlog()
                     if (now < lastBytes) {
