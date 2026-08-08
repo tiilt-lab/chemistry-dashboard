@@ -3,12 +3,8 @@ import { POD_ON_COLOR as POD_COLOR } from "../components/pod-colors"
 import { useNavigate, useParams } from "react-router-dom"
 import { SessionService } from "../services/session-service"
 import { ByodJoinPage } from "./html-pages"
-import { dimsForMode, SESSION_FACING } from "./device-check"
-import {
-    neededRotation,
-    correctedStream,
-    rotationForMode,
-} from "./orientation-correct"
+import { dimsForPlan, SESSION_FACING } from "./device-check"
+import { orientationPlan, correctedStream } from "./orientation-correct"
 import { deriveJoinPhase } from "./join-machine"
 import { SessionModel } from "../models/session"
 import { SessionDeviceModel } from "../models/session-device"
@@ -43,9 +39,12 @@ function JoinPage() {
     // phone under rotation lock) — both need stopping on leave.
     const rawStreamReference = useRef(null)
     const orientationFix = useRef(null)
-    // Orientation mode chosen in the device-check preview ("auto" =
-    // gravity heuristic), captured at join time for handleStream.
-    const orientationMode = useRef("auto")
+    // Resolved orientation plan ({wide, rotation}) for this join, computed
+    // from the device-check choice before the camera constraints are built.
+    const orientationPlanRef = useRef({ wide: false, rotation: 0 })
+    // MediaRecorder options, kept so the watchdog can rebuild the recorder
+    // on the raw camera stream if the rotated-canvas source stalls.
+    const recorderOptions = useRef(null)
     const audioContext = useRef(null)
     const mediaRecorder = useRef(null)
     const source = useRef(null)
@@ -491,21 +490,70 @@ function JoinPage() {
             }
 
             const videoPlay = () => {
-                let video = document.querySelector("video")
+                // Exclude the orientation pipeline's hidden decoder element:
+                // pointing the preview at it would starve the canvas it feeds.
+                let video =
+                    document.querySelector("video:not([data-orient-decoder])") ||
+                    document.querySelector("video")
                 video.srcObject = streamReference.current
+                let started = false
+                let gotChunk = false
                 const begin = () => {
-                    video.play()
+                    if (started) return
+                    started = true
+                    video.play().catch(() => {})
                     mediaRecorder.current.start(interval)
+                    armVideoWatchdog()
                 }
                 // The pre-start preview may have attached this stream
-                // already; loadedmetadata won't refire then.
+                // already; loadedmetadata won't refire then. The timer is the
+                // backstop: a canvas-sourced stream that never delivers a
+                // frame never fires loadedmetadata either, and recording must
+                // not hinge on that event arriving.
                 if (video.readyState >= 1) {
                     begin()
                 } else {
                     video.onloadedmetadata = begin
+                    setTimeout(begin, 3000)
                 }
 
-                mediaRecorder.current.ondataavailable = async function (ev) {
+                // If the recorder produces NO chunk at all, the source is
+                // dead — the rotated-canvas path has done this twice on real
+                // hardware (pod 1221 wrote one byte; pods 1244/1245 wrote
+                // nothing for 25 minutes while audio kept flowing). Rebuild
+                // on the raw camera stream: sideways but complete beats
+                // upright but empty.
+                function armVideoWatchdog() {
+                    setTimeout(() => {
+                        if (gotChunk || !orientationFix.current) return
+                        const raw = rawStreamReference.current
+                        if (!raw || !recorderOptions.current) return
+                        console.error(
+                            "no video data after start — falling back to the raw camera stream",
+                        )
+                        try {
+                            mediaRecorder.current.stop()
+                        } catch (e) {
+                            console.warn("watchdog: recorder stop failed", e)
+                        }
+                        try {
+                            orientationFix.current.stop()
+                        } catch (e) {
+                            console.warn("watchdog: canvas stop failed", e)
+                        }
+                        orientationFix.current = null
+                        streamReference.current = raw
+                        video.srcObject = raw
+                        video.play().catch(() => {})
+                        const rec = new MediaRecorder(raw, recorderOptions.current)
+                        mediaRecorder.current = rec
+                        rec.ondataavailable = onVideoChunk
+                        rec.start(interval)
+                    }, Math.max(8000, interval * 2))
+                }
+
+                const onVideoChunk = async function (ev) {
+                    gotChunk = true
 
                     await ev.data.arrayBuffer()
 
@@ -534,6 +582,7 @@ function JoinPage() {
                     }
 
                 }
+                mediaRecorder.current.ondataavailable = onVideoChunk
             }
 
             if (joinwith.current === "Audio") {
@@ -1088,17 +1137,12 @@ function JoinPage() {
                     joinwith.current === "Video" ||
                     joinwith.current === "Videocartoonify"
                 ) {
-                    // Apply the orientation choice from the device-check
-                    // preview; "auto" falls back to the gravity heuristic
-                    // (a rotation-locked phone mounted sideways delivers a
-                    // buffer with the scene on its side, and only gravity —
-                    // no screen API — reveals it).
+                    // Canvas rotation only when the plan asks for it — an
+                    // explicit Rotate choice. Auto satisfies a sideways
+                    // mount by requesting a landscape frame from the camera
+                    // instead, keeping the canvas out of the record path.
                     try {
-                        const mode = orientationMode.current
-                        const rot =
-                            mode === "auto"
-                                ? await neededRotation()
-                                : rotationForMode(mode)
+                        const rot = orientationPlanRef.current.rotation
                         if (rot !== 0) {
                             const fix = await correctedStream(stream, rot)
                             orientationFix.current = fix
@@ -1153,11 +1197,15 @@ function JoinPage() {
                                 ),
                             ),
                         )
-                        const mediaRec = new MediaRecorder(stream, {
+                        recorderOptions.current = {
                             mimeType: mimetype,
                             videoBitsPerSecond: videoRate,
                             audioBitsPerSecond: 128_000,
-                        })
+                        }
+                        const mediaRec = new MediaRecorder(
+                            stream,
+                            recorderOptions.current,
+                        )
                         mediaRecorder.current = mediaRec
 
                         //Since we are implementing distributed  processing for audio and video,
@@ -1285,17 +1333,19 @@ function JoinPage() {
             // pod that skipped the panel records identically. Panorama cams
             // (360° conference cameras) compose their whole ring view inside
             // the requested frame, so they need the full 1080p too.
-            // Phone paths go through dimsForMode: the device-check
-            // orientation choice decides the requested frame shape ("wide"
-            // asks for landscape outright; the rest request screen-oriented
-            // dims and fix rotation after capture). Panorama cams compose
-            // their ring view landscape regardless of the host device, so
-            // they keep a fixed landscape frame.
-            orientationMode.current = sel.orientationMode || "auto"
+            // Phone paths go through dimsForPlan: the resolved orientation
+            // plan decides the requested frame shape (wide = ask the camera
+            // for landscape; otherwise screen-oriented dims, with any
+            // explicit rotation applied after capture). Panorama cams
+            // compose their ring view landscape regardless of the host
+            // device, so they keep a fixed landscape frame.
+            orientationPlanRef.current = await orientationPlan(
+                sel.orientationMode || "auto",
+            )
             constraint.video = sel.videoResolution
                 ? {
                       facingMode: SESSION_FACING,
-                      ...dimsForMode(orientationMode.current, sel.videoResolution),
+                      ...dimsForPlan(orientationPlanRef.current, sel.videoResolution),
                   }
                 : sel.videoPanorama
                   ? {
@@ -1304,7 +1354,7 @@ function JoinPage() {
                     }
                   : {
                         facingMode: SESSION_FACING,
-                        ...dimsForMode(orientationMode.current, {
+                        ...dimsForPlan(orientationPlanRef.current, {
                             width: 1920,
                             height: 1080,
                         }),
