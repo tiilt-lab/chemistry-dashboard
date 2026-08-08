@@ -43,9 +43,15 @@ function JoinPage() {
     // phone under rotation lock) — both need stopping on leave.
     const rawStreamReference = useRef(null)
     const orientationFix = useRef(null)
-    // Orientation mode chosen in the device-check preview ("auto" =
-    // gravity heuristic), captured at join time for handleStream.
-    const orientationMode = useRef("auto")
+    // Orientation mode chosen in the device-check preview, captured at
+    // join time for handleStream. Default "wide": ask the camera itself
+    // for a landscape frame — nothing between the camera and the recorder.
+    // ("auto" = gravity heuristic, which can put the rotation canvas in
+    // the record path; see the watchdog in videoPlay.)
+    const orientationMode = useRef("wide")
+    // MediaRecorder options, kept so the watchdog can rebuild the recorder
+    // on the raw camera stream if the rotated-canvas source stalls.
+    const recorderOptions = useRef(null)
     const audioContext = useRef(null)
     const mediaRecorder = useRef(null)
     const source = useRef(null)
@@ -434,7 +440,11 @@ function JoinPage() {
             !state.startDiscussionStreaming &&
             (joinwith.current === "Video" || joinwith.current === "Videocartoonify")
         ) {
-            const video = document.querySelector("video")
+            // Never grab the orientation pipeline's hidden decoder element —
+            // assigning the preview stream to it starves the rotation canvas.
+            const video = document.querySelector(
+                "video:not([data-orient-decoder])",
+            )
             if (video && streamReference.current && !video.srcObject) {
                 video.srcObject = streamReference.current
                 video.play().catch(() => {})
@@ -491,21 +501,70 @@ function JoinPage() {
             }
 
             const videoPlay = () => {
-                let video = document.querySelector("video")
+                // Exclude the orientation pipeline's hidden decoder element:
+                // pointing the preview at it would starve the canvas it feeds.
+                let video =
+                    document.querySelector("video:not([data-orient-decoder])") ||
+                    document.querySelector("video")
                 video.srcObject = streamReference.current
+                let started = false
+                let gotChunk = false
                 const begin = () => {
-                    video.play()
+                    if (started) return
+                    started = true
+                    video.play().catch(() => {})
                     mediaRecorder.current.start(interval)
+                    armVideoWatchdog()
                 }
                 // The pre-start preview may have attached this stream
-                // already; loadedmetadata won't refire then.
+                // already; loadedmetadata won't refire then. The timer is the
+                // backstop: a canvas-sourced stream that never delivers a
+                // frame never fires loadedmetadata either, and recording
+                // must not hinge on that event arriving.
                 if (video.readyState >= 1) {
                     begin()
                 } else {
                     video.onloadedmetadata = begin
+                    setTimeout(begin, 3000)
                 }
 
-                mediaRecorder.current.ondataavailable = async function (ev) {
+                // If the recorder produces NO chunk at all, the source is
+                // dead — the rotated-canvas path has done this repeatedly on
+                // real hardware (pod 1221's one-byte file, pods 1244/1245
+                // and 1262/1263 recording nothing while their previews
+                // looked normal). Rebuild on the raw camera stream:
+                // sideways but complete beats upright but empty.
+                function armVideoWatchdog() {
+                    setTimeout(() => {
+                        if (gotChunk || !orientationFix.current) return
+                        const raw = rawStreamReference.current
+                        if (!raw || !recorderOptions.current) return
+                        console.error(
+                            "no video data after start — falling back to the raw camera stream",
+                        )
+                        try {
+                            mediaRecorder.current.stop()
+                        } catch (e) {
+                            console.warn("watchdog: recorder stop failed", e)
+                        }
+                        try {
+                            orientationFix.current.stop()
+                        } catch (e) {
+                            console.warn("watchdog: canvas stop failed", e)
+                        }
+                        orientationFix.current = null
+                        streamReference.current = raw
+                        video.srcObject = raw
+                        video.play().catch(() => {})
+                        const rec = new MediaRecorder(raw, recorderOptions.current)
+                        mediaRecorder.current = rec
+                        rec.ondataavailable = onVideoChunk
+                        rec.start(interval)
+                    }, Math.max(8000, interval * 2))
+                }
+
+                const onVideoChunk = async function (ev) {
+                    gotChunk = true
 
                     await ev.data.arrayBuffer()
 
@@ -534,6 +593,7 @@ function JoinPage() {
                     }
 
                 }
+                mediaRecorder.current.ondataavailable = onVideoChunk
             }
 
             if (joinwith.current === "Audio") {
@@ -1153,11 +1213,15 @@ function JoinPage() {
                                 ),
                             ),
                         )
-                        const mediaRec = new MediaRecorder(stream, {
+                        recorderOptions.current = {
                             mimeType: mimetype,
                             videoBitsPerSecond: videoRate,
                             audioBitsPerSecond: 128_000,
-                        })
+                        }
+                        const mediaRec = new MediaRecorder(
+                            stream,
+                            recorderOptions.current,
+                        )
                         mediaRecorder.current = mediaRec
 
                         //Since we are implementing distributed  processing for audio and video,
@@ -1291,7 +1355,7 @@ function JoinPage() {
             // dims and fix rotation after capture). Panorama cams compose
             // their ring view landscape regardless of the host device, so
             // they keep a fixed landscape frame.
-            orientationMode.current = sel.orientationMode || "auto"
+            orientationMode.current = sel.orientationMode || "wide"
             constraint.video = sel.videoResolution
                 ? {
                       facingMode: SESSION_FACING,

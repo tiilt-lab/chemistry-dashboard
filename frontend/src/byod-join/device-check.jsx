@@ -98,7 +98,12 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
     const [resChoice, setResChoice] = useState("1920x1080")
     const [actualRes, setActualRes] = useState("")
     const [orientMode, setOrientMode] = useState(
-        () => localStorage.getItem(orientStorageKey("")) || "auto",
+        // Default "wide": the camera itself delivers a landscape frame, so
+        // no rotation canvas ever sits between the camera and the recorder
+        // (the canvas path has stalled into zero-byte recordings on real
+        // pods). "auto"/rotate remain as explicit choices for rigs whose
+        // preview needs them.
+        () => localStorage.getItem(orientStorageKey("")) || "wide",
     )
     const videoRef = useRef(null)
     const cleanupRef = useRef(null)

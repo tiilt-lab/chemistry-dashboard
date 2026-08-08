@@ -135,6 +135,11 @@ export async function correctedStream(rawStream, rotationDeg) {
     vid.playsInline = true
     vid.setAttribute("playsinline", "")
     vid.srcObject = new MediaStream([track])
+    // Mark the decoder so the join page's querySelector("video") calls can
+    // exclude it: if the preview stream gets assigned to THIS element, the
+    // camera track feeding the canvas stops decoding and the recorder goes
+    // silent while the on-screen preview still looks alive.
+    vid.setAttribute("data-orient-decoder", "")
     // Detached <video> elements are not guaranteed to decode on Android
     // Chrome — keep it in the DOM, invisible.
     vid.style.cssText =
