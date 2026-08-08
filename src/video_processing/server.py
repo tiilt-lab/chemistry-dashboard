@@ -108,9 +108,52 @@ class ServerProtocol(WebSocketServerProtocol):
         # records — no frame decode, no VideoProcessor. Default on (hardware
         # pods and older clients don't send the field).
         self.live_analytics = True
+        # Silent-video detection: a pod can hold this socket open, heartbeat
+        # normally, and never send a single video byte (a stalled client-side
+        # capture). Audio keeps recording, so nothing looks wrong until
+        # someone inspects the disk hours later. Track first-byte arrival and
+        # complain loudly if it never comes.
+        self.bytes_received = 0
+        self.silent_check = None
         cm.add(self)
         cancel_idle_recycle()
         logging.info('New client connected...')
+
+    SILENT_VIDEO_SECONDS = 30
+
+    def arm_silent_check(self):
+        self.cancel_silent_check()
+        try:
+            self.silent_check = reactor.callLater(
+                self.SILENT_VIDEO_SECONDS, self._silent_video_fire)
+        except Exception as e:
+            logging.debug('could not arm silent-video check: %s', e)
+
+    def cancel_silent_check(self):
+        if self.silent_check is not None:
+            try:
+                if self.silent_check.active():
+                    self.silent_check.cancel()
+            except Exception:
+                pass
+            self.silent_check = None
+
+    def _silent_video_fire(self):
+        self.silent_check = None
+        if self.bytes_received > 0:
+            return
+        key = self.config.auth_key if self.config else 'unknown'
+        logging.error(
+            'NO VIDEO DATA: pod %s has sent 0 video bytes %ds after starting '
+            '(socket open, client alive). Audio is unaffected; this pod is '
+            'recording no video. The client should reload and rejoin.',
+            key, self.SILENT_VIDEO_SECONDS)
+        # Tell the client too, so the phone can show it rather than looking fine.
+        self.send_json({
+            'type': 'no_video_data',
+            'message': 'The server is receiving no video from this device. '
+                       'Reload the page and rejoin to restore video recording.',
+        })
 
     def onMessage(self, payload, is_binary):
         self.last_message = time.time()
@@ -243,6 +286,11 @@ class ServerProtocol(WebSocketServerProtocol):
                     callbacks.post_connect(self.config.auth_key)
 
     def process_binary(self, data):
+        if not self.bytes_received:
+            self.cancel_silent_check()
+            logging.info('first video bytes from %s',
+                         self.config.auth_key if self.config else 'unknown')
+        self.bytes_received += len(data)
         if self.running and not self.awaitingSpeakers:
             # if cf.video_record_original():
             if self.config.mimeExtension == "webm":
@@ -428,6 +476,9 @@ class ServerProtocol(WebSocketServerProtocol):
 
 
     def signal_start(self):
+        # Recording has begun as far as the client is concerned — from here a
+        # pod with nothing to send is a fault, not a slow start.
+        self.arm_silent_check()
         if self.video_processor and (cf.video_cartoonize() or cf.process_video_analytics()):
             self.video_processor.start()
             self.running = True
@@ -439,6 +490,10 @@ class ServerProtocol(WebSocketServerProtocol):
         if self.end_signaled:
             return
         self.end_signaled = True
+        self.cancel_silent_check()
+        if self.config and self.bytes_received == 0:
+            logging.error('pod %s disconnected having sent NO video data at all',
+                          self.config.auth_key)
 
         if  self.video_processor:
             self.video_processor.stop()

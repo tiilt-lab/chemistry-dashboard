@@ -112,6 +112,8 @@ function JoinPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentForm])
     const [displayText, setDisplayText] = useState("")
+    // Non-fatal banner: video is not reaching the server while audio still is.
+    const [videoAlert, setVideoAlert] = useState("")
     const [pageTitle, setPageTitle] = useState("Join Session")
     const [prevSessionId, setPrevSessionId] = useState(-1)
     const [pcode, setPcode] = useState("")
@@ -525,7 +527,15 @@ function JoinPage() {
                 // upright but empty.
                 function armVideoWatchdog() {
                     setTimeout(() => {
-                        if (gotChunk || !orientationFix.current) return
+                        if (gotChunk) return
+                        // Say so on the pod's own screen either way — a pod
+                        // that records no video otherwise looks healthy.
+                        setVideoAlert(
+                            "This device is not sending video to the server. " +
+                                "Audio is still recording. Reload the page and " +
+                                "rejoin to restore video.",
+                        )
+                        if (!orientationFix.current) return
                         const raw = rawStreamReference.current
                         if (!raw || !recorderOptions.current) return
                         console.error(
@@ -553,7 +563,10 @@ function JoinPage() {
                 }
 
                 const onVideoChunk = async function (ev) {
-                    gotChunk = true
+                    if (!gotChunk) {
+                        gotChunk = true
+                        setVideoAlert("")
+                    }
 
                     await ev.data.arrayBuffer()
 
@@ -1563,6 +1576,12 @@ function JoinPage() {
                     disconnect(true);
                     setDisplayText('The session has been closed by the owner.');
                     setCurrentForm('ClosedSession');
+                } else if (message['type'] === 'no_video_data') {
+                    // The server has received no video at all. Surface it on
+                    // the phone instead of letting the pod look healthy —
+                    // NOT a disconnect: audio is still recording fine.
+                    console.error(message["message"])
+                    setVideoAlert(message["message"])
                 } else if (message['type'] === 'heartbeat') {
                 }
             } else if (e.data instanceof Blob) {
@@ -1988,7 +2007,29 @@ function JoinPage() {
         joinwith: joinwith.current || "Audio",
     })
 
+    // Video-not-recording banner. Deliberately outside ByodJoinPage and
+    // fixed to the viewport: it must be visible on whatever screen the pod is
+    // showing, and must not read as fatal — audio keeps recording while it
+    // is up.
+    const videoAlertBanner = videoAlert ? (
+        <div
+            role="alert"
+            className="fixed inset-x-0 top-0 z-50 bg-red-600 px-4 py-3 text-center text-sm font-semibold text-white shadow-lg"
+        >
+            {videoAlert}
+            <button
+                type="button"
+                onClick={() => setVideoAlert("")}
+                className="ml-3 rounded border border-white/50 px-2 py-0.5 text-xs font-normal"
+            >
+                Dismiss
+            </button>
+        </div>
+    ) : null
+
     return (
+        <>
+        {videoAlertBanner}
         <ByodJoinPage
             joinPhase={joinPhase}
             state={state}
@@ -2073,6 +2114,7 @@ function JoinPage() {
             loadSpeakerMetrics={loadSpeakerMetrics}
             prevSessionId={prevSessionId}
         />
+        </>
     )
 }
 
