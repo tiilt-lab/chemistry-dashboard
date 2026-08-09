@@ -12,6 +12,26 @@ reproduced live in `venv-unified`. Severity: **P1** = corrupts data / kills a
 feature or run / security. **P2** = wrong results, degradation, or stranded UI
 under real use. **P3** = hygiene / latent.
 
+## STATUS (2026-08-09, same day): all P1s and all P2s are FIXED.
+
+Commits: 10f26db (audio P1), be8e9c0 (server P1), f0d2850 (video P1),
+fe64fa1 (frontend P1), then the P2 batches: server, audio, video, frontend
+(one commit each — see git log for this date). Only the P3 tail below remains
+open, plus these deliberately-accepted leftovers from the P2 round:
+
+- **#14**: the (session_id, name) unique constraint now exists in
+  `__table_args__` (fresh installs get it) and both TOCTOU joins converge in
+  application code — but no Alembic migration was written for the live DB
+  (the migration history has multiple heads; write it as its own careful
+  task if the belt-and-braces DB constraint is wanted).
+- **#18**: the session-video upload still runs ffmpeg synchronously on the
+  request thread (now bounded by MAX_CONTENT_LENGTH + its 600s timeout);
+  moving it to the posthoc queue is a P3-grade follow-up.
+- **#26 (partial)**: the posthoc audio service still does its `.dat`→wav
+  conversion and video-audio recovery on its own reactor during init — that
+  reactor serves only trigger UIs, so it was left rather than restructure
+  init into async. The live audio reactor was fully unblocked.
+
 ---
 
 ## P1
