@@ -22,6 +22,9 @@ function AppContextMenu(props) {
   // menu and this one opening in the same click can immediately re-close it.
   const openedAt = React.useRef(0);
   const settledRecently = () => Date.now() - openedAt.current < 250;
+  // Latest onClickOutside for the outside-click listener, so the effect stays
+  // scoped to [isOpen] instead of re-running every render.
+  const onClickOutsideRef = React.useRef(null);
 
   // A fixed-position menu doesn't follow its trigger when an ancestor
   // scrolls — close it instead of letting it float away.
@@ -52,12 +55,13 @@ function AppContextMenu(props) {
   // bubbling to the body) doesn't immediately close it.
   useEffect(() => {
     if (isOpen) return;
+    const handler = (e) => onClickOutsideRef.current && onClickOutsideRef.current(e);
     const id = setTimeout(() => {
-      document.body.addEventListener("click", onClickOutside);
+      document.body.addEventListener("click", handler);
     }, 0);
     return () => {
       clearTimeout(id);
-      document.body.removeEventListener("click", onClickOutside);
+      document.body.removeEventListener("click", handler);
     };
   }, [isOpen])
 
@@ -81,6 +85,7 @@ function AppContextMenu(props) {
         setIsopen(true);
       }
   };
+  onClickOutsideRef.current = onClickOutside;
 
 
   const toggle = (state) => {
