@@ -11,7 +11,7 @@ import re
 class Rating(db.Model):
     __tablename__ = 'rating'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    sessionid = db.Column(db.Integer, nullable=False)
+    sessionid = db.Column(db.Integer, db.ForeignKey('session.id', ondelete='CASCADE'), nullable=False)
     sessiondeviceid = db.Column(db.Integer, nullable=False)
     speakertag = db.Column(db.String(30), nullable=False)
     raterid = db.Column(db.String(30), nullable=False)

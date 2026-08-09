@@ -7,7 +7,7 @@ from app import db
 class SpeakerHrMetrics(db.Model):
     __tablename__ = 'speaker_hr_metrics'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    session_device_id = db.Column(db.Integer, db.ForeignKey('session_device.id'), nullable=False)
+    session_device_id = db.Column(db.Integer, db.ForeignKey('session_device.id', ondelete='CASCADE'), nullable=False)
     speaker_id = db.Column(db.Integer, nullable=True)
     speaker_alias = db.Column(db.String(64), nullable=False)
     sensor_name = db.Column(db.String(64))

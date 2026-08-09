@@ -11,7 +11,7 @@ import re
 class SurveyResponse(db.Model):
     __tablename__ = 'survey_response'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    sessionid = db.Column(db.Integer, nullable=False)
+    sessionid = db.Column(db.Integer, db.ForeignKey('session.id', ondelete='CASCADE'), nullable=False)
     sessiondeviceid = db.Column(db.Integer, nullable=False)
     username = db.Column(db.String(30), nullable=False)
     response = db.Column(db.Text, nullable=False)
