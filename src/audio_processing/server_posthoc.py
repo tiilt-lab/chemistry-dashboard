@@ -66,6 +66,17 @@ running_audio_processes = {}
 # an insert lets two concurrent triggers both pass the "already running" check.
 _running_guard = threading.Lock()
 
+# Cross-process claim that at most one posthoc run exists per pod across ALL
+# processes — the local running_audio_processes dict only coordinates threads
+# in THIS process. Redis SET NX EX with an in-memory fallback (== the old
+# per-process behavior when Redis is down). The TTL self-heals a claim whose
+# holder died, which the never-expiring dict could not. The dict still holds
+# the live processor object below (a live object can't cross processes).
+from distributed_claim import DistributedClaim
+import redis_client
+_POD_CLAIM_TTL = 3 * 60 * 60  # longer than any real run; bounds a dead claim
+_pod_claim = DistributedClaim(redis_factory=redis_client._redis, prefix='audio-posthoc:')
+
 class ServerProtocol(WebSocketServerProtocol):
 
     def __init__(self, *args, **kwargs):
@@ -171,12 +182,14 @@ class ServerProtocol(WebSocketServerProtocol):
                 off_set_date = file_path_split[1].split(")")[0]
  
                  #keep track of currently running posthoc audio analytics
+                # Cross-process claim (see _pod_claim). Returns False if a run
+                # for this pod is already active anywhere — replaces the old
+                # in-process-only membership check; the dict still holds the
+                # run object for local cancel/teardown.
+                if not _pod_claim.try_claim(key, ttl=_POD_CLAIM_TTL):
+                    self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
+                    return
                 with _running_guard:
-                    if key in running_audio_processes:
-                        # Return, or a duplicate trigger clobbers the registry
-                        # entry and starts a second concurrent run on this pod.
-                        self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
-                        return
                     running_audio_processes[key] = "running"
 
                 # Anything that throws between claiming the registry entry and
@@ -190,6 +203,7 @@ class ServerProtocol(WebSocketServerProtocol):
                         # Release the claim or this pod is blocked until restart.
                         with _running_guard:
                             running_audio_processes.pop(key, None)
+                        _pod_claim.release(key)
                         logging.info("Configuration setting failed for audio posthoc processing")
                     else:
                         self.config = result
@@ -233,6 +247,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 except Exception:
                     with _running_guard:
                         running_audio_processes.pop(key, None)
+                    _pod_claim.release(key)
                     logging.exception('posthoc init failed after claiming %s; claim released', key)
                     self.send_json({'type': 'error', 'message': 'Post-hoc initialization failed; see the audio service log.'})
 
@@ -344,6 +359,7 @@ class ServerProtocol(WebSocketServerProtocol):
             for k in hits:
                 with _running_guard:
                     proc = running_audio_processes.pop(k, None)
+                _pod_claim.release(k)
                 if hasattr(proc, 'stop'):
                     try:
                         proc.stop()
@@ -525,6 +541,7 @@ class ServerProtocol(WebSocketServerProtocol):
         try:
             if self.config:
                 running_audio_processes.pop(self.config.auth_key, None)
+                _pod_claim.release(self.config.auth_key)
                 callbacks.post_posthoc_completed(self.config.auth_key, getattr(self, 'model_choices', None))
                 cm.remove(self, self.config.session_key, self.config.auth_key)
         except Exception as e:

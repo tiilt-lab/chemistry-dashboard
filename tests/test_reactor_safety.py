@@ -15,12 +15,17 @@ import reactor_safety  # noqa: E402
 
 class _FakeReactor:
     """Records callFromThread(fn, *args) without executing fn — so a test can
-    prove the send was scheduled on the reactor, not run inline."""
+    prove the send was scheduled on the reactor, not run inline. ``run_all``
+    then executes the scheduled callables to test what they do."""
     def __init__(self):
         self.scheduled = []
 
     def callFromThread(self, fn, *args):
         self.scheduled.append((fn, args))
+
+    def run_all(self):
+        for fn, args in self.scheduled:
+            fn(*args)
 
 
 class _FakeThreads:
@@ -54,27 +59,27 @@ def test_send_message_marshals_onto_reactor_never_inline():
     # It must be SCHEDULED on the reactor, not called directly.
     assert p.direct_calls == []
     assert len(r.scheduled) == 1
-    fn, args = r.scheduled[0]
-    assert fn == p.sendMessage
-    assert args == (b"hello", False)
+    # Executing the scheduled work performs the actual send.
+    r.run_all()
+    assert p.direct_calls == [(b"hello", False)]
 
 
 def test_send_message_binary_flag_is_boolean():
     r = _fresh()
     p = _FakeProtocol()
     reactor_safety.send_message(p, b"\x00\x01", is_binary=1)  # truthy non-bool
-    _, args = r.scheduled[0]
-    assert args == (b"\x00\x01", True)
+    r.run_all()
+    assert p.direct_calls == [(b"\x00\x01", True)]
 
 
 def test_send_json_encodes_and_marshals():
     r = _fresh()
     p = _FakeProtocol()
     reactor_safety.send_json(p, {"type": "start", "n": 3})
-    assert p.direct_calls == []
-    fn, args = r.scheduled[0]
-    payload, is_binary = args
+    assert p.direct_calls == []          # not inline
+    r.run_all()
     import json
+    (payload, is_binary), = p.direct_calls
     assert json.loads(payload.decode("utf8")) == {"type": "start", "n": 3}
     assert is_binary is False
 
@@ -87,14 +92,18 @@ def test_send_json_unserializable_does_not_raise_or_schedule():
     assert p.direct_calls == []   # and definitely nothing sent
 
 
-def test_send_json_swallows_transport_failure():
-    # A dead transport (callFromThread raising) must not propagate into the
-    # caller's thread — a send failure can't be allowed to kill a worker.
-    class _BoomReactor:
-        def callFromThread(self, fn, *args):
-            raise RuntimeError("reactor stopped")
-    reactor_safety.set_reactor(_BoomReactor())
-    reactor_safety.send_json(_FakeProtocol(), {"ok": True})  # must not raise
+def test_deferred_send_on_closed_transport_does_not_raise_into_reactor():
+    # The regression this caught: the send runs LATER on the reactor; a closed
+    # transport (autobahn Disconnected) must be swallowed there, not surface
+    # as an unhandled reactor error.
+    r = _fresh()
+
+    class _ClosedProtocol:
+        def sendMessage(self, payload, is_binary=False):
+            raise RuntimeError("Attempt to send on a closed protocol")
+
+    reactor_safety.send_json(_ClosedProtocol(), {"ok": True})
+    r.run_all()  # must not raise
 
 
 def test_defer_blocking_routes_through_thread_pool():
