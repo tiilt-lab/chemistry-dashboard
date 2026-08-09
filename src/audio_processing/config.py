@@ -1,5 +1,11 @@
 import configparser
 import os
+import sys as _sys
+_COMMON = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'common'))
+if _COMMON not in _sys.path:
+    _sys.path.insert(0, _COMMON)
+from config_base import as_bool
+import config_base as _cb
 
 def initialize():
     global config
@@ -19,10 +25,10 @@ def initialize():
             os.makedirs(folder, exist_ok=True)
 
 def record_original():
-    return str(config['record']['original']) in ['true', 'True', 't', '1']
+    return as_bool(config['record']['original'])
 
 def record_reduced():
-    return str(config['record']['reduced']) in ['true', 'True', 't', '1']
+    return as_bool(config['record']['reduced'])
 
 def recordings_folder():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['record']['recording_folder']))
@@ -31,13 +37,13 @@ def biometric_folder():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['biometrics']['biometrics_folder']))
 
 def video_record_original():
-    return str(config['videorecord']['original']) in ['true', 'True', 't', '1']
+    return as_bool(config['videorecord']['original'])
 
 def video_record_reduced():
-    return str(config['videorecord']['reduced']) in ['true', 'True', 't', '1']
+    return as_bool(config['videorecord']['reduced'])
 
 def video_cartoonize():
-    return str(config['videocartoonize']['cartoonize']) in ['true', 'True', 't', '1']
+    return as_bool(config['videocartoonize']['cartoonize'])
 
 def video_recordings_folder():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['videorecord']['video_recording_folder']))
@@ -61,11 +67,11 @@ def semantic_embedder():
 
 def prosody():
     # Compute prosodic features (pitch/energy/voicing) per utterance (librosa).
-    return str(config.get('processing', 'prosody', fallback='false')) in ['true', 'True', 't', '1']
+    return as_bool(config.get('processing', 'prosody', fallback='false'))
 
 def vocal_emotion():
     # Speech (vocal) emotion recognition per utterance (wav2vec2 SER).
-    return str(config.get('processing', 'vocal_emotion', fallback='false')) in ['true', 'True', 't', '1']
+    return as_bool(config.get('processing', 'vocal_emotion', fallback='false'))
 
 def vocal_emotion_model():
     return str(config.get('processing', 'vocal_emotion_model',
@@ -76,8 +82,8 @@ def diarization_constrain_to_enrolled():
     # enrolled count (max_speakers) and remap each diarization cluster to its
     # nearest enrolled voice print, so utterances resolve to real people instead
     # of leftover SPEAKER_NN clusters. Only affects the WhisperX/Qwen3 paths.
-    return str(config.get('processing', 'diarization_constrain_to_enrolled',
-                          fallback='false')) in ['true', 'True', 't', '1']
+    return as_bool(config.get('processing', 'diarization_constrain_to_enrolled',
+                          fallback='false'))
 
 def diarization_fallback():
     # How the post-hoc fallback (no-fingerprint) path assigns speaker clusters.
@@ -157,10 +163,10 @@ def speaker_metrics_callback():
     return str(config['output']['speaker_metrics_callback'])
 
 def redis_host():
-    return str(config.get('redis', 'redis_host', fallback='localhost'))
+    return _cb.redis_host(config)
 
 def redis_port():
-    return int(config.get('redis', 'redis_port', fallback=6379))
+    return _cb.redis_port(config)
 
 def redis_db():
-    return int(config.get('redis', 'redis_db', fallback=0))
+    return _cb.redis_db(config)

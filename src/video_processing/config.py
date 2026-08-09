@@ -1,5 +1,11 @@
 import configparser
 import os
+import sys as _sys
+_COMMON = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'common'))
+if _COMMON not in _sys.path:
+    _sys.path.insert(0, _COMMON)
+from config_base import as_bool
+import config_base as _cb
 
 def initialize():
     global config
@@ -14,16 +20,16 @@ def initialize():
 
 
 def video_record_original():
-    return str(config['videorecord']['original']) in ['true', 'True', 't', '1']
+    return as_bool(config['videorecord']['original'])
 
 def video_record_reduced():
-    return str(config['videorecord']['reduced']) in ['true', 'True', 't', '1']
+    return as_bool(config['videorecord']['reduced'])
 
 def video_cartoonize():
-    return str(config['videocartoonize']['cartoonize']) in ['true', 'True', 't', '1']
+    return as_bool(config['videocartoonize']['cartoonize'])
 
 def process_video_analytics():
-    return str(config['videoanalyics']['processvideoanalytics']) in ['true', 'True', 't', '1']
+    return as_bool(config['videoanalyics']['processvideoanalytics'])
     
 def video_recordings_folder():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['videorecord']['video_recording_folder']))
@@ -59,13 +65,13 @@ def disconnect_callback():
     return str(config['output']['disconnect_callback'])
 
 def redis_host():
-    return str(config.get('redis', 'redis_host', fallback='localhost'))
+    return _cb.redis_host(config)
 
 def redis_port():
-    return int(config.get('redis', 'redis_port', fallback=6379))
+    return _cb.redis_port(config)
 
 def redis_db():
-    return int(config.get('redis', 'redis_db', fallback=0))
+    return _cb.redis_db(config)
 def emotion_model():
     # Facial-emotion backend: 'resmasking' (FER-2013, default) or 'hsemotion'
     # (EfficientNet-B2 on AffectNet-8 via ONNX — the open SOTA option).
@@ -106,7 +112,7 @@ def person_of_focus():
     # default because it changes stored object_on_focus values; needs a re-run.
     if 'config' not in globals():
         initialize()
-    return str(config.get('videoprocessing', 'person_of_focus', fallback='false')) in ['true', 'True', 't', '1']
+    return as_bool(config.get('videoprocessing', 'person_of_focus', fallback='false'))
 
 def face_model():
     # Face detection + embedding backend: 'dlib' (face_recognition 128-D,
