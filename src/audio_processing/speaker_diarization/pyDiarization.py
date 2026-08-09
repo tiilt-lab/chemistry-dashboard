@@ -2,20 +2,10 @@
 import logging
 import numpy as np
 import sklearn.cluster
-from scipy.spatial import distance
-import scipy.signal
 import sklearn.discriminant_analysis
 import os.path
-import hmmlearn.hmm
-import json
-import scipy
 import torch
 import numpy as np
-from sklearn.decomposition import PCA
-from sklearn.metrics import silhouette_score
-import torchaudio
-from speechbrain.inference import SpeakerRecognition
-from sklearn.metrics.pairwise import cosine_similarity
 import scipy.spatial as sp
 
 def embedSignal(x, verification):

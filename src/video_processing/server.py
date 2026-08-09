@@ -1,19 +1,16 @@
 import os
-import json
 import time
 import queue
 import logging
 import threading
 import subprocess
 import callbacks
-import traceback
-import wave
 import config as cf
 import numpy as np
 try:
     import moviepy.editor as mp  # moviepy 1.x
 except ImportError:
-    import moviepy as mp  # moviepy 2.x dropped the .editor module
+    pass  # moviepy 2.x dropped the .editor module
 
 from recorder import VidRecorder
 from processing_config import ProcessingConfig
@@ -39,7 +36,6 @@ except Exception as _vc_err:
     print("video_cartoonizer unavailable ({}) - cartoonify disabled".format(_vc_err))
 from datetime import datetime
 from twisted.internet import reactor, task
-from twisted.internet import threads as _threads
 from autobahn.twisted.websocket import WebSocketServerFactory
 from autobahn.twisted.websocket import WebSocketServerProtocol
 from queue import Full, Empty

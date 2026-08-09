@@ -1,5 +1,4 @@
-from flask import Blueprint, Response, request, abort, session, make_response
-from app import socketio
+from flask import Blueprint, request
 import logging
 import json
 import database

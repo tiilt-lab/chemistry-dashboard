@@ -1,6 +1,5 @@
 from app import db
 from datetime import datetime, timezone
-from utility import verify_characters
 from sqlalchemy.dialects.mysql import LONGTEXT
 
 class SessionSynthesizedReport(db.Model):

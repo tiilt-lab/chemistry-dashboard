@@ -1,12 +1,10 @@
 from flask import Blueprint, request, session
 import logging
 import database
-import json
 from utility import json_response
 import wrappers
 import authz
 from tables.speaker import Speaker
-from tables.speaker_transcript_metrics import SpeakerTranscriptMetrics
 
 api_routes = Blueprint('speaker', __name__)
 

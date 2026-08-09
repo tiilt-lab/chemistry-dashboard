@@ -2,7 +2,6 @@ import logging
 from queue import Queue,Empty
 import threading
 import time
-import cv2
 import torch
 import os;
 import traceback
@@ -13,9 +12,6 @@ from collections import Counter
 import sys as _sys
 _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from metric_post_policy import should_post_metrics
-from yolo_head.utils.datasets import LoadImageDataset
-from yolo_head.utils.general import scale_coords
-from ultralytics.engine.results import Results
 
 class VideoMetricAnalytics:
     def __init__(self, AttentionTracking,EmotionDetection, ImageDetection,stop_signal,num_workers=4,source="real_time"):

@@ -1,8 +1,7 @@
-from flask import Blueprint, Response, request, abort, session
+from flask import Blueprint, request, session
 from utility import json_response
 from datetime import datetime, timezone
 from app import limiter
-import json
 import logging
 import database
 import wrappers

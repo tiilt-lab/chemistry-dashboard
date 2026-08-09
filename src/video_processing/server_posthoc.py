@@ -8,7 +8,6 @@ if _rs_c not in _rs_sys.path:
 import reactor_safety  # reactor/thread boundary; src/common bootstrapped above
 from ws_protocol import WsMessageMixin  # shared onMessage/onClose
 import os
-import json
 import time
 import logging
 import callbacks

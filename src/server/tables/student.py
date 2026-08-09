@@ -1,6 +1,5 @@
 from app import db
 from datetime import datetime, timezone
-from utility import verify_characters
 
 class Student(db.Model):
     __tablename__ = 'student'

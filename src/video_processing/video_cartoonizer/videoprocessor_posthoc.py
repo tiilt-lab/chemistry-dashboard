@@ -22,17 +22,12 @@ except ImportError:
 import os
 import warnings
 import logging
-import json
 import cv2
 import tempfile
 import subprocess
 
-import callbacks
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor
-from queue import Queue,Empty, Full
-from global_singleton_lock import attention_emotion_predictor_lock, object_detector_lock
-from concurrent.futures import TimeoutError
+from queue import Full
 
 WAIT_TIMEOUT = 0.05   # 50 ms (tune this)
 

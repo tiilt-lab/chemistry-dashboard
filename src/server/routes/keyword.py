@@ -1,11 +1,8 @@
-from flask import Blueprint, Response, jsonify, request, abort, session
-from utility import sanitize, json_response
+from flask import Blueprint, request
+from utility import json_response
 from tables.keyword_list import KeywordList
-from tables.keyword_list_item import KeywordListItem
-import logging
 import database
 import wrappers
-import os
 
 api_routes = Blueprint('keyword', __name__)
 

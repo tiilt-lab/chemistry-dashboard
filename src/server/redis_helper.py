@@ -3,7 +3,6 @@ import sys
 import redis
 import time
 import json
-import logging
 import config as cf
 
 # The session key builders + read accessors are shared with the processing

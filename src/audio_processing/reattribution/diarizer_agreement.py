@@ -17,7 +17,6 @@ diarizer and call it.
 """
 import argparse
 import json
-import os
 
 import numpy as np
 

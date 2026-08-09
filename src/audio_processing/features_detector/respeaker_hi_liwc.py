@@ -12,7 +12,7 @@ def listContainsVariant(l, word):
 			try:
 				if word.startswith(nItem):
 					return 1
-			except:
+			except Exception:
 					pass
 		else:
 			if item == word:
@@ -120,7 +120,7 @@ if __name__ == '__main__':
 	hgi_emots, hgi_dictionary = populate_dictionary_index_hi()
 	liwc_emots, liwc_dictionary = populate_dictionary_index_liwc()
 	for a in range(10):
-		r = raw_input("Input text\n")
+		r = input("Input text\n")
 		hgi_count, hgi_emot_dict = process_text(r, hgi_dictionary, hgi_emots)
 		liwc_count, liwc_emot_dict = process_text(r,liwc_dictionary, liwc_emots)
 		print (hgi_count,liwc_count, hgi_emot_dict, liwc_emot_dict)

@@ -4,8 +4,6 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import os
 import binascii
-import random
-import string
 
 class APIClient(db.Model):
     __tablename__ = 'api_client'

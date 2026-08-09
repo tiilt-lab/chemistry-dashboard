@@ -12,8 +12,6 @@ _rs_c = _rs_os.path.join(_rs_c, 'common')
 if _rs_c not in _rs_sys.path:
     _rs_sys.path.insert(0, _rs_c)
 import reactor_safety  # reactor/thread boundary; src/common bootstrapped above
-import time
-import os
 import logging
 import threading
 import callbacks
@@ -22,7 +20,6 @@ from speaker_metrics import speaker_metrics
 from features_detector.features_detector import detect_LIWC_Indices
 from queue import Full
 import config as cf
-import json
 
 class SpeakerMetricProcessor:
     def __init__(self, sessionid, session_device_id, transcripts, semantic_model, config,running_audio_processes, scorer=None):

@@ -1,6 +1,5 @@
 import database
 import logging
-import re
 
 def process_tagging_data(session_device_id, tagging_data):
     results = tagging_data['results']

@@ -1,10 +1,6 @@
 import numpy as np
 import threading
-from sentence_transformers import SentenceTransformer
 import logging
-import os
-import multiprocessing as mp
-from multiprocessing.process import AuthenticationString
 import time
 import callbacks
 

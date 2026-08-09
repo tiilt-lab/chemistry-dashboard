@@ -1,6 +1,5 @@
 from flask import request, session
 from functools import wraps
-import logging
 import database
 import utility
 from utility import json_response

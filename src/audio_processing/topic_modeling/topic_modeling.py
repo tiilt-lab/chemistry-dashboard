@@ -1,25 +1,16 @@
 import os
 import sys
 import re
-from unittest.util import _count_diff_all_purpose
-import numpy as np
-from pprint import pprint
 from collections import defaultdict
 #from tf_idf import tfidf
 
 # Gensim
 import gensim
-import gensim.corpora as corpora
 from gensim.utils import simple_preprocess
-from gensim.models import CoherenceModel
-from collections import Counter
-from sklearn.feature_extraction.text import CountVectorizer
 
 # spacy for lemmatization
-import spacy
 
 
-from nltk.corpus import stopwords
 
 # Shared spaCy loader / bigram builder / base stop words (see common).
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'common')))

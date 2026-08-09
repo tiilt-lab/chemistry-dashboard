@@ -5,7 +5,6 @@ Time Difference of Arrival for ReSpeaker V2 6mic array
 import collections
 import math
 import numpy as np
-import time
 import logging
 
 from .element import Element

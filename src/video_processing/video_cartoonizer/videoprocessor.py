@@ -12,30 +12,22 @@ _rs_sys.path.insert(0, _rs_os.path.dirname(_rs_os.path.abspath(__file__)))
 from frame_payload import build_frame_payload
 import logging
 import threading
-import time
 import numpy as np
 import cv2
 import os
 import torch
 import torch.nn.functional as F
-from tqdm import tqdm
 from .model.encoder.align_all_parallel import align_face
-from .util import  get_video_crop_parameter,get_facial_shape,tensor2cv2
+from .util import  get_video_crop_parameter,tensor2cv2
 try:
     from moviepy.editor import *  # moviepy 1.x
 except ModuleNotFoundError:
     from moviepy import *  # moviepy 2.x moved the public API to the package root
 from scipy.io import wavfile
 import logging
-import copy
-import json
 import traceback
-import callbacks
-from concurrent.futures import ThreadPoolExecutor
 from queue import Queue,Empty, Full
 # from .VideoMetricProcessor import VideoMetricAnalytics
-from global_singleton_lock import attention_emotion_predictor_lock, object_detector_lock
-from concurrent.futures import TimeoutError
 
 WAIT_TIMEOUT = 0.05   # 50 ms (tune this)
 

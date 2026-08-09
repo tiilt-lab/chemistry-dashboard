@@ -1,16 +1,11 @@
-from email.mime import audio
-from http.client import responses
 from google.cloud import speech_v1p1beta1 as speech
 from google.api_core import exceptions
-from google.cloud import speech as speechV1
 from queue import Empty
 import os
 import time
-import math
 import logging
 import threading
 import config as cf
-import numpy as np
 
 # For converting nano seconds to seconds.
 NANO = 1000000000

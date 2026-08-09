@@ -10,7 +10,6 @@ mapping differs from the proprietary LIWC constructs (it is built from open HGI
 categories), so absolute values are not directly comparable to LIWC output —
 they are an open approximation of the same five dimensions.
 """
-import logging
 
 from .respeaker_hi_liwc import populate_dictionary_index_hi, process_text
 

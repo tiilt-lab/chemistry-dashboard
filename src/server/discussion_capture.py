@@ -1,6 +1,4 @@
-from app import app, db, DATABASE_FILE, socketio, scheduler
-from routes import socket
-from tables import folder, device, session_device, session, transcript, keyword, keyword_usage, keyword_list, keyword_list_item, user,student,speaker_video_metrics,speaker_hr_metrics
+from app import app, socketio, scheduler
 import scheduled_tasks
 import config as cf
 import device_websockets
@@ -42,7 +40,6 @@ app.register_blueprint(data_quality_api)
 import authz
 import wrappers
 from flask import request
-from tables.transcript import Transcript as _Transcript  # noqa: F811
 authz.configure(authz.Deps(
     get_device=lambda did: database.get_session_devices(id=did),
     get_transcript=lambda tid: database.get_transcript(tid),

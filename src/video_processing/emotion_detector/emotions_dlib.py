@@ -445,7 +445,7 @@ class LandmarkFrontalizationDlib():
         try:
             frontalization_weights = np.load(file_frontalization_model)
             print('Frontalization weights loaded successfully.')
-        except: 
+        except Exception:
             print('Problem loading frontalization weights!')
         
         if ((frontalization_weights.shape[0] != 2 * TOTAL_LANDMARKS + 1) |

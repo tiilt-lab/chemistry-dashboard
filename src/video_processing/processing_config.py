@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from redis_helper import RedisSessions  # also bootstraps src/common on sys.path
 from processing_config_base import validate_start_message
 import callbacks
 import json

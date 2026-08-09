@@ -15,8 +15,6 @@ except ImportError:
     import moviepy as mp  # moviepy 2.x dropped the .editor module
 import  cv2
 import numpy as np
-import json
-import os
 from facial_recognition_backend import get_backend_by_name
 
 

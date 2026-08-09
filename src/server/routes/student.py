@@ -1,5 +1,4 @@
-from flask import Blueprint, Response, request, abort, session, send_file
-from tables.user import User
+from flask import Blueprint, request, session, send_file
 from app import base_dir
 import json
 import logging

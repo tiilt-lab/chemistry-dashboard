@@ -3,7 +3,6 @@
 uptimes). Read-only, best-effort — every probe degrades to None rather than
 failing the whole response, so the ops view still renders during trouble.
 """
-import os
 import shutil
 import subprocess
 import time

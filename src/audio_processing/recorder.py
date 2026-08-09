@@ -1,4 +1,3 @@
-from genericpath import isfile
 import logging
 import numpy as np
 from scipy.io import wavfile

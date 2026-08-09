@@ -1,5 +1,4 @@
-from twisted.python import log
-from twisted.internet import reactor, task
+from twisted.internet import reactor
 from autobahn.twisted.websocket import WebSocketServerFactory
 from autobahn.twisted.websocket import WebSocketServerProtocol
 from app import socketio

@@ -1,8 +1,6 @@
 from app import socketio
-from flask import Blueprint, Response, request, abort
+from flask import Blueprint, request
 from device_websockets import ConnectionManager
-from flask_socketio import emit
-from datetime import datetime
 import utility
 from utility import json_response
 import logging

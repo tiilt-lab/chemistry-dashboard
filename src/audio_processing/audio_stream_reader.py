@@ -12,7 +12,6 @@ import threading
 import logging
 import numpy as np
 import time
-import json
 from queue import Full
 
 class AudioStreamReader:

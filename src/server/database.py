@@ -1,6 +1,6 @@
 from app import db
 import re
-from sqlalchemy import and_, desc
+from sqlalchemy import and_
 from sqlalchemy.sql.expression import func
 from datetime import datetime, timezone
 import random

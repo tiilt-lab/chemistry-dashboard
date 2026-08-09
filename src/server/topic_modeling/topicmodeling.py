@@ -10,7 +10,6 @@ import gensim.corpora as corpora
 from gensim.utils import simple_preprocess
 
 # spacy for lemmatization
-import spacy
 
 import PyPDF2
 

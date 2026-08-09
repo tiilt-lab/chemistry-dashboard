@@ -1,10 +1,8 @@
-from flask import Blueprint, Response, request, abort
+from flask import Blueprint, request
 from device_websockets import ConnectionManager
 from utility import string_to_bool, sanitize, json_response
 from tables.device import Device
-import logging
 import database
-import requests
 import wrappers
 
 api_routes = Blueprint('device', __name__)

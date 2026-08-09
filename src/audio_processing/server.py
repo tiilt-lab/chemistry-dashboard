@@ -1,5 +1,4 @@
 import os
-import json
 import time
 import queue
 import threading
@@ -31,7 +30,6 @@ import safe_names
 from audio_buffer import AudioBuffer
 from processor import AudioProcessor
 from twisted.internet import reactor, task
-from twisted.internet import threads as _threads
 from autobahn.twisted.websocket import WebSocketServerFactory
 from autobahn.twisted.websocket import WebSocketServerProtocol
 from asr_connectors.factory import create_asr
@@ -226,7 +224,6 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
             # heartbeats for EVERY connected pod for seconds per blob. Any
             # failure must still reach the client — an unhandled exception
             # used to leave the sign-up page on "Processing…" forever.
-            from twisted.internet import threads as _threads
 
             def _work(blob=data):
                 with self._fingerprint_lock:
@@ -454,7 +451,6 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         if cf.record_original() and getattr(self, 'orig_recorder', None):
             recorders.append(self.orig_recorder)
         if recorders:
-            from twisted.internet import threads as _threads
 
             def _close_all(recs=recorders):
                 for r in recs:

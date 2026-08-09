@@ -14,7 +14,7 @@ from torch.nn import init
 import torchvision.transforms as transforms
 from .model.stylegan.op import conv2d_gradfix
 from .model.encoder.encoders.psp_encoders import GradualStyleEncoder
-from .model.encoder.align_all_parallel import get_landmark,get_landmark_multi,get_landmark_shape
+from .model.encoder.align_all_parallel import get_landmark_multi
 
 import logging
     

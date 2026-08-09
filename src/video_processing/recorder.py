@@ -1,10 +1,5 @@
-from genericpath import isfile
 import logging
-import numpy as np
-from scipy.io import wavfile
 import os
-import numpy as np
-import cv2
 try:
     from moviepy.editor import *  # moviepy 1.x
 except ImportError:

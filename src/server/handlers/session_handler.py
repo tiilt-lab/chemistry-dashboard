@@ -1,7 +1,5 @@
-import os
 import logging
 import database
-import requests
 import socketio_helper
 from datetime import datetime, timezone
 from app import socketio

@@ -22,7 +22,6 @@ import logging
 import os
 import queue as queue_module
 import subprocess
-import sys
 import tempfile
 import threading
 import time

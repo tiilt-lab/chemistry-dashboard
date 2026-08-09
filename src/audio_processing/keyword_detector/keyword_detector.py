@@ -1,7 +1,5 @@
 import gensim
-import logging
 import re
-import nltk
 import os
 
 # Keyword semantic matching supports two backends, selected via

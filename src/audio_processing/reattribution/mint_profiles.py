@@ -26,8 +26,7 @@ import numpy as np
 
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from link_chains import (link_clusters, anchor_and_propagate, cosine,
-                         consolidate_within_pod)  # noqa: E402
+from link_chains import (link_clusters, anchor_and_propagate, cosine)  # noqa: E402
 
 BIOMETRICS = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "audiobiometrics")

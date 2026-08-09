@@ -1,7 +1,5 @@
 from flask import Blueprint, request
-import logging
 import database
-import json
 from utility import json_response
 import wrappers
 from tables.folder import Folder

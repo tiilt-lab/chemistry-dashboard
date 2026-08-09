@@ -1,13 +1,13 @@
-from flask import Blueprint, Response, jsonify, request, abort, session
+from flask import Blueprint, request
 from tables.topic_model import TopicModel
-from utility import sanitize, json_response
+from utility import json_response
 from werkzeug.utils import secure_filename
 import topic_modeling.topicmodeling as topicmodeling
 import logging
 import database
 import wrappers
 import os
-from joblib import dump, load
+from joblib import dump
 
 
 api_routes = Blueprint('fileupload', __name__)
