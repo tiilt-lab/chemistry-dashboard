@@ -12,7 +12,17 @@ reproduced live in `venv-unified`. Severity: **P1** = corrupts data / kills a
 feature or run / security. **P2** = wrong results, degradation, or stranded UI
 under real use. **P3** = hygiene / latent.
 
-## STATUS (2026-08-09, same day): all P1s and all P2s are FIXED.
+## STATUS (2026-08-09, same day): all P1s, all P2s, and the P3 tail are FIXED.
+
+P3 batches shipped (one commit each): server, audio, video, frontend — see
+git log for this date. One P3 deliberately deferred: the unreachable legacy
+capture path in profile-creation-component.jsx is dead code but a real
+refactor to remove (its functions are still passed as props and wired to
+their own effects); its one live bug — Done not releasing the processing
+sockets — was fixed in place. The rest of this section (P1/P2 leftovers)
+still stands.
+
+
 
 Commits: 10f26db (audio P1), be8e9c0 (server P1), f0d2850 (video P1),
 fe64fa1 (frontend P1), then the P2 batches: server, audio, video, frontend
