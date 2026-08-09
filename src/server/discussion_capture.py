@@ -20,6 +20,13 @@ from routes.llm_query import api_routes as llm_api
 from routes.health import api_routes as health_api
 from routes.data_quality import api_routes as data_quality_api
 
+# Side-effect import: routes/socket.py registers the /session socketio event
+# handlers via @socketio.on decorators AT IMPORT TIME, and is referenced by no
+# name — so a linter sees it as "unused". Do NOT remove it: without it the live
+# socket namespace is unregistered and every client's room_joined never fires
+# (the whole overview loads forever).
+from routes import socket as _socket_handlers  # noqa: F401
+
 app.register_blueprint(admin_api)
 app.register_blueprint(auth_api)
 app.register_blueprint(session_api)

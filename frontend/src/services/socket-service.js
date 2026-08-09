@@ -5,7 +5,12 @@ export class SocketService {
 
   // Creates socket connection to server.
   createSocket(endpoint, room = null) {
-    const socket = io(window.location.protocol + '//' + window.location.host + '/' + endpoint, {transports: ['websocket'], upgrade: false});
+    // Start on long-polling and upgrade to WebSocket only if the server
+    // supports it. The app used to force websocket-only, but the eventlet->
+    // threading server migration broke the WebSocket transport, so a
+    // websocket-only client could never connect (live updates silently died).
+    // Polling always works; if WS is restored later, engine.io auto-upgrades.
+    const socket = io(window.location.protocol + '//' + window.location.host + '/' + endpoint, {transports: ['polling', 'websocket']});
     socket.on('connect', e => {
       if (room != null) {
         socket.emit('join_room', {room: room});
