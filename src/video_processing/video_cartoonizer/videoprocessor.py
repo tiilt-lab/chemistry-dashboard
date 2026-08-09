@@ -6,6 +6,9 @@ _rs_c = _rs_os.path.join(_rs_c, 'common')
 if _rs_c not in _rs_sys.path:
     _rs_sys.path.insert(0, _rs_c)
 import reactor_safety  # reactor/thread boundary; src/common bootstrapped above
+# Imported as video_cartoonizer.videoprocessor, so add this file's own dir for
+# the bare sibling import below.
+_rs_sys.path.insert(0, _rs_os.path.dirname(_rs_os.path.abspath(__file__)))
 from frame_payload import build_frame_payload
 import logging
 import threading

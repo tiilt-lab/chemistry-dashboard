@@ -8,6 +8,10 @@ import os;
 import traceback
 import callbacks
 from collections import Counter
+# This module is imported as video_cartoonizer.VideoMetricProcessor, so its own
+# directory isn't on sys.path for the bare sibling import below — add it.
+import sys as _sys
+_sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from metric_post_policy import should_post_metrics
 from yolo_head.utils.datasets import LoadImageDataset
 from yolo_head.utils.general import scale_coords
