@@ -17,7 +17,7 @@ def _callback_base():
     # (Video config has no processing_callback accessor — a typo here once made
     # the restart callback fail every time, leaving dead runs flagged as
     # running for the 3h TTL.)
-    return config.video_metrics_callback().rsplit('/', 1)[0]
+    return callbacks_common.callback_base(config.video_metrics_callback())
 
 
 def get_redis_session_key(auth_key):
@@ -71,25 +71,16 @@ def post_video_metrics(source, video_metrics):
         'source': source,
         'video_metrics': video_metrics
     }
-    try:
-        response = requests.post(config.video_metrics_callback(), json=result, timeout=callbacks_common.CALLBACK_TIMEOUT)
-        return response.status_code == 200
-    except Exception as e:
-        logging.warning('video metric callback failed: {0}'.format(e))
-        return False
+    return callbacks_common.post_json_ok(config.video_metrics_callback(), result, 'video metric')
 
 
 def post_gaze_overlays(source, records, reset=False):
     # Overlay geometry (head/gaze/object boxes) for the dashboard's video
     # overlay toggles. The server appends to a per-pod JSONL; reset=True on a
     # run's first batch replaces the previous run's file.
-    try:
-        response = requests.post(_callback_base() + '/gaze_overlays',
-                                 json={'source': source, 'records': records, 'reset': reset}, timeout=callbacks_common.CALLBACK_TIMEOUT)
-        return response.status_code == 200
-    except Exception as e:
-        logging.warning('gaze overlay callback failed: {0}'.format(e))
-        return False
+    return callbacks_common.post_json_ok(
+        _callback_base() + '/gaze_overlays',
+        {'source': source, 'records': records, 'reset': reset}, 'gaze overlay')
 
 
 def post_posthoc_reset(source, scope):

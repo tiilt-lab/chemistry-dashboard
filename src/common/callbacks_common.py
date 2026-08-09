@@ -25,6 +25,25 @@ def _post_best_effort(url, payload, name):
         logging.warning('%s callback failed: %s', name, e)
 
 
+def callback_base(url):
+    """The /api/v1/callback base, derived by stripping the last path segment.
+    Each tree fed a different config URL into the same rsplit; that lived in
+    two _callback_base copies."""
+    return url.rsplit('/', 1)[0]
+
+
+def post_json_ok(url, payload, name):
+    """POST json and return whether the server answered 200; log-and-return
+    False on any error. This is the try/post/status==200/except idiom that was
+    hand-written in every simple poster across both trees."""
+    try:
+        response = requests.post(url, json=payload, timeout=CALLBACK_TIMEOUT)
+        return response.status_code == 200
+    except Exception as e:
+        logging.warning('%s callback failed: %s', name, e)
+        return False
+
+
 def post_connect(connect_url, source):
     connection = {
         'source': source,
