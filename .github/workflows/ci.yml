@@ -35,7 +35,7 @@ jobs:
       # style). Lower CAP whenever the count drops.
       - name: ruff (ratcheted)
         run: |
-          CAP=43
+          CAP=25
           COUNT=$(ruff check src --output-format json | python -c "import json,sys; print(len(json.load(sys.stdin)))")
           echo "ruff violations: $COUNT (cap: $CAP)"
           test "$COUNT" -le "$CAP"
