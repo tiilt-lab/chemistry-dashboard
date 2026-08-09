@@ -12,6 +12,34 @@ reproduced live in `venv-unified`. Severity: **P1** = corrupts data / kills a
 feature or run / security. **P2** = wrong results, degradation, or stranded UI
 under real use. **P3** = hygiene / latent.
 
+## ROUND 3 (2026-08-09, later same day): data/authz/realtime deep pass.
+
+Four fresh reviewers (data+transaction, auth/security, config/ops, non-byod
+frontend). Fixed and deployed (commits e582c51 server, 9ce5e79 frontend,
+712e534 tests):
+- **Cross-tenant authz P1s**: transcript reassign/edit_text (any account could
+  rewrite/reassign any tenant's transcripts by id) now session-scoped;
+  remove_device_from_session (own one session → end/delete another tenant's
+  live pod) now checks pod membership; unauthenticated updatestudent now gated;
+  session_device speakers/keywords/mark_posthoc reads scoped to their session.
+- **delete_user P1**: 500ed (FK 1451) for any user with video/HR sessions —
+  metrics now deleted before pods; Rater/Rating/Survey orphans cleared in
+  delete_user + delete_session.
+- **Concurrency**: posthoc_queue worker-exit race (job stranded), device_ws
+  send_json via callFromThread, check_transcripts max_instances=1.
+- update_student lastname typo (wrote a non-existent column).
+Tests added: test_doa, test_audio_buffer, test_google_asr_stop,
+test_sweep_contracts (54 python tests, was 34).
+
+DEFERRED from round 3 (recommended, not yet done): DB indexes on the
+anonymous-analytics hot columns (speaker.alias, transcript.speaker_tag,
+speaker_video_metrics.student_username — 257k rows, full-scanned) — needs an
+index migration; the get_session_triage / update_transcript_features_batch
+N+1s; the reattribution CLIs' json.load(open()) handles; the expert-rating
+hardcoded study ids + non-200 handling gaps (P3).
+
+---
+
 ## STATUS (2026-08-09, same day): all P1s, all P2s, and the P3 tail are FIXED.
 
 P3 batches shipped (one commit each): server, audio, video, frontend — see
