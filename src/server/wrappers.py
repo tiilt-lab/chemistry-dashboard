@@ -105,6 +105,11 @@ def _verify_session_guard(write):
         return verify_function
     return decorator
 
+# Predicate form for routes that resolve the session id themselves (e.g. via a
+# transcript row) rather than from the URL. Same owner/super write matrix.
+def session_write_allowed(session_id, user):
+    return bool(_session_for(session_id, user, write=True))
+
 # Read guard: attach the session for endpoints that only report on it.
 verify_session_read_access = _verify_session_guard(write=False)
 

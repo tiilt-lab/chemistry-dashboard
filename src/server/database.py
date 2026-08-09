@@ -597,6 +597,12 @@ def delete_session(session_id):
     db.session.query(Transcript).filter(Transcript.id.in_(sub_query)).delete(synchronize_session='fetch')
     db.session.query(SpeakerVideoMetrics).filter(SpeakerVideoMetrics.id.in_(sub_query2)).delete(synchronize_session='fetch')
     db.session.query(SpeakerHrMetrics).filter(SpeakerHrMetrics.id.in_(sub_query3)).delete(synchronize_session='fetch')
+    # Rater/Rating/SurveyResponse hold sessionid as a plain int (no FK), so
+    # nothing cascades — clear them here or they orphan forever pointing at a
+    # deleted session.
+    db.session.query(Rating).filter(Rating.sessionid == session_id).delete()
+    db.session.query(Rater).filter(Rater.sessionid == session_id).delete()
+    db.session.query(SurveyResponse).filter(SurveyResponse.sessionid == session_id).delete()
     db.session.query(SessionDevice).filter(SessionDevice.session_id == session_id).delete()
     db.session.query(Session).filter(Session.id == session_id).delete()
     db.session.commit()
@@ -947,6 +953,18 @@ def delete_user(id):
         db.session.query(KeywordUsage).filter(KeywordUsage.transcript_id.in_(transcriptSubQuery)).delete(synchronize_session='fetch')
         db.session.query(Transcript).filter(Transcript.id.in_(transcriptSubQuery)).delete(synchronize_session='fetch')
         db.session.query(Keyword).filter(Keyword.session_id.in_(sessionSubQuery)).delete(synchronize_session='fetch')
+        # SpeakerVideoMetrics/SpeakerHrMetrics FK session_device.id with NO
+        # ondelete cascade, so they MUST be deleted before their pods — the
+        # old code went straight to SessionDevice and every delete_user for a
+        # user who ever ran a video/HR session hit FK error 1451 and 500ed.
+        # delete_session does exactly this; mirror it. Rater/Rating/Survey
+        # rows have no FK at all and were orphaned forever — clear them too.
+        deviceSubQuery = db.session.query(SessionDevice.id).filter(SessionDevice.session_id.in_(sessionSubQuery)).subquery()
+        db.session.query(SpeakerVideoMetrics).filter(SpeakerVideoMetrics.session_device_id.in_(deviceSubQuery)).delete(synchronize_session='fetch')
+        db.session.query(SpeakerHrMetrics).filter(SpeakerHrMetrics.session_device_id.in_(deviceSubQuery)).delete(synchronize_session='fetch')
+        db.session.query(Rating).filter(Rating.sessionid.in_(sessionSubQuery)).delete(synchronize_session='fetch')
+        db.session.query(Rater).filter(Rater.sessionid.in_(sessionSubQuery)).delete(synchronize_session='fetch')
+        db.session.query(SurveyResponse).filter(SurveyResponse.sessionid.in_(sessionSubQuery)).delete(synchronize_session='fetch')
         db.session.query(SessionDevice).filter(SessionDevice.session_id.in_(sessionSubQuery)).delete(synchronize_session='fetch')
         db.session.query(Session).filter(Session.owner_id == id).delete()
         folder_ids = [folder.id for folder in db.session.query(Folder).filter(Folder.owner_id == id).all()]
@@ -1175,7 +1193,9 @@ def update_student(id, lastname=None, firstname=None,biometric_captured=None):
     student = get_students(id=id)
     if student:
         if lastname:
-            student.name = lastname
+            # Student has no `name` column — the old assignment created a
+            # throwaway attribute and the lastname edit never persisted.
+            student.lastname = lastname
         if firstname:
             student.firstname = firstname
         if biometric_captured:

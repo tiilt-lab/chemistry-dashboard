@@ -33,6 +33,15 @@ image_queue_dict = {}
 # "no report yet" and each inserted a row.
 _synthesis_write_lock = threading.Lock()
 
+
+def _device_in_session(device_id, session_id):
+    """A pod named in a URL must belong to the session the caller was
+    authorized for — the session guards prove access to session_id only, and
+    device ids are sequential/global, so an unchecked device_id is a
+    cross-tenant read/write by id."""
+    d = database.get_session_devices(id=device_id)
+    return d if (d is not None and d.session_id == session_id) else None
+
 @api_routes.route('/api/v1/sessions', methods=['GET'])
 @wrappers.verify_login(public=True)
 def get_sessions(user, **kwargs):
@@ -579,6 +588,8 @@ def mark_posthoc_completed(session_id, session_device_id, user, **kwargs):
     owned = database.get_sessions(id=session_id, owner_id=user['id'], first=True)
     if owned is None:
         return json_response({'message': 'Session not found.'}, 404)
+    if _device_in_session(session_device_id, session_id) is None:
+        return json_response({'message': 'Session device not found.'}, 404)
     # Optional per-run model provenance blob (e.g. {asr, embedder, diarizer,
     # scorer, emotion, attention, ...}); absent for older callers.
     body = request.get_json(silent=True) or {}
@@ -701,6 +712,8 @@ def session_transcript_speaker_metrics(session_id, **kwargs):
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_read_access
 def session_device_speakers(session_id, device_id, **kwargs):
+    if _device_in_session(device_id, session_id) is None:
+        return json_response({'message': 'Session device not found.'}, 404)
     speakers = database.get_speakers(session_device_id=device_id)
     return json_response([speaker.json() for speaker in speakers])
 
@@ -715,6 +728,8 @@ def session_speakers(session_id, **kwargs):
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_read_access
 def session_device_keywords(session_id, device_id, **kwargs):
+    if _device_in_session(device_id, session_id) is None:
+        return json_response({'message': 'Session device not found.'}, 404)
     keywords = database.get_keyword_usages(session_device_id=device_id)
     return json_response([keyword.json() for keyword in keywords])
 
@@ -1121,6 +1136,13 @@ def set_session_passcode(session_id, **kwargs):
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access
 def remove_device_from_session(session_id, session_device_id, **kwargs):
+    # verify_session_access only proves the caller owns session_id; the pod id
+    # is from the URL and must belong to THAT session, or a user who owns any
+    # one session could end/delete another tenant's live pod by id (the
+    # sibling rename/get routes already check this).
+    target = database.get_session_devices(id=session_device_id)
+    if target is None or target.session_id != session_id:
+        return json_response({'message': 'Session device not found.'}, 404)
     delete = string_to_bool(request.args.get('delete', 'false'))
     if delete:
         # Admins/supers may delete any pod; everyone else only pods that

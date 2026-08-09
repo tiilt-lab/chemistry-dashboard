@@ -186,8 +186,12 @@ class ServerProtocol(WebSocketServerProtocol):
         self.transport.loseConnection()
 
     def send_json(self, message):
+        # send_command/_and_wait call this from Flask request threads (help
+        # button, admin log fetch); Twisted transports are not thread-safe,
+        # so marshal the write onto the reactor. From the reactor thread it
+        # just schedules for the next iteration.
         payload = json.dumps(message).encode('utf8')
-        self.sendMessage(payload, isBinary = False)
+        reactor.callFromThread(self.sendMessage, payload, False)
 
 
 def run_server():

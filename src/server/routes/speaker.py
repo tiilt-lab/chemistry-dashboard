@@ -101,12 +101,17 @@ def reassign_transcript_speaker(transcript_id, **kwargs):
     if not valid:
         return json_response({'message': message}, 400)
 
-    # scope check: the row must belong to a pod the caller can see, and the
-    # alias must be a real roster member of that pod.
+    # scope check: the row must belong to a session the caller can WRITE
+    # (owner/super), the alias must be a real roster member of that pod.
+    # Without this any logged-in account could reassign/inject speakers on
+    # any tenant's pod by walking transcript ids.
     from tables.transcript import Transcript
     from app import db
     row = db.session.query(Transcript).filter(Transcript.id == transcript_id).first()
     if row is None:
+        return json_response({'message': 'Transcript not found.'}, 404)
+    device = database.get_session_devices(id=row.session_device_id)
+    if device is None or not wrappers.session_write_allowed(device.session_id, kwargs['user']):
         return json_response({'message': 'Transcript not found.'}, 404)
     roster = {s.alias for s in database.get_speakers(
         session_device_id=row.session_device_id) if s.alias}
@@ -142,6 +147,16 @@ def edit_transcript_text(transcript_id, **kwargs):
         return json_response({'message': 'Transcript text is required.'}, 400)
     if len(text) > 5000:
         return json_response({'message': 'Transcript text too long.'}, 400)
+    # Scope to a session the caller can write, or any logged-in account could
+    # rewrite any tenant's transcript text by id.
+    from tables.transcript import Transcript
+    from app import db
+    row = db.session.query(Transcript).filter(Transcript.id == transcript_id).first()
+    if row is None:
+        return json_response({'message': 'Transcript not found.'}, 404)
+    device = database.get_session_devices(id=row.session_device_id)
+    if device is None or not wrappers.session_write_allowed(device.session_id, kwargs['user']):
+        return json_response({'message': 'Transcript not found.'}, 404)
     ok = database.update_transcript_text(transcript_id, text)
     if not ok:
         return json_response({'message': 'Transcript not found.'}, 404)

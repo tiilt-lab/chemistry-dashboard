@@ -205,14 +205,41 @@ def add_students(**kwargs):
         
 @api_routes.route('/api/v1/student/updatestudent', methods=['POST'])
 def update_students(**kwargs):
-    content = request.json
+    content = request.json or {}
     id = content.get('id',None)
     if not id:
         return json_response({'message': 'Student  Id must be provided '}, 400)
     lastname = content.get('lastname', None)
     firstname = content.get('firstname', None)
     biometric_captured = content.get('biometric_captured', None)
-    
+
+    student = database.get_students(id=id)
+    if not student:
+        return json_response({'message': 'Student not found.'}, 404)
+
+    # This route was fully unauthenticated — anyone could rewrite any
+    # student's name and enrollment flag by id. Admins/supers keep full
+    # edit; everyone else (the anonymous enrollment-completion path, which
+    # only sets biometric_captured for the student who just enrolled) must
+    # prove they know the student's name and may not rename — the same
+    # protection addstudent uses for re-enrollment.
+    sess_user = session.get('user')
+    is_admin = False
+    if sess_user:
+        fresh = database.get_users(id=sess_user.get('id'))
+        is_admin = bool(fresh and not fresh.locked and fresh.role in wrappers.ADMIN_ROLES)
+
+    if not is_admin:
+        name_ok = (
+            (student.firstname or '').strip().lower() == (firstname or '').strip().lower()
+            and (student.lastname or '').strip().lower() == (lastname or '').strip().lower()
+        )
+        if not name_ok:
+            return json_response({'message': 'Name does not match our records.'}, 403)
+        # Non-admins may only (re)confirm enrollment, never rename.
+        lastname = None
+        firstname = None
+
     success, student = database.update_student(id,lastname, firstname,biometric_captured)
     if success:
         database.save_changes()

@@ -47,8 +47,13 @@ def main():
 			device.connected = False
 		database.save_changes()
 
-	# Schedule tasks
-	scheduler.add_job(scheduled_tasks.check_transcripts, 'interval', seconds=60)
+	# Schedule tasks. max_instances=1 + coalesce: if a run overruns the 60s
+	# interval (slow DB, many active sessions) the global job_defaults would
+	# otherwise start a 2nd/3rd concurrent instance, and two of them can both
+	# see a session as still-open and each fire end_session — duplicate 'end'
+	# pings to every pod. This job must never overlap itself.
+	scheduler.add_job(scheduled_tasks.check_transcripts, 'interval', seconds=60,
+	                  max_instances=1, coalesce=True)
 
 	# Pre-warm the video remux cache so first views never wait.
 	from routes.session import prewarm_video_cache

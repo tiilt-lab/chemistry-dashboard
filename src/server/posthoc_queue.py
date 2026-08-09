@@ -218,26 +218,35 @@ def _maybe_recycle_audio_service():
 
 
 def _worker_loop():
+    global _worker
     while True:
         with _lock:
             job = next((j for j in _jobs if j["state"] == "queued"), None)
             if job is None:
-                return  # drain and exit; next enqueue restarts the worker
+                # Clear _worker UNDER the lock as we exit. Otherwise a job
+                # enqueued in the window between this return and the thread
+                # actually dying saw is_alive()==True, no replacement worker
+                # was started, and the job sat "queued" forever. Now the exit
+                # decision and enqueue's liveness check are serialized.
+                _worker = None
+                return
             job["state"] = "running"
             job["started_at"] = time.time()
             _persist_locked()
         try:
             _maybe_recycle_audio_service()
             _run_job(job)
-            job["state"] = "done"
+            outcome, err = "done", None
         except Exception as e:
             logging.warning("posthoc queue: pod %s failed: %s", job["device_id"], e)
-            job["state"] = "error"
-            job["error"] = str(e)
-        finally:
+            outcome, err = "error", str(e)
+        # Terminal transition under the lock so a persisted snapshot can't
+        # capture a torn view (state without finished_at).
+        with _lock:
+            job["state"] = outcome
+            job["error"] = err
             job["finished_at"] = time.time()
-            with _lock:
-                _persist_locked()
+            _persist_locked()
 
 
 def enqueue(session_id, device_ids, models=None):
