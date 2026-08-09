@@ -94,44 +94,54 @@ class GoogleASR():
         self.running = False
 
     def generator(self):
+        # STOP is terminal for the whole connector, not just this stream:
+        # `processing()` loops on self.running and would otherwise build a
+        # fresh generator that blocks forever on an empty queue (the posthoc
+        # hang — nothing follows the sentinel). Chunks already drained before
+        # a STOP/None is seen are still yielded so their audio is not lost.
         generator_time = 0
-        while self.running and generator_time < GoogleASR.STREAM_LIMIT:
-            first_chunk = None
-            try:
-                if self.blocking_get:
-                    first_chunk = self.audio_queue.get()
-                else:
-                    # block briefly to avoid CPU spin; adjust timeout for latency needs
-                    first_chunk = self.audio_queue.get(timeout=0.25)
-
-            except Empty:
-                continue
-
-            if first_chunk is self.STOP:
-                return
-
-            if first_chunk is None:
-                break
-            
-            data = [first_chunk]  
-            while not self.audio_queue.empty():
+        try:
+            while self.running and generator_time < GoogleASR.STREAM_LIMIT:
+                first_chunk = None
                 try:
-                    chunk = self.audio_queue.get(block=False)
+                    if self.blocking_get:
+                        first_chunk = self.audio_queue.get()
+                    else:
+                        # block briefly to avoid CPU spin; adjust timeout for latency needs
+                        first_chunk = self.audio_queue.get(timeout=0.25)
+
                 except Empty:
+                    continue
+
+                if first_chunk is self.STOP:
+                    self.running = False
                     return
 
-                if chunk is self.STOP:
-                    return
+                if first_chunk is None:
+                    break
 
-                if chunk is None:
-                    return
-             
-                data.append(chunk)
-            for chunk in data:
-                generator_time += (len(chunk) / GoogleASR.DEPTH) / GoogleASR.SAMPLE_RATE
-            yield b''.join(data)
-        self.audio_time += generator_time
-        
+                data = [first_chunk]
+                while not self.audio_queue.empty():
+                    try:
+                        chunk = self.audio_queue.get(block=False)
+                    except Empty:
+                        break
+
+                    if chunk is self.STOP:
+                        self.running = False
+                        break
+
+                    if chunk is None:
+                        break
+
+                    data.append(chunk)
+                for chunk in data:
+                    generator_time += (len(chunk) / GoogleASR.DEPTH) / GoogleASR.SAMPLE_RATE
+                yield b''.join(data)
+        finally:
+            # try/finally so restart offsets stay correct on every exit path
+            # (STOP, stream limit, an exception out of the gRPC consumer).
+            self.audio_time += generator_time
 
     def _convert_result(self, result, audio_start_time):
         # timedelta -> absolute seconds within the whole recording (stream
@@ -231,10 +241,17 @@ class GoogleASR():
         while self.running:
             try:
                 if not self.audio_queue.empty():
-                    audio_wav = speech.RecognitionAudio(content=self.audio_queue.get())
+                    content = self.audio_queue.get()
+                    if content is self.STOP or content is None:
+                        # Terminal sentinel — same contract as generator().
+                        self.running = False
+                        continue
+                    audio_wav = speech.RecognitionAudio(content=content)
                     responses = client.recognize(config = recognition_config, audio=audio_wav)
                     self.process_wav_responses(responses, self.audio_time)
                     self.audio_file_duration = self.audio_file_duration + self.audio_interval
+                else:
+                    time.sleep(0.05)  # don't spin at 100% CPU on an empty queue
             except exceptions.InvalidArgument as e:
                 logging.warning('Invalid args for Google ASR Connector for client {0}. Attempting to restart connection... {1}'.format(self.config.auth_key,e))
             except exceptions.OutOfRange as e:

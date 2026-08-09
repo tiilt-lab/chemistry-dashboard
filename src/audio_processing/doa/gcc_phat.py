@@ -26,7 +26,11 @@ def gcc_phat(sig, refsig, fs=1, max_tau=None, interp=1):
     REFSIG = np.fft.rfft(refsig, n=n, axis=0)
     R = SIG * np.conj(REFSIG)
 
-    cc = np.fft.irfft(R / np.abs(R), n=(interp * n))
+    # A silent (all-zero) window makes |R| zero and the whitening a 0/0 NaN
+    # that argmax/arcsin turn into a garbage bearing; floor the magnitude.
+    denom = np.abs(R)
+    denom[denom < 1e-12] = 1e-12
+    cc = np.fft.irfft(R / denom, n=(interp * n))
 
     max_shift = int(interp * n / 2)
     if max_tau:

@@ -36,7 +36,7 @@ class DOA(Element):
         theta = [0, 0, 0]
 
         buf = b''.join(self.queue)
-        buf = np.fromstring(buf, dtype='int16')
+        buf = np.frombuffer(buf, dtype='int16')
         for i, v in enumerate(self.pair):
             tau[i], _ = gcc_phat(buf[v[0]::6], buf[v[1]::6], fs=self.sample_rate, max_tau=MAX_TDOA_6, interp=1)
             theta[i] = np.arcsin(tau[i] / MAX_TDOA_6) * 180 / np.pi
@@ -75,4 +75,6 @@ def calculateDOA(audio_start_time, audio_data, word_timings, sample_rate, channe
         return result
     except Exception as e:
         logging.critical('Direction of arrival calculation failed: {0}'.format(e))
-        return -1
+        # None is the established "no direction" value downstream; -1 would be
+        # persisted as a real bearing.
+        return None
