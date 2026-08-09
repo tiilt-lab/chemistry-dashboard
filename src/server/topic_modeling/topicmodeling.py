@@ -75,7 +75,7 @@ def generate_corpus(file_url, extra_stop_words):
     else:
         data = process_file(file_url)
 
-    def lemmatization(texts, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV']):
+    def lemmatization(texts, allowed_postags=('NOUN', 'ADJ', 'VERB', 'ADV')):
         """https://spacy.io/api/annotation"""
         texts_out = []
         for sent in texts:

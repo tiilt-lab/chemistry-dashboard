@@ -169,7 +169,7 @@ def get_facial_shape(img, predictor,bbox):
     shape =   predictor(img, rect)
     return shape
 
-def get_video_crop_parameter(filepath, predictor, model, padding=[200,200,200,200]):
+def get_video_crop_parameter(filepath, predictor, model, padding=(200,200,200,200)):
     if type(filepath) == str:
         img = dlib.load_rgb_image(filepath)
     else:

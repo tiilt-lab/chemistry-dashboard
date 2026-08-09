@@ -44,7 +44,7 @@ def preprocess_transcript(transcript, extra_stop_words):
 
     data = [transcript]
 
-    def lemmatization(texts, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV']):
+    def lemmatization(texts, allowed_postags=('NOUN', 'ADJ', 'VERB', 'ADV')):
         """https://spacy.io/api/annotation"""
         texts_out = []
         for sent in texts:

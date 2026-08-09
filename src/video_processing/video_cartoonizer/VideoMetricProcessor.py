@@ -238,7 +238,7 @@ class VideoMetricAnalytics:
                             # arithmetic (round(tensor) raises TypeError).
                             f_w = float(imsizes[index][0])
                             f_h = float(imsizes[index][1])
-                            norm_box = lambda b: [round(float(b[0])/f_w,4), round(float(b[1])/f_h,4), round(float(b[2])/f_w,4), round(float(b[3])/f_h,4)]
+                            norm_box = lambda b, f_w=f_w, f_h=f_h: [round(float(b[0])/f_w,4), round(float(b[1])/f_h,4), round(float(b[2])/f_w,4), round(float(b[3])/f_h,4)]
                             overlay_records.append({
                                 't': float(time_stamp),
                                 'p': str(person_alias),

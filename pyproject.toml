@@ -22,7 +22,11 @@ extend-exclude = [
 ]
 
 [tool.ruff.lint]
-# Real-correctness rules, not style: F = pyflakes (unused/undefined names,
-# redefinitions, bad f-strings), E9 = syntax/IO errors, E722 = bare `except:`
-# (swallows KeyboardInterrupt/SystemExit and hides the real error).
-select = ["F", "E9", "E722"]
+# Real-correctness rules, not style:
+#   F    = pyflakes (unused/undefined names, redefinitions, bad f-strings)
+#   E9   = syntax / IO errors
+#   E722 = bare `except:` (swallows KeyboardInterrupt/SystemExit, hides errors)
+#   B006 = mutable default argument (shared-state bug)
+#   B023 = function/lambda in a loop not binding the loop variable (late-binding
+#          closure bug). Both B-classes are currently at zero — keep them there.
+select = ["F", "E9", "E722", "B006", "B023"]
