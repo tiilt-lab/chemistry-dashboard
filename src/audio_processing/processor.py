@@ -24,6 +24,7 @@ import numpy as np
 from joblib import load
 from topic_modeling.topic_modeling import preprocess_transcript
 import config as cf
+from processing_common import select_topic_id, save_embeddings, load_embeddings
 # from source_seperation import source_seperation_pre_trained
 # from server.topic_modeling.topicmodeling import get_topics_with_prob
 # For converting nano seconds to seconds.
@@ -137,7 +138,7 @@ class AudioProcessor:
         results = []
         if self.embeddings_file is not None and self.embeddings:
             try:
-                np.save(self.embeddings_file, np.array(self.embeddings, dtype=object))
+                save_embeddings(self.embeddings_file, self.embeddings)
             except Exception as e:
                 logging.warning('could not save embeddings file %s: %s',
                                 self.embeddings_file, e)
@@ -237,15 +238,9 @@ class AudioProcessor:
                     logging.info("Topics distribution: ")
                     logging.info(topics)
                     #    topics = get_topics_with_prob(transcript_text)
-                    if len(topics) > 0:
-                        # The best probability must be tracked, not just
-                        # compared against 0 — otherwise topic_id ends up as
-                        # the LAST topic with p>0, not the most probable.
-                        best_prob = 0
-                        for topic in topics:
-                            if topic[1] > best_prob:
-                                best_prob = topic[1]
-                                topic_id = topic[0]
+                    # Shared argmax (processing_common) — was duplicated and
+                    # drifting between the live and posthoc processors.
+                    topic_id = select_topic_id(topics, default=topic_id)
                 logging.info(topic_id)
 
             # Get DoA (Direction of Arrival)
@@ -316,11 +311,9 @@ class AudioProcessor:
                 if self.config.diarization:
                     if len(self.embeddings) == 0 and self.embeddings_file is not None:
                         try:
-                            # The file is saved as an object array, which
-                            # np.load refuses without allow_pickle — every
-                            # resume silently restarted from [] before this.
-                            self.embeddings = np.load(
-                                self.embeddings_file, allow_pickle=True).tolist()
+                            # Shared loader (processing_common): object array,
+                            # allow_pickle required, or resume restarts from [].
+                            self.embeddings = load_embeddings(self.embeddings_file)
                         except Exception as e:
                             logging.error(
                                 "Unable to load embeddings file: %s", e)

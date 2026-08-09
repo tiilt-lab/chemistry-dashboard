@@ -28,19 +28,23 @@ def test_embed_signal_uses_float_domain():
 
 
 def test_embeddings_loaded_with_allow_pickle():
-    # The embeddings file is an object array; np.load without allow_pickle
-    # raises and every session resume silently restarted from [].
+    # The de-forked loader lives in processing_common and MUST allow_pickle
+    # (object array); both processors call it. See test_processing_common.py
+    # for the behavioral test.
+    common = _read("audio_processing", "processing_common.py")
+    assert "allow_pickle=True" in common, "shared loader must allow_pickle"
     for mod in ("processor.py", "processor_posthoc.py"):
-        s = _read("audio_processing", mod)
-        assert "allow_pickle=True" in s, f"{mod}: embeddings load must allow_pickle"
+        assert "load_embeddings(" in _read("audio_processing", mod), \
+            f"{mod}: must use the shared load_embeddings"
 
 
 def test_topic_selection_tracks_best_probability():
-    # topic_id must be the argmax, not the last topic with p>0 (the old loop
-    # never updated its running max).
+    # The de-forked argmax lives in processing_common; both processors call it.
+    common = _read("audio_processing", "processing_common.py")
+    assert "best_prob" in common, "shared select_topic_id must track the max"
     for mod in ("processor.py", "processor_posthoc.py"):
-        s = _read("audio_processing", mod)
-        assert "best_prob" in s, f"{mod}: topic loop must track best probability"
+        assert "select_topic_id(" in _read("audio_processing", mod), \
+            f"{mod}: must use the shared select_topic_id"
 
 
 def test_diarization_flag_not_hardcoded_true():
