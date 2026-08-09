@@ -24,7 +24,6 @@ try:
 except ModuleNotFoundError:
     from moviepy import *  # moviepy 2.x moved the public API to the package root
 from scipy.io import wavfile
-import logging
 import traceback
 from queue import Queue,Empty, Full
 # from .VideoMetricProcessor import VideoMetricAnalytics
@@ -247,7 +246,7 @@ class VideoProcessor:
                         
                     processed_frame_track.append(resized_frame)
                         
-                except Exception as e:
+                except Exception:
                     error_str = traceback.format_exc()
                     logging.info('exception occured while converting video to cartoon: {0}'.format(error_str))
                     continue  
@@ -425,7 +424,7 @@ class VideoProcessor:
                     # we just need 290 frames of the 10 sec chunks, and break if the frames capture  is more than 290    
                     if  subclib_frame_count > 300:
                         break
-            except Exception as e:
+            except Exception:
                 error_str = traceback.format_exc()
                 logging.warning('Exception thrown while extracting image subclib {0} {1}'.format(error_str, self.config.auth_key))
             finally:

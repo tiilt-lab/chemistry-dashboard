@@ -5,7 +5,6 @@ import sklearn.cluster
 import sklearn.discriminant_analysis
 import os.path
 import torch
-import numpy as np
 import scipy.spatial as sp
 
 def embedSignal(x, verification):

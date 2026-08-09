@@ -80,7 +80,7 @@ class AudioStreamReader:
                 if self.realtime:
                     time.sleep(chunk_duration)
               
-        except Exception as e:
+        except Exception:
             error_str = traceback.format_exc()
             logging.info('exception occurred while reading wav : {0}'.format(error_str))
         finally:

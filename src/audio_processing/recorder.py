@@ -2,7 +2,6 @@ import logging
 import numpy as np
 from scipy.io import wavfile
 import os
-import numpy as np
 
 
 class WaveRecorder:

@@ -274,7 +274,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                             # path is now sanitized so it can't point off-tree.
                             facials = np.load(facial_embedding_file+".npy", allow_pickle=True).item()
                             self.facial_embeddings[speaker["id"]] = {"alias": speaker["alias"], "data": facials[speaker["alias"]]}
-                        except Exception as e:
+                        except Exception:
                             error_str = traceback.format_exc()
                             logging.info("error loading facial embedding for {} : {}".format(speaker["alias"],error_str))
 

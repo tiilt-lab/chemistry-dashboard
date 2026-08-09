@@ -266,7 +266,7 @@ class VideoMetricAnalytics:
                 for person_id, persons_detail in video_metrics.items():
                     data = self.aggregate_all_metrics_in_same_timestamp(persons_detail)
                     video_metrics[person_id] = data
-        except Exception as e:
+        except Exception:
             error_str = traceback.format_exc()
             logging.info("Error in computing video metrics: {0}".format(error_str))
         

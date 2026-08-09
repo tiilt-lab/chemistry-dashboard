@@ -60,7 +60,7 @@ def end_session(session_id):
     for device in devices_to_ping:
         try:
             sent = ConnectionManager.instance.send_command(device.id, {'cmd': 'end'})
-        except Exception as e:
+        except Exception:
             logging.critical('Session End: Pod ' + str(device.id) + ' was unreachable or failed to respond.')
     return True, session
 
@@ -108,5 +108,5 @@ def remove_session_device(session_device_id):
         if session_device.device_id:
             try:
                 ConnectionManager.instance.send_command(session_device.device_id, {'cmd': 'end'})
-            except Exception as e:
+            except Exception:
                 logging.critical('Session End: Pod ' + str(session_device.device_id) + ' was unreachable or failed to respond.')

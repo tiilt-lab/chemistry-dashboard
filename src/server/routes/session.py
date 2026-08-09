@@ -6,7 +6,7 @@ from utility import sanitize, string_to_bool, json_response, safe_name
 from tables.session_device import SessionDevice
 from redis_helper import RedisSessions
 from tables.session import Session
-from utility import json_response,batch_video_metrics,batch_transcript_metrics,batch_transcript_video_metrics,synthesized_transcript_video_metrics_by_window
+from utility import batch_video_metrics,batch_transcript_metrics,batch_transcript_video_metrics,synthesized_transcript_video_metrics_by_window
 from metrics_windowing import fmt_start_time
 from app import socketio
 import logging

@@ -21,7 +21,6 @@ except ImportError:
     import moviepy as mp  # moviepy 2.x dropped the .editor module
 import os
 import warnings
-import logging
 import cv2
 import tempfile
 import subprocess
@@ -244,7 +243,7 @@ class VideoProcessorPosthoc:
                                 final_audio_file
                             ], check=True)
                 vidclip.close()
-        except Exception as e:
+        except Exception:
             error_str = traceback.format_exc()
             logging.warning('Exception thrown while Processing video posthoc video image extraction {0} {1}'.format(error_str, self.config.auth_key))
         finally:

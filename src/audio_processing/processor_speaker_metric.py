@@ -86,7 +86,7 @@ class SpeakerMetricProcessor:
                 
                 # compute_particpation_score(transcriptObj['speaker_id'],transcriptObj['start_time'],transcriptObj['transcript'])
               
-        except Exception as e:
+        except Exception:
             error_str = traceback.format_exc()
             logging.info('exception occured while computing speaker metrics  : {0}'.format(error_str))
         finally:
@@ -131,7 +131,7 @@ class SpeakerMetricProcessor:
             posted = callbacks.post_transcript_features(self.config.auth_key, updates)
             logging.info('transcript metric recompute (%s): %d utterances, persisted=%s',
                          self.scorer or 'liwc', len(updates), posted)
-        except Exception as e:
+        except Exception:
             error_str = traceback.format_exc()
             logging.info('exception occured while computing transcript metrics  : {0}'.format(error_str))
         finally:

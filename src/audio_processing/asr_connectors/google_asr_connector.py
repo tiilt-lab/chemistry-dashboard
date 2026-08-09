@@ -199,7 +199,7 @@ class GoogleASR():
                 # helper sends the config as the first request itself.
                 responses = client.streaming_recognize(streaming_config, requests)
                 self.process_responses(responses, self.audio_time)
-            except exceptions.InvalidArgument as e:
+            except exceptions.InvalidArgument:
                 logging.warning('Invalid args for Google ASR Connector for client {0}. Attempting to restart connection...'.format(self.config.auth_key))
             except exceptions.OutOfRange as e:
                 # Request dies if either maximum time limit or there is a long duration wihout audio

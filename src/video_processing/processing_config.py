@@ -61,7 +61,7 @@ class ProcessingConfig:
                 return False, "Invalid key."
 
             return True, ProcessingConfig(auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, embeddingsFile,sessionId,deviceId,videocartoonify,video,mimeExtension)
-        except Exception as e:
+        except Exception:
             return False, "could not verify auth_key"
 
     def is_valid_key(self):
