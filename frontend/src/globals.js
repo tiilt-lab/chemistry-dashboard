@@ -139,6 +139,16 @@ export function speakerColorFor(name, allNames) {
     return palette[i % palette.length]
 }
 
+// One stable color per speaker across a set of transcripts, so a speaker keeps
+// the same color in every view. Was built two ways (a reduce in
+// transcripts-component, a loop in transcript-panel).
+export function buildSpeakerColors(transcripts) {
+    const tags = [...new Set((transcripts || []).map((t) => t.speaker_tag).filter(Boolean))]
+    const map = {}
+    for (const tag of tags) map[tag] = speakerColorFor(tag, tags)
+    return map
+}
+
 // Clock-style HH:MM:SS from seconds (shared by transcripts + reflection dashboards).
 export function formatHMS(s) {
   const date = new Date(1000 * Math.floor(s));

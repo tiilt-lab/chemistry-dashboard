@@ -6,7 +6,24 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
-const { formatSeconds, formatHMS, filterSortByDevice } = await import("./globals")
+const { formatSeconds, formatHMS, filterSortByDevice, buildSpeakerColors, speakerColorFor } = await import("./globals")
+
+describe("buildSpeakerColors", () => {
+    it("maps each unique speaker tag to its palette color, ignoring blanks", () => {
+        const rows = [
+            { speaker_tag: "Ada" }, { speaker_tag: "Ada" },
+            { speaker_tag: "Bo" }, { speaker_tag: null }, { speaker_tag: "" },
+        ]
+        const map = buildSpeakerColors(rows)
+        expect(Object.keys(map).sort()).toEqual(["Ada", "Bo"])
+        expect(map.Ada).toBe(speakerColorFor("Ada", ["Ada", "Bo"]))
+        expect(map.Bo).toBe(speakerColorFor("Bo", ["Ada", "Bo"]))
+    })
+    it("handles empty/absent input", () => {
+        expect(buildSpeakerColors([])).toEqual({})
+        expect(buildSpeakerColors(undefined)).toEqual({})
+    })
+})
 
 describe("filterSortByDevice", () => {
     const rows = [

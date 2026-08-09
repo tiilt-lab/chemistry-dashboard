@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { formatSeconds, speakerColorFor } from "../../globals"
+import { formatSeconds, buildSpeakerColors } from "../../globals"
 import { SpeakerReassign } from "../speaker-reassign"
 import { sessionToVideo } from "../video-player/video-time"
 import { downloadBlob } from "../../utilities/download"
@@ -62,13 +62,6 @@ function transcriptsToCsv(rows, displayTime) {
         )
     }
     return lines.join("\n")
-}
-
-function buildSpeakerColors(transcripts) {
-    const tags = [...new Set((transcripts || []).map((t) => t.speaker_tag).filter(Boolean))]
-    const map = {}
-    for (const tag of tags) map[tag] = speakerColorFor(tag, tags)
-    return map
 }
 
 // Compact, scrollable transcript list shown inline on the pod-detail page.
