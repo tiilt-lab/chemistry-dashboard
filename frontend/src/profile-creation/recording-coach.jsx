@@ -203,6 +203,7 @@ function RecordingCoach({
         startVisionLoop();
     };
 
+    const stopEverythingRef = useRef(null);
     const stopEverything = () => {
         cancelTick();
         elapsedRef.current = 0;
@@ -226,6 +227,7 @@ function RecordingCoach({
         setCountdown(null);
         setElapsed(0);
     };
+    stopEverythingRef.current = stopEverything;
 
     // Audio meters. Refs, not per-render `let`s — the meter loop calls
     // setState every frame, so a re-render was guaranteed between start and
@@ -464,7 +466,7 @@ function RecordingCoach({
     }, [noiseFloorDb, rmsDb, clipping]);
 
     // Cleanup on unmount
-    useEffect(() => () => stopEverything(), []);
+    useEffect(() => () => stopEverythingRef.current(), []);
 
     // Helpers
     const cameras = devices.filter(d => d.kind === 'videoinput');

@@ -119,7 +119,7 @@ function ExpertRatingComponent() {
 
   useEffect(() => {
     if (itemsForRating.length > 0) {
-      loadDashboard(itemsForRating[0])
+      loadDashboardRef.current(itemsForRating[0])
     }
 
   }, [itemsForRating])
@@ -214,6 +214,7 @@ function ExpertRatingComponent() {
       )
   }
 
+  const loadDashboardRef = useRef(null);
   const loadDashboard = (selecteditem) => {
     setSession1Transcripts([])
     setTranscripts(null)
@@ -229,6 +230,7 @@ function ExpertRatingComponent() {
     setEvaluationOptionInstruction(evaloptInt)
     setSelectedItemForRating(selecteditem)
   }
+  loadDashboardRef.current = loadDashboard;
 
   const loadSession = (sessionid) => {
     const fetchData = sessionService.getSessionById(sessionid)

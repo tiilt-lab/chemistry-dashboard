@@ -196,7 +196,7 @@ function PodComponent() {
   }, [displayTranscripts, displayVideoMetrics, selectedSpkrId1, details]);
 
   useEffect(() => {
-    if (sessionDeviceId && session.id) getSpeakers();
+    if (sessionDeviceId && session.id) getSpeakersRef.current();
     else setSpeakers([]);
   }, [sessionDeviceId, session]);
 
@@ -206,7 +206,7 @@ function PodComponent() {
       // narrative streams in via the pending banner when not yet cached.
       latestParticipantRequest.current = participantIDReflectionDashboard
       setCurrentParticipant(participantIDReflectionDashboard)
-      extractParticipantData(participantIDReflectionDashboard)
+      extractParticipantDataRef.current(participantIDReflectionDashboard)
     }
   }, [participantIDReflectionDashboard])
 
@@ -304,6 +304,7 @@ function PodComponent() {
     }
   };
 
+  const getSpeakersRef = useRef(null);
   const getSpeakers = () => {
     const fetchData = new SessionService().getSessionDeviceSpeakers(
       session.id,
@@ -324,6 +325,7 @@ function PodComponent() {
       }
     );
   };
+  getSpeakersRef.current = getSpeakers;
 
   const removeDeviceFromSession = (deleteDevice = false) => {
     const fetchData = new SessionService().removeDeviceFromSession(
@@ -496,6 +498,7 @@ function PodComponent() {
   // ~30s Gemini generation, which renders as an inline pending banner instead
   // of a page-blocking dialog. `background` prefetches without touching what
   // is on screen (used to warm the remaining participants after first load).
+  const extractParticipantDataRef = useRef(null);
   const extractParticipantData = async (participantId, background = false) => {
     let respObj = buildData("Participant level sesssion analysis", participantId, null, null)
 
@@ -553,6 +556,7 @@ function PodComponent() {
       return false
     }
   }
+  extractParticipantDataRef.current = extractParticipantData;
 
   // After the first participant's reflection is up, quietly generate the
   // rest so switching students is instant (reports persist server-side too).
