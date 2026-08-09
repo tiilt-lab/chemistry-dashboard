@@ -20,11 +20,18 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-stop_words = []
+BASE_STOP_WORDS = ('from', 'subject', 're', 'edu', 'use')
+
+# Loaded once per process — spacy.load is ~1s and used to run on every
+# /api/v1/topics request, on the request thread.
+_nlp = None
 
 
-def add_stop_words(words):
-    stop_words.extend(words)
+def _get_nlp():
+    global _nlp
+    if _nlp is None:
+        _nlp = spacy.load("en_core_web_sm", disable=['parser', 'ner'])
+    return _nlp
 
 
 def generate_bigram(data_words):
@@ -68,12 +75,10 @@ def process_file(file_url):
 
 
 def generate_corpus(file_url, extra_stop_words):
-    stop_words = ['from', 'subject', 're', 'edu', 'use']
-    extra_stop_words = add_stop_words(stop_words)
-    if extra_stop_words:
-      stop_words = stop_words + extra_stop_words
-
-    add_stop_words(stop_words)
+    # Local list. The old code kept a module-global that grew on every
+    # request, and its add_stop_words() dance (which returns None) silently
+    # discarded the caller's extra stop words.
+    stop_words = list(BASE_STOP_WORDS) + [w for w in (extra_stop_words or []) if w]
 
     data = []
 
@@ -97,7 +102,7 @@ def generate_corpus(file_url, extra_stop_words):
     data_words_nostops = [[word for word in simple_preprocess(str(doc)) if word not in stop_words] for doc in data]
     data_words_bigrams = generate_bigram(data_words_nostops)
 
-    nlp = spacy.load("en_core_web_sm", disable=['parser', 'ner'])
+    nlp = _get_nlp()
     data_lemmatized = lemmatization(data_words_bigrams, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV'])
     texts = data_lemmatized
 

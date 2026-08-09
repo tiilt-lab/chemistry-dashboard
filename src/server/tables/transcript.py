@@ -32,7 +32,6 @@ class Transcript(db.Model):
         self.session_device_id = session_device_id
         self.start_time = start_time
         self.length = length
-        self.end_time = start_time + length
         self.question = question
         self.transcript = transcript
         self.word_count = len(transcript.split())

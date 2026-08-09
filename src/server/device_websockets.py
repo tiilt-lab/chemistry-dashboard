@@ -17,32 +17,41 @@ class ConnectionManager:
 
     def __init__(self):
         ConnectionManager.instance = self
+        # connections is mutated on the websocket reactor thread and read
+        # from Flask request threads — every access goes through the lock.
+        self._lock = threading.Lock()
         self.connections = []
         self.jobs = {}
 
     def add_connection(self, device_id, socket):
-        match = next((conn for conn in self.connections if conn['id'] == device_id), None)
+        with self._lock:
+            match = next((conn for conn in self.connections if conn['id'] == device_id), None)
         if match:
             self.remove_connection(match['id'], match['socket'])
-        self.connections.append({'id':device_id, 'socket': socket})
+        with self._lock:
+            self.connections.append({'id':device_id, 'socket': socket})
+            count = len(self.connections)
         from app import app
         with app.app_context():
             database.set_device_connected(device_id, True)
             database.close_session()
-        print(len(self.connections))
+        logging.info('%d device(s) connected.', count)
 
     def remove_connection(self, device_id, socket):
-        match = next((conn for conn in self.connections if conn['id'] == device_id and conn['socket'] == socket), None)
+        with self._lock:
+            match = next((conn for conn in self.connections if conn['id'] == device_id and conn['socket'] == socket), None)
+            if match is not None:
+                self.connections = [conn for conn in self.connections if conn['id'] != device_id]
         if match is not None:
             from app import app
             with app.app_context():
                 database.set_device_connected(device_id, False)
                 database.close_session()
-            self.connections = [conn for conn in self.connections if conn['id'] != device_id]
             logging.info('Device {0} has disconnected.'.format(device_id))
 
     def send_command_and_wait(self, device_id, command):
-        match = next((conn for conn in self.connections if conn['id'] == device_id), None)
+        with self._lock:
+            match = next((conn for conn in self.connections if conn['id'] == device_id), None)
         success = False
         response = None
         if match:
@@ -50,16 +59,18 @@ class ConnectionManager:
             command['job_id'] = job.job_id
             self.jobs[job.job_id] = job
             match['socket'].send_json(command)
-            while not job.is_timed_out() and not job.is_complete():
-                time.sleep(0.1)
+            # Event wait instead of the old 0.1s busy-poll on the request
+            # thread; wakes immediately when the response lands.
+            job.wait()
             if job.is_complete():
                 success = True
                 response = job.response_data
-            self.jobs.pop(job.job_id)
+            self.jobs.pop(job.job_id, None)
         return success, response
 
     def send_command(self, device_id, command):
-        match = next((conn for conn in self.connections if conn['id'] == device_id), None)
+        with self._lock:
+            match = next((conn for conn in self.connections if conn['id'] == device_id), None)
         if match:
             match['socket'].send_json(command)
             return True
@@ -77,10 +88,16 @@ class Job:
         self.timeout = timeout
         self.response_time = None
         self.response_data = None
+        self._done = threading.Event()
 
     def add_response(self, data):
         self.response_time = time.time()
         self.response_data = data
+        self._done.set()
+
+    def wait(self):
+        # True the moment the response arrives; False on timeout.
+        return self._done.wait(self.timeout)
 
     def is_complete(self):
         return self.response_time is not None

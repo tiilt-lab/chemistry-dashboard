@@ -214,7 +214,7 @@ def add_transcript(**kwargs):
         transcript = _persist_transcript(session_device, p)
         room_name = str(session_device.session_id)
         socketio.emit('transcript_update', json.dumps(transcript.json()), room=room_name, namespace="/session")
-        res = {'transcript_id': transcript.__hash__()}
+        res = {'transcript_id': transcript.id}
     return json_response(payload=res)
 
 
@@ -255,7 +255,7 @@ def add_speaker_transcript_metrics(**kwargs):
                                                     communication_density=communication_density[i])
             metrics.append(metric.json())
         socketio.emit('transcript_metrics_update', json.dumps({'transcript':transcript.json(), 'speaker_metrics':metrics}), room=room_name, namespace="/session")
-        res = {'transcript_id': transcript.__hash__()}
+        res = {'transcript_id': transcript.id}
     return json_response(payload=res)
 
 def _gaze_overlay_path(session_device_id):

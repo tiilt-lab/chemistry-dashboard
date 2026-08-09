@@ -15,7 +15,8 @@ import logging
 import os
 
 import numpy as np
-from flask import Blueprint
+from datetime import datetime, timedelta, timezone
+from flask import Blueprint, request
 
 import database
 import wrappers
@@ -123,8 +124,17 @@ def _pod_report(device):
 @api_routes.route('/api/v1/data_quality', methods=['GET'])
 @wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
 def data_quality(**kwargs):
+    # Each pod costs several queries plus embedding reads from disk, and the
+    # ended-session list grows all term — bound the default sweep to the
+    # last 30 days (override with ?days=N, days=0 for everything).
+    try:
+        days = int(request.args.get('days', 30))
+    except (TypeError, ValueError):
+        days = 30
+    cutoff = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)) if days > 0 else None
     sessions = [s for s in database.get_sessions()
-                if s.end_date is not None]
+                if s.end_date is not None
+                and (cutoff is None or s.creation_date >= cutoff)]
     report = []
     for s in sessions:
         devices = database.get_session_devices(session_id=s.id) or []

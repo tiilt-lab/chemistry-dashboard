@@ -277,8 +277,15 @@ def get_llm_question_answer_interactions(session_id,session_device_id,username, 
     if answers:
         retObj = []
         for ans in answers:
-            ans.answer = json.loads(str(ans.answer))
-            retObj.append(ans.json())
+            # Parse into the response dict only — assigning the dict onto the
+            # live ORM object's Text column was a latent corruption trap (it
+            # only survived because nothing committed afterwards).
+            row = ans.json()
+            try:
+                row['answer'] = json.loads(str(ans.answer))
+            except (json.JSONDecodeError, ValueError, TypeError):
+                row['answer'] = {'raw': str(ans.answer)}
+            retObj.append(row)
 
         return json_response(retObj)
     else:

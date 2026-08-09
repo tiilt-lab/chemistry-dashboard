@@ -133,9 +133,11 @@ def update_session(session_id, user, **kwargs):
 def delete_session(session_id, **kwargs):
     success =False
     try:
-        success = database.delete_session(session_id) 
-    except Exception as e:
-        logging.info("error occurred while deleting session: {0}".format(e))    
+        success = database.delete_session(session_id)
+    except Exception:
+        # exception-level with stack: info collapsed FK errors and deadlocks
+        # into a generic 400 with no trace of what actually failed.
+        logging.exception("error occurred while deleting session %s", session_id)
     if success:
         return json_response()
     else:
@@ -1167,8 +1169,13 @@ def export_session_transcript_metrics(session_id,windowsize, format, **kwargs):
         for session_device in session_devices:
             transcripts = database.get_all_transcript_metrics_by_session(session_device_id=session_device.id)
             keywords = database.get_keyword_usages(session_device_id=session_device.id)
+            # Index once: the per-transcript list scan was O(transcripts x
+            # keyword_usages) per export.
+            keywords_by_transcript = {}
+            for keyword in keywords:
+                keywords_by_transcript.setdefault(keyword.transcript_id, []).append(keyword)
             for t, sm in transcripts:
-                transcript_keywords = [keyword for keyword in keywords if keyword.transcript_id == t.id]
+                transcript_keywords = keywords_by_transcript.get(t.id, [])
                 fwrite.writerow({'Device ID':session_device.id,
                     'Device Name':session_device.name,
                     'Start Time': str(timedelta(seconds=int(t.start_time))),
@@ -1268,8 +1275,13 @@ def export_session_transcript_video_metrics(session_id,windowsize, format, **kwa
         for session_device in session_devices:
             all_metrics = database.get_all_metrics_by_session(session_device_id=session_device.id)
             keywords = database.get_keyword_usages(session_device_id=session_device.id)
+            # Index once: the per-transcript list scan was O(transcripts x
+            # keyword_usages) per export.
+            keywords_by_transcript = {}
+            for keyword in keywords:
+                keywords_by_transcript.setdefault(keyword.transcript_id, []).append(keyword)
             for t,sm,vm in all_metrics:
-                transcript_keywords = [keyword for keyword in keywords if keyword.transcript_id == t.id]
+                transcript_keywords = keywords_by_transcript.get(t.id, [])
                 fwrite.writerow({'Device ID':session_device.id,
                     'Device Name':session_device.name,
                     'Start Time': str(t.start_time), #str(timedelta(seconds=int(t.start_time))),

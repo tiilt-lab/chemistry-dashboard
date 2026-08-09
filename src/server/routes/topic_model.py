@@ -17,6 +17,10 @@ api_routes = Blueprint('fileupload', __name__)
 @wrappers.verify_login()
 def post_file(user_id, **kwargs):
     logging.info("Upload a file.")
+    # The corpus dir is per-user; without this check any logged-in account
+    # could seed another user's topic-model corpus.
+    if user_id != kwargs['user']['id']:
+        return json_response({'message': 'Cannot upload into another user\'s corpus.'}, 403)
     if request.method == 'POST':
         logging.info("This is a post")
         # fileUploaded = request.files['fileUpload']
@@ -47,7 +51,9 @@ def get_topics(user, **kwargs):
 
     if not os.path.exists("topicModels"):
       os.makedirs("topicModels")
-    dump(topicModel, os.path.join("topicModels", "tempModel"))
+    # Per-user temp name: with the shared "tempModel", two users generating
+    # and saving concurrently swapped each other's models.
+    dump(topicModel, os.path.join("topicModels", "tempModel_{0}".format(user['id'])))
 
     response = [topic[1] for topic in topicModel.print_topics()]
     logging.info(response)
@@ -66,9 +72,12 @@ def save_topic_model(user, **kwargs):
   if not valid:
     return json_response({'message': message}, 400)
   if new_name is not None:
+    temp_path = os.path.join("topicModels", "tempModel_{0}".format(user['id']))
+    if not os.path.isfile(temp_path):
+      return json_response({'message': 'No generated topic model to save — generate topics first.'}, 400)
     new_topic_model = database.add_topic_model(user['id'], new_name, summary)
     file_name = "{}_{}".format(new_topic_model.owner_id, new_topic_model.id)
-    os.rename(os.path.join("topicModels", "tempModel"), os.path.join("topicModels", file_name))
+    os.rename(temp_path, os.path.join("topicModels", file_name))
     return json_response(new_topic_model.json())
   else:
     return json_response({'message': 'Must provide "name".'}, status=400)

@@ -37,7 +37,9 @@ def _check_transcripts():
 				if len(transcripts) == 0:
 					logging.info('Session {0}: no transcripts, no connected devices, and unwatched for {1} minutes - stopping.'.format(session.id, int(TIMEOUT / 60)))
 					session_handler.end_session(session.id)
-	except Exception as ex:
-		logging.info('Session timeout scheduled task has failed: {0}'.format(ex))
+	except Exception:
+		# The auto-close job failing silently means sessions never end; log
+		# with the stack so the cause is visible in the journal.
+		logging.exception('Session timeout scheduled task has failed')
 	finally:
 		database.close_session()

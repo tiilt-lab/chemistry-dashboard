@@ -106,7 +106,7 @@ def delete_user(user_id, **kwargs):
     if success:
         return json_response()
     else:
-        return json_response({'User not found.'}, 400)
+        return json_response({'message': 'User not found.'}, 400)
     
 # Merge duplicate student profiles (students self-register during joining,
 # so the same person often ends up with several usernames). Moves all
@@ -127,20 +127,34 @@ def merge_student(student_id, **kwargs):
         return json_response({'message': 'Student not found.'}, 404)
     # Usernames build a path for os.remove/os.rename — basename them so a
     # traversed name can't reach outside the biometrics dir.
-    bio_dir = os.path.join(cf.root_dir(), "chemistry-dashboard/audio_processing/audiovideobiometrics")
     dup_safe = utility.safe_name(moved['duplicate_username'])
     target_safe = utility.safe_name(target.username)
+    # ALL enrollment artifacts follow the username, not just the raw .webm —
+    # the voice print (.wav/.emb.npy/.check.json) and face embeddings
+    # (.npy/.arc.npy) are what diarization and the Students page actually
+    # read; leaving them behind made the surviving profile "not enrolled"
+    # and lost the voice print.
+    src_dir = os.path.join(cf.root_dir(), "chemistry-dashboard")
+    artifact_files = [
+        (os.path.join(src_dir, "audio_processing", "audiovideobiometrics"), (".webm",)),
+        (os.path.join(src_dir, "audio_processing", "audiobiometrics"),
+         (".wav", ".emb.npy", ".check.json")),
+        (os.path.join(src_dir, "video_processing", "facial_embeddings"),
+         (".npy", ".arc.npy")),
+    ]
     try:
         if dup_safe and target_safe:
-            dup_file = os.path.join(bio_dir, "{0}.webm".format(dup_safe))
-            target_file = os.path.join(bio_dir, "{0}.webm".format(target_safe))
-            if os.path.isfile(dup_file):
-                if os.path.isfile(target_file):
-                    os.remove(dup_file)
-                else:
-                    os.rename(dup_file, target_file)
+            for folder, exts in artifact_files:
+                for ext in exts:
+                    dup_file = os.path.join(folder, dup_safe + ext)
+                    target_file = os.path.join(folder, target_safe + ext)
+                    if os.path.isfile(dup_file):
+                        if os.path.isfile(target_file):
+                            os.remove(dup_file)
+                        else:
+                            os.rename(dup_file, target_file)
     except Exception as e:
-        logging.info('Unable to move biometric file during merge: {0}'.format(e))
+        logging.warning('Unable to move biometric files during merge: {0}'.format(e))
     return json_response({'moved': moved, 'target': target.json()})
 
 
@@ -152,14 +166,25 @@ def delete_student(student_id, **kwargs):
         safe_username = utility.safe_name(student.username)
         try:
             if safe_username:
-                biometric_file_path = os.path.join(cf.root_dir(), "chemistry-dashboard/audio_processing/audiovideobiometrics","{0}.webm".format(safe_username))
-                if os.path.isfile(biometric_file_path):
-                    os.remove(biometric_file_path)
+                # Remove every enrollment artifact, not just the raw .webm
+                # (same set the merge endpoint moves).
+                src_dir = os.path.join(cf.root_dir(), "chemistry-dashboard")
+                for folder, exts in [
+                    (os.path.join(src_dir, "audio_processing", "audiovideobiometrics"), (".webm",)),
+                    (os.path.join(src_dir, "audio_processing", "audiobiometrics"),
+                     (".wav", ".emb.npy", ".check.json")),
+                    (os.path.join(src_dir, "video_processing", "facial_embeddings"),
+                     (".npy", ".arc.npy")),
+                ]:
+                    for ext in exts:
+                        p = os.path.join(folder, safe_username + ext)
+                        if os.path.isfile(p):
+                            os.remove(p)
         except Exception as e:
             logging.info('Unable to delete biometric file: {0}'.format(e))
         return json_response()
     else:
-        return json_response({'User not found.'}, 400)
+        return json_response({'message': 'User not found.'}, 400)
     
 @api_routes.route('/api/v1/admin/raters/<int:id>', methods=['DELETE'])
 @wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
@@ -168,7 +193,7 @@ def delete_rater(id, **kwargs):
     if rater is not None:
         return json_response()
     else:
-        return json_response({'Rater not found.'}, 400)
+        return json_response({'message': 'Rater not found.'}, 400)
 
 @api_routes.route('/api/v1/admin/users/<int:user_id>/lock', methods=['POST'])
 @wrappers.verify_login(roles=wrappers.ADMIN_ROLES)

@@ -1,3 +1,4 @@
+import hmac
 from app import db
 from datetime import datetime, timedelta, timezone
 import hashlib
@@ -42,13 +43,14 @@ class APIClient(db.Model):
         salt_bytes = self.salt.encode('ascii')
         secret_hash = hashlib.pbkdf2_hmac('sha512', provided_secret.encode('utf-8'), salt_bytes, 100000)
         secret_hash = binascii.hexlify(secret_hash).decode('ascii')
-        return secret_hash == self.client_secret_hash
+        # Constant-time compare; == leaks a timing signal.
+        return hmac.compare_digest(secret_hash, self.client_secret_hash)
 
     def verify_token(self, provided_token):
         salt_bytes = self.salt.encode('ascii')
         token_hash = hashlib.pbkdf2_hmac('sha512', provided_token.encode('utf-8'), salt_bytes, 100000)
         token_hash = binascii.hexlify(token_hash).decode('ascii')
-        return token_hash == self.client_token_hash and datetime.now(timezone.utc).replace(tzinfo=None) < self.expiration_date
+        return hmac.compare_digest(token_hash, self.client_token_hash) and datetime.now(timezone.utc).replace(tzinfo=None) < self.expiration_date
 
     def json(self):
         return dict(

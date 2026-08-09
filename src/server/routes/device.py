@@ -29,6 +29,8 @@ def update_device(device_id, **kwargs):
     if not valid:
         return json_response({'message': message}, 400)
     device = database.edit_device(device_id, name=name, connected=connected)
+    if device is None:
+        return json_response({'message': 'Device not found.'}, 404)
     return json_response(device.json())
 
 

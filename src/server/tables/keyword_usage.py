@@ -20,7 +20,7 @@ class KeywordUsage(db.Model):
         self.keyword = keyword
         self.similarity = similarity
 
-    def json(self, suppress=[]):
+    def json(self, suppress=()):
         json_data = dict(
             id=self.id,
             word=self.word,

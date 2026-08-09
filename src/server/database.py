@@ -518,6 +518,9 @@ def edit_device(deivce_id, name=None, connected=None):
 
 def set_device_connected(device_id, connected):
     device = get_devices(id=device_id)
+    if device is None:
+        logging.warning('set_device_connected: unknown device id %r', device_id)
+        return
     device.connected = connected
     db.session.commit()
 
@@ -1238,6 +1241,8 @@ def add_folder(owner_id, name=None, parent=None):
 
 def update_folder(folder_id, name=None, parent=None):
     folder = db.session.query(Folder).filter(Folder.id == folder_id).first()
+    if folder is None:
+        return None
     if name is not None:
         folder.name = name
     # -1 means root folder, none means no change.

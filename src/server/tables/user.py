@@ -2,9 +2,10 @@ from app import db
 from datetime import datetime, timezone
 from utility import verify_characters
 import hashlib
+import hmac
 import os
 import binascii
-import random
+import secrets
 import string
 import re
 
@@ -59,10 +60,13 @@ class User(db.Model):
         salt_bytes = self.salt.encode('ascii')
         pwdhash = hashlib.pbkdf2_hmac('sha512', provided_password.encode('utf-8'), salt_bytes, 100000)
         pwdhash = binascii.hexlify(pwdhash).decode('ascii')
-        return pwdhash == self.hash_pass
+        # Constant-time compare; == leaks a timing signal.
+        return hmac.compare_digest(pwdhash, self.hash_pass)
 
     def reset_password(self, length):
-        random_password = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(length))
+        # secrets, not random: Mersenne Twister output is predictable, and
+        # this password gates the account until the user changes it.
+        random_password = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(length))
         self.set_password(random_password, validate=False)
         self.change_password = True
         return random_password
