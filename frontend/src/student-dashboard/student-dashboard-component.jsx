@@ -215,7 +215,7 @@ function StudentSessionDashboard() {
       setDisplaySingleSession(true);
     }
 
-  }, [selectedDeviceID])
+  }, [selectedDeviceID, firstLoadCompleted, sessionId])
 
 
   // ___________________________________________________________ 

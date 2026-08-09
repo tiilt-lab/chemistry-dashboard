@@ -346,7 +346,7 @@ function JoinPage() {
 
     // SECOND LEVEL: THIS IS TRIGGERED WHEN THE USER CLICKS ON THE JOIN BUTTON AND TRIGGERS THE VALIDATION OF THE INPUTS AND AUDIO DEVICES. THIS THEN TRIGGERS THE REQUEST FOR THE ACCESS KEY FROM THE SERVER
     useEffect(() => {
-        if (constraintObj !== null && mimetype !== null && pcode !== "" && joinwith.current !== "") handleStream()
+        if (constraintObj !== null && mimetype !== null && pcode !== "" && joinwith.current !== "") handleStreamRef.current()
     }, [constraintObj, pcode, mimetype])
 
 
@@ -1326,6 +1326,7 @@ function JoinPage() {
         setArmed(true)
     }
 
+    const handleStreamRef = useRef(null);
     const handleStream = async () => {
         try {
             //Await wake lock for screen first
@@ -1463,6 +1464,8 @@ function JoinPage() {
             disconnect(true)
         }
     }
+
+    handleStreamRef.current = handleStream;
 
     // Verifies the users connection input, then routes through the device
     // check page (camera preview, mic levels, channel choice) before the
