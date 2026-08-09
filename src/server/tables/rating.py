@@ -1,12 +1,6 @@
 from app import db
 from datetime import datetime, timezone
 from utility import verify_characters
-import hashlib
-import os
-import binascii
-import random
-import string
-import re
 
 class Rating(db.Model):
     __tablename__ = 'rating'

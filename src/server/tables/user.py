@@ -50,7 +50,10 @@ class User(db.Model):
             role=self.role,
             email=self.email,
             creation_date=str(self.creation_date) + ' UTC',
-            last_login=self.last_login,
+            # Match creation_date's ' UTC' suffix — without it the frontend's
+            # stringToDate parsed last_login as LOCAL time, not UTC (nullable,
+            # so guard None).
+            last_login=(str(self.last_login) + ' UTC') if self.last_login else None,
             locked=self.locked,
             change_password=self.change_password,
             api_access=(self.api_client is not None)

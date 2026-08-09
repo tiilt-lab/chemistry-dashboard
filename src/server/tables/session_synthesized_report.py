@@ -2,12 +2,6 @@ from app import db
 from datetime import datetime, timezone
 from utility import verify_characters
 from sqlalchemy.dialects.mysql import LONGTEXT
-import hashlib
-import os
-import binascii
-import random
-import string
-import re
 
 class SessionSynthesizedReport(db.Model):
     __tablename__ = 'session_synthesized_report'
