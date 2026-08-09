@@ -7,6 +7,7 @@ from tables.session_device import SessionDevice
 from redis_helper import RedisSessions
 from tables.session import Session
 from utility import json_response,batch_video_metrics,batch_transcript_metrics,batch_transcript_video_metrics,synthesized_transcript_video_metrics_by_window
+from metrics_windowing import fmt_start_time
 from app import socketio
 import logging
 import database
@@ -1200,7 +1201,7 @@ def export_session_transcript_metrics(session_id,windowsize, format, **kwargs):
                 transcript_keywords = keywords_by_transcript.get(t.id, [])
                 fwrite.writerow({'Device ID':session_device.id,
                     'Device Name':session_device.name,
-                    'Start Time': str(timedelta(seconds=int(t.start_time))),
+                    'Start Time': fmt_start_time(t.start_time),
                     'Transcript Id': int(t.id),
                     'Transcript':t.transcript,
                     'Keywords': ', '.join([keyword.keyword for keyword in transcript_keywords]),
@@ -1258,7 +1259,7 @@ def export_session_video_metrics(session_id, windowsize, format, **kwargs):
             for v in videoMetrics:
                 fwrite.writerow({'Device ID':session_device.id,
                     'Device Name':session_device.name,
-                    'Start Time':str(timedelta(seconds=int(v.time_stamp))),
+                    'Start Time': fmt_start_time(v.time_stamp),
                     'Facial Emotion': str(v.facial_emotion),
                     'Object Focus On': str(v.object_on_focus),
                     'Attention Level': int(v.attention_level),
@@ -1306,7 +1307,7 @@ def export_session_transcript_video_metrics(session_id,windowsize, format, **kwa
                 transcript_keywords = keywords_by_transcript.get(t.id, [])
                 fwrite.writerow({'Device ID':session_device.id,
                     'Device Name':session_device.name,
-                    'Start Time': str(t.start_time), #str(timedelta(seconds=int(t.start_time))),
+                    'Start Time': fmt_start_time(t.start_time),
                     'Transcript':t.transcript,
                     'Keywords': ', '.join([keyword.keyword for keyword in transcript_keywords]),
                     'Keywords Detected': ', '.join([keyword.word for keyword in transcript_keywords]),

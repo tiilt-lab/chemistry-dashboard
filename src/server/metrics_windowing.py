@@ -5,6 +5,15 @@ Flask/SQLAlchemy, and so the two utility.py call sites (CSV export and
 synthesis) share ONE implementation instead of drifting copies.
 """
 from collections import Counter
+from datetime import timedelta
+
+
+def fmt_start_time(seconds):
+    """Format a start-time offset (seconds, possibly float) as H:MM:SS for the
+    CSV exports. The three export routes formatted this column inconsistently —
+    two as H:MM:SS, one as raw seconds — so it lives here once.
+    """
+    return str(timedelta(seconds=int(seconds)))
 
 
 def reduce_video_window(facial_emotion, object_on_focus, attention_level,

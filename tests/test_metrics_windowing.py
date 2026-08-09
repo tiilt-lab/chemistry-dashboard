@@ -16,7 +16,27 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src", "server"))
 
-from metrics_windowing import reduce_video_window  # noqa: E402
+from metrics_windowing import reduce_video_window, fmt_start_time  # noqa: E402
+
+
+def test_fmt_start_time_is_hms_everywhere():
+    # The three CSV exports formatted the "Start Time" column three ways: two
+    # used H:MM:SS, the third leaked raw seconds (str(t.start_time)). One shared
+    # formatter, H:MM:SS, for all of them.
+    assert fmt_start_time(0) == "0:00:00"
+    assert fmt_start_time(65) == "0:01:05"
+    assert fmt_start_time(3661) == "1:01:01"
+    # Accepts float seconds (DB columns are floats); truncates to whole seconds.
+    assert fmt_start_time(65.9) == "0:01:05"
+
+
+def test_all_three_exports_use_the_shared_start_time_formatter():
+    with open(os.path.join(os.path.dirname(__file__), "..", "src", "server",
+                           "routes", "session.py")) as f:
+        s = f.read()
+    assert s.count("fmt_start_time(") >= 3, \
+        "all three CSV exports must format Start Time via the shared helper"
+    assert "str(t.start_time)," not in s, "raw-seconds Start Time drift must be gone"
 
 
 def test_empty_window_has_no_attention_not_zero():
