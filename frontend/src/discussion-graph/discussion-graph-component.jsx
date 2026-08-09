@@ -1,5 +1,5 @@
 import { similarityToRGB, formatSeconds } from '../globals';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOutletContext } from 'react-router-dom';
 import { DiscussionPage } from './html-pages'
@@ -68,9 +68,13 @@ function DiscussionGraphComponent() {
     };
   }, [])
 
+  // Latest updateGraph, so the rebuild effect stays keyed on its real inputs
+  // (updateGraph is a body function recreated every render).
+  const updateGraphRef = useRef(null);
+
   // Rebuild whenever either input lands, in whichever order they arrive.
   useEffect(() => {
-    updateGraph();
+    updateGraphRef.current();
   }, [transcripts, sessionDevices])
 
   useEffect(()=>{
@@ -131,6 +135,8 @@ function DiscussionGraphComponent() {
   const navigateToSession = () => {
     navigate('/sessions/' + session.id);
   }
+
+  updateGraphRef.current = updateGraph;
 
   const generateTimestamps = (lastTranscript) => {
     //a fix of the timestamp mistake
