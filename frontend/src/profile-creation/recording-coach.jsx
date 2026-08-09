@@ -211,13 +211,20 @@ function RecordingCoach({
         setElapsed(0);
     };
 
-    // Audio meters
-    let meterRAF = 0;
+    // Audio meters. Refs, not per-render `let`s — the meter loop calls
+    // setState every frame, so a re-render was guaranteed between start and
+    // stop, and stop cancelled a stale (usually 0) id: both loops then ran
+    // (FaceDetector per frame included) until the tab reloaded. Same fix the
+    // recorder-tick loop already has (rafRef/tickActiveRef above).
+    const meterRAF = useRef(null);
+    const meterActive = useRef(false);
     const startMeters = () => {
         const analyser = analyserRef.current;
         if (!analyser) return;
         const buf = new Float32Array(analyser.fftSize);
+        meterActive.current = true;
         const loop = () => {
+            if (!meterActive.current) return;
             analyser.getFloatTimeDomainData(buf);
             // RMS
             const rms = Math.sqrt(buf.reduce((s, v) => s + v * v, 0) / buf.length) || 1e-8;
@@ -227,14 +234,21 @@ function RecordingCoach({
             setRmsDb(rmsDbNew);
             setPeakDb(peakDbNew);
             setClipping(peak > 0.98); // near full‑scale
-            meterRAF = requestAnimationFrame(loop);
+            meterRAF.current = requestAnimationFrame(loop);
         };
-        meterRAF = requestAnimationFrame(loop);
+        meterRAF.current = requestAnimationFrame(loop);
     };
-    const stopMeters = () => cancelAnimationFrame(meterRAF);
+    const stopMeters = () => {
+        meterActive.current = false;
+        if (meterRAF.current !== null) {
+            cancelAnimationFrame(meterRAF.current);
+            meterRAF.current = null;
+        }
+    };
 
     // Vision loop (brightness + face guidance)
-    let visionRAF = 0;
+    const visionRAF = useRef(null);
+    const visionActive = useRef(false);
     const startVisionLoop = () => {
         const v = videoRef.current;
         const c = canvasRef.current;
@@ -242,9 +256,11 @@ function RecordingCoach({
         const ctx = c.getContext('2d');
         if (!ctx) return;
 
+        visionActive.current = true;
         const loop = async () => {
+            if (!visionActive.current) return;
             if (!v.videoWidth || !v.videoHeight) {
-                visionRAF = requestAnimationFrame(loop);
+                visionRAF.current = requestAnimationFrame(loop);
                 return;
             }
             c.width = v.videoWidth;
@@ -296,11 +312,18 @@ function RecordingCoach({
             if (FaceDetectorApi && !fOk) vHints.push('Center your face and keep eyes level; fill ~1/3 of frame.');
             setHintsVideo(vHints);
 
-            visionRAF = requestAnimationFrame(loop);
+            if (!visionActive.current) return;
+            visionRAF.current = requestAnimationFrame(loop);
         };
-        visionRAF = requestAnimationFrame(loop);
+        visionRAF.current = requestAnimationFrame(loop);
     };
-    const stopVisionLoop = () => cancelAnimationFrame(visionRAF);
+    const stopVisionLoop = () => {
+        visionActive.current = false;
+        if (visionRAF.current !== null) {
+            cancelAnimationFrame(visionRAF.current);
+            visionRAF.current = null;
+        }
+    };
 
     // Start a recording (test or full)
     const beginRecording = async (mode) => {

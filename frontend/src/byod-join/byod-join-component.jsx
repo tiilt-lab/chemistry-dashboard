@@ -330,7 +330,12 @@ function JoinPage() {
 
     const interval = 10000
 
-    let wakeLock = null
+    // Refs, not per-render `let`s: disconnect runs from a later render whose
+    // `let wakeLock` binding was always null, so the lock was never released
+    // — and each acquire added another permanent visibilitychange listener
+    // that re-requested the lock forever after leaving the session.
+    const wakeLock = useRef(null)
+    const wakeLockVisListener = useRef(null)
 
     // FIRST EFFECT THAT RENDERS THE PAGE WITH METRIC OPTIONS INITIALIZATION
     useEffect(() => {
@@ -725,7 +730,7 @@ function JoinPage() {
             setPolarInfo({})
         }
 
-        if (wakeLock) releaseWakeLock()
+        releaseWakeLock()
 
         if (source.current != null) {
             source.current.disconnect()
@@ -2150,8 +2155,15 @@ function JoinPage() {
     }
 
     const closeDialog = () => {
-        if (currentForm === "ClosedSession")
+        if (currentForm === "ClosedSession") {
+            // Dismissing "Session ended" returns to the join form (identity
+            // kept, per disconnect's contract) — ending.current previously
+            // stayed latched, deriving the terminal "ended" phase forever,
+            // and the pod was stranded on a header-only blank page.
             setPrevSessionId(-1)
+            ending.current = false
+            constraintObjRefReset()
+        }
         setCurrentForm("")
     }
 
@@ -2176,27 +2188,38 @@ function JoinPage() {
         }
 
         try {
-            wakeLock = await navigator.wakeLock.request("screen")
-            wakeLock.addEventListener("release", () => {
-            })
-            document.addEventListener("visibilitychange", async () => {
-                if (
-                    wakeLock !== null &&
-                    document.visibilityState === "visible"
-                ) {
-                    wakeLock = await navigator.wakeLock.request("screen")
+            wakeLock.current = await navigator.wakeLock.request("screen")
+            if (wakeLockVisListener.current === null) {
+                // One listener for the component's lifetime; it re-acquires
+                // only while a lock is meant to be held (ref non-null).
+                wakeLockVisListener.current = async () => {
+                    if (
+                        wakeLock.current !== null &&
+                        document.visibilityState === "visible"
+                    ) {
+                        try {
+                            wakeLock.current = await navigator.wakeLock.request("screen")
+                        } catch {
+                            /* backgrounded tabs can refuse; retried on next visible */
+                        }
+                    }
                 }
-            })
+                document.addEventListener("visibilitychange", wakeLockVisListener.current)
+            }
         } catch (err) {
             console.error(err)
         }
     }
 
-    const releaseWakeLock = async () => {
+    const releaseWakeLock = () => {
         try {
-            wakeLock.release().then(() => {
-                wakeLock = null
-            })
+            if (wakeLockVisListener.current !== null) {
+                document.removeEventListener("visibilitychange", wakeLockVisListener.current)
+                wakeLockVisListener.current = null
+            }
+            const lock = wakeLock.current
+            wakeLock.current = null
+            if (lock) lock.release().catch(() => {})
         } catch (err) {
             console.error(`WakeLock release error: ${err}`)
         }

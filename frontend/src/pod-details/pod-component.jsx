@@ -39,7 +39,6 @@ function PodComponent() {
   const [timeRange, setTimeRange] = useState([0, 1]);
   const [startTime, setStartTime] = useState();
   const [endTime, setEndTime] = useState();
-  const [intervalId, setIntervalId] = useState();
   const [activeSessionService] = useOutletContext();
   const [details, setDetails] = useState("Group");
   const [speakers, setSpeakers] = useState([]);
@@ -93,10 +92,14 @@ function PodComponent() {
       }
     }
     if (transcripts.length <= 0) {
-      const transcriptSub = activeSessionService.getTranscripts();
+      const transcriptObs = activeSessionService.getTranscripts();
       //const transcriptSub = activeSessionService.getSessionDeviceTranscripts(sessionDeviceId, setTranscripts);
 
-      transcriptSub.subscribe((e) => {
+      // Keep the SUBSCRIPTION (what .subscribe returns), not the observable
+      // — the old code pushed the observable, so cleanup never unsubscribed
+      // and every pod visit leaked a live subscription firing setState on an
+      // unmounted component for the rest of the session.
+      const transcriptSub = transcriptObs.subscribe((e) => {
         if (Object.keys(e).length !== 0) {
           const data = e
             .filter(
@@ -135,8 +138,8 @@ function PodComponent() {
 
 
     if (videoMetrics.length <= 0) {
-      const videoMetricsSub = activeSessionService.getVideoMetrics();
-      videoMetricsSub.subscribe((e) => {
+      const videoMetricsObs = activeSessionService.getVideoMetrics();
+      const videoMetricsSub = videoMetricsObs.subscribe((e) => {
         if (Object.keys(e).length !== 0) {
           const data = e
             .filter(
@@ -158,25 +161,23 @@ function PodComponent() {
     }
 
 
-    // Refresh based on timeslider.
-    setIntervalId(
-      setInterval(() => {
-        // console.log("Fetched onto pod-component");
-        //ResetTimeRange(timeRange);
-        if (session === undefined || !session.recording) {
-          clearInterval(intervalId);
-        }
-      }, 2000)
-    );
+    // Refresh based on timeslider. Local id, not the intervalId state: the
+    // tick and the cleanup both read the state value captured BEFORE
+    // setIntervalId committed (undefined), so the 2s interval never stopped.
+    const refreshIntervalId = setInterval(() => {
+      if (session === undefined || !session.recording) {
+        clearInterval(refreshIntervalId);
+      }
+    }, 2000);
 
     return () => {
-      subscriptions.map((sub) => {
-        if (sub.closed) {
-          sub.unsubscribe();
-        }
-      });
-      clearInterval(intervalId);
+      // unsubscribe() is idempotent; the old `if (sub.closed)` guard was
+      // inverted and only ever "cleaned" already-closed subscriptions.
+      subscriptions.forEach((sub) => sub.unsubscribe());
+      subscriptions.length = 0;
+      clearInterval(refreshIntervalId);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

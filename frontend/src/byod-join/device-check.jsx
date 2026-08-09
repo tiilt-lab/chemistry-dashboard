@@ -128,8 +128,16 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
     const videoRef = useRef(null)
     const cleanupRef = useRef(null)
     const streamRef = useRef(null)
+    // Generation token: openPreview is async, and a call still awaiting the
+    // permission prompt can't be cleaned by stopPreview (cleanupRef is only
+    // set at the end). Bumping the generation invalidates every pending call
+    // so its stream is stopped on arrival instead of leaking — an orphaned
+    // stream held the camera all session and made the real join's
+    // getUserMedia throw NotReadableError on many Androids.
+    const previewGen = useRef(0)
 
     const stopPreview = () => {
+        previewGen.current++
         if (cleanupRef.current) {
             cleanupRef.current()
             cleanupRef.current = null
@@ -179,6 +187,7 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
 
     const openPreview = async (audioDeviceId, videoDeviceId) => {
         stopPreview()
+        const gen = previewGen.current
         setError("")
         const chosenRes = parseResolution(resChoice)
         try {
@@ -205,6 +214,12 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
                     : false,
             }
             const stream = await navigator.mediaDevices.getUserMedia(constraints)
+            if (gen !== previewGen.current) {
+                // Superseded (device switch, or the join started) while we
+                // were behind the permission prompt: release immediately.
+                stream.getTracks().forEach((t) => t.stop())
+                return
+            }
             streamRef.current = stream
 
             const vtrack = stream.getVideoTracks()[0]
@@ -252,6 +267,11 @@ function InlineDeviceCheck({ wantsVideo, selectionRef }) {
 
             // Device labels only populate after permission is granted.
             const devices = await navigator.mediaDevices.enumerateDevices()
+            if (gen !== previewGen.current) {
+                if (orientFix) orientFix.stop()
+                stream.getTracks().forEach((t) => t.stop())
+                return
+            }
             setMics(devices.filter((d) => d.kind === "audioinput"))
             setCams(devices.filter((d) => d.kind === "videoinput"))
 

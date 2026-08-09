@@ -49,7 +49,11 @@ function SignupPage() {
     const apiService = new ApiService()
     const interval = 10000
 
-    let wakeLock = null
+    // Refs, not per-render `let`s — same fix as the join page: the release
+    // path ran in a later render whose binding was null, and each acquire
+    // stacked another permanent visibilitychange re-acquirer.
+    const wakeLock = useRef(null)
+    const wakeLockVisListener = useRef(null)
 
     useEffect(() => {
         if (studentObject != null) {
@@ -629,27 +633,36 @@ function SignupPage() {
         }
 
         try {
-            wakeLock = await navigator.wakeLock.request("screen")
-            wakeLock.addEventListener("release", () => {
-            })
-            document.addEventListener("visibilitychange", async () => {
-                if (
-                    wakeLock !== null &&
-                    document.visibilityState === "visible"
-                ) {
-                    wakeLock = await navigator.wakeLock.request("screen")
+            wakeLock.current = await navigator.wakeLock.request("screen")
+            if (wakeLockVisListener.current === null) {
+                wakeLockVisListener.current = async () => {
+                    if (
+                        wakeLock.current !== null &&
+                        document.visibilityState === "visible"
+                    ) {
+                        try {
+                            wakeLock.current = await navigator.wakeLock.request("screen")
+                        } catch {
+                            /* backgrounded tabs can refuse; retried on next visible */
+                        }
+                    }
                 }
-            })
+                document.addEventListener("visibilitychange", wakeLockVisListener.current)
+            }
         } catch (err) {
             console.error(err)
         }
     }
 
-    const releaseWakeLock = async () => {
+    const releaseWakeLock = () => {
         try {
-            wakeLock.release().then(() => {
-                wakeLock = null
-            })
+            if (wakeLockVisListener.current !== null) {
+                document.removeEventListener("visibilitychange", wakeLockVisListener.current)
+                wakeLockVisListener.current = null
+            }
+            const lock = wakeLock.current
+            wakeLock.current = null
+            if (lock) lock.release().catch(() => {})
         } catch (err) {
             console.error(`WakeLock release error: ${err}`)
         }

@@ -76,15 +76,17 @@ export function deriveJoinPhase(
 
 // Legal forward transitions — the reference the incremental migration checks
 // itself against. Reconnects re-enter `connecting` from `recording`/`ready`;
-// backing out of speaker setup returns to `form`; `ended` is terminal for a
-// pod.
+// backing out of speaker setup returns to `form`. Dismissing the
+// session-ended dialog returns to `form` (identity kept) so the pod can
+// rejoin the next session — `ended` used to be terminal, which left a
+// header-only blank page with no way forward.
 export const JOIN_TRANSITIONS: Record<JoinPhase, JoinPhase[]> = {
     form: ["enrolling", "ended"],
     enrolling: ["connecting", "form", "ended"],
     connecting: ["ready", "enrolling", "ended"],
     ready: ["recording", "connecting", "ended"],
     recording: ["connecting", "ended"],
-    ended: [],
+    ended: ["form"],
 }
 
 export function isLegalTransition(from: JoinPhase, to: JoinPhase): boolean {

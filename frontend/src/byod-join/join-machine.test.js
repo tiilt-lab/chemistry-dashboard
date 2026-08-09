@@ -82,8 +82,10 @@ describe("isLegalTransition", () => {
     it("backing out of speaker setup returns to the form", () => {
         expect(isLegalTransition("enrolling", "form")).toBe(true)
     })
-    it("rejects illegal jumps and escapes from terminal", () => {
+    it("rejects illegal jumps; ended only returns to the join form", () => {
         expect(isLegalTransition("form", "recording")).toBe(false)
         expect(isLegalTransition("ended", "recording")).toBe(false)
+        // dismissing the session-ended dialog re-opens the join form
+        expect(isLegalTransition("ended", "form")).toBe(true)
     })
 })
