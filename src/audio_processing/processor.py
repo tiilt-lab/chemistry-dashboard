@@ -25,6 +25,7 @@ from joblib import load
 from topic_modeling.topic_modeling import preprocess_transcript
 import config as cf
 from processing_common import select_topic_id, save_embeddings, load_embeddings
+from completion_latch import CompletionLatch
 # from source_seperation import source_seperation_pre_trained
 # from server.topic_modeling.topicmodeling import get_topics_with_prob
 # For converting nano seconds to seconds.
@@ -40,11 +41,10 @@ class AudioProcessor:
         # appending while completion runs np.array(self.embeddings) raises
         # numpy's "content of sequences changed" (same fix as posthoc).
         self._embeddings_lock = threading.Lock()
-        # Guards running_processes and the completion latch: unlocked
-        # read-modify-writes from per-utterance threads lost decrements
-        # (completion never fired) or double-fired the tagging POST.
-        self._proc_count_lock = threading.Lock()
-        self._completed = False
+        # Exactly-once completion accounting (running-count + asr-end + latch)
+        # lives in CompletionLatch, a shared tested state machine — the live
+        # and post-hoc processors used to hand-roll it and the copies drifted.
+        self._latch = CompletionLatch(self.__complete_callback)
         self.mt_feats = np.array([])
         self.speakers = np.array([])
         self.signal = np.array([])
@@ -57,7 +57,6 @@ class AudioProcessor:
         self.fs = 16000
         self.running = False
         self.asr_complete = False
-        self.running_processes = 0
         self.topic_model = None
         self.fingerprints = None
         self.cohesion_window = 20
@@ -72,8 +71,8 @@ class AudioProcessor:
     def start(self):
         self.running = True
         self.asr_complete = False
-        self.running_processes = 0
-        self._completed = False
+        # Fresh latch per run (start may be called again to reprocess).
+        self._latch = CompletionLatch(self.__complete_callback)
         self.processing_thread = threading.Thread(target=self.process)
         self.processing_thread.daemon = True
         if self.config.topic_model:
@@ -85,16 +84,6 @@ class AudioProcessor:
 
     def stop(self):
         self.running = False
-
-    def _finish_if_done(self):
-        # Exactly-once completion: the reader thread (setting asr_complete)
-        # and the last worker thread (decrementing to zero) can race; the
-        # latch ensures a single __complete_callback whichever wins.
-        with self._proc_count_lock:
-            if not self.asr_complete or self.running_processes != 0 or self._completed:
-                return
-            self._completed = True
-        self.__complete_callback()
 
     def __complete_callback(self):
         logging.info("completing callback")
@@ -192,13 +181,12 @@ class AudioProcessor:
                 transcript_audio_data = self.audio_buffer.extract(
                     start_time, end_time)
                 # Start processing thread for DoA, keywords, feature, etc.
-                with self._proc_count_lock:
-                    self.running_processes += 1
+                self._latch.task_started()
                 transcript_thread = threading.Thread(target=self.process_transcript, args=(
                     transcript_data, transcript_audio_data, start_time, end_time))
                 transcript_thread.daemon = True
                 transcript_thread.start()
-        self._finish_if_done()
+        self._latch.mark_asr_complete()
         logging.info('Processing thread stopped for {0}.'.format(
             self.config.auth_key))
 
@@ -362,8 +350,6 @@ class AudioProcessor:
                               self.config.auth_key)
 
         # Check if this was the final process of the transmission.
-        with self._proc_count_lock:
-            self.running_processes -= 1
-        self._finish_if_done()
+        self._latch.task_done()
 
        

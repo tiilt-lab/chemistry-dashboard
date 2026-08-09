@@ -31,6 +31,7 @@ from joblib import load
 from topic_modeling.topic_modeling import preprocess_transcript
 import config as cf
 from processing_common import select_topic_id, save_embeddings, load_embeddings
+from completion_latch import CompletionLatch
 # from source_seperation import source_seperation_pre_trained
 # from server.topic_modeling.topicmodeling import get_topics_with_prob
 # For converting nano seconds to seconds.
@@ -50,11 +51,12 @@ class AudioProcessorPosthoc:
         # raised numpy's "content of sequences changed" RuntimeError, killing
         # every utterance of a pod before its transcript was posted.
         self._embeddings_lock = threading.Lock()
-        # Guards running_processes and the completion latch: unlocked
-        # read-modify-writes from per-utterance threads lost decrements
-        # (completion never fired) or double-fired the tagging POST.
-        self._proc_count_lock = threading.Lock()
-        self._completed = False
+        # Exactly-once completion accounting (running-count + asr-end + latch)
+        # lives in CompletionLatch, a shared tested state machine. The posthoc
+        # copy of this had drifted to an unlocked decrement that bypassed the
+        # latch (double-fired the tagging POST / lost a decrement); the shared
+        # latch removes that whole class of bug.
+        self._latch = CompletionLatch(self.__complete_callback)
         self.mt_feats = np.array([])
         self.speakers = np.array([])
         self.signal = np.array([])
@@ -67,7 +69,6 @@ class AudioProcessorPosthoc:
         self.fs = 16000
         self.running = False
         self.asr_complete = False
-        self.running_processes = 0
         self.topic_model = None
         self.fingerprints = None
         self.cohesion_window = 20
@@ -84,8 +85,8 @@ class AudioProcessorPosthoc:
         self._started_at = time.time()  # epoch; sent to clients so elapsed survives refresh
         self.running = True
         self.asr_complete = False
-        self.running_processes = 0
-        self._completed = False
+        # Fresh latch per run (start may be called again to reprocess).
+        self._latch = CompletionLatch(self.__complete_callback)
         self.processing_thread = threading.Thread(target=self.process)
         self.processing_thread.daemon = True
         if self.config.topic_model:
@@ -97,16 +98,6 @@ class AudioProcessorPosthoc:
 
     def stop(self):
         self.running = False
-
-    def _finish_if_done(self):
-        # Exactly-once completion: the reader thread (setting asr_complete)
-        # and the last worker thread (decrementing to zero) can race; the
-        # latch ensures a single __complete_callback whichever wins.
-        with self._proc_count_lock:
-            if not self.asr_complete or self.running_processes != 0 or self._completed:
-                return
-            self._completed = True
-        self.__complete_callback()
 
     def __complete_callback(self):
         logging.info("completing callback")
@@ -255,8 +246,7 @@ class AudioProcessorPosthoc:
                 transcript_audio_data = self.audio_buffer.extract(
                     start_time, end_time)
                 # Start processing thread for DoA, keywords, feature, etc.
-                with self._proc_count_lock:
-                    self.running_processes += 1
+                self._latch.task_started()
                 transcript_thread = threading.Thread(target=self.process_transcript, args=(
                     transcript_data, transcript_audio_data, start_time, end_time))
                 transcript_thread.daemon = True
@@ -271,7 +261,7 @@ class AudioProcessorPosthoc:
                         self.send_json(self._last_progress)
                     except Exception:
                         pass
-        self._finish_if_done()
+        self._latch.mark_asr_complete()
         logging.info('Processing thread stopped for {0}.'.format(
             self.config.auth_key))
 
@@ -438,9 +428,9 @@ class AudioProcessorPosthoc:
             logging.exception("Processing FAILED for client %s: %s",
                               self.config.auth_key, e)
 
-        # Check if this was the final process of the transmission.
-        self.running_processes -= 1
-        if self.asr_complete and self.running_processes == 0:
-            self.__complete_callback()
+        # Check if this was the final process of the transmission. Routed
+        # through the shared latch (was an unlocked decrement + direct
+        # __complete_callback that bypassed the exactly-once guard).
+        self._latch.task_done()
 
        

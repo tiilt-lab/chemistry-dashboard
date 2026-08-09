@@ -53,6 +53,26 @@ def test_diarization_flag_not_hardcoded_true():
     assert "self.diarization = True" not in s, "diarization must not be hardcoded on"
 
 
+def test_both_audio_processors_share_the_completion_latch():
+    # The completion race (asr-end vs last-worker) must be handled by the one
+    # tested CompletionLatch in BOTH processors, not a hand-rolled counter.
+    # The posthoc copy had drifted to an unlocked decrement + a direct
+    # __complete_callback that bypassed the exactly-once guard.
+    for mod in ("processor.py", "processor_posthoc.py"):
+        s = _read("audio_processing", mod)
+        assert "CompletionLatch(" in s, f"{mod}: must use the shared CompletionLatch"
+        assert "self._latch.task_started()" in s and "self._latch.task_done()" in s, \
+            f"{mod}: worker lifecycle must go through the latch"
+        assert "self._latch.mark_asr_complete()" in s, \
+            f"{mod}: end-of-stream must signal the latch"
+        assert "running_processes" not in s, \
+            f"{mod}: hand-rolled running_processes counter must be gone"
+    # The specific drifted pattern must not come back.
+    posthoc = _read("audio_processing", "processor_posthoc.py")
+    assert "self.running_processes -= 1" not in posthoc
+    assert "self.asr_complete and self.running_processes == 0" not in posthoc
+
+
 # ---- realtime / reactor safety -------------------------------------------
 
 def test_worker_thread_sends_use_reactor_safety_boundary():
