@@ -62,8 +62,17 @@ function AppSessionToolbar(props) {
         setSessionEnding(true);
         props.closingSession(true);
         const fetchData = deleteDevice ? (new SessionService().removeDeviceFromSession(props.session.id, props.sessionDevice.id, true)) : (new SessionService().endSession(props.session.id));
+        // Any non-200 or rejection must clear the "Ending…" state and tell the
+        // user — the success-only handler left the button stuck forever and
+        // swallowed the rejection on a failed end.
+        const onFailure = () => {
+            setSessionEnding(false);
+            props.closingSession(false);
+            setConfirmingEnd(false);
+            window.alert("Couldn't end the session — check your connection and try again.");
+        };
         fetchData.then(response => {
-            if (response.status === 200) {
+            if (response && response.status === 200) {
                 setSessionEnding(false);
                 if (deleteDevice) {
                     navigate('/join')
@@ -76,8 +85,10 @@ function AppSessionToolbar(props) {
                         navigate('/sessions', { replace: true })
                     }
                 }
+            } else {
+                onFailure();
             }
-        })
+        }).catch(onFailure)
     }
 
     return (

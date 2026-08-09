@@ -57,10 +57,11 @@ function TranscriptsComponent(){
       }
 
       if (transcripts.length <= 0) {
-        const transcriptSub = activeSessionService.getTranscripts()
-         //const transcriptSub = activeSessionService.getSessionDeviceTranscripts(sessionDeviceId, setTransripts);
-
-         transcriptSub.subscribe(e => {
+         // Push the SUBSCRIPTION, not the observable: the old code pushed the
+         // shared BehaviorSubject and discarded .subscribe()'s return, so
+         // cleanup never unsubscribed and every pod visit leaked a live
+         // subscriber running filter+sort+setState on every socket emit.
+         const transcriptSub = activeSessionService.getTranscripts().subscribe(e => {
              if (Object.keys(e).length !== 0) {
                  const data = e.filter(t => t.session_device_id === parseInt(sessionDeviceId, 10))
                      .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
@@ -70,16 +71,14 @@ function TranscriptsComponent(){
          subscriptions.push(transcriptSub);
      }
     }
-      
-    
 
     return () => {
-      subscriptions.map(sub => {
-          if (sub.closed) {
-              sub.unsubscribe()
-          }
-      });
+      // unsubscribe() is idempotent; the old `if (sub.closed)` guard was
+      // inverted and only ever cleaned already-closed subscriptions.
+      subscriptions.forEach(sub => sub.unsubscribe());
+      subscriptions.length = 0;
   }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 },[])
 
 // Recompute the decorated rows whenever the transcript set changes. The
