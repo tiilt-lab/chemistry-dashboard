@@ -6,6 +6,7 @@ _rs_c = _rs_os.path.join(_rs_c, 'common')
 if _rs_c not in _rs_sys.path:
     _rs_sys.path.insert(0, _rs_c)
 import reactor_safety  # reactor/thread boundary; src/common bootstrapped above
+from frame_payload import build_frame_payload
 import logging
 import threading
 import time
@@ -313,30 +314,10 @@ class VideoProcessor:
         offset = self.config.start_offset
         return round(offset+ (frame_sec_mark + (self.video_interval * self.video_chunk_count)))
     
-    def process_video_analytics(self,batch_frames,facialEmbeddings,batch_track,time_marker,vid_img_dir,auth_key):
-        # with self.lock:
-            processing_timer = time.monotonic()
-            video_metrics=None
-            success = False
-           
-            with object_detector_lock():  # serialize CUDA/NMS across all users in this process
-                all_frames,face_object_detected = self.image_object_detection.detection_with_facial_regonition(batch_frames,facialEmbeddings,batch_track,time_marker,vid_img_dir,auth_key)
-
-            attention_emotion_det_lock =  attention_emotion_predictor_lock()  # serialize attention/emotion prediction across all users in this process
-            video_metrics, overlay_records = self.VideoMetricAnalytics.compute_videoMetrics(all_frames,face_object_detected,attention_emotion_det_lock)
-            if overlay_records:
-                callbacks.post_gaze_overlays(
-                    self.config.auth_key, overlay_records,
-                    reset=not self.VideoMetricAnalytics._overlays_posted)
-                self.VideoMetricAnalytics._overlays_posted = True
-            
-            if video_metrics: 
-                # logging.info(video_metrics)
-                success = callbacks.post_video_metrics(self.config.auth_key, video_metrics)
-
-                processing_time = time.monotonic() - processing_timer
-                if success:
-                    logging.info( f"Video processing results posted successfully for client {self.config.auth_key} (Processing time: {processing_time})")
+    # (removed) process_video_analytics: dead — it referenced self.VideoMetricAnalytics,
+    # which is never assigned, so any call would AttributeError. Its only
+    # invocations were commented out. Live analytics go through the detect
+    # worker via enqueue_latest_frame_payload / build_frame_payload below.
 
     def worker_process(self,frames_batch, time_markers, batch_idx):
         # Do cvtColor here if needed (OpenCV releases GIL, ok in threads)
@@ -354,7 +335,7 @@ class VideoProcessor:
             # flag. (Omitting it made every live batch raise ValueError:
             # not enough values to unpack, silently disabling live gaze/
             # attention analytics.)
-            payload = [frames_batch, self.facialEmbeddings, batch_idx, time_markers, self.vid_img_dir, self.config.auth_key, False]
+            payload = build_frame_payload(frames_batch, self.facialEmbeddings, batch_idx, time_markers, self.vid_img_dir, self.config.auth_key, False)
             self.enqueue_latest_frame_payload(payload,self.config.auth_key)
             # self.process_video_analytics(frames_batch, self.facialEmbeddings, batch_idx, time_markers, self.vid_img_dir,self.config.auth_key)
             

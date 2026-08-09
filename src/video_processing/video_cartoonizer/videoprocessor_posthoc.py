@@ -6,6 +6,7 @@ _rs_c = _rs_os.path.join(_rs_c, 'common')
 if _rs_c not in _rs_sys.path:
     _rs_sys.path.insert(0, _rs_c)
 import reactor_safety  # reactor/thread boundary; src/common bootstrapped above
+from frame_payload import build_frame_payload
 import logging
 import threading
 import time
@@ -200,7 +201,7 @@ class VideoProcessorPosthoc:
                                 # logging.info("frame size is {0}, dtype is {1}, min is {2}, max is {3}".format(frame.shape, frame.dtype, frame.min(), frame.max()))
                                 if len(self.frame_batch) == self.batch_size:
                                     logging.info(f"batch being inserted is {self.batch_track}")
-                                    payload = [self.frame_batch, self.facialEmbeddings, self.batch_track, self.time_marker, self.vid_img_dir, self.config.auth_key,False]
+                                    payload = build_frame_payload(self.frame_batch, self.facialEmbeddings, self.batch_track, self.time_marker, self.vid_img_dir, self.config.auth_key, False)
                                     accumulator_load = self.image_object_detection.worker_posthoc(payload)  
                                     self.video_metric_analytics.worker(accumulator_load, post_always=True)
                                 
@@ -221,7 +222,7 @@ class VideoProcessorPosthoc:
                             # self.stop()
 
                 # push the rest of the batched frames adjtime to queue
-                payload = [self.frame_batch, self.facialEmbeddings, self.batch_track, self.time_marker, self.vid_img_dir, self.config.auth_key,False]
+                payload = build_frame_payload(self.frame_batch, self.facialEmbeddings, self.batch_track, self.time_marker, self.vid_img_dir, self.config.auth_key, False)
                 
                 accumulator_load = self.image_object_detection.worker_posthoc(payload)  
                 self.video_metric_analytics.worker(accumulator_load, post_always=True)
@@ -252,7 +253,7 @@ class VideoProcessorPosthoc:
                 try:
                     logging.info("called finally after thread stop initiated")
                     self.running_video_processes.pop(self.config.auth_key,None)
-                    payload = [self.frame_batch, self.facialEmbeddings, self.batch_track, self.time_marker, self.vid_img_dir, self.config.auth_key,True]
+                    payload = build_frame_payload(self.frame_batch, self.facialEmbeddings, self.batch_track, self.time_marker, self.vid_img_dir, self.config.auth_key, True)
                     
                     accumulator_load = self.image_object_detection.worker_posthoc(payload) 
                     self.video_metric_analytics.worker(accumulator_load, post_always=True)
