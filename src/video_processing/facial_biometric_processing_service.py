@@ -79,6 +79,10 @@ class FacialBiometricProcessor:
         self.mediaExt = mediaExt
         self.currAlias = currAlias
         self.web_socket_connection = None
+        # Serializes runs: a quick retake used to start a second thread that
+        # raced the first over the same clip and .npy (last writer won, with
+        # an embedding computed from whichever bytes it happened to read).
+        self._run_lock = threading.Lock()
 
     def start(self):
         self.facial_embedding_pro_thread = threading.Thread(target=self.savefacialembedding,args=(self.facial_biometric_file,self.video_file,self.mediaExt,self.currAlias), name="FacialEmbeddingProcessor")
@@ -90,14 +94,19 @@ class FacialBiometricProcessor:
         self.web_socket_connection = web_socket
 
     def send_json(self, message):
+        # Called from the worker thread; Twisted transports are not
+        # thread-safe, so hand the write to the reactor.
+        from twisted.internet import reactor
         payload = json.dumps(message).encode('utf8')
-        self.web_socket_connection.sendMessage(payload, isBinary = False)
+        reactor.callFromThread(
+            self.web_socket_connection.sendMessage, payload, False)
 
     def savefacialembedding(self,facial_biometric_file,video_file,mediaExt,currAlias):
         # Runs on a daemon thread: any uncaught exception used to kill it
         # silently and the sign-up page waited on "Processing…" forever.
         try:
-            self._savefacialembedding(facial_biometric_file, video_file, mediaExt, currAlias)
+            with self._run_lock:
+                self._savefacialembedding(facial_biometric_file, video_file, mediaExt, currAlias)
         except Exception as e:
             logging.warning('facial biometric processing failed: %s', e, exc_info=True)
             try:

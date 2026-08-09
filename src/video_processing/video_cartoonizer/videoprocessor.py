@@ -142,8 +142,12 @@ class VideoProcessor:
         self.facialEmbeddings = facialEmbeddings
 
     def send_json(self, message):
+        # Called from the processing thread; Twisted transports are not
+        # thread-safe, so hand the write to the reactor.
+        from twisted.internet import reactor
         payload = json.dumps(message).encode('utf8')
-        self.web_socket_connection.sendMessage(payload, isBinary = False)
+        reactor.callFromThread(
+            self.web_socket_connection.sendMessage, payload, False)
         
     # def __complete_callback(self):
     #     try:
@@ -287,9 +291,12 @@ class VideoProcessor:
             if savetopath is None:
                 success, encoded_frame =  cv2.imencode('.jpeg', processed_frame_track[j])
                 if success:
-                    payload = encoded_frame.tobytes() #base64.b64encode() 
+                    from twisted.internet import reactor
+                    payload = encoded_frame.tobytes() #base64.b64encode()
                     logging.info("i am about to send the cartoonized image")
-                    self.web_socket_connection.sendMessage(payload, isBinary = True)
+                    # worker thread -> reactor: transports are not thread-safe
+                    reactor.callFromThread(
+                        self.web_socket_connection.sendMessage, payload, True)
                     logging.info("i have sent the cartoonized image")
                     # callbacks.post_cartoonized_image(self.config.auth_key,self.config.sessionId,self.config.deviceId, encoded_frame.tobytes())
                            

@@ -26,18 +26,25 @@ class VidRecorder:
         self.channels = channels
 
     def write_audio(self, data):
+        # logging.error, not print(): under systemd print went nowhere, so a
+        # full disk dropped every chunk invisibly while bytes_received kept
+        # counting — neither the no-video nor the lag alarm ever fired.
         try:
             with open(self.dat_filename, "ab") as f:
                 f.write(data)
-        except Exception as e:
-            print('Unable to write data to file: {0}'.format(e))
+            return True
+        except Exception:
+            logging.exception('RECORDING LOSS: unable to write audio to %s', self.dat_filename)
+            return False
 
     def write(self, data,path):
         try:
             with open(path, "ab") as f:
                 f.write(data)
-        except Exception as e:
-            print('Unable to write data to file: {0}'.format(e))
+            return True
+        except Exception:
+            logging.exception('RECORDING LOSS: unable to write video to %s', path)
+            return False
 
     def close(self,path):
         if not self.closed:

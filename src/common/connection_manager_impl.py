@@ -18,12 +18,42 @@ class ConnectionManager:
                     connection.signal_end()
 
     def check_connection_authentication(self):
+        # is_valid_key() is an HTTP POST (30s timeout) per running connection.
+        # This sweep fires on a 5s LoopingCall on the reactor — done inline,
+        # a slow API server blocked ingest for every pod for up to
+        # 30s x connections. Validate off-reactor; only the teardown of
+        # expired connections is marshalled back onto the reactor.
+        from twisted.internet import threads
+
+        if getattr(self, '_auth_sweep_running', False):
+            return  # previous sweep still in flight (slow API) — don't stack
+        self._auth_sweep_running = True
+
         with self.lock:
-            for connection in list(self.connections):
-                if connection.running and not connection.config.is_valid_key():
-                    logging.info('Closing client due to expired key.')
-                    connection.send_close('Your access has been revoked.')
-                    connection.signal_end()
+            candidates = [c for c in list(self.connections) if c.running]
+
+        def _sweep(conns=candidates):
+            expired = []
+            for connection in conns:
+                try:
+                    if not connection.config.is_valid_key():
+                        expired.append(connection)
+                except Exception:
+                    logging.exception('key validation errored; keeping connection')
+            return expired
+
+        def _teardown(expired):
+            self._auth_sweep_running = False
+            for connection in expired:
+                logging.info('Closing client due to expired key.')
+                connection.send_close('Your access has been revoked.')
+                connection.signal_end()
+
+        def _failed(f):
+            self._auth_sweep_running = False
+            logging.warning('auth sweep failed: %s', f)
+
+        threads.deferToThread(_sweep).addCallbacks(_teardown, _failed)
 
     def add(self, connection):
         with self.lock:

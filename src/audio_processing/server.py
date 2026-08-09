@@ -22,6 +22,7 @@ import safe_names
 from audio_buffer import AudioBuffer
 from processor import AudioProcessor
 from twisted.internet import reactor, task
+from twisted.internet import threads as _threads
 from autobahn.twisted.websocket import WebSocketServerFactory
 from autobahn.twisted.websocket import WebSocketServerProtocol
 from asr_connectors.factory import create_asr
@@ -204,7 +205,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.signal_start()
                 self.send_json({'type':'start'})
                 logging.info('Audio process connected')
-                callbacks.post_connect(self.config.auth_key)
+                _threads.deferToThread(callbacks.post_connect, self.config.auth_key)
 
     def getRunning(self):
         return self.running
@@ -455,7 +456,8 @@ class ServerProtocol(WebSocketServerProtocol):
             self.processor.stop()
 
         if self.config:
-            callbacks.post_disconnect(self.config.auth_key)
+            # 30s-timeout HTTP off the reactor; teardown must not stall ingest.
+            _threads.deferToThread(callbacks.post_disconnect, self.config.auth_key)
             cm.remove(self, self.config.session_key, self.config.auth_key)
 
        

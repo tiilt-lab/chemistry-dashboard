@@ -346,9 +346,17 @@ class ServerProtocol(WebSocketServerProtocol):
 
     def process_binary(self, data):
         if self.stream_data == 'audio-video-fingerprint':
+            # Each blob is a complete standalone take (same contract as the
+            # audio side): start it on a fresh scratch file — VidRecorder
+            # appends, so a retake used to land AFTER take 1 in the same file
+            # and the embedding run re-read the old take.
+            try:
+                os.remove(self.video_file + "." + self.mediaExt)
+            except OSError:
+                pass
             self.vid_recorder.write(data,self.video_file+"."+self.mediaExt)
 
-            self.facial_processor.start()     
+            self.facial_processor.start()
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 

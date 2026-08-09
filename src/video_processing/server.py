@@ -30,6 +30,7 @@ except Exception as _vc_err:
     print("video_cartoonizer unavailable ({}) - cartoonify disabled".format(_vc_err))
 from datetime import datetime
 from twisted.internet import reactor, task
+from twisted.internet import threads as _threads
 from autobahn.twisted.websocket import WebSocketServerFactory
 from autobahn.twisted.websocket import WebSocketServerProtocol
 from queue import Full, Empty
@@ -128,6 +129,11 @@ class StreamingChunkDecoder:
         self.height = None
         self.reader = None
         self.batches_done = 0
+        # Last container header seen (EBML/ftyp init segment). MediaRecorder
+        # emits it exactly once per recorder start, so it is cached to
+        # recover from a mid-stream pipe break without waiting for a client
+        # recorder restart.
+        self.init_blob = None
         self.pump = threading.Thread(
             target=self._pump, name='chunkdec-' + label[:12], daemon=True)
         self.pump.start()
@@ -163,15 +169,30 @@ class StreamingChunkDecoder:
                 blob = self.feed_queue.get()
                 if blob is None or self.dead:
                     break
-                if self.proc is None or self._is_header(blob):
-                    if not self._respawn(blob):
+                is_header = self._is_header(blob)
+                if is_header:
+                    self.init_blob = blob
+                if self.proc is None or is_header:
+                    # After a pipe break, respawn from the CACHED init
+                    # segment: the client only ever sends the header once per
+                    # recorder start, so "wait for the next header" meant
+                    # dead analytics for the rest of the session, plus one
+                    # doomed ffprobe against a mid-stream cluster per chunk.
+                    header = blob if is_header else self.init_blob
+                    if header is None or not self._respawn(header):
                         continue
+                    if not is_header:
+                        try:
+                            self.proc.stdin.write(header)
+                        except Exception:
+                            self._kill_proc()
+                            continue
                 try:
                     self.proc.stdin.write(blob)
                 except Exception as e:
                     logging.warning(
                         'analytics decoder pipe broke for %s (%s) - '
-                        'waiting for the next header to restart',
+                        'will restart from the cached header on the next blob',
                         self.label, e)
                     self._kill_proc()
         finally:
@@ -588,12 +609,12 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.arm_lag_check()
                     self.send_json({'type':'start','message':'Video processing not activated to start video processor'})
                     logging.info('Video process connected but video processing not activated')
-                    callbacks.post_connect(self.config.auth_key)
+                    _threads.deferToThread(callbacks.post_connect, self.config.auth_key)
                 else:
                     self.signal_start()
                     self.send_json({'type':'start', 'message':'Video processing started'})
                     logging.info('Video process connected')
-                    callbacks.post_connect(self.config.auth_key)
+                    _threads.deferToThread(callbacks.post_connect, self.config.auth_key)
 
     def process_binary(self, data):
         if not self.bytes_received:
@@ -732,7 +753,8 @@ class ServerProtocol(WebSocketServerProtocol):
             logging.info("Video processor stopped for client {0}".format(self.config.auth_key))
 
         if self.config:
-            callbacks.post_disconnect(self.config.auth_key)
+            # 30s-timeout HTTP off the reactor; teardown must not stall ingest.
+            _threads.deferToThread(callbacks.post_disconnect, self.config.auth_key)
             cm.remove(self, self.config.session_key, self.config.auth_key)
             # Live pods never send last_batch, so their analytics queues are
             # never popped by the schedulers — evict here or a disconnected
