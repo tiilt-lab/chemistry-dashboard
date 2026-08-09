@@ -71,7 +71,7 @@ function SignupPage() {
 
     useEffect(() => {
         if (constraintObj !== null) {
-            detectMediaSouceType()
+            detectMediaSouceTypeRef.current()
 
         }
     }, [constraintObj])
@@ -99,7 +99,7 @@ function SignupPage() {
 
     useEffect(() => {
         if (audioSocketProccesorConnected && videoSocketProccesorConnected) {
-            requestStartAudioVideoProcessing()
+            requestStartAudioVideoProcessingRef.current()
         }
     }, [audioSocketProccesorConnected, videoSocketProccesorConnected])
 
@@ -405,6 +405,7 @@ function SignupPage() {
         });
     }
 
+    const detectMediaSouceTypeRef = useRef(null);
     const detectMediaSouceType = async () => {
         // A rejected getUserMedia (permission denied, no camera) used to
         // bubble out unhandled, stranding the page on "Processing…" forever.
@@ -423,6 +424,8 @@ function SignupPage() {
             setShowAlert(true)
         }
     }
+
+    detectMediaSouceTypeRef.current = detectMediaSouceType;
 
     const pickMimeType = async (constraintObj) => {
         const stream = await navigator.mediaDevices.getUserMedia(constraintObj)
@@ -574,6 +577,7 @@ function SignupPage() {
     }
 
     // Begin capturing and sending student video sample.
+    const requestStartAudioVideoProcessingRef = useRef(null);
     const requestStartAudioVideoProcessing = async () => {
         let message = null
         if (audiows.current === null) {
@@ -605,6 +609,8 @@ function SignupPage() {
 
 
 
+
+    requestStartAudioVideoProcessingRef.current = requestStartAudioVideoProcessing;
 
     const closeAlert = () => {
         setShowAlert(false)
