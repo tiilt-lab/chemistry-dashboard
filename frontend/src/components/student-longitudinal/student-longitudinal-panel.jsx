@@ -17,7 +17,7 @@ export const trendOf = (values) => {
 }
 
 // seconds -> "m:ss" (talk time is minutes-scale, not hours)
-const fmtMins = (sec) => fmtClock(sec || 0)
+export const fmtMins = (sec) => fmtClock(sec || 0)
 
 // Open-question ratio per session (only sessions where they asked any).
 export const openRatios = (rows) =>
