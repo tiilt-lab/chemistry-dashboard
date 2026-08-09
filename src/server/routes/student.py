@@ -239,7 +239,9 @@ def post_rating(**kwargs):
     evaluationCategory = content.get('evaluationCategory',None)
     response = content.get('response',None)
     success = False
-    rating = database.get_ratings(sessionid=sessionid,sessiondeviceid=sessionDeviceId,speakertag=speakerTag,raterid=None,evaluationcategory=evaluationCategory)
+    # Scope the existing-rating lookup to THIS rater — with raterid omitted a
+    # second rater's submission silently overwrites the first rater's row.
+    rating = database.get_ratings(sessionid=sessionid,sessiondeviceid=sessionDeviceId,speakertag=speakerTag,raterid=raterid,evaluationcategory=evaluationCategory) if raterid else None
     if rating and response:
         resp = json.dumps(response)
         success, _ = database.update_rating(rating[0].id,response=resp)

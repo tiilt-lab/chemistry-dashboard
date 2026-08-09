@@ -37,8 +37,8 @@ class ConnectionManager:
             from app import app
             with app.app_context():
                 database.set_device_connected(device_id, False)
+                database.close_session()
             self.connections = [conn for conn in self.connections if conn['id'] != device_id]
-            database.close_session()
             logging.info('Device {0} has disconnected.'.format(device_id))
 
     def send_command_and_wait(self, device_id, command):
@@ -103,11 +103,18 @@ class ServerProtocol(WebSocketServerProtocol):
         self.last_message = time.time()
         if not is_binary:
             try:
-                payload = payload.decode('utf-8')
-                data = json.loads(payload)
-                self.process_json(data)
+                data = json.loads(payload.decode('utf-8'))
             except Exception as e:
                 logging.info('Payload is not properly formatted JSON: ' + str(e))
+                return
+            try:
+                # db.session needs an app context on this (reactor) thread —
+                # without one every handler raises and the device looks dead.
+                from app import app
+                with app.app_context():
+                    self.process_json(data)
+            except Exception:
+                logging.exception('Device websocket handler failed for cmd=%r', data.get('cmd'))
 
     def onClose(self, *args, **kwargs):
         if self.device_id:

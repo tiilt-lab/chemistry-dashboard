@@ -206,7 +206,9 @@ def verify_topic_model_access(f):
     def verify_function(*args, **kwargs):
         topic_model_id= kwargs['topic_model_id']
         user = kwargs['user']
-        topic_model_model = database.get_topic_models(id=topic_model_id)
+        # Scoped to the requesting owner — without this any account can
+        # operate on (e.g. delete) any user's topic model.
+        topic_model_model = database.get_topic_models(id=topic_model_id, owner_id=user['id'])
         if topic_model_model:
             kwargs['topic_model'] = topic_model_model
             return f(*args, **kwargs)
