@@ -782,6 +782,43 @@ function JoinPage() {
         }
     }
 
+    // Unmount teardown. Browser back (or any route change) unmounts this
+    // component without running navigateToLogin — before this, the started
+    // recorder, worklet, and both websockets lived on in closures and the
+    // phone kept streaming with the landing page on screen. The ref
+    // indirection matters: an []-deps cleanup captures the FIRST render's
+    // disconnect closure, whose session/socket state is stale.
+    const disconnectRef = useRef(null)
+    disconnectRef.current = disconnect
+    useEffect(() => {
+        return () => {
+            // Detach handlers before closing (same reason as navigateToLogin):
+            // onclose would mistake this for a mid-session drop and reconnect.
+            for (const w of [audiows.current, videows.current]) {
+                if (w) {
+                    w.onclose = null
+                    w.onmessage = null
+                    w.onerror = null
+                }
+            }
+            disconnectRef.current(true)
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
+    // While recording, refresh/tab-close must prompt: besides the current
+    // chunk, everything queued in videows.bufferedAmount (the congested-
+    // uplink backlog the end-of-recording drain protects) dies with the page.
+    useEffect(() => {
+        if (!armed) return
+        const warn = (e) => {
+            e.preventDefault()
+            e.returnValue = ""
+        }
+        window.addEventListener("beforeunload", warn)
+        return () => window.removeEventListener("beforeunload", warn)
+    }, [armed])
+
     // Add a speaker slot after joining (needed when the group joined with
     // "detect automatically", i.e. zero pre-created slots).
     // Adds a speaker slot. When a name is given, enrolled speakers default
