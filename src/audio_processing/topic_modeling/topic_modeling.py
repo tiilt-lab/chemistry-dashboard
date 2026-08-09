@@ -19,12 +19,22 @@ import spacy
 
 
 from nltk.corpus import stopwords
-stop_words = []#stopwords.words('english')
+
+BASE_STOP_WORDS = ('from', 'subject', 're', 'edu', 'use')
+
+# Loaded once per process: spacy.load is ~1s and this runs PER UTTERANCE on
+# topic-model sessions.
+_nlp = None
+
+
+def _get_nlp():
+    global _nlp
+    if _nlp is None:
+        _nlp = spacy.load("en_core_web_sm", disable=['parser', 'ner'])
+    return _nlp
 
 
 mallet_path = '~/mallet-2.0.8/bin/mallet' # update this path
-def add_stop_words(words):
-    stop_words.extend(words)
 
 def sent_to_words(sentences):
     for sentence in sentences:
@@ -43,10 +53,9 @@ def generate_trigram(data_words, bigram):
     return trigram, trigram_mod
 
 def preprocess_transcript(transcript, extra_stop_words):
-    stop_words = ['from', 'subject', 're', 'edu', 'use']
-    extra_stop_words = add_stop_words(stop_words)
-    if extra_stop_words:
-      stop_words = stop_words + extra_stop_words
+    # Local list: the old module-global grew on every utterance, and the
+    # add_stop_words dance (returns None) discarded the caller's extras.
+    stop_words = list(BASE_STOP_WORDS) + [w for w in (extra_stop_words or []) if w]
 
     transcript = re.sub('\S*@\S*\s?', '', transcript)
 
@@ -55,8 +64,6 @@ def preprocess_transcript(transcript, extra_stop_words):
 
     # Remove distracting single quotes
     transcript = re.sub("\'", "", transcript)
-
-    add_stop_words(stop_words)
 
     data = [transcript]
 
@@ -71,7 +78,7 @@ def preprocess_transcript(transcript, extra_stop_words):
     data_words_nostops = [[word for word in simple_preprocess(str(transcript)) if word not in stop_words]]
     data_words_bigrams = generate_bigram(data_words_nostops)
 
-    nlp = spacy.load("en_core_web_sm", disable=['parser', 'ner'])
+    nlp = _get_nlp()
     data_lemmatized = lemmatization(data_words_bigrams, allowed_postags=['NOUN', 'ADJ', 'VERB', 'ADV'])
     texts = data_lemmatized
 

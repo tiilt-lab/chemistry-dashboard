@@ -5,7 +5,9 @@ Returns:
 """
 
 import time
+import glob
 import os
+import uuid
 import logging
 import threading
 import callbacks
@@ -120,6 +122,13 @@ class AudioProcessorPosthoc:
             # labels (carried pyannote), so serialize as strings either way.
             np.savetxt(os.path.join(_rd, "{}.txt".format(time.strftime("%Y%m%d-%H%M%S"))),
                        np.array(self.speakers, dtype=str), fmt='%s')
+            # Debug artifacts: prune to the newest 200 — one file per
+            # session accumulated here forever.
+            try:
+                for _old in sorted(glob.glob(os.path.join(_rd, '*.txt')))[:-200]:
+                    os.remove(_old)
+            except OSError:
+                pass
         # Release the run + mark it complete server-side, so the result persists
         # even if the browser that triggered it has since disconnected.
         try:
@@ -371,8 +380,13 @@ class AudioProcessorPosthoc:
                                 "Unable to load embeddings file: %s", e)
                             self.embeddings = []
                     elif self.embeddings_file is None:
-                        self.embeddings_file = time.strftime(
-                            "%Y%m%d-%H%M%S")+".npy"
+                        # Absolute path + auth_key + random suffix: the old
+                        # CWD-relative second-granular name collided when two
+                        # pods started the same second.
+                        emb_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'embeddings')
+                        os.makedirs(emb_dir, exist_ok=True)
+                        self.embeddings_file = os.path.join(
+                            emb_dir, '{0}-{1}.npy'.format(self.config.auth_key, uuid.uuid4().hex[:8]))
                     embedding = embedSignal(audio_data, self.diarization_model)
                     # Saved once at completion (send_speaker_taggings) — the
                     # old per-utterance re-save of the whole array was O(n²)

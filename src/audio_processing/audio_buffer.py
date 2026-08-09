@@ -24,12 +24,22 @@ class AudioBuffer:
             self.buffer_end += len(data) / (self.sample_rate * self.channels * self.depth)
             if self.buffer_end - self.buffer_start > self.max_seconds:
                 extra_time = self.buffer_end - self.buffer_start - self.max_seconds
-                extra_data = int(extra_time * self.sample_rate) * (self.channels * self.depth)
+                extra_samples = int(extra_time * self.sample_rate)
+                extra_data = extra_samples * (self.channels * self.depth)
                 self.audio_buffer = self.audio_buffer[extra_data:]
-                self.buffer_start += extra_time
+                # Advance by exactly what was trimmed. Advancing by the float
+                # extra_time while trimming int(extra_time*sr) samples skewed
+                # start by up to a sample per trim (~0.5s/hour on long live
+                # sessions), slowly misaligning extracts vs word timings.
+                self.buffer_start += extra_samples / self.sample_rate
 
     def extract(self, start_time, end_time):
         with self.lock:
+            # Clamp: a stale/late timestamp older than the retention window
+            # produced NEGATIVE byte offsets, silently returning audio from
+            # the wrong end of the buffer.
             start_byte = int((start_time - self.buffer_start) * self.sample_rate) * (self.channels * self.depth)
             end_byte = int((end_time - self.buffer_start) * self.sample_rate) * (self.channels * self.depth)
+            start_byte = max(0, start_byte)
+            end_byte = max(start_byte, end_byte)
             return self.audio_buffer[start_byte: end_byte]

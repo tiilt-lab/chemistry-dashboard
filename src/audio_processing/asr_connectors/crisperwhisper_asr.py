@@ -92,6 +92,25 @@ class _SharedWorker:
 
     # -- lifecycle (all callers hold self._lock) ---------------------------
 
+    def _read_reply(self, timeout):
+        # Bounded readline. A wedged worker (hung model load, CUDA stall)
+        # used to block readline forever WHILE HOLDING THE SHARED LOCK,
+        # deadlocking live transcription for every pod at once. On timeout
+        # the caller kills the worker and the retry path takes over. The
+        # worker writes whole JSON lines, so select-then-readline won't
+        # block on a partial line in practice.
+        import select
+        deadline = time.time() + timeout
+        while True:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                raise RuntimeError(
+                    "CrisperWhisper worker unresponsive for %.0fs" % timeout)
+            ready, _, _ = select.select([self._proc.stdout], [], [],
+                                        min(remaining, 5))
+            if ready:
+                return self._proc.stdout.readline()
+
     def _ensure_proc(self):
         if self._proc is not None and self._proc.poll() is None:
             return
@@ -104,7 +123,7 @@ class _SharedWorker:
             [_worker_python(), _WORKER, "--serve", "--model", model, "--mode", mode],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL, text=True, bufsize=1)
-        ready = self._proc.stdout.readline()
+        ready = self._read_reply(timeout=180)
         if not ready or not json.loads(ready).get("ready"):
             self._kill()
             raise RuntimeError("CrisperWhisper worker failed to start")
@@ -161,7 +180,7 @@ class _SharedWorker:
                     self._ensure_proc()
                     self._proc.stdin.write(json.dumps({"audio": wav_path}) + "\n")
                     self._proc.stdin.flush()
-                    line = self._proc.stdout.readline()
+                    line = self._read_reply(timeout=120)
                     if not line:
                         raise RuntimeError("worker closed its pipe")
                     self._last_used = time.time()

@@ -225,54 +225,6 @@ def checkFingerprints(x, fingerprints, verification):
 
 
 
-def clusterEmbeddings(embeddings_list, max_speakers = 10, n_speakers = 0):
-  embeddings = np.array([])
-  for emb in embeddings_list:
-    if not np.any(embeddings):
-      embeddings = np.array(emb['embedding'])
-    else:
-      embeddings = np.append(embeddings, emb['embedding'], axis=0)
-
-  dist_all = np.sum(distance.squareform(distance.pdist(embeddings)), axis=0)
-  m_dist_all = np.mean(dist_all)
-  i_non_outliers = np.nonzero(dist_all < 1.2 * m_dist_all)[0]
-
-  s_range = []
-  if n_speakers <= 0:
-      s_range = range(2, min(max_speakers, embeddings.shape[0] - 1))
-  else:
-      s_range = [n_speakers]
-  cluster_labels = []
-  cluster_centers = []
-
-  silhouette_coefficients = []
-
-  for speakers in s_range:
-    k_means = sklearn.cluster.KMeans(n_clusters=speakers, n_init=10, init='random')
-    k_means.fit(embeddings)
-    cls = k_means.labels_
-    means = k_means.cluster_centers_
-
-    cluster_labels.append(cls)
-    cluster_centers.append(means)
-    score = silhouette_score(embeddings, cls)
-    silhouette_coefficients.append(score)
-
-  imax = int(np.argmax(silhouette_coefficients))
-  # optimal number of clusters
-  num_speakers = s_range[imax]
-  cls = cluster_labels[imax]
-
-  n_wins = embeddings.shape[0]
-  for index in range(n_wins):
-      cls = np.zeros((n_wins,))
-      j = np.argmin(np.abs(index - i_non_outliers))
-      cls[index] = cluster_labels[imax][j]
-
-  class_names = ["speaker{0:d}".format(c) for c in range(num_speakers)]
-
-  return cls, class_names, cluster_centers
-
 # Auto-tuned spectral clustering (NME-SC, Park et al. 2019) for the
 # no-fingerprint fallback: build a p-nearest-neighbor similarity graph over
 # the per-utterance embeddings, read the speaker count from the eigengap of
@@ -308,7 +260,15 @@ def getSpectralEmbeddings(embeddings_list):
   best = None  # (r_p, eigengap vector, eigenvectors)
   #attempt to find best p (up to n/2 — the old n/4 cap left single-cluster
   #pods with only fragmented graphs to choose from)
-  for p in range(1, max(2, int(n / 2))):
+  # Each candidate p costs a full n x n eigh (the search was O(n^4) overall):
+  # fine at ~150 utterances, minutes of single-core spinning at 600+. Above a
+  # threshold, thin the candidates to an even sample across the same range —
+  # NME varies smoothly in p, so a ~40-point sweep finds the same regime.
+  p_range = range(1, max(2, int(n / 2)))
+  if len(p_range) > 40:
+    step = len(p_range) // 40
+    p_range = list(p_range)[::step]
+  for p in p_range:
 
     # p-neighbor row-binarization: connect each utterance to its p MOST
     # similar peers (self included — sim[i][i] == 1 is always in the top p).

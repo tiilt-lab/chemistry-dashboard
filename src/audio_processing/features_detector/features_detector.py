@@ -39,9 +39,17 @@ def detect_features(transcript):
 # Composite LIWC style indices used by the post-hoc P&I / E&T re-computation
 # (SpeakerMetricProcessor). Distinct from detect_features above: this returns
 # the balanced analytic/authenticity/certainty/clout/emotional-tone indices.
+_LIWC_INDEX_CACHE = None
+
+
 def detect_LIWC_Indices(transcript):
+    # Parse the LIWC CSV once per process — this runs per utterance and the
+    # dictionary never changes at runtime.
+    global _LIWC_INDEX_CACHE
+    if _LIWC_INDEX_CACHE is None:
+        _LIWC_INDEX_CACHE = populate_dictionary_index_liwc()
     results = {}
-    liwc_emots, liwc_dictionary = populate_dictionary_index_liwc()
+    liwc_emots, liwc_dictionary = _LIWC_INDEX_CACHE
     liwc_features = extract_liwc_categories(transcript, liwc_dictionary, liwc_emots)
     for summary_name, weights in COMPOSITE_LIWC_INDICES.items():
         raw_score = mean_liwc_index(liwc_features, weights)
