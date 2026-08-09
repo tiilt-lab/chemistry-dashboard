@@ -127,7 +127,13 @@ class VideoProcessor:
 
     def stop(self):
         self.running = False
-        self.vid_pro_thread.join()
+        # Bounded join: this runs on the reactor thread at disconnect; an
+        # unbounded join on a wedged worker froze ingest for every pod.
+        thread = getattr(self, 'vid_pro_thread', None)
+        if thread is not None and thread.is_alive():
+            thread.join(timeout=10)
+            if thread.is_alive():
+                logging.warning('video processor thread did not stop within 10s; abandoning it (daemon)')
 
     def add_websocket_connection(self,web_socket):
         self.web_socket_connection = web_socket

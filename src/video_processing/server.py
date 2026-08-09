@@ -240,43 +240,57 @@ class StreamingChunkDecoder:
                     return
                 yield item
 
+        def force_sentinel(q):
+            # The consumer blocks in drain() until it sees SENTINEL; it MUST
+            # be delivered on every exit path or the consumer thread — and
+            # the reactor-side join waiting on it — hangs forever. If the
+            # queue is full of unconsumed frames, discard one to make room.
+            while True:
+                try:
+                    q.put_nowait(SENTINEL)
+                    return
+                except Full:
+                    try:
+                        q.get_nowait()
+                    except queue.Empty:
+                        pass
+
         batch_q = None
         n_in_batch = 0
-        while True:
-            buf = proc.stdout.read(frame_bytes)
-            if len(buf) < frame_bytes:
-                break
-            if self.dead:
-                continue  # keep the pipe drained so ffmpeg can exit
-            if batch_q is None:
-                # Announce the batch as it STARTS so the consumer streams
-                # it live instead of waiting 10s for a complete list.
-                batch_q = queue.Queue(maxsize=batch_frames + 1)
-                self.sink(drain(batch_q))
-                n_in_batch = 0
-            frame = np.frombuffer(buf, dtype=np.uint8).reshape(
-                (height, width, 3))
-            try:
-                batch_q.put_nowait((n_in_batch / float(self.FPS), frame))
-            except Full:
-                pass  # consumer lagging: analytics samples, never blocks
-            n_in_batch += 1
-            if n_in_batch >= batch_frames:
+        try:
+            while True:
+                buf = proc.stdout.read(frame_bytes)
+                if len(buf) < frame_bytes:
+                    break
+                if self.dead:
+                    continue  # keep the pipe drained so ffmpeg can exit
+                if batch_q is None:
+                    # Announce the batch as it STARTS so the consumer streams
+                    # it live instead of waiting 10s for a complete list.
+                    batch_q = queue.Queue(maxsize=batch_frames + 1)
+                    self.sink(drain(batch_q))
+                    n_in_batch = 0
+                frame = np.frombuffer(buf, dtype=np.uint8).reshape(
+                    (height, width, 3))
                 try:
-                    batch_q.put_nowait(SENTINEL)
+                    batch_q.put_nowait((n_in_batch / float(self.FPS), frame))
                 except Full:
-                    pass
-                batch_q = None
-                self.batches_done += 1
-                if self.batches_done % 6 == 1:
-                    logging.info(
-                        'analytics decoder for %s delivered batch %d',
-                        self.label, self.batches_done)
-        if batch_q is not None:
-            try:
-                batch_q.put_nowait(SENTINEL)
-            except Full:
-                pass
+                    pass  # consumer lagging: analytics samples, never blocks
+                n_in_batch += 1
+                if n_in_batch >= batch_frames:
+                    force_sentinel(batch_q)
+                    batch_q = None
+                    self.batches_done += 1
+                    if self.batches_done % 6 == 1:
+                        logging.info(
+                            'analytics decoder for %s delivered batch %d',
+                            self.label, self.batches_done)
+        finally:
+            # try/finally: an exception here (e.g. raised out of self.sink)
+            # previously killed the reader with no sentinel, leaving the
+            # consumer blocked forever and wedging teardown.
+            if batch_q is not None:
+                force_sentinel(batch_q)
 
 
 cartoon_model = VideoCartoonifyLoader()
@@ -720,13 +734,22 @@ class ServerProtocol(WebSocketServerProtocol):
         if self.config:
             callbacks.post_disconnect(self.config.auth_key)
             cm.remove(self, self.config.session_key, self.config.auth_key)
+            # Live pods never send last_batch, so their analytics queues are
+            # never popped by the schedulers — evict here or a disconnected
+            # pod's queued frame payloads stay pinned until process recycle.
+            image_object_detection.frame_queue_manager.pop(self.config.auth_key, None)
+            image_object_detection.accumulator_queue_manager.pop(self.config.auth_key, None)
         else:
             cm.remove(self, None, None)
 
         if cm.get_number_of_connections() == 0:
-            image_object_detection.stop()
-            video_metric_analytics.stop()
-            logging.info("No more connected clients, stopping image detection and video metric analytics thread,  service.")
+            # Deliberately NOT stopping image_object_detection /
+            # video_metric_analytics here: stop() permanently exits their
+            # worker threads and the only start() calls are in __main__, so a
+            # class joining inside the idle-recycle window would get no
+            # analytics at all (frames enqueue, nothing drains). Idle threads
+            # cost a 50ms poll; the idle recycle below reclaims everything.
+            logging.info("No more connected clients; scheduling idle recycle.")
             schedule_idle_recycle()
         logging.info('Closing client connection...')
         self.transport.loseConnection()

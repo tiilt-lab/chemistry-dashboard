@@ -69,8 +69,14 @@ class VideoMetricAnalytics:
                 self.hasreceivedjob = True
 
             while candidate_turn < len_candidate_unique_ids:
+                # The reactor thread evicts a pod's queue on disconnect; the
+                # key snapshot above may be stale, so tolerate a missing key.
+                candidate_queue = self.Imagedetection.accumulator_queue_manager.get(candidate_unique_ids[candidate_turn])
+                if candidate_queue is None:
+                    candidate_turn += 1
+                    continue
                 try:
-                    payload = self.Imagedetection.accumulator_queue_manager[candidate_unique_ids[candidate_turn]].get_nowait() #get(timeout=0.25)
+                    payload = candidate_queue.get_nowait() #get(timeout=0.25)
 
                 except Empty:
                     # Advance past an empty queue instead of retrying it —
