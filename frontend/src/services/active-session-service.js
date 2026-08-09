@@ -20,57 +20,42 @@ export class ActiveSessionService {
     sessionId
     initialized = false
 
-    initialize(sessionId, setInitialized) {
+    // onResult is called EXACTLY once with an outcome:
+    //   { status: "ready" }                        — session + devices loaded
+    //   { status: "error", httpStatus: <code|null> } — any failure
+    // The old version only advanced on the full 200/200/parse happy path and
+    // did nothing (just console.error) on any failure — so a 401 (expired
+    // login) or a non-200 left the session page's spinner up forever with no
+    // error and no redirect. Always report, so the caller can recover.
+    async initialize(sessionId, onResult) {
         if (this.sessionId === sessionId) {
             return
         }
         this.close()
         this.sessionId = sessionId
-        // Call APIs.
-        const fetchRes = this.sessionService.getSession(sessionId)
-        fetchRes.then(
-            (response) => {
-                if (response.status === 200) {
-                    const respSess = response.json()
-                    respSess.then((session) => {
-                        const sessionObj = SessionModel.fromJson(session)
-                        this.sessionSource.next(sessionObj)
-                        const fectdev =
-                            this.sessionService.getSessionDevices(sessionId)
-                        fectdev.then(
-                            (response) => {
-                                if (response.status === 200) {
-                                    const respDev = response.json()
-                                    respDev.then((devices) => {
-                                        const devicesObj =
-                                            SessionDeviceModel.fromJsonList(
-                                                devices,
-                                            )
-                                        this.sessionDeviceSource.next(
-                                            devicesObj,
-                                        )
-                                        this.initializeSocket()
-                                        setInitialized(true)
-                                    })
-                                }
-                            },
-                            (apierror) => {
-                                console.error(
-                                    "file active-session-service: func initialize 1",
-                                    apierror,
-                                )
-                            },
-                        )
-                    })
-                }
-            },
-            (apiError) => {
-                console.error(
-                    "file active-session-service: func initialize 2",
-                    apiError,
-                )
-            },
-        )
+        try {
+            const sessionResp = await this.sessionService.getSession(sessionId)
+            if (sessionResp.status !== 200) {
+                onResult({ status: "error", httpStatus: sessionResp.status })
+                return
+            }
+            const session = await sessionResp.json()
+            this.sessionSource.next(SessionModel.fromJson(session))
+
+            const devicesResp = await this.sessionService.getSessionDevices(sessionId)
+            if (devicesResp.status !== 200) {
+                onResult({ status: "error", httpStatus: devicesResp.status })
+                return
+            }
+            const devices = await devicesResp.json()
+            this.sessionDeviceSource.next(SessionDeviceModel.fromJsonList(devices))
+
+            this.initializeSocket()
+            onResult({ status: "ready" })
+        } catch (error) {
+            console.error("active-session-service: initialize failed", error)
+            onResult({ status: "error", httpStatus: null, error })
+        }
     }
 
     initializeSocket() {
