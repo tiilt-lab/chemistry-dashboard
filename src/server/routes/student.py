@@ -164,7 +164,7 @@ def get_students(user_name, **kwargs):
     if student:
         return json_response(student.json())
     else:
-        return json_response({'message': 'Student  not found.'}, 400)
+        return json_response({'message': 'Student  not found.'}, 404)
       
 @api_routes.route('/api/v1/student/addstudent', methods=['POST'])
 def add_students(**kwargs):

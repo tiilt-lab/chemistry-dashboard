@@ -42,7 +42,7 @@ def get_keyword_list(keyword_list_id, **kwargs):
     if keyword_list:
         return json_response(keyword_list.json())
     else:
-        return json_response({'message': 'Keyword list not found'}, 400)
+        return json_response({'message': 'Keyword list not found'}, 404)
 
 
 @api_routes.route('/api/v1/keyword_lists/<int:keyword_list_id>', methods=['PUT'])
@@ -59,7 +59,7 @@ def update_keyword_list(keyword_list_id, **kwargs):
         keyword_list = database.update_keyword_list(
             keyword_list_id, new_name, new_keywords)
         return json_response(keyword_list.json())
-    return json_response({'message': 'Keyword list not found'}, 400)
+    return json_response({'message': 'Keyword list not found'}, 404)
 
 
 @api_routes.route('/api/v1/keyword_lists/<int:keyword_list_id>', methods=['DELETE'])

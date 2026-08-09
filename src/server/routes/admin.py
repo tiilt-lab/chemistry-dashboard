@@ -106,7 +106,7 @@ def delete_user(user_id, **kwargs):
     if success:
         return json_response()
     else:
-        return json_response({'message': 'User not found.'}, 400)
+        return json_response({'message': 'User not found.'}, 404)
     
 # Merge duplicate student profiles (students self-register during joining,
 # so the same person often ends up with several usernames). Moves all
@@ -184,7 +184,7 @@ def delete_student(student_id, **kwargs):
             logging.info('Unable to delete biometric file: {0}'.format(e))
         return json_response()
     else:
-        return json_response({'message': 'User not found.'}, 400)
+        return json_response({'message': 'User not found.'}, 404)
     
 @api_routes.route('/api/v1/admin/raters/<int:id>', methods=['DELETE'])
 @wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
@@ -193,7 +193,7 @@ def delete_rater(id, **kwargs):
     if rater is not None:
         return json_response()
     else:
-        return json_response({'message': 'Rater not found.'}, 400)
+        return json_response({'message': 'Rater not found.'}, 404)
 
 @api_routes.route('/api/v1/admin/users/<int:user_id>/lock', methods=['POST'])
 @wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
@@ -204,7 +204,7 @@ def lock_user(user_id, **kwargs):
     if user:
         return json_response(user.json())
     else:
-        return json_response({'message': 'User not found.'}, 400)
+        return json_response({'message': 'User not found.'}, 404)
 
 @api_routes.route('/api/v1/admin/users/<int:user_id>/unlock', methods=['POST'])
 @wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
@@ -216,7 +216,7 @@ def unlock_user(user_id, **kwargs):
         RedisLogin.unlock_login(user.email)
         return json_response(user.json())
     else:
-        return json_response({'message': 'User not found.'}, 400)
+        return json_response({'message': 'User not found.'}, 404)
 
 @api_routes.route('/api/v1/admin/users/<int:user_id>/role', methods=['POST'])
 @wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
@@ -232,7 +232,7 @@ def change_user_role(user_id, **kwargs):
     if user:
         return json_response(user.json())
     else:
-        return json_response({'message': 'User not found.'}, 400)
+        return json_response({'message': 'User not found.'}, 404)
 
 @api_routes.route('/api/v1/admin/users/<int:user_id>/reset', methods=['POST'])
 @wrappers.verify_login(roles=wrappers.ADMIN_ROLES)
@@ -245,7 +245,7 @@ def reset_password(user_id, **kwargs):
         database.save_changes()
         return json_response({'password': new_password})
     else:
-        return json_response({'message': 'User not found'}, 400)
+        return json_response({'message': 'User not found'}, 404)
 
 @api_routes.route('/api/v1/admin/users/<int:user_id>/api', methods=['POST'])
 @wrappers.verify_login(roles=['super'])
@@ -257,7 +257,7 @@ def allow_api_access(user_id, **kwargs):
         api_client, client_secret = database.create_api_client(user_id)
         return json_response({'api_client': api_client.json(), 'client_secret': client_secret})
     else:
-        return json_response({'message': 'User not found'}, 400)
+        return json_response({'message': 'User not found'}, 404)
 
 @api_routes.route('/api/v1/admin/users/<int:user_id>/api', methods=['DELETE'])
 @wrappers.verify_login(roles=['super'], public=True)
@@ -269,7 +269,7 @@ def revoke_api_access(user_id, **kwargs):
         database.delete_api_client(user_id=user_id)
         return json_response({'success': True})
     else:
-        return json_response({'message': 'User not found'}, 400)
+        return json_response({'message': 'User not found'}, 404)
 
 @api_routes.route('/api/v1/admin/server/logs', methods=['GET'])
 @wrappers.verify_login(roles=['super'])

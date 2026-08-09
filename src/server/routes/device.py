@@ -89,4 +89,4 @@ def blink(device_id, **kwargs):
         ConnectionManager.instance.send_command(device_id, command)
         return json_response()
     else:
-        return json_response({'message': 'Device not found.'}, 400)
+        return json_response({'message': 'Device not found.'}, 404)

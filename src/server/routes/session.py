@@ -85,7 +85,7 @@ def get_session_by_passcode(passcode, **kwargs):
     if sessions:
         return json_response([session.json() for session in sessions])
     else:
-        return json_response({'message': 'Session  not found.'}, 400)
+        return json_response({'message': 'Session  not found.'}, 404)
 
 @api_routes.route('/api/v1/sessions/student/sessionid/<int:session_id>', methods=['GET'])
 def get_session_by_id(session_id, **kwargs):
@@ -93,7 +93,7 @@ def get_session_by_id(session_id, **kwargs):
     if session:
         return json_response(session.json())
     else:
-        return json_response({'message': 'Session  not found.'}, 400)
+        return json_response({'message': 'Session  not found.'}, 404)
 
 @api_routes.route('/api/v1/sessions/student/alias/<string:alias>', methods=['GET'])
 def get_sessions_by_alias(alias, **kwargs):
@@ -101,7 +101,7 @@ def get_sessions_by_alias(alias, **kwargs):
     if sessions:
          return json_response([session.json() for session in sessions])
     else:
-        return json_response({'message': 'Session  not found.'}, 400)
+        return json_response({'message': 'Session  not found.'}, 404)
     
 @api_routes.route('/api/v1/sessions/sessionid/<int:session_id>/student/alias/<string:alias>', methods=['GET'])
 def get_session_device_by_alias(session_id,alias, **kwargs):
@@ -109,7 +109,7 @@ def get_session_device_by_alias(session_id,alias, **kwargs):
     if sessionsDevices:
          return json_response([device.json() for device in sessionsDevices])
     else:
-        return json_response({'message': 'Session  not found.'}, 400)
+        return json_response({'message': 'Session  not found.'}, 404)
 
 @api_routes.route('/api/v1/sessions/<int:session_id>', methods=['PUT'])
 @wrappers.verify_login(public=True)
@@ -1096,7 +1096,7 @@ def set_help_button(**kwargs):
             room_name = str(session_device.session_id)
             socketio.emit('device_update', json.dumps(session_device.json()), room=room_name, namespace="/session")
         return json_response()
-    return json_response({'message': 'Session device not found.'}, 400)
+    return json_response({'message': 'Session device not found.'}, 404)
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/name', methods=['PUT'])
 @wrappers.verify_login(public=True)
