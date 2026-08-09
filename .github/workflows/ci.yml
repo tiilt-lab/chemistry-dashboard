@@ -19,6 +19,27 @@ jobs:
       # producer/consumer contracts. No DB/GPU/network dependencies.
       - run: python -m pytest tests/ -q
 
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      # Pinned so the violation count is deterministic across runners.
+      - run: pip install ruff==0.16.2
+      # Ratcheted gate, mirroring the eslint --max-warnings policy: the backend
+      # had no static analysis, so a full backlog can't be required to be zero
+      # today. The cap lets no NEW violation in and must only ever DECREASE.
+      # Rules + excludes live in pyproject.toml (F/E9/E722 — real bugs, not
+      # style). Lower CAP whenever the count drops.
+      - name: ruff (ratcheted)
+        run: |
+          CAP=43
+          COUNT=$(ruff check src --output-format json | python -c "import json,sys; print(len(json.load(sys.stdin)))")
+          echo "ruff violations: $COUNT (cap: $CAP)"
+          test "$COUNT" -le "$CAP"
+
   frontend:
     runs-on: ubuntu-latest
     defaults:

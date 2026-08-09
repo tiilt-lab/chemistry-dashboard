@@ -1,0 +1,28 @@
+# Ruff configuration for the first-party Python in src/.
+#
+# The backend previously had NO static analysis (the frontend has eslint). Ruff
+# runs in CI with a ratcheted violation cap (see .github/workflows/ci.yml) — the
+# same policy as the eslint gate: no NEW violations may land, and the cap only
+# ever decreases. The current backlog (mostly unused imports) is worked down
+# over time, not required to be zero today.
+[tool.ruff]
+target-version = "py311"
+
+# Third-party / vendored / generated code — not ours to lint.
+extend-exclude = [
+  "src/venv-crisper",
+  "src/venv-nemo",
+  "src/venv-unified",
+  "src/video_processing/yolo_head",
+  "src/video_processing/asd",
+  "src/video_processing/attention_tracking",
+  "src/video_processing/video_cartoonizer/model",
+  "src/video_processing/emotion_detector/models",
+  "src/server/migrations/versions",
+]
+
+[tool.ruff.lint]
+# Real-correctness rules, not style: F = pyflakes (unused/undefined names,
+# redefinitions, bad f-strings), E9 = syntax/IO errors, E722 = bare `except:`
+# (swallows KeyboardInterrupt/SystemExit and hides the real error).
+select = ["F", "E9", "E722"]
