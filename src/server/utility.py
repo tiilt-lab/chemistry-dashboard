@@ -2,6 +2,7 @@
 from flask import jsonify
 from markupsafe import escape  # flask.escape removed in Flask 2.3
 from collections import Counter,defaultdict
+from metrics_windowing import reduce_video_window
 import numpy as np
 from scipy.stats import median_abs_deviation
 import statistics
@@ -306,22 +307,12 @@ def batch_video_metrics(videoMetrics, windowsize, fwrite, speaker, session_devic
             newwindowstarted = True
             l += 1
         if(v.time_stamp >= start and v.time_stamp >= end) or l == n:
-            # Accumulate metrics for the window
-            if facial_emotion:
-                most_common_emotion = Counter(facial_emotion).most_common(1)[0][0]
-            else:
-                most_common_emotion = None
-            if object_on_focus:
-                most_common_object = Counter(object_on_focus).most_common(1)[0][0]
-            else:
-                most_common_object = None
-            if attention_level:
-                avg_attention = sum(attention_level) // len(attention_level)
-                attention_rate = avg_attention / (windowsize * (window_count+1)) 
-            else:
-                avg_attention = None
-                attention_rate = 0
-            
+            # Accumulate metrics for the window (shared reducer — was a copy
+            # that drifted from the synthesis path on the empty-window value).
+            most_common_emotion, most_common_object, avg_attention, attention_rate = \
+                reduce_video_window(facial_emotion, object_on_focus, attention_level,
+                                    windowsize, window_count)
+
             # attention_rate_acc.append([window_count, attention_rate])
             attention_rate_acc.append(attention_rate)
         
@@ -708,21 +699,12 @@ def aggregate_video_metric_per_window(videoMetrics_per_window,windowsize,window_
     facial_emotion = videoMetrics_per_window['facial_emotion']
     object_on_focus = videoMetrics_per_window['object_on_focus']
     attention_level = videoMetrics_per_window['attention_level']
-    
-    if facial_emotion:
-        most_common_emotion = Counter(facial_emotion).most_common(1)[0][0]
-    else:
-        most_common_emotion = None
-    if object_on_focus:
-        most_common_object = Counter(object_on_focus).most_common(1)[0][0]
-    else:
-        most_common_object = None
-    if attention_level:
-        avg_attention = sum(attention_level) // len(attention_level)
-        attention_rate = avg_attention / (windowsize * (window_count+1)) 
-    else:
-        avg_attention = 0
-        attention_rate = 0
+
+    # Shared reducer — this copy used to emit avg_attention=0 for an empty
+    # window while the CSV path emitted None; now both say None ("no data").
+    most_common_emotion, most_common_object, avg_attention, attention_rate = \
+        reduce_video_window(facial_emotion, object_on_focus, attention_level,
+                            windowsize, window_count)
     prev_attention_rate = prev_metric[20]
     trend_direction = get_progression(prev_attention_rate, attention_rate,"numerical")
     gazeontask =  1 if trend_direction == 1 else 0
