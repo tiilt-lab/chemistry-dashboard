@@ -111,6 +111,18 @@ def test_delete_user_removes_metrics_before_devices():
     assert vid < dev, "video metrics must be deleted before SessionDevice"
 
 
+def test_device_in_session_guard_is_never_inlined():
+    # The cross-tenant isolation predicate ("pod belongs to THIS session, else
+    # 404") must go through the single authz.device_in_session helper. Four
+    # routes re-implemented `session_device.session_id != session_id` by hand;
+    # a hand copy is where the next tenant-isolation leak hides.
+    s = _read("server", "routes", "session.py")
+    assert ".session_id != session_id" not in s, \
+        "tenant-isolation check must use _device_in_session, not an inline predicate"
+    assert s.count("_device_in_session(") >= 7, \
+        "all membership-guarded routes must resolve via _device_in_session"
+
+
 def test_connected_flag_cleared_on_session_end_and_removal():
     s = _read("server", "handlers", "session_handler.py")
     assert s.count("connected = False") >= 2, \

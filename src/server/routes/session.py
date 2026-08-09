@@ -739,8 +739,8 @@ def session_device_keywords(session_id, device_id, **kwargs):
 def session_device(session_id, session_device_id, **kwargs):
         # `processing_key` was a required positional nothing supplied — every
         # call 500ed with a TypeError before reaching the body.
-        session_device = database.get_session_devices(id=session_device_id)
-        if session_device is None or session_device.session_id != session_id:
+        session_device = _device_in_session(session_device_id, session_id)
+        if session_device is None:
             return json_response({'message': 'Session device not found.'}, 404)
         return json_response(session_device.json())
 
@@ -1103,8 +1103,8 @@ def rename_session_device(session_id, device_id, **kwargs):
         return json_response({'message': 'Name must not be empty.'}, 400)
     if len(name) > 64:
         return json_response({'message': 'Name must not exceed 64 characters.'}, 400)
-    session_device = database.get_session_devices(id=device_id)
-    if not session_device or session_device.session_id != session_id:
+    session_device = _device_in_session(device_id, session_id)
+    if session_device is None:
         return json_response({'message': 'Pod not found in this session.'}, 404)
     session_device.name = name
     database.save_changes()
@@ -1140,8 +1140,8 @@ def remove_device_from_session(session_id, session_device_id, **kwargs):
     # is from the URL and must belong to THAT session, or a user who owns any
     # one session could end/delete another tenant's live pod by id (the
     # sibling rename/get routes already check this).
-    target = database.get_session_devices(id=session_device_id)
-    if target is None or target.session_id != session_id:
+    target = _device_in_session(session_device_id, session_id)
+    if target is None:
         return json_response({'message': 'Session device not found.'}, 404)
     delete = string_to_bool(request.args.get('delete', 'false'))
     if delete:
@@ -1354,8 +1354,8 @@ def export_session_transcript_video_metrics(session_id,windowsize, format, **kwa
 # call this with no credential (students have no accounts).
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/synthesized_feedback_metrics',methods=['GET'])
 def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
-    session_device = database.get_session_devices(id=session_device_id)
-    if session_device is None or session_device.session_id != session_id:
+    session_device = _device_in_session(session_device_id, session_id)
+    if session_device is None:
         return json_response({'message': 'Session device not found.'}, 404)
 
     existing_synthesis = database.get_synthesized_feedback_report(sessionId=session_id, sessionDeviceId = session_device_id)
