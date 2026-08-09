@@ -11,29 +11,18 @@ alignment (a 5.5-min recording takes ~2 min), vs. seconds for WhisperX.
 """
 
 import os
-import json
 import logging
-import subprocess
-import threading
-import queue as queue_module
 
-from .base_asr import AsrResult
+from .base_asr import (AsrResult, PosthocFileASR, worker_python,
+                       run_json_worker, permissive_torch_load,
+                       POSTHOC_WORKER_TIMEOUT)
 
 _WORKER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "qwen3_worker.py")
 
 
-def _worker_python():
-    # Historically qwen-asr lived in a dedicated py3.10 venv (the pipeline ran
-    # py3.9). On the unified py3.10 environment qwen-asr is installed alongside
-    # everything else, so the current interpreter works; prefer the dedicated
-    # venv only if it still exists.
-    import sys
-    dedicated = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                             "qwen_venv", "bin", "python")
-    return dedicated if os.path.exists(dedicated) else sys.executable
+class Qwen3ASR(PosthocFileASR):
+    DRAIN_NAME = "qwen3"
 
-
-class Qwen3ASR:
     def __init__(self, audio_queue, transcript_queue, config, media_type,
                  interval, audio_file=None, model_id=None, diarize=False,
                  max_speakers=None, enrolled=None, speaker_model=None):
@@ -50,37 +39,12 @@ class Qwen3ASR:
         self.speaker_model = speaker_model
         self.running = False
 
-    def start(self):
-        self.running = True
-        threading.Thread(target=self._drain_queue, daemon=True,
-                         name="qwen3-queue-drain").start()
-        threading.Thread(target=self._transcribe_file, daemon=True,
-                         name="qwen3-transcribe").start()
-
-    def stop(self):
-        self.running = False
-
-    def _drain_queue(self):
-        while self.running:
-            try:
-                chunk = self.audio_queue.get(timeout=0.25)
-            except queue_module.Empty:
-                continue
-            if chunk is None or not isinstance(chunk, (bytes, bytearray)):
-                break
+    # start()/stop()/_drain_queue() come from PosthocFileASR.
 
     def _speaker_turns(self):
-        # pyannote diarization runs in THIS (3.9) process — only qwen-asr
-        # itself needs 3.10.
+        # pyannote diarization runs in THIS process — only qwen-asr needs 3.10.
         import torch
-        original_load = torch.load
-
-        def _permissive_load(*args, **kwargs):
-            kwargs["weights_only"] = False
-            return original_load(*args, **kwargs)
-
-        torch.load = _permissive_load
-        try:
+        with permissive_torch_load():
             from pyannote.audio import Pipeline
             token = os.environ.get("HUGGING_FACE_HUB_TOKEN")
             pipeline = Pipeline.from_pretrained(
@@ -89,8 +53,6 @@ class Qwen3ASR:
             diarization = pipeline(self.audio_file, max_speakers=self.max_speakers)
             return [(turn.start, turn.end, label)
                     for turn, _, label in diarization.itertracks(yield_label=True)]
-        finally:
-            torch.load = original_load
 
     @staticmethod
     def _speaker_at(turns, midpoint):
@@ -102,22 +64,10 @@ class Qwen3ASR:
     def _transcribe_file(self):
         try:
             logging.info("Qwen3-ASR: transcribing %s via %s", self.audio_file, self.model_id)
-            import tempfile
-            with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tf:
-                out_path = tf.name
-            try:
-                proc = subprocess.run(
-                    [_worker_python(), _WORKER, self.audio_file, self.model_id, out_path],
-                    capture_output=True, timeout=3600)
-                if proc.returncode != 0:
-                    raise RuntimeError("worker failed: %s" % proc.stderr.decode()[-500:])
-                with open(out_path) as f:
-                    data = json.load(f)
-            finally:
-                try:
-                    os.remove(out_path)
-                except OSError:
-                    pass
+            data = run_json_worker(
+                lambda out_path: [worker_python("qwen_venv", 2), _WORKER,
+                                  self.audio_file, self.model_id, out_path],
+                timeout=POSTHOC_WORKER_TIMEOUT)
             segments = data.get("segments", [])
             logging.info("Qwen3-ASR: %d segments", len(segments))
 

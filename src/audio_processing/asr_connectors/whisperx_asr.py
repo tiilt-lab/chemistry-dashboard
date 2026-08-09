@@ -13,13 +13,13 @@ attribution stays with the existing fingerprint matching downstream.
 """
 
 import logging
-import threading
-import queue as queue_module
 
-from .base_asr import AsrResult
+from .base_asr import AsrResult, PosthocFileASR, permissive_torch_load
 
 
-class WhisperXASR:
+class WhisperXASR(PosthocFileASR):
+    DRAIN_NAME = "whisperx"
+
     def __init__(self, audio_queue, transcript_queue, config, media_type,
                  interval, audio_file=None, model_size=None, diarize=False,
                  max_speakers=None, enrolled=None, speaker_model=None,
@@ -43,44 +43,13 @@ class WhisperXASR:
         self.diarize = self.diarizer is not None
         self.running = False
 
-    def start(self):
-        self.running = True
-        drain = threading.Thread(target=self._drain_queue, daemon=True,
-                                 name="whisperx-queue-drain")
-        drain.start()
-        worker = threading.Thread(target=self._transcribe_file, daemon=True,
-                                  name="whisperx-transcribe")
-        worker.start()
-
-    def stop(self):
-        self.running = False
-
-    def _drain_queue(self):
-        # The post-hoc reader pushes PCM chunks for streaming ASRs; WhisperX
-        # reads the file directly, so just keep the queue from filling up.
-        while self.running:
-            try:
-                chunk = self.audio_queue.get(timeout=0.25)
-            except queue_module.Empty:
-                continue
-            if chunk is None or not isinstance(chunk, (bytes, bytearray)):
-                break
+    # start()/stop()/_drain_queue() come from PosthocFileASR. WhisperX reads
+    # the file directly and only drains the PCM queue so the reader can't block.
 
     def _transcribe_file(self):
         try:
             import torch
-            # torch>=2.6 defaults weights_only=True, which rejects the
-            # pyannote/wav2vec2 checkpoints whisperx loads. These are trusted
-            # Hugging Face downloads; restore the permissive behaviour for the
-            # duration of model loading.
-            original_load = torch.load
-
-            def _permissive_load(*args, **kwargs):
-                kwargs["weights_only"] = False
-                return original_load(*args, **kwargs)
-
-            torch.load = _permissive_load
-            try:
+            with permissive_torch_load():
                 # The RTX 8000 is shared with a second instance, so a whisperx
                 # model load / transcribe occasionally loses the memory race
                 # and dies with "CUDA out of memory" — a transient spike, not a
@@ -99,8 +68,6 @@ class WhisperXASR:
                             _time.sleep(45)
                             continue
                         raise
-            finally:
-                torch.load = original_load
 
             emitted = 0
             for segment in result["segments"]:

@@ -28,7 +28,8 @@ import threading
 import time
 import wave
 
-from .base_asr import BaseASR, AsrResult
+from .base_asr import (BaseASR, AsrResult, PosthocFileASR, worker_python,
+                       run_json_worker, POSTHOC_WORKER_TIMEOUT)
 
 _WORKER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "crisper_worker.py")
 
@@ -36,10 +37,8 @@ DEFAULT_MODEL = "nyralabs/CrisperWhisper2.0_large"
 
 
 def _worker_python():
-    dedicated = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-        "venv-crisper", "bin", "python")
-    return dedicated if os.path.exists(dedicated) else sys.executable
+    # venv-crisper lives in src/ (3 dirs above asr_connectors/); shared resolver.
+    return worker_python("venv-crisper", 3)
 
 
 def _split_segments(words, max_gap=1.0, max_len=15.0):
@@ -261,8 +260,10 @@ class CrisperWhisperASR(BaseASR):
         self._buffer = bytearray()
 
 
-class CrisperWhisperPosthocASR:
+class CrisperWhisperPosthocASR(PosthocFileASR):
     """Post-hoc connector: one-shot worker over the whole recording."""
+
+    DRAIN_NAME = "crisper"
 
     def __init__(self, audio_queue, transcript_queue, config, media_type,
                  interval, audio_file=None, model_id=None, mode=None):
@@ -274,46 +275,17 @@ class CrisperWhisperPosthocASR:
         self.mode = mode or "verbatim"
         self.running = False
 
-    def start(self):
-        self.running = True
-        threading.Thread(target=self._drain_queue, daemon=True,
-                         name="crisper-queue-drain").start()
-        threading.Thread(target=self._transcribe_file, daemon=True,
-                         name="crisper-transcribe").start()
-
-    def stop(self):
-        self.running = False
-
-    def _drain_queue(self):
-        while self.running:
-            try:
-                chunk = self.audio_queue.get(timeout=0.25)
-            except queue_module.Empty:
-                continue
-            if chunk is None or not isinstance(chunk, (bytes, bytearray)):
-                break
+    # start()/stop()/_drain_queue() come from PosthocFileASR.
 
     def _transcribe_file(self):
         try:
             logging.info("CrisperWhisper: transcribing %s via %s (mode=%s)",
                          self.audio_file, self.model_id, self.mode)
-            with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tf:
-                out_path = tf.name
-            try:
-                proc = subprocess.run(
-                    [_worker_python(), _WORKER,
-                     "--oneshot", self.audio_file, out_path,
-                     "--model", self.model_id, "--mode", self.mode],
-                    capture_output=True, timeout=7200)
-                if proc.returncode != 0:
-                    raise RuntimeError("worker failed: %s" % proc.stderr.decode()[-500:])
-                with open(out_path) as f:
-                    data = json.load(f)
-            finally:
-                try:
-                    os.remove(out_path)
-                except OSError:
-                    pass
+            data = run_json_worker(
+                lambda out_path: [_worker_python(), _WORKER,
+                                  "--oneshot", self.audio_file, out_path,
+                                  "--model", self.model_id, "--mode", self.mode],
+                timeout=POSTHOC_WORKER_TIMEOUT)
             words = data.get("words", [])
             logging.info("CrisperWhisper: %d words", len(words))
             _emit_segments(self.transcript_queue, words)
