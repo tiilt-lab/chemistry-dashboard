@@ -2,6 +2,7 @@ import os
 import json
 import time
 import queue
+import threading
 import logging
 import callbacks
 import enrollment_check
@@ -64,6 +65,8 @@ class ServerProtocol(WebSocketServerProtocol):
         # Escape hatch: after repeated quality-gate failures the client can
         # ask for the recording to be accepted anyway (verdict still logged).
         self.fingerprint_force = False
+        # Serializes deferred enrollment-blob processing for this connection.
+        self._fingerprint_lock = threading.Lock()
 
         logging.info('Loaded Diarization Model and Semantic Model...')
 
@@ -231,15 +234,24 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.currSpeaker = None
                 self.currAlias = None
         elif self.stream_data == 'audio-video-fingerprint':
-            # Any failure in here must reach the client — an unhandled
-            # exception used to bubble to onMessage's catch-all and the
-            # sign-up page waited on "Processing…" forever.
-            try:
-                self.process_fingerprint_blob(data)
-            except Exception as e:
-                logging.warning('fingerprint save failed: %s', e, exc_info=True)
+            # Deferred off the reactor: this decodes up to 60s of video
+            # (moviepy/ffmpeg), embeds it (ECAPA), and cross-matches against
+            # every enrollment on disk — done inline it stalled captions and
+            # heartbeats for EVERY connected pod for seconds per blob. Any
+            # failure must still reach the client — an unhandled exception
+            # used to leave the sign-up page on "Processing…" forever.
+            from twisted.internet import threads as _threads
+
+            def _work(blob=data):
+                with self._fingerprint_lock:
+                    self.process_fingerprint_blob(blob)
+
+            def _fail(f):
+                logging.warning('fingerprint save failed: %s', f.getErrorMessage(), exc_info=False)
                 self.send_json({'type': 'error',
                                 'message': 'Saving the recording failed on the server. Please try again.'})
+
+            _threads.deferToThread(_work).addErrback(_fail)
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 
@@ -366,7 +378,10 @@ class ServerProtocol(WebSocketServerProtocol):
             logging.warning('send_json: unserializable payload: %r', message)
             return
         try:
-            self.sendMessage(payload, isBinary = False)
+            # callFromThread makes this safe from worker threads (enrollment
+            # runs deferred off-reactor); from the reactor it just queues the
+            # write for the next iteration.
+            reactor.callFromThread(self.sendMessage, payload, False)
         except Exception as e:
             logging.debug('send_json: transport send failed: %s', e)
 
@@ -453,10 +468,23 @@ class ServerProtocol(WebSocketServerProtocol):
         # The recorders only exist on live audio connections (created in
         # signal_start); fingerprint-enrollment connections close through
         # here too and used to throw AttributeError into the log every time.
+        # Deferred off the reactor: close() converts the whole session .dat
+        # to wav — done inline it stalled ingest for every connected pod for
+        # the duration of the conversion. Nothing here consumes the .wav
+        # synchronously (posthoc reads it much later).
+        recorders = []
         if cf.record_reduced() and getattr(self, 'redu_recorder', None):
-            self.redu_recorder.close()
+            recorders.append(self.redu_recorder)
         if cf.record_original() and getattr(self, 'orig_recorder', None):
-            self.orig_recorder.close()
+            recorders.append(self.orig_recorder)
+        if recorders:
+            from twisted.internet import threads as _threads
+
+            def _close_all(recs=recorders):
+                for r in recs:
+                    r.close()
+
+            _threads.deferToThread(_close_all)
 
 if __name__ == '__main__':
     cf.initialize()

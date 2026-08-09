@@ -19,7 +19,10 @@ class ProcessingConfig:
         self.doa = doa
         self.features = features
         self.tag = tag
-        self.diarization = True # Default to true for testing.
+        # Honor the computed value: the leftover "True for testing" override
+        # made every session pay per-utterance ECAPA embedding and an
+        # end-of-session clustering pass whether tagging was requested or not.
+        self.diarization = diarization
         self.embeddings_file = embeddings_file
         self.topic_model = topic_model
         self.owner = owner

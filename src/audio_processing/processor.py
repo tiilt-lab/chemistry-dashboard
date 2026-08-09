@@ -15,7 +15,7 @@ from features_detector import scorer_factory
 from keyword_detector import keyword_detector
 from doa.doa_respeaker_v2_6mic_array import calculateDOA
 from speaker_diarization.pyDiarization import clusterSpectralEmbeddings
-from speaker_diarization.pyDiarization import embedSignal, checkFingerprints, part_voice_features
+from speaker_diarization.pyDiarization import embedSignal, checkFingerprints, part_voice_features, reset_speaker_session_state
 from speaker_diarization.pyDiarization import getSpectralEmbeddings
 from speaker_diarization import segment_split
 import numpy as np
@@ -37,6 +37,11 @@ class AudioProcessor:
         # appending while completion runs np.array(self.embeddings) raises
         # numpy's "content of sequences changed" (same fix as posthoc).
         self._embeddings_lock = threading.Lock()
+        # Guards running_processes and the completion latch: unlocked
+        # read-modify-writes from per-utterance threads lost decrements
+        # (completion never fired) or double-fired the tagging POST.
+        self._proc_count_lock = threading.Lock()
+        self._completed = False
         self.mt_feats = np.array([])
         self.speakers = np.array([])
         self.signal = np.array([])
@@ -65,6 +70,7 @@ class AudioProcessor:
         self.running = True
         self.asr_complete = False
         self.running_processes = 0
+        self._completed = False
         self.processing_thread = threading.Thread(target=self.process)
         self.processing_thread.daemon = True
         if self.config.topic_model:
@@ -76,6 +82,16 @@ class AudioProcessor:
 
     def stop(self):
         self.running = False
+
+    def _finish_if_done(self):
+        # Exactly-once completion: the reader thread (setting asr_complete)
+        # and the last worker thread (decrementing to zero) can race; the
+        # latch ensures a single __complete_callback whichever wins.
+        with self._proc_count_lock:
+            if not self.asr_complete or self.running_processes != 0 or self._completed:
+                return
+            self._completed = True
+        self.__complete_callback()
 
     def __complete_callback(self):
         logging.info("completing callback")
@@ -97,6 +113,14 @@ class AudioProcessor:
     def setSpeakerFingerprints(self, fingerprints):
         self.fingerprints = fingerprints
         logging.info("Set Speakers")
+        # A fresh roster means a fresh session for these speakers: drop their
+        # cross-session mic adaptation and re-read (possibly re-recorded)
+        # enrollment prints from disk.
+        try:
+            reset_speaker_session_state(
+                info.get('alias') for info in (fingerprints or {}).values())
+        except Exception:
+            logging.exception('resetting speaker session state failed')
         self.speaker_metrics_process.setSpeakers(self.fingerprints)
 
     def send_speaker_taggings(self):
@@ -158,13 +182,13 @@ class AudioProcessor:
                 transcript_audio_data = self.audio_buffer.extract(
                     start_time, end_time)
                 # Start processing thread for DoA, keywords, feature, etc.
-                self.running_processes += 1
+                with self._proc_count_lock:
+                    self.running_processes += 1
                 transcript_thread = threading.Thread(target=self.process_transcript, args=(
                     transcript_data, transcript_audio_data, start_time, end_time))
                 transcript_thread.daemon = True
                 transcript_thread.start()
-        if self.running_processes == 0:
-            self.__complete_callback()
+        self._finish_if_done()
         logging.info('Processing thread stopped for {0}.'.format(
             self.config.auth_key))
 
@@ -205,9 +229,13 @@ class AudioProcessor:
                     logging.info(topics)
                     #    topics = get_topics_with_prob(transcript_text)
                     if len(topics) > 0:
-                        max = 0
+                        # The best probability must be tracked, not just
+                        # compared against 0 — otherwise topic_id ends up as
+                        # the LAST topic with p>0, not the most probable.
+                        best_prob = 0
                         for topic in topics:
-                            if topic[1] > max:
+                            if topic[1] > best_prob:
+                                best_prob = topic[1]
                                 topic_id = topic[0]
                 logging.info(topic_id)
 
@@ -279,8 +307,11 @@ class AudioProcessor:
                 if self.config.diarization:
                     if len(self.embeddings) == 0 and self.embeddings_file is not None:
                         try:
+                            # The file is saved as an object array, which
+                            # np.load refuses without allow_pickle — every
+                            # resume silently restarted from [] before this.
                             self.embeddings = np.load(
-                                self.embeddings_file).tolist()
+                                self.embeddings_file, allow_pickle=True).tolist()
                         except Exception as e:
                             logging.error(
                                 "Unable to load embeddings file: %s", e)
@@ -309,20 +340,23 @@ class AudioProcessor:
                     logging.info( f"Processing results posted successfully for client {self.config.auth_key} (Processing time: {processing_time}) @ {start_time} for transcript {transcript_id}")
                 else:
                     logging.warning("Processing results FAILED to post for"
-                                    " client %d (Processing time: {%f)",
+                                    " client %s (Processing time: %.2f)",
                                     self.config.auth_key, processing_time)
 
             # Get source seperation
             # if self.config.source_seperation:
             #   source_seperation = source_seperation_pre_trained(audio_data)
 
-        except Exception as e:
-            logging.error("Processing FAILED for client %d: %s",
-                          self.config.auth_key, e)
+        except Exception:
+            # %d with a string auth_key made the logging call itself raise,
+            # replacing the real error with a "--- Logging error ---" dump
+            # (posthoc got this fix earlier; the live side never did).
+            logging.exception("Processing FAILED for client %s",
+                              self.config.auth_key)
 
         # Check if this was the final process of the transmission.
-        self.running_processes -= 1
-        if self.asr_complete and self.running_processes == 0:
-            self.__complete_callback()
+        with self._proc_count_lock:
+            self.running_processes -= 1
+        self._finish_if_done()
 
        

@@ -171,45 +171,62 @@ class ServerProtocol(WebSocketServerProtocol):
                         return
                     running_audio_processes[key] = "running"
 
-                conf_val = {'key':key,'encoding': "pcm_f32le", 'sample_rate': self.sample_rate,'channels': 1,'sessionid': self.sessionid,'deviceid': self.session_device_id,
-                            'tag': self.run_tagging, 'server_start':self.server_start,'keywords':self.keywords,'transcribe':self.run_transcribe,'features':self.run_features,'doa':self.run_doa,'topic_model':self.topic_model_choice,'owner':1,'off_set_date':off_set_date}
-                valid, result = ProcessingConfig.from_json(conf_val,source="posthoc processing")
-                if not valid:
-                    # Release the claim or this pod is blocked until restart.
-                    running_audio_processes.pop(key, None)
-                    logging.info("Configuration setting failed for audio posthoc processing")
-                else:    
-                    self.config = result
-                    
-                    if os.path.splitext(self.audio_file)[1] == ".dat":
-                        wavfilename =  os.path.splitext(self.audio_file)[0]+".wav"
-                        with open(self.audio_file, "rb") as f:
-                            all_data = f.read()
-                            all_data = np.frombuffer(all_data, np.float32 if self.config.depth == 4 else np.int16, -1)
-                            chunk_length = int(len(all_data) / self.config.channels)
-                            all_data = np.reshape(all_data, (chunk_length, self.config.channels))
-                        wavfile.write(wavfilename, self.config.sample_rate, all_data)
-                        os.remove(self.audio_file)
-                        self.audio_file = wavfilename
-                        
+                # Anything that throws between claiming the registry entry and
+                # signal_start used to leak the claim (swallowed by onMessage's
+                # catch-all), leaving the pod "already running" until restart.
+                try:
+                    conf_val = {'key':key,'encoding': "pcm_f32le", 'sample_rate': self.sample_rate,'channels': 1,'sessionid': self.sessionid,'deviceid': self.session_device_id,
+                                'tag': self.run_tagging, 'server_start':self.server_start,'keywords':self.keywords,'transcribe':self.run_transcribe,'features':self.run_features,'doa':self.run_doa,'topic_model':self.topic_model_choice,'owner':1,'off_set_date':off_set_date}
+                    valid, result = ProcessingConfig.from_json(conf_val,source="posthoc processing")
+                    if not valid:
+                        # Release the claim or this pod is blocked until restart.
+                        with _running_guard:
+                            running_audio_processes.pop(key, None)
+                        logging.info("Configuration setting failed for audio posthoc processing")
+                    else:
+                        self.config = result
 
-                    #start processing
-                    for speaker in data['speakers']:
-                        try:
-                            alias = safe_names.safe_name(speaker["alias"])
-                        except safe_names.UnsafeName:
-                            logging.warning('skipping speaker with unsafe alias %r', speaker.get("alias"))
-                            continue
-                        audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}".format(alias))
-                        with wave.open(audio_fingerprint_file+'.wav') as wavObj:
-                            byte_audio_data = self.read_bytes_from_wav(wavObj)
-                        self.speakers[speaker["id"]] = {"alias": speaker["alias"], "data": byte_audio_data}
+                        if os.path.splitext(self.audio_file)[1] == ".dat":
+                            wavfilename =  os.path.splitext(self.audio_file)[0]+".wav"
+                            with open(self.audio_file, "rb") as f:
+                                all_data = f.read()
+                                all_data = np.frombuffer(all_data, np.float32 if self.config.depth == 4 else np.int16, -1)
+                                chunk_length = int(len(all_data) / self.config.channels)
+                                all_data = np.reshape(all_data, (chunk_length, self.config.channels))
+                            wavfile.write(wavfilename, self.config.sample_rate, all_data)
+                            os.remove(self.audio_file)
+                            self.audio_file = wavfilename
 
-                    self.signal_start()
-                    self.processor.setSpeakerFingerprints(self.speakers)
 
-                    self.send_json({'type':'init posthoc analytics completed','message':"Starting Audio Analytics Processing"})
-                    logging.info('Audio Posthoc analytics initiated')
+                        #start processing
+                        for speaker in data['speakers']:
+                            try:
+                                alias = safe_names.safe_name(speaker["alias"])
+                            except safe_names.UnsafeName:
+                                logging.warning('skipping speaker with unsafe alias %r', speaker.get("alias"))
+                                continue
+                            audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}".format(alias))
+                            try:
+                                with wave.open(audio_fingerprint_file+'.wav') as wavObj:
+                                    byte_audio_data = self.read_bytes_from_wav(wavObj)
+                            except (FileNotFoundError, wave.Error) as e:
+                                # One roster member without a usable enrollment
+                                # recording must not abort the whole run.
+                                logging.warning('skipping speaker %r: unreadable enrollment wav (%s)',
+                                                speaker.get("alias"), e)
+                                continue
+                            self.speakers[speaker["id"]] = {"alias": speaker["alias"], "data": byte_audio_data}
+
+                        self.signal_start()
+                        self.processor.setSpeakerFingerprints(self.speakers)
+
+                        self.send_json({'type':'init posthoc analytics completed','message':"Starting Audio Analytics Processing"})
+                        logging.info('Audio Posthoc analytics initiated')
+                except Exception:
+                    with _running_guard:
+                        running_audio_processes.pop(key, None)
+                    logging.exception('posthoc init failed after claiming %s; claim released', key)
+                    self.send_json({'type': 'error', 'message': 'Post-hoc initialization failed; see the audio service log.'})
 
         if data['type'] == 'Initialize_participation_and_impact_style_computation':
             self.sessionid = data['sessionid']
@@ -314,9 +331,11 @@ class ServerProtocol(WebSocketServerProtocol):
 
         if data['type'] == 'cancel_posthoc':
             sdid = str(data.get('sessiondeviceid', ''))
-            hits = [k for k in list(running_audio_processes.keys()) if k.startswith(sdid + '-')]
+            with _running_guard:
+                hits = [k for k in list(running_audio_processes.keys()) if k.startswith(sdid + '-')]
             for k in hits:
-                proc = running_audio_processes.pop(k, None)
+                with _running_guard:
+                    proc = running_audio_processes.pop(k, None)
                 if hasattr(proc, 'stop'):
                     try:
                         proc.stop()

@@ -28,8 +28,12 @@ class AudioStreamReader:
 
 
     def send_json(self, message):
+        # Called from the reader thread; Twisted transports are not
+        # thread-safe, so hand the write to the reactor.
+        from twisted.internet import reactor
         payload = json.dumps(message).encode('utf8')
-        self.web_socket_connection.sendMessage(payload, isBinary = False)
+        reactor.callFromThread(
+            self.web_socket_connection.sendMessage, payload, False)
 
     def start(self):
         self.processing_thread = threading.Thread(target=self._run,name="audio_stream_reader")

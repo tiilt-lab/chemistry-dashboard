@@ -19,8 +19,11 @@ from sklearn.metrics.pairwise import cosine_similarity
 import scipy.spatial as sp
 
 def embedSignal(x, verification):
-
-  signal = torch.tensor(np.frombuffer(x, dtype=np.dtype('int16')))
+  # FLOAT domain, like every other embedding path here: raw-int16 embeddings
+  # are measurably degraded (see cluster_reconcile's -0.08 vs 0.39 note), and
+  # the clustering merge gate below is calibrated on float-domain centroids.
+  signal = torch.tensor(
+      np.frombuffer(x, dtype=np.int16).astype(np.float32) / 32768.0)
 
   embedding = verification.encode_batch(signal)
   # The model may live on CUDA; numpy conversion requires host memory.
@@ -104,6 +107,17 @@ _PRINT_CACHE = {}
 # sessions. Bridges the enrollment-mic vs session-mic domain gap: after a few
 # clear utterances, the speaker is matched against how they sound TODAY.
 _SESSION_ACC = {}
+
+
+def reset_speaker_session_state(aliases):
+  """Called when a pod (re)sets its roster. Those speakers are starting a
+  fresh session: their mic-adaptation samples from an earlier session (other
+  room, other phone) must not carry over, and a re-recorded enrollment print
+  must be re-read from disk instead of served stale from the process cache."""
+  for alias in aliases:
+    if alias:
+      _SESSION_ACC.pop(alias, None)
+      _PRINT_CACHE.pop(alias, None)
 
 
 def _print_embedding(alias, raw_bytes, verification):

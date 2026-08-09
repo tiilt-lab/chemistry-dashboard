@@ -127,9 +127,17 @@ class SpeakerProcessor:
         self.embeddings = np.concatenate((self.embeddings, np.array([embedding])))
         given_data = self.subspaceProjection(self.subspace_basis, embedding)
         new_data = np.array([embedding - given_data])
-        self.total_new[speaker] += np.linalg.norm(new_data)/(np.linalg.norm(given_data) + np.linalg.norm(new_data))
-        normalized_new_data = normalizeVector(new_data)
-        self.subspace_basis = np.concatenate((self.subspace_basis, normalized_new_data), axis = 0)
+        new_norm = np.linalg.norm(new_data)
+        given_norm = np.linalg.norm(given_data)
+        # A near-duplicate utterance (repeated "yeah"s) lies inside the
+        # accumulated subspace: new_norm ~ 0, and normalizing that residual
+        # put a NaN row into subspace_basis, silently zeroing newness for
+        # every later utterance of the session. Contribute nothing new, and
+        # keep the basis clean.
+        if new_norm > 1e-9:
+            self.total_new[speaker] += new_norm / (given_norm + new_norm)
+            normalized_new_data = normalizeVector(new_data)
+            self.subspace_basis = np.concatenate((self.subspace_basis, normalized_new_data), axis = 0)
         with np.errstate(divide='ignore', invalid='ignore'):
             self.newness = np.divide(self.total_new, self.contributions)
             self.newness = np.nan_to_num(self.newness)

@@ -39,6 +39,11 @@ class AudioProcessorPosthoc:
         # raised numpy's "content of sequences changed" RuntimeError, killing
         # every utterance of a pod before its transcript was posted.
         self._embeddings_lock = threading.Lock()
+        # Guards running_processes and the completion latch: unlocked
+        # read-modify-writes from per-utterance threads lost decrements
+        # (completion never fired) or double-fired the tagging POST.
+        self._proc_count_lock = threading.Lock()
+        self._completed = False
         self.mt_feats = np.array([])
         self.speakers = np.array([])
         self.signal = np.array([])
@@ -69,6 +74,7 @@ class AudioProcessorPosthoc:
         self.running = True
         self.asr_complete = False
         self.running_processes = 0
+        self._completed = False
         self.processing_thread = threading.Thread(target=self.process)
         self.processing_thread.daemon = True
         if self.config.topic_model:
@@ -80,6 +86,16 @@ class AudioProcessorPosthoc:
 
     def stop(self):
         self.running = False
+
+    def _finish_if_done(self):
+        # Exactly-once completion: the reader thread (setting asr_complete)
+        # and the last worker thread (decrementing to zero) can race; the
+        # latch ensures a single __complete_callback whichever wins.
+        with self._proc_count_lock:
+            if not self.asr_complete or self.running_processes != 0 or self._completed:
+                return
+            self._completed = True
+        self.__complete_callback()
 
     def __complete_callback(self):
         logging.info("completing callback")
@@ -121,14 +137,26 @@ class AudioProcessorPosthoc:
     def send_json(self, message):
         import json as _json
         try:
+            # Called from processing threads; Twisted transports are not
+            # thread-safe, so hand the write to the reactor.
+            from twisted.internet import reactor
             payload = _json.dumps(message).encode('utf8')
-            self.web_socket_connection.sendMessage(payload, isBinary=False)
+            reactor.callFromThread(
+                self.web_socket_connection.sendMessage, payload, False)
         except Exception as e:
             logging.info('completion notify failed: {0}'.format(e))
 
     def setSpeakerFingerprints(self, fingerprints):
         self.fingerprints = fingerprints
         logging.info("Set Speakers")
+        # Same as the live processor: a fresh roster invalidates those
+        # speakers' cached prints and cross-session mic adaptation.
+        try:
+            from speaker_diarization.pyDiarization import reset_speaker_session_state
+            reset_speaker_session_state(
+                info.get('alias') for info in (fingerprints or {}).values())
+        except Exception:
+            logging.exception('resetting speaker session state failed')
         self.speaker_metrics_process.setSpeakers(self.fingerprints)
 
     def send_speaker_taggings(self):
@@ -217,7 +245,8 @@ class AudioProcessorPosthoc:
                 transcript_audio_data = self.audio_buffer.extract(
                     start_time, end_time)
                 # Start processing thread for DoA, keywords, feature, etc.
-                self.running_processes += 1
+                with self._proc_count_lock:
+                    self.running_processes += 1
                 transcript_thread = threading.Thread(target=self.process_transcript, args=(
                     transcript_data, transcript_audio_data, start_time, end_time))
                 transcript_thread.daemon = True
@@ -232,8 +261,7 @@ class AudioProcessorPosthoc:
                         self.send_json(self._last_progress)
                     except Exception:
                         pass
-        if self.running_processes == 0:
-            self.__complete_callback()
+        self._finish_if_done()
         logging.info('Processing thread stopped for {0}.'.format(
             self.config.auth_key))
 
@@ -272,9 +300,13 @@ class AudioProcessorPosthoc:
                     logging.info(topics)
                     #    topics = get_topics_with_prob(transcript_text)
                     if len(topics) > 0:
-                        max = 0
+                        # The best probability must be tracked, not just
+                        # compared against 0 — otherwise topic_id ends up as
+                        # the LAST topic with p>0, not the most probable.
+                        best_prob = 0
                         for topic in topics:
-                            if topic[1] > max:
+                            if topic[1] > best_prob:
+                                best_prob = topic[1]
                                 topic_id = topic[0]
                 logging.info(topic_id)
 
@@ -329,8 +361,11 @@ class AudioProcessorPosthoc:
                 if self.config.diarization:
                     if len(self.embeddings) == 0 and self.embeddings_file is not None:
                         try:
+                            # The file is saved as an object array, which
+                            # np.load refuses without allow_pickle — every
+                            # resume silently restarted from [] before this.
                             self.embeddings = np.load(
-                                self.embeddings_file).tolist()
+                                self.embeddings_file, allow_pickle=True).tolist()
                         except Exception as e:
                             logging.error(
                                 "Unable to load embeddings file: %s", e)

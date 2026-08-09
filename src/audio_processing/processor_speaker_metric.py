@@ -56,8 +56,12 @@ class SpeakerMetricProcessor:
         self.web_socket_connection = web_socket
 
     def send_json(self, message):
+        # Called from the metric worker thread; Twisted transports are not
+        # thread-safe, so hand the write to the reactor.
+        from twisted.internet import reactor
         payload = json.dumps(message).encode('utf8')
-        self.web_socket_connection.sendMessage(payload, isBinary = False)
+        reactor.callFromThread(
+            self.web_socket_connection.sendMessage, payload, False)
 
     def setSpeakerFingerprints(self, fingerprints):
         self.fingerprints = fingerprints
