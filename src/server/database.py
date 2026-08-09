@@ -638,19 +638,26 @@ def generate_session_passcode(session_id):
     # Memorable single-word passcodes (see passcode_words.py); falls back to
     # word+digits if every word is in use by an active session.
     session = get_sessions(id=session_id)
-    passcode = None
-    for _ in range(60):
-        candidate = random.choice(passcode_words.WORDS)
-        if not get_sessions(active=True, passcode=candidate):
-            passcode = candidate
-            break
-    while passcode is None:
-        candidate = random.choice(passcode_words.WORDS) + str(random.randint(10, 99))
-        if not get_sessions(active=True, passcode=candidate):
-            passcode = candidate
-    session.passcode = passcode
-    db.session.commit()
-    return session
+    while True:
+        passcode = None
+        for _ in range(60):
+            candidate = random.choice(passcode_words.WORDS)
+            if not get_sessions(active=True, passcode=candidate):
+                passcode = candidate
+                break
+        while passcode is None:
+            candidate = random.choice(passcode_words.WORDS) + str(random.randint(10, 99))
+            if not get_sessions(active=True, passcode=candidate):
+                passcode = candidate
+        session.passcode = passcode
+        db.session.commit()
+        # The pick above is check-then-set: two sessions created concurrently
+        # can both see a word as free and both commit it, making one join
+        # code route to the wrong class. Post-commit rule both sides agree
+        # on: the earliest session keeps the code, later ones re-roll.
+        clashes = get_sessions(active=True, passcode=passcode)
+        if not any(s.id < session.id for s in clashes):
+            return session
 
 # -------------------------
 # SessionDevice
@@ -747,6 +754,19 @@ def create_byod_session_device(passcode, name, collaborators):
         session_device = SessionDevice(session.id, None, name)
         db.session.add(session_device)
         db.session.commit()
+        # Two phones joining with the same name concurrently both pass the
+        # duplicate check above (legacy deployments have no DB constraint —
+        # see the __table_args__ note on SessionDevice). Converge
+        # deterministically: the earliest row wins; a later duplicate deletes
+        # itself and signs into the winner like the re-join path.
+        earliest = db.session.query(SessionDevice).filter(
+            SessionDevice.session_id == session.id,
+            SessionDevice.name == name).order_by(SessionDevice.id).first()
+        if earliest is not None and earliest.id != session_device.id:
+            db.session.delete(session_device)
+            earliest.removed = False
+            db.session.commit()
+            return True, earliest, get_speakers(session_device_id=earliest.id)
         session_device.create_key()
         db.session.commit()
         logging.info("Collaborators: {}".format(collaborators))
@@ -1494,19 +1514,59 @@ def get_student_longitudinal(username):
         .join(Session, SessionDevice.session_id == Session.id) \
         .filter(Speaker.alias == username) \
         .order_by(Session.creation_date).all()
+    if not devices:
+        return []
+    dids = [did for did, _sid, _sname, _sdate in devices]
+
+    # This endpoint is anonymously reachable and a student accrues sessions
+    # all term, so the per-session queries are batched: five fixed round
+    # trips total instead of ~5 per session.
+
+    # Everyone's seconds + utterance counts, grouped per pod. Gives this
+    # student's totals AND their group context (size, rank) — share alone is
+    # meaningless without knowing how many people were splitting the airtime.
+    per_speaker_by_dev = {}
+    for did, tag, sec, n in db.session.query(
+            Transcript.session_device_id, Transcript.speaker_tag,
+            func.sum(Transcript.length), func.count(Transcript.id)).filter(
+            Transcript.session_device_id.in_(dids),
+            Transcript.speaker_tag.isnot(None)) \
+            .group_by(Transcript.session_device_id, Transcript.speaker_tag).all():
+        per_speaker_by_dev.setdefault(did, []).append((tag, sec, n))
+
+    # Ordered speaker tags per pod, for the turn-run computation below.
+    tags_by_dev = {}
+    for did, tag in db.session.query(
+            Transcript.session_device_id, Transcript.speaker_tag).filter(
+            Transcript.session_device_id.in_(dids),
+            Transcript.speaker_tag.isnot(None)) \
+            .order_by(Transcript.session_device_id, Transcript.start_time).all():
+        tags_by_dev.setdefault(did, []).append(tag)
+
+    attn_by_dev = dict(db.session.query(
+        SpeakerVideoMetrics.session_device_id,
+        func.avg(SpeakerVideoMetrics.attention_level)).filter(
+        SpeakerVideoMetrics.session_device_id.in_(dids),
+        SpeakerVideoMetrics.student_username == username)
+        .group_by(SpeakerVideoMetrics.session_device_id).all())
+
+    utts_by_dev = {}
+    for did, q, t in db.session.query(
+            Transcript.session_device_id, Transcript.question,
+            Transcript.transcript).filter(
+            Transcript.session_device_id.in_(dids),
+            Transcript.speaker_tag == username).all():
+        utts_by_dev.setdefault(did, []).append((q, t))
+
+    report_by_dev = {}
+    for report in db.session.query(SessionSynthesizedReport).filter(
+            SessionSynthesizedReport.session_device_id.in_(dids)).all():
+        report_by_dev.setdefault(report.session_device_id, report)
+
+    from analytics import classify_question
     out = []
     for did, sid, sname, sdate in devices:
-        # One grouped pass per pod: everyone's seconds + utterance counts.
-        # Gives this student's totals AND their group context (size, rank) —
-        # share alone is meaningless without knowing how many people were
-        # splitting the airtime.
-        per_speaker = db.session.query(
-            Transcript.speaker_tag,
-            func.sum(Transcript.length),
-            func.count(Transcript.id)).filter(
-            Transcript.session_device_id == did,
-            Transcript.speaker_tag.isnot(None)) \
-            .group_by(Transcript.speaker_tag).all()
+        per_speaker = per_speaker_by_dev.get(did, [])
         total_sec = sum(float(sec or 0) for _t, sec, _n in per_speaker)
         their_sec, their_utt_count = 0.0, 0
         for tag, sec, n in per_speaker:
@@ -1518,25 +1578,15 @@ def get_student_longitudinal(username):
         # Turns = consecutive runs by this speaker (30 quick utterances in
         # one exchange is one turn, not thirty). Distinguishes "one long
         # monologue" from "engaged repeatedly" at identical share.
-        tags = [t for (t,) in db.session.query(Transcript.speaker_tag).filter(
-            Transcript.session_device_id == did,
-            Transcript.speaker_tag.isnot(None))
-            .order_by(Transcript.start_time).all()]
         turns, prev = 0, None
-        for t in tags:
+        for t in tags_by_dev.get(did, []):
             if t == username and prev != username:
                 turns += 1
             prev = t
-        avg_attn = db.session.query(func.avg(SpeakerVideoMetrics.attention_level)).filter(
-            SpeakerVideoMetrics.session_device_id == did,
-            SpeakerVideoMetrics.student_username == username).scalar()
+        avg_attn = attn_by_dev.get(did)
         # Questions asked and their openness, from the same transcript rows
         # the dynamics panel uses.
-        their_utts = db.session.query(
-            Transcript.question, Transcript.transcript).filter(
-            Transcript.session_device_id == did,
-            Transcript.speaker_tag == username).all()
-        from analytics import classify_question
+        their_utts = utts_by_dev.get(did, [])
         questions = sum(1 for q, _t in their_utts if q)
         open_qs = sum(1 for q, t in their_utts
                       if q and classify_question(t) == 'open')
@@ -1548,10 +1598,9 @@ def get_student_longitudinal(username):
         influence = relevance = None
         try:
             import json as _json
-            reports = get_synthesized_feedback_report(
-                sessionId=sid, sessionDeviceId=did)
-            if reports:
-                pl = _json.loads(reports[0].synthesized_feedback) \
+            report = report_by_dev.get(did)
+            if report:
+                pl = _json.loads(report.synthesized_feedback) \
                     .get('participants_level', {})
                 entries = pl.get(username) or []
                 si = [e['socialimpact'] for e in entries

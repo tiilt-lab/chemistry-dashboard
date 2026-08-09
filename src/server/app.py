@@ -55,6 +55,11 @@ app.config['SESSION_COOKIE_NAME'] = 'DCSession'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
+# Cap request bodies. The largest legitimate payload is a session-video
+# upload (~2h at the 5 Mbps recording ceiling ≈ 4.5 GB); without a cap a
+# single request could fill the disk. Everything else is far smaller.
+app.config['MAX_CONTENT_LENGTH'] = 6 * 1024 * 1024 * 1024
+
 # Trust exactly as many trailing X-Forwarded-For entries as there are proxies in
 # front of this instance (see config.proxy_count). Trusting one too many hands
 # remote_addr to the caller, since everything left of the proxies' own entries is

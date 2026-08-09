@@ -340,6 +340,9 @@ def add_tagging(**kwargs):
   if session_device:
     callback_handlers.process_tagging_data(session_device.id, tagging_data)
     session_device.embeddings = embeddingsFile
+    # Without an explicit commit the teardown session.remove() rolled this
+    # assignment back, silently losing the embeddings path on every tag.
+    database.save_changes()
   return json_response()
 
 # Alias kept because older peers post to the /callback/-prefixed path; the

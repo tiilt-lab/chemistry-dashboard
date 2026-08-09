@@ -8,10 +8,21 @@ from dotenv import load_dotenv
 from utility import json_response, build_prompt
 import wrappers
 import os
+import threading
 import time
 import numpy as np
 
 api_routes = Blueprint('llmquery', __name__)
+
+# A generation can hold a Werkzeug worker for minutes (Ollama timeout is
+# 600s), and two of these endpoints are anonymous by design — without a cap a
+# handful of concurrent requests pins the whole threaded pool and every other
+# route stalls. Excess requests get a clean 429 instead of a hung server.
+_LLM_SLOTS = threading.BoundedSemaphore(int(os.getenv("LLM_MAX_CONCURRENT", "3")))
+
+
+class _LLMBusy(Exception):
+    pass
 
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -106,19 +117,29 @@ def _pick_local_model():
 def call_llm(prompt):
     """Local first (best available model from OLLAMA_MODELS), Gemini
     fallback. Every reflection/Q&A/summary goes through here."""
-    model = _pick_local_model()
-    if model:
-        try:
-            return call_local_llm(prompt, model)
-        except Exception as e:
-            logging.warning("local llm %s failed (%s); falling back to Gemini",
-                            model, e)
-    return call_gemini_with_retry(prompt)
+    if not _LLM_SLOTS.acquire(blocking=False):
+        raise _LLMBusy()
+    try:
+        model = _pick_local_model()
+        if model:
+            try:
+                return call_local_llm(prompt, model)
+            except Exception as e:
+                logging.warning("local llm %s failed (%s); falling back to Gemini",
+                                model, e)
+        return call_gemini_with_retry(prompt)
+    finally:
+        _LLM_SLOTS.release()
 
 
 def _llm_error_response(e):
     """Map raw Gemini failures to something an instructor can act on. The
     spend-cap 429 used to dump the whole error JSON into the dialog."""
+    if isinstance(e, _LLMBusy):
+        return json_response({
+            'message': "The AI service is handling its maximum number of "
+                       "requests right now. Please try again in a minute.",
+        }, 429)
     s = str(e)
     logging.error("llm error: %s", s)
     if 'RESOURCE_EXHAUSTED' in s or "'code': 429" in s or s.startswith('429'):
@@ -153,7 +174,7 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
 
     existing_feedback = database.get_speaker_session_device_llm_report(username=metricObj['participant_name'], sessionId=metricObj['sessionid'], sessionDeviceId = metricObj['sessiondeviceid'])
     
-    if existing_feedback and metricObj['retrieve_existing_report'] == 'true':
+    if existing_feedback and metricObj.get('retrieve_existing_report') == 'true':
         raw = str(existing_feedback.feedback_analysis)
     else:
         prompt = build_prompt(metricObj,"Session_level analysis for participant")
@@ -173,7 +194,7 @@ def generate_llm_feedback_based_on_metrics(**kwargs):
             raw = _stamp_provenance(raw, response.model)
 
             #add to the database
-            if metricObj['retrieve_existing_report'] != 'true' and existing_feedback:
+            if metricObj.get('retrieve_existing_report') != 'true' and existing_feedback:
                 #update the database
                 database.update_speaker_session_device_llm_report(id=existing_feedback.id,feedback_analysis=raw)
             else:
@@ -199,11 +220,22 @@ def fetch_response_for_question(**kwargs):
     raw = ""
     if not questionObj:
         return json_response({'message': 'Missing data.'}, 400)
-    
-    if int(questionObj['default_question_id']) > -1 :
-        existing_response = database.get_speaker_session_device_llm_question_answer(username=questionObj['participant_name'], sessionId=questionObj['sessionid'], sessionDeviceId = questionObj['sessiondeviceid'],default_question_id=int(questionObj['default_question_id']))
-    
-    if existing_response and questionObj['retrieve_existing_answer'] == 'true':
+    # Missing/malformed fields must be a clean 400, not a KeyError 500.
+    missing = [k for k in ('participant_name', 'sessionid', 'sessiondeviceid',
+                           'question')
+               if not questionObj.get(k)]
+    if missing:
+        return json_response({'message': 'Missing fields: %s' % ', '.join(missing)}, 400)
+    try:
+        default_question_id = int(questionObj.get('default_question_id', -1))
+    except (TypeError, ValueError):
+        return json_response({'message': '"default_question_id" must be an integer.'}, 400)
+    questionObj['default_question_id'] = default_question_id
+
+    if default_question_id > -1 :
+        existing_response = database.get_speaker_session_device_llm_question_answer(username=questionObj['participant_name'], sessionId=questionObj['sessionid'], sessionDeviceId = questionObj['sessiondeviceid'],default_question_id=default_question_id)
+
+    if existing_response and questionObj.get('retrieve_existing_answer') == 'true':
         raw = str(existing_response.answer)
     else:
         prompt = build_prompt(questionObj,"Interactive question answer")
@@ -218,7 +250,7 @@ def fetch_response_for_question(**kwargs):
             raw = _stamp_provenance(raw, response.model)
 
             #add to the database
-            if questionObj['retrieve_existing_answer'] != 'true' and existing_response:
+            if questionObj.get('retrieve_existing_answer') != 'true' and existing_response:
                 #update the database
                 database.update_speaker_session_device_llm_question_answer(id=existing_response.id,question=questionObj['question'],answer=raw)
             else:

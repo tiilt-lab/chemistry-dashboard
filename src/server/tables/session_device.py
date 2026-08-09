@@ -29,14 +29,16 @@ class SessionDevice(db.Model):
     llmquestionanswer = db.relationship("LLMQuestionAnswer", back_populates="session_device", cascade="all, delete",passive_deletes=True)
     sessionSynthesizedReports = db.relationship("SessionSynthesizedReport", back_populates="session_device", cascade="all, delete",passive_deletes=True)
 
-    UniqueConstraint('session_id', 'name', name='unique_session_name')
+    # Must live in __table_args__ — as a bare class-body expression the
+    # constraint object was discarded and no constraint ever existed.
+    __table_args__ = (UniqueConstraint('session_id', 'name', name='unique_session_name'),)
 
     KEY_MAX_LENGTH = 64
     NAME_MAX_LENGTH = 64
     NAME_CHARS = 'a-zA-Z0-9\': '
 
     def __hash__(self):
-        return hash((self.session_device_id))
+        return hash(self.id)
 
     def __init__(self, session_id, device_id, name):
         self.session_id = session_id

@@ -29,6 +29,9 @@ import time
 
 api_routes = Blueprint('session', __name__)
 image_queue_dict = {}
+# Serializes synthesized-report writes: concurrent anonymous GETs both saw
+# "no report yet" and each inserted a row.
+_synthesis_write_lock = threading.Lock()
 
 @api_routes.route('/api/v1/sessions', methods=['GET'])
 @wrappers.verify_login(public=True)
@@ -108,7 +111,10 @@ def update_session(session_id, user, **kwargs):
         valid, message = Session.verify_fields(name=name)
         if not valid:
             return json_response({'message': message}, 400)
-    if folder != -1:
+    # None means "not changing the folder" — without the None guard a plain
+    # rename ran get_folders(id=None), which returns the user's first folder
+    # or None, 404ing every rename for users who own no folders.
+    if folder is not None and folder != -1:
         owned_folder = database.get_folders(id=folder, owner_id=user['id'], first =True)
         if not owned_folder:
             return json_response({'message': 'Either the folder does not exist or invalid access'}, 404)
@@ -713,11 +719,12 @@ def session_device_keywords(session_id, device_id, **kwargs):
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:session_device_id>', methods=['GET'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_read_access
-def session_device(session_id, session_device_id, processing_key, **kwargs):
-        if session_device_id:
-          session_device = database.get_session_devices(id=session_device_id)
-        elif processing_key:
-          session_device = database.get_session_devices(processing_key=processing_key)
+def session_device(session_id, session_device_id, **kwargs):
+        # `processing_key` was a required positional nothing supplied — every
+        # call 500ed with a TypeError before reaching the body.
+        session_device = database.get_session_devices(id=session_device_id)
+        if session_device is None or session_device.session_id != session_id:
+            return json_response({'message': 'Session device not found.'}, 404)
         return json_response(session_device.json())
 
 def _pod_ids_with_recordings():
@@ -853,8 +860,10 @@ def add_device_heart_rate(device_id, **kwargs):
         rr_text = ','.join(str(int(v)) for v in rr if isinstance(v, (int, float)))[:64]
         rows.append({
             'speaker_id': s.get('speaker_id'),
-            'speaker_alias': sanitize(str(s.get('alias', '')))[:64] or 'Unknown',
-            'sensor_name': sanitize(str(s.get('sensor', '')))[:64],
+            # sanitize('') returns None — slicing it raised a TypeError that
+            # aborted the whole batch (up to 500 samples) on one bad sample.
+            'speaker_alias': (sanitize(str(s.get('alias', ''))) or 'Unknown')[:64],
+            'sensor_name': (sanitize(str(s.get('sensor', ''))) or '')[:64],
             'time_stamp': max(0, int((t_ms - session_start_ms) / 1000.0)),
             'heart_rate': hr,
             'rr_ms': rr_text,
@@ -1312,10 +1321,17 @@ def export_session_transcript_video_metrics(session_id,windowsize, format, **kwa
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/synthesized_feedback_metrics',methods=['GET'])
 def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
     session_device = database.get_session_devices(id=session_device_id)
-    
-    combine_metric_level = {'group_id': session_device.id, 'group_name': session_device.name, 'window_level':{}, 'participants_level':{}, 'session_level':{}, 'group_level':{}}
-    
+    if session_device is None or session_device.session_id != session_id:
+        return json_response({'message': 'Session device not found.'}, 404)
+
     existing_synthesis = database.get_synthesized_feedback_report(sessionId=session_id, sessionDeviceId = session_device_id)
+
+    # An anonymous endpoint must not be a recompute-and-rewrite amplifier:
+    # once the session has ended the data is frozen, so serve the stored
+    # report instead of rebuilding the whole window synthesis per GET.
+    parent_session = database.get_sessions(id=session_id)
+    if existing_synthesis and parent_session is not None and parent_session.end_date is not None:
+        return json_response(json.loads(existing_synthesis[0].synthesized_feedback))
 
     keywords = database.get_keyword_usages(session_device_id=session_device_id)
     videoMetrics = database.get_speaker_video_metrics(session_device_id=session_device_id)
@@ -1323,11 +1339,14 @@ def getSynthesizedFeedbackMetrics(session_id,session_device_id, **kwargs):
     combine_metric_level = synthesized_transcript_video_metrics_by_window(transcriptSpeakerMetric,videoMetrics,session_device,keywords,windowsize=10)
 
     combine_metric_dump = json.dumps(combine_metric_level)
-    if existing_synthesis:
-        database.update_synthesized_feedback_report(id=existing_synthesis[0].id,synthesized_feedback=combine_metric_dump)
-    else:
-        database.add_synthesized_feedback_report(sessionId=session_id,sessionDeviceId=session_device_id,synthesized_feedback=combine_metric_dump)
-
+    with _synthesis_write_lock:
+        # Re-read under the lock: two concurrent GETs both saw "no report"
+        # and each added a row, duplicating reports forever after.
+        existing_synthesis = database.get_synthesized_feedback_report(sessionId=session_id, sessionDeviceId = session_device_id)
+        if existing_synthesis:
+            database.update_synthesized_feedback_report(id=existing_synthesis[0].id,synthesized_feedback=combine_metric_dump)
+        else:
+            database.add_synthesized_feedback_report(sessionId=session_id,sessionDeviceId=session_device_id,synthesized_feedback=combine_metric_dump)
 
     return json_response(combine_metric_level)
     
@@ -1359,12 +1378,22 @@ def add_cartoonized_image(**kwargs):
     logging.info('Received cartoonized image ...')
     content = request.get_json()
     queue_key = '{0}_{1}_{2}'.format(content['source'],content['sessionid'],content['deviceid'])
-    if queue_key in image_queue_dict.keys():
-        image_queue_dict[queue_key].put(content)
-    else:
-        image_queue = queue.Queue()
-        image_queue.put(content)
-        image_queue_dict[queue_key] = image_queue
+    # setdefault is atomic (the old check-then-set lost a frame batch when two
+    # POSTs raced), and the queue is bounded: if no browser ever opens the
+    # stream, base64 frames otherwise accumulate for the process lifetime.
+    # When full, drop the oldest frame — the stream is a live preview.
+    image_queue = image_queue_dict.setdefault(queue_key, queue.Queue(maxsize=120))
+    try:
+        image_queue.put_nowait(content)
+    except queue.Full:
+        try:
+            image_queue.get_nowait()
+        except queue.Empty:
+            pass
+        try:
+            image_queue.put_nowait(content)
+        except queue.Full:
+            pass
     return json_response()
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices/<int:device_id>/auth/<auth_id>/streamimages')
