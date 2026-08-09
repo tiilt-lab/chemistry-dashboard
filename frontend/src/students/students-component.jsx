@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
+import { okJson } from "../lib/utils"
 import {
     dlgHeading,
     dlgBody,
@@ -115,7 +116,7 @@ function StudentsComponent(props) {
     const loadStudents = async () => {
         try {
             const response = await new AuthService().getStudentsOverview()
-            setStudents(response.status === 200 ? await response.json() : [])
+            setStudents(await okJson(response, []))
         } catch {
             setStudents([])
         }

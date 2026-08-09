@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { okJson } from "../lib/utils"
 import {
     dlgHeading,
     dlgBody,
@@ -46,13 +47,9 @@ function UsersComponent(props) {
     const loadUsers = async () => {
         try {
             const response = await new AuthService().getUsers()
-            if (response.status === 200) {
-                const all = UserModel.fromJsonList(await response.json())
-                // Never act on yourself here — that's what Settings is for.
-                setUsers(all.filter((u) => u.id !== me.id))
-            } else {
-                setUsers([])
-            }
+            const all = UserModel.fromJsonList(await okJson(response, []))
+            // Never act on yourself here — that's what Settings is for.
+            setUsers(all.filter((u) => u.id !== me.id))
         } catch {
             setUsers([])
         }
