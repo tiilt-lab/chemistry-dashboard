@@ -60,22 +60,18 @@ diarization_model = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-e
 semantic_model.share_memory()
 STOP_SIGNAL = object()
 
-running_audio_processes = {}
-# Serializes the check-then-claim on running_audio_processes: the guards run on
-# both reactor and worker threads, and an unlocked membership test followed by
-# an insert lets two concurrent triggers both pass the "already running" check.
-_running_guard = threading.Lock()
-
-# Cross-process claim that at most one posthoc run exists per pod across ALL
-# processes — the local running_audio_processes dict only coordinates threads
-# in THIS process. Redis SET NX EX with an in-memory fallback (== the old
-# per-process behavior when Redis is down). The TTL self-heals a claim whose
-# holder died, which the never-expiring dict could not. The dict still holds
-# the live processor object below (a live object can't cross processes).
-from distributed_claim import DistributedClaim
+# Cross-process registry of pods currently under posthoc processing. Fuses a
+# Redis claim (at most one run per pod across ALL processes; TTL self-heals a
+# dead claim) with the local dict that holds the live processor object for
+# teardown. Drop-in for the old dict where the processors touch it
+# (pop/get/keys/[]=); the claim decision is the atomic try_claim below.
 import redis_client
-_POD_CLAIM_TTL = 3 * 60 * 60  # longer than any real run; bounds a dead claim
-_pod_claim = DistributedClaim(redis_factory=redis_client._redis, prefix='audio-posthoc:')
+from pod_registry import PodRegistry
+running_audio_processes = PodRegistry(redis_factory=redis_client._redis,
+                                      prefix='audio-posthoc:')
+# Kept only for the few multi-op sections that snapshot-then-mutate; the
+# registry is internally locked, so single ops don't need it.
+_running_guard = threading.Lock()
 
 class ServerProtocol(WebSocketServerProtocol):
 
@@ -182,15 +178,11 @@ class ServerProtocol(WebSocketServerProtocol):
                 off_set_date = file_path_split[1].split(")")[0]
  
                  #keep track of currently running posthoc audio analytics
-                # Cross-process claim (see _pod_claim). Returns False if a run
-                # for this pod is already active anywhere — replaces the old
-                # in-process-only membership check; the dict still holds the
-                # run object for local cancel/teardown.
-                if not _pod_claim.try_claim(key, ttl=_POD_CLAIM_TTL):
+                # Atomic cross-process claim; False if a run for this pod is
+                # already active anywhere. registry.pop(...) later releases it.
+                if not running_audio_processes.try_claim(key):
                     self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
                     return
-                with _running_guard:
-                    running_audio_processes[key] = "running"
 
                 # Anything that throws between claiming the registry entry and
                 # signal_start used to leak the claim (swallowed by onMessage's
@@ -200,10 +192,8 @@ class ServerProtocol(WebSocketServerProtocol):
                                 'tag': self.run_tagging, 'server_start':self.server_start,'keywords':self.keywords,'transcribe':self.run_transcribe,'features':self.run_features,'doa':self.run_doa,'topic_model':self.topic_model_choice,'owner':1,'off_set_date':off_set_date}
                     valid, result = ProcessingConfig.from_json(conf_val,source="posthoc processing")
                     if not valid:
-                        # Release the claim or this pod is blocked until restart.
-                        with _running_guard:
-                            running_audio_processes.pop(key, None)
-                        _pod_claim.release(key)
+                        # registry.pop releases the cross-process claim too.
+                        running_audio_processes.pop(key, None)
                         logging.info("Configuration setting failed for audio posthoc processing")
                     else:
                         self.config = result
@@ -245,9 +235,7 @@ class ServerProtocol(WebSocketServerProtocol):
                         self.send_json({'type':'init posthoc analytics completed','message':"Starting Audio Analytics Processing"})
                         logging.info('Audio Posthoc analytics initiated')
                 except Exception:
-                    with _running_guard:
-                        running_audio_processes.pop(key, None)
-                    _pod_claim.release(key)
+                    running_audio_processes.pop(key, None)
                     logging.exception('posthoc init failed after claiming %s; claim released', key)
                     self.send_json({'type': 'error', 'message': 'Post-hoc initialization failed; see the audio service log.'})
 
@@ -272,11 +260,9 @@ class ServerProtocol(WebSocketServerProtocol):
                 off_set_date = "Sat Jun 27 18:17:13 2026" #this is just a generic date
 
                 #keep track of currently running posthoc audio analytics
-            with _running_guard:
-                if key in running_audio_processes:
-                    self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
-                    return
-                running_audio_processes[key] = "running"
+            if not running_audio_processes.try_claim(key):
+                self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
+                return
 
             conf_val = {'key':key,'encoding': "pcm_f32le", 'sample_rate': self.sample_rate,'channels': 1,'sessionid': self.sessionid,'deviceid': self.session_device_id,
                             'tag': True, 'server_start':self.server_start,'keywords':self.keywords,'transcribe':True,'features':True,'doa':True,'topic_model':None,'owner':1,'off_set_date':off_set_date}
@@ -314,11 +300,9 @@ class ServerProtocol(WebSocketServerProtocol):
                 off_set_date = file_path_split[1].split(")")[0]
  
                  #keep track of currently running posthoc audio analytics
-                with _running_guard:
-                    if key in running_audio_processes:
-                        self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
-                        return
-                    running_audio_processes[key] = "running"
+                if not running_audio_processes.try_claim(key):
+                    self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
+                    return
 
                 conf_val = {'key':key,'encoding': "pcm_f32le", 'sample_rate': self.sample_rate,'channels': 1,'sessionid': self.sessionid,'deviceid': self.session_device_id,
                                 'tag': True, 'server_start':self.server_start,'keywords':self.keywords,'transcribe':True,'features':True,'doa':True,'topic_model':None,'owner':1,'off_set_date':off_set_date}
@@ -357,9 +341,7 @@ class ServerProtocol(WebSocketServerProtocol):
             with _running_guard:
                 hits = [k for k in list(running_audio_processes.keys()) if k.startswith(sdid + '-')]
             for k in hits:
-                with _running_guard:
-                    proc = running_audio_processes.pop(k, None)
-                _pod_claim.release(k)
+                proc = running_audio_processes.pop(k, None)
                 if hasattr(proc, 'stop'):
                     try:
                         proc.stop()
@@ -541,7 +523,6 @@ class ServerProtocol(WebSocketServerProtocol):
         try:
             if self.config:
                 running_audio_processes.pop(self.config.auth_key, None)
-                _pod_claim.release(self.config.auth_key)
                 callbacks.post_posthoc_completed(self.config.auth_key, getattr(self, 'model_choices', None))
                 cm.remove(self, self.config.session_key, self.config.auth_key)
         except Exception as e:
