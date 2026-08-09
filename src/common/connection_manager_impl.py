@@ -1,3 +1,4 @@
+import reactor_safety
 import time
 import logging
 import threading
@@ -23,8 +24,6 @@ class ConnectionManager:
         # a slow API server blocked ingest for every pod for up to
         # 30s x connections. Validate off-reactor; only the teardown of
         # expired connections is marshalled back onto the reactor.
-        from twisted.internet import threads
-
         if getattr(self, '_auth_sweep_running', False):
             return  # previous sweep still in flight (slow API) — don't stack
         self._auth_sweep_running = True
@@ -53,7 +52,7 @@ class ConnectionManager:
             self._auth_sweep_running = False
             logging.warning('auth sweep failed: %s', f)
 
-        threads.deferToThread(_sweep).addCallbacks(_teardown, _failed)
+        reactor_safety.defer_blocking(_sweep).addCallbacks(_teardown, _failed)
 
     def add(self, connection):
         with self.lock:

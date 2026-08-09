@@ -51,9 +51,11 @@ def test_diarization_flag_not_hardcoded_true():
 
 # ---- realtime / reactor safety -------------------------------------------
 
-def test_worker_thread_sends_use_call_from_thread():
+def test_worker_thread_sends_use_reactor_safety_boundary():
     # Twisted transports are not thread-safe; worker-thread sends must go
-    # through reactor.callFromThread.
+    # through the reactor_safety boundary (which marshals via callFromThread).
+    # The raw-primitive ban is enforced separately in
+    # test_reactor_boundary_contract.py.
     checks = [
         ("audio_processing", "processor_posthoc.py"),
         ("audio_processing", "processor_speaker_metric.py"),
@@ -63,7 +65,7 @@ def test_worker_thread_sends_use_call_from_thread():
     ]
     for parts in checks:
         s = _read(*parts)
-        assert "callFromThread" in s, f"{'/'.join(parts)}: send must use callFromThread"
+        assert "reactor_safety" in s, f"{'/'.join(parts)}: send must use reactor_safety"
 
 
 # ---- authorization (round-3 security fixes) ------------------------------

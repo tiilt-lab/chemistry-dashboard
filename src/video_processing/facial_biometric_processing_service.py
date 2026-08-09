@@ -1,3 +1,11 @@
+import os as _rs_os, sys as _rs_sys  # noqa: E401
+_rs_c = _rs_os.path.dirname(_rs_os.path.abspath(__file__))
+while _rs_c != '/' and not _rs_os.path.isdir(_rs_os.path.join(_rs_c, 'common')):
+    _rs_c = _rs_os.path.dirname(_rs_c)
+_rs_c = _rs_os.path.join(_rs_c, 'common')
+if _rs_c not in _rs_sys.path:
+    _rs_sys.path.insert(0, _rs_c)
+import reactor_safety  # reactor/thread boundary; src/common bootstrapped above
 import logging
 import threading
 import time
@@ -94,12 +102,8 @@ class FacialBiometricProcessor:
         self.web_socket_connection = web_socket
 
     def send_json(self, message):
-        # Called from the worker thread; Twisted transports are not
-        # thread-safe, so hand the write to the reactor.
-        from twisted.internet import reactor
-        payload = json.dumps(message).encode('utf8')
-        reactor.callFromThread(
-            self.web_socket_connection.sendMessage, payload, False)
+        # Called from the embedding worker thread — via the reactor-safety boundary.
+        reactor_safety.send_json(self.web_socket_connection, message)
 
     def savefacialembedding(self,facial_biometric_file,video_file,mediaExt,currAlias):
         # Runs on a daemon thread: any uncaught exception used to kill it

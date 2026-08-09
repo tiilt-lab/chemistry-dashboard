@@ -1,3 +1,11 @@
+import os as _rs_os, sys as _rs_sys  # noqa: E401
+_rs_c = _rs_os.path.dirname(_rs_os.path.abspath(__file__))
+while _rs_c != '/' and not _rs_os.path.isdir(_rs_os.path.join(_rs_c, 'common')):
+    _rs_c = _rs_os.path.dirname(_rs_c)
+_rs_c = _rs_os.path.join(_rs_c, 'common')
+if _rs_c not in _rs_sys.path:
+    _rs_sys.path.insert(0, _rs_c)
+import reactor_safety  # reactor/thread boundary; src/common bootstrapped above
 import logging
 import threading
 import time
@@ -142,12 +150,8 @@ class VideoProcessor:
         self.facialEmbeddings = facialEmbeddings
 
     def send_json(self, message):
-        # Called from the processing thread; Twisted transports are not
-        # thread-safe, so hand the write to the reactor.
-        from twisted.internet import reactor
-        payload = json.dumps(message).encode('utf8')
-        reactor.callFromThread(
-            self.web_socket_connection.sendMessage, payload, False)
+        # Called from the processing thread — via the reactor-safety boundary.
+        reactor_safety.send_json(self.web_socket_connection, message)
         
     # def __complete_callback(self):
     #     try:
@@ -291,12 +295,11 @@ class VideoProcessor:
             if savetopath is None:
                 success, encoded_frame =  cv2.imencode('.jpeg', processed_frame_track[j])
                 if success:
-                    from twisted.internet import reactor
                     payload = encoded_frame.tobytes() #base64.b64encode()
                     logging.info("i am about to send the cartoonized image")
-                    # worker thread -> reactor: transports are not thread-safe
-                    reactor.callFromThread(
-                        self.web_socket_connection.sendMessage, payload, True)
+                    # worker thread -> reactor-safety boundary (binary frame)
+                    reactor_safety.send_message(
+                        self.web_socket_connection, payload, is_binary=True)
                     logging.info("i have sent the cartoonized image")
                     # callbacks.post_cartoonized_image(self.config.auth_key,self.config.sessionId,self.config.deviceId, encoded_frame.tobytes())
                            

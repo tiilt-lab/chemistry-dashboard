@@ -4,6 +4,7 @@ from autobahn.twisted.websocket import WebSocketServerFactory
 from autobahn.twisted.websocket import WebSocketServerProtocol
 from app import socketio
 import os
+import sys
 import json
 import time
 import threading
@@ -11,6 +12,14 @@ import database
 import logging
 import time
 import uuid
+
+# src/common holds the shared reactor/thread-boundary helper. The server
+# process doesn't otherwise put it on the path (unlike the audio/video
+# services, which do it via their connection_manager shim).
+_COMMON = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'common')
+if _COMMON not in sys.path:
+    sys.path.insert(0, _COMMON)
+import reactor_safety
 
 class ConnectionManager:
     instance = None
@@ -187,11 +196,8 @@ class ServerProtocol(WebSocketServerProtocol):
 
     def send_json(self, message):
         # send_command/_and_wait call this from Flask request threads (help
-        # button, admin log fetch); Twisted transports are not thread-safe,
-        # so marshal the write onto the reactor. From the reactor thread it
-        # just schedules for the next iteration.
-        payload = json.dumps(message).encode('utf8')
-        reactor.callFromThread(self.sendMessage, payload, False)
+        # button, admin log fetch) — via the reactor-safety boundary.
+        reactor_safety.send_json(self, message)
 
 
 def run_server():

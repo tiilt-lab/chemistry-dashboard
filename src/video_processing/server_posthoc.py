@@ -1,3 +1,11 @@
+import os as _rs_os, sys as _rs_sys  # noqa: E401
+_rs_c = _rs_os.path.dirname(_rs_os.path.abspath(__file__))
+while _rs_c != '/' and not _rs_os.path.isdir(_rs_os.path.join(_rs_c, 'common')):
+    _rs_c = _rs_os.path.dirname(_rs_c)
+_rs_c = _rs_os.path.join(_rs_c, 'common')
+if _rs_c not in _rs_sys.path:
+    _rs_sys.path.insert(0, _rs_c)
+import reactor_safety  # reactor/thread boundary; src/common bootstrapped above
 import os
 import json
 import time
@@ -392,12 +400,9 @@ class ServerProtocol(WebSocketServerProtocol):
 
 
     def send_json(self, message):
-        # Best-effort: probes/idle closes mean the socket may already be gone.
-        try:
-            payload = json.dumps(message).encode('utf8')
-            self.sendMessage(payload, isBinary = False)
-        except Exception:
-            pass
+        # Reactor-safe transport write (was a raw sendMessage). See
+        # common/reactor_safety.
+        reactor_safety.send_json(self, message)
 
     def signal_start(self):
         self.video_processor = VideoProcessorPosthoc(self.facial_emotion_detector,self.image_object_detection,self.attention_detection,self.video_metric_analytics,

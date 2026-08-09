@@ -4,6 +4,14 @@ Returns:
     _description_
 """
 
+import os as _rs_os, sys as _rs_sys  # noqa: E401
+_rs_c = _rs_os.path.dirname(_rs_os.path.abspath(__file__))
+while _rs_c != '/' and not _rs_os.path.isdir(_rs_os.path.join(_rs_c, 'common')):
+    _rs_c = _rs_os.path.dirname(_rs_c)
+_rs_c = _rs_os.path.join(_rs_c, 'common')
+if _rs_c not in _rs_sys.path:
+    _rs_sys.path.insert(0, _rs_c)
+import reactor_safety  # reactor/thread boundary; src/common bootstrapped above
 import time
 import glob
 import os
@@ -144,16 +152,9 @@ class AudioProcessorPosthoc:
             self.send_json(self._last_progress)
 
     def send_json(self, message):
-        import json as _json
-        try:
-            # Called from processing threads; Twisted transports are not
-            # thread-safe, so hand the write to the reactor.
-            from twisted.internet import reactor
-            payload = _json.dumps(message).encode('utf8')
-            reactor.callFromThread(
-                self.web_socket_connection.sendMessage, payload, False)
-        except Exception as e:
-            logging.info('completion notify failed: {0}'.format(e))
+        # Called from processing threads — routed through the reactor-safety
+        # boundary rather than touching the transport directly.
+        reactor_safety.send_json(self.web_socket_connection, message)
 
     def setSpeakerFingerprints(self, fingerprints):
         self.fingerprints = fingerprints

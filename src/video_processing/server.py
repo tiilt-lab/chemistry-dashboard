@@ -18,6 +18,14 @@ except ImportError:
 from recorder import VidRecorder
 from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager  # also puts src/common on sys.path
+import os as _rs_os, sys as _rs_sys  # noqa: E401
+_rs_c = _rs_os.path.dirname(_rs_os.path.abspath(__file__))
+while _rs_c != '/' and not _rs_os.path.isdir(_rs_os.path.join(_rs_c, 'common')):
+    _rs_c = _rs_os.path.dirname(_rs_c)
+_rs_c = _rs_os.path.join(_rs_c, 'common')
+if _rs_c not in _rs_sys.path:
+    _rs_sys.path.insert(0, _rs_c)
+import reactor_safety  # reactor/thread boundary; src/common bootstrapped above
 import audio_bytes
 import safe_names
 # Cartoonify is optional (and disabled in this instance's config); its
@@ -621,12 +629,12 @@ class ServerProtocol(WebSocketServerProtocol):
                     self.arm_lag_check()
                     self.send_json({'type':'start','message':'Video processing not activated to start video processor'})
                     logging.info('Video process connected but video processing not activated')
-                    _threads.deferToThread(callbacks.post_connect, self.config.auth_key)
+                    reactor_safety.defer_blocking(callbacks.post_connect, self.config.auth_key)
                 else:
                     self.signal_start()
                     self.send_json({'type':'start', 'message':'Video processing started'})
                     logging.info('Video process connected')
-                    _threads.deferToThread(callbacks.post_connect, self.config.auth_key)
+                    reactor_safety.defer_blocking(callbacks.post_connect, self.config.auth_key)
 
     def process_binary(self, data):
         if not self.bytes_received:
@@ -711,17 +719,10 @@ class ServerProtocol(WebSocketServerProtocol):
             return False
     
     def send_json(self, message):
-        # Best-effort: the socket may already be gone, and a raise here would
-        # abort the connection manager's periodic sweep for every later client.
-        try:
-            payload = json.dumps(message).encode('utf8')
-        except TypeError:
-            logging.warning('send_json: unserializable payload: %r', message)
-            return
-        try:
-            self.sendMessage(payload, isBinary = False)
-        except Exception as e:
-            logging.debug('send_json: transport send failed: %s', e)
+        # The one sanctioned transport-write path (reactor-safe, best-effort).
+        # This was a raw sendMessage — unsafe from the analytics/callback
+        # worker threads that call it. See common/reactor_safety.
+        reactor_safety.send_json(self, message)
 
     # PCM helpers live in src/common/audio_bytes.py, shared with the audio
     # servers (the local copy of reduce_wav_channel had lost its return).
@@ -765,7 +766,7 @@ class ServerProtocol(WebSocketServerProtocol):
 
         if self.config:
             # 30s-timeout HTTP off the reactor; teardown must not stall ingest.
-            _threads.deferToThread(callbacks.post_disconnect, self.config.auth_key)
+            reactor_safety.defer_blocking(callbacks.post_disconnect, self.config.auth_key)
             cm.remove(self, self.config.session_key, self.config.auth_key)
             # Live pods never send last_batch, so their analytics queues are
             # never popped by the schedulers — evict here or a disconnected

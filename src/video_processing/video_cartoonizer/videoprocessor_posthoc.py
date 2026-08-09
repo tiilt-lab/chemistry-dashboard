@@ -1,3 +1,11 @@
+import os as _rs_os, sys as _rs_sys  # noqa: E401
+_rs_c = _rs_os.path.dirname(_rs_os.path.abspath(__file__))
+while _rs_c != '/' and not _rs_os.path.isdir(_rs_os.path.join(_rs_c, 'common')):
+    _rs_c = _rs_os.path.dirname(_rs_c)
+_rs_c = _rs_os.path.join(_rs_c, 'common')
+if _rs_c not in _rs_sys.path:
+    _rs_sys.path.insert(0, _rs_c)
+import reactor_safety  # reactor/thread boundary; src/common bootstrapped above
 import logging
 import threading
 import time
@@ -74,16 +82,11 @@ class VideoProcessorPosthoc:
         self.facialEmbeddings = facialEmbeddings
 
     def send_json(self, message):
-        # Best-effort: the run may outlive the triggering client (background
-        # completion), in which case the socket is closed — never let a progress
-        # /completion send kill the processing thread.
-        try:
-            if self.web_socket_connection is None:
-                return
-            payload = json.dumps(message).encode('utf8')
-            self.web_socket_connection.sendMessage(payload, isBinary = False)
-        except Exception:
-            pass
+        # The run may outlive the triggering client (background completion),
+        # so a closed socket is fine — reactor_safety.send_json is best-effort.
+        if self.web_socket_connection is None:
+            return
+        reactor_safety.send_json(self.web_socket_connection, message)
 
     def _probe_duration(self):
         # Browser-captured webm files often carry no duration metadata; both

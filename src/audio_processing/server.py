@@ -17,6 +17,14 @@ from recorder import WaveRecorder
 from recorder import VidRecorder
 from processing_config import ProcessingConfig
 from connection_manager import ConnectionManager  # also puts src/common on sys.path
+import os as _rs_os, sys as _rs_sys  # noqa: E401
+_rs_c = _rs_os.path.dirname(_rs_os.path.abspath(__file__))
+while _rs_c != '/' and not _rs_os.path.isdir(_rs_os.path.join(_rs_c, 'common')):
+    _rs_c = _rs_os.path.dirname(_rs_c)
+_rs_c = _rs_os.path.join(_rs_c, 'common')
+if _rs_c not in _rs_sys.path:
+    _rs_sys.path.insert(0, _rs_c)
+import reactor_safety  # reactor/thread boundary; src/common bootstrapped above
 import audio_bytes
 import safe_names
 from audio_buffer import AudioBuffer
@@ -205,7 +213,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.signal_start()
                 self.send_json({'type':'start'})
                 logging.info('Audio process connected')
-                _threads.deferToThread(callbacks.post_connect, self.config.auth_key)
+                reactor_safety.defer_blocking(callbacks.post_connect, self.config.auth_key)
 
     def getRunning(self):
         return self.running
@@ -252,7 +260,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 self.send_json({'type': 'error',
                                 'message': 'Saving the recording failed on the server. Please try again.'})
 
-            _threads.deferToThread(_work).addErrback(_fail)
+            reactor_safety.defer_blocking(_work).addErrback(_fail)
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
 
@@ -371,20 +379,9 @@ class ServerProtocol(WebSocketServerProtocol):
                                     'quality': verdict})
 
     def send_json(self, message):
-        # Best-effort: the socket may already be gone, and a raise here would
-        # abort the connection manager's periodic sweep for every later client.
-        try:
-            payload = json.dumps(message).encode('utf8')
-        except TypeError:
-            logging.warning('send_json: unserializable payload: %r', message)
-            return
-        try:
-            # callFromThread makes this safe from worker threads (enrollment
-            # runs deferred off-reactor); from the reactor it just queues the
-            # write for the next iteration.
-            reactor.callFromThread(self.sendMessage, payload, False)
-        except Exception as e:
-            logging.debug('send_json: transport send failed: %s', e)
+        # The one sanctioned transport-write path (reactor-safe from worker
+        # threads; best-effort on a dead socket). See common/reactor_safety.
+        reactor_safety.send_json(self, message)
 
     # PCM helpers live in src/common/audio_bytes.py, shared with the other
     # three WS servers; these delegates keep the config-bound call shape.
@@ -457,7 +454,7 @@ class ServerProtocol(WebSocketServerProtocol):
 
         if self.config:
             # 30s-timeout HTTP off the reactor; teardown must not stall ingest.
-            _threads.deferToThread(callbacks.post_disconnect, self.config.auth_key)
+            reactor_safety.defer_blocking(callbacks.post_disconnect, self.config.auth_key)
             cm.remove(self, self.config.session_key, self.config.auth_key)
 
        
@@ -486,7 +483,7 @@ class ServerProtocol(WebSocketServerProtocol):
                 for r in recs:
                     r.close()
 
-            _threads.deferToThread(_close_all)
+            reactor_safety.defer_blocking(_close_all)
 
 if __name__ == '__main__':
     cf.initialize()
