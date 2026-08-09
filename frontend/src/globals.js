@@ -41,15 +41,28 @@ export function cos(degrees) {
   return result;
 }
 
-export function formatSeconds(seconds, padding = false) {
-  const h = Math.floor(seconds / 3600).toString();
-  const m = Math.floor((seconds % 3600) / 60).toString();
-  const s = Math.floor((seconds % 60)).toString();
-  let result = '';
-  if (h !== '0') {
-    result = h.padStart(2, '0') + ':';
+// Canonical seconds -> clock formatter. Options let it express the variants
+// that used to be reimplemented across components/models:
+//   padLeading  (default true)  pad the largest shown unit to 2 digits
+//   alwaysHours (default false)  show hours even when 0 (HH:MM:SS)
+//   invalid     (default none)   value to return for null/NaN input
+export function formatSeconds(seconds, opts = {}) {
+  const { padLeading = true, alwaysHours = false, invalid } = opts || {};
+  if (invalid !== undefined && (seconds == null || Number.isNaN(Number(seconds)))) {
+    return invalid;
   }
-  return result + m.padStart(2, '0') + ':' + s.padStart(2, '0');
+  const total = Math.floor(seconds);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = Math.floor(total % 60);
+  const ss = s.toString().padStart(2, '0');
+  if (alwaysHours || h > 0) {
+    const hh = padLeading ? h.toString().padStart(2, '0') : h.toString();
+    const mm = m.toString().padStart(2, '0');
+    return `${hh}:${mm}:${ss}`;
+  }
+  const mm = padLeading ? m.toString().padStart(2, '0') : m.toString();
+  return `${mm}:${ss}`;
 }
 
 export function similarityToRGB(similarity) {

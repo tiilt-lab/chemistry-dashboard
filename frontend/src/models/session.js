@@ -1,4 +1,4 @@
-import { stringToDate } from '../globals';
+import { stringToDate, formatSeconds } from '../globals';
 
 export class SessionModel {
   // Server Fields
@@ -23,14 +23,10 @@ export class SessionModel {
   local_start_date;
 
   // Format a duration in seconds as H:MM:SS / M:SS (used for pod durations).
+  // Delegates to the one canonical globals.formatSeconds (unpadded leading
+  // unit, "—" for missing) instead of a private copy of the same math.
   static formatDuration(seconds) {
-    if (seconds == null || isNaN(seconds)) return '—';
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    const mm = m.toString().padStart(2, '0');
-    const ss = s.toString().padStart(2, '0');
-    return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
+    return formatSeconds(seconds, { padLeading: false, invalid: '—' });
   }
 
   get recording(){
@@ -50,14 +46,10 @@ export class SessionModel {
   }
 
   get lengthFormatted() {
-    const h = Math.floor(this.length / 60 / 60);
-    const m = Math.floor((this.length - (h * 60 * 60)) / 60);
-    const s = Math.floor(this.length - (m * 60) - (h * 60 * 60));
-    let result = '';
-    result += h.toString().padStart(2, '0') + ':';
-    result += m.toString().padStart(2, '0') + ':';
-    result += s.toString().padStart(2, '0');
-    return result;
+    // Always HH:MM:SS (hour zero-padded, shown even when 0), via the shared
+    // formatter. formatSeconds floors seconds/3600 so this stays correct past
+    // 24h (unlike the Date-based formatHMS, which would wrap).
+    return formatSeconds(this.length, { alwaysHours: true });
   }
 
   static fromJson(json){
