@@ -153,13 +153,13 @@ function ExpertRatingComponent() {
       generateDisplayVideoMetrics(videoMetrics, sTime, eTime)
     }
 
-  }, [transcripts, videoMetrics]);
+  }, [transcripts, videoMetrics, timeRange]);
 
   useEffect(() => {
     if (transcriptDoneLoading && videoMetricDoneLoading) {
       setDashboardPage(selectedItemForRating.dashboardType)
     }
-  }, [transcriptDoneLoading, videoMetricDoneLoading])
+  }, [transcriptDoneLoading, videoMetricDoneLoading, selectedItemForRating.dashboardType])
 
   const completedCount = useMemo(
     () => Object.values(ratings).filter((value) => value > 0).length,
