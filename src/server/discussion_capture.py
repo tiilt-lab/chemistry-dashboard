@@ -36,6 +36,22 @@ app.register_blueprint(llm_api)
 app.register_blueprint(health_api)
 app.register_blueprint(data_quality_api)
 
+# Wire the resource-centric authorization layer (src/server/authz.py). Deps are
+# injected here — at the one place that already imports the DB, wrappers, and
+# the request context — so authz itself stays Flask-free and unit-testable.
+import authz
+import wrappers
+from flask import request
+from tables.transcript import Transcript as _Transcript  # noqa: F811
+authz.configure(authz.Deps(
+    get_device=lambda did: database.get_session_devices(id=did),
+    get_transcript=lambda tid: database.get_transcript(tid),
+    session_access=lambda sid, user, write: bool(wrappers._session_for(sid, user, write)),
+    key_grants=lambda device: bool(device.processing_key) and (
+        request.headers.get('X-Processing-Key') or request.args.get('key')
+    ) == device.processing_key,
+))
+
 
 def main():
 

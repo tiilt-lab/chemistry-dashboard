@@ -15,6 +15,7 @@ import watchers
 from datetime import datetime, timedelta, timezone
 from handlers import session_handler
 import wrappers
+import authz
 import config as cf
 import socketio_helper
 import posthoc_state
@@ -34,13 +35,12 @@ image_queue_dict = {}
 _synthesis_write_lock = threading.Lock()
 
 
-def _device_in_session(device_id, session_id):
-    """A pod named in a URL must belong to the session the caller was
-    authorized for — the session guards prove access to session_id only, and
-    device ids are sequential/global, so an unchecked device_id is a
-    cross-tenant read/write by id."""
-    d = database.get_session_devices(id=device_id)
-    return d if (d is not None and d.session_id == session_id) else None
+# A pod named in a URL must belong to the session the caller was authorized
+# for — the session guards prove access to session_id only, and device ids are
+# sequential/global, so an unchecked device_id is a cross-tenant read/write by
+# id. Delegates to the central resource-authz layer so the membership rule
+# lives in one place (authz.device_in_session).
+_device_in_session = authz.device_in_session
 
 @api_routes.route('/api/v1/sessions', methods=['GET'])
 @wrappers.verify_login(public=True)

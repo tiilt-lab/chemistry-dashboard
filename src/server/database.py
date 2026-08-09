@@ -877,6 +877,9 @@ def set_speaker_tag(transcript, tag):
     db.session.commit()
     return True
 
+def get_transcript(id):
+    return db.session.query(Transcript).filter(Transcript.id == id).first()
+
 def get_transcripts(session_id=None, session_device_id=None, start_time=0, end_time=-1, speaker_id = -1):
     query = db.session.query(Transcript).order_by(Transcript.start_time.asc())
     if session_id is not None:

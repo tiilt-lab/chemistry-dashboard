@@ -1,9 +1,10 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, session
 import logging
 import database
 import json
 from utility import json_response
 import wrappers
+import authz
 from tables.speaker import Speaker
 from tables.speaker_transcript_metrics import SpeakerTranscriptMetrics
 
@@ -70,14 +71,9 @@ def update_speaker(speaker_id, **kwargs):
 
 @api_routes.route('/api/v1/transcripts/<int:transcript_id>/speaker_metrics', methods=['GET'])
 def get_transcript_speaker_metrics(transcript_id, **kwargs):
-    # Scope through the transcript's pod: key or logged-in session required.
-    from tables.transcript import Transcript
-    from app import db
-    row = db.session.query(Transcript).filter(Transcript.id == transcript_id).first()
-    if row is None:
-        return json_response({'message': 'Does not exist.'}, 404)
-    device = database.get_session_devices(id=row.session_device_id)
-    if not device or not wrappers.device_access_allowed(device):
+    # Fused resolve+authorize (READ): session access OR the pod's own key.
+    # This route has no login decorator, so the user comes from the session.
+    if authz.resolve_transcript(transcript_id, kwargs.get('user') or session.get('user')) is None:
         return json_response({'message': 'Does not exist.'}, 404)
     speaker_metrics = database.get_speaker_transcript_metrics(transcript_id=transcript_id)
     return json_response([speaker_metric.json() for speaker_metric in speaker_metrics])
@@ -101,17 +97,11 @@ def reassign_transcript_speaker(transcript_id, **kwargs):
     if not valid:
         return json_response({'message': message}, 400)
 
-    # scope check: the row must belong to a session the caller can WRITE
-    # (owner/super), the alias must be a real roster member of that pod.
-    # Without this any logged-in account could reassign/inject speakers on
-    # any tenant's pod by walking transcript ids.
-    from tables.transcript import Transcript
-    from app import db
-    row = db.session.query(Transcript).filter(Transcript.id == transcript_id).first()
+    # Fused resolve+authorize: cannot obtain the row without WRITE access to
+    # its owning session. Replaces the old manual transcript->device->session
+    # walk that the sibling routes kept forgetting.
+    row = authz.resolve_transcript(transcript_id, kwargs['user'], write=True)
     if row is None:
-        return json_response({'message': 'Transcript not found.'}, 404)
-    device = database.get_session_devices(id=row.session_device_id)
-    if device is None or not wrappers.session_write_allowed(device.session_id, kwargs['user']):
         return json_response({'message': 'Transcript not found.'}, 404)
     roster = {s.alias for s in database.get_speakers(
         session_device_id=row.session_device_id) if s.alias}
@@ -147,15 +137,8 @@ def edit_transcript_text(transcript_id, **kwargs):
         return json_response({'message': 'Transcript text is required.'}, 400)
     if len(text) > 5000:
         return json_response({'message': 'Transcript text too long.'}, 400)
-    # Scope to a session the caller can write, or any logged-in account could
-    # rewrite any tenant's transcript text by id.
-    from tables.transcript import Transcript
-    from app import db
-    row = db.session.query(Transcript).filter(Transcript.id == transcript_id).first()
-    if row is None:
-        return json_response({'message': 'Transcript not found.'}, 404)
-    device = database.get_session_devices(id=row.session_device_id)
-    if device is None or not wrappers.session_write_allowed(device.session_id, kwargs['user']):
+    # Fused resolve+authorize (WRITE) — see reassign above.
+    if authz.resolve_transcript(transcript_id, kwargs['user'], write=True) is None:
         return json_response({'message': 'Transcript not found.'}, 404)
     ok = database.update_transcript_text(transcript_id, text)
     if not ok:

@@ -72,9 +72,11 @@ def test_worker_thread_sends_use_reactor_safety_boundary():
 
 def test_transcript_mutations_are_session_scoped():
     s = _read("server", "routes", "speaker.py")
-    # both reassign and edit_text must scope through the owning session.
-    assert s.count("session_write_allowed") >= 2, \
-        "reassign/edit_text must both check session_write_allowed"
+    # reassign and edit_text must resolve the transcript through the
+    # resource-authz layer with WRITE access (fused resolve+authorize).
+    assert s.count("authz.resolve_transcript") >= 2, \
+        "reassign/edit_text must resolve via authz.resolve_transcript"
+    assert "write=True" in s, "transcript mutations must require write access"
 
 
 def test_remove_device_checks_session_membership():
