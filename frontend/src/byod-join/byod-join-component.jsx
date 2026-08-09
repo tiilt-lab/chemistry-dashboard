@@ -687,7 +687,7 @@ function JoinPage() {
         if (frameBufferLength > 0) {
             renderFrameFromBuffer()
         }
-    }, [frameBufferLength])
+    }, [frameBufferLength, renderFrameFromBuffer])
 
 
     //EIGHTH LEVEL: THIS EFFECT IS TRIGGERED ONCE THE PREVIEW MODE IS TOGGLED, THIS THEN UPDATES THE LABEL FOR THE PREVIEW TOGGLE BUTTON

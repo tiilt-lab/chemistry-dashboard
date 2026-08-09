@@ -235,7 +235,7 @@ function StudentSessionDashboard() {
       generateDisplayVideoMetrics(videoMetrics, sTime, eTime)
     }
 
-  }, [transcripts, videoMetrics, session.current, timeRange, currentSessionRunning])
+  }, [transcripts, videoMetrics, timeRange, currentSessionRunning, firstLoadCompleted])
 
 
   useEffect(() => {
@@ -249,7 +249,7 @@ function StudentSessionDashboard() {
       setFirstLoadCompleted(true);
     }
 
-  }, [transcriptDoneLoading, videoMetricDoneLoading, loadedAfresh]);
+  }, [transcriptDoneLoading, videoMetricDoneLoading, loadedAfresh, firstLoadCompleted]);
 
 
   useEffect(() => {
