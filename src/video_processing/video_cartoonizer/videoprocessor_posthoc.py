@@ -202,7 +202,7 @@ class VideoProcessorPosthoc:
                                     logging.info(f"batch being inserted is {self.batch_track}")
                                     payload = [self.frame_batch, self.facialEmbeddings, self.batch_track, self.time_marker, self.vid_img_dir, self.config.auth_key,False]
                                     accumulator_load = self.image_object_detection.worker_posthoc(payload)  
-                                    self.video_metric_analytics.worker_posthoc(accumulator_load)
+                                    self.video_metric_analytics.worker(accumulator_load, post_always=True)
                                 
                                     self.frame_batch = []
                                     self.time_marker = []
@@ -224,7 +224,7 @@ class VideoProcessorPosthoc:
                 payload = [self.frame_batch, self.facialEmbeddings, self.batch_track, self.time_marker, self.vid_img_dir, self.config.auth_key,False]
                 
                 accumulator_load = self.image_object_detection.worker_posthoc(payload)  
-                self.video_metric_analytics.worker_posthoc(accumulator_load)
+                self.video_metric_analytics.worker(accumulator_load, post_always=True)
 
                 # create ffmpeg concat list
                 list_file = os.path.join(tmpdir, "chunks.txt")
@@ -255,7 +255,7 @@ class VideoProcessorPosthoc:
                     payload = [self.frame_batch, self.facialEmbeddings, self.batch_track, self.time_marker, self.vid_img_dir, self.config.auth_key,True]
                     
                     accumulator_load = self.image_object_detection.worker_posthoc(payload) 
-                    self.video_metric_analytics.worker_posthoc(accumulator_load)
+                    self.video_metric_analytics.worker(accumulator_load, post_always=True)
                     
                     logging.info('Video Processor Posthoc  stopped for {0}.'.format(self.config.auth_key))
                     self.send_json({'type': 'process_completed', 'message': "Video posthoc analytics completed"})

@@ -8,6 +8,7 @@ import os;
 import traceback
 import callbacks
 from collections import Counter
+from metric_post_policy import should_post_metrics
 from yolo_head.utils.datasets import LoadImageDataset
 from yolo_head.utils.general import scale_coords
 from ultralytics.engine.results import Results
@@ -124,7 +125,9 @@ class VideoMetricAnalytics:
             # worker_thread.start()      
             self.worker(payload)
 
-    def worker(self,payload):
+    def worker(self, payload, post_always=False):
+        # post_always replaces the old worker_posthoc fork: that method was a
+        # near-verbatim copy whose only difference was forcing can_post=True.
         auth_key,all_frames,accumulator,batch_track,last_batch = payload
         processing_timer = time.monotonic()
         torch.cuda.synchronize()
@@ -133,42 +136,14 @@ class VideoMetricAnalytics:
         torch.cuda.synchronize()
         t2 = time.time()
         logging.info(f"Inside VideoMetricProcessor: procesing attention and emotion dectection took {t2 - t1:.6f}s for {auth_key}")
-        
+
         logging.info("Alloc {0}: after Attention and emotion detection for batch {1}".format((torch.cuda.memory_allocated() / 1024**2), batch_track))
         logging.info("reserved {0}: after Attention and emotion detection for batch {1}".format((torch.cuda.memory_reserved() / 1024**2), batch_track))
-        
-        # first_val = next(iter(video_metrics.values()), None) 
-        can_post =  video_metrics and (self.source == "real_time" or self.source == "post_hoc") 
+
+        can_post = should_post_metrics(video_metrics, self.source, post_always)
         logging.info("insert {0} into DB for batch {1} and {2}".format(video_metrics,batch_track,can_post))
-        
-        if video_metrics and can_post:
 
-            success = callbacks.post_video_metrics(auth_key, video_metrics)
-
-            processing_time = time.monotonic() - processing_timer
-            if success:
-                logging.info( f"Video processing results posted successfully for client {auth_key} (Processing time: {processing_time})")
-
-        if overlay_records:
-            callbacks.post_gaze_overlays(auth_key, overlay_records,
-                                         reset=not self._overlays_posted)
-            self._overlays_posted = True
-
-    def worker_posthoc(self,payload):
-        auth_key,all_frames,accumulator,batch_track,last_batch = payload
-        processing_timer = time.monotonic()
-        torch.cuda.synchronize()
-        t1 = time.time()
-        video_metrics, overlay_records = self.compute_videoMetrics(all_frames,accumulator,batch_track)
-        torch.cuda.synchronize()
-        t2 = time.time()
-        logging.info(f"Inside VideoMetricProcessor: procesing attention and emotion dectection took {t2 - t1:.6f}s for {auth_key}")
-        
-        # first_val = next(iter(video_metrics.values()), None) 
-        can_post =  True
-        logging.info("insert {0} into DB for batch {1} and {2}".format(video_metrics,batch_track,can_post))
-        
-        if video_metrics and can_post:
+        if can_post:
 
             success = callbacks.post_video_metrics(auth_key, video_metrics)
 
