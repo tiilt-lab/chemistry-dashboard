@@ -50,6 +50,13 @@ export class ActiveSessionService {
             const devices = await devicesResp.json()
             this.sessionDeviceSource.next(SessionDeviceModel.fromJsonList(devices))
 
+            // The pod list comes from REST above, so the page is ready to show
+            // it now. Do NOT gate the display on the socket's room_joined: the
+            // socket is for LIVE updates, and if it can't connect (e.g. the
+            // WebSocket transport is unavailable) the pods would otherwise load
+            // forever. room_joined re-affirms this flag when the socket does
+            // connect; live data still streams in through its handlers.
+            this.initialized = true
             this.initializeSocket()
             onResult({ status: "ready" })
         } catch (error) {

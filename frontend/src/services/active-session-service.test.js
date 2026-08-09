@@ -32,6 +32,19 @@ describe("ActiveSessionService.initialize always reports an outcome", () => {
         expect(results).toEqual([{ status: "ready" }])
     })
 
+    it("marks initialized from the REST load, not the socket, so pods render even if the socket can't connect", async () => {
+        const svc = makeService(ok({ id: 414, name: "s", creation_date: "2026-08-09 00:00:00 UTC", end_date: null }), ok([{ id: 1 }]))
+        expect(svc.initialized).toBe(false)
+        await svc.initialize(414, () => {})
+        expect(svc.initialized).toBe(true) // set without any room_joined event
+    })
+
+    it("does not mark initialized when the load fails", async () => {
+        const svc = makeService({ status: 401, json: () => Promise.resolve({}) }, ok([]))
+        await svc.initialize(414, () => {})
+        expect(svc.initialized).toBe(false)
+    })
+
     it("reports error with httpStatus 401 when the session call is unauthorized", async () => {
         const svc = makeService({ status: 401, json: () => Promise.resolve({}) }, ok([]))
         const results = []
