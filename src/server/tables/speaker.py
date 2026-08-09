@@ -6,7 +6,7 @@ class Speaker(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     session_device_id = db.Column(db.Integer, db.ForeignKey('session_device.id', ondelete="CASCADE"), nullable=False)
-    alias = db.Column(db.String(64))
+    alias = db.Column(db.String(64), index=True)
     
     session_device = db.relationship("SessionDevice", back_populates="speakers")
 
