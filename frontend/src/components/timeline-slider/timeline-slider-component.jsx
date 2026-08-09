@@ -12,14 +12,18 @@ function AppTimelineSlider(props) {
   const TIMELINE_WIDTH = 100;
   const HANDLE_WIDTH = 4;
   const timelineBackgroundRef = useRef(null);
+  // Latest sendUpdate, so the effects below can call it without listing it as a
+  // dep (it's recreated every render; adding it would fire inputChanged to the
+  // parent on every render).
+  const sendUpdateRef = useRef(null);
 
   useEffect(() => {
     // Initial update to parent component
-    sendUpdate();
+    sendUpdateRef.current();
   }, []);
 
   useEffect(() => {
-    sendUpdate();
+    sendUpdateRef.current();
   }, [dragging, min, max]);
 
   // Send updated slider values to parent
@@ -30,6 +34,7 @@ function AppTimelineSlider(props) {
       initalDragPos.current = [-1,-1]
     }
   };
+  sendUpdateRef.current = sendUpdate;
 
   // Calculate pixel position for each handle based on normalized values
   const handlePos = (handleId) => {
