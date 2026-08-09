@@ -387,11 +387,11 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
 
         # Queue is full: drop the old queued item
         try:
-            old_item = self.asr_audio_queue.get_nowait()
+            self.asr_audio_queue.get_nowait()  # drop one to make room (result unused)
             # optional: if you use task_done semantics elsewhere, call task_done here
             # self.asr_audio_queue.task_done()
         except Empty:
-            old_item = None
+            pass
 
         # Try again to insert the latest chunk
         try:

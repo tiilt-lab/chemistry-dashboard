@@ -26,7 +26,6 @@ def login():
     ip = utility.get_client_ip(request)
     email = content.get('email', None)
     password = content.get('password', None)
-    success = False
     message = ''
     user = None
     if not email or not password:
@@ -48,7 +47,6 @@ def login():
                     user = system_user.json()
                     session['user'] = user
                     session.permanent = True
-                    success = True
                     message = 'Login successful.'
                     RedisLogin.successful_login_attempt(email, ip)
                     logging.info('Login attempt for {0} from {1} succeeded.'.format(email, ip))

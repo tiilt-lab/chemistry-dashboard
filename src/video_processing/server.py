@@ -8,7 +8,7 @@ import callbacks
 import config as cf
 import numpy as np
 try:
-    import moviepy.editor as mp  # moviepy 1.x
+    import moviepy.editor as mp  # moviepy 1.x  # noqa: F401
 except ImportError:
     pass  # moviepy 2.x dropped the .editor module
 

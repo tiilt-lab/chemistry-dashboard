@@ -20,9 +20,9 @@ import torch.nn.functional as F
 from .model.encoder.align_all_parallel import align_face
 from .util import  get_video_crop_parameter,tensor2cv2
 try:
-    from moviepy.editor import *  # moviepy 1.x
+    from moviepy.editor import *  # moviepy 1.x  # noqa: F403
 except ModuleNotFoundError:
-    from moviepy import *  # moviepy 2.x moved the public API to the package root
+    from moviepy import *  # moviepy 2.x moved the public API to the package root  # noqa: F403
 from scipy.io import wavfile
 import traceback
 from queue import Queue,Empty, Full
@@ -356,12 +356,11 @@ class VideoProcessor:
 
         # Queue is full: drop the old queued item
         try:
-            old_item = candidate_frame_queue.get_nowait()
+            candidate_frame_queue.get_nowait()  # drop one to make room (result unused)
             # optional: if you use task_done semantics elsewhere, call task_done here
             # self.frame_queue.task_done()
         except Empty:
             logging.warning("Frame queue for {0} was full but is now empty; failed to replace payload.".format(candidate_queue_id))
-            old_item = None
 
         # Try again to insert the latest chunk
         try:

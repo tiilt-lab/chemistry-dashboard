@@ -98,7 +98,6 @@ def process_text(txt, hgi_dictionary, listofEmots, stemmer=PorterStemmer()):
 	for emot in listofEmots: wordDictionary[emot]=0
 	c_text = wordpunct_tokenize(txt)
 	base_words = [word.lower() for word in c_text]
-	stemmed_words = [stemmer.stem(word.lower()) for word in base_words]
 	#non_stop = [word.lower() for word in base_words if word.lower() not in strstopwords]
 	no_punct = [word.lower() for word in base_words if word.lower().isalpha()]
 	wordCount = 0

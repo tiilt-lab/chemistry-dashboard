@@ -42,7 +42,6 @@ def preprocess_transcript(transcript, extra_stop_words):
     # Remove distracting single quotes
     transcript = re.sub("\'", "", transcript)
 
-    data = [transcript]
 
     def lemmatization(texts, allowed_postags=('NOUN', 'ADJ', 'VERB', 'ADV')):
         """https://spacy.io/api/annotation"""

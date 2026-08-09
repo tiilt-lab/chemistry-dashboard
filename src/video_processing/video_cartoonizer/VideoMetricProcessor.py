@@ -167,7 +167,6 @@ class VideoMetricAnalytics:
             for person_id, persons_detail in face_object_detected['head'].items():
                 # with attention_emotion_det_lock:
                 torch.cuda.synchronize()
-                t1 = time.time()
                 val_imgs, val_faces, val_head_channels, headboxes, imsizes, frame_ids, _ = self.AttentionTracking.get_batched_facial_data(persons_detail,frames)
                 val_gaze_heatmap_preds, val_attmaps, val_inout_preds = self.AttentionTracking.compute_gaze_direction(val_imgs, val_faces, val_head_channels)
                 # torch.cuda.synchronize()
@@ -184,11 +183,9 @@ class VideoMetricAnalytics:
                     if frame_index != int(frame_ids[index]):
                         logging.Info("in File VideoMetricAnalytics: Persons data from face detection and gaze detections messed up, please review...")
                         return None
-                    frame_raw = frames[frame_index]
 
                     # with attention_emotion_det_lock:
                     torch.cuda.synchronize()
-                    t1 = time.time()
                     pred_emotion = self.EmotionDetection.predict_facial_emotion_for_single_participant(frames[frame_index], h_bbox,person_alias,frame_index,self.Imagedetection.crop_face_from_frame_with_bbox)
                     gaze_x, gaze_y = self.AttentionTracking.get_gaze_direction_point(val_gaze_heatmap_preds[index], val_inout_preds[index], imsizes[index])
                     # torch.cuda.synchronize()

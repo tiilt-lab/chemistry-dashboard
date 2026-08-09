@@ -160,7 +160,6 @@ def check_enrollment(wav_path, alias, model, biometric_dir=None):
 
     # Similar voices are recorded, not rejected: list every enrolled voice
     # above the threshold so the Students page can show which voices overlap.
-    nearest_alias = None
     nearest_sim = None
     similar_to = []
     if full_emb is not None:
@@ -177,7 +176,7 @@ def check_enrollment(wav_path, alias, model, biometric_dir=None):
                 continue
             sim = _cosine(full_emb, other)
             if nearest_sim is None or sim > nearest_sim:
-                nearest_sim, nearest_alias = sim, other_alias
+                nearest_sim = sim
             if sim >= SIMILAR_VOICE_THRESHOLD:
                 similar_to.append({"username": other_alias, "similarity": round(sim, 3)})
         similar_to.sort(key=lambda x: -x["similarity"])

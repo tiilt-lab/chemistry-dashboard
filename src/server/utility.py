@@ -235,7 +235,6 @@ def convert_attention_to_class_fuse_back_to_accumulator(accumulated_metrics,atte
 
     if type == "categorical":
         if len_attention_rates > 0 and len_attention_rates  == 1:
-            attention_class = 'low'
             accumulated_metrics[0][7] = "low"
             return accumulated_metrics
         elif len_attention_rates > 0:

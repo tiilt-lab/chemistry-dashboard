@@ -1,9 +1,9 @@
 import logging
 import os
 try:
-    from moviepy.editor import *  # moviepy 1.x
+    from moviepy.editor import *  # moviepy 1.x  # noqa: F403
 except ImportError:
-    from moviepy import *  # moviepy 2.x dropped the .editor module
+    from moviepy import *  # moviepy 2.x dropped the .editor module  # noqa: F403
 
 class VidRecorder:
 

@@ -284,7 +284,6 @@ def post_rating(**kwargs):
 @api_routes.route('/api/v1/student/postsurveyresponse', methods=['POST'])
 def post_survey_response(**kwargs):
     content = request.json
-    id = content.get('id',None)
     sessionid = content.get('sessionid',None)
     sessionDeviceId = content.get('sessionDeviceId',None)
     username = content.get('username',None)

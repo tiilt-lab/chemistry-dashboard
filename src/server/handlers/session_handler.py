@@ -28,7 +28,7 @@ def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod
     RedisSessions.create_session(session.id, config)
     if devices:
         for device in devices:
-            result = pod_join_session(session.id, device)
+            pod_join_session(session.id, device)
     return session
 
 def end_session(session_id):
@@ -59,7 +59,7 @@ def end_session(session_id):
     devices_to_ping = database.get_devices(ids=[session_device.device_id for session_device in session_devices if session_device.device_id is not None])
     for device in devices_to_ping:
         try:
-            sent = ConnectionManager.instance.send_command(device.id, {'cmd': 'end'})
+            ConnectionManager.instance.send_command(device.id, {'cmd': 'end'})
         except Exception:
             logging.critical('Session End: Pod ' + str(device.id) + ' was unreachable or failed to respond.')
     return True, session

@@ -3,7 +3,6 @@
 """
 
 import numpy as np
-import time
 import math
 
 
@@ -12,7 +11,6 @@ def gcc_phat(sig, refsig, fs=1, max_tau=None, interp=1):
     This function computes the offset between the signal sig and the reference signal refsig
     using the Generalized Cross Correlation - Phase Transform (GCC-PHAT)method.
     '''
-    start_time = time.time()
 
     # This seems to increase performance as the data is a length of a power of 2.
     # sig = np.append(sig, power_two_padding(len(sig)))
