@@ -6,6 +6,7 @@ _rs_c = _rs_os.path.join(_rs_c, 'common')
 if _rs_c not in _rs_sys.path:
     _rs_sys.path.insert(0, _rs_c)
 import reactor_safety  # reactor/thread boundary; src/common bootstrapped above
+from ws_protocol import WsMessageMixin  # shared onMessage/onClose
 import os
 import json
 import time
@@ -73,7 +74,7 @@ running_audio_processes = PodRegistry(redis_factory=redis_client._redis,
 # registry is internally locked, so single ops don't need it.
 _running_guard = threading.Lock()
 
-class ServerProtocol(WebSocketServerProtocol):
+class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -99,31 +100,7 @@ class ServerProtocol(WebSocketServerProtocol):
         cm.add(self)
         logging.info('New client connected...')
 
-    def onMessage(self, payload, is_binary):
-        self.last_message = time.time()
-        if is_binary:
-            try:
-                self.process_binary(payload)
-            except Exception as e:
-                logging.warning('Error processing binary: {0}'.format(e))
-        else:
-            valid_json = False
-            try:
-                payload = payload.decode('utf-8')
-                data = json.loads(payload)
-                valid_json = True
-            except Exception as e:
-                logging.warning('Payload is not properly formatted JSON.')
-                self.send_json({'type': 'error', 'message': 'Payload is not properly formatted JSON.'})
-            if valid_json:
-                try:
-                    self.process_json(data)
-                except Exception as e:
-                    logging.warning('Error processing json: {0}'.format(e))
-
-    def onClose(self, wasClean, code, reason):
-        logging.info("close was triggered externally..... wasclean {0}, code {1}, reason {2}".format( wasClean, code, reason))
-        self.signal_end()
+    # onMessage / onClose come from WsMessageMixin (shared across both services).
 
     def process_json(self, data):
         if not 'type' in data:
