@@ -7,6 +7,10 @@ import style from './dialog.module.css';
 // restored to the opener on close; Escape triggers onClose when provided.
 function ModalShell({ onClose, label, containerClass, containerStyle, children }) {
   const ref = useRef(null);
+  // Latest onClose without re-running the mount-only focus-trap effect below
+  // (re-running it would re-capture the opener and fire the focus-restore).
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     const node = ref.current;
@@ -27,9 +31,9 @@ function ModalShell({ onClose, label, containerClass, containerStyle, children }
     }
 
     const onKey = (e) => {
-      if (e.key === 'Escape' && onClose) {
+      if (e.key === 'Escape' && onCloseRef.current) {
         e.stopPropagation();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key === 'Tab') {

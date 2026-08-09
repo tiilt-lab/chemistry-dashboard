@@ -29,7 +29,7 @@ function LoginPage() {
             setLoading(false)
             setErrors({ form: "Invalid email or password." })
         }
-    }, [loginStatus, authObject])
+    }, [loginStatus, authObject, navigate])
 
     const handleSubmit = (event) => {
         event.preventDefault()
