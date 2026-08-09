@@ -1,4 +1,5 @@
 import os
+import sys
 import re
 from unittest.util import _count_diff_all_purpose
 import numpy as np
@@ -20,18 +21,9 @@ import spacy
 
 from nltk.corpus import stopwords
 
-BASE_STOP_WORDS = ('from', 'subject', 're', 'edu', 'use')
-
-# Loaded once per process: spacy.load is ~1s and this runs PER UTTERANCE on
-# topic-model sessions.
-_nlp = None
-
-
-def _get_nlp():
-    global _nlp
-    if _nlp is None:
-        _nlp = spacy.load("en_core_web_sm", disable=['parser', 'ner'])
-    return _nlp
+# Shared spaCy loader / bigram builder / base stop words (see common).
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'common')))
+from topic_modeling_common import BASE_STOP_WORDS, _get_nlp, generate_bigram  # noqa: E402
 
 
 mallet_path = '~/mallet-2.0.8/bin/mallet' # update this path
@@ -39,12 +31,6 @@ mallet_path = '~/mallet-2.0.8/bin/mallet' # update this path
 def sent_to_words(sentences):
     for sentence in sentences:
         yield(gensim.utils.simple_preprocess(str(sentence), deacc=True))  # deacc=True removes punctuations
-
-def generate_bigram(data_words):
-    bigram = gensim.models.Phrases(data_words, min_count=5, threshold=100) # higher threshold fewer phrases.
-    bigram_mod = gensim.models.phrases.Phraser(bigram)
-
-    return [bigram_mod[doc] for doc in data_words]
 
 def generate_trigram(data_words, bigram):
     trigram = gensim.models.Phrases(bigram[data_words], threshold=100)

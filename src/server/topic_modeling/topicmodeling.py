@@ -1,4 +1,5 @@
 import os
+import sys
 import re
 import pandas as pd
 from collections import defaultdict
@@ -20,25 +21,9 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-BASE_STOP_WORDS = ('from', 'subject', 're', 'edu', 'use')
-
-# Loaded once per process — spacy.load is ~1s and used to run on every
-# /api/v1/topics request, on the request thread.
-_nlp = None
-
-
-def _get_nlp():
-    global _nlp
-    if _nlp is None:
-        _nlp = spacy.load("en_core_web_sm", disable=['parser', 'ner'])
-    return _nlp
-
-
-def generate_bigram(data_words):
-    bigram = gensim.models.Phrases(data_words, min_count=5, threshold=100)  # higher threshold fewer phrases.
-    bigram_mod = gensim.models.phrases.Phraser(bigram)
-
-    return [bigram_mod[doc] for doc in data_words]
+# Shared spaCy loader / bigram builder / base stop words (see common).
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'common')))
+from topic_modeling_common import BASE_STOP_WORDS, _get_nlp, generate_bigram  # noqa: E402,F401
 
 
 def process_file(file_url):
