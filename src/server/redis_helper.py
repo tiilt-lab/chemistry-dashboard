@@ -1,8 +1,19 @@
+import os
+import sys
 import redis
 import time
 import json
 import logging
 import config as cf
+
+# The session key builders + read accessors are shared with the processing
+# services via common/redis_client; import them so this file doesn't keep its
+# own copy. (common/redis_client binds `import config as cf` to THIS process's
+# config, which exposes the same redis_host/port/db accessors.)
+_COMMON = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'common'))
+if _COMMON not in sys.path:
+    sys.path.insert(0, _COMMON)
+from redis_client import RedisSessions as _CommonRedisSessions
 
 r = redis.StrictRedis(host=cf.redis_host(), port=cf.redis_port(), db=cf.redis_db(), decode_responses=True)
 
@@ -43,15 +54,11 @@ class RedisLogin:
         if len(keys) > 0:
             r.delete(*keys)
 
-class RedisSessions:
-
-    @staticmethod
-    def make_config_redis_key(session_id):
-        return 'APS-Config-{0}'.format(session_id)
-
-    @staticmethod
-    def make_auth_redis_key(processing_key):
-        return 'APS-Auth-{0}'.format(processing_key)
+class RedisSessions(_CommonRedisSessions):
+    # make_config_redis_key / make_auth_redis_key / get_session_config /
+    # get_device_key are inherited from the shared common/redis_client copy.
+    # Below are the server-only writers + get_session, which use the eager
+    # module-level client `r`.
 
     @staticmethod
     def create_session(session_id, config):
@@ -75,18 +82,11 @@ class RedisSessions:
         r.set(redis_auth_key, redis_config_key)
 
     @staticmethod
-    def get_device_key(processing_key):
-        redis_key = RedisSessions.make_auth_redis_key(processing_key)
-        return r.get(redis_key)
-
-    @staticmethod
     def delete_device_key(processing_key):
         redis_key = RedisSessions.make_auth_redis_key(processing_key)
         r.delete(redis_key)
 
-    @staticmethod
-    def get_session_config(redis_key):
-        return r.get(redis_key)
+    # get_device_key / get_session_config are inherited from common.
 
 
 if __name__ == '__main__':
