@@ -21,7 +21,7 @@ class WaveRecorder:
             with open(self.dat_filename, "ab") as f:
                 f.write(data)
         except Exception:
-            # print() went nowhere under systemd; a full disk was invisible.
+            # stdout is discarded under systemd, so a full disk was invisible.
             logging.exception('Unable to write audio data to %s', self.dat_filename)
 
     def close(self):
@@ -63,16 +63,17 @@ class VidRecorder:
         try:
             with open(self.vid_filename, "ab") as f:
                 f.write(data)
-        except Exception as e:
-            print('Unable to write data to file: {0}'.format(e))
+        except Exception:
+            # stdout is discarded under systemd, so a full disk was invisible.
+            logging.exception('Unable to write video data to %s', self.vid_filename)
 
     def read_temp_wav(self,filename):
         try:
             with open(filename, "rb") as f:
                 byteAudio = f.read()
                 return byteAudio
-        except Exception as e:
-            print('Unable to read temp audio data to file: {0}'.format(e))  
+        except Exception:
+            logging.exception('Unable to read temp audio data from %s', filename)
 
     def close(self):
         if not self.closed:

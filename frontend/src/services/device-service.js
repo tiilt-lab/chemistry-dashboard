@@ -27,7 +27,7 @@ export class DeviceService {
   }
 
   removeDevice(deviceId){
-    return this.api.httpRequestCall('api/v1/devices/${deviceId}','DELETE',{});
+    return this.api.httpRequestCall(`api/v1/devices/${deviceId}`,'DELETE',{});
   }
 
   blinkPod(deviceId, op) {
