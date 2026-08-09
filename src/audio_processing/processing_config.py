@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
-from redis_helper import RedisSessions
+from redis_helper import RedisSessions  # also bootstraps src/common on sys.path
+from processing_config_base import validate_start_message
 import json
 import logging
 import config as cf
@@ -36,40 +37,17 @@ class ProcessingConfig:
 
     @staticmethod
     def from_json(data, source=None):
-        auth_key = data.get('key', None)
-        encoding = data.get('encoding', None)
-        try:
-            sample_rate = int(data.get('sample_rate', None))
-        except Exception as e:
-            return False, "sample_rate must be an integer."
-        try:
-            channels = int(data.get('channels', None))
-        except Exception as e:
-            return False, "channels must be an integer."
-        try:
-            offset = float(data.get('offset', 0.0))
-        except Exception as e:
-            return False, "offset must be a float."
-
-        try:
-            sessionId = int(data.get('sessionid', None))
-        except Exception as e:
-            return False, "sessionid must be an integer."
-
-        try:
-            deviceId = int(data.get('deviceid', None))
-        except Exception as e:
-            return False, "deviceid must be an integer."
-
-        # Check if fields are missing.
-        if not auth_key or not sample_rate or not encoding or not channels or not sessionId or not deviceId:
-            return False, "Start message requires key, sample_rate, encoding, sessionid, deviceid and channels."
-        # Check if format is supported.
-        if not encoding in ['pcm_i16le', 'pcm_f16le', 'pcm_f32le']:
-            return False, "Unsupported encoding type."
-        # Check if sample rate is supported.
-        if not sample_rate in [16000, 32000, 44100, 48000]:
-            return False, "Unsupported sample rate."
+        # Shared field validation (parse/allowlist) — see processing_config_base.
+        ok, res = validate_start_message(data)
+        if not ok:
+            return False, res
+        auth_key = res['auth_key']
+        encoding = res['encoding']
+        sample_rate = res['sample_rate']
+        channels = res['channels']
+        offset = res['offset']
+        sessionId = res['sessionId']
+        deviceId = res['deviceId']
         # Check if tagging is requested and is possible.
         tag = data.get('tag', False) and cf.record_original() and channels == 2
         # Check if diarization is requested and possible.
