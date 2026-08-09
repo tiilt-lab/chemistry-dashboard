@@ -106,6 +106,7 @@ function RecordingCoach({
 
     const [hintsVideo, setHintsVideo] = useState([]);
     const [hintsAudio, setHintsAudio] = useState([]);
+    const [previewError, setPreviewError] = useState("");
     const [videoBlobData, setVideoBlobData] = useState(null)
     const [actualTimeElapsed, setActualTimeElapsed] = useState(0)
 
@@ -126,6 +127,21 @@ function RecordingCoach({
     // Start preview with selected devices
     const startPreview = async () => {
         stopEverything();
+        setPreviewError("");
+        try {
+            await startPreviewInner();
+        } catch (ex) {
+            // A permission denial used to be an unhandled rejection — the
+            // Start Preview button just looked dead.
+            setPreviewError(
+                ex && ex.name === "NotAllowedError"
+                    ? "Camera/microphone access was blocked — allow it in your browser settings and try again."
+                    : "Couldn't open the camera/microphone (" + ((ex && ex.name) || "error") + "). Close other apps using them and try again.",
+            );
+        }
+    };
+
+    const startPreviewInner = async () => {
         const constraints = {
             video: {
                 deviceId: camId ? { exact: camId } : undefined,
@@ -670,6 +686,11 @@ function RecordingCoach({
 
             {/* Controls */}
             <section className="rounded-2xl border p-4 shadow-sm">
+                 {previewError && (
+                        <div className="mt-2 rounded-xl bg-red-50 p-3 text-sm text-red-900">
+                            {previewError}
+                        </div>
+                    )}
                  {(hintsVideo.length > 0 || hintsAudio.length > 0) && (
                         <div className="mt-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
                             <div className="font-medium">Suggestions</div>

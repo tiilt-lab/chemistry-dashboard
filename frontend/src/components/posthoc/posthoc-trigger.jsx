@@ -392,6 +392,31 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
         }
     }
 
+    // Unmount: close run sockets and stop the heartbeat. The run itself
+    // continues server-side (completion is recorded via the server-side
+    // callback), but the orphaned sockets used to keep heartbeating and
+    // firing setState on an unmounted component after navigation.
+    useEffect(() => {
+        return () => {
+            if (heartbeat.current) {
+                clearInterval(heartbeat.current)
+                heartbeat.current = null
+            }
+            for (const ws of sockets.current) {
+                if (!ws) continue
+                ws.onmessage = null
+                ws.onerror = null
+                ws.onclose = null
+                try {
+                    ws.close()
+                } catch {
+                    /* noop */
+                }
+            }
+            sockets.current = []
+        }
+    }, [])
+
     const begin = (kind, defs) => {
         // Reset for a fresh run.
         for (const ws of sockets.current) {

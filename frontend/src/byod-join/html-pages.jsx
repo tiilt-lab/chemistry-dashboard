@@ -523,7 +523,7 @@ function ByodJoinPage(props) {
                                             {(props.speakers || []).map(
                                                 (speaker, count) => (
                                                     <div
-                                                        key={"speaker" + count}
+                                                        key={speaker.id ?? "speaker" + count}
                                                         className="my-3 flex flex-row items-center justify-between rounded-md border px-2 py-2"
                                                     >
                                                         {speaker.fingerprinted ? (

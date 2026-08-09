@@ -529,7 +529,9 @@ function JoinPage() {
                 let started = false
                 let gotChunk = false
                 const begin = () => {
-                    if (started) return
+                    // The 3s backstop can fire after disconnect nulled the
+                    // recorder — that was an uncaught TypeError in a timer.
+                    if (started || mediaRecorder.current === null) return
                     started = true
                     video.play().catch(() => {})
                     mediaRecorder.current.start(interval)
@@ -554,8 +556,13 @@ function JoinPage() {
                 // looked normal). Rebuild on the raw camera stream:
                 // sideways but complete beats upright but empty.
                 function armVideoWatchdog() {
+                    // Bind to the recorder being watched: a reconnect within
+                    // the watchdog window builds a NEW recorder, and the old
+                    // timer must not stop the healthy new one.
+                    const armedRecorder = mediaRecorder.current
                     setTimeout(() => {
                         if (gotChunk || !orientationFix.current) return
+                        if (mediaRecorder.current === null || mediaRecorder.current !== armedRecorder) return
                         const raw = rawStreamReference.current
                         if (!raw || !recorderOptions.current) return
                         console.error(
@@ -629,8 +636,10 @@ function JoinPage() {
     // TO FETCH THE TRANSCRIPTS AND VIDEO METRICS FROM THE SERVER EVERY 2 SECONDS AND UPDATE THE DISPLAY
     useEffect(() => {
         let intervalLoad
-        // fetch the transcript
-        if (session !== null && sessionDevice !== null) {
+        // Gate on streaming: this used to poll every 2s the whole time the
+        // group idled on the (offline-by-design) speaker page, where no
+        // transcripts can exist yet.
+        if (session !== null && sessionDevice !== null && state.startDiscussionStreaming) {
             fetchTranscript(sessionDevice.id)
             fetchVideoMetric(sessionDevice.id)
             intervalLoad = setInterval(() => {
@@ -642,7 +651,8 @@ function JoinPage() {
         return () => {
             clearInterval(intervalLoad)
         }
-    }, [session, sessionDevice])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [session, sessionDevice, state.startDiscussionStreaming])
 
     //SIXTH LEVEL: THIS EFFECT IS TRIGGERED ONCE THE TRANSCRIPTS AND VIDEO METRICS ARE FETCHED, 
     // THIS THEN GENERATES THE DISPLAY TRANSCRIPTS AND VIDEO METRICS BASED ON THE SELECTED TIME RANGE AND UPDATES THE DISPLAY
@@ -728,6 +738,18 @@ function JoinPage() {
             polarConns.current = {}
             hrBuffer.current = []
             setPolarInfo({})
+            // Cartoonify playback: stop the 33ms interval and free every
+            // frame object URL (they are never revoked anywhere else).
+            if (playbackIntervalRef.current) {
+                clearInterval(playbackIntervalRef.current)
+                playbackIntervalRef.current = null
+            }
+            isPlayingBatchRef.current = false
+            frameBuffer.current.forEach((url) => {
+                if (url) URL.revokeObjectURL(url)
+            })
+            frameBuffer.current = []
+            setFrameBufferLength(0)
         }
 
         releaseWakeLock()
@@ -1901,11 +1923,20 @@ function JoinPage() {
 
     const requestHelp = () => {
         sessionDevice.button_pressed = !sessionDevice.button_pressed
-        sessionService.setDeviceButton(
-            sessionDevice.id,
-            sessionDevice.button_pressed,
-            key.current,
-        )
+        const requested = sessionDevice.button_pressed
+        sessionService
+            .setDeviceButton(sessionDevice.id, requested, key.current)
+            .then((r) => {
+                if (!r || r.status !== 200) return Promise.reject()
+            })
+            .catch(() => {
+                // Offline, the tap used to silently do nothing — the group
+                // kept waiting for an instructor who was never called.
+                sessionDevice.button_pressed = !requested
+                setStreamWarning(
+                    "Couldn't send the help request — check the connection and tap again.",
+                )
+            })
     }
 
     // The header back arrow. In-app navigation only (never browser
@@ -2044,6 +2075,21 @@ function JoinPage() {
                 if (playbackIntervalRef.current) {
                     clearInterval(playbackIntervalRef.current);
                     playbackIntervalRef.current = null;
+                }
+
+                // Free the PREVIOUS batch's object URLs — batches never
+                // replay (cartoonImgBatch only grows), and unrevoked frame
+                // blobs otherwise accumulate for the whole session. This
+                // batch's last frame stays displayed, so it is kept.
+                const prevStart = (cartoonImgBatch - 2) * 40;
+                if (prevStart >= 0) {
+                    for (let i = prevStart; i < startIndex; i++) {
+                        const url = frameBuffer.current[i];
+                        if (url) {
+                            URL.revokeObjectURL(url);
+                            frameBuffer.current[i] = null;
+                        }
+                    }
                 }
 
                 isPlayingBatchRef.current = false;
