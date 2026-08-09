@@ -246,6 +246,9 @@ class StreamingChunkDecoder:
             except Exception:
                 try:
                     p.kill()
+                    # Reap after kill or the child sits as a zombie until
+                    # CPython's lazy sweep on some later Popen.
+                    p.wait(timeout=2)
                 except Exception:
                     pass
 
@@ -351,7 +354,6 @@ class ServerProtocol(WebSocketServerProtocol):
         self.stream_data = False
         self.awaitingSpeakers = True
         self.facial_embeddings = None
-        self.video_files_accum = []
         # Per-pod toggle from the join form: when off, this connection only
         # records — no frame decode, no VideoProcessor. Default on (hardware
         # pods and older clients don't send the field).
@@ -545,12 +547,22 @@ class ServerProtocol(WebSocketServerProtocol):
         if data['type'] == 'heartbeat':
             auth_key = data.get('key', None)
             logging.info("Recieved Heartbeat from client with authkey {0}".format(auth_key))
-            if auth_key != "no key":
+            if auth_key != "no key" and self.config is not None:
+                # config-None guard: a heartbeat before 'start' raised
+                # AttributeError into the log on every beat.
                 if (self.config.videocartoonify or self.config.video) and not (self.live_analytics and (cf.video_cartoonize() or cf.process_video_analytics())):
                     self.send_json({'type':'heartbeat'})
                     logging.info("Sent Heartbeat response to client with authkey {0}".format(auth_key))
 
         if data['type'] == 'start':
+            if self.config is not None:
+                # config is set by every successful start. A second 'start'
+                # on a live socket used to replace the decoder/processor/
+                # recorders without stopping the old ones, leaking a live
+                # ffmpeg and three threads until recycle.
+                logging.warning('duplicate start ignored for %s', self.config.auth_key)
+                self.send_json({'type': 'error', 'message': 'Processing already started on this connection.'})
+                return
             valid, result = ProcessingConfig.from_json(data)
             if not valid:
                 self.send_json({'type': 'error', 'message': "Initialization failed"})
@@ -637,7 +649,6 @@ class ServerProtocol(WebSocketServerProtocol):
                 fixed = self.filename+"_"+str(self.video_count)+"."+self.config.mimeExtension
                 self.orig_vid_recorder.write(data,fixed)
                 # self.remux_mp4(temp_file_name, fixed)
-                self.video_files_accum.append(fixed)
 
                 # Live frame analytics for mp4 pods: same streaming decoder
                 # as webm — fragmented mp4 decodes from a pipe just as well,
