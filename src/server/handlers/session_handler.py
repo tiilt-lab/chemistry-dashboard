@@ -50,6 +50,10 @@ def end_session(session_id):
     for session_device in session_devices:
         session_device.button_pressed = False
         session_device.removed = True
+        # An ended session has no connected pods by definition. Clearing it
+        # here self-heals the stale-flag case where a pod died ungracefully
+        # and its post_disconnect callback never fired.
+        session_device.connected = False
         RedisSessions.delete_device_key(session_device.processing_key)
     database.save_changes()
 
@@ -99,6 +103,9 @@ def remove_session_device(session_device_id):
     if session_device:
         RedisSessions.delete_device_key(session_device.processing_key)
         session_device.removed = True
+        # A removed pod is no longer connected; clear the flag so it can't
+        # linger if its disconnect callback never fired.
+        session_device.connected = False
         database.save_changes()
         if session_device.device_id:
             try:
