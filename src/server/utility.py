@@ -49,18 +49,22 @@ def verify_characters(value, chars):
     return False
 
 
+import sys as _sys
+_COMMON = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'common')
+if _COMMON not in _sys.path:
+    _sys.path.insert(0, _COMMON)
+from safe_names import safe_name as _safe_name, UnsafeName
+
+
 def safe_name(value):
     # Filesystem-safe leaf name for building enrollment/biometric paths from a
-    # username or alias. Strips any directory part, then allows only the app's
-    # own name charset (letters, digits, . _ : ' space -), which excludes / and
-    # \\. Returns None for anything unsafe so callers can 404 rather than touch
-    # a traversed path. Mirrors routes/session.py _face_thumb_path.
-    raw = str(value or '').strip()
-    if not raw or len(raw) > 64 or set(raw) <= {'.'} or not verify_characters(raw, "a-zA-Z0-9._:' -"):
+    # username or alias. Delegates to the canonical common/safe_names.safe_name
+    # (same charset/dot/basename guard, which excludes / and \\) and maps its
+    # UnsafeName -> None so callers can 404 rather than touch a traversed path.
+    try:
+        return _safe_name(value)
+    except UnsafeName:
         return None
-    if os.path.basename(raw) != raw:
-        return None
-    return raw
 
 def participant_only_session_prompt(data):
     return f"""

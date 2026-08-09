@@ -2,7 +2,7 @@ from flask import Blueprint, Response, request, abort, session, make_response, s
 import glob
 import subprocess
 import threading
-from utility import sanitize, string_to_bool, json_response
+from utility import sanitize, string_to_bool, json_response, safe_name
 from tables.session_device import SessionDevice
 from redis_helper import RedisSessions
 from tables.session import Session
@@ -1057,10 +1057,14 @@ def session_device_by_id(session_device_id, **kwargs):
 
 def _face_thumb_path(alias):
     # Representative face crop saved by the video pipeline (per student alias).
+    # Use the shared safe_name guard (charset + dot-only + basename), not a
+    # bare basename() — that was the weakest of the three path guards.
+    safe = safe_name(alias)
+    if safe is None:
+        return None
     base = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         '..', 'video_processing', 'facial_embeddings', 'thumbnails')
-    safe = os.path.basename(str(alias))  # prevent path traversal
     return os.path.join(base, "{0}.jpg".format(safe))
 
 
@@ -1070,7 +1074,7 @@ def get_face_thumbnail(session_id, session_device_id, alias, **kwargs):
     # Face crop for a recognized student, scoped to a session+device path (same
     # access model as the pod video). 404 until the pod is (re)processed.
     path = _face_thumb_path(alias)
-    if not os.path.exists(path):
+    if path is None or not os.path.exists(path):
         return ('', 404)
     resp = make_response(send_file(path, mimetype='image/jpeg'))
     resp.headers['Cache-Control'] = 'public, max-age=300'
