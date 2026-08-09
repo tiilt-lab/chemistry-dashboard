@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { formatHMS as formatSeconds, speakerColorFor } from "../globals";
+import { formatHMS as formatSeconds, speakerColorFor, filterSortByDevice } from "../globals";
 import { useNavigate, useOutletContext,useParams, useSearchParams } from 'react-router-dom';
 import {TranscriptComponentPage} from './html-pages'
 import { decorateTranscripts } from './transcript-utils'
@@ -63,8 +63,7 @@ function TranscriptsComponent(){
          // subscriber running filter+sort+setState on every socket emit.
          const transcriptSub = activeSessionService.getTranscripts().subscribe(e => {
              if (Object.keys(e).length !== 0) {
-                 const data = e.filter(t => t.session_device_id === parseInt(sessionDeviceId, 10))
-                     .sort((a, b) => (a.start_time > b.start_time) ? 1 : -1)
+                 const data = filterSortByDevice(e, sessionDeviceId, "start_time")
                  setTranscripts(data)
              }
          })

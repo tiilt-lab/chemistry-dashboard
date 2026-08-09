@@ -243,23 +243,6 @@ export class ActiveSessionService {
         return this.sessionDeviceSource.getValue()
     }
 
-    getSessionDeviceTranscripts(sessionDeviceId, setState) {
-        this.transcriptSource.subscribe((e) => {
-            if (Object.keys(e).length !== 0) {
-                const data = e
-                    .filter(
-                        (t) =>
-                            t.session_device_id ===
-                            parseInt(sessionDeviceId, 10),
-                    )
-                    .sort((a, b) => (a.start_time > b.start_time ? 1 : -1))
-                setState(data)
-            }
-        })
-
-        return this.transcriptSource
-    }
-
     getTranscripts() {
         return this.transcriptSource
     }

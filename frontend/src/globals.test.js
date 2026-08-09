@@ -6,7 +6,30 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
-const { formatSeconds, formatHMS } = await import("./globals")
+const { formatSeconds, formatHMS, filterSortByDevice } = await import("./globals")
+
+describe("filterSortByDevice", () => {
+    const rows = [
+        { session_device_id: 3, start_time: 30 },
+        { session_device_id: 7, start_time: 5 },
+        { session_device_id: 3, start_time: 10 },
+    ]
+    it("keeps only the given device and sorts ascending by the key", () => {
+        expect(filterSortByDevice(rows, 3, "start_time")).toEqual([
+            { session_device_id: 3, start_time: 10 },
+            { session_device_id: 3, start_time: 30 },
+        ])
+    })
+    it("coerces a string device id (URL params are strings)", () => {
+        expect(filterSortByDevice(rows, "7", "start_time")).toEqual([
+            { session_device_id: 7, start_time: 5 },
+        ])
+    })
+    it("returns empty when no row matches, without mutating the input", () => {
+        expect(filterSortByDevice(rows, 99, "start_time")).toEqual([])
+        expect(rows[0].session_device_id).toBe(3)
+    })
+})
 
 describe("formatSeconds", () => {
     it("defaults to zero-padded H:MM:SS, dropping a zero hour", () => {

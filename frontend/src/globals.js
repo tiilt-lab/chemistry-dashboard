@@ -65,6 +65,18 @@ export function formatSeconds(seconds, opts = {}) {
   return `${mm}:${ss}`;
 }
 
+// Keep only the rows for one pod (session device) and sort them ascending by
+// a time key. This filter+sort was copy-pasted into every live-stream
+// subscriber (transcripts by start_time, video metrics by time_stamp); the
+// subscriber-leak bug that pattern carried was fixed independently three
+// times, so it belongs in one place.
+export function filterSortByDevice(items, sessionDeviceId, sortKey) {
+  const id = parseInt(sessionDeviceId, 10);
+  return items
+    .filter((x) => x.session_device_id === id)
+    .sort((a, b) => (a[sortKey] > b[sortKey] ? 1 : -1));
+}
+
 export function similarityToRGB(similarity) {
   const color = Math.floor(230 - (230 * similarity / 100));
   return 'rgb(' + color + ',' + color + ', 255)';

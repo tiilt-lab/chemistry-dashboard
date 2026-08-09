@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
 import { ApiService } from "../services/api-service";
 import { PodComponentPages } from "./html-pages";
+import { filterSortByDevice } from "../globals";
 
 // The dashboard views live in the URL (?view=...&speaker=...) so they are
 // linkable, bookmarkable, and reload/back-button safe. "Group" is the clean
@@ -101,11 +102,7 @@ function PodComponent() {
       // unmounted component for the rest of the session.
       const transcriptSub = transcriptObs.subscribe((e) => {
         if (Object.keys(e).length !== 0) {
-          const data = e
-            .filter(
-              (t) => t.session_device_id === parseInt(sessionDeviceId, 10)
-            )
-            .sort((a, b) => (a.start_time > b.start_time ? 1 : -1));
+          const data = filterSortByDevice(e, sessionDeviceId, "start_time");
           setTranscripts(data);
           // console.log(data,session, 'testing refresh still debugging ...')
 
@@ -141,11 +138,7 @@ function PodComponent() {
       const videoMetricsObs = activeSessionService.getVideoMetrics();
       const videoMetricsSub = videoMetricsObs.subscribe((e) => {
         if (Object.keys(e).length !== 0) {
-          const data = e
-            .filter(
-              (v) => v.session_device_id === parseInt(sessionDeviceId, 10)
-            )
-            .sort((a, b) => (a.time_stamp > b.time_stamp ? 1 : -1));
+          const data = filterSortByDevice(e, sessionDeviceId, "time_stamp");
           setVideoMetrics(data);
           // console.log(data,session, 'testing refresh still debugging ...')
 
