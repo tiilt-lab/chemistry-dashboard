@@ -238,11 +238,11 @@ function PodComponent() {
       "Discussion features",
       "Radar chart",
       "Participation",
-      "Social Impact",
-      "Responsivity",
-      "Internal Cohesion",
-      "Newness",
-      "Communication Density",
+      "Influence",
+      "External Relevance",
+      "Internal Relevance",
+      "Discussion Novelty",
+      "Compactness",
       "Video Metrics"
     ]
     initChecklistData(boxArr, setShowBoxes)
