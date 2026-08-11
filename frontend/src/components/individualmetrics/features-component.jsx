@@ -25,11 +25,11 @@ function AppIndividualFeaturesComponent(props) {
   const updateGraphs = useCallback((transcripts,spkrId) => {
     const valueArrays = [
       { name: "Participation", values: [],'time':[] },
-      { name: "Social Impact", values: [],'time':[] },
-      { name: "Responsivity", values: [],'time':[] },
-      { name: "Internal Cohesion", values: [],'time':[] },
-      { name: "Newness", values: [],'time':[] },
-      { name: "Communication Density", values: [],'time':[] },
+      { name: "Influence", values: [],'time':[] },
+      { name: "External Relevance", values: [],'time':[] },
+      { name: "Internal Relevance", values: [],'time':[] },
+      { name: "Discussion Novelty", values: [],'time':[] },
+      { name: "Compactness", values: [],'time':[] },
       
     ];
     if(!transcripts || !transcripts.length===0 || spkrId === -1)

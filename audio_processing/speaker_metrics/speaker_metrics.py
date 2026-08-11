@@ -44,6 +44,7 @@ class SpeakerProcessor:
 
         self.length = 0
         self.semantic_model = semantic_model
+        self.newness_trace = []
 
     def setSpeakers(self, speakers):
       if speakers is None:
@@ -62,6 +63,7 @@ class SpeakerProcessor:
 
       self.prev_window_speakers =  []
       self.embedding_speakers = []
+      
 
       self.window_lagged_contributions = np.zeros((self.tau_window, self.participants, self.participants), dtype=int) #np.zeros((self.tau_window, self.participants+1, self.participants+1), dtype=int)
       self.xi_sums = np.zeros((self.tau_window, self.participants, self.participants), dtype=float) #np.zeros((self.tau_window, self.participants+1, self.participants+1), dtype=float)
@@ -495,6 +497,16 @@ class SpeakerProcessor:
           else 0.0
       )
 
+      # Record the contribution-level value before cumulative averaging.
+      # self.newness_trace.append({
+      #     "turn": int(self.length + 1),
+      #     "speaker_index": int(speaker),
+      #     "speaker_contribution_number": int(self.contributions[speaker]),
+      #     "raw_newness": float(contribution_newness),
+      #     "given_norm": given_norm,
+      #     "new_norm": new_norm
+      # })
+
       self.total_new[speaker] += contribution_newness
 
       # 4. Expand the basis only when the contribution introduces
@@ -645,9 +657,11 @@ class SpeakerProcessor:
                                                     si_score.tolist(),
                                                     n_score.tolist(),
                                                     cd_score.tolist())
-
+          
+        # logging.info("participantion score is {0}".format(p_score.tolist()))  
         if success:
           logging.info('[Speaker_Metrics]Processing posted successfully for client {0} (Processing time: {1}) @ {2}'.format(self.auth_key, processing_time, processing_timer))
+          
         else:
           logging.warning('[Speaker_Metrics]Processing results FAILED to post for client {0} (Processing time: {1})'.format(self.auth_key, processing_time))
 
