@@ -9,7 +9,7 @@ SpeakerProcessor
 
 Perfrom textual analysis of each speakers data using the transcripts and diarization output.
 
-Implements the Group Communication Analysis (GCA) framework:
+Implements a modified version of the Group Communication Analysis (GCA) framework:
 
     Dowell, N. M. M., Nixon, T. M., & Graesser, A. C. (2019).
     Group communication analysis: A computational linguistics approach for

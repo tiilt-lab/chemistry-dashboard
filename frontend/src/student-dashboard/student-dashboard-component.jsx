@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState,useMemo } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom"
 import { StudentSessionDashboardPages } from "./html-pages";
 import { AuthService } from "../services/auth-service"
@@ -10,23 +10,23 @@ import { SessionDeviceModel } from "../models/session-device";
 import { FEATURE_LABELS, BOX_LABELS, buildChecklist } from "../utilities/checklist"
 
 const surveyquestion = [
-  ["communication rate","How would you rate the level of communication?"],
-  ["climate rate","How would  you rate the climate (group dynamics) during the collaboration session?"],
-  ["conflict frequency","How frequently did disagreements/conflict occur during the collaboration?"],
-  ["Particpation balance","How balanced was participation among group members (verbal contribution, turn taking) of group members?"],
-  ["reflection usefullness","How useful was the reflection feedback in helping you understand your collaboration?","(If you did not receive feedback, please answer based on how useful you think it would have been.)"],
-  ["collaboration goal","What aspect of your collaboration would you want to improve on in future collaboration session (Objective) ?"],
-  ["collaboration quality","How would you rate the overall quality of your team's collaboration this session?"],
-  ["assessment accuracy","How would you rate the accuracy of the assessment scores?","(If you did not receive assessment, please select 'Did not receive')"]
+  ["Communication rate", "How would you rate the level of communication?"],
+  ["Climate rate", "How would  you rate the climate (group dynamics) during the collaboration session?"],
+  ["Conflict frequency", "How frequently did disagreements/conflict occur during the collaboration?"],
+  ["Participation balance", "How balanced was participation among group members (verbal contribution, turn taking) of group members?"],
+  ["Reflection usefulness", "How useful was the reflection feedback in helping you understand your collaboration?", "(If you did not receive feedback, please answer based on how useful you think it would have been.)"],
+  ["Collaboration goal", "What aspect of your collaboration would you want to improve on in future collaboration session (Objective) ?"],
+  ["Collaboration quality", "How would you rate the overall quality of your team's collaboration this session?"],
+  ["Assessment accuracy", "How would you rate the accuracy of the assessment scores?", "(If you did not receive assessment, please select 'Did not receive')"]
 ]
-const likertOptions = [["Very low","Low","Normal","High","Very high"],
-                      ["Very poor","Poor","Neutral","Good","Excellent"],
-                      ["Never","Rarely","Sometimes","Often","Very Often"],
-                      ["Very unbalanced","Somewhat unbalanced",'Moderately balanced',"Mostly balanced","Very balanced"],
-                      ["Not useful","Slightly useful","Moderately useful","Very useful","Extremely useful"],
-                      ["Communication","Participation","Focused attention","Idea contribution","Momemtum"],
-                      ["Very low","Low","Normal","High","Very high"],
-                      ["Did not receive","low","Just right","High","Too high"]]
+const likertOptions = [["Very low", "Low", "Normal", "High", "Very high"],
+["Very poor", "Poor", "Neutral", "Good", "Excellent"],
+["Never", "Rarely", "Sometimes", "Often", "Very Often"],
+["Very unbalanced", "Somewhat unbalanced", 'Moderately balanced', "Mostly balanced", "Very balanced"],
+["Not useful", "Slightly useful", "Moderately useful", "Very useful", "Extremely useful"],
+["Communication", "Participation", "Focused attention", "Idea contribution", "Momemtum"],
+["Very low", "Low", "Normal", "High", "Very high"],
+["Did not receive", "low", "Just right", "High", "Too high"]]
 // const likertOptions = [1, 2, 3, 4, 5];
 
 function StudentSessionDashboard() {
@@ -135,7 +135,7 @@ function StudentSessionDashboard() {
   // including the survey page.
   const location = useLocation();
   const pathToSurveyOptions = location.pathname.split("/").at(-1)
-  
+
   const sessionService = new SessionService()
   const authService = new AuthService()
 
@@ -301,9 +301,9 @@ function StudentSessionDashboard() {
 
 
   const completedCount = useMemo(
-      () => Object.values(ratings).filter((value) => value !== "").length,
-      [ratings]
-    );
+    () => Object.values(ratings).filter((value) => value !== "").length,
+    [ratings]
+  );
 
   const updateTranscriptVideoMetricStore = (loaded, sessiontype, selectedSessionId, selectedSessionDeviceId, Transcripts, VideoMetrics) => {
     //if loaded afresh then update the store
@@ -1173,7 +1173,7 @@ function StudentSessionDashboard() {
       getSessionDevices={getSessionDevices}
       selectFilteredDevice1={selectFilteredDevice1}
       selectFilteredDevice2={selectFilteredDevice2}
-      dialogHeading = {dialogHeading}
+      dialogHeading={dialogHeading}
 
       loadReflectiondashboard={loadReflectiondashboard}
       reflectionDashboardDoneLoading={reflectionDashboardDoneLoading}
@@ -1192,16 +1192,16 @@ function StudentSessionDashboard() {
 
 
       //Survey props
-      surveyquestion = {surveyquestion}
+      surveyquestion={surveyquestion}
       likertOptions={likertOptions}
-      completedCount = {completedCount}
-      ratings = {ratings}
-      handleRate = {handleRate}
-      handleSubmit ={handleSubmit}
-      submitted ={submitted}
-      setNotes ={setNotes}
-      notes = {notes}
-      pathToSurveyOptions = {pathToSurveyOptions}
+      completedCount={completedCount}
+      ratings={ratings}
+      handleRate={handleRate}
+      handleSubmit={handleSubmit}
+      submitted={submitted}
+      setNotes={setNotes}
+      notes={notes}
+      pathToSurveyOptions={pathToSurveyOptions}
 
     />
   );

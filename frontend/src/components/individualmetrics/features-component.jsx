@@ -1,4 +1,4 @@
-import { useEffect, useCallback,useState } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { IndividualFeaturePage } from "./html-pages-individual";
 
 function AppIndividualFeaturesComponent(props) {
@@ -23,18 +23,17 @@ function AppIndividualFeaturesComponent(props) {
   // },[]);
 
   //update new metrics (individual)
-  const updateGraphs = useCallback((transcripts,spkrId) => {
+  const updateGraphs = useCallback((transcripts, spkrId) => {
     const valueArrays = [
-      { name: "Participation", values: [],'time':[] },
-      { name: "Social Impact", values: [],'time':[] },
-      { name: "Responsivity", values: [],'time':[] },
-      { name: "Internal Cohesion", values: [],'time':[] },
-      { name: "Newness", values: [],'time':[] },
-      { name: "Communication Density", values: [],'time':[] },
-      
+      { name: "Participation", values: [], 'time': [] },
+      { name: "Influence", values: [], 'time': [] },
+      { name: "External Relevance", values: [], 'time': [] },
+      { name: "Internal Relevance", values: [], 'time': [] },
+      { name: "Novelty", values: [], 'time': [] },
+      { name: "Communication Density", values: [], 'time': [] },
+
     ];
-    if(!transcripts || !transcripts.length===0 || spkrId === -1)
-    {
+    if (!transcripts || !transcripts.length === 0 || spkrId === -1) {
       // console.log("no transcript or speaker id")  
       setFeatures(valueArrays);
       return;
@@ -42,18 +41,18 @@ function AppIndividualFeaturesComponent(props) {
 
     var speaker_metric;
     transcripts.forEach((t) => {
-      if(spkrId !== "sessiontranscriptcomparison"){
+      if (spkrId !== "sessiontranscriptcomparison") {
         //select speaker metrics from transcripts based on the spkrId
         speaker_metric = (t.speaker_metrics || []).find(
-        (item) => item.speaker_id === spkrId
-      );
+          (item) => item.speaker_id === spkrId
+        );
 
 
-      }else{
-       //select speaker metrics from transcripts based on the spkrId
+      } else {
+        //select speaker metrics from transcripts based on the spkrId
         speaker_metric = (t.speaker_metrics || []).find(
-        (item) => item.speaker_id !== null
-      );
+          (item) => item.speaker_id !== null
+        );
       }
 
       // Not every transcript has a metric row for this speaker (they only
@@ -76,7 +75,7 @@ function AppIndividualFeaturesComponent(props) {
     });
 
     // console.log("transcript data: ", valueArrays)
-    
+
     //smooth the values of the value array over 10 values
     for (const valueArray of valueArrays) {
       const length = valueArray.values.length;
@@ -111,12 +110,12 @@ function AppIndividualFeaturesComponent(props) {
       valueArray["path"] = path;
     }
     setFeatures(valueArrays);
-  },[]);
+  }, []);
 
-   useEffect(() => {
+  useEffect(() => {
     // console.log("tracking spker id ", props.spkrId, props.transcripts.length)
     if (props.transcripts.length === 0) return;
-    updateGraphs(props.transcripts,props.spkrId);
+    updateGraphs(props.transcripts, props.spkrId);
     // The per-speaker transcripts arrive a render AFTER the speaker id is
     // selected, so this must also re-run when they land — with only spkrId in
     // the deps the charts stayed empty forever.

@@ -16,22 +16,22 @@ const METRICS = [
     },
     {
         key: "social_impact",
-        name: "Social Impact",
+        name: "Influence",
         description: "How much a speaker's speech is related to the responses that follow it.",
     },
     {
         key: "responsivity",
-        name: "Responsivity",
+        name: "External Relevance",
         description: "How much a speaker's responses relate to what others said before.",
     },
     {
         key: "internal_cohesion",
-        name: "Internal Cohesion",
+        name: "Internal Relevance",
         description: "How much a speaker's speech relates to their own earlier speech.",
     },
     {
         key: "newness",
-        name: "Newness",
+        name: "Novelty",
         description: "How much new information a speaker introduces over the session.",
     },
     // communication_density is deliberately absent: the pipeline never computes
