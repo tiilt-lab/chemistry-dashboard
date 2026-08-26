@@ -4,7 +4,7 @@
 function GcaNote() {
     return (
         <div className="text-xs text-tiilt-muted">
-            Metrics from Group Communication Analysis (GCA) —{" "}
+            Metrics adapted from Group Communication Analysis (GCA) —{" "}
             <a
                 className="underline"
                 href="https://doi.org/10.3758/s13428-018-1102-z"
