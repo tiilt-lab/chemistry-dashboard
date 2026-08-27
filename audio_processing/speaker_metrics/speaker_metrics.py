@@ -54,50 +54,26 @@ class SpeakerProcessor:
       self.indicies = {k: i for i ,k in enumerate(speakers)}
       logging.info("speakers are {0}".format(self.indicies))
 
-      # if self.usedby == "speaker metric processor":
-      #    self.contributions = np.zeros(self.participants, dtype=int)
-      # else:   
-      #   self.contributions = np.zeros(self.participants+1, dtype=int)
-
       self.contributions = np.zeros(self.participants, dtype=int)  
 
       self.prev_window_speakers =  []
       self.embedding_speakers = []
       
 
-      self.window_lagged_contributions = np.zeros((self.tau_window, self.participants, self.participants), dtype=int) #np.zeros((self.tau_window, self.participants+1, self.participants+1), dtype=int)
-      self.xi_sums = np.zeros((self.tau_window, self.participants, self.participants), dtype=float) #np.zeros((self.tau_window, self.participants+1, self.participants+1), dtype=float)
-      self.resp_vals = np.zeros((self.participants, self.participants), dtype=float) #np.zeros((self.participants+1, self.participants+1), dtype=float)
-      self.total_new = np.zeros(self.participants, dtype=float) #np.zeros((self.participants+1), dtype=float)
+      self.window_lagged_contributions = np.zeros((self.tau_window, self.participants, self.participants), dtype=int) 
+      self.xi_sums = np.zeros((self.tau_window, self.participants, self.participants), dtype=float) 
+      self.resp_vals = np.zeros((self.participants, self.participants), dtype=float) 
+      self.total_new = np.zeros(self.participants, dtype=float) 
 
-      self.ignore_diag = np.ones((self.participants, self.participants), dtype=bool) #np.ones((self.participants+1, self.participants+1), dtype=bool)
+      self.ignore_diag = np.ones((self.participants, self.participants), dtype=bool) 
       np.fill_diagonal(self.ignore_diag, 0)
 
-      self.participation_scores = np.zeros((self.participants), dtype=float) #np.zeros((self.participants+1), dtype=float)
-      self.internal_cohesion = np.zeros((self.participants), dtype=float) #np.zeros((self.participants+1), dtype=float)
-      self.overall_responsivity = np.zeros((self.participants), dtype=float) #np.zeros((self.participants+1), dtype=float)
-      self.social_impact = np.zeros((self.participants), dtype=float) #np.zeros((self.participants+1), dtype=float)
+      self.participation_scores = np.zeros((self.participants), dtype=float) 
+      self.internal_cohesion = np.zeros((self.participants), dtype=float) 
+      self.overall_responsivity = np.zeros((self.participants), dtype=float) 
+      self.social_impact = np.zeros((self.participants), dtype=float) 
       self.newness = self.total_new
-      self.communication_density = np.zeros((self.participants), dtype=float) #np.zeros((self.participants+1), dtype=float)
-
-    def calculateCohesionSums(self, speaker, embedding, model):
-      current_speaker = speaker
-      min_lag = min(self.length, self.tau_window)
-      for i in range(0, min_lag):
-          lag = i + 1
-          prev_speaker =  self.indicies[self.prev_window_speakers[-lag]]  #self.indicies[self.prev_window_speakers[i]] + 1 if self.prev_window_speakers[i] != -1 else 0
-          sim = model.similarity(self.embeddings[-lag], embedding)
-          # logging.info("simillarity is {0} for lag {1}".format(sim,lag))
-          self.xi_sums[i][current_speaker][prev_speaker] +=  sim #model.similarity(self.embeddings[self.length-i-1], embedding)
-          self.window_lagged_contributions[i][current_speaker][prev_speaker] += 1
-      if len(self.prev_window_speakers) >= self.tau_window:
-        self.prev_window_speakers.pop(0)
-
-      with np.errstate(divide='ignore', invalid='ignore'):
-          cross_cohesion = np.divide(self.xi_sums, self.window_lagged_contributions)
-          cross_cohesion = np.nan_to_num(cross_cohesion)
-
-      return cross_cohesion
+      self.communication_density = np.zeros((self.participants), dtype=float) 
 
     # -------------------------------
     # Helper: normalize vector safely
@@ -135,11 +111,6 @@ class SpeakerProcessor:
           context_embedding = self.aggregate_embeddings(context_window,weighted=use_weighted_past)
           group_contexts.append(context_embedding)
       return group_contexts
-  
-      # past_window = self.embeddings[-min_lag:]
-      # group_past_context_embedding = self.aggregate_embeddings(past_window, weighted=use_weighted_past)
-
-      # return group_past_context_embedding
 
     def speaker_cumulative_past_context_by_session(self, min_lag, use_weighted_past=True):
       """
@@ -270,70 +241,7 @@ class SpeakerProcessor:
 
       return speaker_contexts
 
-    def calculateCohesionSums_V2(self, speaker, embedding, model,current_window_size=3,use_weighted_past=True):
-      try:
-          current_speaker = speaker
-          min_lag = min(self.length, self.tau_window)
-
-          if min_lag == 0:
-              return np.zeros(
-                  (self.tau_window, self.participants, self.participants)
-              )
-
-          current_embedding = self.safe_normalize(embedding).astype(np.float32)
-
-          # --------------------------------------------------
-          # Compute lag-faithful speaker-context similarity
-          # --------------------------------------------------
-          speaker_past_contexts = self.speaker_cumulative_past_context_by_session(
-              min_lag,
-              use_weighted_past
-          )
-
-          # --------------------------------------------------
-          # Attribute scores to speaker-pair matrix.
-          # Off-diagonal cells estimate cross-speaker cohesion.
-          # Diagonal cells estimate internal cohesion.
-          # --------------------------------------------------
-          for i in range(0, min_lag):
-              tau_context = speaker_past_contexts[i]
-
-              if tau_context is None:
-                  continue
-
-              prev_speaker = tau_context["speaker"]
-              speaker_context = tau_context["context_embedding"]
-
-              if speaker_context is None:
-                  continue
-
-              speaker_sim = float(model.similarity(
-                  speaker_context.astype(np.float32),
-                  current_embedding
-              ))
-
-              self.xi_sums[i][current_speaker][prev_speaker] += speaker_sim
-              self.window_lagged_contributions[i][current_speaker][prev_speaker] += 1
-
-          
-          if len(self.prev_window_speakers) >= self.tau_window:
-              self.prev_window_speakers.pop(0)
-
-          with np.errstate(divide='ignore', invalid='ignore'):
-              cross_cohesion = np.divide(
-                  self.xi_sums,
-                  self.window_lagged_contributions
-              )
-              cross_cohesion = np.nan_to_num(cross_cohesion)
-
-          return cross_cohesion
-
-      except Exception as e:
-          error_str = traceback.format_exc()
-          logging.info("threw exception {0}".format(error_str))
-
-
-    def calculateCohesionSums_V3(self, speaker, embedding, model,current_window_size=3,use_weighted_past=True):
+    def calculateCohesionSums(self, speaker, embedding, model,current_window_size=3,use_weighted_past=True):
       try:
           current_speaker = speaker
           min_lag = min(self.length, self.tau_window)
@@ -359,25 +267,6 @@ class SpeakerProcessor:
           # Diagonal cells estimate internal cohesion.
           # --------------------------------------------------
           for i in range(0, min_lag):
-              # tau_context = speaker_past_contexts[i]
-
-              # if tau_context is None:
-              #     continue
-
-              # prev_speaker = tau_context["speaker"]
-              # speaker_context = tau_context["context_embedding"]
-
-              # if speaker_context is None:
-              #     continue
-
-              # speaker_sim = float(model.similarity(
-              #     speaker_context.astype(np.float32),
-              #     current_embedding
-              # ))
-
-              # self.xi_sums[i][current_speaker][prev_speaker] += speaker_sim
-              # self.window_lagged_contributions[i][current_speaker][prev_speaker] += 1
-
             lag = i + 1
             prev_speaker = self.indicies[self.prev_window_speakers[-lag]]
             speaker_context = speaker_past_contexts[i]
@@ -411,13 +300,6 @@ class SpeakerProcessor:
           error_str = traceback.format_exc()
           logging.info("threw exception {0}".format(error_str))
 
-
-    # def subspaceProjection(self, s, v):
-    #     proj = 0
-    #     for vector in s:
-    #         proj += projection(vector, v)
-    #     return proj
-
     def subspaceProjection(self, basis, vector, epsilon=1e-12):
       vector = np.asarray(vector, dtype=float).reshape(-1)
       projection_sum = np.zeros_like(vector)
@@ -434,18 +316,6 @@ class SpeakerProcessor:
 
 
     def processResponsivity(self, cross_cohesion):
-        min_lag = min(self.length, self.tau_window)
-        with np.errstate(divide='ignore', invalid='ignore'):
-          responsivity = np.divide(np.sum(cross_cohesion, axis=0), max(min_lag, 1))
-          responsivity = np.nan_to_num(responsivity)
-        
-        self.internal_cohesion = np.diagonal(responsivity)
-        # logging.info("internal cohesio is {0}".format(self.internal_cohesion))
-        denom = max(self.participants - 1, 1)
-        self.social_impact = np.divide(np.sum(responsivity, axis=0, where=self.ignore_diag), denom)
-        self.overall_responsivity = np.divide(np.sum(responsivity, axis=1, where=self.ignore_diag), denom)
-
-    def processResponsivity_v2(self, cross_cohesion):
       valid_counts = np.count_nonzero(self.window_lagged_contributions,axis=0)
 
       with np.errstate(divide='ignore', invalid='ignore'):
@@ -457,18 +327,8 @@ class SpeakerProcessor:
       self.social_impact = np.divide(np.sum(responsivity, axis=0, where=self.ignore_diag),denom)
       self.overall_responsivity = np.divide(np.sum(responsivity, axis=1, where=self.ignore_diag),denom)
 
-    # def calculateNewness_by_particpant_contributions(self, embedding, speaker):
-    #     self.embeddings = np.concatenate((self.embeddings, np.array([embedding])))
-    #     given_data = self.subspaceProjection(self.subspace_basis, embedding)
-    #     new_data = np.array([embedding - given_data])
-    #     self.total_new[speaker] += np.linalg.norm(new_data)/(np.linalg.norm(given_data) + np.linalg.norm(new_data))
-    #     normalized_new_data = normalizeVector(new_data)
-    #     self.subspace_basis = np.concatenate((self.subspace_basis, normalized_new_data), axis = 0)
-    #     with np.errstate(divide='ignore', invalid='ignore'):
-    #         self.newness = np.divide(self.total_new, self.contributions)
-    #         self.newness = np.nan_to_num(self.newness)
 
-    def calculateNewness_by_participant_contributions(self,embedding,speaker,epsilon=1e-10):
+    def calculateNewness(self,embedding,speaker,epsilon=1e-10):
       embedding = np.asarray(embedding,dtype=float,).reshape(-1)
 
       # 1. Project the current contribution onto the semantic
@@ -497,15 +357,6 @@ class SpeakerProcessor:
           else 0.0
       )
 
-      # Record the contribution-level value before cumulative averaging.
-      # self.newness_trace.append({
-      #     "turn": int(self.length + 1),
-      #     "speaker_index": int(speaker),
-      #     "speaker_contribution_number": int(self.contributions[speaker]),
-      #     "raw_newness": float(contribution_newness),
-      #     "given_norm": given_norm,
-      #     "new_norm": new_norm
-      # })
 
       self.total_new[speaker] += contribution_newness
 
@@ -529,7 +380,7 @@ class SpeakerProcessor:
               )
 
   
-      # 6. GCA participant-level Newness:
+      # 5. GCA participant-level Newness:
       #    mean contribution-level Newness.
       self.newness = np.divide(
           self.total_new,
@@ -544,20 +395,7 @@ class SpeakerProcessor:
 
       return contribution_newness
 
-    def calculateNewness_by_group_contributions(self, embedding, speaker):
-        self.embeddings = np.concatenate((self.embeddings, np.array([embedding])))
-        given_data = self.subspaceProjection(self.subspace_basis, embedding)
-        new_data = np.array([embedding - given_data])
-        self.total_new[speaker] += np.linalg.norm(new_data)/(np.linalg.norm(given_data) + np.linalg.norm(new_data))
-        normalized_new_data = normalizeVector(new_data)
-        self.subspace_basis = np.concatenate((self.subspace_basis, normalized_new_data), axis = 0)
-        total_group_newness = np.sum(self.total_new)
-        # logging.info("total newness matrix {0}, sum: {1} ".format(self.total_new,total_group_newness))
-        # logging.info("contribution matrix {0}, sum: {1} ".format(self.contributions,np.sum(self.contributions)))
-        with np.errstate(divide='ignore', invalid='ignore'):
-            self.newness = self.total_new/total_group_newness
-            self.newness = np.nan_to_num(self.newness)
-       
+   
     def start(self):
         self.running = True
         self.asr_complete = False
@@ -609,8 +447,8 @@ class SpeakerProcessor:
           embedding = self.semantic_model.encode(transcript)
 
           if self.length > 0:
-            cross_cohesion = self.calculateCohesionSums_V3(index, embedding, self.semantic_model) #self.calculateCohesionSums(index, embedding, self.semantic_model)
-            self.processResponsivity_v2(cross_cohesion) #self.processResponsivity(cross_cohesion)
+            cross_cohesion = self.calculateCohesionSums(index, embedding, self.semantic_model) 
+            self.processResponsivity(cross_cohesion) 
 
           else:
             pass
@@ -618,7 +456,7 @@ class SpeakerProcessor:
             # self.subspace_basis = normalizeVector(self.embeddings)
             # self.total_new[index] += 1
 
-          self.calculateNewness_by_participant_contributions(embedding, index)
+          self.calculateNewness(embedding, index)
           # Append the current contribution only after all metrics
           # relative to the preceding discourse have been calculated.
           self.append_contribution_history(embedding=embedding,speaker_index=index,speaker_id=speaker)
@@ -718,7 +556,7 @@ def process(processing_queue, speaker_transcript_queue, model):
                 if processor.length > 0:
                   cross_cohesion = processor.calculateCohesionSums(index, embedding, model)
                   processor.processResponsivity(cross_cohesion)
-                  processor.calculateNewness_by_participant_contributions(embedding, index)
+                  processor.calculateNewness(embedding, index)
 
                 else:
                   processor.embeddings = np.array([embedding])
