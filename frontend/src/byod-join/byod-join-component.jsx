@@ -681,14 +681,6 @@ function JoinPage() {
         }
     }, [displayTranscripts, displayVideoMetrics, selectedSpkrId1, selectedSpkrId2, details])
 
-    // SEVENTH LEVEL: THIS EFFECT IS TRIGGERED ONCE THE LENGTH OF THE CARTOONIFIED FRAME BUFFER IS UPDATED, THIS THEN RENDERS THE FRAMES IN 
-    // THE BUFFER TO THE VIDEO ELEMENT ONE BY ONE WITH A SMALL DELAY TO CREATE A SMOOTH VIDEO STREAMING EXPERIENCE
-    useEffect(() => {
-        if (frameBufferLength > 0) {
-            renderFrameFromBuffer()
-        }
-    }, [frameBufferLength, renderFrameFromBuffer])
-
 
     //EIGHTH LEVEL: THIS EFFECT IS TRIGGERED ONCE THE PREVIEW MODE IS TOGGLED, THIS THEN UPDATES THE LABEL FOR THE PREVIEW TOGGLE BUTTON
     useEffect(() => {
@@ -2100,6 +2092,18 @@ function JoinPage() {
             }
         }, 33);
     }, [cartoonImgBatch, frameBufferLength]);
+
+    // The effect that consumes this callback must live below it: listing
+    // `renderFrameFromBuffer` in an effect's dependency array above the
+    // `const` declaration reads it in the temporal dead zone on the first
+    // render (ReferenceError), which took down the whole join page.
+    // SEVENTH LEVEL: THIS EFFECT IS TRIGGERED ONCE THE LENGTH OF THE CARTOONIFIED FRAME BUFFER IS UPDATED, THIS THEN RENDERS THE FRAMES IN 
+    // THE BUFFER TO THE VIDEO ELEMENT ONE BY ONE WITH A SMALL DELAY TO CREATE A SMOOTH VIDEO STREAMING EXPERIENCE
+    useEffect(() => {
+        if (frameBufferLength > 0) {
+            renderFrameFromBuffer()
+        }
+    }, [frameBufferLength, renderFrameFromBuffer])
 
     const ResetTimeRange = (values) => {
         if (session !== null) {
