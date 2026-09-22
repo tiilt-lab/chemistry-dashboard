@@ -5,7 +5,7 @@ redis==3.2.1
 nltk==3.6.6
 gensim==3.7.2
 Twisted==22.2.0
-autobahn==20.12.3
+autobahn==26.7.1
 google-cloud-speech==1.2.0
 simplejson==3.16.0
 eyed3==0.8.12
