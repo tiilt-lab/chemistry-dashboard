@@ -292,6 +292,48 @@ _remux_locks = {}
 _remux_locks_guard = threading.Lock()
 
 
+def _is_full_range_vp9(path):
+    # Some iPhone recorders emit VP9 flagged full range ("pc"). Chrome's
+    # hardware VP9 decoder on macOS rejects that flag outright
+    # (PIPELINE_ERROR_DECODE right after metadata), so the pod page showed
+    # "No recording" for an otherwise valid file. Every other recorder we
+    # have seen emits limited range, which plays everywhere.
+    try:
+        probe = subprocess.run(
+            ['ffprobe', '-v', 'error', '-select_streams', 'v:0',
+             '-show_entries', 'stream=codec_name,color_range',
+             '-of', 'csv=p=0', path],
+            capture_output=True, timeout=60, text=True)
+        fields = probe.stdout.strip().split(',')
+        return len(fields) >= 2 and fields[0] == 'vp9' and fields[1] == 'pc'
+    except Exception:
+        return False
+
+
+def _transcode_to_h264(src, dst):
+    # Full-range VP9 -> limited-range H.264 MP4 (plays in every browser,
+    # including macOS Chrome's hardware path and Safari). NVENC first
+    # (~4x realtime at 1080p on the Quadro), libx264 if the GPU encoder is
+    # unavailable. Long recordings are the reason for the generous timeout.
+    common_in = ['ffmpeg', '-y', '-v', 'error', '-i', src,
+                 '-vf', 'scale=in_range=pc:out_range=tv', '-pix_fmt', 'yuv420p']
+    common_out = ['-c:a', 'aac', '-b:a', '96k', '-movflags', '+faststart', dst]
+    encoders = [
+        ['-c:v', 'h264_nvenc', '-preset', 'p4', '-rc', 'vbr', '-cq', '28',
+         '-b:v', '0', '-maxrate', '5M', '-bufsize', '8M'],
+        ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23'],
+    ]
+    result = None
+    for enc in encoders:
+        result = subprocess.run(common_in + enc + common_out,
+                                capture_output=True, timeout=3600)
+        if result.returncode == 0:
+            return result
+        logging.warning('transcode with %s failed for %s: %s',
+                        enc[1], src, result.stderr[-300:])
+    return result
+
+
 def _fixed_video_path(session_device_id):
     # Returns the remuxed (duration+cues fixed) copy, creating it on demand.
     # The remux writes to a temp name and renames atomically, and concurrent
@@ -302,7 +344,11 @@ def _fixed_video_path(session_device_id):
         return None
     _, cache_dir = _video_dirs()
     os.makedirs(cache_dir, exist_ok=True)
-    ext = '.mp4' if originals[0].lower().endswith('.mp4') else '.webm'
+    src_ext = '.mp4' if originals[0].lower().endswith('.mp4') else '.webm'
+    # Full-range VP9 is transcoded rather than remuxed (see _is_full_range_vp9);
+    # the .mp4 cache name keeps it distinct from a plain remux of the same file.
+    transcode = src_ext == '.webm' and _is_full_range_vp9(originals[0])
+    ext = '.mp4' if transcode else src_ext
     # Segment count + total size in the cache name: a reconnect adds a new
     # segment mid-session, which must invalidate the previously cached remux.
     total_bytes = sum(os.path.getsize(o) for o in originals)
@@ -330,9 +376,12 @@ def _fixed_video_path(session_device_id):
         durations = []
         try:
             if len(originals) == 1:
-                result = subprocess.run(
-                    ['ffmpeg', '-y', '-v', 'error', '-i', originals[0], '-c', 'copy', tmp],
-                    capture_output=True, timeout=300)
+                if transcode:
+                    result = _transcode_to_h264(originals[0], tmp)
+                else:
+                    result = subprocess.run(
+                        ['ffmpeg', '-y', '-v', 'error', '-i', originals[0], '-c', 'copy', tmp],
+                        capture_output=True, timeout=300)
                 if result.returncode != 0:
                     logging.warning('ffmpeg remux failed for %s: %s', originals, result.stderr[-500:])
                     return originals[0]  # fall back to the raw first segment
@@ -345,7 +394,7 @@ def _fixed_video_path(session_device_id):
                 # concatenated. The gap between segments is not represented;
                 # playback runs continuously.
                 for i, original in enumerate(originals):
-                    seg = '{0}.seg{1}{2}'.format(fixed, i, ext)
+                    seg = '{0}.seg{1}{2}'.format(fixed, i, src_ext)
                     result = subprocess.run(
                         ['ffmpeg', '-y', '-v', 'error', '-i', original, '-c', 'copy', seg],
                         capture_output=True, timeout=300)
@@ -359,13 +408,23 @@ def _fixed_video_path(session_device_id):
                 with open(listfile, 'w') as f:
                     for seg in seg_files[:-1]:
                         f.write("file '{0}'\n".format(seg.replace("'", r"'\''")))
+                # With a transcode pending, concatenate into an intermediate
+                # in the source container first; tmp is the final .mp4.
+                cat_out = tmp
+                if transcode:
+                    cat_out = '{0}.cat{1}'.format(fixed, src_ext)
+                    seg_files.append(cat_out)
                 result = subprocess.run(
                     ['ffmpeg', '-y', '-v', 'error', '-f', 'concat', '-safe', '0',
-                     '-i', listfile, '-c', 'copy', tmp],
+                     '-i', listfile, '-c', 'copy', cat_out],
                     capture_output=True, timeout=300)
                 if result.returncode != 0:
                     logging.warning('ffmpeg concat failed for %s: %s', originals, result.stderr[-500:])
                     return originals[0]
+                if transcode:
+                    result = _transcode_to_h264(cat_out, tmp)
+                    if result.returncode != 0:
+                        return originals[0]
             os.replace(tmp, fixed)  # atomic: readers see nothing or all of it
             try:
                 with open(seg_json, 'w') as f:
