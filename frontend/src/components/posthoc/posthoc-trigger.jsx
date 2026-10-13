@@ -39,7 +39,6 @@ const STARTED_ACKS = new Set([
 // alternative implementations today; the rest are shown (single option,
 // locked) so it is explicit what computes each result.
 const ASR_OPTIONS = [
-    { id: "google-cloud-speech", label: "Google Cloud Speech-to-Text" },
     { id: "whisperx", label: "WhisperX (open SOTA: batched + word-aligned)" },
     { id: "qwen3", label: "Qwen3-ASR 1.7B (open; leaderboard-best WER, slower)" },
     { id: "qwen3-0.6b", label: "Qwen3-ASR 0.6B (open; fast variant)" },
@@ -641,7 +640,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     // Short names for the "current data" summary chips.
     const shortName = (id) =>
         ({
-            "google-cloud-speech": "Google STT",
+            "google-cloud-speech": "Google STT (retired)",
             whisperx: "WhisperX",
             whisper: "Whisper",
             qwen3: "Qwen3-ASR",

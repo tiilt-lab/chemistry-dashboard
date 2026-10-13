@@ -68,7 +68,7 @@ function SortControl({
 
 // Small stat cards over ALL sessions (not just the open folder), matching
 // the Students page pattern.
-function SessionStats({ sessions }) {
+function SessionStats({ sessions, inFolder }) {
     const all = sessions || []
     const live = all.filter((s) => s.recording).length
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
@@ -87,7 +87,7 @@ function SessionStats({ sessions }) {
     )
     return (
         <div className="mb-4 flex flex-col gap-3 sm:flex-row">
-            {card("Sessions", all.length)}
+            {card(inFolder ? "In this folder" : "Sessions", all.length)}
             {card(
                 "Live now",
                 live > 0 ? (
@@ -988,7 +988,10 @@ function DiscussionSessionPage(props) {
                         </div>
 
                         {!props.isLoading ? (
-                            <SessionStats sessions={props.sessions} />
+                            <SessionStats
+                                sessions={props.scopedSessions || props.sessions}
+                                inFolder={!!props.inFolder}
+                            />
                         ) : null}
 
                         {!props.isLoading ? <AnalysisQueuePanel /> : null}

@@ -47,7 +47,7 @@ COMMON_CB = _read("common", "callbacks_common.py")
 
 def test_audio_takes_the_lease_in_signal_start_before_any_model():
     body = _def(AUDIO, "signal_start")
-    for model in ("AudioBuffer(", "Qwen3ASR(", "WhisperXASR(", "CrisperWhisperPosthocASR(", "GoogleASR(",
+    for model in ("AudioBuffer(", "Qwen3ASR(", "WhisperXASR(", "CrisperWhisperPosthocASR(",
                   "AudioProcessorPosthoc("):
         _before(body, "self._gpu_lease = acquire_for_run(", model)
     assert "return False" in body and body.rstrip().endswith("return True")

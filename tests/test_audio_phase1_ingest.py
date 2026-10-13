@@ -21,7 +21,7 @@ def pcm(seconds, value=1):
 
 
 def test_stamped_chunk_is_bytes_compatible():
-    # GoogleASR only joins and measures chunks; it must keep working unchanged.
+    # A connector that only joins and measures chunks must keep working unchanged.
     c = StampedChunk(bytearray(b"\x01\x00" * 4), 320)
     assert isinstance(c, bytes) and len(c) == 8 and c.sample_offset == 320
     assert b"".join([c, c]) == bytes(c) * 2

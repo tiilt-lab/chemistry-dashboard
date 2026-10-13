@@ -484,8 +484,9 @@ def sync_enabled(**kwargs):
 # Human-readable labels for the models the audio processor is configured with,
 # so the UI can state provenance without duplicating the audio config here.
 _ASR_LABELS = {
-    "google-cloud-speech": "Google Cloud Speech-to-Text (video model, en-US)",
-    "whisper": "Whisper (open, offline)",
+    # Retired engines keep a label so old runs' provenance still reads.
+    "google-cloud-speech": "Google Cloud Speech-to-Text (retired 2026-10-13)",
+    "whisper": "Whisper (open, offline; retired)",
     "whisperx": "WhisperX (open; batched + word-level alignment)",
     "qwen3": "Qwen3-ASR 1.7B + ForcedAligner (open)",
     "qwen3-0.6b": "Qwen3-ASR 0.6B + ForcedAligner (open, fast)",
@@ -511,7 +512,7 @@ def _read_audio_models():
     # Defaults MUST match the config.py fallbacks, else this endpoint would
     # advertise a model the pipeline doesn't actually run when config.ini omits
     # the key (config.py keyword_backend() falls back to 'word2vec').
-    models = {'asr': 'google-cloud-speech', 'scorer': 'liwc',
+    models = {'asr': 'crisperwhisper', 'scorer': 'liwc',
               'keyword_backend': 'word2vec', 'semantic_embedder': 'all-mpnet-base-v2'}
     try:
         parser = configparser.RawConfigParser()

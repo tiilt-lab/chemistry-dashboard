@@ -225,9 +225,11 @@ def create_session(user, **kwargs):
     doa = request.json.get('doa', False)
     # Live transcription engine, chosen at creation and locked for the
     # session's lifetime (it lives in the session's immutable Redis config).
+    # CrisperWhisper 2.0 is the only engine (Google Cloud Speech was removed
+    # 2026-10-13); null means the server default, which is the same thing.
     asr = request.json.get('asr', None)
-    if asr is not None and asr not in ('google-cloud-speech', 'whisper', 'crisperwhisper'):
-        return json_response({'message': 'asr must be google-cloud-speech, whisper or crisperwhisper.'}, 400)
+    if asr is not None and asr != 'crisperwhisper':
+        return json_response({'message': 'asr must be crisperwhisper.'}, 400)
     # Live video analytics (GPU + ~3 cores per pod during class). False =
     # "record now, analyse later": every pod is still recorded and the
     # post-hoc video run is queued automatically when the session ends.

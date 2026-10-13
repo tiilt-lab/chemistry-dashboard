@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom"
 import { SessionService } from "../services/session-service"
 import { SessionModel } from "../models/session"
 import { FolderModel } from "../models/folder"
+import { scopeSessions, listedSessions } from "./scope"
 import { DiscussionSessionPage } from "./html-pages"
 import { startPolling } from "../globals"
 
@@ -92,6 +93,17 @@ function SessionsComponent(props) {
         const folder = searchParam.get("folder")
         displayFolder(parseInt(folder, 10))
     }, [folders])
+
+    // The table follows the live list: the 2 s poll (and a move or delete
+    // from another tab) replaces `sessions`, and the open folder's rows must
+    // be recomputed from it rather than frozen from the last click.
+    useEffect(() => {
+        setDisplayedSessions(listedSessions(sessions, currentFolder))
+    }, [sessions, currentFolder])
+    // What the stats cards count: the whole account at Home, the open
+    // folder's own sessions inside a folder (the table and the folder row
+    // use the same rule, so the three can never disagree).
+    const scopedSessions = scopeSessions(sessions, currentFolder)
 
     const navigateToHomescreen = () => {
         navigate("/home", { replace: true })
@@ -635,6 +647,8 @@ function SessionsComponent(props) {
             me={props.userdata}
             isLoading={isLoading}
             sessions={sessions}
+            scopedSessions={scopedSessions}
+            inFolder={currentFolder !== ""}
             folders={folders}
             breadcrumbs={breadcrumbs}
             goBackToPrevious={goBackToPrevious}

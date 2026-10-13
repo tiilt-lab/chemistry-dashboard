@@ -62,16 +62,14 @@ function CreateSessionPage(props) {
               <div>
                 <label className={fieldLabel}>Live transcription</label>
                 <div className="divide-y divide-tiilt-line overflow-hidden rounded-lg border border-tiilt-line">
+                  {/* CrisperWhisper is the only engine (Google Cloud Speech was
+                      removed): shown as a single locked choice so it stays
+                      explicit what transcribes the session. */}
                   {[
                     {
                       value: "crisperwhisper",
                       name: "CrisperWhisper 2.0 — verbatim, on this server",
                       desc: "Keeps fillers, stutters and false starts with pause-accurate word timing. Audio never leaves the machine; captions run a few seconds behind.",
-                    },
-                    {
-                      value: "google-cloud-speech",
-                      name: "Google Cloud",
-                      desc: "Fastest word-by-word captions; audio is sent to Google and billed per minute.",
                     },
                   ].map((opt) => (
                     <button
