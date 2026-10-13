@@ -244,6 +244,14 @@ def create_session(user, **kwargs):
         negotiation_coding = False
     if not isinstance(negotiation_coding, bool):
         return json_response({'message': 'negotiationCoding must be true or false.'}, 400)
+    # Two devices per breakout group, one per side of the table: teams are
+    # fixed by device (each pod's join names its group and side). Only
+    # meaningful with negotiation coding on. Absent/null = one device per group.
+    negotiation_paired = request.json.get('negotiationPaired', False)
+    if negotiation_paired is None:
+        negotiation_paired = False
+    if not isinstance(negotiation_paired, bool):
+        return json_response({'message': 'negotiationPaired must be true or false.'}, 400)
     folder = request.json.get('folder', None)
     if folder == -1:
         folder = None
@@ -253,7 +261,8 @@ def create_session(user, **kwargs):
         return json_response({'message': 'Either the folder does not exist or invalid access'}, 404)
     new_session = session_handler.create_session(user['id'], name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder, asr=asr,
                                                  live_video_analytics=live_video_analytics,
-                                                 negotiation_coding_enabled=negotiation_coding)
+                                                 negotiation_coding_enabled=negotiation_coding,
+                                                 negotiation_paired=negotiation_paired and negotiation_coding)
     return json_response(new_session.json())
 
 @api_routes.route('/api/v1/sessions/byod', methods=['POST'])
@@ -269,7 +278,15 @@ def byod_join_session(**kwargs):
         valid, message = SessionDevice.verify_fields(name=name)
         if not valid:
             return json_response({'message': message}, 400)
-    success, data = session_handler.byod_join_session(name, passcode, collaborators)
+    # Paired negotiation sessions: the join form also says which breakout
+    # group ("Table 3") this device sits at and which side it records.
+    ok, message, negotiation_group, negotiation_side = SessionDevice.verify_negotiation(
+        sanitize(request.json.get('negotiationGroup') or '') or '', request.json.get('negotiationSide'))
+    if not ok:
+        return json_response({'message': message}, 400)
+    success, data = session_handler.byod_join_session(name, passcode, collaborators,
+                                                      negotiation_group=negotiation_group,
+                                                      negotiation_side=negotiation_side)
     if success:
         return json_response(data)
     else:

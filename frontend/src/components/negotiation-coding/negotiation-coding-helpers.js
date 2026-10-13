@@ -168,9 +168,18 @@ export function sameTeams(a, b) {
     return kx.every((k, i) => k === ky[i] && x[k] === y[k])
 }
 
+// An utterance's team: the one the server stamped on it (its device's side
+// in a paired run), else its speaker tag's assignment, else unassigned.
 export function teamOf(row, teams) {
+    if (row && TEAMS.includes(row.team)) return row.team
     const t = row && teams ? teams[row.speaker_tag] : null
     return TEAMS.includes(t) ? t : UNASSIGNED
+}
+
+// "Table 3 · Pat" for a pod's negotiation role; null when it has none.
+export function roleLabel(group, side) {
+    const parts = [group, side].map((p) => (p == null ? "" : String(p).trim())).filter(Boolean)
+    return parts.length ? parts.join(" · ") : null
 }
 
 function count(team, key) {

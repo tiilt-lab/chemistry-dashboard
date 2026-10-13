@@ -18,6 +18,11 @@ class NegotiationCodingRun(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     session_device_id = db.Column(db.Integer, db.ForeignKey('session_device.id', ondelete='CASCADE'), nullable=False, index=True)
+    # Paired sessions (one device per team): the other side's device. The
+    # run covers both devices' transcripts; SET NULL if the partner is
+    # removed (its transcripts, and so its codes, cascade away on their own).
+    # Mapped column: migration 5d6e7f809102 first.
+    partner_device_id = db.Column(db.Integer, db.ForeignKey('session_device.id', ondelete='SET NULL'), nullable=True)
     status = db.Column(db.String(16), nullable=False)
     model = db.Column(db.String(128))
     codebook_version = db.Column(db.String(32))
@@ -33,8 +38,9 @@ class NegotiationCodingRun(db.Model):
     def __hash__(self):
         return hash(self.id)
 
-    def __init__(self, session_device_id, model, codebook_version, teams=None):
+    def __init__(self, session_device_id, model, codebook_version, teams=None, partner_device_id=None):
         self.session_device_id = session_device_id
+        self.partner_device_id = partner_device_id
         self.status = 'queued'
         self.model = model
         self.codebook_version = codebook_version
@@ -57,10 +63,18 @@ class NegotiationCodingRun(db.Model):
     def summary_dict(self):
         return self._json_field(self.summary, None)
 
+    def is_paired(self):
+        return self.partner_device_id is not None
+
+    def device_ids(self):
+        # The devices whose transcripts this run codes, first device first.
+        return [self.session_device_id] + ([self.partner_device_id] if self.partner_device_id is not None else [])
+
     def json(self):
         return dict(
             id=self.id,
             session_device_id=self.session_device_id,
+            partner_device_id=self.partner_device_id,
             status=self.status,
             model=self.model,
             codebook_version=self.codebook_version,

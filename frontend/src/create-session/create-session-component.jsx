@@ -69,6 +69,11 @@ function CreateSessionComponent(props) {
   const [negotiationCoding, setNegotiationCoding] = useState(
     changedState && prevState.negotiationCoding != null ? prevState.negotiationCoding === true : false
   );
+  // Two laptops per breakout group, one per side of the table: each team's
+  // pod names its table and side at join time and the coding merges the pair.
+  const [negotiationPaired, setNegotiationPaired] = useState(
+    changedState && prevState.negotiationPaired != null ? prevState.negotiationPaired === true : false
+  );
   const [selectedKeywordList] = useState(changedState ? prevState.selectedKeywordList : null);
   const [selectedTopicModel] = useState(changedState ? prevState.selectedTopicModel : null);
   const [selectedDevices, setSelectedDevices] = useState([]);
@@ -180,7 +185,7 @@ function CreateSessionComponent(props) {
       const deviceIds = selectedDevices.map(d => d.id);
       const keywordListId = (selectedKeywordList) ? selectedKeywordList.id : null;
       const topicModelId = (selectedTopicModel) ? selectedTopicModel.id : null;
-      const fetchData = new SessionService().createNewSession(finalName, deviceIds, keywordListId, topicModelId, byod, features, doa, folder, asr, liveVideoAnalytics, negotiationCoding)
+      const fetchData = new SessionService().createNewSession(finalName, deviceIds, keywordListId, topicModelId, byod, features, doa, folder, asr, liveVideoAnalytics, negotiationCoding, negotiationCoding && negotiationPaired)
       fetchData.then(
         response=>{
           if(response.status === 200){
@@ -313,6 +318,8 @@ function CreateSessionComponent(props) {
     setLiveVideoAnalytics = {setLiveVideoAnalytics}
     negotiationCoding = {negotiationCoding}
     setNegotiationCoding = {setNegotiationCoding}
+    negotiationPaired = {negotiationPaired}
+    setNegotiationPaired = {setNegotiationPaired}
     goToSettings = {goToSettings}
     goToDevices = {goToDevices}
     devices = {devices}

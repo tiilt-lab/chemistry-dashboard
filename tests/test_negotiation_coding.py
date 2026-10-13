@@ -609,17 +609,21 @@ def test_routes_post_get_put_export_and_session_list(env):
     # the coding leg runs
     env.engine.run_coding(pod.id, llm=gold_llm, run_id=body["run_id"])
     payload = _call(env, r.get_negotiation_coding, "GET", **ids).get_json()
-    assert set(payload) == {"run", "teams", "codes", "summary"}
-    assert set(payload["run"]) == {"id", "session_device_id", "status", "model", "codebook_version", "created_at",
-                                   "started_at", "finished_at", "error", "utterances_coded", "invalid_codes"}
+    assert set(payload) == {"run", "mode", "pods", "teams", "codes", "summary"}
+    assert set(payload["run"]) == {"id", "session_device_id", "partner_device_id", "status", "model",
+                                   "codebook_version", "created_at", "started_at", "finished_at", "error",
+                                   "utterances_coded", "invalid_codes"}
     assert payload["run"]["status"] == "done" and payload["teams"] == TEAMS
+    assert payload["mode"] == "single" and payload["run"]["partner_device_id"] is None
+    assert payload["pods"] == [{"id": pod.id, "name": pod.name, "group": None, "side": None}]
     assert len(payload["codes"]) == 14
     first = payload["codes"][0]
-    assert set(first) == {"transcript_id", "start_time", "length", "speaker_tag", "text",
-                          "emotion", "rip", "frame", "listening"}
-    assert (first["start_time"], first["speaker_tag"], first["frame"]) == (0, "Pat", "past_blame")
+    assert set(first) == {"transcript_id", "session_device_id", "start_time", "length", "speaker_tag", "team",
+                          "text", "emotion", "rip", "frame", "listening"}
+    assert (first["start_time"], first["speaker_tag"], first["team"], first["frame"]) == (0, "Pat", "Pat", "past_blame")
+    assert first["session_device_id"] == pod.id
     assert payload["codes"][8]["listening"] == ["paraphrase", "check_understanding"]
-    assert set(payload["summary"]) == {"by_team", "by_speaker", "timeline"}
+    assert set(payload["summary"]) == {"by_team", "by_speaker", "timeline", "pods"}
     assert payload["summary"]["timeline"]["first_future_move"] == 150
 
     # PUT teams: recomputed from the stored codes, no LLM
@@ -630,6 +634,7 @@ def test_routes_post_get_put_export_and_session_list(env):
     assert swapped["summary"]["by_team"]["Sandy"]["frame"]["past_blame"] == 1
     assert swapped["summary"]["by_speaker"]["Pat"]["team"] == "Sandy"
     assert swapped["run"]["status"] == "done" and len(swapped["codes"]) == 14
+    assert swapped["codes"][0]["team"] == "Sandy"   # rows follow the new assignment
     assert _call(env, r.set_negotiation_teams, "PUT", {"teams": "x"}, **ids).status_code == 400
     assert _call(env, r.set_negotiation_teams, "PUT", {}, session_id=session.id,
                  session_device_id=empty.id).status_code == 404
@@ -640,10 +645,10 @@ def test_routes_post_get_put_export_and_session_list(env):
     assert resp.headers["Content-Type"] == "text/csv; charset=utf-8"
     assert resp.headers["Content-Disposition"] == "attachment; filename=negotiation_coding_session%d_pod%d.csv" % (session.id, pod.id)
     rows = list(csv.reader(io.StringIO(resp.data.decode("utf-8"))))
-    assert rows[0] == ["transcript_id", "start_time", "length", "speaker_tag", "team", "text",
+    assert rows[0] == ["transcript_id", "start_time", "length", "speaker_tag", "team", "pod", "text",
                        "emotion", "rip", "frame", "listening"]
     assert len(rows) == 15
-    assert rows[9][1:] == ["120", "10", "Pat", "Sandy", VIKING[8][1],
+    assert rows[9][1:] == ["120", "10", "Pat", "Sandy", pod.name, VIKING[8][1],
                            "neutral", "interest", "none", "paraphrase;check_understanding"]
     assert int(rows[9][0]) == payload["codes"][8]["transcript_id"]
 
@@ -651,7 +656,9 @@ def test_routes_post_get_put_export_and_session_list(env):
     resp = _call(env, r.list_negotiation_coding, "GET", session_id=session.id)
     overview = {e["device_id"]: e for e in resp.get_json()}
     assert set(overview) == {pod.id, empty.id}
-    assert set(overview[pod.id]) == {"device_id", "device_name", "run", "teams", "summary"}
+    assert set(overview[pod.id]) == {"device_id", "device_name", "negotiation_group", "negotiation_side",
+                                     "run", "mode", "pods", "teams", "summary"}
+    assert overview[pod.id]["mode"] == "single"
     assert overview[pod.id]["run"]["status"] == "done" and overview[pod.id]["summary"]["timeline"]["first_escalating"] == 15
     assert overview[empty.id]["run"] is None and overview[empty.id]["summary"] is None
     assert _call(env, r.export_negotiation_coding, "GET", session_id=session.id,
@@ -849,28 +856,41 @@ def test_handler_stores_the_flag_and_queues_coding_at_session_end():
     assert end.index("database.save_changes()") < end.index("queue_negotiation_coding(session, session_devices)") \
         < end.index("# Ping pod devices")
     queue = _func_source(s, "queue_negotiation_coding")
-    assert "negotiation_coding.queue_coding_run(session.id, session_device.id)" in queue
+    assert "negotiation_coding.queue_coding_run(session.id, device_id, partner_device_id=partner_id)" in queue
     assert "database.session_device_transcript_count(session_device.id)" in queue
+    assert "negotiation_coding.resolve_pair(session_device.id)" in queue
+    assert "negotiation_paired=False" in create.splitlines()[0]
+    assert "session.negotiation_paired = bool(negotiation_paired)" in create
 
 
 def test_queue_negotiation_coding_skips_empty_pods_and_is_best_effort():
     src = _read(*HANDLER)
     queued = []
 
-    def queue_coding_run(session_id, device_id, teams=None):
+    def queue_coding_run(session_id, device_id, teams=None, partner_device_id=None):
         if device_id == 3:
             raise RuntimeError("redis down")
-        queued.append(device_id)
+        queued.append((device_id, partner_device_id))
         return types.SimpleNamespace(id=100 + device_id)
 
+    # Paired session: pods 1+4 are one breakout group (Pat = 4, so 4 is the
+    # run's first device); 2 is empty; 3 blows up; 5 has no partner yet.
+    pairs = {1: (4, 1), 4: (4, 1), 2: (2, None), 3: (3, None), 5: (5, None)}
     ns = {"logging": __import__("logging"),
           "database": types.SimpleNamespace(session_device_transcript_count=lambda d: 0 if d == 2 else 5),
-          "negotiation_coding": types.SimpleNamespace(queue_coding_run=queue_coding_run)}
+          "negotiation_coding": types.SimpleNamespace(queue_coding_run=queue_coding_run,
+                                                      resolve_pair=lambda d: pairs[d])}
     exec(_func_source(src, "queue_negotiation_coding"), ns)
     session = types.SimpleNamespace(id=9)
     pods = [types.SimpleNamespace(id=i) for i in (1, 2, 3, 4)]
     assert ns["queue_negotiation_coding"](session, pods) == [(1, 101), (4, 104)]
-    assert queued == [1, 4]
+    assert queued == [(1, None), (4, None)]
+
+    queued.clear()
+    paired = types.SimpleNamespace(id=9, negotiation_paired=True)
+    pods = [types.SimpleNamespace(id=i) for i in (1, 2, 3, 4, 5)]
+    assert ns["queue_negotiation_coding"](paired, pods) == [(4, 104), (5, 105)]
+    assert queued == [(4, 1), (5, None)]   # one run for the pair, 4 never queued twice
 
 
 def test_session_model_column_json_and_blueprint_registration():
@@ -878,6 +898,12 @@ def test_session_model_column_json_and_blueprint_registration():
     assert "negotiation_coding = db.Column(db.Boolean, nullable=True)" in s
     assert "negotiation_coding=bool(self.negotiation_coding)" in s
     assert "self.negotiation_coding = bool(negotiation_coding)" in s
+    assert "negotiation_paired = db.Column(db.Boolean, nullable=True)" in s
+    assert "negotiation_paired=bool(self.negotiation_paired)" in s
+    sd = _read("src", "server", "tables", "session_device.py")
+    assert "negotiation_group = db.Column(db.String(32), nullable=True)" in sd
+    assert "negotiation_side = db.Column(db.String(16), nullable=True)" in sd
+    assert "NEGOTIATION_SIDES = ('Pat', 'Sandy')" in sd
     dc = _read("src", "server", "discussion_capture.py")
     assert "from routes.negotiation_coding import api_routes as negotiation_coding_api" in dc
     assert "app.register_blueprint(negotiation_coding_api)" in dc
@@ -891,13 +917,17 @@ def test_routes_are_guarded_and_rate_limited():
         if isinstance(node, ast.FunctionDef) and node.name.endswith("negotiation_coding") or \
                 isinstance(node, ast.FunctionDef) and node.name == "set_negotiation_teams":
             guards[node.name] = [ast.unparse(d) for d in node.decorator_list]
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == "set_negotiation_role":
+            guards[node.name] = [ast.unparse(d) for d in node.decorator_list]
     assert "wrappers.verify_session_access" in guards["start_negotiation_coding"]
     assert "wrappers.verify_session_access" in guards["set_negotiation_teams"]
+    assert "wrappers.verify_session_access" in guards["set_negotiation_role"]
     for name in ("get_negotiation_coding", "export_negotiation_coding", "list_negotiation_coding"):
         assert "wrappers.verify_session_read_access" in guards[name]
     assert any("limiter.limit('30 per hour'" in d for d in guards["start_negotiation_coding"])
     assert all(any(d.startswith("wrappers.verify_login(") for d in ds) for ds in guards.values())
-    assert s.count("missing = _pod_or_404(session_device_id, session_id)") == 4
+    assert s.count("missing = _pod_or_404(session_device_id, session_id)") == 5
     assert "authz.device_in_session(session_device_id, session_id)" in s
 
 
@@ -934,3 +964,318 @@ def test_migration_chains_after_live_video_and_is_guarded_both_ways():
     assert "sa.ForeignKeyConstraint(['transcript_id'], ['transcript.id'], ondelete='CASCADE')" in up
     assert "op.drop_column('session', 'negotiation_coding')" in down
     assert down.index("negotiation_code'") < down.index("negotiation_coding_run'")   # child first
+
+
+# ------------------------------------------------ paired devices (one per team)
+
+def _row(i, device, start, text, tag=None, sim=None, closed_world=False, length=8):
+    conf = None
+    if sim is not None:
+        conf = {"percent": 80, "sim": sim, "margin": 0.2}
+        if closed_world:
+            conf["closed_world"] = True
+    return types.SimpleNamespace(
+        id=i, session_device_id=device, start_time=start, length=length, speaker_tag=tag, transcript=text,
+        _voice_features_json=lambda: {"confidence": conf} if conf else None)
+
+
+SIDES = {1: "Pat", 2: "Sandy"}
+
+
+def test_text_similarity_and_same_moment():
+    assert nc.text_similarity("I need the money by Friday", "I need the money by Friday.") == 1.0
+    assert nc.text_similarity("I need the money by Friday", "need money Friday") > 0.5
+    assert nc.text_similarity("Let's slow down", "The supplier is unpaid") < 0.3
+    assert nc.text_similarity("", "anything") == 0.0
+    a = {"start_time": 10, "length": 8}
+    assert nc.same_moment(a, {"start_time": 11.4, "length": 8})          # starts within 1.5 s
+    assert nc.same_moment(a, {"start_time": 14, "length": 8})            # 4 s of an 8 s utterance overlap
+    assert not nc.same_moment(a, {"start_time": 15, "length": 8})        # 3 of 8: below half
+    assert not nc.same_moment(a, {"start_time": 30, "length": 8})
+    assert nc.same_moment({"start_time": 10, "length": 0}, {"start_time": 11, "length": 0})
+    assert not nc.same_moment({"start_time": 10, "length": 0}, {"start_time": 13, "length": 0})
+
+
+def test_match_strength_prefers_the_devices_own_confident_speakers():
+    assert nc.match_strength({"speaker_tag": None}) == 0.0
+    assert nc.match_strength({"speaker_tag": "Pat"}) == 0.5
+    assert nc.match_strength({"speaker_tag": "Pat", "confidence": {"sim": 0.8}}) == 0.8
+    assert nc.match_strength({"speaker_tag": "Pat", "confidence": {"sim": 0.8, "closed_world": True}}) == pytest.approx(0.5)
+    assert nc.match_strength({"speaker_tag": "Pat", "confidence": {"sim": "junk"}}) == 0.5
+
+
+def test_merge_paired_keeps_one_copy_of_each_utterance_on_its_own_side():
+    # Both microphones hear the whole table. The Pat laptop (device 1) hears
+    # its own speakers confidently and Sandy's faintly (closed-world picks or
+    # no match); the Sandy laptop (device 2) the reverse.
+    pat = [
+        _row(1, 1, 0, "You went on vacation and left Alex in charge", "Pat", sim=0.82),
+        _row(2, 1, 15.5, "That's ridiculous you signed off on the change order", "Jordan", sim=0.62, closed_world=True),
+        _row(3, 1, 30, "Don't you understand I need the money by Friday", "Pat", sim=0.79),
+        _row(4, 1, 45.2, "mumble bankruptcy recover", None),                    # far side, unmatched, different words
+        _row(5, 1, 60, "I can call the loan whenever I want", "Jordan", sim=0.7),
+        _row(6, 1, 75, "Fine tell me what is bothering you most", "Sam", sim=0.9),
+    ]
+    sandy = [
+        _row(11, 2, 0.4, "You went on vacation and left Alex in charge", "Riley", sim=0.55, closed_world=True),
+        _row(12, 2, 15, "That's ridiculous. You're the one who signed off on the change order.", "Sandy", sim=0.88),
+        _row(13, 2, 45, "If you force me into bankruptcy you may not recover the money", "Sandy", sim=0.84),
+        _row(14, 2, 60.3, "I can call the loan whenever I want", None),           # far side, unmatched copy
+        _row(15, 2, 75.5, "Can we slow this down for a minute", "Riley", sim=0.8),   # both talking at once: kept
+    ]
+    kept, dropped = nc.merge_paired({1: pat, 2: sandy}, SIDES)
+    assert [u["transcript_id"] for u in kept] == [1, 12, 3, 13, 5, 6, 15]
+    assert [u["index"] for u in kept] == list(range(7))
+    assert [u["team"] for u in kept] == ["Pat", "Sandy", "Pat", "Sandy", "Pat", "Pat", "Sandy"]
+    assert [u["session_device_id"] for u in kept] == [1, 2, 1, 2, 1, 1, 2]
+    assert {d["transcript_id"]: (d["kept_transcript_id"], d["reason"]) for d in dropped} == {
+        11: (1, "duplicate"),     # Pat's own words, stronger on the Pat laptop
+        2: (12, "duplicate"),     # Sandy's words: closed-world pick on Pat's laptop loses to Sandy's 0.88
+        4: (13, "bleed"),         # unmatched garble against a matched utterance at the same moment
+        14: (5, "duplicate"),     # unmatched but word-for-word: the text match decides first
+    }
+    assert all(0 <= d["similarity"] <= 1 for d in dropped)
+    assert kept[0]["confidence"]["sim"] == 0.82
+
+
+def test_merge_paired_ties_go_to_the_fuller_text_then_the_earlier_row():
+    a = _row(1, 1, 0, "we both let that slide", "Pat", sim=0.7)
+    b = _row(2, 2, 0.5, "the contract says changes must be in writing but we both let that slide", "Sandy", sim=0.72)
+    kept, dropped = nc.merge_paired({1: [a], 2: [b]}, SIDES)
+    assert [u["transcript_id"] for u in kept] == [2] and dropped[0]["reason"] == "duplicate"
+    c = _row(3, 1, 0, "same words here", "Pat")
+    d = _row(4, 2, 0, "same words here", "Sandy")
+    kept, _ = nc.merge_paired({1: [c], 2: [d]}, SIDES)
+    assert [u["transcript_id"] for u in kept] == [3]
+    # one device, nothing to merge against; unsided device gets no team
+    kept, dropped = nc.merge_paired({1: [a, c]}, {}) if False else nc.merge_paired({1: [a], 2: []}, {1: "Pat"})
+    assert dropped == [] and kept[0]["team"] == "Pat" and kept[0]["index"] == 0
+    kept, _ = nc.merge_paired({1: [a]}, {})
+    assert "team" not in kept[0]
+
+
+def test_team_of_code_prefers_the_stamped_team_and_rollup_keys_shared_tags_apart():
+    assert nc.team_of_code({"speaker_tag": "Pat", "team": "Sandy"}, TEAMS) == "Sandy"
+    assert nc.team_of_code({"speaker_tag": "Pat", "team": "nonsense"}, TEAMS) == "Pat"
+    assert nc.team_of_code({"speaker_tag": "Coach"}, TEAMS) == nc.UNASSIGNED
+    assert nc.other_team("Pat") == "Sandy" and nc.other_team("Sandy") == "Pat"
+    codes = [dict(u, team=("Pat" if u["index"] % 2 == 0 else "Sandy"), speaker_tag=None, **VIKING[u["index"]][2])
+             for u in _utterances()]
+    summary = nc.summarize(codes, {}, CODEBOOK, extra={"cross_talk": {"dropped": 3}, "pods": None})
+    assert summary["by_team"]["Pat"]["utterances"] == 7 and summary["by_team"]["Sandy"]["utterances"] == 7
+    assert summary["by_team"][nc.UNASSIGNED]["utterances"] == 0
+    assert set(summary["by_speaker"]) == {"", " (Sandy)"}   # the untagged voice on both sides, kept apart
+    assert summary["by_speaker"][""]["team"] == "Pat" and summary["by_speaker"][" (Sandy)"]["team"] == "Sandy"
+    assert summary["cross_talk"] == {"dropped": 3} and "pods" not in summary
+
+
+def _paired_session(env, group="Table 1", sides=("Pat", "Sandy")):
+    from tables.session_device import SessionDevice
+    session = _session(env)
+    session.negotiation_coding = True
+    session.negotiation_paired = True
+    env.db.session.commit()
+    pods = []
+    for side in sides:
+        device = SessionDevice(session.id, None, "%s %s" % (group, side) if side else "Lone")
+        device.negotiation_group = group
+        device.negotiation_side = side
+        env.db.session.add(device)
+        env.db.session.flush()
+        device.create_key()
+        pods.append(device)
+    env.db.session.commit()
+    return session, pods
+
+
+def _add(env, device, start, text, tag, sim=None, closed_world=False):
+    vf = None
+    if sim is not None:
+        vf = {"confidence": {"percent": 80, "sim": sim, "margin": 0.2}}
+        if closed_world:
+            vf["confidence"]["closed_world"] = True
+    env.database.add_transcript(device.id, start, 10, text, False, 0, 0, 0, 0, 0, 0, -1, tag, -1, voice_features=vf)
+
+
+def test_paired_run_codes_both_pods_merged_with_teams_by_side(env):
+    d, r = env.database, env.routes
+    session, (pat, sandy) = _paired_session(env)
+    # the 14-line exchange heard by both laptops: each side hears its own
+    # lines confidently and the other side's as a weak closed-world pick
+    for i, (tag, text, _) in enumerate(VIKING):
+        near, far = (pat, sandy) if tag == "Pat" else (sandy, pat)
+        _add(env, near, 15 * i, text, tag, sim=0.85)
+        _add(env, far, 15 * i + 1, text, tag, sim=0.5, closed_world=True)
+    assert env.engine.resolve_pair(sandy.id) == (pat.id, sandy.id)
+    assert env.engine.resolve_pair(pat.id) == (pat.id, sandy.id)
+
+    env.enqueue_coding.calls.clear()
+    resp = _call(env, r.start_negotiation_coding, "POST", {}, session_id=session.id, session_device_id=sandy.id)
+    assert resp.status_code == 202
+    body = resp.get_json()
+    assert (body["session_device_id"], body["partner_device_id"]) == (pat.id, sandy.id)
+    assert env.enqueue_coding.calls == [((session.id, pat.id, body["run_id"]), {})]
+    run = d.get_negotiation_run(body["run_id"])
+    assert run.partner_device_id == sandy.id and run.is_paired() and run.device_ids() == [pat.id, sandy.id]
+    # either pod finds the run; POST again on the other pod reuses it
+    assert d.get_latest_negotiation_run(sandy.id).id == run.id
+    again = _call(env, r.start_negotiation_coding, "POST", {}, session_id=session.id, session_device_id=pat.id).get_json()
+    assert again["run_id"] == run.id
+
+    env.engine.run_coding(pat.id, llm=gold_llm, run_id=run.id)
+    for pod in (pat, sandy):
+        payload = _call(env, r.get_negotiation_coding, "GET", session_id=session.id, session_device_id=pod.id).get_json()
+        assert payload["run"]["id"] == run.id and payload["mode"] == "paired"
+        assert payload["pods"] == [{"id": pat.id, "name": "Table 1 Pat", "group": "Table 1", "side": "Pat"},
+                                   {"id": sandy.id, "name": "Table 1 Sandy", "group": "Table 1", "side": "Sandy"}]
+    assert len(payload["codes"]) == 14 and payload["run"]["utterances_coded"] == 14
+    assert [c["team"] for c in payload["codes"]] == [tag for tag, _, _ in VIKING]
+    assert [c["session_device_id"] for c in payload["codes"]] == [pat.id if tag == "Pat" else sandy.id for tag, _, _ in VIKING]
+    assert [c["start_time"] for c in payload["codes"]] == [15 * i for i in range(14)]   # the near copies
+    assert payload["summary"]["cross_talk"]["dropped"] == 14 and payload["summary"]["cross_talk"]["kept"] == 14
+    assert all(x["reason"] == "duplicate" for x in payload["summary"]["cross_talk"]["detail"])
+    assert payload["summary"]["pods"][0]["side"] == "Pat"
+    assert payload["summary"]["by_team"]["Pat"]["utterances"] == 7
+    assert payload["summary"]["by_team"]["Sandy"]["utterances"] == 7
+    assert payload["summary"]["timeline"]["first_escalating"] == 15
+    # 14 codes stored, none for the dropped far copies
+    from tables.negotiation_code import NegotiationCode
+    assert env.db.session.query(NegotiationCode).filter(NegotiationCode.run_id == run.id).count() == 14
+
+    # a speaker-tag assignment cannot override the device's side
+    swapped = _call(env, r.set_negotiation_teams, "PUT", {"teams": {"Pat": "Sandy"}},
+                    session_id=session.id, session_device_id=sandy.id).get_json()
+    assert swapped["codes"][0]["team"] == "Pat" and swapped["summary"]["by_team"]["Pat"]["utterances"] == 7
+    assert swapped["summary"]["cross_talk"]["dropped"] == 14
+
+    # CSV names the pod of every line
+    resp = _call(env, r.export_negotiation_coding, "GET", session_id=session.id, session_device_id=sandy.id)
+    rows = list(csv.reader(io.StringIO(resp.data.decode("utf-8"))))
+    assert rows[1][3:6] == ["Pat", "Pat", "Table 1 Pat"] and rows[2][3:6] == ["Sandy", "Sandy", "Table 1 Sandy"]
+
+    # the session overview shows the run on both pods
+    overview = {e["device_id"]: e for e in _call(env, r.list_negotiation_coding, "GET", session_id=session.id).get_json()}
+    assert overview[pat.id]["run"]["id"] == overview[sandy.id]["run"]["id"] == run.id
+    assert overview[sandy.id]["negotiation_side"] == "Sandy" and overview[sandy.id]["mode"] == "paired"
+
+
+def test_run_sides_fills_in_a_missing_or_clashing_side(env):
+    d = env.database
+    session, (a, b) = _paired_session(env, group="Table 2", sides=(None, None))
+    run = d.create_negotiation_run(a.id, "m", "viking-v2", partner_device_id=b.id)
+    assert env.engine.run_sides(run) == {a.id: "Pat", b.id: "Sandy"}
+    b.negotiation_side = "Pat"
+    env.db.session.commit()
+    assert env.engine.run_sides(run) == {a.id: "Sandy", b.id: "Pat"}
+    a.negotiation_side = "Pat"
+    env.db.session.commit()
+    assert env.engine.run_sides(run) == {a.id: "Pat", b.id: "Sandy"}   # the partner yields
+    # a lone sided pod: its utterances are its side; an unsided lone pod: nothing stamped
+    lone = d.create_negotiation_run(a.id, "m", "viking-v2")
+    assert env.engine.run_sides(lone) == {a.id: "Pat"}
+    a.negotiation_side = None
+    env.db.session.commit()
+    assert env.engine.run_sides(lone) == {}
+    assert env.engine.run_pods(run, {a.id: "Pat"})[1] == {"id": b.id, "name": "Lone", "group": "Table 2", "side": None}
+
+
+def test_resolve_pair_partner_lookup_and_lone_pods(env):
+    d = env.database
+    session, (pat, sandy) = _paired_session(env, group="Table 3")
+    lone = _pod(env, session, with_transcripts=False)
+    assert env.engine.resolve_pair(lone.id) == (lone.id, None)          # no group
+    lone.negotiation_group = "Table 9"
+    env.db.session.commit()
+    assert env.engine.resolve_pair(lone.id) == (lone.id, None)          # no partner yet
+    assert d.get_negotiation_partner(pat).id == sandy.id
+    sandy.removed = True
+    env.db.session.commit()
+    assert d.get_negotiation_partner(pat) is None and env.engine.resolve_pair(pat.id) == (pat.id, None)
+    sandy.removed = False
+    env.db.session.commit()
+    # two pods on the same side still pair (the lower id is first); an unpaired session never pairs
+    sandy.negotiation_side = "Pat"
+    env.db.session.commit()
+    assert env.engine.resolve_pair(sandy.id) == (pat.id, sandy.id)
+    session.negotiation_paired = False
+    env.db.session.commit()
+    assert env.engine.resolve_pair(sandy.id) == (sandy.id, None)
+    assert env.engine.resolve_pair(999999) == (999999, None)
+
+
+def test_role_route_sets_group_and_side_with_validation(env):
+    d, r = env.database, env.routes
+    session, (pat, sandy) = _paired_session(env, group="Table 4")
+    ids = dict(session_id=session.id, session_device_id=sandy.id)
+    assert _call(env, r.set_negotiation_role, "PUT", {"group": "Table 4", "side": "Coach"}, **ids).status_code == 400
+    assert _call(env, r.set_negotiation_role, "PUT", {"group": "x" * 33, "side": "Pat"}, **ids).status_code == 400
+    assert _call(env, r.set_negotiation_role, "PUT", {"group": "Table <4>", "side": "Pat"}, **ids).status_code == 400
+    resp = _call(env, r.set_negotiation_role, "PUT", {"group": " Table 5 ", "side": "pat"}, **ids)
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert (body["session_device"]["negotiation_group"], body["session_device"]["negotiation_side"]) == ("Table 5", "Pat")
+    assert body["partner_device_id"] is None and body["first_device_id"] == sandy.id   # moved to a table of its own
+    assert d.get_session_devices(id=sandy.id).negotiation_side == "Pat"
+    cleared = _call(env, r.set_negotiation_role, "PUT", {"group": "", "side": None}, **ids).get_json()
+    assert cleared["session_device"]["negotiation_group"] is None and cleared["session_device"]["negotiation_side"] is None
+    assert _call(env, r.set_negotiation_role, "PUT", {"group": "T", "side": "Pat"}, session_id=session.id,
+                 session_device_id=_pod(env, _session(env), with_transcripts=False).id).status_code == 404
+
+
+def test_byod_join_stores_the_role_and_names_the_pod_after_it(env):
+    from tables.session_device import SessionDevice
+    d = env.database
+    session = _session(env)
+    session.passcode = "VIKING%d" % session.id
+    env.db.session.commit()
+    ok, device, speakers = d.create_byod_session_device(session.passcode, "", 0, "Table 7", "Sandy")
+    assert ok and device.name == "Table 7 Sandy" and (device.negotiation_group, device.negotiation_side) == ("Table 7", "Sandy")
+    ok, named, _ = d.create_byod_session_device(session.passcode, "Window table", 0, "Table 7", "Pat")
+    assert ok and named.name == "Window table" and named.negotiation_side == "Pat"
+    assert d.get_negotiation_partner(device).id == named.id
+    # rejoining the same pod with a corrected role updates it
+    ok, again, _ = d.create_byod_session_device(session.passcode, "Window table", 0, "Table 8", "Pat")
+    assert ok and again.id == named.id and again.negotiation_group == "Table 8"
+    ok, same, _ = d.create_byod_session_device(session.passcode, "Window table", 0, None, None)
+    assert ok and same.id == named.id and same.negotiation_group == "Table 8"   # blank keeps the role
+    ok, plain, _ = d.create_byod_session_device(session.passcode, "", 0)
+    assert ok and plain.name.startswith("Group ") and plain.negotiation_group is None
+    assert SessionDevice.verify_negotiation("Table 1", "SANDY") == (True, None, "Table 1", "Sandy")
+    assert SessionDevice.verify_negotiation("", "") == (True, None, None, None)
+    assert SessionDevice.verify_negotiation(None, None) == (True, None, None, None)
+    assert SessionDevice.verify_negotiation("Table 1", 3)[0] is False
+    assert SessionDevice.verify_negotiation(3, "Pat")[0] is False
+    assert device.negotiation_label() == "Table 7 \u00b7 Sandy" and plain.negotiation_label() is None
+
+
+def test_create_session_and_join_routes_read_the_pairing_fields():
+    src = _read("src", "server", "routes", "session.py")
+    create = _func_source(src, "create_session")
+    assert "request.json.get('negotiationPaired', False)" in create
+    assert "if not isinstance(negotiation_paired, bool):" in create
+    assert "negotiation_paired=negotiation_paired and negotiation_coding" in create
+    join = _func_source(src, "byod_join_session")
+    assert "SessionDevice.verify_negotiation(" in join
+    assert "request.json.get('negotiationGroup')" in join and "request.json.get('negotiationSide')" in join
+    assert "negotiation_group=negotiation_group" in join and "negotiation_side=negotiation_side" in join
+    handler = _func_source(_read(*HANDLER), "byod_join_session")
+    assert "negotiation_group=negotiation_group, negotiation_side=negotiation_side" in handler
+
+
+def test_pairs_migration_chains_after_negotiation_coding_and_is_guarded():
+    versions = os.path.join(ROOT, "src", "server", "migrations", "versions")
+    fn = [f for f in os.listdir(versions) if f.startswith("5d6e7f809102_")]
+    assert len(fn) == 1, fn
+    s = _read("src", "server", "migrations", "versions", fn[0])
+    assert "revision = '5d6e7f809102'" in s and "down_revision = '4c5d6e7f8091'" in s
+    up = s[s.index("def upgrade():"):s.index("def downgrade():")]
+    down = s[s.index("def downgrade():"):]
+    for table, column in (("session", "negotiation_paired"), ("session_device", "negotiation_group"),
+                          ("session_device", "negotiation_side"), ("negotiation_coding_run", "partner_device_id")):
+        assert "if not _has_column('%s', '%s'):" % (table, column) in up
+        assert "op.drop_column('%s', '%s')" % (table, column) in down
+    assert "op.create_foreign_key('fk_negotiation_coding_run_partner', 'negotiation_coding_run',\n" \
+           "                              'session_device', ['partner_device_id'], ['id'], ondelete='SET NULL')" in up
+    assert down.index("drop_constraint") < down.index("partner_device_id")
+    run = _read("src", "server", "tables", "negotiation_coding_run.py")
+    assert "partner_device_id = db.Column(db.Integer, db.ForeignKey('session_device.id', ondelete='SET NULL'), nullable=True)" in run

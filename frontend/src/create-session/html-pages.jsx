@@ -163,6 +163,61 @@ function CreateSessionPage(props) {
                     </span>
                   </span>
                 </label>
+                {props.negotiationCoding === true ? (
+                  <div className="mt-2 flex flex-col gap-2 rounded-lg border border-tiilt-line bg-white px-3 py-2.5">
+                    <span className="block text-sm font-semibold text-tiilt-ink">
+                      Devices per breakout group
+                    </span>
+                    <label
+                      htmlFor="radNegotiationSingle"
+                      className="flex cursor-pointer items-start gap-3"
+                    >
+                      <input
+                        id="radNegotiationSingle"
+                        type="radio"
+                        name="negotiationDevices"
+                        className="mt-0.5 h-4 w-4 flex-none cursor-pointer accent-tiilt"
+                        checked={props.negotiationPaired !== true}
+                        onChange={() => props.setNegotiationPaired(false)}
+                      />
+                      <span>
+                        <span className="block text-sm text-tiilt-ink">
+                          One laptop per group
+                        </span>
+                        <span className="block text-xs text-tiilt-muted">
+                          One microphone and camera for the whole table; after
+                          the session you assign each speaker to Pat or Sandy
+                          by name on the pod page.
+                        </span>
+                      </span>
+                    </label>
+                    <label
+                      htmlFor="radNegotiationPaired"
+                      className="flex cursor-pointer items-start gap-3"
+                    >
+                      <input
+                        id="radNegotiationPaired"
+                        type="radio"
+                        name="negotiationDevices"
+                        className="mt-0.5 h-4 w-4 flex-none cursor-pointer accent-tiilt"
+                        checked={props.negotiationPaired === true}
+                        onChange={() => props.setNegotiationPaired(true)}
+                      />
+                      <span>
+                        <span className="block text-sm text-tiilt-ink">
+                          Two laptops per group, one per team
+                        </span>
+                        <span className="block text-xs text-tiilt-muted">
+                          Each team joins from its own laptop and picks its
+                          table and side (Pat or Sandy) on the join page.
+                          Everything that laptop&apos;s microphone and camera
+                          capture counts for that team, and the two
+                          transcripts are merged into one coded conversation.
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+                ) : null}
               </div>
             </div>
             <div className={footerBar}>

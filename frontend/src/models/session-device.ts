@@ -11,6 +11,10 @@ export interface SessionDeviceJson {
   button_pressed?: boolean
   posthoc_analyzed_date?: string | null
   posthoc_models?: Record<string, string> | null
+  // Paired negotiation sessions: breakout group ("Table 3") and the side of
+  // the table this device records ("Pat" | "Sandy"); null elsewhere.
+  negotiation_group?: string | null
+  negotiation_side?: string | null
 }
 
 export class SessionDeviceModel {
@@ -22,6 +26,8 @@ export class SessionDeviceModel {
   button_pressed?: boolean
   posthoc_analyzed_date: string | null = null
   posthoc_models: Record<string, string> | null = null
+  negotiation_group: string | null = null
+  negotiation_side: string | null = null
 
   static fromJson(json: SessionDeviceJson): SessionDeviceModel {
     const model = new SessionDeviceModel()
@@ -34,6 +40,8 @@ export class SessionDeviceModel {
     // Post-hoc provenance: which run analyzed this pod and with which models.
     model.posthoc_analyzed_date = json["posthoc_analyzed_date"] ?? null
     model.posthoc_models = json["posthoc_models"] ?? null
+    model.negotiation_group = json["negotiation_group"] ?? null
+    model.negotiation_side = json["negotiation_side"] ?? null
     return model
   }
 

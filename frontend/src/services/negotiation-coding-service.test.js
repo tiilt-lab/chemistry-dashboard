@@ -34,6 +34,19 @@ describe("NegotiationCodingService", () => {
         expect(out).toEqual({ status: 200, body: { run: { status: "done" } } })
     })
 
+    it("PUTs the pod's table and side to /role, blanks clearing both", async () => {
+        reply = { status: 200, json: () => Promise.resolve({ session_device: { id: 42 }, partner_device_id: 43 }) }
+        const out = await new NegotiationCodingService().setRole(3, 42, { group: "Table 3", side: "Pat" })
+        expect(calls[0].url).toBe(
+            "https://example.test/api/v1/sessions/3/devices/42/negotiation_coding/role",
+        )
+        expect(calls[0].options.method).toBe("PUT")
+        expect(JSON.parse(calls[0].options.body)).toEqual({ group: "Table 3", side: "Pat" })
+        expect(out).toEqual({ status: 200, body: { session_device: { id: 42 }, partner_device_id: 43 } })
+        await new NegotiationCodingService().setRole(3, 42, null)
+        expect(JSON.parse(calls[1].options.body)).toEqual({ group: "", side: "" })
+    })
+
     it("resolves a 404 (never run) with a null body instead of rejecting", async () => {
         reply = { status: 404, json: () => Promise.reject(new Error("no body")) }
         await expect(new NegotiationCodingService().get(3, 42)).resolves.toEqual({

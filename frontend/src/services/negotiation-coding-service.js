@@ -44,6 +44,18 @@ export class NegotiationCodingService {
             .then(parse)
     }
 
+    // Paired sessions: this pod's breakout group and side ({group, side};
+    // blank clears both). Resolves 200 {session_device, partner_device_id,
+    // first_device_id}; the next run uses the new role.
+    setRole(sessionId, sessionDeviceId, role) {
+        return this.api
+            .httpRequestCall(base(sessionId, sessionDeviceId) + "/role", "PUT", {
+                group: (role && role.group) || "",
+                side: (role && role.side) || "",
+            })
+            .then(parse)
+    }
+
     // Absolute URL of the CSV download (a plain link: the session cookie goes
     // along with the navigation, so no fetch is needed).
     exportCsvUrl(sessionId, sessionDeviceId) {

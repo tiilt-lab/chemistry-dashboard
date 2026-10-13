@@ -1,16 +1,23 @@
 """Negotiation coding per pod (negotiation_coding.py): start a run, read the
-latest one with its codes and summary, re-assign teams, export CSV, and the
-per-session overview. Gated like the other per-pod routes: session write
-access to start or re-assign, read access to look; the pod must belong to
-the session in the URL (ids are sequential).
+latest one with its codes and summary, re-assign teams, export CSV, set a
+pod's breakout group and side (paired sessions), and the per-session
+overview. Gated like the other per-pod routes: session write access to
+start, re-assign or set the role, read access to look; the pod must belong
+to the session in the URL (ids are sequential).
+
+In a paired session (one device per team) the two pods of a breakout group
+share one run: POST on either pod queues it for the pair, GET on either pod
+returns it.
 """
 import csv
 import importlib
 import io
+import json
 
 from flask import Blueprint, request, make_response, session as flask_session
-from app import limiter
-from utility import json_response
+from app import limiter, socketio
+from utility import json_response, sanitize
+from tables.session_device import SessionDevice
 import authz
 import database
 import wrappers
@@ -24,7 +31,7 @@ negotiation_coding = importlib.import_module('negotiation_coding')
 api_routes = Blueprint('negotiation_coding', __name__)
 
 POD = '/api/v1/sessions/<int:session_id>/devices/<int:session_device_id>/negotiation_coding'
-CSV_COLUMNS = ('transcript_id', 'start_time', 'length', 'speaker_tag', 'team', 'text',
+CSV_COLUMNS = ('transcript_id', 'start_time', 'length', 'speaker_tag', 'team', 'pod', 'text',
                'emotion', 'rip', 'frame', 'listening')
 
 
@@ -58,8 +65,12 @@ def start_negotiation_coding(session_id, session_device_id, **kwargs):
     teams, bad = _teams_from_body()
     if bad:
         return bad
-    run = negotiation_coding.queue_coding_run(session_id, session_device_id, teams)
-    return json_response({'run_id': run.id, 'status': run.status}, 202)
+    # Paired session: one run for the pod and its partner, hung off the
+    # group's first device whichever pod the instructor clicked.
+    first, partner = negotiation_coding.resolve_pair(session_device_id)
+    run = negotiation_coding.queue_coding_run(session_id, first, teams, partner_device_id=partner)
+    return json_response({'run_id': run.id, 'status': run.status, 'session_device_id': first,
+                          'partner_device_id': partner}, 202)
 
 
 @api_routes.route(POD, methods=['GET'])
@@ -104,12 +115,13 @@ def export_negotiation_coding(session_id, session_device_id, **kwargs):
     if run is None:
         return json_response({'message': 'No negotiation coding run for this pod.'}, 404)
     payload = negotiation_coding.run_payload(run)
+    pod_names = {p['id']: p['name'] or 'Pod %s' % p['id'] for p in payload['pods']}
     buf = io.StringIO()
     writer = csv.writer(buf)
     writer.writerow(CSV_COLUMNS)
     for c in payload['codes']:
         writer.writerow([c['transcript_id'], c['start_time'], c['length'], c['speaker_tag'],
-                         negotiation_coding.team_of(c['speaker_tag'], payload['teams']), c['text'],
+                         c['team'], pod_names.get(c['session_device_id'], ''), c['text'],
                          c['emotion'], c['rip'], c['frame'], ';'.join(c['listening'])])
     output = make_response(buf.getvalue().encode('utf-8'))
     output.headers['Content-Type'] = 'text/csv; charset=utf-8'
@@ -118,19 +130,46 @@ def export_negotiation_coding(session_id, session_device_id, **kwargs):
     return output
 
 
+@api_routes.route(POD + '/role', methods=['PUT'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_access
+def set_negotiation_role(session_id, session_device_id, **kwargs):
+    """Paired sessions: which breakout group this pod belongs to and which
+    side of the table it records ({"group": "Table 3", "side": "Pat"}; blank
+    clears). Fixes a mis-entered join; the next run picks it up."""
+    missing = _pod_or_404(session_device_id, session_id)
+    if missing:
+        return missing
+    body = request.get_json(silent=True) or {}
+    ok, error, group, side = SessionDevice.verify_negotiation(sanitize(body.get('group') or '') or '',
+                                                              body.get('side'))
+    if not ok:
+        return json_response({'message': error}, 400)
+    device = database.set_session_device_negotiation(session_device_id, group, side)
+    if device is None:
+        return json_response({'message': 'Does not exist.'}, 404)
+    socketio.emit('device_update', json.dumps(device.json()), room=str(session_id), namespace='/session')
+    first, partner = negotiation_coding.resolve_pair(session_device_id)
+    return json_response({'session_device': device.json(), 'partner_device_id': partner,
+                          'first_device_id': first})
+
+
 @api_routes.route('/api/v1/sessions/<int:session_id>/negotiation_coding', methods=['GET'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_read_access
 def list_negotiation_coding(session_id, **kwargs):
     # Every pod of the session with its latest run (no codes), run = null
-    # where nothing was ever queued.
+    # where nothing was ever queued. A paired run shows on both of its pods.
     latest = {}
     for run in database.get_negotiation_runs(session_id):   # newest first
-        latest.setdefault(run.session_device_id, run)
+        for device_id in run.device_ids():
+            latest.setdefault(device_id, run)
     result = []
     for device in database.get_session_devices(session_id=session_id):
         run = latest.get(device.id)
-        entry = {'device_id': device.id, 'device_name': device.name, 'run': None, 'teams': {}, 'summary': None}
+        entry = {'device_id': device.id, 'device_name': device.name,
+                 'negotiation_group': device.negotiation_group, 'negotiation_side': device.negotiation_side,
+                 'run': None, 'mode': None, 'pods': [], 'teams': {}, 'summary': None}
         if run is not None:
             entry.update(negotiation_coding.run_payload(run, with_codes=False))
         result.append(entry)

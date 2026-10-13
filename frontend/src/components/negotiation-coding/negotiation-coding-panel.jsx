@@ -16,6 +16,7 @@ import {
     assignedTeams,
     sameTeams,
     teamOf,
+    roleLabel,
     rollupTable,
     badgeCodes,
     filterKey,
@@ -29,6 +30,11 @@ import {
 // and shows the per-team roll-up, the de-escalation timeline and the coded
 // utterances. Hidden unless the session opted in or a run already exists,
 // so other classes never see it.
+//
+// Two setups. One laptop per table: speakers are assigned to Pat or Sandy
+// by name here. Two laptops per table, one per side (session.negotiation_
+// paired): teams are fixed by device, the pair shares one run, and this
+// panel shows both devices and lets a mistyped table/side be corrected.
 
 const POLL_MS = 5000
 
@@ -49,9 +55,10 @@ const selectCls =
 
 const sectionTitle = "font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase"
 
-function NegotiationCodingPanel({ session, sessionDeviceId, tagCounts }) {
+function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCounts }) {
     const sessionId = session ? session.id : null
     const optedIn = !!(session && session.negotiation_coding)
+    const paired = !!(session && session.negotiation_paired)
     const [svc] = useState(() => new NegotiationCodingService())
     // Latest GET/PUT body; exists: null = unknown yet, false = 404 (never run).
     const [data, setData] = useState(null)
@@ -65,6 +72,18 @@ function NegotiationCodingPanel({ session, sessionDeviceId, tagCounts }) {
     // Teams as last seen from the server, so a 5 s poll never clobbers an
     // edit in progress: the draft resets only when the server's teams change.
     const serverTeams = useRef(null)
+    // Paired sessions: this pod's table and side (from the device row),
+    // editable here when a join was typed wrong; the next run uses it.
+    const deviceGroup = (sessionDevice && sessionDevice.negotiation_group) || ""
+    const deviceSide = (sessionDevice && sessionDevice.negotiation_side) || ""
+    const [roleDraft, setRoleDraft] = useState({ group: deviceGroup, side: deviceSide })
+    const [roleSaved, setRoleSaved] = useState({ group: deviceGroup, side: deviceSide })
+    const [partnerId, setPartnerId] = useState(undefined)
+    useEffect(() => {
+        setRoleDraft({ group: deviceGroup, side: deviceSide })
+        setRoleSaved({ group: deviceGroup, side: deviceSide })
+        setPartnerId(undefined)
+    }, [deviceGroup, deviceSide, sessionDeviceId])
 
     const apply = (body) => {
         setData(body)
@@ -177,6 +196,26 @@ function NegotiationCodingPanel({ session, sessionDeviceId, tagCounts }) {
             .finally(() => setBusy(null))
     }
 
+    const saveRole = () => {
+        setBusy("role")
+        setActionError(null)
+        svc.setRole(sessionId, sessionDeviceId, roleDraft)
+            .then(({ status: st, body }) => {
+                if (st === 200 && body && body.session_device) {
+                    const d = body.session_device
+                    const next = { group: d.negotiation_group || "", side: d.negotiation_side || "" }
+                    setRoleDraft(next)
+                    setRoleSaved(next)
+                    setPartnerId(body.partner_device_id == null ? null : body.partner_device_id)
+                } else {
+                    const why = body && (body.error || body.message)
+                    setActionError(`Saving the table and side failed (HTTP ${st})${why ? ": " + why : ""}.`)
+                }
+            })
+            .catch(() => setActionError("Saving the table and side failed (network error)."))
+            .finally(() => setBusy(null))
+    }
+
     const saveTeams = () => {
         setBusy("save")
         setActionError(null)
@@ -206,6 +245,15 @@ function NegotiationCodingPanel({ session, sessionDeviceId, tagCounts }) {
     const timeline = (data && data.summary && data.summary.timeline) || {}
     const shown = filterCodes(codes, filters)
     const hasResults = runStatus === "done" && codes.length > 0
+    // "paired": teams by device (this run, or the session's setup before any run).
+    const mode = data && data.mode ? data.mode : paired ? "paired" : "single"
+    const pods = (data && data.pods) || []
+    const podName = (id) => {
+        const p = pods.find((x) => x.id === id)
+        return p ? p.name || `Pod ${p.id}` : null
+    }
+    const crossTalk = data && data.summary && data.summary.cross_talk
+    const roleDirty = roleDraft.group !== roleSaved.group || roleDraft.side !== roleSaved.side
 
     return (
         <AppSectionBoxComponent
@@ -230,6 +278,9 @@ function NegotiationCodingPanel({ session, sessionDeviceId, tagCounts }) {
                                 : null}
                             {run.model ? ` · ${run.model}` : null}
                             {run.codebook_version ? ` · codebook ${run.codebook_version}` : null}
+                            {crossTalk && typeof crossTalk.dropped === "number"
+                                ? ` · ${crossTalk.dropped} cross-talk copies dropped`
+                                : null}
                         </span>
                     ) : null}
                     <span className="grow" />
@@ -265,9 +316,9 @@ function NegotiationCodingPanel({ session, sessionDeviceId, tagCounts }) {
                 ) : null}
                 {exists === false ? (
                     <div className="rounded-lg bg-tiilt-ground/50 px-3 py-2 text-xs text-tiilt-muted">
-                        No coding yet. Assign the speakers to their teams below, then run coding to
-                        have every utterance coded for emotion, interests/rights/power, frame and
-                        listening moves.
+                        {mode === "paired"
+                            ? "No coding yet. Check the table and side below, then run coding: both laptops' transcripts are merged into one conversation and every utterance is coded for emotion, interests/rights/power, frame and listening moves."
+                            : "No coding yet. Assign the speakers to their teams below, then run coding to have every utterance coded for emotion, interests/rights/power, frame and listening moves."}
                     </div>
                 ) : null}
                 {active ? (
@@ -277,7 +328,91 @@ function NegotiationCodingPanel({ session, sessionDeviceId, tagCounts }) {
                     </div>
                 ) : null}
 
-                {/* Team assignment */}
+                {/* Teams by device (paired sessions) */}
+                {mode === "paired" ? (
+                    <div className="flex flex-col gap-2">
+                        <div className={sectionTitle}>Teams by device</div>
+                        <div className="text-xs text-tiilt-muted">
+                            Each laptop records one side of the table: its transcript, faces and
+                            gestures count for that team, and the pair is coded as one conversation.
+                        </div>
+                        {pods.length > 0 ? (
+                            <ul className="flex flex-col gap-1">
+                                {pods.map((p) => (
+                                    <li key={p.id} className="flex flex-wrap items-center gap-2 text-xs">
+                                        <StatusPill tone={TEAM_TONE[p.side] || "neutral"} className="text-[10px]">
+                                            {p.side || "Side not set"}
+                                        </StatusPill>
+                                        <span className="font-semibold text-tiilt-ink">{p.name || `Pod ${p.id}`}</span>
+                                        {p.group ? <span className="text-tiilt-muted">{p.group}</span> : null}
+                                        {p.id === sessionDeviceId ? (
+                                            <span className="text-tiilt-muted">(this pod)</span>
+                                        ) : null}
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : null}
+                        {sessionDevice ? (
+                            <div className="flex flex-col gap-2 rounded-lg border border-tiilt-line bg-white px-3 py-2">
+                                <div className="text-xs font-semibold text-tiilt-ink">
+                                    This pod{roleLabel(roleSaved.group, roleSaved.side) ? `: ${roleLabel(roleSaved.group, roleSaved.side)}` : ""}
+                                </div>
+                                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                                    <label className="flex flex-col gap-1 text-xs sm:col-span-2">
+                                        <span className="text-tiilt-muted">Table or breakout group</span>
+                                        <input
+                                            value={roleDraft.group}
+                                            maxLength={32}
+                                            placeholder="e.g. Table 3"
+                                            disabled={busy != null}
+                                            onChange={(e) => setRoleDraft((d) => ({ ...d, group: e.target.value }))}
+                                            className="w-full rounded-lg border border-tiilt-line bg-white px-3 py-1.5 text-sm text-tiilt-ink outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30 disabled:bg-tiilt-ground"
+                                        />
+                                    </label>
+                                    <label className="flex flex-col gap-1 text-xs">
+                                        <span className="text-tiilt-muted">Records</span>
+                                        <select
+                                            value={roleDraft.side}
+                                            disabled={busy != null}
+                                            onChange={(e) => setRoleDraft((d) => ({ ...d, side: e.target.value }))}
+                                            className={selectCls}
+                                        >
+                                            <option value="">Side not set</option>
+                                            {TEAMS.map((t) => (
+                                                <option key={t} value={t}>
+                                                    {t}&apos;s team
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={saveRole}
+                                        disabled={!roleDirty || busy != null}
+                                        className={btnSecondarySm + " inline-flex items-center gap-2 disabled:opacity-50"}
+                                    >
+                                        {busy === "role" ? <InlineSpinner /> : null}
+                                        Save table and side
+                                    </button>
+                                    <span className="text-xs text-tiilt-muted">
+                                        {roleDirty
+                                            ? "Unsaved — the next run uses the saved values."
+                                            : partnerId === undefined
+                                              ? "Two laptops on the same table, one per side, are coded together."
+                                              : partnerId === null
+                                                ? "Saved. No other laptop on this table yet."
+                                                : `Saved. Paired with ${podName(partnerId) || "pod " + partnerId}.`}
+                                    </span>
+                                </div>
+                            </div>
+                        ) : null}
+                    </div>
+                ) : null}
+
+                {/* Team assignment (one laptop per table) */}
+                {mode !== "paired" ? (
                 <div className="flex flex-col gap-2">
                     <div className={sectionTitle}>Teams</div>
                     {tags.length === 0 ? (
@@ -333,6 +468,7 @@ function NegotiationCodingPanel({ session, sessionDeviceId, tagCounts }) {
                         </div>
                     )}
                 </div>
+                ) : null}
 
                 {runStatus === "done" && codes.length === 0 ? (
                     <div className="rounded-lg bg-tiilt-ground/50 px-3 py-2 text-xs text-tiilt-muted">
@@ -481,10 +617,17 @@ function NegotiationCodingPanel({ session, sessionDeviceId, tagCounts }) {
                                                     <span className="font-ahamono tabular-nums text-tiilt-muted">
                                                         {fmtClock(row.start_time)}
                                                     </span>
-                                                    <span className="font-semibold text-tiilt-ink">
+                                                    <span
+                                                        className="font-semibold text-tiilt-ink"
+                                                        title={mode === "paired" ? podName(row.session_device_id) || undefined : undefined}
+                                                    >
                                                         {row.speaker_tag || "Unknown"}
                                                     </span>
-                                                    <StatusPill tone={TEAM_TONE[team]} className="text-[10px]">
+                                                    <StatusPill
+                                                        tone={TEAM_TONE[team]}
+                                                        className="text-[10px]"
+                                                        title={mode === "paired" ? `Recorded by ${podName(row.session_device_id) || "this side's laptop"}` : undefined}
+                                                    >
                                                         {team === UNASSIGNED ? "Unassigned" : team}
                                                     </StatusPill>
                                                     <span className="flex flex-wrap gap-1">

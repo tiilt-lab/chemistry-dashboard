@@ -201,6 +201,7 @@ function AppInfographicsComparison(props) {
                             node: (
                                 <NegotiationCodingPanel
                                     session={props.session}
+                                    sessionDevice={props.sessionDevice}
                                     sessionDeviceId={props.sessionDevice.id}
                                     tagCounts={props.tagCounts}
                                 />

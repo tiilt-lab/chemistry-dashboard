@@ -10,7 +10,7 @@ from redis_helper import RedisSessions
 import posthoc_queue
 import negotiation_coding
 
-def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder, asr=None, live_video_analytics=True, negotiation_coding_enabled=False):
+def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder, asr=None, live_video_analytics=True, negotiation_coding_enabled=False, negotiation_paired=False):
     session, keywords = database.create_session(user_id, keyword_list_id, topic_model_id, name, folder)
     # "Record now, analyse later" for video: only an explicit False turns the
     # live pipeline off; None (older callers) keeps the historic behaviour.
@@ -21,6 +21,10 @@ def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod
     # Negotiation class: end_session queues an LLM coding run per pod.
     if bool(negotiation_coding_enabled) != bool(session.negotiation_coding):
         session.negotiation_coding = bool(negotiation_coding_enabled)
+        database.save_changes()
+    # Two devices per breakout group (one per side): teams fixed by device.
+    if bool(negotiation_paired) != bool(session.negotiation_paired):
+        session.negotiation_paired = bool(negotiation_paired)
         database.save_changes()
     if byod:
         session = database.generate_session_passcode(session.id)
@@ -145,15 +149,23 @@ def queue_deferred_video_analysis(session, session_devices, recordings_dir=None)
 
 def queue_negotiation_coding(session, session_devices):
     """End of a negotiation_coding session: a coding run per pod that has
-    transcripts (legs=('coding',) on the post-hoc queue). Returns
-    [(pod id, run id)] queued."""
-    queued = []
+    transcripts (legs=('coding',) on the post-hoc queue). In a paired
+    session the two pods of a breakout group get ONE run, hung off the
+    group's first device. Returns [(pod id, run id)] queued."""
+    queued, covered = [], set()
+    paired = bool(getattr(session, 'negotiation_paired', False))
     for session_device in session_devices:
+        if session_device.id in covered:
+            continue
         try:
             if not database.session_device_transcript_count(session_device.id):
                 continue
-            run = negotiation_coding.queue_coding_run(session.id, session_device.id)
-            queued.append((session_device.id, run.id))
+            device_id, partner_id = session_device.id, None
+            if paired:
+                device_id, partner_id = negotiation_coding.resolve_pair(session_device.id)
+                covered.update(d for d in (device_id, partner_id) if d is not None)
+            run = negotiation_coding.queue_coding_run(session.id, device_id, partner_device_id=partner_id)
+            queued.append((device_id, run.id))
         except Exception:
             logging.exception('session %s: could not queue negotiation coding for pod %s',
                               session.id, session_device.id)
@@ -161,8 +173,9 @@ def queue_negotiation_coding(session, session_devices):
     return queued
 
 
-def byod_join_session(name, passcode, collaborators):
-    success, session_device, speakers = database.create_byod_session_device(passcode, name, collaborators)
+def byod_join_session(name, passcode, collaborators, negotiation_group=None, negotiation_side=None):
+    success, session_device, speakers = database.create_byod_session_device(
+        passcode, name, collaborators, negotiation_group=negotiation_group, negotiation_side=negotiation_side)
     if success:
         session = database.get_sessions(id=session_device.session_id)
         RedisSessions.create_device_key(session_device.processing_key, session.id)

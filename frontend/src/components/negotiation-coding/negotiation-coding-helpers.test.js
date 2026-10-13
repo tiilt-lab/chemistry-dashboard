@@ -8,6 +8,7 @@ import {
     assignedTeams,
     sameTeams,
     teamOf,
+    roleLabel,
     badgeCodes,
     matchesFilters,
     filterCodes,
@@ -138,6 +139,19 @@ describe("team helpers", () => {
     it("resolves an utterance's team, defaulting to unassigned", () => {
         expect(teamOf({ speaker_tag: "a" }, { a: "Sandy" })).toBe("Sandy")
         expect(teamOf({ speaker_tag: "b" }, { a: "Sandy" })).toBe("unassigned")
+    })
+    it("lets the server-stamped team (a paired run's device side) win over the tag assignment", () => {
+        expect(teamOf({ speaker_tag: "a", team: "Pat" }, { a: "Sandy" })).toBe("Pat")
+        expect(teamOf({ speaker_tag: "b", team: "Sandy" }, {})).toBe("Sandy")
+        expect(teamOf({ speaker_tag: "a", team: "nonsense" }, { a: "Sandy" })).toBe("Sandy")
+        expect(teamOf({ speaker_tag: "b", team: null }, {})).toBe("unassigned")
+    })
+    it("labels a pod's table and side", () => {
+        expect(roleLabel("Table 3", "Pat")).toBe("Table 3 · Pat")
+        expect(roleLabel("Table 3", null)).toBe("Table 3")
+        expect(roleLabel("", "Sandy")).toBe("Sandy")
+        expect(roleLabel(" ", "")).toBeNull()
+        expect(roleLabel(null, undefined)).toBeNull()
     })
 })
 

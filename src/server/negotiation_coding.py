@@ -5,14 +5,24 @@ timeline. Built for the Kellogg "Viking" case (Pat's team vs Sandy's team);
 the codebook is src/server/negotiation_codebook.json.
 
 Import-light on purpose: everything above ``run_coding`` is pure (prompt,
-chunking, parsing/repair, rollup, timeline) and runs with a fake LLM in tests;
-the database and queue are imported inside the functions that need them.
+chunking, parsing/repair, pair merging, rollup, timeline) and runs with a fake
+LLM in tests; the database and queue are imported inside the functions that
+need them.
+
+Two setups. One device per breakout group: the run codes that pod's
+transcript and the instructor assigns speaker tags to teams afterwards
+(``teams``). Two devices per group, one on each side of the table
+(session.negotiation_paired, session_device.negotiation_side): a "paired"
+run codes both pods' transcripts merged on the session clock, every
+utterance belongs to its device's side, and near-duplicates (both
+microphones hear the whole table) are dropped before coding.
 
 The LLM contract (verified 2026-09-30 against qwen3.8-27b-uncensored): thinking
 must be OFF — ``chat_template_kwargs.enable_thinking=false`` in the request
 AND ``/no_think`` at the end of the prompt — or Qwen 3 spends the whole token
 budget thinking and returns nothing; temperature 0; strict JSON array back.
 """
+import difflib
 import json
 import logging
 import os
@@ -31,6 +41,13 @@ CHUNK_SIZE = 40         # utterances coded per call
 CONTEXT_SIZE = 5        # preceding utterances shown read-only
 PEAK_WINDOW = 60        # s: the window with the most escalating utterances
 CALM_WINDOW = 120       # s: no escalation this long = sustained de-escalation
+# Paired sessions: both microphones hear the whole table, so the two
+# transcripts are merged on the session clock (transcript.start_time counts
+# from the session's creation on every pod) and the far side's copy of an
+# utterance is dropped.
+PAIR_START_TOLERANCE = 1.5   # s: starts this close are the same moment ...
+PAIR_OVERLAP_MIN = 0.5       # ... or the two overlap this share of the shorter one
+PAIR_TEXT_SIMILARITY = 0.5   # token ratio from which two copies are one utterance
 
 TEAMS = ("Pat", "Sandy")
 UNASSIGNED = "unassigned"
@@ -120,10 +137,145 @@ def chunks(utterances, size=CHUNK_SIZE, context=CONTEXT_SIZE):
         yield utterances[max(0, start - context):start], utterances[start:start + size]
 
 
-def utterances_from_rows(rows):
+def _utterance(r, team=None):
+    u = {"transcript_id": r.id, "start_time": r.start_time, "length": r.length,
+         "speaker_tag": r.speaker_tag, "text": r.transcript,
+         "session_device_id": getattr(r, "session_device_id", None)}
+    if team in TEAMS:
+        u["team"] = team
+    conf = _attribution_confidence(r)
+    if conf is not None:
+        u["confidence"] = conf
+    return u
+
+
+def _attribution_confidence(r):
+    # The live diarizer stores {percent, sim, margin[, closed_world]} under
+    # voice_features.confidence; absent on older rows and post-hoc rows.
+    getter = getattr(r, "_voice_features_json", None)
+    vf = getter() if callable(getter) else None
+    conf = (vf or {}).get("confidence") if isinstance(vf, dict) else None
+    return conf if isinstance(conf, dict) else None
+
+
+def utterances_from_rows(rows, team=None):
     # Transcript rows -> the dicts the engine works on; index = position.
-    return [{"index": i, "transcript_id": r.id, "start_time": r.start_time, "length": r.length,
-             "speaker_tag": r.speaker_tag, "text": r.transcript} for i, r in enumerate(rows)]
+    # ``team`` (a device with a fixed side) stamps every utterance.
+    return [dict(_utterance(r, team), index=i) for i, r in enumerate(rows)]
+
+
+# ------------------------------------------------------- paired devices
+
+def _tokens(text):
+    return re.findall(r"[a-z0-9']+", (text or "").lower())
+
+
+def text_similarity(a, b):
+    """0..1 token-sequence similarity; 0 when either side has no words."""
+    ta, tb = _tokens(a), _tokens(b)
+    if not ta or not tb:
+        return 0.0
+    return difflib.SequenceMatcher(None, ta, tb).ratio()
+
+
+def _span(u):
+    start = float(u.get("start_time") or 0)
+    return start, start + max(float(u.get("length") or 0), 0.0)
+
+
+def same_moment(a, b):
+    """Two utterances from different devices that started within
+    PAIR_START_TOLERANCE of each other, or overlap for at least
+    PAIR_OVERLAP_MIN of the shorter one."""
+    a0, a1 = _span(a)
+    b0, b1 = _span(b)
+    if abs(a0 - b0) <= PAIR_START_TOLERANCE:
+        return True
+    shorter = min(a1 - a0, b1 - b0)
+    return shorter > 0 and (min(a1, b1) - max(a0, b0)) / shorter >= PAIR_OVERLAP_MIN
+
+
+def match_strength(u):
+    """How surely the device's own roster claimed the words: the diarizer's
+    similarity (a below-gate closed-world pick demoted), 0.5 for a tag with
+    no stored confidence, 0 for an unmatched voice. The nearer microphone
+    hears its own speakers best, so the stronger copy is that side's."""
+    if not u.get("speaker_tag"):
+        return 0.0
+    conf = u.get("confidence") or {}
+    sim = conf.get("sim")
+    if sim is None:
+        return 0.5
+    try:
+        strength = float(sim)
+    except (TypeError, ValueError):
+        return 0.5
+    return strength - (0.3 if conf.get("closed_world") else 0.0)
+
+
+def _prefer(a, b):
+    # (winner, loser) between two copies of one utterance: the stronger
+    # attribution, then the fuller text, then the earlier row.
+    sa, sb = match_strength(a), match_strength(b)
+    if abs(sa - sb) > 0.05:
+        return (a, b) if sa > sb else (b, a)
+    la, lb = len(_tokens(a.get("text"))), len(_tokens(b.get("text")))
+    if la != lb:
+        return (a, b) if la > lb else (b, a)
+    return (a, b) if a["transcript_id"] <= b["transcript_id"] else (b, a)
+
+
+def merge_paired(rows_by_device, sides):
+    """One conversation from two devices' transcripts. ``rows_by_device`` maps
+    device id -> transcript rows, ``sides`` device id -> team. Rows are put
+    on one timeline; for a pair of same-moment utterances from the two
+    devices, a text match (>= PAIR_TEXT_SIMILARITY) keeps the better-
+    attributed copy ("duplicate"), an unmatched voice against a matched one
+    drops the unmatched copy ("bleed": the far side heard faintly), and
+    anything else stays (both sides really talking at once). Returns
+    (utterances in time order, re-indexed, each with team and
+    session_device_id; dropped: [{transcript_id, kept_transcript_id, reason,
+    similarity}])."""
+    pool = []
+    for device_id, rows in rows_by_device.items():
+        pool.extend(_utterance(r, sides.get(device_id)) for r in rows)
+    pool.sort(key=lambda u: (u["start_time"], u["transcript_id"]))
+    kept, dropped, settled = [], [], set()
+    for i, u in enumerate(pool):
+        if u["transcript_id"] in settled:
+            continue
+        horizon = _span(u)[1] + PAIR_START_TOLERANCE
+        best, best_sim = None, -1.0
+        for v in pool[i + 1:]:
+            if v["start_time"] > horizon:
+                break
+            if v["session_device_id"] == u["session_device_id"] or v["transcript_id"] in settled:
+                continue
+            if not same_moment(u, v):
+                continue
+            sim = text_similarity(u["text"], v["text"])
+            if sim > best_sim:
+                best, best_sim = v, sim
+        if best is None:
+            kept.append(u)
+            continue
+        if best_sim >= PAIR_TEXT_SIMILARITY:
+            winner, loser, reason = _prefer(u, best) + ("duplicate",)
+        elif bool(u.get("speaker_tag")) != bool(best.get("speaker_tag")):
+            winner, loser = (u, best) if u.get("speaker_tag") else (best, u)
+            reason = "bleed"
+        else:
+            kept.append(u)
+            continue
+        settled.add(loser["transcript_id"])
+        settled.add(winner["transcript_id"])
+        kept.append(winner)
+        dropped.append({"transcript_id": loser["transcript_id"], "kept_transcript_id": winner["transcript_id"],
+                        "reason": reason, "similarity": round(best_sim, 2)})
+    kept.sort(key=lambda u: (u["start_time"], u["transcript_id"]))
+    for i, u in enumerate(kept):
+        u["index"] = i
+    return kept, dropped
 
 
 # ------------------------------------------------------------------- llm
@@ -281,6 +433,17 @@ def team_of(speaker_tag, teams):
     return team if team in TEAMS else UNASSIGNED
 
 
+def team_of_code(code, teams):
+    """A coded utterance's team: the one stamped on it (its device's side
+    in a paired run) else its speaker tag's assignment."""
+    team = code.get("team")
+    return team if team in TEAMS else team_of(code.get("speaker_tag") or "", teams)
+
+
+def other_team(team):
+    return TEAMS[1] if team == TEAMS[0] else TEAMS[0]
+
+
 def _bucket(codebook):
     b = {"utterances": 0}
     for dim, spec in codebook["dimensions"].items():
@@ -305,11 +468,14 @@ def rollup(codes, teams, codebook=None):
     by_speaker = {}
     for code in codes:
         tag = code.get("speaker_tag") or ""
-        team = team_of(tag, teams)
+        team = team_of_code(code, teams)
         _tally(by_team[team], code)
-        if tag not in by_speaker:
-            by_speaker[tag] = dict(team=team, **_bucket(codebook))
-        _tally(by_speaker[tag], code)
+        # Paired runs can carry the same tag on both sides (two unmatched
+        # voices, or one name enrolled on both laptops): keyed apart.
+        key = tag if tag not in by_speaker or by_speaker[tag]["team"] == team else "%s (%s)" % (tag, team)
+        if key not in by_speaker:
+            by_speaker[key] = dict(team=team, **_bucket(codebook))
+        _tally(by_speaker[key], code)
     return {"by_team": by_team, "by_speaker": by_speaker}
 
 
@@ -357,7 +523,7 @@ def team_dynamics(codes, teams):
     start = ordered[0]["start_time"] if ordered else 0
     out = {}
     for team in TEAMS + (UNASSIGNED,):
-        mine = [c for c in ordered if team_of(c.get("speaker_tag") or "", teams) == team]
+        mine = [c for c in ordered if team_of_code(c, teams) == team]
         opening = [c["rip"] for c in mine if c["start_time"] < start + OPENING_WINDOW and c.get("rip") in RIP_CODES]
         # ties go to the code the team reached for first
         counts = {r: opening.count(r) for r in RIP_CODES if r in opening}
@@ -375,11 +541,16 @@ def team_dynamics(codes, teams):
     return out
 
 
-def summarize(codes, teams, codebook=None):
+def summarize(codes, teams, codebook=None, extra=None):
+    """Roll-up, team dynamics and timeline; ``extra`` (a paired run's
+    cross_talk and pods) is merged in as further top-level keys."""
     summary = rollup(codes, teams, codebook)
     for team, dynamics in team_dynamics(codes, teams).items():
         summary["by_team"][team].update(dynamics)
     summary["timeline"] = timeline(codes)
+    for key, value in (extra or {}).items():
+        if value is not None:
+            summary[key] = value
     return summary
 
 
@@ -403,38 +574,120 @@ def validate_teams(teams):
 
 # --------------------------------------------------------- orchestration
 
-def code_row(code, transcript):
-    # One entry of the API's "codes" list: the utterance and its codes.
-    return {"transcript_id": transcript.id, "start_time": transcript.start_time,
-            "length": transcript.length, "speaker_tag": transcript.speaker_tag,
-            "text": transcript.transcript, "emotion": code.emotion, "rip": code.rip,
-            "frame": code.frame, "listening": code.listening_list()}
+def code_row(code, transcript, teams=None, sides=None):
+    # One entry of the API's "codes" list: the utterance, its codes and its
+    # team (its device's side when the device has one, else its tag's
+    # assignment, else "unassigned").
+    device_id = transcript.session_device_id
+    side = (sides or {}).get(device_id)
+    return {"transcript_id": transcript.id, "session_device_id": device_id,
+            "start_time": transcript.start_time, "length": transcript.length,
+            "speaker_tag": transcript.speaker_tag, "text": transcript.transcript,
+            "team": side if side in TEAMS else team_of(transcript.speaker_tag or "", teams),
+            "emotion": code.emotion, "rip": code.rip, "frame": code.frame,
+            "listening": code.listening_list()}
 
 
-def run_coding(session_device_id, teams=None, llm=call_llm, run_id=None, codebook=None):
+def _side_of(device):
+    side = getattr(device, "negotiation_side", None)
+    return side if side in TEAMS else None
+
+
+def run_sides(run):
+    """{device id: team} for the run's devices. A single device counts only
+    when it has a side (a paired session's lone pod). In a paired run a
+    missing side is the complement of the other's, both missing makes the
+    first device Pat, and two devices claiming one side give the partner the
+    other."""
+    import database
+    first = database.get_session_devices(id=run.session_device_id)
+    if not run.is_paired():
+        side = _side_of(first)
+        return {run.session_device_id: side} if side else {}
+    partner = database.get_session_devices(id=run.partner_device_id)
+    a, b = _side_of(first), _side_of(partner)
+    if a is None and b is None:
+        a, b = TEAMS
+    elif a is None:
+        a = other_team(b)
+    elif b is None or b == a:
+        b = other_team(a)
+    return {run.session_device_id: a, run.partner_device_id: b}
+
+
+def run_pods(run, sides):
+    """[{id, name, group, side}] for the run's devices, first device first."""
+    import database
+    pods = []
+    for device_id in run.device_ids():
+        device = database.get_session_devices(id=device_id)
+        pods.append({"id": device_id,
+                     "name": getattr(device, "name", None),
+                     "group": getattr(device, "negotiation_group", None),
+                     "side": sides.get(device_id)})
+    return pods
+
+
+def _pair_rank(device):
+    # Pat first, then Sandy, then unsided; ties by id: the two pods of a
+    # group always agree on which is the run's first device.
+    side = _side_of(device)
+    return (TEAMS.index(side) if side else len(TEAMS), device.id)
+
+
+def resolve_pair(session_device_id):
+    """(first device id, partner id or None) of the pod's breakout group in a
+    paired session; (pod id, None) in any other session or when the pod has
+    no group or no partner yet."""
+    import database
+    device = database.get_session_devices(id=session_device_id)
+    if device is None:
+        return session_device_id, None
+    session = database.get_sessions(id=device.session_id)
+    if session is None or not getattr(session, "negotiation_paired", False):
+        return device.id, None
+    partner = database.get_negotiation_partner(device)
+    if partner is None:
+        return device.id, None
+    first, second = sorted((device, partner), key=_pair_rank)
+    return first.id, second.id
+
+
+def run_coding(session_device_id, teams=None, llm=call_llm, run_id=None, codebook=None, partner_device_id=None):
     """Code one pod end to end: load its transcripts, code them, persist the
     codes, compute the summary. Reports to run ``run_id`` (created queued by
     the route or end_session) or creates one. Marks the run running -> done,
     or error (message kept) and re-raises so the queue job fails too.
     ``teams`` None = the run row's teams, re-read after coding so a PUT made
-    meanwhile wins."""
+    meanwhile wins. A paired run (``partner_device_id`` on the row, or given
+    here when the run is created) codes both devices' transcripts merged."""
     import database
     codebook = codebook or load_codebook()
     run = database.get_negotiation_run(run_id) if run_id is not None else None
     if run is None:
         if run_id is not None:
             raise RuntimeError("negotiation coding run %s does not exist" % run_id)
-        run = database.create_negotiation_run(session_device_id, llm_model(), codebook["version"], teams or {})
+        run = database.create_negotiation_run(session_device_id, llm_model(), codebook["version"], teams or {},
+                                              partner_device_id=partner_device_id)
     database.update_negotiation_run(run.id, status="running", started_at=_now(), finished_at=None, error=None)
     try:
-        rows = database.get_transcripts(session_device_id=session_device_id)
-        coded, invalid = code_utterances(codebook, utterances_from_rows(rows), llm)
+        sides = run_sides(run)
+        extra = {"pods": run_pods(run, sides)}
+        if run.is_paired():
+            rows_by_device = {d: database.get_transcripts(session_device_id=d) for d in run.device_ids()}
+            utterances, dropped = merge_paired(rows_by_device, sides)
+            extra["cross_talk"] = {"dropped": len(dropped), "kept": len(utterances),
+                                   "detail": dropped[:500]}
+        else:
+            rows = database.get_transcripts(session_device_id=run.session_device_id)
+            utterances = utterances_from_rows(rows, sides.get(run.session_device_id))
+        coded, invalid = code_utterances(codebook, utterances, llm)
         database.add_negotiation_codes(run.id, coded)
         if teams is None:
             teams = database.get_negotiation_run(run.id).teams_dict()
         database.update_negotiation_run(
             run.id, status="done", finished_at=_now(), teams=teams,
-            summary=summarize(coded, teams, codebook),
+            summary=summarize(coded, teams, codebook, extra),
             utterances_coded=len(coded), invalid_codes=invalid)
     except Exception as e:
         logging.exception("negotiation coding: run %s for pod %s failed", run.id, session_device_id)
@@ -444,37 +697,49 @@ def run_coding(session_device_id, teams=None, llm=call_llm, run_id=None, codeboo
 
 
 def recompute_summary(run, teams, codebook=None):
-    """New team assignment for a run: re-roll the stored codes, no LLM call."""
+    """New team assignment for a run: re-roll the stored codes, no LLM call.
+    (In a paired run the devices' sides win over the assignment.)"""
     import database
     fields = {"teams": teams}
     if run.status == "done":
-        codes = [code_row(c, t) for c, t in database.get_negotiation_codes(run.id)]
-        fields["summary"] = summarize(codes, teams, codebook)
+        sides = run_sides(run)
+        codes = [code_row(c, t, teams, sides) for c, t in database.get_negotiation_codes(run.id)]
+        previous = run.summary_dict() or {}
+        extra = {"pods": run_pods(run, sides), "cross_talk": previous.get("cross_talk")}
+        fields["summary"] = summarize(codes, teams, codebook, extra)
     return database.update_negotiation_run(run.id, **fields)
 
 
 def run_payload(run, with_codes=True):
-    """The GET shape: {run, teams, codes?, summary}; summary is None until done."""
+    """The GET shape: {run, mode, pods, teams, codes?, summary}; summary is
+    None until done. mode is "paired" (two devices, teams by side) or
+    "single" (teams by speaker tag)."""
     import database
-    payload = {"run": run.json(), "teams": run.teams_dict(), "summary": run.summary_dict()}
+    sides = run_sides(run)
+    payload = {"run": run.json(), "mode": "paired" if run.is_paired() else "single",
+               "pods": run_pods(run, sides), "teams": run.teams_dict(), "summary": run.summary_dict()}
     if with_codes:
-        payload["codes"] = [code_row(c, t) for c, t in database.get_negotiation_codes(run.id)]
+        teams = payload["teams"]
+        payload["codes"] = [code_row(c, t, teams, sides) for c, t in database.get_negotiation_codes(run.id)]
     return payload
 
 
-def queue_coding_run(session_id, session_device_id, teams=None):
-    """A run row for the pod and a coding job on the post-hoc queue. A run
-    still queued for the pod is reused (its teams updated when given) rather
-    than stacking a second identical run behind it."""
+def queue_coding_run(session_id, session_device_id, teams=None, partner_device_id=None):
+    """A run row for the pod (and its partner, in a paired session) and a
+    coding job on the post-hoc queue. A run still queued for the same
+    device(s) is reused (its teams updated when given) rather than stacking
+    a second identical run behind it."""
     import database
     import posthoc_queue
     run = database.get_latest_negotiation_run(session_device_id)
-    if run is not None and run.status == "queued":
+    if run is not None and run.status == "queued" and run.session_device_id == session_device_id \
+            and run.partner_device_id == partner_device_id:
         if teams is not None:
             run = database.update_negotiation_run(run.id, teams=teams)
     else:
         run = database.create_negotiation_run(session_device_id, llm_model(),
-                                              load_codebook()["version"], teams or {})
+                                              load_codebook()["version"], teams or {},
+                                              partner_device_id=partner_device_id)
     posthoc_queue.enqueue_coding(session_id, session_device_id, run.id)
     return run
 

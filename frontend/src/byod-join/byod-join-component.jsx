@@ -172,6 +172,32 @@ function JoinPage() {
         if (code) setPcode(code.toUpperCase().slice(0, 16))
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [joinCode])
+    useEffect(() => {
+        const code = (pcode || "").trim()
+        setRoleError("")
+        if (code.length < 3) {
+            setPairedSession(false)
+            return undefined
+        }
+        let cancelled = false
+        const timer = setTimeout(() => {
+            new SessionService()
+                .getSessionByPasscode(code)
+                .then((resp) => (resp.status === 200 ? resp.json() : null))
+                .then((list) => {
+                    if (cancelled) return
+                    const found = Array.isArray(list) ? list[0] : null
+                    setPairedSession(!!(found && found.negotiation_paired === true))
+                })
+                .catch(() => {
+                    if (!cancelled) setPairedSession(false)
+                })
+        }, 400)
+        return () => {
+            cancelled = true
+            clearTimeout(timer)
+        }
+    }, [pcode])
     const [constraintObj, setConstraintObj] = useState(null)
     const [mimetype, setMimeType] = useState(null)
     const [mimeExtension, setMimeExtension] = useState(null);
@@ -229,6 +255,13 @@ function JoinPage() {
     // Mirrored into a ref because the value is read when the video socket's
     // start message is built, long after the join form set it.
     const [liveAnalytics, setLiveAnalyticsState] = useState(true)
+    // Paired negotiation sessions (two laptops per table, one per side):
+    // the session is looked up by passcode as it is typed so the form can
+    // ask for the table and side before the join; the role is kept so
+    // backing out and rejoining prefills it.
+    const [pairedSession, setPairedSession] = useState(false)
+    const [roleError, setRoleError] = useState("")
+    const negotiationRole = useRef(null)
     // Server-side watchdog verdicts (silent video / upload lagging): the
     // recording looks fine from the pod, so the pod's own screen is the
     // only place a warning reaches the people who can act on it.
@@ -1739,10 +1772,20 @@ function JoinPage() {
     // Verifies the users connection input, then routes through the device
     // check page (camera preview, mic levels, channel choice) before the
     // actual join.
-    const verifyInputAndAudio = (names, passcode, joinswith, collaborators) => {
+    const verifyInputAndAudio = (names, passcode, joinswith, collaborators, negotiation) => {
         if (names === null) {
             names = "User Device"
         }
+        // A paired session needs both the table and the side: a laptop that
+        // joins without them would be coded as nobody's team.
+        if (pairedSession) {
+            const role = negotiation || {}
+            if (!role.group || !role.side) {
+                setRoleError("Enter your table and choose which side this laptop records.")
+                return
+            }
+        }
+        setRoleError("")
         // The join form's inline device check owns the current selection;
         // release its preview devices before the real capture opens them.
         const inline = inlineSelection.current || {}
@@ -1755,7 +1798,7 @@ function JoinPage() {
             channelIndex:
                 inline.channelIndex === undefined ? null : inline.channelIndex,
         }
-        requestAccessKey(names, passcode, collaborators, joinswith)
+        requestAccessKey(names, passcode, collaborators, joinswith, negotiation)
     }
 
     // Stop the recorder so its buffered media flushes while the sockets
@@ -1839,7 +1882,7 @@ function JoinPage() {
 
 
     // Requests session access from the server.
-    const requestAccessKey = async (names, passcode, collaborators, l_joinwith) => {
+    const requestAccessKey = async (names, passcode, collaborators, l_joinwith, negotiation) => {
         ending.current = false
         setCurrentForm("Connecting")
         const sel = deviceSelection.current || {}
@@ -1900,7 +1943,7 @@ function JoinPage() {
         }
         const mediaType = pickMimeType(constraint)
         const mediaExt = (mediaType !== "" && mediaType.indexOf("webm") !== -1) ? "webm" : (mediaType !== "" && mediaType.indexOf("mp4") !== -1) ? "mp4" : ""
-        sessionService.joinByodSession(names, passcode, collaborators).then(
+        sessionService.joinByodSession(names, passcode, collaborators, negotiation).then(
             (response) => {
                 const joinFailed = (message) => {
                     setDisplayText(message)
@@ -1926,6 +1969,10 @@ function JoinPage() {
                         // was left blank — keep the assigned name so backing
                         // out prefills it and rejoining resumes this pod.
                         name.current = jsonObj["session_device"].name || names
+                        negotiationRole.current = {
+                            group: jsonObj["session_device"].negotiation_group || (negotiation && negotiation.group) || "",
+                            side: jsonObj["session_device"].negotiation_side || (negotiation && negotiation.side) || "",
+                        }
                         key.current = jsonObj.key;
                         // From here every API call and media URL carries the
                         // pod key — the guarded device endpoints need it.
@@ -2657,6 +2704,9 @@ function JoinPage() {
             requestHelp={requestHelp}
             pcode={pcode}
             savedName={name.current}
+            pairedSession={pairedSession}
+            roleError={roleError}
+            savedRole={negotiationRole.current}
             wrongInput={wrongInput}
             changeTouppercase={changeTouppercase}
             joinwith={joinwith.current}
