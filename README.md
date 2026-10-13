@@ -32,8 +32,8 @@ the discussion is happening and dig into afterwards.
 4. **Live capture and processing.** On "start", the client streams:
    - **Audio** over `/audio_socket` to the audio processor: voice-activity
      segmentation → speaker ID (ECAPA embeddings matched against the pod's
-     fingerprints) → ASR (`google-cloud-speech` by default, `whisper` for a
-     fully offline pipeline) → per-utterance features: keyword matching
+     fingerprints) → ASR (CrisperWhisper 2.0, fully on this machine; the
+     Google Cloud Speech option was removed) → per-utterance features: keyword matching
      (sentence embeddings), question detection, expression/thinking-style
      scoring (LIWC / open / LLM), participation and cohesion metrics.
    - **Video** (optional) over `/video_socket` to the video processor: face
@@ -106,7 +106,7 @@ deploy/              nginx configs, udev rules, per-instance systemd units
 ## Installing on a new machine
 
 Target: Ubuntu 22.04+ with an NVIDIA GPU (the video pipeline and local ASR
-need CUDA; an audio-only instance using `google-cloud-speech` can run on CPU).
+need CUDA; CrisperWhisper is the only ASR, so a GPU is required for audio too).
 
 ### 1. System packages
 
@@ -170,8 +170,9 @@ Then edit:
   **`src/video_processing/config.ini`** — point the `[output]` callback URLs
   at your Flask port, set `redis_db` to **match the server's** (the server
   writes session auth keys the processors read), and set the same `root_dir`.
-  This is also where you pick backends: `asr=google-cloud-speech|whisper`,
-  `scorer=liwc|open|llm`, gaze/emotion/head models, post-hoc fps, etc.
+  This is also where you pick backends: `asr=crisperwhisper` (the only
+  value; legacy keys map to it), `scorer=liwc|open|llm`, gaze/emotion/head
+  models, post-hoc fps, etc.
 
 ### 5. Credentials
 

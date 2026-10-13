@@ -54,8 +54,9 @@ function CreateSessionComponent(props) {
   // Legacy 'whisper' sessions fold into crisperwhisper (plain Whisper retired).
   const [asr, setAsr] = useState(() => {
     const prev = changedState ? prevState.asr : null;
-    const chosen = prev || 'crisperwhisper';
-    return chosen === 'whisper' ? 'crisperwhisper' : chosen;
+    // CrisperWhisper is the only engine; a remembered legacy choice
+    // (whisper, google-cloud-speech) from an older form state maps to it.
+    return prev === 'crisperwhisper' || !prev ? 'crisperwhisper' : 'crisperwhisper';
   });
   // Live video analytics (GPU + ~3 cores per pod during class). Off = every
   // group is still recorded and the video analysis is queued automatically

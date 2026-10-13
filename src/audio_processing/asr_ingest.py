@@ -45,7 +45,7 @@ class StampedChunk(bytes):
     """PCM bytes plus the absolute sample offset of their first sample.
 
     A ``bytes`` subclass on purpose: consumers that only join and measure
-    chunks (GoogleASR) keep working unchanged, and the offset rides along for
+    chunks keep working unchanged, and the offset rides along for
     consumers that need the clock (CrisperWhisper windows).
     """
 

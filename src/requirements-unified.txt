@@ -88,7 +88,6 @@ future==1.0.0
 gensim==4.4.0
 google-api-core==2.31.0
 google-auth==2.55.1
-google-cloud-speech==2.40.0
 google-genai==2.10.0
 googleapis-common-protos==1.75.0
 greenlet==3.5.3

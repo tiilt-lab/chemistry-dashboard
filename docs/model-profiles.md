@@ -28,7 +28,7 @@ intended default so behaviour is predictable when a key is missing.
 
 | Knob | config.ini `[processing]` | Code fallback | Per-run field | Live default | Post-hoc default (UI) |
 |---|---|---|---|---|---|
-| ASR | `asr` | `google-cloud-speech` | `asr` | google-cloud-speech | **whisperx** |
+| ASR | `asr` | `crisperwhisper` | `asr` | crisperwhisper (only engine; Google Cloud Speech removed 2026-10-13) | **whisperx** |
 | E&T scorer | `scorer` | `liwc` | `scorer` | liwc | liwc |
 | Speaker ID | — | — | `diarizer` (fingerprint\|pyannote) | fingerprint | **pyannote** |
 | Cohesion embedder | `semantic_embedder` | `all-mpnet-base-v2` | `embedder` | all-mpnet-base-v2 | **bge-large-en-v1.5** |

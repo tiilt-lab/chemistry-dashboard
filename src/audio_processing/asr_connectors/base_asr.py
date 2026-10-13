@@ -10,9 +10,9 @@ object shape:
     result.alternatives[0].words[i].start_time.seconds / .nanos
     result.alternatives[0].words[i].end_time.seconds / .nanos
 
-The adapter classes below reproduce that shape so a non-Google connector can
-emit results without any change to the consumer. GoogleASR already emits native
-protobuf objects of this shape, so it does not need the adapters.
+The adapter classes below reproduce that shape (the one the retired Google
+Cloud Speech connector emitted natively) so every connector feeds the same
+consumer without change.
 """
 
 import json

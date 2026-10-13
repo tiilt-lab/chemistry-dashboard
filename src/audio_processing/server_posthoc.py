@@ -29,7 +29,6 @@ import audio_bytes
 import safe_names
 from audio_buffer import AudioBuffer
 from audio_stream_reader import AudioStreamReader
-from asr_connectors.google_asr_connector_posthoc import GoogleASR
 from twisted.internet import reactor, task
 from features_detector import features_detector
 from keyword_detector import keyword_detector
@@ -179,7 +178,11 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
             self.keywords= data['keywords']
             # Optional per-run model choices from the trigger UI; fall back to
             # the deployment config when absent.
+            # Google Cloud Speech was removed and plain Whisper retired:
+            # a re-run requested under either key runs CrisperWhisper.
             self.asr_choice = data.get('asr') or cf.asr()
+            if self.asr_choice in ('google-cloud-speech', 'google', 'whisper'):
+                self.asr_choice = 'crisperwhisper'
             self.scorer_choice = data.get('scorer') or None
             self.diarizer_choice = data.get('diarizer') or 'fingerprint'
             self.embedder_choice = data.get('embedder') or None
@@ -495,15 +498,17 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
             redis_client._redis(), owner='audio-posthoc:%d:%s' % (os.getpid(), self.config.auth_key))
         if self._gpu_lease is None:
             return False
-        # WhisperX transcribes the whole file before emitting results, so the
-        # buffer must retain the entire recording (2h cap ≈ 230MB PCM).
-        buffer_seconds = 7200 if getattr(self, 'asr_choice', None) in ('whisperx', 'qwen3', 'qwen3-0.6b', 'crisperwhisper', 'whisper') else None
+        # Every remaining engine transcribes the whole file before emitting
+        # results, so the buffer must retain the entire recording (2h cap
+        # ≈ 230MB PCM). (The streaming Google connector that needed no
+        # retention is gone.)
+        buffer_seconds = 7200
         self.audio_buffer = AudioBuffer(self.config, max_seconds=buffer_seconds)
         self.asr_audio_queue = Queue()
         self.asr_transcript_queue = Queue()
         # Per-run ASR choice from the trigger UI (falls back to config.ini).
-        # Whisper consumes the same PCM queue and runs fully offline; import
-        # lazily so the Google path never needs faster-whisper installed.
+        # Every engine consumes the same PCM queue and runs fully offline;
+        # each is imported lazily so one never needs the others' dependencies.
         # Constrain diarization to the pod's known enrolled participants
         # (cap speaker count + remap clusters to enrolled voices), when enabled
         # and the enrolled set is known. Off -> None args -> unchanged behaviour.
@@ -527,22 +532,22 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                                    diarizer=(getattr(self, 'diarizer_choice', None)
                                              if getattr(self, 'diarizer_choice', None) in ('pyannote', 'sortformer') else None),
                                    max_speakers=_max_spk, enrolled=_enr, speaker_model=_spk_model)
-        elif getattr(self, 'asr_choice', None) in ('crisperwhisper', 'whisper'):
-            # 'whisper' is a legacy alias: plain Whisper was retired in
-            # favour of CrisperWhisper.
+        else:
+            # CrisperWhisper 2.0: the default, and what any unknown key
+            # runs (an unknown key is logged by the trigger route).
             from asr_connectors.crisperwhisper_asr import CrisperWhisperPosthocASR
             self.asr = CrisperWhisperPosthocASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval,
                                                 audio_file=self.audio_file, model_id=cf.crisperwhisper_model(),
                                                 mode=cf.crisperwhisper_mode())
-        else:
-            self.asr = GoogleASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data,self.interval,STOP_SIGNAL)
         self.asr.start()
         self.processor = AudioProcessorPosthoc(self.audio_buffer, self.asr_transcript_queue, diarization_model, get_semantic_model(getattr(self, 'embedder_choice', None)), self.config, scorer=getattr(self, 'scorer_choice', None))
         # Mark the run as running server-side WITHOUT wiping: the previous
         # results stay until the processor has the complete new set and
         # publishes it (reset-with-wipe happens there) (audit C.3).
         callbacks.post_posthoc_reset(self.config.auth_key, 'audio', wipe=False)
-        batch_asr = getattr(self, 'asr_choice', None) in ('whisperx', 'qwen3', 'qwen3-0.6b', 'crisperwhisper', 'whisper')
+        # All engines are batch: the reader feeds the file as fast as it can
+        # rather than pacing it like the retired streaming connector needed.
+        batch_asr = True
         self.audioreader = AudioStreamReader(self.audio_buffer, self.asr_audio_queue, self.audio_file, self.queue_put_timeout,self.config,STOP_SIGNAL,running_audio_processes, realtime=not batch_asr)
         # Bound BEFORE the processor starts: an ASR that fails instantly
         # completes at once, and its cleanup must find the hook + registry

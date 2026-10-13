@@ -49,7 +49,10 @@ def video_recordings_folder():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), str(config['videorecord']['video_recording_folder']))
 
 def asr():
-    return str(config['processing']['asr'])
+    # Live transcription backend. CrisperWhisper 2.0 is the only one since
+    # Google Cloud Speech was removed (2026-10-13); the factory maps every
+    # legacy key to it, so an absent or stale value never breaks a session.
+    return str(config.get('processing', 'asr', fallback='crisperwhisper'))
 
 def scorer():
     # Expression & Thinking Style backend: 'liwc' (default) or 'llm'.
