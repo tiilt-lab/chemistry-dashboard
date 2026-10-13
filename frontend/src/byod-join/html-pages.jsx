@@ -27,6 +27,15 @@ import { AppInfographicsComparison } from "../components/infographics-view/infog
 
 const fieldLabel = "mb-1.5 block text-left text-sm font-semibold text-tiilt-ink"
 
+// Paired negotiation sessions: the table and side fields of the join form,
+// when they are shown ({group, side}); null for every other session.
+function readNegotiationRole() {
+    const group = document.getElementById("negGroup")
+    const side = document.getElementById("negSide")
+    if (!group && !side) return null
+    return { group: group ? group.value.trim() : "", side: side ? side.value : "" }
+}
+
 // Speaker name as an inline editor: click the name to type. Committing
 // (Enter/blur) a name that matches an enrolled profile attaches that
 // profile's saved fingerprint automatically; other names just rename. The
@@ -275,6 +284,46 @@ function ByodJoinPage(props) {
                                         automatically. If rejoining, use the
                                         same group name as before.
                                     </div>
+                                    {props.pairedSession ? (
+                                        <div className="flex flex-col gap-3 rounded-xl border border-tiilt/40 bg-tiilt-soft/40 px-3 py-3">
+                                            <div className="text-left text-xs leading-5 text-tiilt-ink">
+                                                This negotiation session records each
+                                                team from its own laptop. Enter your
+                                                table and which side this laptop sits
+                                                with; everything it hears and sees
+                                                counts for that team.
+                                            </div>
+                                            <div>
+                                                <label htmlFor="negGroup" className={fieldLabel}>
+                                                    Table or breakout group
+                                                </label>
+                                                <input
+                                                    className={dlgInput}
+                                                    id="negGroup"
+                                                    maxLength={32}
+                                                    defaultValue={(props.savedRole && props.savedRole.group) || ""}
+                                                    placeholder="e.g. Table 3"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="negSide" className={fieldLabel}>
+                                                    This laptop records
+                                                </label>
+                                                <select
+                                                    id="negSide"
+                                                    className={dlgSelect}
+                                                    defaultValue={(props.savedRole && props.savedRole.side) || ""}
+                                                >
+                                                    <option value="">Choose a side…</option>
+                                                    <option value="Pat">Pat&apos;s team</option>
+                                                    <option value="Sandy">Sandy&apos;s team</option>
+                                                </select>
+                                            </div>
+                                            {props.roleError ? (
+                                                <div className={dlgError}>{props.roleError}</div>
+                                            ) : null}
+                                        </div>
+                                    ) : null}
                                     <div>
                                         <label htmlFor="name" className={fieldLabel}>
                                             Group name{" "}
@@ -286,7 +335,11 @@ function ByodJoinPage(props) {
                                             className={dlgInput}
                                             id="name"
                                             defaultValue={props.savedName || ""}
-                                            placeholder="Leave blank to be named Group A, B, C…"
+                                            placeholder={
+                                                props.pairedSession
+                                                    ? "Leave blank to be named after the table and side"
+                                                    : "Leave blank to be named Group A, B, C…"
+                                            }
                                         />
                                     </div>
 
@@ -444,6 +497,7 @@ function ByodJoinPage(props) {
                                                     // Group size is chosen on
                                                     // the speaker page now.
                                                     0,
+                                                    readNegotiationRole(),
                                                 )
                                             }
                                         >

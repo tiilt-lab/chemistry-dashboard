@@ -310,7 +310,9 @@ class SessionService {
     doa,
     folder,
     asr,
-    liveVideoAnalytics
+    liveVideoAnalytics,
+    negotiationCoding,
+    negotiationPaired
   ) {
     const body = {
       name: name,
@@ -325,17 +327,27 @@ class SessionService {
       asr: asr || null,
       // false = record video now, analyse after class (default: analyse live)
       liveVideoAnalytics: liveVideoAnalytics !== false,
+      // true = negotiation class: code each pod's utterances per team after it ends
+      negotiationCoding: negotiationCoding === true,
+      // true = two laptops per breakout group, one per side (teams by device)
+      negotiationPaired: negotiationPaired === true,
     };
 
     return this.api.httpRequestCall("api/v1/sessions", "POST", body);
   }
 
-  joinByodSession(name, passcode, collaborators) {
+  joinByodSession(name, passcode, collaborators, negotiation) {
     const body = {
       name: name,
       passcode: passcode,
       collaborators: collaborators,
     };
+    // Paired negotiation sessions: which table and side this laptop records
+    // ({group, side}); omitted entirely for every other join.
+    if (negotiation && (negotiation.group || negotiation.side)) {
+      body.negotiationGroup = negotiation.group || "";
+      body.negotiationSide = negotiation.side || "";
+    }
     return this.api.httpRequestCall("api/v1/sessions/byod", "POST", body);
   }
 

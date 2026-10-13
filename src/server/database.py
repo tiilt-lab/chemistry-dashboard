@@ -36,6 +36,8 @@ from tables.rater import Rater
 from tables.session_synthesized_report import SessionSynthesizedReport
 from tables.rating import Rating
 from tables.survey_response import SurveyResponse
+from tables.negotiation_coding_run import NegotiationCodingRun
+from tables.negotiation_code import NegotiationCode
 
 # Saves changes made to database (models)
 def save_changes():
@@ -779,23 +781,31 @@ def next_group_letter_name(session_id):
         i += 1
     return 'Group ' + letters(i)
 
-def create_byod_session_device(passcode, name, collaborators):
+def create_byod_session_device(passcode, name, collaborators, negotiation_group=None, negotiation_side=None):
     session = get_sessions(active=True, passcode=passcode, first=True)
     speakers = []
     if not session:
         return False, 'Session not found.', speakers
     if not name:
-        name = next_group_letter_name(session.id)
+        # Paired negotiation sessions name the device after its role
+        # ("Table 3 Pat") so the overview reads at a glance.
+        role = ' '.join(p for p in (negotiation_group, negotiation_side) if p)
+        name = role if role else next_group_letter_name(session.id)
     duplicate = get_session_devices(session_id=session.id, name=name, first=True)
     if duplicate:
         if duplicate.connected: # User signed into a device already in use.
             return False, "Name already in use.", speakers
         else: # User signed back into existing device.
             duplicate.removed = False
+            if negotiation_group or negotiation_side:
+                duplicate.negotiation_group = negotiation_group
+                duplicate.negotiation_side = negotiation_side
             db.session.commit()
             return True, duplicate, get_speakers(session_device_id=duplicate.id)
     else: # New session device.
         session_device = SessionDevice(session.id, None, name)
+        session_device.negotiation_group = negotiation_group
+        session_device.negotiation_side = negotiation_side
         db.session.add(session_device)
         db.session.commit()
         # Two phones joining with the same name concurrently both pass the
@@ -1961,3 +1971,92 @@ def mark_session_device_posthoc(session_device_id, models=None, durations=None):
             logging.warning("Could not persist posthoc_models: %s", e)
     db.session.commit()
     return True
+
+
+# -------------------------
+# Negotiation coding (negotiation_coding.py)
+# -------------------------
+
+def create_negotiation_run(session_device_id, model, codebook_version, teams=None, partner_device_id=None):
+    run = NegotiationCodingRun(session_device_id, model, codebook_version, teams, partner_device_id)
+    db.session.add(run)
+    db.session.commit()
+    return run
+
+def get_negotiation_run(run_id):
+    return db.session.query(NegotiationCodingRun).filter(NegotiationCodingRun.id == run_id).first()
+
+def get_latest_negotiation_run(session_device_id):
+    """The pod's newest run, whether the pod is the run's first device or
+    the partner of a paired run."""
+    return db.session.query(NegotiationCodingRun) \
+        .filter(db.or_(NegotiationCodingRun.session_device_id == session_device_id,
+                       NegotiationCodingRun.partner_device_id == session_device_id)) \
+        .order_by(NegotiationCodingRun.id.desc()).first()
+
+def get_negotiation_partner(session_device):
+    """In a paired session, the other device of the pod's breakout group
+    (same negotiation_group, not removed): the one on the other side if
+    there is one, else the first other device of the group. None when the
+    pod has no group or no partner yet."""
+    if session_device is None or not session_device.negotiation_group:
+        return None
+    others = db.session.query(SessionDevice) \
+        .filter(SessionDevice.session_id == session_device.session_id,
+                SessionDevice.negotiation_group == session_device.negotiation_group,
+                SessionDevice.id != session_device.id,
+                SessionDevice.removed == False) \
+        .order_by(SessionDevice.id.asc()).all()   # noqa: E712
+    if not others:
+        return None
+    opposite = [d for d in others if d.negotiation_side and d.negotiation_side != session_device.negotiation_side]
+    return (opposite or others)[0]
+
+def set_session_device_negotiation(session_device_id, group, side):
+    session_device = get_session_devices(id=session_device_id)
+    if session_device is None:
+        return None
+    session_device.negotiation_group = group
+    session_device.negotiation_side = side
+    db.session.commit()
+    return session_device
+
+def get_negotiation_runs(session_id):
+    """Every run of the session's pods, newest first."""
+    return db.session.query(NegotiationCodingRun) \
+        .join(SessionDevice, NegotiationCodingRun.session_device_id == SessionDevice.id) \
+        .filter(SessionDevice.session_id == session_id) \
+        .order_by(NegotiationCodingRun.id.desc()).all()
+
+def update_negotiation_run(run_id, **fields):
+    """Set the given columns; teams/summary given as dicts are stored as JSON."""
+    import json as _json
+    run = get_negotiation_run(run_id)
+    if run is None:
+        return None
+    for name, value in fields.items():
+        if name in ('teams', 'summary') and value is not None and not isinstance(value, str):
+            value = _json.dumps(value)
+        setattr(run, name, value)
+    db.session.commit()
+    return run
+
+def add_negotiation_codes(run_id, codes):
+    """The run's codes, wholesale: rows from an interrupted earlier attempt
+    (coordinator restart re-queues the job) are replaced, not doubled."""
+    db.session.query(NegotiationCode).filter(NegotiationCode.run_id == run_id).delete()
+    db.session.add_all([NegotiationCode(run_id, c['transcript_id'], c['emotion'], c['rip'],
+                                        c['frame'], c.get('listening')) for c in codes])
+    db.session.commit()
+    return len(codes)
+
+def get_negotiation_codes(run_id):
+    """(code, transcript) pairs of a run in transcript order."""
+    return db.session.query(NegotiationCode, Transcript) \
+        .join(Transcript, NegotiationCode.transcript_id == Transcript.id) \
+        .filter(NegotiationCode.run_id == run_id) \
+        .order_by(Transcript.start_time.asc(), Transcript.id.asc()).all()
+
+def session_device_transcript_count(session_device_id):
+    return db.session.query(func.count(Transcript.id)) \
+        .filter(Transcript.session_device_id == session_device_id).scalar() or 0

@@ -21,6 +21,15 @@ class Session(db.Model):
     # Mapped column: migration 3b4c5d6e7f80 must be applied before this code
     # is deployed (a missing column raises on every Session query).
     live_video_analytics = db.Column(db.Boolean, nullable=True)
+    # Negotiation coding (Kellogg negotiation class): TRUE = end_session queues
+    # an LLM coding run per pod (negotiation_coding.py). NULL/FALSE = off, the
+    # historic behaviour. Mapped column: migration 4c5d6e7f8091 first.
+    negotiation_coding = db.Column(db.Boolean, nullable=True)
+    # Two devices per breakout group, one per side of the table, so teams are
+    # fixed by device (session_device.negotiation_side) instead of assigned
+    # per speaker afterwards. NULL/FALSE = one device per group. Mapped
+    # column: migration 5d6e7f809102 first.
+    negotiation_paired = db.Column(db.Boolean, nullable=True)
 
     keywords = db.relationship("Keyword", lazy='joined', uselist=True, cascade="all, delete", passive_deletes=True)
 
@@ -36,13 +45,15 @@ class Session(db.Model):
     def __hash__(self):
         return hash((self.id))
 
-    def __init__(self, owner_id, name="Unnamed", folder=None, topic_model=None, live_video_analytics=True):
+    def __init__(self, owner_id, name="Unnamed", folder=None, topic_model=None, live_video_analytics=True, negotiation_coding=False, negotiation_paired=False):
         self.owner_id = owner_id
         self.name = name
         self.creation_date = datetime.now(timezone.utc).replace(tzinfo=None)
         self.folder = folder
         self.topic_model_id = topic_model
         self.live_video_analytics = live_video_analytics is not False
+        self.negotiation_coding = bool(negotiation_coding)
+        self.negotiation_paired = bool(negotiation_paired)
 
 
     def get_length(self):
@@ -60,7 +71,10 @@ class Session(db.Model):
             folder=self.folder,
             topic_model_id=self.topic_model_id,
             # NULL (rows from before the column) reads as the historic "live".
-            live_video_analytics=self.live_video_analytics is not False
+            live_video_analytics=self.live_video_analytics is not False,
+            # NULL (rows from before the column) reads as off.
+            negotiation_coding=bool(self.negotiation_coding),
+            negotiation_paired=bool(self.negotiation_paired)
         )
 
     @staticmethod

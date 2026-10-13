@@ -22,7 +22,14 @@ class SessionDevice(db.Model):
     # missing DB column raises on every SessionDevice query, it does not read as
     # None. The _posthoc_models_json guard only protects against bad JSON.
     posthoc_models = db.Column(db.Text, nullable=True)
-    
+    # Negotiation classes with one device per team (session.negotiation_paired):
+    # the breakout group this device belongs to ("Table 3") and the side of the
+    # case it records ("Pat" or "Sandy"), so its transcript, faces and gestures
+    # all count for that team. NULL on every other session. Mapped columns:
+    # migration 5d6e7f809102 must be applied before this code is deployed.
+    negotiation_group = db.Column(db.String(32), nullable=True)
+    negotiation_side = db.Column(db.String(16), nullable=True)
+
     speakers = db.relationship("Speaker", back_populates="session_device", cascade="all, delete",passive_deletes=True)
     llmfeedbackreports = db.relationship("LLMFeedbackReport", back_populates="session_device", cascade="all, delete",passive_deletes=True)
     llmquestionanswer = db.relationship("LLMQuestionAnswer", back_populates="session_device", cascade="all, delete",passive_deletes=True)
@@ -38,6 +45,8 @@ class SessionDevice(db.Model):
     KEY_MAX_LENGTH = 64
     NAME_MAX_LENGTH = 64
     NAME_CHARS = 'a-zA-Z0-9\': '
+    NEGOTIATION_SIDES = ('Pat', 'Sandy')
+    NEGOTIATION_GROUP_MAX_LENGTH = 32
 
     def __hash__(self):
         return hash(self.id)
@@ -65,7 +74,9 @@ class SessionDevice(db.Model):
             button_pressed=self.button_pressed,
             embeddings=self.embeddings,
             posthoc_analyzed_date=str(self.posthoc_analyzed_date) + ' UTC' if self.posthoc_analyzed_date else None,
-            posthoc_models=self._posthoc_models_json()
+            posthoc_models=self._posthoc_models_json(),
+            negotiation_group=self.negotiation_group,
+            negotiation_side=self.negotiation_side
         )
 
     def _posthoc_models_json(self):
@@ -89,3 +100,29 @@ class SessionDevice(db.Model):
             if not verify_characters(name, SessionDevice.NAME_CHARS):
                 message = 'Invalid characters in device name.'
         return message is None, message
+
+    @staticmethod
+    def verify_negotiation(group=None, side=None):
+        """(ok, message, clean group, clean side) for a paired-session role.
+        Blank/None clears a field; the side is case-insensitive Pat/Sandy;
+        the group is a short label with the device-name character set."""
+        clean_group = (group or '').strip() if isinstance(group, str) or group is None else None
+        if clean_group is None:
+            return False, 'Group must be text.', None, None
+        if len(clean_group) > SessionDevice.NEGOTIATION_GROUP_MAX_LENGTH:
+            return False, 'Group must not exceed {0} characters.'.format(SessionDevice.NEGOTIATION_GROUP_MAX_LENGTH), None, None
+        if clean_group and not verify_characters(clean_group, SessionDevice.NAME_CHARS):
+            return False, 'Invalid characters in group.', None, None
+        clean_side = None
+        if side not in (None, ''):
+            if not isinstance(side, str):
+                return False, 'Side must be Pat or Sandy.', None, None
+            clean_side = side.strip().capitalize()
+            if clean_side not in SessionDevice.NEGOTIATION_SIDES:
+                return False, 'Side must be Pat or Sandy.', None, None
+        return True, None, clean_group or None, clean_side
+
+    def negotiation_label(self):
+        # "Table 3 · Pat" for the overview and the coding panel; None if unset.
+        parts = [p for p in (self.negotiation_group, self.negotiation_side) if p]
+        return ' \u00b7 '.join(parts) if parts else None

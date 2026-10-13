@@ -180,6 +180,21 @@ function PodRow({ device, enrich, alerts, onOpen, checked, onToggle, queue, inde
                     >
                         {name}
                     </span>
+                    {device.negotiation_group || device.negotiation_side ? (
+                        <StatusPill
+                            tone={
+                                device.negotiation_side === "Pat"
+                                    ? "brand"
+                                    : device.negotiation_side === "Sandy"
+                                      ? "teal"
+                                      : "neutral"
+                            }
+                            className="text-[11px]"
+                            title="Negotiation table and side this laptop records"
+                        >
+                            {[device.negotiation_group, device.negotiation_side].filter(Boolean).join(" · ")}
+                        </StatusPill>
+                    ) : null}
                     {renameInline ? (
                         <button
                             onClick={(ev) => {
