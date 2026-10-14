@@ -1,9 +1,11 @@
 // The create-session form's pod setup: how a breakout group is composed and
 // which device records what. Team names default to Team A, Team B, … and
-// are renamed by the instructor (the code knows no case's sides). Up to
-// four teams; one device per team needs exactly two.
-export const MAX_TEAMS = 4
-const LETTERS = ["A", "B", "C", "D"]
+// are renamed by the instructor (the code knows no case's sides). One team
+// (the whole group), two, or a custom count of three or more, up to eight
+// (the server's limit); one device per team needs exactly two.
+export const MAX_TEAMS = 8
+export const MIN_CUSTOM_TEAMS = 3
+const LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"]
 
 export const DEFAULT_POD_SETUP = {
     enabled: false,

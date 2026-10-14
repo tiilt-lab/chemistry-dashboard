@@ -2,7 +2,7 @@ import React from "react";
 import { EmptyState } from "../components/empty-state";
 import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel, dlgError } from "../components/dialog-styles"
 import { pageShell, formCard } from "../components/layout-styles"
-import { setupTeams } from "./pod-setup"
+import { setupTeams, MAX_TEAMS, MIN_CUSTOM_TEAMS } from "./pod-setup"
 import { Appheader } from "../header/header-component";
 import { GenericDialogBox } from "../dialog/dialog-component";
 import { AppFolderSelectComponent } from "../components/folder-select/folder-select-component";
@@ -129,17 +129,41 @@ function PodSetupSection({ setup, setSetup, error }) {
 
           <SetupRow label="Teams" hint={hasTeams ? "Per group, with how many people on each." : "People per group."}>
             <div className="flex flex-col gap-3">
-              <select
-                id="podTeamsPerGroup"
-                value={s.teamsPerGroup}
-                onChange={(e) => set({ teamsPerGroup: parseInt(e.target.value, 10) })}
-                className={numberCls + " app-select w-40 cursor-pointer pr-8"}
-              >
-                <option value={1}>No teams</option>
-                <option value={2}>Two teams</option>
-                <option value={3}>Three teams</option>
-                <option value={4}>Four teams</option>
-              </select>
+              <div className="flex flex-wrap items-end gap-3">
+                <select
+                  id="podTeamsPerGroup"
+                  value={s.teamsPerGroup >= MIN_CUSTOM_TEAMS ? "custom" : s.teamsPerGroup}
+                  onChange={(e) =>
+                    set({
+                      teamsPerGroup:
+                        e.target.value === "custom"
+                          ? Math.max(MIN_CUSTOM_TEAMS, s.teamsPerGroup)
+                          : parseInt(e.target.value, 10),
+                    })
+                  }
+                  className={numberCls + " app-select w-48 cursor-pointer pr-8"}
+                >
+                  <option value={1}>1 (the whole group)</option>
+                  <option value={2}>2</option>
+                  <option value="custom">Custom (3 or more)</option>
+                </select>
+                {s.teamsPerGroup >= MIN_CUSTOM_TEAMS ? (
+                  <div>
+                    <label htmlFor="podTeamsCustom" className={smallLabel}>
+                      How many
+                    </label>
+                    <input
+                      id="podTeamsCustom"
+                      type="number"
+                      min={MIN_CUSTOM_TEAMS}
+                      max={MAX_TEAMS}
+                      value={s.teamsPerGroup}
+                      onChange={(e) => set({ teamsPerGroup: int(e.target.value, MIN_CUSTOM_TEAMS, MAX_TEAMS) })}
+                      className={numberCls}
+                    />
+                  </div>
+                ) : null}
+              </div>
               {hasTeams ? (
                 <div className="overflow-hidden rounded-lg border border-tiilt-line">
                   <div className={teamGrid + " bg-tiilt-ground/60 px-3 py-1.5 font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase"}>
@@ -157,7 +181,7 @@ function PodSetupSection({ setup, setSetup, error }) {
                         type="text"
                         maxLength={16}
                         value={t.name}
-                        placeholder={`Team ${"ABCD"[i]}`}
+                        placeholder={`Team ${"ABCDEFGH"[i]}`}
                         onChange={(e) => setTeam(i, { name: e.target.value })}
                         className={textCls}
                       />

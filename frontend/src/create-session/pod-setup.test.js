@@ -15,13 +15,14 @@ describe("pod setup", () => {
         })
         expect(podConfigFromSetup(DEFAULT_POD_SETUP)).toBeNull()
     })
-    it("supports up to four teams, one device per group beyond two", () => {
+    it("supports a custom count of teams up to eight, one device per group beyond two", () => {
         const four = { ...DEFAULT_POD_SETUP, enabled: true, teamsPerGroup: 4 }
         expect(setupTeams(four).map((t) => t.name)).toEqual(["Team A", "Team B", "Team C", "Team D"])
         const cfg = podConfigFromSetup(four)
         expect(cfg.group_size).toBe(12)
         expect(cfg.devices_per_group).toBe("group")
-        expect(setupTeams({ ...four, teamsPerGroup: 9 })).toHaveLength(4)
+        expect(setupTeams({ ...four, teamsPerGroup: 8 }).map((t) => t.name).at(-1)).toBe("Team H")
+        expect(setupTeams({ ...four, teamsPerGroup: 9 })).toHaveLength(8)
         const none = { ...DEFAULT_POD_SETUP, enabled: true, teamsPerGroup: 1, groupSize: 5 }
         expect(podConfigFromSetup(none)).toMatchObject({ teams: [], group_size: 5, devices_per_group: "group" })
     })
