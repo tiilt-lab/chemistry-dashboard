@@ -1593,3 +1593,21 @@ def test_create_session_route_takes_a_scheme_ref():
     assert "session.coding_scheme = coding_scheme" in handler and "negotiation_coding_enabled = True" in handler
     dc = _read("src", "server", "discussion_capture.py")
     assert "app.register_blueprint(coding_scheme_api)" in dc
+
+
+def test_teams_are_read_off_speaker_names_when_nobody_assigned(env):
+    assert nc.infer_teams(["Pat1", "pat 2", "SANDY-3", "Coach", "", None, "Patsy"], ("Pat", "Sandy")) == {
+        "Pat1": "Pat", "pat 2": "Pat", "SANDY-3": "Sandy", "Patsy": "Pat"}
+    assert nc.infer_teams(["Buyer A", "seller_b", "x"], ("Buyer", "Seller")) == {"Buyer A": "Buyer", "seller_b": "Seller"}
+    assert nc.infer_teams(["Team A1", "teamb2", "Team"], ("Team A", "Team B")) == {"Team A1": "Team A", "teamb2": "Team B"}
+    d = env.database
+    session = _session(env)
+    pod = _pod(env, session, with_transcripts=False)
+    for i, (tag, text, _) in enumerate(VIKING):
+        _add(env, pod, 15 * i, text, tag + str(i % 3 + 1))      # Pat1, Sandy2, Pat3 ...
+    run = env.engine.run_coding(pod.id, llm=gold_llm)
+    assert run.teams_dict() == {"Pat1": "Pat", "Sandy2": "Sandy", "Pat3": "Pat", "Sandy1": "Sandy", "Pat2": "Pat", "Sandy3": "Sandy"}
+    assert run.summary_dict()["by_team"]["Pat"]["utterances"] == 7
+    # an explicit assignment, even partial, is respected as given
+    run2 = env.engine.run_coding(pod.id, {"Pat1": "Sandy"}, llm=gold_llm)
+    assert run2.teams_dict() == {"Pat1": "Sandy"}

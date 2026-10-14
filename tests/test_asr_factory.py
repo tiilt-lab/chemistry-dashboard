@@ -78,7 +78,10 @@ def test_session_route_accepts_only_crisperwhisper():
 def test_frontend_offers_no_google_engine():
     create = _read("frontend", "src", "create-session", "html-pages.jsx")
     assert "google-cloud-speech" not in create
-    assert create.count('value: "crisperwhisper"') == 1
+    # The session form no longer offers an engine at all (CrisperWhisper is
+    # the only one, mentioned in a comment); the server defaults it.
+    assert 'value: "crisperwhisper"' not in create
+    assert "google" not in create.lower()
     trigger = _read("frontend", "src", "components", "posthoc", "posthoc-trigger.jsx")
     options = trigger[trigger.index("const ASR_OPTIONS"):trigger.index("const DIARIZER_OPTIONS")]
     assert "google" not in options.lower()

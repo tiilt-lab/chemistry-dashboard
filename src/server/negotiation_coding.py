@@ -604,6 +604,24 @@ def summarize(codes, teams, codebook=None, extra=None, names=TEAMS):
     return summary
 
 
+def infer_teams(speaker_tags, names=TEAMS):
+    """Teams read off speaker names: a tag that begins with exactly one team
+    name (case-insensitive, letters and digits only: "Buyer1", "buyer-g3",
+    "SELLER 2") is that team's. Lets a class that enrols students as
+    <team>1..<team>3 skip the manual assignment; anything ambiguous or
+    unmatched is left unassigned."""
+    out = {}
+    lowered = [(n, n.lower()) for n in names]
+    for tag in speaker_tags:
+        if not tag:
+            continue
+        key = "".join(ch for ch in str(tag).lower() if ch.isalnum())
+        hits = [n for n, low in lowered if key.startswith("".join(ch for ch in low if ch.isalnum()))]
+        if len(hits) == 1:
+            out[str(tag)] = hits[0]
+    return out
+
+
 def validate_teams(teams, names=TEAMS):
     """The request's {"<speaker_tag>": "<team name>"} -> (clean dict, error).
     Team names are matched case-insensitively against ``names`` (the
@@ -777,6 +795,9 @@ def run_coding(session_device_id, teams=None, llm=call_llm, run_id=None, codeboo
         database.add_negotiation_codes(run.id, coded, list(codebook["dimensions"]))
         if teams is None:
             teams = database.get_negotiation_run(run.id).teams_dict()
+        if not teams and not run.is_paired():
+            # Nobody assigned yet: names like Buyer1 / Seller2 say it themselves.
+            teams = infer_teams({u.get("speaker_tag") for u in utterances}, names)
         database.update_negotiation_run(
             run.id, status="done", finished_at=_now(), teams=teams,
             summary=summarize(coded, teams, codebook, extra, names),

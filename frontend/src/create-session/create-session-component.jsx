@@ -59,8 +59,6 @@ function CreateSessionComponent(props) {
   // toggle only ever produced sessions whose E&T charts sat empty until a
   // posthoc re-run. The UI option was removed alongside the byod one.
   const features = true;
-  // Live transcription engine, locked at creation (crisperwhisper = local GPU).
-  // Legacy 'whisper' sessions fold into crisperwhisper (plain Whisper retired).
   // Utterance coding: the chosen scheme's ref, or "" for none. Choosing one
   // is what turns coding on (the server's negotiation_coding flag follows).
   const [codingScheme, setCodingScheme] = useState(

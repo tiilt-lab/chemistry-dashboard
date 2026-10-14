@@ -300,15 +300,19 @@ def test_video_server_folds_the_session_flag_into_the_record_only_branch():
 
 # ---- browser ------------------------------------------------------------------
 
-def test_create_session_ui_sends_the_flag_and_defaults_it_on():
+def test_create_session_ui_derives_the_flag_from_the_chosen_analyses():
+    # The form offers the live analyses under "Advanced analysis"; the
+    # record-now-analyse-later flag is simply "none chosen".
     comp = _read("frontend", "src", "create-session", "create-session-component.jsx")
-    assert "const [liveVideoAnalytics, setLiveVideoAnalytics] = useState(" in comp
-    assert "folder, asr, liveVideoAnalytics" in comp  # further flags may follow (negotiationCoding)
+    assert "const [liveVideoAnalyses, setLiveVideoAnalyses] = useState(" in comp
+    assert "liveVideoAnalyses.length > 0, negotiationCoding" in comp
     page = _read("frontend", "src", "create-session", "html-pages.jsx")
-    assert "Analyse video live (uses the GPU during class; off = record now, analyse after class)" in page
-    assert 'checked={props.liveVideoAnalytics !== false}' in page
+    assert "function AdvancedAnalysisSection(" in page
+    assert '{ key: "attention", label: "Attention and gaze"' in page
+    assert '{ key: "emotion", label: "Facial emotion"' in page
     svc = _read("frontend", "src", "services", "session-service.js")
     assert "liveVideoAnalytics: liveVideoAnalytics !== false" in svc
+    assert "body.liveVideoAnalyses = liveVideoAnalyses" in svc
     model = _read("frontend", "src", "models", "session.js")
     assert "model.live_video_analytics = json['live_video_analytics'] !== false" in model
 
