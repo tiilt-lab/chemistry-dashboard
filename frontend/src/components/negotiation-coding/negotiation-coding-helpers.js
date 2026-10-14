@@ -19,9 +19,10 @@ export function teamNamesOf(data, session) {
     return fromSetup.length >= 2 ? fromSetup : TEAMS
 }
 
-// The codebook, in display order. `rollup: false` marks the "nothing coded"
-// values that the server's summary does not count (they still get a filter
-// chip). Listening is multi-label.
+// The built-in negotiation scheme's dimensions, the fallback for a run that
+// carries no codebook. `rollup: false` marks the "nothing coded" values that
+// the roll-up table leaves out (they still get a filter chip). Listening is
+// multi-label.
 export const DIMENSIONS = [
     {
         key: "emotion",
@@ -70,14 +71,36 @@ export const DIMENSIONS = [
     },
 ]
 
-const LABELS = {}
-for (const d of DIMENSIONS) {
-    LABELS[d.key] = {}
-    for (const c of d.codes) LABELS[d.key][c.code] = c.label
+const QUIET = new Set(["neutral", "none"])
+
+// The dimensions a run was coded with, from its payload's codebook (the
+// session's scheme, any dimensions), else the built-in list. A dimension's
+// default code ("none", "neutral") is the quiet value: no badge, no roll-up
+// row.
+export function dimensionsOf(data) {
+    const dims = data && data.codebook && Array.isArray(data.codebook.dimensions) ? data.codebook.dimensions : null
+    if (!dims || dims.length === 0) return DIMENSIONS
+    return dims.map((d) => ({
+        key: d.key,
+        label: d.label || d.key,
+        multi: d.multi === true,
+        codes: (d.codes || []).map((c) => ({
+            code: c.code,
+            label: c.label || c.code,
+            rollup: !(d.default != null && c.code === d.default) && !(d.default == null && !d.multi && QUIET.has(c.code)),
+        })),
+    }))
 }
 
-export function codeLabel(dim, code) {
-    return (LABELS[dim] && LABELS[dim][code]) || code
+export function codeLabel(dim, code, dims = DIMENSIONS) {
+    const d = dims.find((x) => x.key === dim)
+    const c = d && d.codes.find((x) => x.code === code)
+    return (c && c.label) || code
+}
+
+export function dimensionLabel(dim, dims = DIMENSIONS) {
+    const d = dims.find((x) => x.key === dim)
+    return d ? d.label : dim
 }
 
 // The de-escalation timeline, in display order, with what each time means.
@@ -203,7 +226,7 @@ function count(team, key) {
 // Summary.by_team -> a table: teams as columns (unassigned only when it has
 // utterances), one section per dimension, one row per counted code. Each
 // cell is { n, pct } with pct relative to the column's utterance count.
-export function rollupTable(summary, names = TEAMS) {
+export function rollupTable(summary, names = TEAMS, dims = DIMENSIONS) {
     const byTeam = (summary && summary.by_team) || {}
     const columns = names.map((t) => ({
         key: t,
@@ -214,7 +237,7 @@ export function rollupTable(summary, names = TEAMS) {
     if (un && count(un, "utterances") > 0) {
         columns.push({ key: UNASSIGNED, label: "Unassigned", utterances: count(un, "utterances") })
     }
-    const sections = DIMENSIONS.map((d) => ({
+    const sections = dims.map((d) => ({
         key: d.key,
         label: d.label,
         rows: d.codes
@@ -224,9 +247,12 @@ export function rollupTable(summary, names = TEAMS) {
                 label: c.label,
                 cells: columns.map((col) => {
                     const team = byTeam[col.key]
+                    // The server nests every dimension's counts under its key
+                    // (older summaries put single-choice counts at the top level).
+                    const nested = team && team[d.key]
                     const n =
-                        d.key === "listening"
-                            ? count(team && team.listening, c.code)
+                        nested && typeof nested === "object"
+                            ? count(nested, c.code)
                             : count(team, c.code)
                     const pct = col.utterances > 0 ? Math.round((100 * n) / col.utterances) : null
                     return { n, pct }
@@ -238,22 +264,26 @@ export function rollupTable(summary, names = TEAMS) {
 
 // All codes carried by one utterance as [{dim, code, label}] (including the
 // quiet neutral/none values, so filters on them work).
-export function utteranceCodes(row) {
+export function utteranceCodes(row, dims = DIMENSIONS) {
     if (!row) return []
     const out = []
-    for (const d of DIMENSIONS) {
+    for (const d of dims) {
         const v = row[d.key]
         const list = d.multi ? (Array.isArray(v) ? v : []) : v ? [v] : []
-        for (const code of list) out.push({ dim: d.key, code, label: codeLabel(d.key, code) })
+        for (const code of list) {
+            const spec = d.codes.find((c) => c.code === code)
+            // Quiet = the dimension's "nothing coded" value: its declared
+            // default (rollup false), or neutral/none on a single-choice dimension.
+            const quiet = !!(spec && spec.rollup === false) || (!d.multi && QUIET.has(code))
+            out.push({ dim: d.key, code, label: codeLabel(d.key, code, dims), quiet })
+        }
     }
     return out
 }
 
-const QUIET = new Set(["neutral", "none"])
-
-// Codes worth a badge on the utterance line (neutral / none are implied).
-export function badgeCodes(row) {
-    return utteranceCodes(row).filter((c) => !QUIET.has(c.code))
+// Codes worth a badge on the utterance line (a dimension's quiet value is implied).
+export function badgeCodes(row, dims = DIMENSIONS) {
+    return utteranceCodes(row, dims).filter((c) => !c.quiet)
 }
 
 export function filterKey(dim, code) {
@@ -263,7 +293,7 @@ export function filterKey(dim, code) {
 // selected is a Set of "dim:code" keys. Chips within one dimension OR
 // together; dimensions AND together ("escalating" + "power" = escalating
 // power moves). An empty selection matches everything.
-export function matchesFilters(row, selected) {
+export function matchesFilters(row, selected, dims = DIMENSIONS) {
     if (!selected || selected.size === 0) return true
     const byDim = {}
     for (const key of selected) {
@@ -273,14 +303,14 @@ export function matchesFilters(row, selected) {
         if (!byDim[dim]) byDim[dim] = new Set()
         byDim[dim].add(code)
     }
-    const have = utteranceCodes(row)
+    const have = utteranceCodes(row, dims)
     return Object.entries(byDim).every(([dim, codes]) =>
         have.some((c) => c.dim === dim && codes.has(c.code)),
     )
 }
 
-export function filterCodes(rows, selected) {
-    return (rows || []).filter((r) => matchesFilters(r, selected))
+export function filterCodes(rows, selected, dims = DIMENSIONS) {
+    return (rows || []).filter((r) => matchesFilters(r, selected, dims))
 }
 
 // Poll while a run is queued/running. `poll` returns a promise; `onResult`

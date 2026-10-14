@@ -182,7 +182,9 @@ def test_prompt_carries_the_codebook_the_context_and_ends_with_no_think():
     assert "That's ridiculous." in system and "I can call the loan." in system
     assert "Which of these three issues matters most to you?" in system
     assert "JSON array" in system and '"i"' in system
-    assert system.index("CASE FACTS") < system.index("$1.4M") < system.index("emotion (exactly one code)")
+    assert system.index("CONTEXT FACTS") < system.index("$1.4M") < system.index("emotion (exactly one code)")
+    assert "Team A's team versus Team B's team" in system and "4 dimensions" in system
+    assert '"emotion": "<code>"' in system and '"listening": ["<code>", ...]' in system
     assert "- Fawn" not in system and "Fawn (some materials call this person Alex" in system
     assert "* Every question gets its form label" in system and "'Calm down' is NOT defusing" in system
     assert "(examples of strong listening moves, not codes:" in system
@@ -459,7 +461,8 @@ def env():
         socketio=types.SimpleNamespace(emit=_Recorder()))
     identity = lambda f: f  # noqa: E731
     _stub_module("wrappers", verify_login=lambda public=False: identity,
-                 verify_session_access=identity, verify_session_read_access=identity)
+                 verify_session_access=identity, verify_session_read_access=identity,
+                 ADMIN_ROLES=("admin", "super"))
     _stub_module("config")
     enqueue_coding = _Recorder(True)
     _stub_module("posthoc_queue", enqueue_coding=enqueue_coding)
@@ -476,6 +479,10 @@ def env():
         "negotiation_routes", os.path.join(SERVER, "routes", "negotiation_coding.py"))
     routes = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(routes)
+    spec2 = importlib.util.spec_from_file_location(
+        "coding_scheme_routes", os.path.join(SERVER, "routes", "coding_scheme.py"))
+    scheme_routes = importlib.util.module_from_spec(spec2)
+    spec2.loader.exec_module(scheme_routes)
     engine = sys.modules["negotiation_coding"]
 
     ctx = flask_app.app_context()
@@ -483,8 +490,8 @@ def env():
     tables = [t for t in app_stub.db.metadata.sorted_tables
               if not any(type(c.type).__module__.startswith("sqlalchemy.dialects.mysql") for c in t.columns)]
     app_stub.db.metadata.create_all(app_stub.db.engine, tables=tables)
-    yield types.SimpleNamespace(database=database, routes=routes, engine=engine, flask_app=flask_app,
-                                db=app_stub.db, enqueue_coding=enqueue_coding)
+    yield types.SimpleNamespace(database=database, routes=routes, scheme_routes=scheme_routes, engine=engine,
+                                flask_app=flask_app, db=app_stub.db, enqueue_coding=enqueue_coding)
     app_stub.db.session.remove()
     ctx.pop()
     for name, module in list(sys.modules.items()):
@@ -617,8 +624,13 @@ def test_routes_post_get_put_export_and_session_list(env):
     # the coding leg runs
     env.engine.run_coding(pod.id, llm=gold_llm, run_id=body["run_id"])
     payload = _call(env, r.get_negotiation_coding, "GET", **ids).get_json()
-    assert set(payload) == {"run", "mode", "team_names", "pods", "teams", "codes", "summary"}
+    assert set(payload) == {"run", "mode", "codebook", "team_names", "pods", "teams", "codes", "summary"}
     assert payload["team_names"] == ["Pat", "Sandy"]
+    assert payload["codebook"]["ref"] == "builtin:negotiation"
+    assert [d["key"] for d in payload["codebook"]["dimensions"]] == ["emotion", "rip", "frame", "listening"]
+    assert payload["codebook"]["dimensions"][1]["label"] == "Interests, rights, power"
+    assert payload["codebook"]["dimensions"][3]["multi"] is True
+    assert payload["codebook"]["analytics"] == {"timeline": True, "future_move": True, "dynamics": True}
     assert set(payload["run"]) == {"id", "session_device_id", "partner_device_id", "status", "model",
                                    "codebook_version", "created_at", "started_at", "finished_at", "error",
                                    "utterances_coded", "invalid_codes"}
@@ -666,7 +678,7 @@ def test_routes_post_get_put_export_and_session_list(env):
     overview = {e["device_id"]: e for e in resp.get_json()}
     assert set(overview) == {pod.id, empty.id}
     assert set(overview[pod.id]) == {"device_id", "device_name", "negotiation_group", "negotiation_side",
-                                     "run", "mode", "team_names", "pods", "teams", "summary"}
+                                     "run", "mode", "codebook", "team_names", "pods", "teams", "summary"}
     assert overview[pod.id]["mode"] == "single"
     assert overview[pod.id]["run"]["status"] == "done" and overview[pod.id]["summary"]["timeline"]["first_escalating"] == 15
     assert overview[empty.id]["run"] is None and overview[empty.id]["summary"] is None
@@ -1444,3 +1456,140 @@ def test_join_as_extra_laptop_takes_the_next_free_suffix(env):
     join = _func_source(src, "byod_join_session")
     assert "join_as_extra = request.json.get('joinAsExtra', False) is True" in join
     assert "'slot_taken': True}, 409)" in join
+
+
+# ------------------------------------------------- coding schemes (any case)
+
+LIVELINESS = {
+    "name": "Discussion liveliness",
+    "description": "Who keeps the conversation moving.",
+    "context": ["The group is designing a bridge out of spaghetti."],
+    "dimensions": [
+        {"label": "Move", "guidance": "What the utterance does for the group.",
+         "codes": [{"code": "proposes", "definition": "Offers an idea or a plan."},
+                   {"code": "builds", "label": "Builds on", "definition": "Extends someone else's idea."},
+                   {"code": "blocks", "definition": "Rejects without an alternative."},
+                   {"code": "other", "definition": "Anything else."}]},
+        {"label": "Tone", "multi": True,
+         "codes": [{"code": "playful", "definition": "Jokes, laughter."},
+                   {"code": "tense", "definition": "Irritation, impatience."}]},
+    ],
+}
+
+
+def liveliness_llm(messages):
+    moves = ["proposes", "builds", "blocks", "other"]
+    return json.dumps([{"i": i, "move": moves[i % 4], "tone": ["playful"] if i % 3 == 0 else []}
+                       for i in _code_indices(messages)])
+
+
+def test_a_session_codes_with_the_scheme_it_chose(env):
+    import coding_schemes as cs
+    d, r, sr = env.database, env.routes, env.scheme_routes
+    session = _session(env)
+    pod = _pod(env, session)
+    user = {"id": session.owner_id, "role": "user"}
+    # the scheme is made in the Library, then the session points at it
+    resp = _call(env, sr.create_coding_scheme, "POST", LIVELINESS, user=user)
+    assert resp.status_code == 200, resp.get_json()
+    stored = resp.get_json()
+    assert stored["ref"].startswith("scheme:") and stored["name"] == "Discussion liveliness"
+    assert [dim["key"] for dim in stored["dimensions"]] == ["move", "tone"]
+    assert stored["dimensions"][0]["default"] == "other" and stored["dimensions"][1]["default"] is None
+    assert stored["dimensions"][0]["codes"][1] == {"code": "builds", "label": "Builds on", "definition": "Extends someone else's idea.", "examples": []}
+    session.coding_scheme = stored["ref"]
+    session.negotiation_coding = True
+    env.db.session.commit()
+    assert session.json()["coding_scheme"] == stored["ref"]
+    book = env.engine.codebook_for_device(pod.id)
+    assert list(book["dimensions"]) == ["move", "tone"] and book["case_facts"] == LIVELINESS["context"]
+    assert book["version"] == "Discussion liveliness" and book["ref"] == stored["ref"]
+    assert cs.analytics(book) == {"timeline": False, "future_move": False, "dynamics": False}
+    prompt = env.engine.build_prompt(book, _utterances()[:2], [])[0]["content"]
+    assert "spaghetti" in prompt and '"move": "<code>"' in prompt and '"tone": ["<code>", ...]' in prompt
+    assert "2 dimensions" in prompt and "Who keeps the conversation moving." in prompt
+
+    ids = dict(session_id=session.id, session_device_id=pod.id)
+    run_id = _call(env, r.start_negotiation_coding, "POST", {"teams": TEAMS}, **ids).get_json()["run_id"]
+    assert d.get_negotiation_run(run_id).codebook_version == "Discussion liveliness"
+    env.engine.run_coding(pod.id, llm=liveliness_llm, run_id=run_id)
+    payload = _call(env, r.get_negotiation_coding, "GET", **ids).get_json()
+    assert payload["codebook"]["name"] == "Discussion liveliness"
+    assert [dim["key"] for dim in payload["codebook"]["dimensions"]] == ["move", "tone"]
+    assert payload["codebook"]["dimensions"][0]["codes"][1]["label"] == "Builds on"
+    assert set(payload["codes"][0]) == {"transcript_id", "session_device_id", "start_time", "length", "speaker_tag",
+                                        "team", "text", "move", "tone"}
+    assert payload["codes"][0]["move"] == "proposes" and payload["codes"][0]["tone"] == ["playful"]
+    assert payload["codes"][1]["tone"] == []
+    by_team = payload["summary"]["by_team"]
+    assert set(by_team["Pat"]) == {"utterances", "move", "tone"}        # no opening_move: not a negotiation scheme
+    assert by_team["Pat"]["move"]["proposes"] == 4 and by_team["Pat"]["tone"]["playful"] == 3
+    assert payload["summary"]["timeline"] is None
+    resp = _call(env, r.export_negotiation_coding, "GET", **ids)
+    rows = list(csv.reader(io.StringIO(resp.data.decode("utf-8"))))
+    assert rows[0] == ["transcript_id", "start_time", "length", "speaker_tag", "team", "pod", "text", "move", "tone"]
+    assert rows[1][7:] == ["proposes", "playful"] and rows[2][7:] == ["builds", ""]
+    # a stored row carries its codes as JSON; the Viking columns stay empty
+    from tables.negotiation_code import NegotiationCode
+    row = env.db.session.query(NegotiationCode).filter(NegotiationCode.run_id == run_id).first()
+    assert row.values() == {"move": "proposes", "tone": ["playful"]} and row.emotion is None
+
+    # Library routes: list (built-in first), get by ref or id, update, delete; others' schemes are invisible
+    listing = _call(env, sr.list_coding_schemes, "GET", user=user).get_json()
+    assert listing[0]["ref"] == "builtin:negotiation" and listing[0]["builtin"] is True
+    assert [x["name"] for x in listing[1:]] == ["Discussion liveliness"] and listing[1]["owned"] is True
+    assert _call(env, sr.get_coding_scheme, "GET", user=user, ref=stored["ref"]).get_json()["dimension_count"] == 2
+    assert _call(env, sr.get_coding_scheme, "GET", user=user, ref=str(stored["id"])).status_code == 200
+    builtin = _call(env, sr.get_coding_scheme, "GET", user=user, ref="builtin:negotiation").get_json()
+    assert [dim["key"] for dim in builtin["dimensions"]] == ["emotion", "rip", "frame", "listening"]
+    assert _call(env, sr.get_coding_scheme, "GET", user=user, ref="builtin:nope").status_code == 404
+    stranger = {"id": session.owner_id + 1000, "role": "user"}
+    assert _call(env, sr.get_coding_scheme, "GET", user=stranger, ref=stored["ref"]).status_code == 404
+    assert _call(env, sr.update_coding_scheme, "PUT", dict(LIVELINESS, name="Renamed"), user=stranger, scheme_id=stored["id"]).status_code == 404
+    admin = {"id": 1, "role": "admin"}
+    assert _call(env, sr.update_coding_scheme, "PUT", dict(LIVELINESS, name="Renamed"), user=admin, scheme_id=stored["id"]).get_json()["name"] == "Renamed"
+    assert _call(env, sr.update_coding_scheme, "PUT", {"name": ""}, user=user, scheme_id=stored["id"]).status_code == 400
+    assert _call(env, sr.validate_coding_scheme, "POST", {"name": "x", "dimensions": []}, user=user).get_json() == \
+        {"ok": False, "message": "A scheme needs at least one dimension."}
+    assert _call(env, sr.delete_coding_scheme, "DELETE", user=stranger, scheme_id=stored["id"]).status_code == 404
+    assert _call(env, sr.delete_coding_scheme, "DELETE", user=user, scheme_id=stored["id"]).status_code == 200
+    # the session's coded results survive; a new run would use the built-in scheme
+    assert len(_call(env, r.get_negotiation_coding, "GET", **ids).get_json()["codes"]) == 14
+    assert env.engine.codebook_for_device(pod.id)["ref"] == "builtin:negotiation"
+
+
+def test_create_session_route_takes_live_video_analyses():
+    create = _func_source(_read("src", "server", "routes", "session.py"), "create_session")
+    assert "live_video_analyses = request.json.get('liveVideoAnalyses')" in create
+    assert "live_video_analytics = len(live_video_analyses) > 0" in create
+    assert "live_video_analyses=live_video_analyses" in create
+    handler = _func_source(_read(*HANDLER), "create_session")
+    assert "session.live_video_analyses = ','.join(live_video_analyses)" in handler
+    assert "'live_video_analyses': list(live_video_analyses)" in handler
+    table = _read("src", "server", "tables", "session.py")
+    assert "LIVE_VIDEO_ANALYSES = ('attention', 'emotion')" in table
+    assert "live_video_analyses=self.live_video_analyses_list()" in table
+
+
+def test_session_live_video_analyses_json(env):
+    session = _session(env)
+    assert session.json()["live_video_analyses"] == ["attention", "emotion"]   # NULL = both
+    session.live_video_analyses = "emotion"
+    assert session.json()["live_video_analyses"] == ["emotion"]
+    session.live_video_analyses = ""
+    assert session.json()["live_video_analyses"] == []
+    session.live_video_analyses = None
+    session.live_video_analytics = False
+    assert session.json()["live_video_analyses"] == []
+
+
+def test_create_session_route_takes_a_scheme_ref():
+    create = _func_source(_read("src", "server", "routes", "session.py"), "create_session")
+    assert "coding_scheme = request.json.get('codingScheme') or None" in create
+    assert "coding_scheme_lib.resolve(coding_scheme, database.get_coding_scheme_dict) is None" in create
+    assert "negotiation_coding = True" in create and "coding_scheme=coding_scheme" in create
+    assert "coding_scheme_lib.BUILTIN_PREFIX + coding_scheme_lib.BUILTIN_NEGOTIATION" in create
+    handler = _func_source(_read(*HANDLER), "create_session")
+    assert "session.coding_scheme = coding_scheme" in handler and "negotiation_coding_enabled = True" in handler
+    dc = _read("src", "server", "discussion_capture.py")
+    assert "app.register_blueprint(coding_scheme_api)" in dc

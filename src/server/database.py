@@ -38,6 +38,7 @@ from tables.rating import Rating
 from tables.survey_response import SurveyResponse
 from tables.negotiation_coding_run import NegotiationCodingRun
 from tables.negotiation_code import NegotiationCode
+from tables.coding_scheme import CodingScheme
 
 # Saves changes made to database (models)
 def save_changes():
@@ -2073,14 +2074,57 @@ def update_negotiation_run(run_id, **fields):
     db.session.commit()
     return run
 
-def add_negotiation_codes(run_id, codes):
+def add_negotiation_codes(run_id, codes, dimensions=None):
     """The run's codes, wholesale: rows from an interrupted earlier attempt
-    (coordinator restart re-queues the job) are replaced, not doubled."""
+    (coordinator restart re-queues the job) are replaced, not doubled.
+    ``dimensions`` names the keys to store (the scheme's); absent, every
+    key of the coded utterance that is not transcript metadata."""
+    meta = {'index', 'transcript_id', 'start_time', 'length', 'speaker_tag', 'text',
+            'session_device_id', 'team', 'confidence'}
     db.session.query(NegotiationCode).filter(NegotiationCode.run_id == run_id).delete()
-    db.session.add_all([NegotiationCode(run_id, c['transcript_id'], c['emotion'], c['rip'],
-                                        c['frame'], c.get('listening')) for c in codes])
+    rows = []
+    for c in codes:
+        keys = dimensions if dimensions else [k for k in c if k not in meta]
+        rows.append(NegotiationCode(run_id, c['transcript_id'], {k: c.get(k) for k in keys}))
+    db.session.add_all(rows)
     db.session.commit()
     return len(codes)
+
+
+# -------------------------
+# Coding schemes (coding_schemes.py)
+# -------------------------
+
+def get_coding_schemes(id=None, owner_id=None):
+    query = db.session.query(CodingScheme)
+    if id is not None:
+        return query.filter(CodingScheme.id == id).first()
+    if owner_id is not None:
+        query = query.filter(CodingScheme.owner_id == owner_id)
+    return query.order_by(CodingScheme.name.asc()).all()
+
+def get_coding_scheme_dict(scheme_id):
+    stored = get_coding_schemes(id=scheme_id)
+    return stored.scheme_dict() if stored is not None else None
+
+def create_coding_scheme(owner_id, scheme):
+    stored = CodingScheme(owner_id, scheme)
+    db.session.add(stored)
+    db.session.commit()
+    return stored
+
+def update_coding_scheme(scheme_id, scheme):
+    stored = get_coding_schemes(id=scheme_id)
+    if stored is None:
+        return None
+    stored.set_scheme(scheme)
+    db.session.commit()
+    return stored
+
+def delete_coding_scheme(scheme_id):
+    db.session.query(CodingScheme).filter(CodingScheme.id == scheme_id).delete(synchronize_session='fetch')
+    db.session.commit()
+    return True
 
 def get_negotiation_codes(run_id):
     """(code, transcript) pairs of a run in transcript order."""

@@ -867,6 +867,12 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                     self.live_analytics = False
                     logging.info('Session %s records video without live analytics; pod %s is record-only (post-hoc video queued at session end)',
                                  self.config.sessionId, self.config.auth_key)
+                else:
+                    # Which analyses this pod's frames get (session choice).
+                    chosen = getattr(self.config, 'live_video_analyses', None)
+                    video_metric_analytics.set_analyses(self.config.auth_key, chosen)
+                    logging.info('Session %s pod %s live video analyses: %s', self.config.sessionId,
+                                 self.config.auth_key, sorted(chosen) if chosen else 'all')
 
                 if(data['numSpeakers'] != 0):
                     self.facial_embeddings = dict()
@@ -1071,6 +1077,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
 
             def _evict(_result=None):
                 gone = image_object_detection.frame_queue_manager.pop(key, None)
+                video_metric_analytics.clear_analyses(key)
                 if gone is not None:
                     _dropped_retired['batches'] += int(getattr(gone, 'dropped', 0) or 0)
                 image_object_detection.accumulator_queue_manager.pop(key, None)

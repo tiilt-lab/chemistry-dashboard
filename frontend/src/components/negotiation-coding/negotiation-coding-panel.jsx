@@ -6,8 +6,9 @@ import { btnPrimarySm, btnSecondarySm, dlgError } from "../dialog-styles"
 import { NegotiationCodingService } from "../../services/negotiation-coding-service"
 import {
     UNASSIGNED,
-    DIMENSIONS,
     TIMELINE_FIELDS,
+    dimensionsOf,
+    dimensionLabel,
     fmtClock,
     describeRun,
     isActiveStatus,
@@ -39,7 +40,8 @@ import {
 
 const POLL_MS = 5000
 
-// Pill tone per code (listening moves stay neutral).
+// Pill tone per code: the negotiation scheme's codes keep their meaning
+// colours; any other scheme colours by dimension (one tone per dimension).
 const BADGE_TONE = {
     "emotion:escalating": "danger",
     "emotion:defusing": "teal",
@@ -48,6 +50,13 @@ const BADGE_TONE = {
     "rip:interest": "teal",
     "frame:past_blame": "orange",
     "frame:future_problem_solving": "teal",
+}
+const DIM_TONES = ["brand", "teal", "orange", "danger", "neutral"]
+const badgeTone = (c, dims) => {
+    const known = BADGE_TONE[`${c.dim}:${c.code}`]
+    if (known) return known
+    const i = dims.findIndex((d) => d.key === c.dim)
+    return i >= 0 ? DIM_TONES[i % DIM_TONES.length] : "neutral"
 }
 // Pill tone per team: by position in the session's team list.
 const TEAM_TONES = ["brand", "teal", "orange", "danger"]
@@ -249,9 +258,12 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
             return next
         })
 
-    const table = rollupTable(data && data.summary, names)
-    const timeline = (data && data.summary && data.summary.timeline) || {}
-    const shown = filterCodes(codes, filters)
+    // The run's own dimensions (its scheme), else the built-in negotiation ones.
+    const dims = dimensionsOf(data)
+    const schemeName = data && data.codebook && data.codebook.name
+    const table = rollupTable(data && data.summary, names, dims)
+    const timeline = (data && data.summary && data.summary.timeline) || null
+    const shown = filterCodes(codes, filters, dims)
     const hasResults = runStatus === "done" && codes.length > 0
     // "paired": teams by device (this run, or the session's setup before any run).
     const mode = data && data.mode ? data.mode : paired ? "paired" : "single"
@@ -266,8 +278,8 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
     return (
         <AppSectionBoxComponent
             type={"w-full"}
-            heading={"Negotiation coding"}
-            badge={"Viking case · LLM-coded"}
+            heading={"Coding"}
+            badge={schemeName ? `${schemeName} · LLM-coded` : "LLM-coded"}
             badgeTone={"amber"}
         >
             <div className="flex w-full flex-col gap-4 text-sm">
@@ -325,8 +337,8 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
                 {exists === false ? (
                     <div className="rounded-lg bg-tiilt-ground/50 px-3 py-2 text-xs text-tiilt-muted">
                         {mode === "paired"
-                            ? "No coding yet. Check the table and side below, then run coding: both laptops' transcripts are merged into one conversation and every utterance is coded for emotion, interests/rights/power, frame and listening moves."
-                            : "No coding yet. Assign the speakers to their teams below, then run coding to have every utterance coded for emotion, interests/rights/power, frame and listening moves."}
+                            ? "No coding yet. Check the group and team below, then run coding: both devices' transcripts are merged into one conversation and every utterance is coded with the session's scheme."
+                            : "No coding yet. Assign the speakers to their teams below, then run coding to have every utterance coded with the session's scheme."}
                     </div>
                 ) : null}
                 {active ? (
@@ -540,12 +552,13 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
                                 </table>
                             </div>
                             <div className="text-xs text-tiilt-muted">
-                                Percentages are of each team&apos;s own utterances; listening moves can
-                                stack on one utterance.
+                                Percentages are of each team&apos;s own utterances; a dimension that
+                                allows several codes can stack on one utterance.
                             </div>
                         </div>
 
-                        {/* Timeline */}
+                        {/* Timeline (negotiation schemes only) */}
+                        {timeline ? (
                         <div className="flex flex-col gap-2">
                             <div className={sectionTitle}>De-escalation timeline</div>
                             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -563,6 +576,7 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
                                 ))}
                             </div>
                         </div>
+                        ) : null}
 
                         {/* Utterances */}
                         <div className="flex flex-col gap-2">
@@ -582,9 +596,9 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
                                 ) : null}
                             </div>
                             <div className="flex flex-col gap-1.5">
-                                {DIMENSIONS.map((d) => (
+                                {dims.map((d) => (
                                     <div key={d.key} className="flex flex-wrap items-center gap-1">
-                                        <span className="w-20 flex-none text-[11px] text-tiilt-muted">{d.label}</span>
+                                        <span className="w-24 flex-none truncate text-[11px] text-tiilt-muted" title={d.label}>{d.label}</span>
                                         {d.codes.map((c) => {
                                             const key = filterKey(d.key, c.code)
                                             const on = filters.has(key)
@@ -639,12 +653,12 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
                                                         {team === UNASSIGNED ? "Unassigned" : team}
                                                     </StatusPill>
                                                     <span className="flex flex-wrap gap-1">
-                                                        {badgeCodes(row).map((c) => (
+                                                        {badgeCodes(row, dims).map((c) => (
                                                             <StatusPill
                                                                 key={`${c.dim}:${c.code}`}
-                                                                tone={BADGE_TONE[`${c.dim}:${c.code}`] || "neutral"}
+                                                                tone={badgeTone(c, dims)}
                                                                 className="text-[10px]"
-                                                                title={d3Label(c.dim)}
+                                                                title={dimensionLabel(c.dim, dims)}
                                                             >
                                                                 {c.label}
                                                             </StatusPill>
@@ -663,12 +677,6 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
             </div>
         </AppSectionBoxComponent>
     )
-}
-
-// Tooltip on a code badge: which dimension it belongs to.
-function d3Label(dim) {
-    const d = DIMENSIONS.find((x) => x.key === dim)
-    return d ? d.label : dim
 }
 
 export { NegotiationCodingPanel }

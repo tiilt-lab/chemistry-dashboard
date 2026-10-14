@@ -6,7 +6,15 @@ import { FolderModel } from '../models/folder';
 import { useEffect, useState } from 'react';
 import {CreateSessionPage} from './html-pages'
 import { DEFAULT_POD_SETUP, setupTeams, podConfigFromSetup, podSetupProblem } from './pod-setup';
+import { CodingSchemeService } from '../services/coding-scheme-service';
+
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+
+// The live video analyses a session may run (server: Session.LIVE_VIDEO_ANALYSES).
+export const LIVE_VIDEO_ANALYSES = [
+  { key: "attention", label: "Attention and gaze", desc: "Where each person looks, their attention level and the object of focus." },
+  { key: "emotion", label: "Facial emotion", desc: "The expression read from each face." },
+];
 
 
 // Date-stamped default name, e.g. "Session Aug 7 14:05" (chars limited to
@@ -53,24 +61,29 @@ function CreateSessionComponent(props) {
   const features = true;
   // Live transcription engine, locked at creation (crisperwhisper = local GPU).
   // Legacy 'whisper' sessions fold into crisperwhisper (plain Whisper retired).
-  const [asr, setAsr] = useState(() => {
-    const prev = changedState ? prevState.asr : null;
-    // CrisperWhisper is the only engine; a remembered legacy choice
-    // (whisper, google-cloud-speech) from an older form state maps to it.
-    return prev === 'crisperwhisper' || !prev ? 'crisperwhisper' : 'crisperwhisper';
-  });
-  // Live video analytics (GPU + ~3 cores per pod during class). Off = every
-  // group is still recorded and the video analysis is queued automatically
-  // when the session ends. Default on: nothing changes for existing habits.
-  const [liveVideoAnalytics, setLiveVideoAnalytics] = useState(
-    changedState && prevState.liveVideoAnalytics != null ? prevState.liveVideoAnalytics !== false : true
+  // Utterance coding: the chosen scheme's ref, or "" for none. Choosing one
+  // is what turns coding on (the server's negotiation_coding flag follows).
+  const [codingScheme, setCodingScheme] = useState(
+    changedState && prevState.codingScheme ? prevState.codingScheme : ""
   );
-  // Negotiation coding (Kellogg Viking case): after each pod finishes, a local
-  // LLM codes every utterance per team. Off by default so other classes never
-  // see the panel.
-  const [negotiationCoding, setNegotiationCoding] = useState(
-    changedState && prevState.negotiationCoding != null ? prevState.negotiationCoding === true : false
+  const negotiationCoding = codingScheme !== "";
+  const [codingSchemes, setCodingSchemes] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    new CodingSchemeService().list().then(({ status, body }) => {
+      if (alive && status === 200 && Array.isArray(body)) setCodingSchemes(body);
+      else if (alive) setCodingSchemes([]);
+    });
+    return () => { alive = false; };
+  }, []);
+  // Which video analyses run during class; none = record now, analyse after.
+  const [liveVideoAnalyses, setLiveVideoAnalyses] = useState(
+    changedState && Array.isArray(prevState.liveVideoAnalyses)
+      ? prevState.liveVideoAnalyses
+      : LIVE_VIDEO_ANALYSES.map((a) => a.key)
   );
+  const toggleLiveVideoAnalysis = (key) =>
+    setLiveVideoAnalyses((list) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]));
   // Pod setup: how a breakout group is composed and which laptop records
   // what. Off = the free-form join (any group name, roster sized on the
   // speaker page). With two teams and one laptop per team the two pods of
@@ -192,7 +205,7 @@ function CreateSessionComponent(props) {
       const deviceIds = selectedDevices.map(d => d.id);
       const keywordListId = (selectedKeywordList) ? selectedKeywordList.id : null;
       const topicModelId = (selectedTopicModel) ? selectedTopicModel.id : null;
-      const fetchData = new SessionService().createNewSession(finalName, deviceIds, keywordListId, topicModelId, byod, features, doa, folder, asr, liveVideoAnalytics, negotiationCoding, negotiationCoding && negotiationPaired, podConfigFromSetup(podSetup))
+      const fetchData = new SessionService().createNewSession(finalName, deviceIds, keywordListId, topicModelId, byod, features, doa, folder, null, liveVideoAnalyses.length > 0, negotiationCoding, negotiationCoding && negotiationPaired, podConfigFromSetup(podSetup), codingScheme || null, liveVideoAnalyses)
       fetchData.then(
         response=>{
           if(response.status === 200){
@@ -319,12 +332,13 @@ function CreateSessionComponent(props) {
     sessionName = {sessionName}
     setSessionName = {setSessionName}
     folderPath = {folderPath}
-    asr = {asr}
-    setAsr = {setAsr}
-    liveVideoAnalytics = {liveVideoAnalytics}
-    setLiveVideoAnalytics = {setLiveVideoAnalytics}
     negotiationCoding = {negotiationCoding}
-    setNegotiationCoding = {setNegotiationCoding}
+    codingScheme = {codingScheme}
+    setCodingScheme = {setCodingScheme}
+    codingSchemes = {codingSchemes}
+    liveVideoAnalyses = {liveVideoAnalyses}
+    toggleLiveVideoAnalysis = {toggleLiveVideoAnalysis}
+    goToCodingSchemes = {() => navigate('/coding-schemes')}
     negotiationPaired = {negotiationPaired}
     podSetup = {podSetup}
     setPodSetup = {setPodSetup}

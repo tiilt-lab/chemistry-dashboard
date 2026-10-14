@@ -125,6 +125,23 @@ class VideoMetricAnalytics:
             # worker_thread.start()      
             self.worker(payload)
 
+    # Per-pod choice of live analyses (session.live_video_analyses): the
+    # connection registers its set at start and drops it on disconnect; a pod
+    # with no entry (post-hoc runs, older sessions) gets both.
+    ALL_ANALYSES = frozenset(('attention', 'emotion'))
+
+    def set_analyses(self, auth_key, analyses):
+        if not hasattr(self, '_analyses_by_key'):
+            self._analyses_by_key = {}
+        self._analyses_by_key[auth_key] = frozenset(analyses) if analyses is not None else self.ALL_ANALYSES
+
+    def clear_analyses(self, auth_key):
+        if hasattr(self, '_analyses_by_key'):
+            self._analyses_by_key.pop(auth_key, None)
+
+    def analyses_for(self, auth_key):
+        return getattr(self, '_analyses_by_key', {}).get(auth_key, self.ALL_ANALYSES)
+
     def worker(self, payload, post_always=False):
         # post_always replaces the old worker_posthoc fork: that method was a
         # near-verbatim copy whose only difference was forcing can_post=True.
@@ -132,7 +149,8 @@ class VideoMetricAnalytics:
         processing_timer = time.monotonic()
         torch.cuda.synchronize()
         t1 = time.time()
-        video_metrics, overlay_records = self.compute_videoMetrics(all_frames,accumulator,batch_track)
+        video_metrics, overlay_records = self.compute_videoMetrics(all_frames,accumulator,batch_track,
+                                                                   analyses=self.analyses_for(auth_key))
         torch.cuda.synchronize()
         t2 = time.time()
         logging.info(f"Inside VideoMetricProcessor: procesing attention and emotion dectection took {t2 - t1:.6f}s for {auth_key}")
@@ -156,7 +174,13 @@ class VideoMetricAnalytics:
                                          reset=not self._overlays_posted)
             self._overlays_posted = True
 
-    def compute_videoMetrics(self,frames,face_object_detected,batch_track=None):
+    def compute_videoMetrics(self,frames,face_object_detected,batch_track=None,analyses=None):
+        # analyses: which of 'attention' (gaze, attention level, object of
+        # focus) and 'emotion' (facial emotion) to compute; None = both. A
+        # switched-off analysis records 'off' / 0 / "Nothing" for the frame.
+        analyses = self.ALL_ANALYSES if analyses is None else frozenset(analyses)
+        do_gaze = 'attention' in analyses
+        do_emotion = 'emotion' in analyses
         video_metrics = {}
         # Overlay geometry (head boxes, gaze points, focused-object boxes) so
         # the dashboard can draw the gaze model's output on top of the video.
@@ -167,12 +191,19 @@ class VideoMetricAnalytics:
             for person_id, persons_detail in face_object_detected['head'].items():
                 # with attention_emotion_det_lock:
                 torch.cuda.synchronize()
-                val_imgs, val_faces, val_head_channels, headboxes, imsizes, frame_ids, _ = self.AttentionTracking.get_batched_facial_data(persons_detail,frames)
-                val_gaze_heatmap_preds, val_attmaps, val_inout_preds = self.AttentionTracking.compute_gaze_direction(val_imgs, val_faces, val_head_channels)
+                if do_gaze:
+                    val_imgs, val_faces, val_head_channels, headboxes, imsizes, frame_ids, _ = self.AttentionTracking.get_batched_facial_data(persons_detail,frames)
+                    val_gaze_heatmap_preds, val_attmaps, val_inout_preds = self.AttentionTracking.compute_gaze_direction(val_imgs, val_faces, val_head_channels)
+                    n_heads = len(val_gaze_heatmap_preds)
+                else:
+                    # Attention off: no gaze model; one pass per detected head
+                    # for the emotion only.
+                    val_gaze_heatmap_preds = val_inout_preds = imsizes = frame_ids = None
+                    n_heads = len(persons_detail)
                 # torch.cuda.synchronize()
                 # t2 = time.time()
                 # logging.info(f"Inside VideoMetricProcessor: batching and gaze detection took {t2 - t1:.6f}s for {len(val_gaze_heatmap_preds)} heads")
-                for index in range(len(val_gaze_heatmap_preds)): 
+                for index in range(n_heads): 
                     pred_attention_level = 0
                     pred_object_focused_on = "Nothing"
                     closest_object_index = None
@@ -180,14 +211,20 @@ class VideoMetricAnalytics:
                     frame_index,person_alias,h_bbox,time_stamp = persons_detail[index]
                     
                     #guarding code
-                    if frame_index != int(frame_ids[index]):
-                        logging.Info("in File VideoMetricAnalytics: Persons data from face detection and gaze detections messed up, please review...")
+                    if do_gaze and frame_index != int(frame_ids[index]):
+                        logging.info("in File VideoMetricAnalytics: Persons data from face detection and gaze detections messed up, please review...")
                         return None
 
                     # with attention_emotion_det_lock:
                     torch.cuda.synchronize()
-                    pred_emotion = self.EmotionDetection.predict_facial_emotion_for_single_participant(frames[frame_index], h_bbox,person_alias,frame_index,self.Imagedetection.crop_face_from_frame_with_bbox)
-                    gaze_x, gaze_y = self.AttentionTracking.get_gaze_direction_point(val_gaze_heatmap_preds[index], val_inout_preds[index], imsizes[index])
+                    if do_emotion:
+                        pred_emotion = self.EmotionDetection.predict_facial_emotion_for_single_participant(frames[frame_index], h_bbox,person_alias,frame_index,self.Imagedetection.crop_face_from_frame_with_bbox)
+                    else:
+                        pred_emotion = 'off'
+                    if do_gaze:
+                        gaze_x, gaze_y = self.AttentionTracking.get_gaze_direction_point(val_gaze_heatmap_preds[index], val_inout_preds[index], imsizes[index])
+                    else:
+                        gaze_x = gaze_y = None
                     # torch.cuda.synchronize()
                     # t2 = time.time()
                     # logging.info(f"Inside VideoMetricProcessor: emotion and gaze point estimation  took {t2 - t1:.6f}s")

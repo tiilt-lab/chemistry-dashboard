@@ -16,9 +16,13 @@ export class SessionModel {
   // false = "record now, analyse later": video is recorded during class but
   // not analysed live; the post-hoc video run is queued at session end.
   live_video_analytics;
-  // true = Kellogg negotiation class (Viking case): each pod's transcript is
-  // coded per utterance after it finishes and the coding panel is shown.
+  // Which analyses run on the video during class: "attention" and/or "emotion".
+  live_video_analyses;
+  // true = utterance coding is on: each pod's transcript is coded with the
+  // session's coding scheme after it finishes and the coding panel is shown.
   negotiation_coding;
+  // The coding scheme's ref ("builtin:negotiation" | "scheme:<id>") or null.
+  coding_scheme;
   // true = two devices per breakout group, one per side of the table, so
   // teams are fixed by device; false = one device per group, speakers are
   // assigned to teams by name afterwards.
@@ -85,7 +89,9 @@ export class SessionModel {
     model.participant_count = json['participant_count'] != null ? json['participant_count'] : null
     model.analysis_running = json['analysis_running'] === true
     model.live_video_analytics = json['live_video_analytics'] !== false
+    model.live_video_analyses = Array.isArray(json['live_video_analyses']) ? json['live_video_analyses'] : null
     model.negotiation_coding = json['negotiation_coding'] === true
+    model.coding_scheme = json['coding_scheme'] || null
     model.negotiation_paired = json['negotiation_paired'] === true
     model.pod_config = json['pod_config'] && typeof json['pod_config'] === 'object' ? json['pod_config'] : null
     model.owner = json['owner'] != null ? json['owner'] : null

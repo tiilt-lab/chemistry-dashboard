@@ -22,6 +22,8 @@ LIVE_VIDEO = "3b4c5d6e7f80"  # session.live_video_analytics (record now, analyse
 NEGOTIATION = "4c5d6e7f8091"  # session.negotiation_coding + negotiation_coding_run/negotiation_code
 PAIRS = "5d6e7f809102"  # one device per team: session.negotiation_paired, pod group/side, run partner
 POD_CONFIG = "6e7f80910213"  # session.pod_config: the session starter's pod setup
+SCHEMES = "7f8091021324"  # coding_scheme table, session.coding_scheme, negotiation_code.codes
+LIVE_ANALYSES = "809102132435"  # session.live_video_analyses
 
 
 def _read(*parts):
@@ -72,7 +74,7 @@ def test_single_root_and_single_head():
     assert roots == ["d7cd8fa96963"], "expected one root, got %s" % roots
     referenced = {d for downs, _ in revs.values() for d in downs}
     heads = sorted(set(revs) - referenced)
-    assert heads == [POD_CONFIG], "chain must have exactly one head: %s" % heads
+    assert heads == [LIVE_ANALYSES], "chain must have exactly one head: %s" % heads
 
 
 def test_phase2_migrations_are_chained_after_phase1():
@@ -83,6 +85,8 @@ def test_phase2_migrations_are_chained_after_phase1():
     assert revs[NEGOTIATION][0] == (LIVE_VIDEO,)
     assert revs[PAIRS][0] == (NEGOTIATION,)
     assert revs[POD_CONFIG][0] == (PAIRS,)
+    assert revs[SCHEMES][0] == (POD_CONFIG,)
+    assert revs[LIVE_ANALYSES][0] == (SCHEMES,)
     assert revs[NEGOTIATION][0] == (LIVE_VIDEO,)
 
 

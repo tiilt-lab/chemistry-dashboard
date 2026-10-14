@@ -22,6 +22,10 @@ class Session(db.Model):
     # Mapped column: migration 3b4c5d6e7f80 must be applied before this code
     # is deployed (a missing column raises on every Session query).
     live_video_analytics = db.Column(db.Boolean, nullable=True)
+    # Which video analyses run during class: "attention" (gaze, attention
+    # level, object of focus) and/or "emotion" (facial emotion), comma-
+    # separated; NULL = both. Mapped column: migration 809102132435 first.
+    live_video_analyses = db.Column(db.String(32), nullable=True)
     # Negotiation coding (Kellogg negotiation class): TRUE = end_session queues
     # an LLM coding run per pod (negotiation_coding.py). NULL/FALSE = off, the
     # historic behaviour. Mapped column: migration 4c5d6e7f8091 first.
@@ -36,6 +40,11 @@ class Session(db.Model):
     # JSON text; NULL = no setup, the free-form join. Mapped column:
     # migration 6e7f80910213 first.
     pod_config = db.Column(db.Text, nullable=True)
+    # Which coding scheme codes this session's utterances (coding_schemes.py):
+    # "builtin:<key>" or "scheme:<id>"; NULL with negotiation_coding on means
+    # the built-in negotiation scheme (sessions from before the column).
+    # Mapped column: migration 7f8091021324 first.
+    coding_scheme = db.Column(db.String(64), nullable=True)
 
     keywords = db.relationship("Keyword", lazy='joined', uselist=True, cascade="all, delete", passive_deletes=True)
 
@@ -61,6 +70,18 @@ class Session(db.Model):
         self.negotiation_coding = bool(negotiation_coding)
         self.negotiation_paired = bool(negotiation_paired)
         self.pod_config = None
+        self.coding_scheme = None
+        self.live_video_analyses = None
+
+    LIVE_VIDEO_ANALYSES = ('attention', 'emotion')
+
+    def live_video_analyses_list(self):
+        # NULL (rows from before the column) = both; "" = none.
+        if self.live_video_analytics is False:
+            return []
+        if self.live_video_analyses is None:
+            return list(self.LIVE_VIDEO_ANALYSES)
+        return [a for a in self.live_video_analyses.split(',') if a in self.LIVE_VIDEO_ANALYSES]
 
     def pod_config_dict(self):
         return _pod_config.loads(self.pod_config)
@@ -85,10 +106,12 @@ class Session(db.Model):
             topic_model_id=self.topic_model_id,
             # NULL (rows from before the column) reads as the historic "live".
             live_video_analytics=self.live_video_analytics is not False,
+            live_video_analyses=self.live_video_analyses_list(),
             # NULL (rows from before the column) reads as off.
             negotiation_coding=bool(self.negotiation_coding),
             negotiation_paired=bool(self.negotiation_paired),
-            pod_config=self.pod_config_dict()
+            pod_config=self.pod_config_dict(),
+            coding_scheme=self.coding_scheme
         )
 
     @staticmethod

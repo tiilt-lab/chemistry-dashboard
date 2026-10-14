@@ -31,8 +31,7 @@ negotiation_coding = importlib.import_module('negotiation_coding')
 api_routes = Blueprint('negotiation_coding', __name__)
 
 POD = '/api/v1/sessions/<int:session_id>/devices/<int:session_device_id>/negotiation_coding'
-CSV_COLUMNS = ('transcript_id', 'start_time', 'length', 'speaker_tag', 'team', 'pod', 'text',
-               'emotion', 'rip', 'frame', 'listening')
+CSV_BASE = ('transcript_id', 'start_time', 'length', 'speaker_tag', 'team', 'pod', 'text')
 
 
 def _caller_key():
@@ -118,13 +117,14 @@ def export_negotiation_coding(session_id, session_device_id, **kwargs):
         return json_response({'message': 'No negotiation coding run for this pod.'}, 404)
     payload = negotiation_coding.run_payload(run)
     pod_names = {p['id']: p['name'] or 'Pod %s' % p['id'] for p in payload['pods']}
+    dims = [d['key'] for d in payload['codebook']['dimensions']]
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(CSV_COLUMNS)
+    writer.writerow(CSV_BASE + tuple(dims))
     for c in payload['codes']:
+        values = [';'.join(c[d]) if isinstance(c.get(d), list) else (c.get(d) or '') for d in dims]
         writer.writerow([c['transcript_id'], c['start_time'], c['length'], c['speaker_tag'],
-                         c['team'], pod_names.get(c['session_device_id'], ''), c['text'],
-                         c['emotion'], c['rip'], c['frame'], ';'.join(c['listening'])])
+                         c['team'], pod_names.get(c['session_device_id'], ''), c['text']] + values)
     output = make_response(buf.getvalue().encode('utf-8'))
     output.headers['Content-Type'] = 'text/csv; charset=utf-8'
     output.headers['Content-Disposition'] = 'attachment; filename=negotiation_coding_session%d_pod%d.csv' % (

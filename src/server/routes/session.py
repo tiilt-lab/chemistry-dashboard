@@ -14,6 +14,7 @@ import database
 import utility
 import json
 import pod_config as pod_setup
+import coding_schemes as coding_scheme_lib
 import watchers
 from datetime import datetime, timezone
 from handlers import session_handler
@@ -240,6 +241,15 @@ def create_session(user, **kwargs):
         live_video_analytics = True
     if not isinstance(live_video_analytics, bool):
         return json_response({'message': 'liveVideoAnalytics must be true or false.'}, 400)
+    # Which analyses run on the video during class: a subset of
+    # Session.LIVE_VIDEO_ANALYSES ("attention", "emotion"). Absent = both
+    # (when live analytics is on); an empty list = record only.
+    live_video_analyses = request.json.get('liveVideoAnalyses')
+    if live_video_analyses is not None:
+        if not isinstance(live_video_analyses, list) or any(a not in Session.LIVE_VIDEO_ANALYSES for a in live_video_analyses):
+            return json_response({'message': 'liveVideoAnalyses must list only: %s.' % ', '.join(Session.LIVE_VIDEO_ANALYSES)}, 400)
+        live_video_analyses = [a for a in Session.LIVE_VIDEO_ANALYSES if a in live_video_analyses]
+        live_video_analytics = len(live_video_analyses) > 0
     # Negotiation coding (Kellogg): every pod's transcript is LLM-coded when
     # the session ends (routes/negotiation_coding.py). Absent/null = off.
     negotiation_coding = request.json.get('negotiationCoding', False)
@@ -247,6 +257,16 @@ def create_session(user, **kwargs):
         negotiation_coding = False
     if not isinstance(negotiation_coding, bool):
         return json_response({'message': 'negotiationCoding must be true or false.'}, 400)
+    # Utterance coding: which scheme (coding_schemes.py). A ref turns coding
+    # on; the bare flag (older clients) means the built-in negotiation scheme.
+    coding_scheme = request.json.get('codingScheme') or None
+    if coding_scheme is not None:
+        if not isinstance(coding_scheme, str) or len(coding_scheme) > 64 \
+                or coding_scheme_lib.resolve(coding_scheme, database.get_coding_scheme_dict) is None:
+            return json_response({'message': 'codingScheme must name a built-in scheme or one of yours.'}, 400)
+        negotiation_coding = True
+    elif negotiation_coding:
+        coding_scheme = coding_scheme_lib.BUILTIN_PREFIX + coding_scheme_lib.BUILTIN_NEGOTIATION
     # The pod setup (pod_config.py): people and teams per group, device per
     # team or per group, preset group labels. Absent/null = free-form join.
     # Two devices per group, one per team, is what makes a session "paired"
@@ -266,7 +286,8 @@ def create_session(user, **kwargs):
                                                  live_video_analytics=live_video_analytics,
                                                  negotiation_coding_enabled=negotiation_coding,
                                                  negotiation_paired=negotiation_paired and negotiation_coding,
-                                                 pod_config=pod_config)
+                                                 pod_config=pod_config, coding_scheme=coding_scheme,
+                                                 live_video_analyses=live_video_analyses)
     return json_response(new_session.json())
 
 @api_routes.route('/api/v1/sessions/byod', methods=['POST'])

@@ -313,7 +313,9 @@ class SessionService {
     liveVideoAnalytics,
     negotiationCoding,
     negotiationPaired,
-    podConfig
+    podConfig,
+    codingScheme,
+    liveVideoAnalyses
   ) {
     const body = {
       name: name,
@@ -335,7 +337,12 @@ class SessionService {
       // The pod setup ({teams, group_size, devices_per_group, group_count,
       // group_prefix}) or null for the free-form join.
       podConfig: podConfig || null,
+      // the coding scheme's ref ("builtin:negotiation" | "scheme:<id>"); null = no coding
+      codingScheme: codingScheme || null,
     };
+    // Which video analyses run during class ("attention", "emotion"); an
+    // empty list records only. Omitted = both when liveVideoAnalytics is true.
+    if (Array.isArray(liveVideoAnalyses)) body.liveVideoAnalyses = liveVideoAnalyses;
 
     return this.api.httpRequestCall("api/v1/sessions", "POST", body);
   }

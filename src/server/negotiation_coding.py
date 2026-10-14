@@ -1,9 +1,11 @@
-"""Negotiation coding: every utterance of a pod's transcript coded on four
-dimensions (emotion, rights/interests/power, frame, listening moves) by the
-local llama-server, rolled up per team and per speaker, plus a de-escalation
-timeline. Built for the Kellogg "Viking" case; the codebook is
-src/server/negotiation_codebook.json. Team names come from the session's pod
-setup (pod_config.py); nothing here knows a case's sides by name.
+"""Utterance coding: every utterance of a pod's transcript coded on the
+dimensions of the session's coding scheme (coding_schemes.py: the built-in
+negotiation scheme, or one an instructor made) by the local llama-server,
+rolled up per team and per speaker. Schemes with the negotiation
+dimensions also get the de-escalation timeline and per-team opening moves.
+Built for the Kellogg "Viking" case; src/server/negotiation_codebook.json
+is that scheme. Team names come from the session's pod setup
+(pod_config.py); nothing here knows a case's sides by name.
 
 Import-light on purpose: everything above ``run_coding`` is pure (prompt,
 chunking, parsing/repair, pair merging, rollup, timeline) and runs with a fake
@@ -55,7 +57,7 @@ PAIR_TEXT_SIMILARITY = 0.5   # token ratio from which two copies are one utteran
 DEFAULT_TEAMS = ("Team A", "Team B")
 TEAMS = DEFAULT_TEAMS
 UNASSIGNED = "unassigned"
-DIMENSIONS = ("emotion", "rip", "frame", "listening")
+DIMENSIONS = ("emotion", "rip", "frame", "listening")   # the built-in negotiation scheme's
 CODEBOOK_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "negotiation_codebook.json")
 
 
@@ -68,8 +70,33 @@ def llm_model():
 
 
 def load_codebook(path=CODEBOOK_PATH):
+    """The built-in negotiation codebook, in the engine shape (with labels)."""
+    import coding_schemes as coding_scheme
+    if path == CODEBOOK_PATH:
+        scheme = coding_scheme.builtin_scheme(coding_scheme.BUILTIN_NEGOTIATION)
+        return coding_scheme.to_codebook(scheme, scheme["ref"])
     with open(path, encoding="utf-8") as f:
         return json.load(f)
+
+
+def codebook_for_session(session):
+    """The session's scheme as a codebook: its ref resolved (built-in or the
+    instructor's stored scheme), the built-in negotiation scheme when the
+    session has none or it was deleted."""
+    import coding_schemes as coding_scheme
+    import database
+    ref = getattr(session, "coding_scheme", None)
+    scheme = coding_scheme.resolve(ref, database.get_coding_scheme_dict)
+    if scheme is None:
+        return load_codebook()
+    return coding_scheme.to_codebook(scheme, ref)
+
+
+def codebook_for_device(session_device_id):
+    import database
+    device = database.get_session_devices(id=session_device_id)
+    session = database.get_sessions(id=device.session_id) if device is not None else None
+    return codebook_for_session(session)
 
 
 def _now():
@@ -113,16 +140,20 @@ def build_prompt(codebook, utterances, context, names=DEFAULT_TEAMS):
     as the session calls them."""
     facts = "".join("- %s\n" % f for f in codebook.get("case_facts") or [])
     sides = " versus ".join("%s's team" % n for n in names)
+    dims = list(codebook["dimensions"].items())
+    shape = ", ".join('"%s": %s' % (k, '["<code>", ...]' if spec.get("multi") else '"<code>"') for k, spec in dims)
+    about = codebook.get("description") or ""
     system = (
-        "You code utterances from a recorded classroom negotiation exercise (%s). "
-        "For EVERY utterance in the CODE section give codes on " % sides +
-        "four dimensions, using ONLY the codes defined here. Judge each utterance by its own "
-        "words in the light of what came before; apply the decision rules literally.\n\n"
-        + ("CASE FACTS (so references in the transcript resolve):\n" + facts + "\n" if facts else "")
+        "You code utterances from a recorded classroom discussion (%s)%s. "
+        "For EVERY utterance in the CODE section give codes on %d dimension%s, using ONLY the codes "
+        "defined here. Judge each utterance by its own words in the light of what came before; apply "
+        "the decision rules literally.\n\n"
+        % (sides, " — " + about if about else "", len(dims), "" if len(dims) == 1 else "s")
+        + ("CONTEXT FACTS (so references in the transcript resolve):\n" + facts + "\n" if facts else "")
         + _codebook_text(codebook) + "\n\n"
         "Output a JSON array only: no prose, no markdown fence, no thinking. One object per "
         "utterance of the CODE section, in order, shaped "
-        '{"i": <index>, "emotion": "<code>", "rip": "<code>", "frame": "<code>", "listening": ["<code>", ...]}. '
+        '{"i": <index>, ' + shape + "}. "
         "Never output objects for the CONTEXT section.")
     lines = []
     if context:
@@ -460,11 +491,13 @@ def _bucket(codebook):
 
 def _tally(bucket, code):
     bucket["utterances"] += 1
-    for dim in DIMENSIONS:
+    for dim, counts in bucket.items():
+        if not isinstance(counts, dict):   # "utterances", a speaker bucket's "team"
+            continue
         value = code.get(dim)
         for c in (value if isinstance(value, list) else [value]):
-            if c in bucket[dim]:
-                bucket[dim][c] += 1
+            if c in counts:
+                counts[c] += 1
 
 
 def rollup(codes, teams, codebook=None, names=TEAMS):
@@ -486,13 +519,18 @@ def rollup(codes, teams, codebook=None, names=TEAMS):
     return {"by_team": by_team, "by_speaker": by_speaker}
 
 
-def timeline(codes):
-    """Landmarks in transcript seconds (None when the code never occurs):
+def timeline(codes, codebook=None):
+    """Landmarks in transcript seconds (None when the code never occurs;
+    None altogether for a scheme without an escalating emotion code):
     the first escalating utterance; the start of the PEAK_WINDOW with most
     escalating utterances; the first utterance after the first escalation
     that opens a CALM_WINDOW with no escalation (a window the transcript
     ends inside counts: the group stayed calm to the end); the first
     future_problem_solving move."""
+    if codebook is not None:
+        import coding_schemes as coding_scheme
+        if not coding_scheme.analytics(codebook)["timeline"]:
+            return None
     esc = sorted(c["start_time"] for c in codes if c.get("emotion") == "escalating")
     first = esc[0] if esc else None
     peak, peak_n = None, 0
@@ -519,13 +557,17 @@ RIP_CODES = ("interest", "right", "power")
 QUESTION_CODES = ("open_question", "closed_question", "ask_why", "ask_priority", "ask_constraint")
 
 
-def team_dynamics(codes, teams, names=TEAMS):
+def team_dynamics(codes, teams, names=TEAMS, codebook=None):
     """Per team, the debrief's questions: opening_move (dominant rip code in
     the first OPENING_WINDOW seconds of the conversation, "none" if it made
     no rights/interests/power move), rip_sequence (its rip codes in order
     with repeats collapsed and none skipped), last_escalating (seconds of
     its last escalating utterance) and first_interest_question (seconds of
     its first interest-coded question)."""
+    if codebook is not None:
+        import coding_schemes as coding_scheme
+        if not coding_scheme.analytics(codebook)["dynamics"]:
+            return {}
     ordered = sorted(codes, key=lambda c: (c["start_time"], c.get("transcript_id") or 0))
     start = ordered[0]["start_time"] if ordered else 0
     out = {}
@@ -551,10 +593,11 @@ def team_dynamics(codes, teams, names=TEAMS):
 def summarize(codes, teams, codebook=None, extra=None, names=TEAMS):
     """Roll-up, team dynamics and timeline; ``extra`` (a paired run's
     cross_talk and pods) is merged in as further top-level keys."""
+    codebook = codebook or load_codebook()
     summary = rollup(codes, teams, codebook, names)
-    for team, dynamics in team_dynamics(codes, teams, names).items():
+    for team, dynamics in team_dynamics(codes, teams, names, codebook).items():
         summary["by_team"][team].update(dynamics)
-    summary["timeline"] = timeline(codes)
+    summary["timeline"] = timeline(codes, codebook)
     for key, value in (extra or {}).items():
         if value is not None:
             summary[key] = value
@@ -586,17 +629,17 @@ def validate_teams(teams, names=TEAMS):
 # --------------------------------------------------------- orchestration
 
 def code_row(code, transcript, teams=None, sides=None, names=TEAMS):
-    # One entry of the API's "codes" list: the utterance, its codes and its
-    # team (its device's side when the device has one, else its tag's
-    # assignment, else "unassigned").
+    # One entry of the API's "codes" list: the utterance, its codes (one key
+    # per dimension of the run's scheme) and its team (its device's side
+    # when the device has one, else its tag's assignment, else "unassigned").
     device_id = transcript.session_device_id
     side = (sides or {}).get(device_id)
-    return {"transcript_id": transcript.id, "session_device_id": device_id,
-            "start_time": transcript.start_time, "length": transcript.length,
-            "speaker_tag": transcript.speaker_tag, "text": transcript.transcript,
-            "team": side if side in names else team_of(transcript.speaker_tag or "", teams, names),
-            "emotion": code.emotion, "rip": code.rip, "frame": code.frame,
-            "listening": code.listening_list()}
+    row = {"transcript_id": transcript.id, "session_device_id": device_id,
+           "start_time": transcript.start_time, "length": transcript.length,
+           "speaker_tag": transcript.speaker_tag, "text": transcript.transcript,
+           "team": side if side in names else team_of(transcript.speaker_tag or "", teams, names)}
+    row.update(code.values())
+    return row
 
 
 def _side_of(device, names=TEAMS):
@@ -710,7 +753,7 @@ def run_coding(session_device_id, teams=None, llm=call_llm, run_id=None, codeboo
     meanwhile wins. A paired run (``partner_device_id`` on the row, or given
     here when the run is created) codes both devices' transcripts merged."""
     import database
-    codebook = codebook or load_codebook()
+    codebook = codebook or codebook_for_device(session_device_id)
     run = database.get_negotiation_run(run_id) if run_id is not None else None
     if run is None:
         if run_id is not None:
@@ -731,7 +774,7 @@ def run_coding(session_device_id, teams=None, llm=call_llm, run_id=None, codeboo
             rows = database.get_transcripts(session_device_id=run.session_device_id)
             utterances = utterances_from_rows(rows, sides.get(run.session_device_id))
         coded, invalid = code_utterances(codebook, utterances, llm, names=names)
-        database.add_negotiation_codes(run.id, coded)
+        database.add_negotiation_codes(run.id, coded, list(codebook["dimensions"]))
         if teams is None:
             teams = database.get_negotiation_run(run.id).teams_dict()
         database.update_negotiation_run(
@@ -753,6 +796,7 @@ def recompute_summary(run, teams, codebook=None):
     if run.status == "done":
         names = run_names(run)
         sides = run_sides(run, names)
+        codebook = codebook or codebook_for_device(run.session_device_id)
         codes = [code_row(c, t, teams, sides, names) for c, t in database.get_negotiation_codes(run.id)]
         previous = run.summary_dict() or {}
         extra = {"pods": run_pods(run, sides), "cross_talk": previous.get("cross_talk")}
@@ -765,9 +809,11 @@ def run_payload(run, with_codes=True):
     None until done. mode is "paired" (two devices, teams by side) or
     "single" (teams by speaker tag)."""
     import database
+    import coding_schemes as coding_scheme
     names = run_names(run)
     sides = run_sides(run, names)
     payload = {"run": run.json(), "mode": "paired" if run.is_paired() else "single",
+               "codebook": coding_scheme.panel_json(codebook_for_device(run.session_device_id)),
                "team_names": list(names), "pods": run_pods(run, sides),
                "teams": run.teams_dict(), "summary": run.summary_dict()}
     if with_codes:
@@ -790,7 +836,7 @@ def queue_coding_run(session_id, session_device_id, teams=None, partner_device_i
             run = database.update_negotiation_run(run.id, teams=teams)
     else:
         run = database.create_negotiation_run(session_device_id, llm_model(),
-                                              load_codebook()["version"], teams or {},
+                                              codebook_for_device(session_device_id)["version"], teams or {},
                                               partner_device_id=partner_device_id)
     posthoc_queue.enqueue_coding(session_id, session_device_id, run.id)
     return run

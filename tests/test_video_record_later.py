@@ -317,3 +317,16 @@ def test_pods_overview_tags_record_only_sessions():
     page = _read("frontend", "src", "pods-overview", "html-pages.jsx")
     assert "session.live_video_analytics === false" in page
     assert "video: recording only" in page
+
+
+def test_live_video_analyses_from_config_defaults_to_both_and_filters_unknowns():
+    import importlib, os, sys
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src", "video_processing"))
+    import processing_config as pc
+    assert pc.live_video_analyses_from_config(None) == {"attention", "emotion"}
+    assert pc.live_video_analyses_from_config({}) == {"attention", "emotion"}
+    assert pc.live_video_analyses_from_config({"live_video_analyses": None}) == {"attention", "emotion"}
+    assert pc.live_video_analyses_from_config({"live_video_analyses": ["emotion"]}) == {"emotion"}
+    assert pc.live_video_analyses_from_config({"live_video_analyses": "attention, bogus"}) == {"attention"}
+    assert pc.live_video_analyses_from_config({"live_video_analyses": []}) == set()
+    assert pc.live_video_analyses_from_config({"live_video_analyses": 7}) == {"attention", "emotion"}

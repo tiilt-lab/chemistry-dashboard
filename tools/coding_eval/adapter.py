@@ -20,6 +20,7 @@ import importlib.util
 import io
 import json
 import os
+import sys
 import re
 import urllib.request
 
@@ -30,6 +31,11 @@ ENGINE_PATH = os.path.join(REPO, "src", "server", "negotiation_coding.py")
 def _load_engine(path=ENGINE_PATH):
     if not os.path.exists(path):
         raise ImportError("negotiation-coding engine not found at %s" % path)
+    # The engine imports its sibling coding_schemes (the built-in scheme) by
+    # name, so the server directory must be importable.
+    server_dir = os.path.dirname(path)
+    if server_dir not in sys.path:
+        sys.path.insert(0, server_dir)
     spec = importlib.util.spec_from_file_location("negotiation_coding_engine", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

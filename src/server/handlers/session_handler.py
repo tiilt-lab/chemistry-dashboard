@@ -11,8 +11,19 @@ import posthoc_queue
 import negotiation_coding
 import pod_config as pod_setup
 
-def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder, asr=None, live_video_analytics=True, negotiation_coding_enabled=False, negotiation_paired=False, pod_config=None):
+def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder, asr=None, live_video_analytics=True, negotiation_coding_enabled=False, negotiation_paired=False, pod_config=None, coding_scheme=None, live_video_analyses=None):
     session, keywords = database.create_session(user_id, keyword_list_id, topic_model_id, name, folder)
+    # Which video analyses run live (None = both when live analytics is on).
+    if live_video_analyses is not None:
+        session.live_video_analyses = ','.join(live_video_analyses)
+        live_video_analytics = len(live_video_analyses) > 0
+        database.save_changes()
+    # The coding scheme the session's utterances are coded with (a ref,
+    # coding_schemes.py); choosing one is what turns coding on.
+    if coding_scheme:
+        session.coding_scheme = coding_scheme
+        negotiation_coding_enabled = True
+        database.save_changes()
     # The pod setup (already normalized by the route). One device per team
     # means the two pods of a group are coded together: negotiation_paired
     # follows the setup rather than being asked for separately.
@@ -54,6 +65,10 @@ def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod
         # start no decoder/analytics for the pod; end_session then queues the
         # post-hoc video leg per recorded pod (queue_deferred_video_analysis).
         'live_video_analytics': live_video_analytics,
+        # Which analyses the video service runs on this session's pods:
+        # "attention" (gaze, attention, object of focus) and/or "emotion".
+        'live_video_analyses': list(live_video_analyses) if live_video_analyses is not None
+                               else (['attention', 'emotion'] if live_video_analytics else []),
     }
     RedisSessions.create_session(session.id, config)
     if devices:

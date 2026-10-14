@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { EmptyState } from "../components/empty-state";
 import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel, dlgError } from "../components/dialog-styles"
 import { pageShell, formCard } from "../components/layout-styles"
@@ -262,6 +262,113 @@ function PodSetupSection({ setup, setSetup, error }) {
   );
 }
 
+// Advanced analysis: which analyses run on the video during class. Each one
+// costs GPU time per pod while the class is on; whatever is off is still
+// recorded and can be run after class from the pod page. (Transcription
+// always runs live with CrisperWhisper, so it is not a choice here.)
+const LIVE_VIDEO_ANALYSES = [
+  { key: "attention", label: "Attention and gaze", desc: "Where each person looks, their attention level and the object of focus." },
+  { key: "emotion", label: "Facial emotion", desc: "The expression read from each face." },
+];
+
+function AdvancedAnalysisSection({ analyses, toggle }) {
+  const chosen = analyses || [];
+  const [open, setOpen] = useState(false);
+  const summary =
+    chosen.length === 0
+      ? "Record only; analyse after class"
+      : chosen.length === LIVE_VIDEO_ANALYSES.length
+        ? "All video analyses live"
+        : LIVE_VIDEO_ANALYSES.filter((a) => chosen.includes(a.key)).map((a) => a.label).join(", ") + " live";
+  return (
+    <div>
+      <label className={fieldLabel}>Advanced analysis</label>
+      <div className="overflow-hidden rounded-lg border border-tiilt-line bg-white">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          aria-expanded={open}
+          className="flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2.5 text-left"
+        >
+          <span>
+            <span className="block text-sm font-semibold text-tiilt-ink">Video analysis during class</span>
+            <span className="block text-xs text-tiilt-muted">{summary}</span>
+          </span>
+          <span className="flex-none text-xs text-tiilt-muted">{open ? "Hide" : "Choose"}</span>
+        </button>
+        {open ? (
+          <div className="flex flex-col gap-2 border-t border-tiilt-line px-3 py-2.5">
+            {LIVE_VIDEO_ANALYSES.map((a) => (
+              <label key={a.key} htmlFor={`chkLive-${a.key}`} className="flex cursor-pointer items-start gap-3">
+                <input
+                  id={`chkLive-${a.key}`}
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 flex-none cursor-pointer accent-tiilt"
+                  checked={chosen.includes(a.key)}
+                  onChange={() => toggle(a.key)}
+                />
+                <span>
+                  <span className="block text-sm text-tiilt-ink">{a.label}</span>
+                  <span className="block text-xs text-tiilt-muted">{a.desc}</span>
+                </span>
+              </label>
+            ))}
+            <p className="text-xs text-tiilt-muted">
+              Each live analysis uses the GPU for every group while the class is
+              on. Whatever is off is still recorded and can be analysed after
+              class from the pod page. Transcription always runs live.
+            </p>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+// Coding: which scheme (Library) codes every utterance after a pod finishes.
+function CodingSection({ schemes, value, onChange, paired, goToSchemes }) {
+  const list = schemes || [];
+  const chosen = list.find((s) => s.ref === value);
+  return (
+    <div>
+      <label htmlFor="selCodingScheme" className={fieldLabel}>
+        Coding
+      </label>
+      <select
+        id="selCodingScheme"
+        value={value || ""}
+        onChange={(e) => onChange(e.target.value)}
+        className="app-select h-11 w-full cursor-pointer rounded-lg border border-tiilt-line bg-white px-3 pr-8 text-base text-tiilt-ink outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30"
+      >
+        <option value="">No coding</option>
+        {list.map((s) => (
+          <option key={s.ref} value={s.ref}>
+            {s.name}{s.builtin ? " (built in)" : ""}
+          </option>
+        ))}
+      </select>
+      <p className="mt-1 text-xs text-tiilt-muted">
+        {chosen
+          ? (chosen.description || "") +
+            (chosen.description ? " " : "") +
+            "After each group finishes, a local model codes every utterance with this scheme; the results roll up per team and per speaker on the pod page."
+          : "Pick a coding scheme to have every utterance coded after each group finishes. "}
+        {schemes === null ? "Loading schemes…" : null}
+        <button type="button" onClick={goToSchemes} className="ml-1 cursor-pointer font-semibold text-tiilt hover:underline">
+          Manage coding schemes
+        </button>
+      </p>
+      {chosen ? (
+        <p className="mt-1 text-xs text-tiilt-muted">
+          {paired
+            ? "Teams come from the pod setup above: each team records from its own device, and the two devices of a group are coded as one conversation."
+            : "With one device per group you assign each speaker to a team by name on the pod page after the session. Set up pods above with two teams and one device per team to have the teams fixed by device instead."}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function CreateSessionPage(props) {
   return (
     <>
@@ -302,117 +409,18 @@ function CreateSessionPage(props) {
                   <img src={openFolderIcon} alt="" className="h-5 w-5 flex-none" />
                 </button>
               </div>
-              <div>
-                <label className={fieldLabel}>Live transcription</label>
-                <div className="divide-y divide-tiilt-line overflow-hidden rounded-lg border border-tiilt-line">
-                  {/* CrisperWhisper is the only engine (Google Cloud Speech was
-                      removed): shown as a single locked choice so it stays
-                      explicit what transcribes the session. */}
-                  {[
-                    {
-                      value: "crisperwhisper",
-                      name: "CrisperWhisper 2.0 — verbatim, on this server",
-                      desc: "Keeps fillers, stutters and false starts with pause-accurate word timing. Audio never leaves the machine; captions run a few seconds behind.",
-                    },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => props.setAsr(opt.value)}
-                      aria-pressed={props.asr === opt.value}
-                      className={
-                        "flex w-full items-start gap-3 px-3 py-2.5 text-left transition " +
-                        (props.asr === opt.value
-                          ? "bg-tiilt-soft"
-                          : "bg-white hover:bg-tiilt-soft/40")
-                      }
-                    >
-                      <span
-                        className={
-                          "mt-1 h-3.5 w-3.5 flex-none rounded-full border-2 " +
-                          (props.asr === opt.value
-                            ? "border-tiilt bg-tiilt"
-                            : "border-tiilt-line")
-                        }
-                        aria-hidden="true"
-                      />
-                      <span>
-                        <span className="block text-sm font-semibold text-tiilt-ink">
-                          {opt.name}
-                        </span>
-                        <span className="block text-xs text-tiilt-muted">
-                          {opt.desc}
-                        </span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-1 text-xs text-tiilt-muted">
-                  Locked once the session starts.
-                </p>
-              </div>
-              <div>
-                <label className={fieldLabel}>Video</label>
-                <label
-                  htmlFor="chkLiveVideoAnalytics"
-                  className="flex cursor-pointer items-start gap-3 rounded-lg border border-tiilt-line bg-white px-3 py-2.5"
-                >
-                  <input
-                    id="chkLiveVideoAnalytics"
-                    type="checkbox"
-                    className="mt-0.5 h-4 w-4 flex-none cursor-pointer accent-tiilt"
-                    checked={props.liveVideoAnalytics !== false}
-                    onChange={(event) =>
-                      props.setLiveVideoAnalytics(event.target.checked)
-                    }
-                  />
-                  <span>
-                    <span className="block text-sm font-semibold text-tiilt-ink">
-                      Analyse video live (uses the GPU during class; off = record now, analyse after class)
-                    </span>
-                    <span className="block text-xs text-tiilt-muted">
-                      Off: every group&apos;s video is still recorded, and the
-                      attention and emotion analysis is queued automatically
-                      when the session ends.
-                    </span>
-                  </span>
-                </label>
-              </div>
+              <AdvancedAnalysisSection
+                analyses={props.liveVideoAnalyses}
+                toggle={props.toggleLiveVideoAnalysis}
+              />
               <PodSetupSection setup={props.podSetup} setSetup={props.setPodSetup} error={props.podSetupError} />
-              <div>
-                <label className={fieldLabel}>Negotiation coding</label>
-                <label
-                  htmlFor="chkNegotiationCoding"
-                  className="flex cursor-pointer items-start gap-3 rounded-lg border border-tiilt-line bg-white px-3 py-2.5"
-                >
-                  <input
-                    id="chkNegotiationCoding"
-                    type="checkbox"
-                    className="mt-0.5 h-4 w-4 flex-none cursor-pointer accent-tiilt"
-                    checked={props.negotiationCoding === true}
-                    onChange={(event) =>
-                      props.setNegotiationCoding(event.target.checked)
-                    }
-                  />
-                  <span>
-                    <span className="block text-sm font-semibold text-tiilt-ink">
-                      Negotiation coding (Viking case: code utterances per team after each pod finishes)
-                    </span>
-                    <span className="block text-xs text-tiilt-muted">
-                      A local model codes each utterance for emotion,
-                      interests/rights/power, frame and listening moves, rolled
-                      up per team (the teams named in the pod setup) on the pod page.
-                    </span>
-                  </span>
-                </label>
-                {props.negotiationCoding === true ? (
-                  <p className="mt-2 text-xs text-tiilt-muted">
-                    {props.negotiationPaired
-                      ? "Teams come from the pod setup above: each team records from its own device, and the two devices of a table are coded as one negotiation."
-                      : "With one device per group you assign each speaker to a team by name on the pod page after the session. Set up pods above with two teams and one device per team to have the teams fixed by device instead."}
-                  </p>
-                ) : null}
-              </div>
+              <CodingSection
+                schemes={props.codingSchemes}
+                value={props.codingScheme}
+                onChange={props.setCodingScheme}
+                paired={props.negotiationPaired}
+                goToSchemes={props.goToCodingSchemes}
+              />
             </div>
             <div className={footerBar}>
               <div className={footerRow}>

@@ -52,7 +52,7 @@ const NAV_ITEMS = [
     {
         label: "Library",
         to: "/keyword-lists",
-        match: ["/keyword-lists", "/topic-models", "/topic-list", "/file_upload"],
+        match: ["/keyword-lists", "/topic-models", "/topic-list", "/file_upload", "/coding-schemes"],
         Icon: IconLibrary,
     },
 ]

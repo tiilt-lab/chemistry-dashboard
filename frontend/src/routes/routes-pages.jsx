@@ -31,6 +31,8 @@ const PodComponent = lazy(() => import('../pod-details/pod-component').then(m =>
 const TranscriptsComponent = lazy(() => import('../transcripts/transcripts-component').then(m => ({ default: m.TranscriptsComponent })))
 const TopicListComponent = lazy(() => import('../topic-list/topic-list-component').then(m => ({ default: m.TopicListComponent })))
 const ManageTopicModelsComponent = lazy(() => import('../manage-topic-models/manage-topic-models-component').then(m => ({ default: m.ManageTopicModelsComponent })))
+const ManageCodingSchemesComponent = lazy(() => import('../coding-schemes/manage-coding-schemes-component').then(m => ({ default: m.ManageCodingSchemesComponent })))
+const CodingSchemeEditorComponent = lazy(() => import('../coding-schemes/coding-scheme-editor-component').then(m => ({ default: m.CodingSchemeEditorComponent })))
 const StudentsComponent = lazy(() => import('../students/students-component').then(m => ({ default: m.StudentsComponent })))
 const StudentProfileComponent = lazy(() => import('../student-profile/student-profile-component').then(m => ({ default: m.StudentProfileComponent })))
 const RatersComponent = lazy(() => import('../raters/raters-component').then(m => ({ default: m.RatersComponent })))
@@ -82,6 +84,9 @@ function PageRouter() {
                     <Route path='pods/:sessionDeviceId/transcripts' element={<ProtectedRoute component={TranscriptsComponent}/>} />
                 </Route>
                 <Route path='/topic-models' element={<ProtectedRoute component={ManageTopicModelsComponent}/>} />
+                <Route path='/coding-schemes' element={<ProtectedRoute component={ManageCodingSchemesComponent}/>} />
+                <Route path='/coding-schemes/new' element={<ProtectedRoute component={CodingSchemeEditorComponent}/>} />
+                <Route path='/coding-schemes/:ref' element={<ProtectedRoute component={CodingSchemeEditorComponent}/>} />
                 <Route path='/file_upload' element={<ProtectedRoute component={FileUploadComponent}/>} />
                 <Route path='/file_upload/new-session' element={<ProtectedRoute component={FileUploadComponent}/>} />
                 <Route path='/topic-list' element={<ProtectedRoute component={TopicListComponent}/>} />
