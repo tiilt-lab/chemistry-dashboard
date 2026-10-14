@@ -121,7 +121,7 @@ function PodSetupSection({ setup, setSetup, error }) {
                   value={s.groupPrefix}
                   onChange={(e) => set({ groupPrefix: e.target.value })}
                   className={textCls}
-                  placeholder="Table"
+                  placeholder="Group"
                 />
               </div>
             </div>

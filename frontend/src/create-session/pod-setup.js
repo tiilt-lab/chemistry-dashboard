@@ -8,7 +8,7 @@ const LETTERS = ["A", "B", "C", "D"]
 export const DEFAULT_POD_SETUP = {
     enabled: false,
     groupCount: 10,
-    groupPrefix: "Table",
+    groupPrefix: "Group",
     teamsPerGroup: 2,
     groupSize: 6,
     teams: LETTERS.map((letter) => ({ name: `Team ${letter}`, size: 3 })),
@@ -41,6 +41,6 @@ export function podSetupProblem(setup) {
     const names = setupTeams(setup).map((t) => (t.name || "").trim())
     if (names.some((n) => !n)) return "Name every team in the pod setup."
     if (new Set(names.map((n) => n.toLowerCase())).size !== names.length) return "Teams need different names."
-    if (!(setup.groupPrefix || "").trim()) return "Say what the groups are called (for example Table)."
+    if (!(setup.groupPrefix || "").trim()) return "Say what the groups are called (for example Group or Table)."
     return null
 }

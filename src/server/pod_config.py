@@ -112,7 +112,7 @@ def normalize(raw):
             count, err = _int(count, 1, MAX_GROUPS, "Number of groups")
             if err:
                 return None, err
-            prefix, err = _clean(raw.get("group_prefix") or "Table", LABEL_MAX - 4, "Group label")
+            prefix, err = _clean(raw.get("group_prefix") or "Group", LABEL_MAX - 4, "Group label")
             if err:
                 return None, err
             groups = ["%s %d" % (prefix, i + 1) for i in range(count)]

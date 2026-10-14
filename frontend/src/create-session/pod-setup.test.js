@@ -11,7 +11,7 @@ describe("pod setup", () => {
             group_size: 6,
             devices_per_group: "team",
             group_count: 10,
-            group_prefix: "Table",
+            group_prefix: "Group",
         })
         expect(podConfigFromSetup(DEFAULT_POD_SETUP)).toBeNull()
     })
@@ -30,7 +30,7 @@ describe("pod setup", () => {
         const rename = (i, name) => ({ ...on, teams: on.teams.map((t, j) => (j === i ? { ...t, name } : t)) })
         expect(podSetupProblem(rename(1, " "))).toBe("Name every team in the pod setup.")
         expect(podSetupProblem(rename(1, "team a"))).toBe("Teams need different names.")
-        expect(podSetupProblem({ ...on, groupPrefix: "" })).toBe("Say what the groups are called (for example Table).")
+        expect(podSetupProblem({ ...on, groupPrefix: "" })).toBe("Say what the groups are called (for example Group or Table).")
         expect(podSetupProblem({ ...rename(1, "Sandy"), teams: rename(1, "Sandy").teams.map((t, j) => (j === 0 ? { ...t, name: "Pat" } : t)) })).toBeNull()
     })
 })
