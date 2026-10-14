@@ -1862,11 +1862,11 @@ function JoinPage() {
         const role = negotiation || {}
         const needsGroup = pairedSession || !!(joinSetup && (joinSetup.groups || []).length > 0)
         if (needsGroup && !role.group) {
-            setRoleError(joinSetup && (joinSetup.groups || []).length > 0 ? "Choose your table or group." : "Enter your table and choose which side this laptop records.")
+            setRoleError(joinSetup && (joinSetup.groups || []).length > 0 ? "Choose your table or group." : "Enter your table and choose which side this device records.")
             return
         }
         if (pairedSession && !role.side) {
-            setRoleError("Choose which team this laptop records.")
+            setRoleError("Choose which team this device records.")
             return
         }
         setRoleError("")

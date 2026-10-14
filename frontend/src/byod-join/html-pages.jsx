@@ -54,9 +54,9 @@ function SlotPicker({ setup, paired, savedRole, error }) {
     const listed = groups.length === 0 || groups.includes(group) || group === "" || group === OTHER
     const selectValue = groups.includes(group) ? group : group === "" ? "" : OTHER
     const intro = twoTeams
-        ? `This session runs groups of ${groupSize} as ${teams.map((t) => `${t.name} (${t.size})`).join(" vs ")}, each team on its own laptop. Pick the slot this laptop occupies; everything it hears and sees counts for that team.`
+        ? `This session runs groups of ${groupSize} as ${teams.map((t) => `${t.name} (${t.size})`).join(" vs ")}, each team on its own device. Pick the slot this device occupies; everything it hears and sees counts for that team.`
         : paired
-          ? "This negotiation session records each team from its own laptop. Enter your table and which side this laptop sits with; everything it hears and sees counts for that team."
+          ? "This negotiation session records each team from its own device. Enter your table and which side this device sits with; everything it hears and sees counts for that team."
           : `This session runs groups of ${groupSize}${teams.length >= 2 ? ` (${teams.map((t) => `${t.name} ${t.size}`).join(" vs ")})` : ""}. Pick your table or group.`
     return (
         <div className="flex flex-col gap-3 rounded-xl border border-tiilt/40 bg-tiilt-soft/40 px-3 py-3">
@@ -108,7 +108,7 @@ function SlotPicker({ setup, paired, savedRole, error }) {
             {typeTeam ? (
                 <div>
                     <label htmlFor="negSide" className={fieldLabel}>
-                        This laptop records (team name)
+                        This device records (team name)
                     </label>
                     <input
                         className={dlgInput}
@@ -123,7 +123,7 @@ function SlotPicker({ setup, paired, savedRole, error }) {
             {teamOptions.length > 0 ? (
                 <div>
                     <label htmlFor="negSide" className={fieldLabel}>
-                        This laptop records
+                        This device records
                     </label>
                     <select
                         id="negSide"
@@ -1126,7 +1126,7 @@ function ByodJoinPage(props) {
                 heading={"That slot is already connected"}
                 body={
                     (props.displayText || "") +
-                    " Yes joins this laptop as an extra one for the same table and team (it gets its own speaker cards); Cancel goes back so you can pick another slot."
+                    " Yes joins this device as an extra one for the same table and team (it gets its own speaker cards); Cancel goes back so you can pick another slot."
                 }
                 deletebuttonaction={props.joinAsExtraLaptop}
                 cancelbuttonaction={props.closeDialog}

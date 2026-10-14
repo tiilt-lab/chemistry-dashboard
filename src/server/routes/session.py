@@ -306,8 +306,8 @@ def byod_join_session(**kwargs):
     if success:
         return json_response(data)
     if isinstance(data, str) and data.endswith(database.SLOT_TAKEN_SUFFIX):
-        return json_response({'message': data + ' If that laptop died or you are adding a second one, '
-                                         'join as an extra laptop for the same table and team.',
+        return json_response({'message': data + ' If that device died or you are adding a second one, '
+                                         'join as an extra device for the same table and team.',
                               'slot_taken': True}, 409)
     return json_response({'message': data}, 400)
 

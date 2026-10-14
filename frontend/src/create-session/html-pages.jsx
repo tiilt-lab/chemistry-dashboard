@@ -24,21 +24,45 @@ const numberCls =
 const textCls =
   "h-9 w-full rounded-lg border border-tiilt-line bg-white px-2 text-sm text-tiilt-ink outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30";
 
-// How a breakout group is composed and which laptop records what. The join
+// How a breakout group is composed and which device records what. The join
 // page turns this into the slots a device can occupy ("Table 3 · <team>'s
 // team"), names the pod after its slot and pre-creates its speaker cards.
+// Row is module-level (not defined inside the section) so the inputs keep
+// focus across re-renders.
+function SetupRow({ label, hint, children }) {
+  return (
+    <div className="grid grid-cols-1 gap-2 px-4 py-3 sm:grid-cols-[8.5rem_1fr] sm:gap-5">
+      <div className="sm:pt-2">
+        <div className="text-sm font-semibold text-tiilt-ink">{label}</div>
+        {hint ? <div className="text-xs text-tiilt-muted">{hint}</div> : null}
+      </div>
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
+
+const smallLabel = "mb-1 block text-xs text-tiilt-muted";
+const teamGrid = "grid grid-cols-[4.5rem_minmax(0,1fr)_5.5rem] items-center gap-3";
+
 function PodSetupSection({ setup, setSetup, error }) {
   const s = setup || {};
   const set = (patch) => setSetup({ ...s, ...patch });
   const setTeam = (i, patch) =>
     set({ teams: s.teams.map((t, j) => (j === i ? { ...t, ...patch } : t)) });
   const int = (v, lo, hi) => Math.max(lo, Math.min(hi, parseInt(v, 10) || lo));
-  const groupSize = s.teamsPerGroup === 2 ? s.teams[0].size + s.teams[1].size : s.groupSize;
-  const labels = (n, prefix) => {
-    const p = (prefix || "Table").trim() || "Table";
-    if (n <= 3) return Array.from({ length: n }, (_, i) => `${p} ${i + 1}`).join(", ");
-    return `${p} 1, ${p} 2 … ${p} ${n}`;
-  };
+  const twoTeams = s.teamsPerGroup === 2;
+  const teams = (s.teams || []).slice(0, 2);
+  const groupSize = twoTeams ? teams[0].size + teams[1].size : s.groupSize;
+  const prefix = (s.groupPrefix || "").trim() || "Group";
+  const preview =
+    s.groupCount <= 3
+      ? Array.from({ length: s.groupCount }, (_, i) => `${prefix} ${i + 1}`).join(", ")
+      : `${prefix} 1, ${prefix} 2 … ${prefix} ${s.groupCount}`;
+  const teamName = (t, i) => (t.name || "").trim() || `Team ${i + 1}`;
+  const groupsWord = s.groupCount === 1 ? "group" : "groups";
+  const summary = twoTeams
+    ? `${s.groupCount} ${groupsWord} of ${groupSize}: ${teamName(teams[0], 0)} ${teams[0].size} vs ${teamName(teams[1], 1)} ${teams[1].size}, ${s.devices === "team" ? "one device per team" : "one device per group"}.`
+    : `${s.groupCount} ${groupsWord} of ${groupSize}, one device per group.`;
   return (
     <div>
       <label className={fieldLabel}>Pod setup</label>
@@ -55,130 +79,153 @@ function PodSetupSection({ setup, setSetup, error }) {
         />
         <span>
           <span className="block text-sm font-semibold text-tiilt-ink">
-            Set up the groups and laptops in advance
+            Set up the groups and devices in advance
           </span>
           <span className="block text-xs text-tiilt-muted">
-            Joining laptops pick their table and team from a list, are named
+            Joining devices pick their group and team from a list, are named
             after it, and start with the right number of speaker cards. Off:
             groups name themselves and size their roster when they join.
           </span>
         </span>
       </label>
       {s.enabled ? (
-        <div className="mt-2 flex flex-col gap-3 rounded-lg border border-tiilt-line bg-white px-3 py-3 text-sm text-tiilt-ink">
-          <div className="flex flex-wrap items-end gap-3">
-            <label className="flex flex-col gap-1 text-xs text-tiilt-muted">
-              Number of groups
-              <input
-                id="podGroupCount"
-                type="number"
-                min={1}
-                max={200}
-                value={s.groupCount}
-                onChange={(e) => set({ groupCount: int(e.target.value, 1, 200) })}
-                className={numberCls}
-              />
-            </label>
-            <label className="flex grow flex-col gap-1 text-xs text-tiilt-muted">
-              Called
-              <input
-                id="podGroupPrefix"
-                type="text"
-                maxLength={28}
-                value={s.groupPrefix}
-                onChange={(e) => set({ groupPrefix: e.target.value })}
-                className={textCls}
-                placeholder="Table"
-              />
-            </label>
-            <span className="pb-2 text-xs text-tiilt-muted">{labels(s.groupCount, s.groupPrefix)}</span>
-          </div>
-          <div className="flex flex-wrap items-end gap-3">
-            <label className="flex flex-col gap-1 text-xs text-tiilt-muted">
-              Teams per group
+        <div className="mt-2 divide-y divide-tiilt-line overflow-hidden rounded-lg border border-tiilt-line bg-white">
+          <SetupRow label="Groups" hint={preview}>
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label htmlFor="podGroupCount" className={smallLabel}>
+                  How many
+                </label>
+                <input
+                  id="podGroupCount"
+                  type="number"
+                  min={1}
+                  max={200}
+                  value={s.groupCount}
+                  onChange={(e) => set({ groupCount: int(e.target.value, 1, 200) })}
+                  className={numberCls}
+                />
+              </div>
+              <div className="min-w-0 grow basis-40">
+                <label htmlFor="podGroupPrefix" className={smallLabel}>
+                  Called
+                </label>
+                <input
+                  id="podGroupPrefix"
+                  type="text"
+                  maxLength={28}
+                  value={s.groupPrefix}
+                  onChange={(e) => set({ groupPrefix: e.target.value })}
+                  className={textCls}
+                  placeholder="Table"
+                />
+              </div>
+            </div>
+          </SetupRow>
+
+          <SetupRow label="Teams" hint={twoTeams ? "Per group, with how many people on each." : "People per group."}>
+            <div className="flex flex-col gap-3">
               <select
                 id="podTeamsPerGroup"
                 value={s.teamsPerGroup}
                 onChange={(e) => set({ teamsPerGroup: parseInt(e.target.value, 10) })}
-                className={numberCls + " app-select w-28 cursor-pointer pr-7"}
+                className={numberCls + " app-select w-40 cursor-pointer pr-8"}
               >
                 <option value={1}>No teams</option>
                 <option value={2}>Two teams</option>
               </select>
-            </label>
-            {s.teamsPerGroup === 2 ? (
-              s.teams.slice(0, 2).map((t, i) => (
-                <div key={i} className="flex items-end gap-2">
-                  <label className="flex flex-col gap-1 text-xs text-tiilt-muted">
-                    Team {i + 1}
-                    <input
-                      id={`podTeamName${i}`}
-                      type="text"
-                      maxLength={16}
-                      value={t.name}
-                      placeholder={`Team ${i + 1} name`}
-                      onChange={(e) => setTeam(i, { name: e.target.value })}
-                      className={textCls + " w-28"}
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1 text-xs text-tiilt-muted">
-                    People
-                    <input
-                      id={`podTeamSize${i}`}
-                      type="number"
-                      min={1}
-                      max={32}
-                      value={t.size}
-                      onChange={(e) => setTeam(i, { size: int(e.target.value, 1, 32) })}
-                      className={numberCls + " w-16"}
-                    />
-                  </label>
+              {twoTeams ? (
+                <div className="overflow-hidden rounded-lg border border-tiilt-line">
+                  <div className={teamGrid + " bg-tiilt-ground/60 px-3 py-1.5 font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase"}>
+                    <span />
+                    <span>Name</span>
+                    <span>People</span>
+                  </div>
+                  {teams.map((t, i) => (
+                    <div key={i} className={teamGrid + " border-t border-tiilt-line px-3 py-2"}>
+                      <label htmlFor={`podTeamName${i}`} className="text-sm text-tiilt-ink">
+                        Team {i + 1}
+                      </label>
+                      <input
+                        id={`podTeamName${i}`}
+                        type="text"
+                        maxLength={16}
+                        value={t.name}
+                        placeholder={`Team ${i + 1} name`}
+                        onChange={(e) => setTeam(i, { name: e.target.value })}
+                        className={textCls}
+                      />
+                      <input
+                        id={`podTeamSize${i}`}
+                        type="number"
+                        min={1}
+                        max={32}
+                        aria-label={`People on team ${i + 1}`}
+                        value={t.size}
+                        onChange={(e) => setTeam(i, { size: int(e.target.value, 1, 32) })}
+                        className={numberCls + " w-full"}
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))
-            ) : (
-              <label className="flex flex-col gap-1 text-xs text-tiilt-muted">
-                People per group
-                <input
-                  id="podGroupSize"
-                  type="number"
-                  min={1}
-                  max={64}
-                  value={s.groupSize}
-                  onChange={(e) => set({ groupSize: int(e.target.value, 1, 64) })}
-                  className={numberCls}
-                />
-              </label>
-            )}
-            <span className="pb-2 text-xs text-tiilt-muted">
-              {s.groupCount} {s.groupCount === 1 ? "group" : "groups"} of {groupSize}
-              {s.teamsPerGroup === 2 ? ` (${s.teams[0].name || "Team 1"} ${s.teams[0].size} vs ${s.teams[1].name || "Team 2"} ${s.teams[1].size})` : ""}
-            </span>
-          </div>
-          {s.teamsPerGroup === 2 ? (
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs text-tiilt-muted">Laptops</span>
-              {[
-                ["group", "One laptop per group", "One microphone and camera for the whole table."],
-                ["team", "One laptop per team", "Each team joins from its own laptop and picks its table and team; everything that laptop hears and sees counts for that team."],
-              ].map(([value, title, desc]) => (
-                <label key={value} htmlFor={`podDevices-${value}`} className="flex cursor-pointer items-start gap-3">
+              ) : (
+                <div>
+                  <label htmlFor="podGroupSize" className={smallLabel}>
+                    People per group
+                  </label>
                   <input
-                    id={`podDevices-${value}`}
-                    type="radio"
-                    name="podDevices"
-                    className="mt-0.5 h-4 w-4 flex-none cursor-pointer accent-tiilt"
-                    checked={s.devices === value}
-                    onChange={() => set({ devices: value })}
+                    id="podGroupSize"
+                    type="number"
+                    min={1}
+                    max={64}
+                    value={s.groupSize}
+                    onChange={(e) => set({ groupSize: int(e.target.value, 1, 64) })}
+                    className={numberCls}
                   />
-                  <span>
-                    <span className="block text-sm text-tiilt-ink">{title}</span>
-                    <span className="block text-xs text-tiilt-muted">{desc}</span>
-                  </span>
-                </label>
-              ))}
+                </div>
+              )}
             </div>
-          ) : null}
-          {error ? <div className={dlgError}>{error}</div> : null}
+          </SetupRow>
+
+          <SetupRow label="Devices" hint={twoTeams ? "Which device records whom." : "One device records the whole group."}>
+            {twoTeams ? (
+              <div className="flex flex-col gap-2">
+                {[
+                  ["group", "One device per group", "One microphone and camera for the whole table."],
+                  ["team", "One device per team", "Each team joins from its own device and picks its table and team; everything that device hears and sees counts for that team."],
+                ].map(([value, title, desc]) => (
+                  <label
+                    key={value}
+                    htmlFor={`podDevices-${value}`}
+                    className={
+                      "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2 transition " +
+                      (s.devices === value ? "border-tiilt bg-tiilt-soft/60" : "border-tiilt-line bg-white hover:bg-tiilt-soft/30")
+                    }
+                  >
+                    <input
+                      id={`podDevices-${value}`}
+                      type="radio"
+                      name="podDevices"
+                      className="mt-0.5 h-4 w-4 flex-none cursor-pointer accent-tiilt"
+                      checked={s.devices === value}
+                      onChange={() => set({ devices: value })}
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-tiilt-ink">{title}</span>
+                      <span className="block text-xs text-tiilt-muted">{desc}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <div className="pt-2 text-sm text-tiilt-ink">One device per group</div>
+            )}
+          </SetupRow>
+
+          <div className="bg-tiilt-ground/40 px-4 py-2.5 text-xs text-tiilt-ink">
+            {summary}
+            {error ? <div className={dlgError + " mt-1"}>{error}</div> : null}
+          </div>
         </div>
       ) : null}
     </div>
@@ -331,8 +378,8 @@ function CreateSessionPage(props) {
                 {props.negotiationCoding === true ? (
                   <p className="mt-2 text-xs text-tiilt-muted">
                     {props.negotiationPaired
-                      ? "Teams come from the pod setup above: each team records from its own laptop, and the two laptops of a table are coded as one negotiation."
-                      : "With one laptop per table you assign each speaker to a team by name on the pod page after the session. Set up pods above with two teams and one laptop per team to have the teams fixed by device instead."}
+                      ? "Teams come from the pod setup above: each team records from its own device, and the two devices of a table are coded as one negotiation."
+                      : "With one device per group you assign each speaker to a team by name on the pod page after the session. Set up pods above with two teams and one device per team to have the teams fixed by device instead."}
                   </p>
                 ) : null}
               </div>

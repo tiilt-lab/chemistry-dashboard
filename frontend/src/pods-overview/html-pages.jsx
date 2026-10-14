@@ -502,8 +502,8 @@ function LobbyHero({ passcode, joinLink, copyJoinLink, onLock, deviceCount, slot
                     </ul>
                     <div className="mt-2 text-xs text-tiilt-muted">
                         An extra table or group joins with the plain link above and
-                        picks &quot;Other / a new group&quot;. A second laptop for a slot
-                        that is already connected can join as an extra laptop for it.
+                        picks &quot;Other / a new group&quot;. A second device for a slot
+                        that is already connected can join as an extra device for it.
                         Someone arriving late is added from Options on the group&apos;s
                         own screen.
                     </div>

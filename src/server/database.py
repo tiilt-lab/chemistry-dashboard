@@ -783,7 +783,7 @@ def next_group_letter_name(session_id):
 
 # The join refusal for a slot another laptop holds; the route turns it into
 # a 409 so the join page can offer to join as an extra laptop instead.
-SLOT_TAKEN_SUFFIX = "is already connected from another laptop."
+SLOT_TAKEN_SUFFIX = "is already connected from another device."
 
 
 def next_extra_device_name(session_id, name):
@@ -811,7 +811,7 @@ def create_byod_session_device(passcode, name, collaborators, negotiation_group=
         name = role if role else next_group_letter_name(session.id)
     duplicate = get_session_devices(session_id=session.id, name=name, first=True)
     if duplicate and duplicate.connected and join_as_extra:
-        # A second laptop for the same slot (the first one died, or a team
+        # A second device for the same slot (the first one died, or a team
         # brought two): "<slot> 2", same table and team, its own roster.
         name = next_extra_device_name(session.id, name)
         duplicate = get_session_devices(session_id=session.id, name=name, first=True)
