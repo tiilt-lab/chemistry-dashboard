@@ -312,7 +312,8 @@ class SessionService {
     asr,
     liveVideoAnalytics,
     negotiationCoding,
-    negotiationPaired
+    negotiationPaired,
+    podConfig
   ) {
     const body = {
       name: name,
@@ -331,6 +332,9 @@ class SessionService {
       negotiationCoding: negotiationCoding === true,
       // true = two laptops per breakout group, one per side (teams by device)
       negotiationPaired: negotiationPaired === true,
+      // The pod setup ({teams, group_size, devices_per_group, group_count,
+      // group_prefix}) or null for the free-form join.
+      podConfig: podConfig || null,
     };
 
     return this.api.httpRequestCall("api/v1/sessions", "POST", body);

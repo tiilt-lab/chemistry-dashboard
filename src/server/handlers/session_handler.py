@@ -9,9 +9,17 @@ from device_commands import ConnectionManager
 from redis_helper import RedisSessions
 import posthoc_queue
 import negotiation_coding
+import pod_config as pod_setup
 
-def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder, asr=None, live_video_analytics=True, negotiation_coding_enabled=False, negotiation_paired=False):
+def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder, asr=None, live_video_analytics=True, negotiation_coding_enabled=False, negotiation_paired=False, pod_config=None):
     session, keywords = database.create_session(user_id, keyword_list_id, topic_model_id, name, folder)
+    # The pod setup (already normalized by the route). One device per team
+    # means the two pods of a group are coded together: negotiation_paired
+    # follows the setup rather than being asked for separately.
+    if pod_config:
+        session.pod_config = pod_setup.dumps(pod_config)
+        negotiation_paired = pod_setup.paired(pod_config)
+        database.save_changes()
     # "Record now, analyse later" for video: only an explicit False turns the
     # live pipeline off; None (older callers) keeps the historic behaviour.
     live_video_analytics = live_video_analytics is not False

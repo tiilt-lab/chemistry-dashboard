@@ -177,6 +177,7 @@ function JoinPage() {
         setRoleError("")
         if (code.length < 3) {
             setPairedSession(false)
+            setJoinSetup(null)
             return undefined
         }
         let cancelled = false
@@ -187,10 +188,15 @@ function JoinPage() {
                 .then((list) => {
                     if (cancelled) return
                     const found = Array.isArray(list) ? list[0] : null
+                    const setup = found && found.pod_config && typeof found.pod_config === "object" ? found.pod_config : null
+                    setJoinSetup(setup)
                     setPairedSession(!!(found && found.negotiation_paired === true))
                 })
                 .catch(() => {
-                    if (!cancelled) setPairedSession(false)
+                    if (!cancelled) {
+                        setJoinSetup(null)
+                        setPairedSession(false)
+                    }
                 })
         }, 400)
         return () => {
@@ -260,8 +266,19 @@ function JoinPage() {
     // ask for the table and side before the join; the role is kept so
     // backing out and rejoining prefills it.
     const [pairedSession, setPairedSession] = useState(false)
+    // The session's pod setup ({groups, teams, devices_per_group, group_size})
+    // once the passcode resolves: the form then lists the slots a laptop can
+    // occupy instead of asking for free text.
+    const [joinSetup, setJoinSetup] = useState(null)
     const [roleError, setRoleError] = useState("")
-    const negotiationRole = useRef(null)
+    // The slot to prefill: a join link may carry it (/join/CODE?group=Table
+    // 3&team=Pat, one printed link per slot), and a rejoin keeps the last one.
+    const negotiationRole = useRef((() => {
+        const q = new URLSearchParams(window.location.search)
+        const group = (q.get("group") || "").trim()
+        const team = (q.get("team") || "").trim()
+        return group || team ? { group, side: team } : null
+    })())
     // Server-side watchdog verdicts (silent video / upload lagging): the
     // recording looks fine from the pod, so the pod's own screen is the
     // only place a warning reaches the people who can act on it.
@@ -1776,14 +1793,18 @@ function JoinPage() {
         if (names === null) {
             names = "User Device"
         }
-        // A paired session needs both the table and the side: a laptop that
-        // joins without them would be coded as nobody's team.
-        if (pairedSession) {
-            const role = negotiation || {}
-            if (!role.group || !role.side) {
-                setRoleError("Enter your table and choose which side this laptop records.")
-                return
-            }
+        // A session with a pod setup needs the slot: the group whenever the
+        // setup names groups, and the team when each team has its own
+        // laptop (a laptop without them would be coded as nobody's team).
+        const role = negotiation || {}
+        const needsGroup = pairedSession || !!(joinSetup && (joinSetup.groups || []).length > 0)
+        if (needsGroup && !role.group) {
+            setRoleError(joinSetup && (joinSetup.groups || []).length > 0 ? "Choose your table or group." : "Enter your table and choose which side this laptop records.")
+            return
+        }
+        if (pairedSession && !role.side) {
+            setRoleError("Choose which team this laptop records.")
+            return
         }
         setRoleError("")
         // The join form's inline device check owns the current selection;
@@ -2705,6 +2726,7 @@ function JoinPage() {
             pcode={pcode}
             savedName={name.current}
             pairedSession={pairedSession}
+            joinSetup={joinSetup}
             roleError={roleError}
             savedRole={negotiationRole.current}
             wrongInput={wrongInput}

@@ -19,6 +19,170 @@ const fieldLabel = "mb-1.5 block text-sm font-semibold text-tiilt-ink";
 const footerBar = "w-full flex-none border-t border-tiilt-line bg-white";
 const footerRow = "mx-auto flex w-full max-w-lg gap-3 px-4 py-4";
 
+const numberCls =
+  "h-9 w-20 rounded-lg border border-tiilt-line bg-white px-2 text-sm text-tiilt-ink outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30";
+const textCls =
+  "h-9 w-full rounded-lg border border-tiilt-line bg-white px-2 text-sm text-tiilt-ink outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30";
+
+// How a breakout group is composed and which laptop records what. The join
+// page turns this into the slots a device can occupy ("Table 3 · Pat's
+// team"), names the pod after its slot and pre-creates its speaker cards.
+function PodSetupSection({ setup, setSetup }) {
+  const s = setup || {};
+  const set = (patch) => setSetup({ ...s, ...patch });
+  const setTeam = (i, patch) =>
+    set({ teams: s.teams.map((t, j) => (j === i ? { ...t, ...patch } : t)) });
+  const int = (v, lo, hi) => Math.max(lo, Math.min(hi, parseInt(v, 10) || lo));
+  const groupSize = s.teamsPerGroup === 2 ? s.teams[0].size + s.teams[1].size : s.groupSize;
+  const labels = (n, prefix) => {
+    const p = (prefix || "Table").trim() || "Table";
+    if (n <= 3) return Array.from({ length: n }, (_, i) => `${p} ${i + 1}`).join(", ");
+    return `${p} 1, ${p} 2 … ${p} ${n}`;
+  };
+  return (
+    <div>
+      <label className={fieldLabel}>Pod setup</label>
+      <label
+        htmlFor="chkPodSetup"
+        className="flex cursor-pointer items-start gap-3 rounded-lg border border-tiilt-line bg-white px-3 py-2.5"
+      >
+        <input
+          id="chkPodSetup"
+          type="checkbox"
+          className="mt-0.5 h-4 w-4 flex-none cursor-pointer accent-tiilt"
+          checked={s.enabled === true}
+          onChange={(event) => set({ enabled: event.target.checked })}
+        />
+        <span>
+          <span className="block text-sm font-semibold text-tiilt-ink">
+            Set up the groups and laptops in advance
+          </span>
+          <span className="block text-xs text-tiilt-muted">
+            Joining laptops pick their table and team from a list, are named
+            after it, and start with the right number of speaker cards. Off:
+            groups name themselves and size their roster when they join.
+          </span>
+        </span>
+      </label>
+      {s.enabled ? (
+        <div className="mt-2 flex flex-col gap-3 rounded-lg border border-tiilt-line bg-white px-3 py-3 text-sm text-tiilt-ink">
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="flex flex-col gap-1 text-xs text-tiilt-muted">
+              Number of groups
+              <input
+                id="podGroupCount"
+                type="number"
+                min={1}
+                max={200}
+                value={s.groupCount}
+                onChange={(e) => set({ groupCount: int(e.target.value, 1, 200) })}
+                className={numberCls}
+              />
+            </label>
+            <label className="flex grow flex-col gap-1 text-xs text-tiilt-muted">
+              Called
+              <input
+                id="podGroupPrefix"
+                type="text"
+                maxLength={28}
+                value={s.groupPrefix}
+                onChange={(e) => set({ groupPrefix: e.target.value })}
+                className={textCls}
+                placeholder="Table"
+              />
+            </label>
+            <span className="pb-2 text-xs text-tiilt-muted">{labels(s.groupCount, s.groupPrefix)}</span>
+          </div>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="flex flex-col gap-1 text-xs text-tiilt-muted">
+              Teams per group
+              <select
+                id="podTeamsPerGroup"
+                value={s.teamsPerGroup}
+                onChange={(e) => set({ teamsPerGroup: parseInt(e.target.value, 10) })}
+                className={numberCls + " app-select w-28 cursor-pointer pr-7"}
+              >
+                <option value={1}>No teams</option>
+                <option value={2}>Two teams</option>
+              </select>
+            </label>
+            {s.teamsPerGroup === 2 ? (
+              s.teams.slice(0, 2).map((t, i) => (
+                <div key={i} className="flex items-end gap-2">
+                  <label className="flex flex-col gap-1 text-xs text-tiilt-muted">
+                    Team {i + 1}
+                    <input
+                      id={`podTeamName${i}`}
+                      type="text"
+                      maxLength={16}
+                      value={t.name}
+                      onChange={(e) => setTeam(i, { name: e.target.value })}
+                      className={textCls + " w-28"}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs text-tiilt-muted">
+                    People
+                    <input
+                      id={`podTeamSize${i}`}
+                      type="number"
+                      min={1}
+                      max={32}
+                      value={t.size}
+                      onChange={(e) => setTeam(i, { size: int(e.target.value, 1, 32) })}
+                      className={numberCls + " w-16"}
+                    />
+                  </label>
+                </div>
+              ))
+            ) : (
+              <label className="flex flex-col gap-1 text-xs text-tiilt-muted">
+                People per group
+                <input
+                  id="podGroupSize"
+                  type="number"
+                  min={1}
+                  max={64}
+                  value={s.groupSize}
+                  onChange={(e) => set({ groupSize: int(e.target.value, 1, 64) })}
+                  className={numberCls}
+                />
+              </label>
+            )}
+            <span className="pb-2 text-xs text-tiilt-muted">
+              {s.groupCount} {s.groupCount === 1 ? "group" : "groups"} of {groupSize}
+              {s.teamsPerGroup === 2 ? ` (${s.teams[0].name || "Team 1"} ${s.teams[0].size} vs ${s.teams[1].name || "Team 2"} ${s.teams[1].size})` : ""}
+            </span>
+          </div>
+          {s.teamsPerGroup === 2 ? (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs text-tiilt-muted">Laptops</span>
+              {[
+                ["group", "One laptop per group", "One microphone and camera for the whole table."],
+                ["team", "One laptop per team", "Each team joins from its own laptop and picks its table and team; everything that laptop hears and sees counts for that team."],
+              ].map(([value, title, desc]) => (
+                <label key={value} htmlFor={`podDevices-${value}`} className="flex cursor-pointer items-start gap-3">
+                  <input
+                    id={`podDevices-${value}`}
+                    type="radio"
+                    name="podDevices"
+                    className="mt-0.5 h-4 w-4 flex-none cursor-pointer accent-tiilt"
+                    checked={s.devices === value}
+                    onChange={() => set({ devices: value })}
+                  />
+                  <span>
+                    <span className="block text-sm text-tiilt-ink">{title}</span>
+                    <span className="block text-xs text-tiilt-muted">{desc}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function CreateSessionPage(props) {
   return (
     <>
@@ -135,6 +299,7 @@ function CreateSessionPage(props) {
                   </span>
                 </label>
               </div>
+              <PodSetupSection setup={props.podSetup} setSetup={props.setPodSetup} />
               <div>
                 <label className={fieldLabel}>Negotiation coding</label>
                 <label
@@ -162,59 +327,11 @@ function CreateSessionPage(props) {
                   </span>
                 </label>
                 {props.negotiationCoding === true ? (
-                  <div className="mt-2 flex flex-col gap-2 rounded-lg border border-tiilt-line bg-white px-3 py-2.5">
-                    <span className="block text-sm font-semibold text-tiilt-ink">
-                      Devices per breakout group
-                    </span>
-                    <label
-                      htmlFor="radNegotiationSingle"
-                      className="flex cursor-pointer items-start gap-3"
-                    >
-                      <input
-                        id="radNegotiationSingle"
-                        type="radio"
-                        name="negotiationDevices"
-                        className="mt-0.5 h-4 w-4 flex-none cursor-pointer accent-tiilt"
-                        checked={props.negotiationPaired !== true}
-                        onChange={() => props.setNegotiationPaired(false)}
-                      />
-                      <span>
-                        <span className="block text-sm text-tiilt-ink">
-                          One laptop per group
-                        </span>
-                        <span className="block text-xs text-tiilt-muted">
-                          One microphone and camera for the whole table; after
-                          the session you assign each speaker to Pat or Sandy
-                          by name on the pod page.
-                        </span>
-                      </span>
-                    </label>
-                    <label
-                      htmlFor="radNegotiationPaired"
-                      className="flex cursor-pointer items-start gap-3"
-                    >
-                      <input
-                        id="radNegotiationPaired"
-                        type="radio"
-                        name="negotiationDevices"
-                        className="mt-0.5 h-4 w-4 flex-none cursor-pointer accent-tiilt"
-                        checked={props.negotiationPaired === true}
-                        onChange={() => props.setNegotiationPaired(true)}
-                      />
-                      <span>
-                        <span className="block text-sm text-tiilt-ink">
-                          Two laptops per group, one per team
-                        </span>
-                        <span className="block text-xs text-tiilt-muted">
-                          Each team joins from its own laptop and picks its
-                          table and side (Pat or Sandy) on the join page.
-                          Everything that laptop&apos;s microphone and camera
-                          capture counts for that team, and the two
-                          transcripts are merged into one coded conversation.
-                        </span>
-                      </span>
-                    </label>
-                  </div>
+                  <p className="mt-2 text-xs text-tiilt-muted">
+                    {props.negotiationPaired
+                      ? "Teams come from the pod setup above: each team records from its own laptop, and the two laptops of a table are coded as one negotiation."
+                      : "With one laptop per table you assign each speaker to a team by name on the pod page after the session. Set up pods above with two teams and one laptop per team to have the teams fixed by device instead."}
+                  </p>
                 ) : null}
               </div>
             </div>

@@ -1,6 +1,7 @@
 from app import db
 from datetime import datetime, timezone
 from utility import verify_characters
+import pod_config as _pod_config
 
 class Session(db.Model):
     __tablename__ = 'session'
@@ -30,6 +31,11 @@ class Session(db.Model):
     # per speaker afterwards. NULL/FALSE = one device per group. Mapped
     # column: migration 5d6e7f809102 first.
     negotiation_paired = db.Column(db.Boolean, nullable=True)
+    # The session starter's pod setup (pod_config.py): people and teams per
+    # breakout group, one device per team or per group, preset group labels.
+    # JSON text; NULL = no setup, the free-form join. Mapped column:
+    # migration 6e7f80910213 first.
+    pod_config = db.Column(db.Text, nullable=True)
 
     keywords = db.relationship("Keyword", lazy='joined', uselist=True, cascade="all, delete", passive_deletes=True)
 
@@ -54,7 +60,14 @@ class Session(db.Model):
         self.live_video_analytics = live_video_analytics is not False
         self.negotiation_coding = bool(negotiation_coding)
         self.negotiation_paired = bool(negotiation_paired)
+        self.pod_config = None
 
+    def pod_config_dict(self):
+        return _pod_config.loads(self.pod_config)
+
+    def team_names(self):
+        # The team names devices may record for (Viking default without a setup).
+        return _pod_config.team_names(self.pod_config_dict())
 
     def get_length(self):
         return max((self.end_date - self.creation_date).total_seconds() if self.end_date else (datetime.now(timezone.utc).replace(tzinfo=None) - self.creation_date).total_seconds(), 0.0)
@@ -74,7 +87,8 @@ class Session(db.Model):
             live_video_analytics=self.live_video_analytics is not False,
             # NULL (rows from before the column) reads as off.
             negotiation_coding=bool(self.negotiation_coding),
-            negotiation_paired=bool(self.negotiation_paired)
+            negotiation_paired=bool(self.negotiation_paired),
+            pod_config=self.pod_config_dict()
         )
 
     @staticmethod

@@ -3,8 +3,18 @@ import { formatSeconds, stringToDate } from "../../globals"
 // Pure helpers for the negotiation-coding panel (no React) so the roll-up,
 // filters, clock formatting and polling can be unit-tested in node.
 
-export const TEAMS = ["Pat", "Sandy"]
+export const TEAMS = ["Pat", "Sandy"]   // the Viking default; a session's pod setup may name others
 export const UNASSIGNED = "unassigned"
+
+// The team names in play: the run's (server-stamped), else the session's
+// pod setup when it has two or more teams, else the Viking default.
+export function teamNamesOf(data, session) {
+    const fromRun = data && Array.isArray(data.team_names) ? data.team_names.filter(Boolean) : []
+    if (fromRun.length >= 2) return fromRun
+    const teams = session && session.pod_config && Array.isArray(session.pod_config.teams) ? session.pod_config.teams : []
+    const fromSetup = teams.map((t) => t && t.name).filter(Boolean)
+    return fromSetup.length >= 2 ? fromSetup : TEAMS
+}
 
 // The codebook, in display order. `rollup: false` marks the "nothing coded"
 // values that the server's summary does not count (they still get a filter
@@ -150,18 +160,18 @@ export function speakerTags(tagCounts, codes, teams) {
     return [...tags].sort((a, b) => a.localeCompare(b))
 }
 
-// Keep only Pat/Sandy assignments (drop unassigned / unknown values).
-export function assignedTeams(draft) {
+// Keep only real team assignments (drop unassigned / unknown values).
+export function assignedTeams(draft, names = TEAMS) {
     const out = {}
     for (const [tag, team] of Object.entries(draft || {})) {
-        if (TEAMS.includes(team)) out[tag] = team
+        if (names.includes(team)) out[tag] = team
     }
     return out
 }
 
-export function sameTeams(a, b) {
-    const x = assignedTeams(a)
-    const y = assignedTeams(b)
+export function sameTeams(a, b, names = TEAMS) {
+    const x = assignedTeams(a, names)
+    const y = assignedTeams(b, names)
     const kx = Object.keys(x).sort()
     const ky = Object.keys(y).sort()
     if (kx.length !== ky.length) return false
@@ -170,10 +180,10 @@ export function sameTeams(a, b) {
 
 // An utterance's team: the one the server stamped on it (its device's side
 // in a paired run), else its speaker tag's assignment, else unassigned.
-export function teamOf(row, teams) {
-    if (row && TEAMS.includes(row.team)) return row.team
+export function teamOf(row, teams, names = TEAMS) {
+    if (row && names.includes(row.team)) return row.team
     const t = row && teams ? teams[row.speaker_tag] : null
-    return TEAMS.includes(t) ? t : UNASSIGNED
+    return names.includes(t) ? t : UNASSIGNED
 }
 
 // "Table 3 · Pat" for a pod's negotiation role; null when it has none.
@@ -190,9 +200,9 @@ function count(team, key) {
 // Summary.by_team -> a table: teams as columns (unassigned only when it has
 // utterances), one section per dimension, one row per counted code. Each
 // cell is { n, pct } with pct relative to the column's utterance count.
-export function rollupTable(summary) {
+export function rollupTable(summary, names = TEAMS) {
     const byTeam = (summary && summary.by_team) || {}
-    const columns = TEAMS.map((t) => ({
+    const columns = names.map((t) => ({
         key: t,
         label: t,
         utterances: count(byTeam[t], "utterances"),

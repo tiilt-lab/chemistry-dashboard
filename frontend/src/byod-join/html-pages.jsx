@@ -27,8 +27,80 @@ import { AppInfographicsComparison } from "../components/infographics-view/infog
 
 const fieldLabel = "mb-1.5 block text-left text-sm font-semibold text-tiilt-ink"
 
-// Paired negotiation sessions: the table and side fields of the join form,
-// when they are shown ({group, side}); null for every other session.
+// Which slot of the session's pod setup this laptop occupies: the group
+// (from the setup's list, or typed) and, when each team records from its
+// own laptop, the team. The join sends both; the pod is named after them.
+function SlotPicker({ setup, paired, savedRole, error }) {
+    const groups = (setup && setup.groups) || []
+    const teams = (setup && setup.teams) || []
+    const twoTeams = paired && teams.length >= 2
+    const fallbackTeams = [
+        { name: "Pat", size: null },
+        { name: "Sandy", size: null },
+    ]
+    const teamOptions = twoTeams ? teams : paired ? fallbackTeams : []
+    const groupSize = setup && setup.group_size
+    const intro = twoTeams
+        ? `This session runs groups of ${groupSize} as ${teams.map((t) => `${t.name} (${t.size})`).join(" vs ")}, each team on its own laptop. Pick the slot this laptop occupies; everything it hears and sees counts for that team.`
+        : paired
+          ? "This negotiation session records each team from its own laptop. Enter your table and which side this laptop sits with; everything it hears and sees counts for that team."
+          : `This session runs groups of ${groupSize}${teams.length >= 2 ? ` (${teams.map((t) => `${t.name} ${t.size}`).join(" vs ")})` : ""}. Pick your table or group.`
+    return (
+        <div className="flex flex-col gap-3 rounded-xl border border-tiilt/40 bg-tiilt-soft/40 px-3 py-3">
+            <div className="text-left text-xs leading-5 text-tiilt-ink">{intro}</div>
+            <div>
+                <label htmlFor="negGroup" className={fieldLabel}>
+                    Table or breakout group
+                </label>
+                {groups.length > 0 ? (
+                    <select
+                        id="negGroup"
+                        className={dlgSelect}
+                        defaultValue={(savedRole && savedRole.group) || ""}
+                    >
+                        <option value="">Choose…</option>
+                        {groups.map((g) => (
+                            <option key={g} value={g}>
+                                {g}
+                            </option>
+                        ))}
+                    </select>
+                ) : (
+                    <input
+                        className={dlgInput}
+                        id="negGroup"
+                        maxLength={32}
+                        defaultValue={(savedRole && savedRole.group) || ""}
+                        placeholder="e.g. Table 3"
+                    />
+                )}
+            </div>
+            {teamOptions.length > 0 ? (
+                <div>
+                    <label htmlFor="negSide" className={fieldLabel}>
+                        This laptop records
+                    </label>
+                    <select
+                        id="negSide"
+                        className={dlgSelect}
+                        defaultValue={(savedRole && savedRole.side) || ""}
+                    >
+                        <option value="">Choose a team…</option>
+                        {teamOptions.map((t) => (
+                            <option key={t.name} value={t.name}>
+                                {t.name}&apos;s team{t.size ? ` (${t.size} people)` : ""}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            ) : null}
+            {error ? <div className={dlgError}>{error}</div> : null}
+        </div>
+    )
+}
+
+// The slot fields of the join form, when they are shown ({group, side});
+// null for a session without a pod setup.
 function readNegotiationRole() {
     const group = document.getElementById("negGroup")
     const side = document.getElementById("negSide")
@@ -284,45 +356,13 @@ function ByodJoinPage(props) {
                                         automatically. If rejoining, use the
                                         same group name as before.
                                     </div>
-                                    {props.pairedSession ? (
-                                        <div className="flex flex-col gap-3 rounded-xl border border-tiilt/40 bg-tiilt-soft/40 px-3 py-3">
-                                            <div className="text-left text-xs leading-5 text-tiilt-ink">
-                                                This negotiation session records each
-                                                team from its own laptop. Enter your
-                                                table and which side this laptop sits
-                                                with; everything it hears and sees
-                                                counts for that team.
-                                            </div>
-                                            <div>
-                                                <label htmlFor="negGroup" className={fieldLabel}>
-                                                    Table or breakout group
-                                                </label>
-                                                <input
-                                                    className={dlgInput}
-                                                    id="negGroup"
-                                                    maxLength={32}
-                                                    defaultValue={(props.savedRole && props.savedRole.group) || ""}
-                                                    placeholder="e.g. Table 3"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label htmlFor="negSide" className={fieldLabel}>
-                                                    This laptop records
-                                                </label>
-                                                <select
-                                                    id="negSide"
-                                                    className={dlgSelect}
-                                                    defaultValue={(props.savedRole && props.savedRole.side) || ""}
-                                                >
-                                                    <option value="">Choose a side…</option>
-                                                    <option value="Pat">Pat&apos;s team</option>
-                                                    <option value="Sandy">Sandy&apos;s team</option>
-                                                </select>
-                                            </div>
-                                            {props.roleError ? (
-                                                <div className={dlgError}>{props.roleError}</div>
-                                            ) : null}
-                                        </div>
+                                    {props.pairedSession || props.joinSetup ? (
+                                        <SlotPicker
+                                            setup={props.joinSetup}
+                                            paired={props.pairedSession}
+                                            savedRole={props.savedRole}
+                                            error={props.roleError}
+                                        />
                                     ) : null}
                                     <div>
                                         <label htmlFor="name" className={fieldLabel}>
@@ -336,8 +376,8 @@ function ByodJoinPage(props) {
                                             id="name"
                                             defaultValue={props.savedName || ""}
                                             placeholder={
-                                                props.pairedSession
-                                                    ? "Leave blank to be named after the table and side"
+                                                props.pairedSession || props.joinSetup
+                                                    ? "Leave blank to be named after your table and team"
                                                     : "Leave blank to be named Group A, B, C…"
                                             }
                                         />

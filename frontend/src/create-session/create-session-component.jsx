@@ -20,6 +20,34 @@ function defaultSessionName() {
   ).replace(",", "");
 }
 
+// The form's pod setup, as the Viking negotiation class runs it: ten tables
+// of six, two teams of three, one laptop per team.
+export const DEFAULT_POD_SETUP = {
+  enabled: false,
+  groupCount: 10,
+  groupPrefix: "Table",
+  teamsPerGroup: 2,
+  groupSize: 6,
+  teams: [
+    { name: "Pat", size: 3 },
+    { name: "Sandy", size: 3 },
+  ],
+  devices: "team",
+};
+
+// What the API gets for the form's pod setup (null when it is off).
+export function podConfigFromSetup(setup) {
+  if (!setup || !setup.enabled) return null;
+  const twoTeams = setup.teamsPerGroup === 2;
+  return {
+    teams: twoTeams ? setup.teams.slice(0, 2) : [],
+    group_size: twoTeams ? setup.teams[0].size + setup.teams[1].size : setup.groupSize,
+    devices_per_group: twoTeams ? setup.devices : "group",
+    group_count: setup.groupCount,
+    group_prefix: setup.groupPrefix,
+  };
+}
+
 function CreateSessionComponent(props) {
   const BLINK_DELAY = 15000;
   //Previous state
@@ -70,11 +98,14 @@ function CreateSessionComponent(props) {
   const [negotiationCoding, setNegotiationCoding] = useState(
     changedState && prevState.negotiationCoding != null ? prevState.negotiationCoding === true : false
   );
-  // Two laptops per breakout group, one per side of the table: each team's
-  // pod names its table and side at join time and the coding merges the pair.
-  const [negotiationPaired, setNegotiationPaired] = useState(
-    changedState && prevState.negotiationPaired != null ? prevState.negotiationPaired === true : false
+  // Pod setup: how a breakout group is composed and which laptop records
+  // what. Off = the free-form join (any group name, roster sized on the
+  // speaker page). With two teams and one laptop per team the two pods of
+  // a table are coded as one negotiation (negotiationPaired follows it).
+  const [podSetup, setPodSetup] = useState(() =>
+    changedState && prevState.podSetup ? prevState.podSetup : DEFAULT_POD_SETUP
   );
+  const negotiationPaired = podSetup.enabled && podSetup.teamsPerGroup === 2 && podSetup.devices === "team";
   const [selectedKeywordList] = useState(changedState ? prevState.selectedKeywordList : null);
   const [selectedTopicModel] = useState(changedState ? prevState.selectedTopicModel : null);
   const [selectedDevices, setSelectedDevices] = useState([]);
@@ -186,7 +217,7 @@ function CreateSessionComponent(props) {
       const deviceIds = selectedDevices.map(d => d.id);
       const keywordListId = (selectedKeywordList) ? selectedKeywordList.id : null;
       const topicModelId = (selectedTopicModel) ? selectedTopicModel.id : null;
-      const fetchData = new SessionService().createNewSession(finalName, deviceIds, keywordListId, topicModelId, byod, features, doa, folder, asr, liveVideoAnalytics, negotiationCoding, negotiationCoding && negotiationPaired)
+      const fetchData = new SessionService().createNewSession(finalName, deviceIds, keywordListId, topicModelId, byod, features, doa, folder, asr, liveVideoAnalytics, negotiationCoding, negotiationCoding && negotiationPaired, podConfigFromSetup(podSetup))
       fetchData.then(
         response=>{
           if(response.status === 200){
@@ -320,7 +351,8 @@ function CreateSessionComponent(props) {
     negotiationCoding = {negotiationCoding}
     setNegotiationCoding = {setNegotiationCoding}
     negotiationPaired = {negotiationPaired}
-    setNegotiationPaired = {setNegotiationPaired}
+    podSetup = {podSetup}
+    setPodSetup = {setPodSetup}
     goToSettings = {goToSettings}
     goToDevices = {goToDevices}
     devices = {devices}

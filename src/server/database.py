@@ -794,6 +794,8 @@ def create_byod_session_device(passcode, name, collaborators, negotiation_group=
     duplicate = get_session_devices(session_id=session.id, name=name, first=True)
     if duplicate:
         if duplicate.connected: # User signed into a device already in use.
+            if negotiation_group or negotiation_side:
+                return False, "%s is already connected from another laptop. Pick your own table and team." % name, speakers
             return False, "Name already in use.", speakers
         else: # User signed back into existing device.
             duplicate.removed = False

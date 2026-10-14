@@ -49,7 +49,7 @@ PAIR_START_TOLERANCE = 1.5   # s: starts this close are the same moment ...
 PAIR_OVERLAP_MIN = 0.5       # ... or the two overlap this share of the shorter one
 PAIR_TEXT_SIMILARITY = 0.5   # token ratio from which two copies are one utterance
 
-TEAMS = ("Pat", "Sandy")
+TEAMS = ("Pat", "Sandy")   # the Viking default; a session's pod setup may name others
 UNASSIGNED = "unassigned"
 DIMENSIONS = ("emotion", "rip", "frame", "listening")
 CODEBOOK_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "negotiation_codebook.json")
@@ -141,7 +141,7 @@ def _utterance(r, team=None):
     u = {"transcript_id": r.id, "start_time": r.start_time, "length": r.length,
          "speaker_tag": r.speaker_tag, "text": r.transcript,
          "session_device_id": getattr(r, "session_device_id", None)}
-    if team in TEAMS:
+    if team:
         u["team"] = team
     conf = _attribution_confidence(r)
     if conf is not None:
@@ -428,20 +428,21 @@ def code_utterances(codebook, utterances, llm=None, size=CHUNK_SIZE, context=CON
 
 # ------------------------------------------------------ rollup, timeline
 
-def team_of(speaker_tag, teams):
+def team_of(speaker_tag, teams, names=TEAMS):
     team = (teams or {}).get(speaker_tag)
-    return team if team in TEAMS else UNASSIGNED
+    return team if team in names else UNASSIGNED
 
 
-def team_of_code(code, teams):
+def team_of_code(code, teams, names=TEAMS):
     """A coded utterance's team: the one stamped on it (its device's side
-    in a paired run) else its speaker tag's assignment."""
+    in a paired run) else its speaker tag's assignment. ``names`` are the
+    session's team names (pod setup), the Viking pair by default."""
     team = code.get("team")
-    return team if team in TEAMS else team_of(code.get("speaker_tag") or "", teams)
+    return team if team in names else team_of(code.get("speaker_tag") or "", teams, names)
 
 
-def other_team(team):
-    return TEAMS[1] if team == TEAMS[0] else TEAMS[0]
+def other_team(team, names=TEAMS):
+    return names[1] if team == names[0] else names[0]
 
 
 def _bucket(codebook):
@@ -460,15 +461,15 @@ def _tally(bucket, code):
                 bucket[dim][c] += 1
 
 
-def rollup(codes, teams, codebook=None):
-    """Counts of every code per team (Pat, Sandy, unassigned) and per speaker
-    tag; ``teams`` maps speaker_tag -> team."""
+def rollup(codes, teams, codebook=None, names=TEAMS):
+    """Counts of every code per team (each of ``names``, plus unassigned)
+    and per speaker tag; ``teams`` maps speaker_tag -> team."""
     codebook = codebook or load_codebook()
-    by_team = {t: _bucket(codebook) for t in TEAMS + (UNASSIGNED,)}
+    by_team = {t: _bucket(codebook) for t in tuple(names) + (UNASSIGNED,)}
     by_speaker = {}
     for code in codes:
         tag = code.get("speaker_tag") or ""
-        team = team_of_code(code, teams)
+        team = team_of_code(code, teams, names)
         _tally(by_team[team], code)
         # Paired runs can carry the same tag on both sides (two unmatched
         # voices, or one name enrolled on both laptops): keyed apart.
@@ -512,7 +513,7 @@ RIP_CODES = ("interest", "right", "power")
 QUESTION_CODES = ("open_question", "closed_question", "ask_why", "ask_priority", "ask_constraint")
 
 
-def team_dynamics(codes, teams):
+def team_dynamics(codes, teams, names=TEAMS):
     """Per team, the debrief's questions: opening_move (dominant rip code in
     the first OPENING_WINDOW seconds of the conversation, "none" if it made
     no rights/interests/power move), rip_sequence (its rip codes in order
@@ -522,8 +523,8 @@ def team_dynamics(codes, teams):
     ordered = sorted(codes, key=lambda c: (c["start_time"], c.get("transcript_id") or 0))
     start = ordered[0]["start_time"] if ordered else 0
     out = {}
-    for team in TEAMS + (UNASSIGNED,):
-        mine = [c for c in ordered if team_of_code(c, teams) == team]
+    for team in tuple(names) + (UNASSIGNED,):
+        mine = [c for c in ordered if team_of_code(c, teams, names) == team]
         opening = [c["rip"] for c in mine if c["start_time"] < start + OPENING_WINDOW and c.get("rip") in RIP_CODES]
         # ties go to the code the team reached for first
         counts = {r: opening.count(r) for r in RIP_CODES if r in opening}
@@ -541,11 +542,11 @@ def team_dynamics(codes, teams):
     return out
 
 
-def summarize(codes, teams, codebook=None, extra=None):
+def summarize(codes, teams, codebook=None, extra=None, names=TEAMS):
     """Roll-up, team dynamics and timeline; ``extra`` (a paired run's
     cross_talk and pods) is merged in as further top-level keys."""
-    summary = rollup(codes, teams, codebook)
-    for team, dynamics in team_dynamics(codes, teams).items():
+    summary = rollup(codes, teams, codebook, names)
+    for team, dynamics in team_dynamics(codes, teams, names).items():
         summary["by_team"][team].update(dynamics)
     summary["timeline"] = timeline(codes)
     for key, value in (extra or {}).items():
@@ -554,27 +555,31 @@ def summarize(codes, teams, codebook=None, extra=None):
     return summary
 
 
-def validate_teams(teams):
-    """The request's {"<speaker_tag>": "Pat"|"Sandy"} -> (clean dict, error).
-    Missing/null means nobody is assigned; empty or null values unassign."""
+def validate_teams(teams, names=TEAMS):
+    """The request's {"<speaker_tag>": "<team name>"} -> (clean dict, error).
+    Team names are matched case-insensitively against ``names`` (the
+    session's teams). Missing/null means nobody is assigned; empty or null
+    values unassign."""
+    choices = " or ".join(names) if len(names) <= 2 else ", ".join(names[:-1]) + " or " + names[-1]
     if teams is None:
         return {}, None
     if not isinstance(teams, dict):
-        return None, "teams must be an object mapping speaker tags to Pat or Sandy."
+        return None, "teams must be an object mapping speaker tags to %s." % choices
     clean = {}
     for tag, team in teams.items():
         if team in (None, ""):
             continue
-        name = team.strip().capitalize() if isinstance(team, str) else None
-        if name not in TEAMS:
-            return None, "team for speaker %r must be Pat or Sandy." % tag
+        wanted = " ".join(team.split()).lower() if isinstance(team, str) else None
+        name = next((n for n in names if n.lower() == wanted), None)
+        if name is None:
+            return None, "team for speaker %r must be %s." % (tag, choices)
         clean[str(tag)] = name
     return clean, None
 
 
 # --------------------------------------------------------- orchestration
 
-def code_row(code, transcript, teams=None, sides=None):
+def code_row(code, transcript, teams=None, sides=None, names=TEAMS):
     # One entry of the API's "codes" list: the utterance, its codes and its
     # team (its device's side when the device has one, else its tag's
     # assignment, else "unassigned").
@@ -583,35 +588,54 @@ def code_row(code, transcript, teams=None, sides=None):
     return {"transcript_id": transcript.id, "session_device_id": device_id,
             "start_time": transcript.start_time, "length": transcript.length,
             "speaker_tag": transcript.speaker_tag, "text": transcript.transcript,
-            "team": side if side in TEAMS else team_of(transcript.speaker_tag or "", teams),
+            "team": side if side in names else team_of(transcript.speaker_tag or "", teams, names),
             "emotion": code.emotion, "rip": code.rip, "frame": code.frame,
             "listening": code.listening_list()}
 
 
-def _side_of(device):
+def _side_of(device, names=TEAMS):
     side = getattr(device, "negotiation_side", None)
-    return side if side in TEAMS else None
+    return side if side in names else None
 
 
-def run_sides(run):
+def _session_names(session):
+    # The session's team names (pod setup); the Viking pair without one.
+    getter = getattr(session, "team_names", None)
+    names = getter() if callable(getter) else None
+    return tuple(names) if names and len(names) >= 2 else TEAMS
+
+
+def device_team_names(session_device_id):
+    """The team names of the pod's session."""
+    import database
+    device = database.get_session_devices(id=session_device_id)
+    session = database.get_sessions(id=device.session_id) if device is not None else None
+    return _session_names(session)
+
+
+def run_names(run):
+    return device_team_names(run.session_device_id)
+
+
+def run_sides(run, names=TEAMS):
     """{device id: team} for the run's devices. A single device counts only
     when it has a side (a paired session's lone pod). In a paired run a
     missing side is the complement of the other's, both missing makes the
-    first device Pat, and two devices claiming one side give the partner the
-    other."""
+    first device the first team, and two devices claiming one side give the
+    partner the other."""
     import database
     first = database.get_session_devices(id=run.session_device_id)
     if not run.is_paired():
-        side = _side_of(first)
+        side = _side_of(first, names)
         return {run.session_device_id: side} if side else {}
     partner = database.get_session_devices(id=run.partner_device_id)
-    a, b = _side_of(first), _side_of(partner)
+    a, b = _side_of(first, names), _side_of(partner, names)
     if a is None and b is None:
-        a, b = TEAMS
+        a, b = names[0], names[1]
     elif a is None:
-        a = other_team(b)
+        a = other_team(b, names)
     elif b is None or b == a:
-        b = other_team(a)
+        b = other_team(a, names)
     return {run.session_device_id: a, run.partner_device_id: b}
 
 
@@ -628,11 +652,11 @@ def run_pods(run, sides):
     return pods
 
 
-def _pair_rank(device):
-    # Pat first, then Sandy, then unsided; ties by id: the two pods of a
-    # group always agree on which is the run's first device.
-    side = _side_of(device)
-    return (TEAMS.index(side) if side else len(TEAMS), device.id)
+def _pair_rank(device, names=TEAMS):
+    # The first team first, then the second, then unsided; ties by id: the
+    # two pods of a group always agree on which is the run's first device.
+    side = _side_of(device, names)
+    return (names.index(side) if side else len(names), device.id)
 
 
 def resolve_pair(session_device_id):
@@ -649,7 +673,8 @@ def resolve_pair(session_device_id):
     partner = database.get_negotiation_partner(device)
     if partner is None:
         return device.id, None
-    first, second = sorted((device, partner), key=_pair_rank)
+    names = _session_names(session)
+    first, second = sorted((device, partner), key=lambda d: _pair_rank(d, names))
     return first.id, second.id
 
 
@@ -671,7 +696,8 @@ def run_coding(session_device_id, teams=None, llm=call_llm, run_id=None, codeboo
                                               partner_device_id=partner_device_id)
     database.update_negotiation_run(run.id, status="running", started_at=_now(), finished_at=None, error=None)
     try:
-        sides = run_sides(run)
+        names = run_names(run)
+        sides = run_sides(run, names)
         extra = {"pods": run_pods(run, sides)}
         if run.is_paired():
             rows_by_device = {d: database.get_transcripts(session_device_id=d) for d in run.device_ids()}
@@ -687,7 +713,7 @@ def run_coding(session_device_id, teams=None, llm=call_llm, run_id=None, codeboo
             teams = database.get_negotiation_run(run.id).teams_dict()
         database.update_negotiation_run(
             run.id, status="done", finished_at=_now(), teams=teams,
-            summary=summarize(coded, teams, codebook, extra),
+            summary=summarize(coded, teams, codebook, extra, names),
             utterances_coded=len(coded), invalid_codes=invalid)
     except Exception as e:
         logging.exception("negotiation coding: run %s for pod %s failed", run.id, session_device_id)
@@ -702,11 +728,12 @@ def recompute_summary(run, teams, codebook=None):
     import database
     fields = {"teams": teams}
     if run.status == "done":
-        sides = run_sides(run)
-        codes = [code_row(c, t, teams, sides) for c, t in database.get_negotiation_codes(run.id)]
+        names = run_names(run)
+        sides = run_sides(run, names)
+        codes = [code_row(c, t, teams, sides, names) for c, t in database.get_negotiation_codes(run.id)]
         previous = run.summary_dict() or {}
         extra = {"pods": run_pods(run, sides), "cross_talk": previous.get("cross_talk")}
-        fields["summary"] = summarize(codes, teams, codebook, extra)
+        fields["summary"] = summarize(codes, teams, codebook, extra, names)
     return database.update_negotiation_run(run.id, **fields)
 
 
@@ -715,12 +742,14 @@ def run_payload(run, with_codes=True):
     None until done. mode is "paired" (two devices, teams by side) or
     "single" (teams by speaker tag)."""
     import database
-    sides = run_sides(run)
+    names = run_names(run)
+    sides = run_sides(run, names)
     payload = {"run": run.json(), "mode": "paired" if run.is_paired() else "single",
-               "pods": run_pods(run, sides), "teams": run.teams_dict(), "summary": run.summary_dict()}
+               "team_names": list(names), "pods": run_pods(run, sides),
+               "teams": run.teams_dict(), "summary": run.summary_dict()}
     if with_codes:
         teams = payload["teams"]
-        payload["codes"] = [code_row(c, t, teams, sides) for c, t in database.get_negotiation_codes(run.id)]
+        payload["codes"] = [code_row(c, t, teams, sides, names) for c, t in database.get_negotiation_codes(run.id)]
     return payload
 
 

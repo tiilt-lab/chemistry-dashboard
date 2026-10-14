@@ -5,7 +5,6 @@ import { InlineSpinner } from "../inline-spinner"
 import { btnPrimarySm, btnSecondarySm, dlgError } from "../dialog-styles"
 import { NegotiationCodingService } from "../../services/negotiation-coding-service"
 import {
-    TEAMS,
     UNASSIGNED,
     DIMENSIONS,
     TIMELINE_FIELDS,
@@ -16,6 +15,7 @@ import {
     assignedTeams,
     sameTeams,
     teamOf,
+    teamNamesOf,
     roleLabel,
     rollupTable,
     badgeCodes,
@@ -48,7 +48,13 @@ const BADGE_TONE = {
     "frame:past_blame": "orange",
     "frame:future_problem_solving": "teal",
 }
-const TEAM_TONE = { Pat: "brand", Sandy: "teal", [UNASSIGNED]: "neutral" }
+// Pill tone per team: by position in the session's team list, so custom
+// team names colour like Pat/Sandy do.
+const TEAM_TONES = ["brand", "teal", "orange", "danger"]
+const toneFor = (team, names) => {
+    const i = (names || []).indexOf(team)
+    return i >= 0 ? TEAM_TONES[i % TEAM_TONES.length] : "neutral"
+}
 
 const selectCls =
     "app-select w-full cursor-pointer rounded-lg border border-tiilt-line bg-white py-1.5 pr-8 pl-3 text-sm text-tiilt-ink transition outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30 disabled:cursor-default disabled:bg-tiilt-ground disabled:text-tiilt-muted"
@@ -89,7 +95,7 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
         setData(body)
         setExists(true)
         const teams = (body && body.teams) || {}
-        if (serverTeams.current == null || !sameTeams(serverTeams.current, teams)) {
+        if (serverTeams.current == null || !sameTeams(serverTeams.current, teams, teamNamesOf(body, session))) {
             serverTeams.current = teams
             setTeamsDraft(teams)
         }
@@ -163,14 +169,16 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
 
     const codes = (data && data.codes) || []
     const teams = (data && data.teams) || {}
+    // The team names in play: the run's, else the session's pod setup, else Pat/Sandy.
+    const names = teamNamesOf(data, session)
     const tags = speakerTags(tagCounts, codes, { ...teams, ...teamsDraft })
-    const teamsDirty = !sameTeams(teamsDraft, teams)
+    const teamsDirty = !sameTeams(teamsDraft, teams, names)
     const status = describeRun(run, now)
 
     const runCoding = () => {
         setBusy("run")
         setActionError(null)
-        const chosen = assignedTeams(teamsDraft)
+        const chosen = assignedTeams(teamsDraft, names)
         svc.run(sessionId, sessionDeviceId, chosen)
             .then(({ status: st, body }) => {
                 if (st === 202 || st === 200) {
@@ -219,7 +227,7 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
     const saveTeams = () => {
         setBusy("save")
         setActionError(null)
-        svc.setTeams(sessionId, sessionDeviceId, assignedTeams(teamsDraft))
+        svc.setTeams(sessionId, sessionDeviceId, assignedTeams(teamsDraft, names))
             .then(({ status: st, body }) => {
                 if (st === 200 && body) {
                     serverTeams.current = null // force the draft to follow the server
@@ -241,7 +249,7 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
             return next
         })
 
-    const table = rollupTable(data && data.summary)
+    const table = rollupTable(data && data.summary, names)
     const timeline = (data && data.summary && data.summary.timeline) || {}
     const shown = filterCodes(codes, filters)
     const hasResults = runStatus === "done" && codes.length > 0
@@ -340,7 +348,7 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
                             <ul className="flex flex-col gap-1">
                                 {pods.map((p) => (
                                     <li key={p.id} className="flex flex-wrap items-center gap-2 text-xs">
-                                        <StatusPill tone={TEAM_TONE[p.side] || "neutral"} className="text-[10px]">
+                                        <StatusPill tone={toneFor(p.side, names)} className="text-[10px]">
                                             {p.side || "Side not set"}
                                         </StatusPill>
                                         <span className="font-semibold text-tiilt-ink">{p.name || `Pod ${p.id}`}</span>
@@ -378,7 +386,7 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
                                             className={selectCls}
                                         >
                                             <option value="">Side not set</option>
-                                            {TEAMS.map((t) => (
+                                            {names.map((t) => (
                                                 <option key={t} value={t}>
                                                     {t}&apos;s team
                                                 </option>
@@ -427,7 +435,7 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
                                         {tag}
                                     </span>
                                     <select
-                                        value={TEAMS.includes(teamsDraft[tag]) ? teamsDraft[tag] : UNASSIGNED}
+                                        value={names.includes(teamsDraft[tag]) ? teamsDraft[tag] : UNASSIGNED}
                                         onChange={(e) =>
                                             setTeamsDraft((d) => ({ ...d, [tag]: e.target.value }))
                                         }
@@ -435,7 +443,7 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
                                         className={selectCls}
                                     >
                                         <option value={UNASSIGNED}>Unassigned</option>
-                                        {TEAMS.map((t) => (
+                                        {names.map((t) => (
                                             <option key={t} value={t}>
                                                 {t}
                                             </option>
@@ -607,7 +615,7 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
                             ) : (
                                 <ol className="flex max-h-96 flex-col gap-1 overflow-y-auto rounded-lg border border-tiilt-line p-2">
                                     {shown.map((row) => {
-                                        const team = teamOf(row, teams)
+                                        const team = teamOf(row, teams, names)
                                         return (
                                             <li
                                                 key={row.transcript_id != null ? row.transcript_id : `${row.start_time}-${row.speaker_tag}`}
@@ -624,7 +632,7 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
                                                         {row.speaker_tag || "Unknown"}
                                                     </span>
                                                     <StatusPill
-                                                        tone={TEAM_TONE[team]}
+                                                        tone={toneFor(team, names)}
                                                         className="text-[10px]"
                                                         title={mode === "paired" ? `Recorded by ${podName(row.session_device_id) || "this side's laptop"}` : undefined}
                                                     >

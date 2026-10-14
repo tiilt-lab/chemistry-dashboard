@@ -23,6 +23,9 @@ export class SessionModel {
   // teams are fixed by device; false = one device per group, speakers are
   // assigned to teams by name afterwards.
   negotiation_paired;
+  // The session starter's pod setup, or null: {group_size, teams:[{name,
+  // size}], devices_per_group: "group"|"team", groups:[labels]}.
+  pod_config;
   // The owner's email (sent for any session that is not the caller's own —
   // an admin's view of everyone's, or one shared through a folder), whether
   // it is theirs, and whether they may rename, move, delete or stop it.
@@ -84,6 +87,7 @@ export class SessionModel {
     model.live_video_analytics = json['live_video_analytics'] !== false
     model.negotiation_coding = json['negotiation_coding'] === true
     model.negotiation_paired = json['negotiation_paired'] === true
+    model.pod_config = json['pod_config'] && typeof json['pod_config'] === 'object' ? json['pod_config'] : null
     model.owner = json['owner'] != null ? json['owner'] : null
     model.owned = json['owned'] !== false
     // Rename / move / delete allowed: owner, super, or an editor of its folder.

@@ -102,10 +102,12 @@ class SessionDevice(db.Model):
         return message is None, message
 
     @staticmethod
-    def verify_negotiation(group=None, side=None):
-        """(ok, message, clean group, clean side) for a paired-session role.
-        Blank/None clears a field; the side is case-insensitive Pat/Sandy;
+    def verify_negotiation(group=None, side=None, names=None):
+        """(ok, message, clean group, clean side) for a device's role.
+        Blank/None clears a field; the side is matched case-insensitively
+        against ``names`` (the session's team names; Pat/Sandy by default);
         the group is a short label with the device-name character set."""
+        names = tuple(names) if names else SessionDevice.NEGOTIATION_SIDES
         clean_group = (group or '').strip() if isinstance(group, str) or group is None else None
         if clean_group is None:
             return False, 'Group must be text.', None, None
@@ -115,11 +117,13 @@ class SessionDevice(db.Model):
             return False, 'Invalid characters in group.', None, None
         clean_side = None
         if side not in (None, ''):
+            choices = ' or '.join(names) if len(names) <= 2 else ', '.join(names[:-1]) + ' or ' + names[-1]
             if not isinstance(side, str):
-                return False, 'Side must be Pat or Sandy.', None, None
-            clean_side = side.strip().capitalize()
-            if clean_side not in SessionDevice.NEGOTIATION_SIDES:
-                return False, 'Side must be Pat or Sandy.', None, None
+                return False, 'Side must be %s.' % choices, None, None
+            wanted = ' '.join(side.split()).lower()
+            clean_side = next((n for n in names if n.lower() == wanted), None)
+            if clean_side is None:
+                return False, 'Side must be %s.' % choices, None, None
         return True, None, clean_group or None, clean_side
 
     def negotiation_label(self):

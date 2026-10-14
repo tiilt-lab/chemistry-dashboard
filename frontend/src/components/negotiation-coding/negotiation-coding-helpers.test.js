@@ -8,6 +8,7 @@ import {
     assignedTeams,
     sameTeams,
     teamOf,
+    teamNamesOf,
     roleLabel,
     badgeCodes,
     matchesFilters,
@@ -145,6 +146,18 @@ describe("team helpers", () => {
         expect(teamOf({ speaker_tag: "b", team: "Sandy" }, {})).toBe("Sandy")
         expect(teamOf({ speaker_tag: "a", team: "nonsense" }, { a: "Sandy" })).toBe("Sandy")
         expect(teamOf({ speaker_tag: "b", team: null }, {})).toBe("unassigned")
+    })
+    it("takes team names from the run, else the session's pod setup, else Pat/Sandy", () => {
+        expect(teamNamesOf(null, null)).toEqual(["Pat", "Sandy"])
+        expect(teamNamesOf({ team_names: ["Buyer", "Seller"] }, null)).toEqual(["Buyer", "Seller"])
+        expect(teamNamesOf({ team_names: ["Only"] }, { pod_config: { teams: [{ name: "A" }, { name: "B" }] } })).toEqual(["A", "B"])
+        expect(teamNamesOf({}, { pod_config: { teams: [{ name: "A" }] } })).toEqual(["Pat", "Sandy"])
+        expect(teamOf({ speaker_tag: "x", team: "Buyer" }, {}, ["Buyer", "Seller"])).toBe("Buyer")
+        expect(teamOf({ speaker_tag: "x", team: "Pat" }, {}, ["Buyer", "Seller"])).toBe("unassigned")
+        expect(assignedTeams({ a: "Buyer", b: "Pat" }, ["Buyer", "Seller"])).toEqual({ a: "Buyer" })
+        const t = rollupTable({ by_team: { Buyer: { utterances: 2, escalating: 1, listening: {} }, Seller: { utterances: 0, listening: {} } } }, ["Buyer", "Seller"])
+        expect(t.columns.map((c) => c.key)).toEqual(["Buyer", "Seller"])
+        expect(t.sections[0].rows[0].cells[0]).toEqual({ n: 1, pct: 50 })
     })
     it("labels a pod's table and side", () => {
         expect(roleLabel("Table 3", "Pat")).toBe("Table 3 · Pat")

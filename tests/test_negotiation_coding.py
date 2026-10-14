@@ -609,7 +609,8 @@ def test_routes_post_get_put_export_and_session_list(env):
     # the coding leg runs
     env.engine.run_coding(pod.id, llm=gold_llm, run_id=body["run_id"])
     payload = _call(env, r.get_negotiation_coding, "GET", **ids).get_json()
-    assert set(payload) == {"run", "mode", "pods", "teams", "codes", "summary"}
+    assert set(payload) == {"run", "mode", "team_names", "pods", "teams", "codes", "summary"}
+    assert payload["team_names"] == ["Pat", "Sandy"]
     assert set(payload["run"]) == {"id", "session_device_id", "partner_device_id", "status", "model",
                                    "codebook_version", "created_at", "started_at", "finished_at", "error",
                                    "utterances_coded", "invalid_codes"}
@@ -657,7 +658,7 @@ def test_routes_post_get_put_export_and_session_list(env):
     overview = {e["device_id"]: e for e in resp.get_json()}
     assert set(overview) == {pod.id, empty.id}
     assert set(overview[pod.id]) == {"device_id", "device_name", "negotiation_group", "negotiation_side",
-                                     "run", "mode", "pods", "teams", "summary"}
+                                     "run", "mode", "team_names", "pods", "teams", "summary"}
     assert overview[pod.id]["mode"] == "single"
     assert overview[pod.id]["run"]["status"] == "done" and overview[pod.id]["summary"]["timeline"]["first_escalating"] == 15
     assert overview[empty.id]["run"] is None and overview[empty.id]["summary"] is None
@@ -1279,3 +1280,94 @@ def test_pairs_migration_chains_after_negotiation_coding_and_is_guarded():
     assert down.index("drop_constraint") < down.index("partner_device_id")
     run = _read("src", "server", "tables", "negotiation_coding_run.py")
     assert "partner_device_id = db.Column(db.Integer, db.ForeignKey('session_device.id', ondelete='SET NULL'), nullable=True)" in run
+
+
+# ------------------------------------------- team names from the pod setup
+
+VIKING_SETUP = {"group_size": 6, "teams": [{"name": "Buyer", "size": 3}, {"name": "Seller", "size": 3}],
+                "devices_per_group": "team", "groups": ["Table 1", "Table 2"]}
+
+
+def test_engine_rolls_up_under_the_sessions_own_team_names():
+    names = ("Buyer", "Seller")
+    assert nc.team_of("a", {"a": "Seller"}, names) == "Seller"
+    assert nc.team_of("a", {"a": "Pat"}, names) == nc.UNASSIGNED
+    assert nc.team_of_code({"team": "Buyer"}, {}, names) == "Buyer"
+    assert nc.other_team("Buyer", names) == "Seller" and nc.other_team("Seller", names) == "Buyer"
+    assert nc.validate_teams({"x": "seller", "y": " BUYER "}, names) == ({"x": "Seller", "y": "Buyer"}, None)
+    assert nc.validate_teams({"x": "Pat"}, names)[1] == "team for speaker 'x' must be Buyer or Seller."
+    three = ("Red", "Green", "Blue")
+    assert nc.validate_teams({"x": "Pat"}, three)[1] == "team for speaker 'x' must be Red, Green or Blue."
+    codes = [dict(u, team=("Buyer" if u["index"] % 2 == 0 else "Seller"), **VIKING[u["index"]][2]) for u in _utterances()]
+    summary = nc.summarize(codes, {}, CODEBOOK, names=names)
+    assert set(summary["by_team"]) == {"Buyer", "Seller", nc.UNASSIGNED}
+    assert summary["by_team"]["Buyer"]["utterances"] == 7 and summary["by_team"]["Seller"]["opening_move"] in ("none", "power", "interest", "right")
+    # the Viking default still applies when nothing names the teams
+    assert set(nc.rollup(codes, {}, CODEBOOK)["by_team"]) == {"Pat", "Sandy", nc.UNASSIGNED}
+
+
+def test_paired_run_uses_the_setups_team_names(env):
+    import pod_config
+    d, r = env.database, env.routes
+    session, (a, b) = _paired_session(env, group="Table 1", sides=(None, None))
+    session.pod_config = pod_config.dumps(VIKING_SETUP)
+    env.db.session.commit()
+    assert session.team_names() == ("Buyer", "Seller")
+    assert session.json()["pod_config"]["teams"][1]["name"] == "Seller"
+    assert env.engine.device_team_names(a.id) == ("Buyer", "Seller")
+    # the role route validates against the setup's names and canonicalises case
+    ids = dict(session_id=session.id, session_device_id=a.id)
+    assert _call(env, r.set_negotiation_role, "PUT", {"group": "Table 1", "side": "Pat"}, **ids).status_code == 400
+    assert _call(env, r.set_negotiation_role, "PUT", {"group": "Table 1", "side": "seller"}, **ids).status_code == 200
+    assert d.get_session_devices(id=a.id).negotiation_side == "Seller"
+    for i, (tag, text, _) in enumerate(VIKING):
+        _add(env, b if tag == "Pat" else a, 15 * i, text, tag, sim=0.9)
+    # a has a side (Seller), b has none: a sided pod ranks first, b takes the other team
+    assert env.engine.resolve_pair(a.id) == (a.id, b.id)
+    resp = _call(env, r.start_negotiation_coding, "POST", {"teams": {"Pat": "Pat"}}, **ids)
+    assert resp.status_code == 400   # Pat is not a team here
+    resp = _call(env, r.start_negotiation_coding, "POST", {}, **ids)
+    run = d.get_negotiation_run(resp.get_json()["run_id"])
+    assert env.engine.run_sides(run, ("Buyer", "Seller")) == {a.id: "Seller", b.id: "Buyer"}
+    env.engine.run_coding(a.id, llm=gold_llm, run_id=run.id)
+    payload = _call(env, r.get_negotiation_coding, "GET", **ids).get_json()
+    assert payload["team_names"] == ["Buyer", "Seller"]
+    assert {c["team"] for c in payload["codes"]} == {"Buyer", "Seller"}
+    assert payload["summary"]["by_team"]["Buyer"]["utterances"] == 7
+    assert [p["side"] for p in payload["pods"]] == ["Seller", "Buyer"]
+    swapped = _call(env, r.set_negotiation_teams, "PUT", {"teams": {"Pat": "buyer"}}, **ids)
+    assert swapped.status_code == 200 and swapped.get_json()["teams"] == {"Pat": "Buyer"}
+
+
+def test_join_validates_the_team_against_the_setup_and_presizes_the_roster(env):
+    import pod_config
+    from tables.session_device import SessionDevice
+    d = env.database
+    session = _session(env)
+    session.passcode = "SETUP%d" % session.id
+    session.pod_config = pod_config.dumps(VIKING_SETUP)
+    env.db.session.commit()
+    names = session.team_names()
+    assert SessionDevice.verify_negotiation("Table 1", "seller", names) == (True, None, "Table 1", "Seller")
+    assert SessionDevice.verify_negotiation("Table 1", "Pat", names) == (False, "Side must be Buyer or Seller.", None, None)
+    assert SessionDevice.verify_negotiation("Table 1", "Pat") == (True, None, "Table 1", "Pat")   # no setup: Viking default
+    ok, device, speakers = d.create_byod_session_device(session.passcode, "", 0, "Table 1", "Seller")
+    assert ok and device.name == "Table 1 Seller"
+    device.connected = True
+    env.db.session.commit()
+    ok, message, _ = d.create_byod_session_device(session.passcode, "", 0, "Table 1", "Seller")
+    assert not ok and message == "Table 1 Seller is already connected from another laptop. Pick your own table and team."
+    ok, message, _ = d.create_byod_session_device(session.passcode, "Table 1 Seller", 0)
+    assert not ok and message == "Name already in use."
+    # the route pre-sizes the roster from the slot: its team's size, else the group's
+    src = _read("src", "server", "routes", "session.py")
+    join = _func_source(src, "byod_join_session")
+    assert "target = database.get_sessions(active=True, passcode=passcode, first=True)" in join
+    assert "names = target.team_names() if target is not None else None" in join
+    assert "collaborators = pod_setup.speaker_slots(target.pod_config_dict(), negotiation_side)" in join
+    create = _func_source(src, "create_session")
+    assert "pod_setup.normalize(request.json.get('podConfig'))" in create
+    assert "negotiation_paired = True" in create and "pod_config=pod_config" in create
+    handler = _func_source(_read(*HANDLER), "create_session")
+    assert "session.pod_config = pod_setup.dumps(pod_config)" in handler
+    assert "negotiation_paired = pod_setup.paired(pod_config)" in handler

@@ -46,9 +46,11 @@ def _pod_or_404(session_device_id, session_id):
     return None
 
 
-def _teams_from_body():
+def _teams_from_body(session_device_id):
+    # Team names come from the session's pod setup (Pat/Sandy without one).
     body = request.get_json(silent=True) or {}
-    teams, error = negotiation_coding.validate_teams(body.get('teams'))
+    teams, error = negotiation_coding.validate_teams(
+        body.get('teams'), negotiation_coding.device_team_names(session_device_id))
     if error:
         return None, json_response({'message': error}, 400)
     return teams, None
@@ -62,7 +64,7 @@ def start_negotiation_coding(session_id, session_device_id, **kwargs):
     missing = _pod_or_404(session_device_id, session_id)
     if missing:
         return missing
-    teams, bad = _teams_from_body()
+    teams, bad = _teams_from_body(session_device_id)
     if bad:
         return bad
     # Paired session: one run for the pod and its partner, hung off the
@@ -96,7 +98,7 @@ def set_negotiation_teams(session_id, session_device_id, **kwargs):
     run = database.get_latest_negotiation_run(session_device_id)
     if run is None:
         return json_response({'message': 'No negotiation coding run for this pod.'}, 404)
-    teams, bad = _teams_from_body()
+    teams, bad = _teams_from_body(session_device_id)
     if bad:
         return bad
     # Stored codes re-rolled under the new teams; no LLM call.
@@ -142,7 +144,8 @@ def set_negotiation_role(session_id, session_device_id, **kwargs):
         return missing
     body = request.get_json(silent=True) or {}
     ok, error, group, side = SessionDevice.verify_negotiation(sanitize(body.get('group') or '') or '',
-                                                              body.get('side'))
+                                                              body.get('side'),
+                                                              negotiation_coding.device_team_names(session_device_id))
     if not ok:
         return json_response({'message': error}, 400)
     device = database.set_session_device_negotiation(session_device_id, group, side)
