@@ -1233,24 +1233,40 @@ def get_students(id=None, username=None):
         return query.filter(Student.username == username).first()
     return query.all()
 
-def add_student(lastname, firstname, username):
+def add_student(username, group_name=None, team_name=None):
     matched_student = get_students(username=username)
     if matched_student:
         return False, matched_student
-    biometric_captured="no"
-    student = Student(lastname, firstname, username,biometric_captured)
+    student = Student(username, biometric_captured="no", group_name=group_name, team_name=team_name)
     db.session.add(student)
     db.session.commit()
     return True, student
 
+# A peer's roster still comes as first and last names.
 def sync_student(lastname, firstname, username,biometric_captured):
     matched_student = get_students(username=username)
     if matched_student:
         return False, matched_student
-    student = Student(lastname, firstname, username,biometric_captured)
+    student = Student(username, biometric_captured=biometric_captured, firstname=firstname, lastname=lastname)
     db.session.add(student)
     db.session.commit()
     return True, student
+
+# The team on each enrolled speaker's profile, for the tags that have one
+# and whose team is one of `names` (case-insensitive, spacing ignored):
+# {speaker_tag: canonical team name}.
+def student_teams(speaker_tags, names):
+    canon = {" ".join(str(n).split()).lower(): n for n in names if n}
+    out = {}
+    for tag in speaker_tags:
+        if not tag:
+            continue
+        student = get_students(username=str(tag))
+        team = student.team_name if student else None
+        hit = canon.get(" ".join(str(team or "").split()).lower())
+        if hit:
+            out[str(tag)] = hit
+    return out
 
 # Merge one student profile into another: every username-keyed reference
 # (session speakers, video metrics, LLM reports/answers, survey responses)
@@ -1294,7 +1310,10 @@ def delete_student(id):
         return None
 
 
-def update_student(id, lastname=None, firstname=None,biometric_captured=None):
+def update_student(id, lastname=None, firstname=None, biometric_captured=None,
+                   group_name=None, team_name=None):
+    """None leaves a field alone; for group and team an empty string
+    clears it (an instructor's edit)."""
     student = get_students(id=id)
     if student:
         if lastname:
@@ -1303,6 +1322,10 @@ def update_student(id, lastname=None, firstname=None,biometric_captured=None):
             student.lastname = lastname
         if firstname:
             student.firstname = firstname
+        if group_name is not None:
+            student.group_name = group_name or None
+        if team_name is not None:
+            student.team_name = team_name or None
         if biometric_captured:
             student.biometric_captured = biometric_captured    
         db.session.commit()

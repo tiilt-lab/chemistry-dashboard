@@ -796,8 +796,13 @@ def run_coding(session_device_id, teams=None, llm=call_llm, run_id=None, codeboo
         if teams is None:
             teams = database.get_negotiation_run(run.id).teams_dict()
         if not teams and not run.is_paired():
-            # Nobody assigned yet: names like Buyer1 / Seller2 say it themselves.
-            teams = infer_teams({u.get("speaker_tag") for u in utterances}, names)
+            # Nobody assigned yet: the team on each speaker's profile first
+            # (typed when enrolling), then names like Buyer1 / Seller2 for
+            # the rest.
+            tags = {u.get("speaker_tag") for u in utterances}
+            teams = database.student_teams(tags, names)
+            for tag, team in infer_teams(tags, names).items():
+                teams.setdefault(tag, team)
         database.update_negotiation_run(
             run.id, status="done", finished_at=_now(), teams=teams,
             summary=summarize(coded, teams, codebook, extra, names),

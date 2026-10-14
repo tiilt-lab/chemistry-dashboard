@@ -8,6 +8,7 @@ import wrappers
 import utility
 from utility import json_response
 from redis_helper import RedisEnrollmentToken
+from tables.student import Student
 
 api_routes = Blueprint('student', __name__)
 
@@ -177,24 +178,33 @@ def get_students(user_name, **kwargs):
     else:
         return json_response({'message': 'Student  not found.'}, 404)
       
+def _label(value, limit=Student.LABEL_MAX_LENGTH):
+    """A typed group / team: whitespace collapsed, capped, empty -> None."""
+    text = " ".join(str(value or "").split())
+    return text[:limit] or None
+
+
+def _labels(content):
+    """The group and team a client sends (sign-up form, Students page)."""
+    return (_label(content.get('group', content.get('group_name'))),
+            _label(content.get('team', content.get('team_name'))))
+
+
 @api_routes.route('/api/v1/student/addstudent', methods=['POST'])
 def add_students(**kwargs):
-    content = request.json
-    lastname = content.get('lastname', None)
-    firstname = content.get('firstname', None)
-    username = content.get('username', None)
-    if not lastname:
-        return json_response({'message': 'Must provide Last name.'}, 400)
-    if not firstname:
-        return json_response({'message': 'Must provide First name.'}, 400)
+    content = request.json or {}
+    username = " ".join(str(content.get('username') or '').split())
+    group_name, team_name = _labels(content)
     if not username:
         return json_response({'message': 'Must provide User name.'}, 400)
+    if not (Student.USER_NAME_MIN_LENGTH <= len(username) <= Student.USER_NAME_MAX_LENGTH):
+        return json_response({'message': 'Username must be %d-%d characters.' % (Student.USER_NAME_MIN_LENGTH, Student.USER_NAME_MAX_LENGTH)}, 400)
     # The username becomes a filesystem path for the voice/face enrollment
     # artifacts; reject anything that isn't a safe leaf name (this route is
     # public, so it's the primary place to stop a poisoned username).
     if utility.safe_name(username) != username:
         return json_response({'message': 'Invalid characters in username.'}, 400)
-    success, student = database.add_student(lastname, firstname,username)
+    success, student = database.add_student(username, group_name=group_name, team_name=team_name)
     if success:
         database.save_changes()
         body = student.json()
@@ -203,16 +213,14 @@ def add_students(**kwargs):
         body['enrollment_token'] = RedisEnrollmentToken.mint(student.username)
         return json_response(body)
     else:
-        # Existing username: allow self-service re-enrollment when the entered
-        # name matches the record (students have no passwords; the name check
-        # keeps a classmate from casually overwriting someone else's biometrics
-        # by typing their username). The client proceeds to the recording page
-        # when reenroll_allowed is set; a fresh recording replaces the stored
-        # voice print / face embedding under the same alias.
-        name_matches = (
-            (student.firstname or '').strip().lower() == firstname.strip().lower()
-            and (student.lastname or '').strip().lower() == lastname.strip().lower()
-        )
+        # Existing username: allow self-service re-enrollment when the group
+        # and team typed match the record (students have no passwords; this
+        # keeps a classmate from casually overwriting someone else's
+        # biometrics by typing their username). The client proceeds to the
+        # recording page when reenroll_allowed is set; a fresh recording
+        # replaces the stored voice print / face embedding under the same
+        # alias.
+        name_matches = student.identity_matches(group_name, team_name)
         body = {'message': "Username already exists.",
                 "data": student.json(),
                 "reenroll_allowed": name_matches}
@@ -232,6 +240,12 @@ def update_students(**kwargs):
     lastname = content.get('lastname', None)
     firstname = content.get('firstname', None)
     biometric_captured = content.get('biometric_captured', None)
+    # Group and team: absent = leave alone, "" = clear (an instructor's edit).
+    edits = {}
+    for key, alias in (('group', 'group_name'), ('team', 'team_name')):
+        if key in content or alias in content:
+            edits[alias] = _label(content.get(key, content.get(alias))) or ""
+    typed_group, typed_team = _labels(content)
 
     student = database.get_students(id=id)
     if not student:
@@ -250,17 +264,15 @@ def update_students(**kwargs):
         is_admin = bool(fresh and not fresh.locked and fresh.role in wrappers.ADMIN_ROLES)
 
     if not is_admin:
-        name_ok = (
-            (student.firstname or '').strip().lower() == (firstname or '').strip().lower()
-            and (student.lastname or '').strip().lower() == (lastname or '').strip().lower()
-        )
+        name_ok = student.identity_matches(typed_group, typed_team)
         if not name_ok:
-            return json_response({'message': 'Name does not match our records.'}, 403)
+            return json_response({'message': 'Group and team do not match our records.'}, 403)
         # Non-admins may only (re)confirm enrollment, never rename.
         lastname = None
         firstname = None
+        edits = {}
 
-    success, student = database.update_student(id,lastname, firstname,biometric_captured)
+    success, student = database.update_student(id, lastname, firstname, biometric_captured, **edits)
     if success:
         database.save_changes()
         return json_response(student.json())

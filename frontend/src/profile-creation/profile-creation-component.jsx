@@ -201,7 +201,10 @@ function SignupPage() {
 
     useEffect(() => {
         if (audioSaved && videoDone) {
-            new AuthService().updateStudentProfile(studentObject.id, studentObject.lastname, studentObject.firstname, "yes", setStudentUpdated, setAlertMessage, setShowAlert);
+            new AuthService().updateStudentProfile(
+                studentObject.id,
+                { group: studentObject.group_name, team: studentObject.team_name },
+                "yes", setStudentUpdated, setAlertMessage, setShowAlert);
         }
     }, [audioSaved, videoDone])
 
@@ -511,26 +514,26 @@ function SignupPage() {
     }
 
 
-    const verifyUserProfileInput = (lastname, firstname, username, voiceOnlyChoice = false) => {
-        if (lastname === '') {
-            setAlertMessage("Please Enter Your Last Name");
-            setShowAlert(true);
-            document.getElementById("lastname").focus();
-        } else if (firstname === '') {
-            setAlertMessage("Please Enter Your First Name");
-            setShowAlert(true);
-            document.getElementById("firstname").focus();
-        } else if (username === '') {
-            setAlertMessage("Please Enter Your User Id");
+    // The username is the only required field: it is the name in every
+    // transcript. Group and team are what the class calls them (the coding
+    // pass reads the team off the profile).
+    const verifyUserProfileInput = (username, group, team, voiceOnlyChoice = false) => {
+        const tooLong = [["group", group], ["team", team]].find(([, v]) => v.length > 64)
+        if (username === '') {
+            setAlertMessage("Please enter a username");
             setShowAlert(true);
             document.getElementById("username").focus();
         } else if (username.length < 5 || username.length > 10) {
-            setAlertMessage("User name should be atleast 5 characters and not more than 10 characters");
+            setAlertMessage("The username should be 5 to 10 characters");
             setShowAlert(true);
             document.getElementById("username").focus();
+        } else if (tooLong) {
+            setAlertMessage("Please keep group and team under 64 characters");
+            setShowAlert(true);
+            document.getElementById(tooLong[0]).focus();
         } else {
             setVoiceOnly(voiceOnlyChoice === true)
-            new AuthService().createStudentProfile(lastname, firstname, username, setStudentObject, setAlertMessage, setShowAlert);
+            new AuthService().createStudentProfile({ username, group, team }, setStudentObject, setAlertMessage, setShowAlert);
         }
     }
 

@@ -66,9 +66,17 @@ function StatCard({ label, value, hint }) {
     )
 }
 
+// The line under a student's name: the username when the name is not
+// already it (records from the old name-based form), then group and team.
+const subline = (s) =>
+    [s.name !== s.username ? s.username : null, s.group_name, s.team_name]
+        .filter(Boolean)
+        .join(" · ")
+
+const byName = (a, b) => String(a.name || a.username || "").localeCompare(String(b.name || b.username || ""))
+
 const SORTS = {
-    name: (a, b) =>
-        `${a.lastname}${a.firstname}`.localeCompare(`${b.lastname}${b.firstname}`),
+    name: byName,
     sessions: (a, b) => (a.session_count || 0) - (b.session_count || 0),
     // Nulls sort as oldest so "never active" lands at the bottom on desc.
     last_active: (a, b) =>
@@ -186,7 +194,7 @@ function StudentsComponent(props) {
             list = list.filter((s) => enrollmentNeedsAttention(s))
         if (q)
             list = list.filter((s) =>
-                `${s.firstname} ${s.lastname} ${s.username}`
+                `${s.name} ${s.username} ${s.group_name || ""} ${s.team_name || ""}`
                     .toLowerCase()
                     .includes(q),
             )
@@ -214,12 +222,12 @@ function StudentsComponent(props) {
         setTarget(null)
     }
 
-    const addStudent = async (firstname, lastname, username) => {
-        firstname = firstname.trim()
-        lastname = lastname.trim()
+    const addStudent = async (username, group, team) => {
         username = username.trim()
-        if (!firstname || !lastname || !username) {
-            setStatus("Please fill in first name, last name, and username.")
+        group = group.trim()
+        team = team.trim()
+        if (!username) {
+            setStatus("Please enter a username.")
             return
         }
         if (username.length < 5 || username.length > 10) {
@@ -231,7 +239,7 @@ function StudentsComponent(props) {
             const response = await new ApiService().httpRequestCall(
                 "api/v1/student/addstudent",
                 "POST",
-                { firstname, lastname, username },
+                { username, group, team },
             )
             if (response.status === 200) {
                 await loadStudents()
@@ -254,13 +262,9 @@ function StudentsComponent(props) {
         }
     }
 
-    const saveEdit = async (firstname, lastname) => {
-        firstname = firstname.trim()
-        lastname = lastname.trim()
-        if (!firstname || !lastname) {
-            setStatus("First and last name are required.")
-            return
-        }
+    const saveEdit = async (group, team) => {
+        group = group.trim()
+        team = team.trim()
         setCurrentForm("Loading")
         try {
             const response = await new ApiService().httpRequestCall(
@@ -268,16 +272,17 @@ function StudentsComponent(props) {
                 "POST",
                 {
                     id: target.id,
-                    firstname,
-                    lastname,
+                    group,
+                    team,
                     biometric_captured: target.biometric_captured,
                 },
             )
             if (response.status === 200) {
                 await loadStudents()
+                const where = [group, team].filter(Boolean).join(" · ")
                 showStatus(
                     "Student updated",
-                    `${target.username} is now ${firstname} ${lastname}.`,
+                    where ? `${target.username} is now in ${where}.` : `${target.username} has no group or team now.`,
                 )
             } else {
                 showStatus(
@@ -445,12 +450,13 @@ function StudentsComponent(props) {
     const exportCsv = () => {
         const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`
         const lines = [
-            "First name,Last name,Username,Voice,Face,Sessions,Last active,Created",
+            "Name,Username,Group,Team,Voice,Face,Sessions,Last active,Created",
             ...(visible || []).map((s) =>
                 [
-                    esc(s.firstname),
-                    esc(s.lastname),
+                    esc(s.name),
                     esc(s.username),
+                    esc(s.group_name),
+                    esc(s.team_name),
                     esc(voiceState(s).label),
                     s.face_enrolled ? "yes" : "no",
                     s.session_count || 0,
@@ -744,7 +750,7 @@ function StudentsComponent(props) {
                                                 onClick={() =>
                                                     navigate(`/students/${s.id}`)
                                                 }
-                                                title={`Open ${s.firstname}'s profile`}
+                                                title={`Open ${s.name}'s profile`}
                                                 className="cursor-pointer border-t border-tiilt-line bg-white transition first:border-t-0 hover:bg-tiilt-soft/50"
                                             >
                                                 {canManage ? (
@@ -756,7 +762,7 @@ function StudentsComponent(props) {
                                                             onClick={() => toggleSelected(s.id)}
                                                             role="checkbox"
                                                             aria-checked={selected.has(s.id)}
-                                                            aria-label={`Select ${s.firstname} ${s.lastname}`}
+                                                            aria-label={`Select ${s.name}`}
                                                             title={selected.has(s.id) ? "Deselect" : "Select for bulk actions"}
                                                             className={
                                                                 "mx-auto flex h-7 w-8 flex-none cursor-pointer items-center justify-center rounded-md font-ahamono text-xs tabular-nums transition " +
@@ -772,12 +778,13 @@ function StudentsComponent(props) {
                                                 <td className="px-4 py-2.5">
                                                     <span className="min-w-0">
                                                         <span className="block truncate font-semibold text-tiilt-ink">
-                                                            {s.firstname}{" "}
-                                                            {s.lastname}
+                                                            {s.name}
                                                         </span>
-                                                        <span className="block truncate font-ahamono text-xs text-tiilt-muted">
-                                                            {s.username}
-                                                        </span>
+                                                        {subline(s) ? (
+                                                            <span className="block truncate font-ahamono text-xs text-tiilt-muted">
+                                                                {subline(s)}
+                                                            </span>
+                                                        ) : null}
                                                     </span>
                                                 </td>
                                                 <td
@@ -939,7 +946,7 @@ function StudentsComponent(props) {
                 {currentForm === "Enrollment" && target ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>
-                            Enrollment — {target.firstname} {target.lastname}
+                            Enrollment — {target.name}
                         </div>
                         <div className="mb-1 text-sm font-semibold text-tiilt-ink">
                             Voice fingerprint
@@ -1004,24 +1011,6 @@ function StudentsComponent(props) {
                 {currentForm === "AddStudent" ? (
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Add student</div>
-                        <label htmlFor="stuFirstname" className={dlgLabel}>
-                            First name
-                        </label>
-                        <input
-                            id="stuFirstname"
-                            className={dlgInput}
-                            type="text"
-                            maxLength={50}
-                        />
-                        <label htmlFor="stuLastname" className={dlgLabel}>
-                            Last name
-                        </label>
-                        <input
-                            id="stuLastname"
-                            className={dlgInput}
-                            type="text"
-                            maxLength={50}
-                        />
                         <label htmlFor="stuUsername" className={dlgLabel}>
                             Username (5-10 characters)
                         </label>
@@ -1032,6 +1021,24 @@ function StudentsComponent(props) {
                             minLength={5}
                             maxLength={10}
                         />
+                        <label htmlFor="stuGroup" className={dlgLabel}>
+                            Group (optional)
+                        </label>
+                        <input
+                            id="stuGroup"
+                            className={dlgInput}
+                            type="text"
+                            maxLength={64}
+                        />
+                        <label htmlFor="stuTeam" className={dlgLabel}>
+                            Team (optional)
+                        </label>
+                        <input
+                            id="stuTeam"
+                            className={dlgInput}
+                            type="text"
+                            maxLength={64}
+                        />
                         {status ? (
                             <div className={dlgError}>{status}</div>
                         ) : null}
@@ -1039,11 +1046,11 @@ function StudentsComponent(props) {
                             className={dlgPrimary}
                             onClick={() =>
                                 addStudent(
-                                    document.getElementById("stuFirstname")
-                                        .value,
-                                    document.getElementById("stuLastname")
-                                        .value,
                                     document.getElementById("stuUsername")
+                                        .value,
+                                    document.getElementById("stuGroup")
+                                        .value,
+                                    document.getElementById("stuTeam")
                                         .value,
                                 )
                             }
@@ -1061,25 +1068,25 @@ function StudentsComponent(props) {
                         <div className={dlgHeading}>
                             Edit {target.username}
                         </div>
-                        <label htmlFor="editFirstname" className={dlgLabel}>
-                            First name
+                        <label htmlFor="editGroup" className={dlgLabel}>
+                            Group
                         </label>
                         <input
-                            id="editFirstname"
+                            id="editGroup"
                             className={dlgInput}
                             type="text"
-                            maxLength={50}
-                            defaultValue={target.firstname}
+                            maxLength={64}
+                            defaultValue={target.group_name || ""}
                         />
-                        <label htmlFor="editLastname" className={dlgLabel}>
-                            Last name
+                        <label htmlFor="editTeam" className={dlgLabel}>
+                            Team
                         </label>
                         <input
-                            id="editLastname"
+                            id="editTeam"
                             className={dlgInput}
                             type="text"
-                            maxLength={50}
-                            defaultValue={target.lastname}
+                            maxLength={64}
+                            defaultValue={target.team_name || ""}
                         />
                         {status ? (
                             <div className={dlgError}>{status}</div>
@@ -1088,9 +1095,9 @@ function StudentsComponent(props) {
                             className={dlgPrimary}
                             onClick={() =>
                                 saveEdit(
-                                    document.getElementById("editFirstname")
+                                    document.getElementById("editGroup")
                                         .value,
-                                    document.getElementById("editLastname")
+                                    document.getElementById("editTeam")
                                         .value,
                                 )
                             }
@@ -1133,7 +1140,7 @@ function StudentsComponent(props) {
                                             className="h-4 w-4 cursor-pointer accent-tiilt"
                                         />
                                         <span className="text-sm font-semibold text-tiilt-ink">
-                                            {s.firstname} {s.lastname}
+                                            {s.name}
                                         </span>
                                         <span className="font-ahamono text-xs text-tiilt-muted">
                                             {s.username} ·{" "}
@@ -1189,7 +1196,7 @@ function StudentsComponent(props) {
                             Merge {target.username}
                         </div>
                         <div className="text-sm text-tiilt-muted">
-                            All of {target.firstname} {target.lastname}'s
+                            All of {target.name}'s
                             session appearances, metrics, AI feedback, and
                             survey responses move to the student you pick,
                             and the {target.username} profile is deleted.
@@ -1208,15 +1215,10 @@ function StudentsComponent(props) {
                             </option>
                             {(students || [])
                                 .filter((s) => s.id !== target.id)
-                                .sort((a, b) =>
-                                    `${a.lastname}${a.firstname}`.localeCompare(
-                                        `${b.lastname}${b.firstname}`,
-                                    ),
-                                )
+                                .sort(byName)
                                 .map((s) => (
                                     <option key={s.id} value={s.id}>
-                                        {s.firstname} {s.lastname} (
-                                        {s.username})
+                                        {s.name}{s.name !== s.username ? ` (${s.username})` : ""}
                                     </option>
                                 ))}
                         </select>

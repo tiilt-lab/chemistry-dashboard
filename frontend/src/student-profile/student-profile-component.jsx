@@ -53,9 +53,7 @@ function StudentProfileComponent(props) {
         <div role="main" className="main-container">
             <Appheader
                 title={
-                    student
-                        ? `${student.firstname} ${student.lastname}`
-                        : "Student"
+                    student ? student.name : "Student"
                 }
                 nav={() => navigate("/students")}
                 escToBack
@@ -77,11 +75,18 @@ function StudentProfileComponent(props) {
                             <div className="rounded-xl border border-tiilt-line bg-white p-5">
                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                                     <h2 className="text-xl font-semibold text-tiilt-ink">
-                                        {student.firstname} {student.lastname}
+                                        {student.name}
                                     </h2>
-                                    <span className="font-ahamono text-sm text-tiilt-muted">
-                                        {student.username}
-                                    </span>
+                                    {student.name !== student.username ? (
+                                        <span className="font-ahamono text-sm text-tiilt-muted">
+                                            {student.username}
+                                        </span>
+                                    ) : null}
+                                    {student.group_name || student.team_name ? (
+                                        <span className="text-sm text-tiilt-muted">
+                                            {[student.group_name, student.team_name].filter(Boolean).join(" · ")}
+                                        </span>
+                                    ) : null}
                                     <div className="ml-auto flex flex-wrap gap-1.5">
                                         <StatusPill tone={vs.tone}>
                                             {vs.label}

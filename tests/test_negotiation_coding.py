@@ -1286,6 +1286,32 @@ def test_first_group_to_join_starts_the_session_clock(env):
     assert ok and other.creation_date == ahead
 
 
+def test_the_team_on_a_speakers_profile_assigns_them(env):
+    # Enrolling asks for a group and team; the coding pass reads the team
+    # off the profile (case-insensitive) before falling back to the name.
+    from tables.student import Student
+    d = env.database
+    for username, team in (("buyerone", "buyer"), ("sellertwo", "Seller "), ("nobody1", None), ("elsewhere", "Judge")):
+        ok, _ = d.add_student(username, group_name="Group 1", team_name=team)
+        assert ok
+    names = ("Buyer", "Seller")
+    assert d.student_teams({"buyerone", "sellertwo", "nobody1", "elsewhere", "ghost", None}, names) == {
+        "buyerone": "Buyer", "sellertwo": "Seller"}
+    s = d.get_students(username="buyerone")
+    assert s.name == "buyerone" and s.json()["group_name"] == "Group 1"
+    # re-enrollment proof: the group and team typed again, loosely compared
+    assert s.identity_matches("group  1", "BUYER")
+    assert not s.identity_matches("Group 2", "buyer") and not s.identity_matches("Group 1", "")
+    # a record from the old name-based form shows its name and accepts a blank group and team
+    legacy = Student("oldtimer", firstname="Jane", lastname="Doe")
+    env.db.session.add(legacy)
+    env.db.session.commit()
+    assert legacy.name == "Jane Doe" and legacy.identity_matches("", None) and not legacy.identity_matches("Group 1", "")
+    # a second sign-up with the same username is refused, not overwritten
+    ok, again = d.add_student("buyerone", group_name="Group 9", team_name="Seller")
+    assert not ok and again.id == s.id and again.group_name == "Group 1"
+
+
 def test_byod_join_stores_the_role_and_names_the_pod_after_it(env):
     from tables.session_device import SessionDevice
     d = env.database
@@ -1639,3 +1665,8 @@ def test_teams_are_read_off_speaker_names_when_nobody_assigned(env):
     # an explicit assignment, even partial, is respected as given
     run2 = env.engine.run_coding(pod.id, {"Pat1": "Sandy"}, llm=gold_llm)
     assert run2.teams_dict() == {"Pat1": "Sandy"}
+    # the team on an enrolled speaker's profile wins over what the name says
+    ok, _ = d.add_student("Pat1", group_name="Group 4", team_name="sandy")
+    assert ok
+    run3 = env.engine.run_coding(pod.id, llm=gold_llm)
+    assert run3.teams_dict()["Pat1"] == "Sandy" and run3.teams_dict()["Pat2"] == "Pat"

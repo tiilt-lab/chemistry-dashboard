@@ -24,44 +24,19 @@ function ProfileCreationPage(props) {
                         {props.pageTitle}
                     </h2>
                     <p className="mt-1 mb-6 text-sm text-tiilt-muted">
-                        Enter your name and a username. On the next page you
-                        will record a short sample so BLINC can recognize you
+                        Choose a username and, if your class works in groups,
+                        enter your group and team. On the next page you will
+                        record a short sample so BLINC can recognize you
                         during analytics. Enrolled before? Enter the same
-                        username and name to record a fresh sample — it
-                        replaces your old one.
+                        username, group and team to record a fresh sample —
+                        it replaces your old one.
                     </p>
 
+                    {/* No name is asked for: the username is how a student
+                        appears in transcripts, and the group and team are
+                        what the class calls them (the coding pass reads the
+                        team off the profile). */}
                     <div className="flex max-w-md flex-col gap-4">
-                        <div className="flex flex-col gap-1.5">
-                            <label
-                                htmlFor="firstname"
-                                className="text-sm font-semibold text-tiilt-ink"
-                            >
-                                First name
-                            </label>
-                            <input
-                                id="firstname"
-                                maxLength={50}
-                                autoComplete="given-name"
-                                placeholder="First name"
-                                className={inputClass}
-                            />
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                            <label
-                                htmlFor="lastname"
-                                className="text-sm font-semibold text-tiilt-ink"
-                            >
-                                Last name
-                            </label>
-                            <input
-                                id="lastname"
-                                maxLength={50}
-                                autoComplete="family-name"
-                                placeholder="Last name"
-                                className={inputClass}
-                            />
-                        </div>
                         <div className="flex flex-col gap-1.5">
                             <label
                                 htmlFor="username"
@@ -75,9 +50,52 @@ function ProfileCreationPage(props) {
                                 maxLength={10}
                                 autoCapitalize="off"
                                 spellCheck="false"
-                                placeholder="5–10 characters"
+                                placeholder="5–10 letters and numbers"
                                 className={inputClass}
                             />
+                            <span className="text-xs text-tiilt-muted">
+                                How you appear in transcripts. It must be unique,
+                                so make it your own.
+                            </span>
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label
+                                htmlFor="group"
+                                className="text-sm font-semibold text-tiilt-ink"
+                            >
+                                Group
+                            </label>
+                            <input
+                                id="group"
+                                maxLength={64}
+                                autoComplete="off"
+                                placeholder="e.g. Group 3"
+                                className={inputClass}
+                            />
+                            <span className="text-xs text-tiilt-muted">
+                                The group or table your class put you in, as
+                                your instructor names it. Leave blank if there
+                                are none.
+                            </span>
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                            <label
+                                htmlFor="team"
+                                className="text-sm font-semibold text-tiilt-ink"
+                            >
+                                Team
+                            </label>
+                            <input
+                                id="team"
+                                maxLength={64}
+                                autoComplete="off"
+                                placeholder="e.g. Team A"
+                                className={inputClass}
+                            />
+                            <span className="text-xs text-tiilt-muted">
+                                Your team or role within the group, if your
+                                class has them.
+                            </span>
                         </div>
                         {/* Voice only skips the camera entirely: a device
                             without one, or a student who would rather not be
@@ -125,13 +143,13 @@ function ProfileCreationPage(props) {
                             onClick={() =>
                                 props.verifyUserProfileInput(
                                     document
-                                        .getElementById("lastname")
-                                        .value.trim(),
-                                    document
-                                        .getElementById("firstname")
-                                        .value.trim(),
-                                    document
                                         .getElementById("username")
+                                        .value.trim(),
+                                    document
+                                        .getElementById("group")
+                                        .value.trim(),
+                                    document
+                                        .getElementById("team")
                                         .value.trim(),
                                     (document.querySelector('input[name="enrollMode"]:checked') || {}).value === "voice",
                                 )

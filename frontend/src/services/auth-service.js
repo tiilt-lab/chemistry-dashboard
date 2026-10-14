@@ -95,11 +95,12 @@ class AuthService {
     return new ApiService().httpRequestCall("api/v1/logout", 'POST', {});
   }
 
-  createStudentProfile(lastname, firstname, username,setStudentObject,setAlertMessage,setShowAlert) {
+  // profile: { username, group, team } from the sign-up form.
+  createStudentProfile(profile, setStudentObject, setAlertMessage, setShowAlert) {
     const body = {
-      lastname: lastname,
-      firstname: firstname,
-      username: username
+      username: profile.username,
+      group: profile.group || "",
+      team: profile.team || "",
     };
     const fetchRes =  new ApiService().httpRequestCall("api/v1/student/addstudent", 'POST', body);
     fetchRes.then(
@@ -126,7 +127,7 @@ class AuthService {
                 if (err["reenroll_allowed"] || student.biometric_captured !== "yes"){
                   setStudentObject(student)
                 }else{
-                  setAlertMessage("That username already belongs to a different student. If it's yours, enter your name exactly as you registered it — otherwise pick a different username.")
+                  setAlertMessage("That username already belongs to a different student. If it's yours, enter your group and team exactly as you registered them — otherwise pick a different username.")
                   setShowAlert(true)
                 }
               }
@@ -142,11 +143,14 @@ class AuthService {
       })
   }
 
-    updateStudentProfile(id,lastname, firstname,biometric_captured,setStudentUpdated,setAlertMessage,setShowAlert) {
+    // profile: the group and team as the server returned them (its own
+    // record), the proof a student without a password gives to confirm
+    // enrollment.
+    updateStudentProfile(id, profile, biometric_captured, setStudentUpdated, setAlertMessage, setShowAlert) {
     const body = {
       id:id,
-      lastname: lastname,
-      firstname: firstname,
+      group: profile.group || "",
+      team: profile.team || "",
       biometric_captured: biometric_captured
     };
     const fetchRes =  new ApiService().httpRequestCall("api/v1/student/updatestudent", 'POST', body);
