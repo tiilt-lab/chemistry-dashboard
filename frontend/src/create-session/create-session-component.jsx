@@ -5,6 +5,7 @@ import { SessionModel } from '../models/session'
 import { FolderModel } from '../models/folder';
 import { useEffect, useState } from 'react';
 import {CreateSessionPage} from './html-pages'
+import { DEFAULT_POD_SETUP, setupTeams, podConfigFromSetup, podSetupProblem } from './pod-setup';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 
 
@@ -18,47 +19,6 @@ function defaultSessionName() {
     " " +
     now.toTimeString().slice(0, 5)
   ).replace(",", "");
-}
-
-// The form's pod setup: a two-team, three-a-side, one-laptop-per-team shape
-// by default, with the team names left for the instructor to type (the
-// code knows no case's sides).
-export const DEFAULT_POD_SETUP = {
-  enabled: false,
-  groupCount: 10,
-  groupPrefix: "Table",
-  teamsPerGroup: 2,
-  groupSize: 6,
-  teams: [
-    { name: "", size: 3 },
-    { name: "", size: 3 },
-  ],
-  devices: "team",
-};
-
-// Why the setup cannot be sent yet, or null.
-export function podSetupProblem(setup) {
-  if (!setup || !setup.enabled) return null;
-  if (setup.teamsPerGroup === 2) {
-    const names = setup.teams.slice(0, 2).map((t) => (t.name || "").trim());
-    if (names.some((n) => !n)) return "Name both teams in the pod setup.";
-    if (names[0].toLowerCase() === names[1].toLowerCase()) return "The two teams need different names.";
-  }
-  if (!(setup.groupPrefix || "").trim()) return "Say what the groups are called (for example Table).";
-  return null;
-}
-
-// What the API gets for the form's pod setup (null when it is off).
-export function podConfigFromSetup(setup) {
-  if (!setup || !setup.enabled) return null;
-  const twoTeams = setup.teamsPerGroup === 2;
-  return {
-    teams: twoTeams ? setup.teams.slice(0, 2) : [],
-    group_size: twoTeams ? setup.teams[0].size + setup.teams[1].size : setup.groupSize,
-    devices_per_group: twoTeams ? setup.devices : "group",
-    group_count: setup.groupCount,
-    group_prefix: setup.groupPrefix,
-  };
 }
 
 function CreateSessionComponent(props) {
@@ -118,7 +78,7 @@ function CreateSessionComponent(props) {
   const [podSetup, setPodSetup] = useState(() =>
     changedState && prevState.podSetup ? prevState.podSetup : DEFAULT_POD_SETUP
   );
-  const negotiationPaired = podSetup.enabled && podSetup.teamsPerGroup === 2 && podSetup.devices === "team";
+  const negotiationPaired = podSetup.enabled && setupTeams(podSetup).length === 2 && podSetup.devices === "team";
   const podSetupError = podSetupProblem(podSetup);
   const [selectedKeywordList] = useState(changedState ? prevState.selectedKeywordList : null);
   const [selectedTopicModel] = useState(changedState ? prevState.selectedTopicModel : null);

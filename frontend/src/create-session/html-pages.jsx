@@ -2,6 +2,7 @@ import React from "react";
 import { EmptyState } from "../components/empty-state";
 import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel, dlgError } from "../components/dialog-styles"
 import { pageShell, formCard } from "../components/layout-styles"
+import { setupTeams } from "./pod-setup"
 import { Appheader } from "../header/header-component";
 import { GenericDialogBox } from "../dialog/dialog-component";
 import { AppFolderSelectComponent } from "../components/folder-select/folder-select-component";
@@ -52,9 +53,10 @@ function PodSetupSection({ setup, setSetup, error }) {
   const setTeam = (i, patch) =>
     set({ teams: s.teams.map((t, j) => (j === i ? { ...t, ...patch } : t)) });
   const int = (v, lo, hi) => Math.max(lo, Math.min(hi, parseInt(v, 10) || lo));
-  const twoTeams = s.teamsPerGroup === 2;
-  const teams = (s.teams || []).slice(0, 2);
-  const groupSize = twoTeams ? teams[0].size + teams[1].size : s.groupSize;
+  const teams = setupTeams(s);
+  const twoTeams = teams.length === 2;
+  const hasTeams = teams.length >= 2;
+  const groupSize = hasTeams ? teams.reduce((sum, t) => sum + t.size, 0) : s.groupSize;
   const prefix = (s.groupPrefix || "").trim() || "Group";
   const preview =
     s.groupCount <= 3
@@ -62,8 +64,8 @@ function PodSetupSection({ setup, setSetup, error }) {
       : `${prefix} 1, ${prefix} 2 … ${prefix} ${s.groupCount}`;
   const teamName = (t, i) => (t.name || "").trim() || `Team ${i + 1}`;
   const groupsWord = s.groupCount === 1 ? "group" : "groups";
-  const summary = twoTeams
-    ? `${s.groupCount} ${groupsWord} of ${groupSize}: ${teamName(teams[0], 0)} ${teams[0].size} vs ${teamName(teams[1], 1)} ${teams[1].size}, ${s.devices === "team" ? "one device per team" : "one device per group"}.`
+  const summary = hasTeams
+    ? `${s.groupCount} ${groupsWord} of ${groupSize}: ${teams.map((t, i) => `${teamName(t, i)} ${t.size}`).join(" vs ")}, ${twoTeams && s.devices === "team" ? "one device per team" : "one device per group"}.`
     : `${s.groupCount} ${groupsWord} of ${groupSize}, one device per group.`;
   return (
     <div>
@@ -125,7 +127,7 @@ function PodSetupSection({ setup, setSetup, error }) {
             </div>
           </SetupRow>
 
-          <SetupRow label="Teams" hint={twoTeams ? "Per group, with how many people on each." : "People per group."}>
+          <SetupRow label="Teams" hint={hasTeams ? "Per group, with how many people on each." : "People per group."}>
             <div className="flex flex-col gap-3">
               <select
                 id="podTeamsPerGroup"
@@ -135,8 +137,10 @@ function PodSetupSection({ setup, setSetup, error }) {
               >
                 <option value={1}>No teams</option>
                 <option value={2}>Two teams</option>
+                <option value={3}>Three teams</option>
+                <option value={4}>Four teams</option>
               </select>
-              {twoTeams ? (
+              {hasTeams ? (
                 <div className="overflow-hidden rounded-lg border border-tiilt-line">
                   <div className={teamGrid + " bg-tiilt-ground/60 px-3 py-1.5 font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase"}>
                     <span />
@@ -153,7 +157,7 @@ function PodSetupSection({ setup, setSetup, error }) {
                         type="text"
                         maxLength={16}
                         value={t.name}
-                        placeholder={`Team ${i + 1} name`}
+                        placeholder={`Team ${"ABCD"[i]}`}
                         onChange={(e) => setTeam(i, { name: e.target.value })}
                         className={textCls}
                       />
@@ -189,7 +193,7 @@ function PodSetupSection({ setup, setSetup, error }) {
             </div>
           </SetupRow>
 
-          <SetupRow label="Devices" hint={twoTeams ? "Which device records whom." : "One device records the whole group."}>
+          <SetupRow label="Devices" hint={twoTeams ? "Which device records whom." : hasTeams ? "One device records the whole group (one device per team needs exactly two teams)." : "One device records the whole group."}>
             {twoTeams ? (
               <div className="flex flex-col gap-2">
                 {[
