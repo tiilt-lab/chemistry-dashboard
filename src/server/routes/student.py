@@ -30,13 +30,22 @@ def _voice_paths(username):
     return base + '.wav', base + '.check.json'
 
 
+def _voice_print_path(username):
+    # The voice print is the enrollment; recordings are deleted once it
+    # exists (2026-10-14), so "enrolled" means the print is on file.
+    safe = utility.safe_name(username)
+    return os.path.join(_VOICE_DIR, safe + '.emb.npy') if safe else None
+
+
 def _enrollment_fields(username):
     safe = utility.safe_name(username)
     if safe is None:
         return {'voice_enrolled': False, 'voice_check': None, 'face_enrolled': False}
     wav, check = _voice_paths(safe)
     fields = {
-        'voice_enrolled': os.path.isfile(wav),
+        'voice_enrolled': os.path.isfile(_voice_print_path(safe)) or os.path.isfile(wav),
+        # True only for a legacy enrollment whose recording was never deleted.
+        'voice_sample_available': os.path.isfile(wav),
         'voice_check': None,
         'face_enrolled': os.path.isfile(os.path.join(_FACE_DIR, safe + '.npy')),
     }
@@ -119,6 +128,8 @@ def student_fingerprint_audio(student_id, **kwargs):
         return json_response({'message': 'Not authorized for this student.'}, 403)
     wav, _ = _voice_paths(student.username)
     if not os.path.isfile(wav):
+        if os.path.isfile(_voice_print_path(student.username) or ''):
+            return json_response({'message': 'Voice recordings are not kept; only the voice print is stored.'}, 404)
         return json_response({'message': 'No voice enrollment on file.'}, 404)
     return send_file(wav, mimetype='audio/wav', conditional=True)
 

@@ -267,12 +267,18 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                                 continue
                             audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}".format(alias))
                             try:
-                                with wave.open(audio_fingerprint_file+'.wav') as wavObj:
-                                    byte_audio_data = self.read_bytes_from_wav(wavObj)
+                                # The voice print is what matching uses; the
+                                # recording is read only for a legacy
+                                # enrollment that has nothing else.
+                                if os.path.isfile(audio_fingerprint_file + '.emb.npy'):
+                                    byte_audio_data = b''
+                                else:
+                                    with wave.open(audio_fingerprint_file+'.wav') as wavObj:
+                                        byte_audio_data = self.read_bytes_from_wav(wavObj)
                             except (FileNotFoundError, wave.Error) as e:
                                 # One roster member without a usable enrollment
-                                # recording must not abort the whole run.
-                                logging.warning('skipping speaker %r: unreadable enrollment wav (%s)',
+                                # must not abort the whole run.
+                                logging.warning('skipping speaker %r: no voice print or readable recording (%s)',
                                                 speaker.get("alias"), e)
                                 continue
                             self.speakers[speaker["id"]] = {"alias": speaker["alias"], "data": byte_audio_data}

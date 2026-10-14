@@ -17,6 +17,11 @@ Embeddings are compared in ECAPA's native float domain (see
 cluster_reconcile.py: int16-domain embedding degrades to noise) and cached as
 <alias>.emb.npy beside each WAV so cross-matching 180+ enrollments stays fast.
 
+Since 2026-10-14 the voice print is all that is kept: once a recording has
+passed the gate and its embedding is cached, server.py deletes the WAV
+(drop_wav_after_embedding). Cross-matching therefore reads the .emb.npy
+files directly; a legacy WAV without a print is embedded on the fly.
+
 Run `python enrollment_check.py --warm` (from this directory, service venv) to
 pre-compute the cache for existing enrollments.
 """
@@ -134,6 +139,99 @@ def evaluate_enrollment(speech_seconds, self_sim, similar_to, duration_seconds,
     }
 
 
+def enrolled_aliases(folder):
+    """Every alias with a voice print (<alias>.emb.npy) or a legacy recording
+    (<alias>.wav), in name order; partial takes and backups are not
+    enrollments."""
+    found = set()
+    for name in os.listdir(folder):
+        if name.endswith(_CACHE_SUFFIX):
+            alias = name[:-len(_CACHE_SUFFIX)]
+        elif name.endswith(".wav"):
+            alias = name[:-4]
+        else:
+            continue
+        if alias.endswith(".partial") or alias.endswith(".combined.tmp") or ".bak" in name:
+            continue
+        found.add(alias)
+    return sorted(found)
+
+
+def enrolled_embeddings(folder, model, skip_alias=None):
+    """{alias: embedding} for every enrollment in ``folder``: the cached print
+    where there is one, else embedded from the legacy WAV (and cached). An
+    unreadable entry is logged and skipped."""
+    out = {}
+    for other in enrolled_aliases(folder):
+        if other == skip_alias:
+            continue
+        cache = os.path.join(folder, other + _CACHE_SUFFIX)
+        wav = os.path.join(folder, other + ".wav")
+        try:
+            if os.path.isfile(cache) and (not os.path.isfile(wav)
+                                          or os.path.getmtime(cache) >= os.path.getmtime(wav)):
+                out[other] = np.load(cache)
+            elif os.path.isfile(wav):
+                out[other] = _cached_embedding(wav, model)
+        except Exception as e:
+            logging.warning("enrollment check: skip %s: %s", other, e)
+    return out
+
+
+def drop_wav_after_embedding(wav_path, model=None):
+    """Delete an enrollment recording once its voice print exists (computing
+    the print first when it is missing and a model is given). Returns True
+    when the WAV is gone; False, with the WAV kept, when no print could be
+    made (the recording is then still the only copy of the enrollment)."""
+    cache = os.path.splitext(wav_path)[0] + _CACHE_SUFFIX
+    if not os.path.isfile(wav_path):
+        return True
+    if not os.path.isfile(cache):
+        if model is None:
+            return False
+        try:
+            _cached_embedding(wav_path, model)
+        except Exception as e:
+            logging.warning("enrollment: could not embed %s, keeping the recording: %s", wav_path, e)
+            return False
+        if not os.path.isfile(cache):
+            return False
+    try:
+        os.remove(wav_path)
+    except OSError as e:
+        logging.warning("enrollment: could not delete %s: %s", wav_path, e)
+        return False
+    logging.info("enrollment: recording deleted, voice print kept for %s", os.path.basename(cache))
+    return True
+
+
+def drop_wavs(folder, model=None, partial_max_age_seconds=3600):
+    """One-off and housekeeping: delete every enrollment WAV whose print
+    exists (or can be computed when ``model`` is given) and every partial
+    take older than ``partial_max_age_seconds``. Returns
+    {deleted, kept, partials_deleted, kept_aliases}."""
+    import time
+    deleted, kept, partials, kept_aliases = 0, 0, 0, []
+    for name in sorted(os.listdir(folder)):
+        if not name.endswith(".wav"):
+            continue
+        path = os.path.join(folder, name)
+        if name.endswith(".partial.wav") or name.endswith(".combined.tmp.wav"):
+            if time.time() - os.path.getmtime(path) > partial_max_age_seconds:
+                os.remove(path)
+                partials += 1
+                stale_cache = os.path.splitext(path)[0] + _CACHE_SUFFIX
+                if os.path.isfile(stale_cache):
+                    os.remove(stale_cache)
+            continue
+        if drop_wav_after_embedding(path, model):
+            deleted += 1
+        else:
+            kept += 1
+            kept_aliases.append(name[:-4])
+    return {"deleted": deleted, "kept": kept, "partials_deleted": partials, "kept_aliases": kept_aliases}
+
+
 def check_enrollment(wav_path, alias, model, biometric_dir=None):
     """Verdict dict for a just-saved enrollment WAV. 'ok' False means the
     recording should be discarded and re-captured; 'reasons' explains why in
@@ -163,17 +261,7 @@ def check_enrollment(wav_path, alias, model, biometric_dir=None):
     nearest_sim = None
     similar_to = []
     if full_emb is not None:
-        for name in os.listdir(biometric_dir):
-            if not name.endswith(".wav"):
-                continue
-            other_alias = os.path.splitext(name)[0]
-            if other_alias == alias:
-                continue
-            try:
-                other = _cached_embedding(os.path.join(biometric_dir, name), model)
-            except Exception as e:
-                logging.warning("enrollment check: skip %s: %s", name, e)
-                continue
+        for other_alias, other in enrolled_embeddings(biometric_dir, model, skip_alias=alias).items():
             sim = _cosine(full_emb, other)
             if nearest_sim is None or sim > nearest_sim:
                 nearest_sim = sim
@@ -220,8 +308,17 @@ if __name__ == "__main__":
     parser.add_argument("--survey", action="store_true",
                         help="write <alias>.check.json quality sidecars for all "
                              "enrollments (no WAV is modified or deleted)")
+    parser.add_argument("--drop-wavs", action="store_true",
+                        help="delete every enrollment recording whose voice print "
+                             "exists (computing missing prints first) and stale "
+                             "partial takes; keeps only <alias>.emb.npy + .check.json")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
+    if args.drop_wavs:
+        model = SpeakerRecognition.from_hparams(
+            source="speechbrain/spkrec-ecapa-voxceleb",
+            savedir="pretrained_models/pretrained_ecapa")
+        print(json.dumps(drop_wavs(cf.biometric_folder(), model)))
     if args.warm or args.survey:
         model = SpeakerRecognition.from_hparams(
             source="speechbrain/spkrec-ecapa-voxceleb",

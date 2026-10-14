@@ -49,12 +49,23 @@ def build_cluster_to_enrolled_map(audio_file, turns, enrolled, speaker_model,
         logging.warning("cluster reconcile: soundfile unavailable (%s)", e)
         return {}
 
-    # Enrolled reference embeddings, keyed by alias.
+    # Enrolled reference embeddings, keyed by alias: the cached voice print
+    # (all that is kept since recordings are deleted after enrollment), else
+    # embedded from the join-time bytes.
     ref = {}
     for info in enrolled.values():
         alias = info.get('alias')
         try:
-            ref[alias] = _embed_int16(info['data'], speaker_model)
+            emb = None
+            try:
+                from speaker_diarization import pyDiarization as pyd
+                emb = pyd._print_embedding(alias, None, speaker_model)
+            except Exception as e:
+                logging.debug("cluster reconcile: no cached print for %s: %s", alias, e)
+            if emb is None and info.get('data'):
+                emb = _embed_int16(info['data'], speaker_model)
+            if emb is not None:
+                ref[alias] = emb
         except Exception as e:
             logging.warning("cluster reconcile: enrolled embed failed for %s: %s", alias, e)
     if not ref:

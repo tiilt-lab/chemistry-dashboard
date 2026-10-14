@@ -39,12 +39,19 @@ export function VoiceQualityCard({ student }) {
         )
     return (
         <>
-            <audio
-                controls
-                preload="none"
-                className="mb-3 w-full"
-                src={`/api/v1/students/${student.id}/fingerprint_audio`}
-            />
+            {student.voice_sample_available ? (
+                <audio
+                    controls
+                    preload="none"
+                    className="mb-3 w-full"
+                    src={`/api/v1/students/${student.id}/fingerprint_audio`}
+                />
+            ) : (
+                <div className="mb-3 text-xs text-tiilt-muted">
+                    Voice print on file. The recording itself is not kept; the
+                    quality check below was made when it was recorded.
+                </div>
+            )}
             {student.voice_check ? (
                 <div className="mb-3 flex flex-col gap-1.5 rounded-lg bg-tiilt-ground/60 px-3 py-2 text-xs text-tiilt-ink">
                     <div className="flex items-center justify-between gap-3">

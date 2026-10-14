@@ -172,8 +172,14 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
             try:
                 currAlias = safe_names.safe_name(data['alias'])
                 audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}".format(currAlias))
-                with wave.open(audio_fingerprint_file+'.wav') as wavObj:
-                    byte_audio_data = self.read_bytes_from_wav(wavObj)
+                # The voice print (<alias>.emb.npy) is what matching uses;
+                # the recording is only read where a legacy enrollment
+                # still has nothing else.
+                if os.path.isfile(audio_fingerprint_file + '.emb.npy'):
+                    byte_audio_data = b''
+                else:
+                    with wave.open(audio_fingerprint_file+'.wav') as wavObj:
+                        byte_audio_data = self.read_bytes_from_wav(wavObj)
                 if currSpeaker and currAlias:
                     if self.speakers is None:
                         self.speakers = dict()
@@ -376,7 +382,14 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                 else:
                     if os.path.isfile(partial):
                         os.remove(partial)
-                    logging.info('Audio biometrics saved')
+                    # Only the voice print is kept: the recording goes as
+                    # soon as its embedding is cached (every consumer reads
+                    # <alias>.emb.npy; the WAV stays only if no print could
+                    # be made, so an enrollment is never lost).
+                    if enrollment_check.drop_wav_after_embedding(audio_fingerprint_file, diarization_model):
+                        logging.info('Audio biometrics saved (voice print only)')
+                    else:
+                        logging.warning('Audio biometrics saved; recording kept because no voice print could be cached for %s', self.currAlias)
                     self.send_json({'type': 'saved',
                                     'message': "Biometric data captured successfully",
                                     'quality': verdict})
