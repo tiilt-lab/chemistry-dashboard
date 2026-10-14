@@ -30,7 +30,7 @@ import { orientedDims } from "../byod-join/device-check";
 // server verifies (it asks for MORE audio — appended, not restarted — if a
 // take is short). The topics still sweep a wide phonetic range (names,
 // numbers, places, food, opinions) without feeling like a drill.
-const DEFAULT_SCRIPT = `Keep your face toward the camera and slowly turn your head left, right, up, and down while you talk. No script — just answer a few of these out loud, in your normal speaking voice, a couple of sentences each:
+const PROMPTS = `No script — just answer a few of these out loud, in your normal speaking voice, a couple of sentences each:
 
 •  Say your name, and what you're studying or working on this term.
 •  How did you get here today? Describe the route like you're giving directions.
@@ -40,8 +40,21 @@ const DEFAULT_SCRIPT = `Keep your face toward the camera and slowly turn your he
 •  What are your plans for the rest of the week?
 
 Keep going until the meter fills — pauses and "um"s are completely fine.`;
+const DEFAULT_SCRIPT = `Keep your face toward the camera and slowly turn your head left, right, up, and down while you talk. ` + PROMPTS;
+// Voice only: nothing to say about the camera.
+const VOICE_SCRIPT = `Hold the phone, or sit at the laptop, about as far from your mouth as in a normal call. ` + PROMPTS;
+
+// Audio containers MediaRecorder can produce, best first (Opus in WebM on
+// Chrome and Firefox, AAC in MP4 on Safari); the sign-up page probes the
+// same list so the server is told the right extension.
+const VOICE_MIME_TYPES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4;codecs=mp4a.40.2', 'audio/mp4'];
+const VIDEO_MIME_TYPES = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus'];
+const supportedMime = (list) =>
+    list.find((m) => { try { return MediaRecorder.isTypeSupported(m); } catch { return false; } }) || list[list.length - 1];
 
 function RecordingCoach({
+    // No camera: audio-only capture, no preview, no face guidance.
+    voiceOnly = false,
     maxDurationSec = 60,
     minDurationSec = 10,
     onComplete,
@@ -51,8 +64,9 @@ function RecordingCoach({
     onDoneEnrolling,
     onSkipEnrolling,
     showScript = true,
-    scriptText = DEFAULT_SCRIPT,
+    scriptText,
 }) {
+    const script = scriptText || (voiceOnly ? VOICE_SCRIPT : DEFAULT_SCRIPT);
     // Refs & state
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
@@ -133,17 +147,18 @@ function RecordingCoach({
         } catch (ex) {
             // A permission denial used to be an unhandled rejection — the
             // Start Preview button just looked dead.
+            const what = voiceOnly ? "microphone" : "camera/microphone";
             setPreviewError(
                 ex && ex.name === "NotAllowedError"
-                    ? "Camera/microphone access was blocked — allow it in your browser settings and try again."
-                    : "Couldn't open the camera/microphone (" + ((ex && ex.name) || "error") + "). Close other apps using them and try again.",
+                    ? `${what[0].toUpperCase()}${what.slice(1)} access was blocked — allow it in your browser settings and try again.`
+                    : `Couldn't open the ${what} (` + ((ex && ex.name) || "error") + "). Close other apps using it and try again.",
             );
         }
     };
 
     const startPreviewInner = async () => {
         const constraints = {
-            video: {
+            video: voiceOnly ? false : {
                 deviceId: camId ? { exact: camId } : undefined,
                 // Oriented to how the phone is held, so an upright phone
                 // records portrait instead of a cropped landscape box.
@@ -164,7 +179,7 @@ function RecordingCoach({
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         mediaStreamRef.current = stream;
 
-        if (videoRef.current) {
+        if (!voiceOnly && videoRef.current) {
             videoRef.current.srcObject = stream;
             await videoRef.current.play();
         }
@@ -200,7 +215,7 @@ function RecordingCoach({
 
         setIsPreviewing(true);
         startMeters();
-        startVisionLoop();
+        if (!voiceOnly) startVisionLoop();
     };
 
     const stopEverythingRef = useRef(null);
@@ -349,15 +364,11 @@ function RecordingCoach({
         cancelTick();
         elapsedRef.current = 0;
         recordedChunksRef.current = [];
-        const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
-            ? 'video/webm;codecs=vp9,opus'
-            : 'video/webm;codecs=vp8,opus';
+        const mime = supportedMime(voiceOnly ? VOICE_MIME_TYPES : VIDEO_MIME_TYPES);
 
-        const rec = new MediaRecorder(mediaStreamRef.current, {
-            mimeType: mime,
-            videoBitsPerSecond: 3_000_000,
-            audioBitsPerSecond: 128_000,
-        });
+        const rec = new MediaRecorder(mediaStreamRef.current, voiceOnly
+            ? { mimeType: mime, audioBitsPerSecond: 128_000 }
+            : { mimeType: mime, videoBitsPerSecond: 3_000_000, audioBitsPerSecond: 128_000 });
         mediaRecorderRef.current = rec;
 
         rec.ondataavailable = (e) => {
@@ -476,7 +487,7 @@ function RecordingCoach({
         <div className="mx-auto max-w-5xl p-6 space-y-6 overflow-y-auto h-screen">
             <header className="flex items-center justify-between">
                 <h1 className="text-2xl font-semibold">Recording Guide</h1>
-                <div className="text-sm text-tiilt-muted">Optimized for face+voice capture</div>
+                <div className="text-sm text-tiilt-muted">{voiceOnly ? "Voice only — no camera" : "Optimized for face+voice capture"}</div>
             </header>
 
             {/* Preflight checklist */}
@@ -484,33 +495,47 @@ function RecordingCoach({
                 <div className="rounded-2xl border p-4 shadow-sm">
                     <h2 className="mb-2 font-medium">Preflight</h2>
                     <ul className="space-y-2 text-sm">
-                        <li>• Ensure your face is within the rectangular box.</li>
-                        <li>• Face a window or soft light; avoid strong backlight.</li>
-                        <li>• Plain background; remove hats/hoods; keep glasses clean.</li>
+                        {voiceOnly ? null : <li>• Ensure your face is within the rectangular box.</li>}
+                        {voiceOnly ? null : <li>• Face a window or soft light; avoid strong backlight.</li>}
+                        {voiceOnly ? null : <li>• Plain background; remove hats/hoods; keep glasses clean.</li>}
                         <li>• Quiet room; turn off fans/AC where possible.</li>
                         <li>• Speak at normal pace; avoid sudden shouting/laughter.</li>
+                        {voiceOnly ? <li>• Use the built-in microphone or a headset; keep it a hand's width from your mouth.</li> : null}
                     </ul>
                 </div>
 
 
-                <div className="rounded-2xl border p-4 shadow-sm text-sm text-tiilt-muted">
-                    <div className="font-medium text-tiilt-ink">Capture Tips (FR + Diarization)</div>
-                    <ul className="mt-1 list-inside list-disc">
-                        <li>Keep head upright, look at camera; avoid extreme angles & occlusions.</li>
-                        <li>Maintain neutral to mild expressions for FR enrollment; smile only if consistent with target set.</li>
-                        <li>You could turn your head to the right, left, up and down while speaking; to ensure all head orientations are captured.</li>
-                    </ul>
-                </div>
+                {voiceOnly ? (
+                    <div className="rounded-2xl border p-4 shadow-sm text-sm text-tiilt-muted">
+                        <div className="font-medium text-tiilt-ink">What the sample is for</div>
+                        <ul className="mt-1 list-inside list-disc">
+                            <li>BLINC compares it with your voice in class to tell who said what.</li>
+                            <li>Natural talking matches better than reading, so answer the prompts rather than reciting.</li>
+                            <li>No face sample is taken: you will not be recognized on video, only in audio.</li>
+                        </ul>
+                    </div>
+                ) : (
+                    <div className="rounded-2xl border p-4 shadow-sm text-sm text-tiilt-muted">
+                        <div className="font-medium text-tiilt-ink">Capture Tips (FR + Diarization)</div>
+                        <ul className="mt-1 list-inside list-disc">
+                            <li>Keep head upright, look at camera; avoid extreme angles & occlusions.</li>
+                            <li>Maintain neutral to mild expressions for FR enrollment; smile only if consistent with target set.</li>
+                            <li>You could turn your head to the right, left, up and down while speaking; to ensure all head orientations are captured.</li>
+                        </ul>
+                    </div>
+                )}
 
                 <div className="rounded-2xl border p-4 shadow-sm">
                     <h2 className="mb-2 font-medium">Devices</h2>
                     <div className="flex gap-3">
+                        {voiceOnly ? null : (
                         <label className="flex-1 text-sm">Camera
                             <select className="mt-1 w-full rounded-lg border p-2" value={camId} onChange={e => setCamId(e.target.value)}>
                                 <option value="">Default</option>
                                 {cameras.map(d => (<option key={d.deviceId} value={d.deviceId}>{d.label || `Camera ${d.deviceId.slice(-4)}`}</option>))}
                             </select>
                         </label>
+                        )}
                         <label className="flex-1 text-sm">Microphone
                             <select className="mt-1 w-full rounded-lg border p-2" value={micId} onChange={e => setMicId(e.target.value)}>
                                 <option value="">Default</option>
@@ -531,8 +556,21 @@ function RecordingCoach({
                 </div>
             </section>
 
-            {/* Live Preview */}
+            {/* Live Preview (voice only: just the listening status, no picture) */}
             <section className="grid gap-4 md:grid-cols-3">
+                {voiceOnly ? (
+                <div className="md:col-span-2 rounded-2xl border p-4 shadow-sm">
+                    <div className="flex items-center gap-3 rounded-xl bg-tiilt-ground p-4 text-sm text-tiilt-ink">
+                        <span className={`h-3 w-3 flex-none rounded-full ${isPreviewing ? 'bg-emerald-500' : 'bg-tiilt-line'}`} />
+                        {isPreviewing
+                            ? (isRecording ? "Recording your voice…" : "Listening — the meter above shows your level. Press Start Recording when you are ready.")
+                            : "Press Start Preview to open the microphone."}
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
+                        <Badge ok={noiseFloorDb !== null && noiseFloorDb < -40} label={`Noise floor: ${noiseFloorDb === null ? '…' : noiseFloorDb.toFixed(1) + ' dB'}`} />
+                    </div>
+                </div>
+                ) : (
                 <div className="md:col-span-2 rounded-2xl border p-3 shadow-sm">
                     <div className="relative aspect-video overflow-hidden rounded-xl bg-black">
                         <video ref={videoRef} className="h-full w-full object-cover" playsInline muted />
@@ -555,6 +593,7 @@ function RecordingCoach({
                         {FaceDetectorApi && <Badge ok={faceOk} label={`Face centered: ${faceOk ? 'OK' : 'Adjust'}`} />}
                     </div>
                 </div>
+                )}
 
                 {/* script */}
                 <div className="flex flex-col gap-4">
@@ -563,7 +602,7 @@ function RecordingCoach({
                         <div className="rounded-2xl border p-4 shadow-sm">
                             <h3 className="mb-2 font-medium">Things to talk about</h3>
                             <div className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-xl bg-tiilt-ground p-3 text-sm leading-relaxed">
-                                {scriptText}
+                                {script}
                             </div>
                         </div>
                     )}
@@ -609,7 +648,7 @@ function RecordingCoach({
                         {enrollStatus.kind === "saving" ? (
                             <div className="mt-3 flex items-center gap-3 rounded-xl border border-tiilt-line bg-tiilt-ground/60 p-3 text-sm text-tiilt-ink">
                                 <span className="h-4 w-4 flex-none animate-spin rounded-full border-2 border-tiilt border-t-transparent" />
-                                Verifying and saving your voice and face — this
+                                Verifying and saving your voice{voiceOnly ? "" : " and face"} — this
                                 takes about half a minute. Keep this page open.
                             </div>
                         ) : null}
@@ -666,9 +705,9 @@ function RecordingCoach({
                         {enrollStatus.kind !== "success" && enrollStatus.kind !== "saving" && !isRecording && !isTesting ? (
                             <div className="mt-3 border-t border-tiilt-line pt-3">
                                 <div className="text-xs text-tiilt-muted">
-                                    Your account is already created. Enrolling your voice and
-                                    face helps the system tell who said what — you can do it
-                                    now or come back any time.
+                                    Your account is already created. Enrolling your voice{voiceOnly ? "" : " and face"} helps
+                                    the system tell who said what — you can do it now or come
+                                    back any time.
                                 </div>
                                 <button
                                     type="button"

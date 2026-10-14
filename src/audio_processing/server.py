@@ -5,12 +5,9 @@ import threading
 import logging
 import callbacks
 import enrollment_check
+import enrollment_media
 import wave
 import config as cf
-try:
-    import moviepy.editor as mp  # moviepy 1.x
-except ImportError:
-    import moviepy as mp  # moviepy 2.x dropped the .editor module
 from queue import Full, Empty
 from recorder import WaveRecorder
 from recorder import VidRecorder
@@ -148,11 +145,14 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                 self.send_json({'type': 'error', 'message': 'Invalid name.'})
                 return
             self.mediaExt = safe_names.safe_media_ext(data['mimeextension'])
+            # Voice-only enrollment (no camera): the take is an audio-only
+            # container, opened as sound rather than video.
+            self.voice_only = bool(data.get('voice_only'))
             if self.stream_data == 'audio-video-fingerprint':
                 self.video_file = os.path.join(cf.video_recordings_folder(), "{0}".format(self.currAlias))
                 self.vid_recorder = VidRecorder(self.video_file,16000, 2, 1,self.mediaExt)
 
-            logging.info('save-audio-video-fingerprinting: Audio process connected')
+            logging.info('save-audio-video-fingerprinting: Audio process connected%s', ' (voice only)' if self.voice_only else '')
             self.send_json({'type':'saveaudiovideo'})
 
         if data['type'] == 'fingerprint-force':
@@ -306,27 +306,12 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                 raise RuntimeError('recording scratch file was not written: {0}'.format(src))
             audio_fingerprint_file = os.path.join(cf.biometric_folder(), "{0}.{1}".format(self.currAlias,"wav"))
 
-            with mp.VideoFileClip(src, audio=True) as clip:
-                # Keep the subclip within the media duration. Cap at 60s (the
-                # RecordingCoach max), NOT self.interval — that 10s cap is the
-                # live-ASR chunk size and used to silently truncate every
-                # coached enrollment to its first ten seconds.
-                end = min(60.0, float(clip.duration or 0))
-                if end <= 0:
-                    err = "Clip has zero/unknown duration"
-                else:
-                    sub = (clip.subclipped if hasattr(clip, 'subclipped') else clip.subclip)(0, end)  # moviepy 2 rename
-                    if sub.audio is not None:
-                        sub.audio.write_audiofile(
-                                        audio_fingerprint_file ,
-                                        fps=16000,
-                                        nbytes=2,
-                                        codec="pcm_s16le",
-                                        ffmpeg_params=["-ac", "1", "-af", "aresample=resampler=soxr:precision=33"])
-                    else:
-                        # Fallback: there’s no audio track
-                        err = "No audio stream"
-            
+            # Capped at 60s (the RecordingCoach max), NOT self.interval: that
+            # 10s cap is the live-ASR chunk size and used to silently
+            # truncate every coached enrollment to its first ten seconds.
+            err = enrollment_media.extract_audio(src, audio_fingerprint_file,
+                                                 voice_only=getattr(self, 'voice_only', False))
+
             if os.path.isfile(src):
                 os.remove(src)
 

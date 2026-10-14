@@ -21,6 +21,12 @@ function SignupPage() {
     const [showAlert, setShowAlert] = useState(false)
     const [alertMessage, setAlertMessage] = useState("")
     const [constraintObj, setConstraintObj] = useState(null)
+    // Voice-only enrollment: no camera at all, chosen on the sign-up form
+    // (a device without one, or a student who would rather not be filmed).
+    // Only the audio service takes part; the face embedding is simply never
+    // made, which video analytics tolerate (the person is just not matched
+    // on camera).
+    const [voiceOnly, setVoiceOnly] = useState(false)
     const [streamReference, setStreamReference] = useState(null)
     const [mediaRecorder, setMediaRecorder] = useState(null)
     const [audioAuthenticated, setAudioAuthenticated] = useState(false)
@@ -66,14 +72,14 @@ function SignupPage() {
             setCurrentForm("processing")
             const constraint = {}
             constraint.audio = true
-            constraint.video = {
+            constraint.video = voiceOnly ? false : {
                 facingMode: "user",
                 width: 500, //{ min: 640, ideal: 1280, max: 1920 },
                 height: 500, //{ min: 480, ideal: 720, max: 1080 }
             }
             setConstraintObj(constraint)
         }
-    }, [studentObject])
+    }, [studentObject, voiceOnly])
 
     useEffect(() => {
         if (constraintObj !== null) {
@@ -84,17 +90,30 @@ function SignupPage() {
 
 
 
+    // Voice-only never hears from the video service, so every "both
+    // services" condition below counts it as already satisfied.
+    const videoSocketReady = voiceOnly || videoSocketProccesorConnected
+    const videoAuthed = voiceOnly || videoAuthenticated
+    const videoDone = voiceOnly || videoSaved
+
     useEffect(() => {
         if (mimeExtension !== null && mimetype !== null) {
-            if (mimeExtension !== "" && (mimetype.endsWith("opus") || mimetype.endsWith("aac") || mimetype.endsWith("mp4a.40.2"))) {
+            // An audio/* recording carries sound by definition; a video one
+            // only when its codec list names an audio codec.
+            const carriesAudio = voiceOnly
+                ? mimetype.startsWith("audio/")
+                : (mimetype.endsWith("opus") || mimetype.endsWith("aac") || mimetype.endsWith("mp4a.40.2"))
+            if (mimeExtension !== "" && carriesAudio) {
                 // The fingerprint handlers live on the live AUDIO service but
                 // the POSTHOC video service (/video_socket's live video server
                 // has no save-audio-video-fingerprinting handler — connecting
                 // there never acks and enrollment hangs on "Processing…").
                 audiows.current = new WebSocket(apiService.getAudioWebsocketEndpoint())
-                videows.current = new WebSocket(apiService.getVideoPosthocWebsocketEndpoint())
                 connect_audio_websocket_processor_service();
-                connect_video_websocket_processor_service();
+                if (!voiceOnly) {
+                    videows.current = new WebSocket(apiService.getVideoPosthocWebsocketEndpoint())
+                    connect_video_websocket_processor_service();
+                }
             } else {
                 setCurrentForm("")
                 setAlertMessage("No Audio Source detected, please use another device");
@@ -104,20 +123,20 @@ function SignupPage() {
     }, [mimetype, mimeExtension])
 
     useEffect(() => {
-        if (audioSocketProccesorConnected && videoSocketProccesorConnected) {
+        if (audioSocketProccesorConnected && videoSocketReady) {
             requestStartAudioVideoProcessingRef.current()
         }
-    }, [audioSocketProccesorConnected, videoSocketProccesorConnected])
+    }, [audioSocketProccesorConnected, videoSocketReady])
 
     useEffect(() => {
-        if (audioAuthenticated && videoAuthenticated) {
+        if (audioAuthenticated && videoAuthed) {
             setCurrentForm("")
             setNextPage("video_audio_capture_page")
 
         } else {
             // setCurrentForm("processing")
         }
-    }, [audioAuthenticated, videoAuthenticated])
+    }, [audioAuthenticated, videoAuthed])
 
     useEffect(() => {
         if (streamReference && mediaRecorder) {
@@ -181,10 +200,10 @@ function SignupPage() {
     }, [isRecordingStopped])
 
     useEffect(() => {
-        if (audioSaved && videoSaved) {
+        if (audioSaved && videoDone) {
             new AuthService().updateStudentProfile(studentObject.id, studentObject.lastname, studentObject.firstname, "yes", setStudentUpdated, setAlertMessage, setShowAlert);
         }
-    }, [audioSaved, videoSaved])
+    }, [audioSaved, videoDone])
 
     useEffect(() => {
         if (studentUpdate) {
@@ -192,7 +211,9 @@ function SignupPage() {
             setCurrentForm("")
             setEnrollStatus({
                 kind: "success",
-                message: "Your voice and face were verified and saved. You're enrolled.",
+                message: voiceOnly
+                    ? "Your voice was verified and saved. You're enrolled."
+                    : "Your voice and face were verified and saved. You're enrolled.",
             })
         }
     }, [studentUpdate])
@@ -208,21 +229,21 @@ function SignupPage() {
     // Watchdog: if the services haven't both acknowledged within 30s, stop
     // the spinner and say so instead of processing forever.
     useEffect(() => {
-        if (currentForm !== "processing" || (audioAuthenticated && videoAuthenticated)) return
+        if (currentForm !== "processing" || (audioAuthenticated && videoAuthed)) return
         const t = setTimeout(() => {
             setCurrentForm("")
             setAlertMessage("The enrollment services did not respond. Please try again in a moment.")
             setShowAlert(true)
         }, 30000)
         return () => clearTimeout(t)
-    }, [currentForm, audioAuthenticated, videoAuthenticated])
+    }, [currentForm, audioAuthenticated, videoAuthed])
 
     // Save-phase watchdog: quality check + face embedding normally finish
     // within a minute; past two minutes something server-side died without
     // replying, so surface it inline instead of spinning forever.
     useEffect(() => {
         if (enrollStatus.kind !== "saving") return
-        if (audioSaved && videoSaved) return
+        if (audioSaved && videoDone) return
         const t = setTimeout(() => {
             setEnrollStatus({
                 kind: "error",
@@ -230,16 +251,17 @@ function SignupPage() {
             })
         }, 120000)
         return () => clearTimeout(t)
-    }, [enrollStatus.kind, audioSaved, videoSaved])
+    }, [enrollStatus.kind, audioSaved, videoDone])
 
     useEffect(() => {
-        if (audioAuthenticated && videoAuthenticated) {
-            if (audiows.current === null || audiows.current.readyState !== WebSocket.OPEN || videows.current === null || videows.current.readyState !== WebSocket.OPEN) return;
+        if (audioAuthenticated && videoAuthed) {
+            const open = (ws) => ws.current !== null && ws.current.readyState === WebSocket.OPEN
+            if (!open(audiows) || (!voiceOnly && !open(videows))) return;
 
             const send = () => {
-                if (audiows.current.readyState === WebSocket.OPEN && videows.current.readyState === WebSocket.OPEN) {
+                if (open(audiows) && (voiceOnly || open(videows))) {
                     audiows.current.send(JSON.stringify({ type: "heartbeat", key:"no key" }));
-                    videows.current.send(JSON.stringify({ type: "heartbeat",key:"no key" }));
+                    if (videows.current !== null) videows.current.send(JSON.stringify({ type: "heartbeat",key:"no key" }));
 
                 } else {
                     clearInterval(id);
@@ -254,7 +276,7 @@ function SignupPage() {
                 clearInterval(id);
             };
         }
-    }, [audiows, videows, audioAuthenticated, videoAuthenticated]);
+    }, [audiows, videows, audioAuthenticated, videoAuthed, voiceOnly]);
 
 
     const stopRecording = () => {
@@ -282,25 +304,21 @@ function SignupPage() {
     }
 
     const saveRecording = async (videoBlob, duration) => {
-        if (videoBlob) {
-            if (mimetype.startsWith('video/webm')) {
-                const fixedBlob = await fixWebmDuration(videoBlob, duration*1000);
-                if (qualityFails.current >= 3 && audiows.current?.readyState === WebSocket.OPEN) {
-                    audiows.current.send(JSON.stringify({ type: "fingerprint-force" }))
-                }
-                // Fresh attempt: clear the previous save-state flags so the
-                // "both saved" effect only fires for THIS submission.
-                setAudioSaved(false)
-                setVideoSaved(false)
-                setStudentUpdated(false)
-                setEnrollStatus({ kind: "saving", message: "" })
-                videows.current.send(fixedBlob)
-                audiows.current.send(fixedBlob)
-            } else if (mimetype.startsWith('video/mp4')) {
-
-            }
-
+        if (!videoBlob) return
+        // A WebM from MediaRecorder carries no duration and the server reads
+        // one to cap the clip, so stamp it; an MP4 (Safari) already has it.
+        const blob = mimetype.indexOf("webm") !== -1 ? await fixWebmDuration(videoBlob, duration*1000) : videoBlob
+        if (qualityFails.current >= 3 && audiows.current?.readyState === WebSocket.OPEN) {
+            audiows.current.send(JSON.stringify({ type: "fingerprint-force" }))
         }
+        // Fresh attempt: clear the previous save-state flags so the
+        // "both saved" effect only fires for THIS submission.
+        setAudioSaved(false)
+        setVideoSaved(false)
+        setStudentUpdated(false)
+        setEnrollStatus({ kind: "saving", message: "" })
+        if (videows.current !== null) videows.current.send(blob)
+        audiows.current.send(blob)
     };
 
     // const saveRecording = () => {
@@ -440,10 +458,15 @@ function SignupPage() {
             setMimeExtension(mediaExt)
         } catch (ex) {
             setCurrentForm("")
+            const why = (ex && ex.name) || "error"
             setAlertMessage(
                 ex && ex.name === "NotAllowedError"
-                    ? "Camera and microphone access are needed to enroll. Please allow access and try again."
-                    : "No camera/microphone could be opened (" + ((ex && ex.name) || "error") + "). Enrollment needs both.",
+                    ? (voiceOnly
+                        ? "Microphone access is needed to enroll. Please allow it and try again."
+                        : "Camera and microphone access are needed to enroll. Please allow access and try again, or go back and choose voice only.")
+                    : (voiceOnly
+                        ? "No microphone could be opened (" + why + ")."
+                        : "No camera/microphone could be opened (" + why + "). Enrollment needs both; if this device has no camera, go back and choose voice only."),
             )
             setShowAlert(true)
         }
@@ -457,8 +480,15 @@ function SignupPage() {
         // Probe only — release the devices (the capture page reopens them).
         setTimeout(() => stream.getTracks().forEach((t) => t.stop()), 0);
 
-        // Try best-to-widest support order.
-        const candidates = [
+        // Try best-to-widest support order. Voice only: an audio container
+        // (Opus in WebM on Chrome and Firefox, AAC in MP4 on Safari); the
+        // RecordingCoach records with the same preference order.
+        const candidates = !constraintObj.video ? [
+            "audio/webm;codecs=opus",
+            "audio/webm",
+            "audio/mp4;codecs=mp4a.40.2",
+            "audio/mp4",
+        ] : [
             // WebM (Android/desktop Chrome)
             hasAudio ? "video/webm;codecs=vp9,opus" : "video/webm;codecs=vp9",
             hasAudio ? "video/webm;codecs=vp8,opus" : "video/webm;codecs=vp8",
@@ -481,7 +511,7 @@ function SignupPage() {
     }
 
 
-    const verifyUserProfileInput = (lastname, firstname, username) => {
+    const verifyUserProfileInput = (lastname, firstname, username, voiceOnlyChoice = false) => {
         if (lastname === '') {
             setAlertMessage("Please Enter Your Last Name");
             setShowAlert(true);
@@ -499,7 +529,7 @@ function SignupPage() {
             setShowAlert(true);
             document.getElementById("username").focus();
         } else {
-            // setUserProfileDetail([lastname, firstname, username])
+            setVoiceOnly(voiceOnlyChoice === true)
             new AuthService().createStudentProfile(lastname, firstname, username, setStudentObject, setAlertMessage, setShowAlert);
         }
     }
@@ -616,7 +646,7 @@ function SignupPage() {
             return
         }
 
-        if (videows.current === null) {
+        if (videows.current === null && !voiceOnly) {
             return
         }
 
@@ -632,11 +662,14 @@ function SignupPage() {
             video_encoding: "video/webm",
             mimeextension: mimeExtension,
             channels: 2,
-            streamdata: "audio-video-fingerprint"
+            streamdata: "audio-video-fingerprint",
+            // No picture in the recording: the audio service opens it as a
+            // sound file instead of a video.
+            voice_only: voiceOnly
         }
 
         audiows.current.send(JSON.stringify(message))
-        videows.current.send(JSON.stringify(message))
+        if (videows.current !== null) videows.current.send(JSON.stringify(message))
 
     }
 
@@ -730,6 +763,7 @@ function SignupPage() {
             displayText={displayText}
             currentForm={currentForm}
             enrollStatus={enrollStatus}
+            voiceOnly={voiceOnly}
             // Release the processing sockets the capture page opened before
             // leaving — Done skipped this and left them to server-side
             // timeout (Skip already does it).

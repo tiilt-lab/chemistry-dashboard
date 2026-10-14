@@ -25,9 +25,9 @@ function ProfileCreationPage(props) {
                     </h2>
                     <p className="mt-1 mb-6 text-sm text-tiilt-muted">
                         Enter your name and a username. On the next page you
-                        will record a short video so BLINC can match your voice
-                        and face during analytics. Enrolled before? Enter the
-                        same username and name to record a fresh sample — it
+                        will record a short sample so BLINC can recognize you
+                        during analytics. Enrolled before? Enter the same
+                        username and name to record a fresh sample — it
                         replaces your old one.
                     </p>
 
@@ -79,6 +79,46 @@ function ProfileCreationPage(props) {
                                 className={inputClass}
                             />
                         </div>
+                        {/* Voice only skips the camera entirely: a device
+                            without one, or a student who would rather not be
+                            filmed. It is all an audio-only session needs. */}
+                        <fieldset className="flex flex-col gap-2">
+                            <legend className="mb-1.5 text-sm font-semibold text-tiilt-ink">
+                                What to enroll
+                            </legend>
+                            <label className="flex cursor-pointer items-start gap-2.5 text-sm text-tiilt-ink">
+                                <input
+                                    type="radio"
+                                    name="enrollMode"
+                                    value="both"
+                                    defaultChecked
+                                    className="mt-1 h-4 w-4 flex-none cursor-pointer accent-tiilt"
+                                />
+                                <span>
+                                    Voice and face
+                                    <span className="block text-xs text-tiilt-muted">
+                                        Needs a camera and a microphone. BLINC can
+                                        then recognize you on video as well as in
+                                        audio.
+                                    </span>
+                                </span>
+                            </label>
+                            <label className="flex cursor-pointer items-start gap-2.5 text-sm text-tiilt-ink">
+                                <input
+                                    type="radio"
+                                    name="enrollMode"
+                                    value="voice"
+                                    className="mt-1 h-4 w-4 flex-none cursor-pointer accent-tiilt"
+                                />
+                                <span>
+                                    Voice only
+                                    <span className="block text-xs text-tiilt-muted">
+                                        Microphone only, no camera. Enough for
+                                        sessions recorded with audio.
+                                    </span>
+                                </span>
+                            </label>
+                        </fieldset>
 
                         <button
                             className={btnPrimaryTall}
@@ -93,6 +133,7 @@ function ProfileCreationPage(props) {
                                     document
                                         .getElementById("username")
                                         .value.trim(),
+                                    (document.querySelector('input[name="enrollMode"]:checked') || {}).value === "voice",
                                 )
                             }
                         >
@@ -111,6 +152,7 @@ function ProfileCreationPage(props) {
                         nav={() => props.navigateToLogin()}
                     />
                     <RecordingCoach
+                        voiceOnly={props.voiceOnly === true}
                         maxDurationSec={60}
                         minDurationSec={30}
                         onTestClip={() => {}}
