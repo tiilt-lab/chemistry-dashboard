@@ -75,11 +75,12 @@ def _builtin_negotiation():
         })
     return {
         "ref": BUILTIN_PREFIX + BUILTIN_NEGOTIATION,
-        "name": "Negotiation: emotion, interests/rights/power, frame, listening",
-        "description": "Built for the Kellogg Viking Investments case: every utterance coded for "
-                       "escalation, the interests/rights/power move, past-blame vs future "
-                       "problem-solving framing, and listening moves; with a de-escalation timeline "
-                       "and per-team opening moves. The context lines describe the Viking case.",
+        "name": "Viking",
+        "description": "Negotiation coding for the Kellogg Viking Investments case: every utterance "
+                       "coded for emotion (escalating or defusing), the interests/rights/power move, "
+                       "past-blame vs future problem-solving framing, and listening moves; with a "
+                       "de-escalation timeline and per-team opening moves. The context lines "
+                       "describe the Viking case.",
         "context": list(book.get("case_facts") or []),
         "dimensions": dims,
         "builtin": True,

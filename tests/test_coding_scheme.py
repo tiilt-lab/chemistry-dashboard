@@ -92,7 +92,7 @@ def test_codebook_panel_and_analytics_conversions():
                      "analytics": {"timeline": False, "future_move": False, "dynamics": False}}
     viking = cs.to_codebook(cs.builtin_scheme("negotiation"))
     assert cs.analytics(viking) == {"timeline": True, "future_move": True, "dynamics": True}
-    assert cs.resolve("builtin:negotiation")["name"].startswith("Negotiation")
+    assert cs.resolve("builtin:negotiation")["name"] == "Viking"
     assert cs.resolve("scheme:3", lambda i: {"name": "S%d" % i, "dimensions": []}) == {"name": "S3", "dimensions": [], "ref": "scheme:3"}
     assert cs.resolve("scheme:3", lambda i: None) is None and cs.resolve("scheme:x", lambda i: {}) is None
     assert cs.resolve("bogus:1") is None and cs.resolve(None) is None and cs.resolve("scheme:3") is None
