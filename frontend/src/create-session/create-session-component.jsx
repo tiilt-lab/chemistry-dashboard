@@ -74,11 +74,12 @@ function CreateSessionComponent(props) {
     });
     return () => { alive = false; };
   }, []);
-  // Which video analyses run during class; none = record now, analyse after.
+  // Which video analyses run during class. None by default: record now,
+  // analyse after class; each live analysis is opted into per session.
   const [liveVideoAnalyses, setLiveVideoAnalyses] = useState(
     changedState && Array.isArray(prevState.liveVideoAnalyses)
       ? prevState.liveVideoAnalyses
-      : LIVE_VIDEO_ANALYSES.map((a) => a.key)
+      : []
   );
   const toggleLiveVideoAnalysis = (key) =>
     setLiveVideoAnalyses((list) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]));

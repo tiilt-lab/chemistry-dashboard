@@ -305,9 +305,15 @@ def test_create_session_ui_derives_the_flag_from_the_chosen_analyses():
     # record-now-analyse-later flag is simply "none chosen".
     comp = _read("frontend", "src", "create-session", "create-session-component.jsx")
     assert "const [liveVideoAnalyses, setLiveVideoAnalyses] = useState(" in comp
+    # Nothing live by default: a fresh form sends [] (record now, analyse later).
+    assert "? prevState.liveVideoAnalyses\n      : []" in comp
     assert "liveVideoAnalyses.length > 0, negotiationCoding" in comp
     page = _read("frontend", "src", "create-session", "html-pages.jsx")
     assert "function AdvancedAnalysisSection(" in page
+    # ...and it is the last section of the form, after Coding.
+    start = page.index('props.currentMenu === "Settings"')
+    form = page[start:page.index("Start session", start)]
+    assert form.index("<CodingSection") < form.index("<AdvancedAnalysisSection")
     assert '{ key: "attention", label: "Attention and gaze"' in page
     assert '{ key: "emotion", label: "Facial emotion"' in page
     svc = _read("frontend", "src", "services", "session-service.js")

@@ -128,7 +128,7 @@ function PodSetupSection({ setup, setSetup, error }) {
 
           <SetupRow label="Teams" hint={hasTeams ? "Per group, with how many people on each." : "People per group."}>
             <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-end gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <select
                   id="podTeamsPerGroup"
                   value={s.teamsPerGroup >= MIN_CUSTOM_TEAMS ? "custom" : s.teamsPerGroup}
@@ -147,10 +147,9 @@ function PodSetupSection({ setup, setSetup, error }) {
                   <option value="custom">Custom (3 or more)</option>
                 </select>
                 {s.teamsPerGroup >= MIN_CUSTOM_TEAMS ? (
-                  <div>
-                    <label htmlFor="podTeamsCustom" className={smallLabel}>
-                      How many
-                    </label>
+                  // The count sits on the same line as the select (no
+                  // label above it, which would push the row down).
+                  <label htmlFor="podTeamsCustom" className="flex items-center gap-2 text-sm text-tiilt-muted">
                     <input
                       id="podTeamsCustom"
                       type="number"
@@ -159,8 +158,10 @@ function PodSetupSection({ setup, setSetup, error }) {
                       value={s.teamsPerGroup}
                       onChange={(e) => set({ teamsPerGroup: int(e.target.value, MIN_CUSTOM_TEAMS, MAX_TEAMS) })}
                       className={numberCls}
+                      aria-label="How many teams per group"
                     />
-                  </div>
+                    teams
+                  </label>
                 ) : null}
               </div>
               {hasTeams ? (
@@ -261,10 +262,11 @@ function PodSetupSection({ setup, setSetup, error }) {
   );
 }
 
-// Advanced analysis: which analyses run on the video during class. Each one
-// costs GPU time per pod while the class is on; whatever is off is still
-// recorded and can be run after class from the pod page. (Transcription
-// always runs live with CrisperWhisper, so it is not a choice here.)
+// Advanced analysis, the last section of the form: which analyses run on
+// the video during class. Nothing is on by default; each one costs GPU time
+// per pod while the class is on, and whatever is off is still recorded and
+// can be run after class from the pod page. (Transcription always runs live
+// with CrisperWhisper, so it is not a choice here.)
 const LIVE_VIDEO_ANALYSES = [
   { key: "attention", label: "Attention and gaze", desc: "Where each person looks, their attention level and the object of focus." },
   { key: "emotion", label: "Facial emotion", desc: "The expression read from each face." },
@@ -408,10 +410,6 @@ function CreateSessionPage(props) {
                   <img src={openFolderIcon} alt="" className="h-5 w-5 flex-none" />
                 </button>
               </div>
-              <AdvancedAnalysisSection
-                analyses={props.liveVideoAnalyses}
-                toggle={props.toggleLiveVideoAnalysis}
-              />
               <PodSetupSection setup={props.podSetup} setSetup={props.setPodSetup} error={props.podSetupError} />
               <CodingSection
                 schemes={props.codingSchemes}
@@ -419,6 +417,10 @@ function CreateSessionPage(props) {
                 onChange={props.setCodingScheme}
                 paired={props.negotiationPaired}
                 goToSchemes={props.goToCodingSchemes}
+              />
+              <AdvancedAnalysisSection
+                analyses={props.liveVideoAnalyses}
+                toggle={props.toggleLiveVideoAnalysis}
               />
             </div>
             <div className={footerBar}>
