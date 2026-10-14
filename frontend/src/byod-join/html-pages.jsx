@@ -40,6 +40,15 @@ function SlotPicker({ setup, paired, savedRole, error }) {
     ]
     const teamOptions = twoTeams ? teams : paired ? fallbackTeams : []
     const groupSize = setup && setup.group_size
+    // Controlled, seeded from the saved/linked slot: the option lists arrive
+    // with the session lookup, after the first paint, and an uncontrolled
+    // select would keep whatever it showed when it mounted.
+    const [group, setGroup] = useState((savedRole && savedRole.group) || "")
+    const [side, setSide] = useState((savedRole && savedRole.side) || "")
+    useEffect(() => {
+        if (savedRole && savedRole.group) setGroup(savedRole.group)
+        if (savedRole && savedRole.side) setSide(savedRole.side)
+    }, [savedRole])
     const intro = twoTeams
         ? `This session runs groups of ${groupSize} as ${teams.map((t) => `${t.name} (${t.size})`).join(" vs ")}, each team on its own laptop. Pick the slot this laptop occupies; everything it hears and sees counts for that team.`
         : paired
@@ -56,7 +65,8 @@ function SlotPicker({ setup, paired, savedRole, error }) {
                     <select
                         id="negGroup"
                         className={dlgSelect}
-                        defaultValue={(savedRole && savedRole.group) || ""}
+                        value={groups.includes(group) ? group : ""}
+                        onChange={(e) => setGroup(e.target.value)}
                     >
                         <option value="">Choose…</option>
                         {groups.map((g) => (
@@ -70,7 +80,8 @@ function SlotPicker({ setup, paired, savedRole, error }) {
                         className={dlgInput}
                         id="negGroup"
                         maxLength={32}
-                        defaultValue={(savedRole && savedRole.group) || ""}
+                        value={group}
+                        onChange={(e) => setGroup(e.target.value)}
                         placeholder="e.g. Table 3"
                     />
                 )}
@@ -83,7 +94,8 @@ function SlotPicker({ setup, paired, savedRole, error }) {
                     <select
                         id="negSide"
                         className={dlgSelect}
-                        defaultValue={(savedRole && savedRole.side) || ""}
+                        value={teamOptions.some((t) => t.name === side) ? side : ""}
+                        onChange={(e) => setSide(e.target.value)}
                     >
                         <option value="">Choose a team…</option>
                         {teamOptions.map((t) => (
