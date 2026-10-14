@@ -17,3 +17,15 @@ export const pageShell =
 
 export const formCard =
   "flex w-full grow flex-col md:my-auto md:grow-0 md:max-w-xl md:rounded-2xl md:border md:border-tiilt-line md:bg-white md:shadow-modal"
+
+// Library pages (keyword lists, topic models, coding schemes and their
+// editors): the same card, but using the content column's width rather
+// than a narrow wizard, since they hold lists and tables.
+export const wideCard =
+  "flex w-full grow flex-col md:my-auto md:grow-0 md:max-w-5xl md:rounded-2xl md:border md:border-tiilt-line md:bg-white md:shadow-modal"
+
+// A card's action bar. Rounded at the bottom on desktop so the white bar
+// does not square off the card's lower corners (the card itself cannot
+// clip overflow: context menus inside it need to escape it).
+export const cardFooter =
+  "flex w-full flex-none flex-wrap items-center justify-center gap-3 border-t border-tiilt-line bg-white px-4 py-3 md:rounded-b-2xl"

@@ -2,7 +2,7 @@ import { AppContextMenu } from "../components/context-menu/context-menu-componen
 import { SkeletonRows } from "../components/skeleton"
 import { EmptyState } from "../components/empty-state"
 import { btnPrimary } from "../components/dialog-styles"
-import { pageShell, formCard } from "../components/layout-styles"
+import { pageShell, wideCard, cardFooter } from "../components/layout-styles"
 import { DialogBoxTwoOption } from "../dialog/dialog-component"
 import { Appheader } from "../header/header-component"
 import { LibraryTabs } from "../components/library-tabs"
@@ -21,9 +21,9 @@ function KeywordListPage(props) {
                 />
                 <LibraryTabs />
                 <div className={pageShell}>
-                <div className={formCard}>
+                <div className={wideCard}>
                 <div className="relative min-h-0 w-full grow">
-                    <div className="mx-auto w-full max-w-2xl px-4 py-6">
+                    <div className="mx-auto w-full max-w-4xl px-4 py-6">
                         {!props.keywordLists ? (
                             <SkeletonRows rows={5} />
                         ) : (
@@ -90,7 +90,7 @@ function KeywordListPage(props) {
                         </ul>
                     </div>
                 </div>
-                <div className="flex w-full flex-none flex-wrap items-center justify-center gap-3 border-t border-tiilt-line bg-white px-4 py-3">
+                <div className={cardFooter}>
                     <button
                         className={btnPrimary + " h-11 w-full max-w-55 cursor-pointer"}
                         onClick={props.openNewKeywordList}

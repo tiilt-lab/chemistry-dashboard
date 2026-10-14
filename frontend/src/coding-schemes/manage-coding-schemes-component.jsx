@@ -6,7 +6,7 @@ import { SkeletonRows } from "../components/skeleton"
 import { EmptyState } from "../components/empty-state"
 import { StatusPill } from "../components/status-pill"
 import { btnPrimary } from "../components/dialog-styles"
-import { pageShell, formCard } from "../components/layout-styles"
+import { pageShell, wideCard, cardFooter } from "../components/layout-styles"
 import { DialogBoxTwoOption } from "../dialog/dialog-component"
 import { Appheader } from "../header/header-component"
 import { LibraryTabs } from "../components/library-tabs"
@@ -51,9 +51,9 @@ function ManageCodingSchemesComponent() {
                 <Appheader title={"Library"} leftText={false} rightText={""} nav={() => navigate("/home")} />
                 <LibraryTabs />
                 <div className={pageShell}>
-                    <div className={formCard}>
+                    <div className={wideCard}>
                         <div className="relative min-h-0 w-full grow">
-                            <div className="mx-auto w-full max-w-2xl px-4 py-6">
+                            <div className="mx-auto w-full max-w-4xl px-4 py-6">
                                 <p className="mb-4 text-sm text-tiilt-muted">
                                     A coding scheme says what the local model codes every utterance
                                     for: its dimensions and the codes in each. Pick one when you start
@@ -108,7 +108,7 @@ function ManageCodingSchemesComponent() {
                                 </ul>
                             </div>
                         </div>
-                        <div className="flex w-full flex-none flex-wrap items-center justify-center gap-3 border-t border-tiilt-line bg-white px-4 py-3">
+                        <div className={cardFooter}>
                             <button
                                 className={btnPrimary + " h-11 w-full max-w-55 cursor-pointer"}
                                 onClick={() => navigate("/coding-schemes/new")}

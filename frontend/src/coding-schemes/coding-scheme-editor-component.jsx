@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { CodingSchemeService } from "../services/coding-scheme-service"
 import { btnPrimary, btnSecondary, btnSecondarySm, btnDangerOutlineSm, dlgError } from "../components/dialog-styles"
-import { pageShell, formCard } from "../components/layout-styles"
+import { pageShell, wideCard, cardFooter } from "../components/layout-styles"
 import { Appheader } from "../header/header-component"
 import { LibraryTabs } from "../components/library-tabs"
 import { InlineSpinner } from "../components/inline-spinner"
@@ -102,9 +102,9 @@ function CodingSchemeEditorComponent() {
             <Appheader title={"Library"} leftText={false} rightText={""} nav={() => navigate("/coding-schemes")} />
             <LibraryTabs />
             <div className={pageShell}>
-                <div className={formCard}>
+                <div className={wideCard}>
                     <div className="relative min-h-0 w-full grow overflow-y-auto">
-                        <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6">
+                        <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-4 py-6">
                             {!loaded && !error ? <div className="text-sm text-tiilt-muted">Loading…</div> : null}
                             {loaded ? (
                                 <>
@@ -258,7 +258,7 @@ function CodingSchemeEditorComponent() {
                             {saved && !error ? <div className="text-sm text-tiilt-teal-text">Saved.</div> : null}
                         </div>
                     </div>
-                    <div className="flex w-full flex-none flex-wrap items-center justify-center gap-3 border-t border-tiilt-line bg-white px-4 py-3">
+                    <div className={cardFooter}>
                         <button className={btnSecondary} onClick={() => navigate("/coding-schemes")}>
                             Back to schemes
                         </button>

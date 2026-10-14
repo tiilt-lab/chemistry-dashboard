@@ -82,7 +82,7 @@ function TopicListPage(props) {
         </div>
 
         {props.editMode ? (
-          <div className="w-full flex-none border-t border-tiilt-line bg-white">
+          <div className="w-full flex-none border-t border-tiilt-line bg-white md:rounded-b-2xl">
             <div className="mx-auto w-full max-w-lg px-4 py-4">
               <button
                 className={dlgPrimary + " w-full"}
