@@ -17,7 +17,7 @@ import { TranscriptsComponentClient } from "../transcripts/transcripts-component
 
 import style from "./byod-join.module.css"
 import style2 from "../pod-details/pod.module.css"
-import style3 from "../manage-keyword-lists/manage-keyword-lists.module.css"
+import style3 from "../components/library-dialog.module.css"
 import MicIcon from "@icons/Mic"
 import Check from "@icons/Check"
 import Chevron from "@icons/Chevron"

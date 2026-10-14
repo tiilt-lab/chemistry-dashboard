@@ -603,7 +603,6 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
         ["Facial emotion", "emotion", "HSEmotion EfficientNet-B2 (AffectNet-8)"],
         ["Head / person detector", "head_detector", "YOLOv5m (CrowdHuman, 2021)"],
         ["Object of focus", "objects", "YOLO11m (COCO)"],
-        ["Keyword matching", "keywords", "SentenceTransformer (BGE)"],
         ["Face recognition", "face", "dlib ResNet (128-D)"],
     ]
 

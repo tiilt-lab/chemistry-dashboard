@@ -12,7 +12,6 @@ import IconPod from "@icons/IconPod";
 import LightIcon from "@icons/Light";
 
 // Single-step creation: name/folder/toggles, then Start session.
-// (Keyword lists and topic models moved to post-hoc analysis.)
 
 const contentWrap =
   "mx-auto flex w-full max-w-lg grow flex-col gap-4 px-4 py-6";
@@ -431,10 +430,6 @@ function CreateSessionPage(props) {
                   Start session
                 </button>
               </div>
-            </div>
-            <div className="mx-auto w-full max-w-lg flex-none px-4 pb-4 text-center text-xs text-tiilt-muted">
-              Keywords and topic models are chosen later, as part of
-              post-hoc analysis on each pod.
             </div>
           </React.Fragment>
         ) : (

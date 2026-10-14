@@ -8,7 +8,7 @@ import { TiiltLogo } from "../components/tiilt-logo"
 // route around every signed-in page, so moving between sections no longer
 // means going back to /home. Collapses to an icon rail below lg.
 //
-// A group inside a session is a "Group". "Library" fronts the keyword/topic
+// A group inside a session is a "Group". "Library" fronts the coding-scheme
 // configuration cluster.
 
 function IconSessions(props) {
@@ -51,8 +51,8 @@ const NAV_ITEMS = [
     { label: "Students", to: "/students", match: ["/students"], Icon: IconStudents },
     {
         label: "Library",
-        to: "/keyword-lists",
-        match: ["/keyword-lists", "/topic-models", "/topic-list", "/file_upload", "/coding-schemes"],
+        to: "/coding-schemes",
+        match: ["/coding-schemes"],
         Icon: IconLibrary,
     },
 ]

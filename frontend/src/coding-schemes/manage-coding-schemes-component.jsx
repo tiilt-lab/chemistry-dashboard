@@ -10,7 +10,7 @@ import { pageShell, wideCard, cardFooter } from "../components/layout-styles"
 import { DialogBoxTwoOption } from "../dialog/dialog-component"
 import { Appheader } from "../header/header-component"
 import { LibraryTabs } from "../components/library-tabs"
-import style from "../manage-keyword-lists/manage-keyword-lists.module.css"
+import style from "../components/library-dialog.module.css"
 import style2 from "../components/context-menu/context-menu.module.css"
 
 // Coding schemes: what the utterance coder codes for. The built-in

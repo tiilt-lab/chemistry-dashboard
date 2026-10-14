@@ -19,18 +19,13 @@ import { RouteErrorBoundary } from './error-boundary'
 const JoinPage = lazy(() => import('../byod-join/byod-join-component').then(m => ({ default: m.JoinPage })))
 const StudentSessionDashboard = lazy(() => import('../student-dashboard/student-dashboard-component').then(m => ({ default: m.StudentSessionDashboard })))
 const ExpertRatingComponent = lazy(() => import('../expert-rating/expert-rating-component').then(m => ({ default: m.ExpertRatingComponent })))
-const ManageKeywordListsComponent = lazy(() => import('../manage-keyword-lists/manage-keyword-lists-component').then(m => ({ default: m.ManageKeywordListsComponent })))
-const KeywordListItemsComponent = lazy(() => import('../keyword-list-items/keyword-list-items-component').then(m => ({ default: m.KeywordListItemsComponent })))
 const CreateSessionComponent = lazy(() => import('../create-session/create-session-component').then(m => ({ default: m.CreateSessionComponent })))
 const PodsOverviewComponent = lazy(() => import('../pods-overview/pods-overview-component').then(m => ({ default: m.PodsOverviewComponent })))
 const DiscussionGraphComponent = lazy(() => import('../discussion-graph/discussion-graph-component').then(m => ({ default: m.DiscussionGraphComponent })))
-const FileUploadComponent = lazy(() => import('../file-upload/file-upload-component').then(m => ({ default: m.FileUploadComponent })))
 const SettingsComponent = lazy(() => import('../settings/settings-component').then(m => ({ default: m.SettingsComponent })))
 const OpsComponent = lazy(() => import('../ops/ops-component').then(m => ({ default: m.OpsComponent })))
 const PodComponent = lazy(() => import('../pod-details/pod-component').then(m => ({ default: m.PodComponent })))
 const TranscriptsComponent = lazy(() => import('../transcripts/transcripts-component').then(m => ({ default: m.TranscriptsComponent })))
-const TopicListComponent = lazy(() => import('../topic-list/topic-list-component').then(m => ({ default: m.TopicListComponent })))
-const ManageTopicModelsComponent = lazy(() => import('../manage-topic-models/manage-topic-models-component').then(m => ({ default: m.ManageTopicModelsComponent })))
 const ManageCodingSchemesComponent = lazy(() => import('../coding-schemes/manage-coding-schemes-component').then(m => ({ default: m.ManageCodingSchemesComponent })))
 const CodingSchemeEditorComponent = lazy(() => import('../coding-schemes/coding-scheme-editor-component').then(m => ({ default: m.CodingSchemeEditorComponent })))
 const StudentsComponent = lazy(() => import('../students/students-component').then(m => ({ default: m.StudentsComponent })))
@@ -70,10 +65,10 @@ function PageRouter() {
                     nav rail + content column. Public flows stay outside. */}
                 <Route element={<AppShell />}>
                 <Route path='/home' element={<ProtectedRoute component={HomeScreen} />}/>
-                <Route path='/keyword-lists' element={<ProtectedRoute  component={ManageKeywordListsComponent} />}/>
-                <Route path='/keyword-lists/new' element={<ProtectedRoute  component={KeywordListItemsComponent}/>}/>
-                <Route path='/keyword-lists/new-session' element={<ProtectedRoute  component={KeywordListItemsComponent}/>}/>
-                <Route path='/keyword-lists/:keyword_list_id' element={<ProtectedRoute  component={KeywordListItemsComponent}/>}/>
+                {/* Keyword lists and topic models left the interface on
+                    2026-10-14 (five sessions had ever used a keyword list,
+                    none a topic model); old links land on the Library. */}
+                <Route path='/keyword-lists/*' element={<Navigate replace to="/coding-schemes" />} />
                 <Route path='/sessions' element={<ProtectedRoute component={SessionsComponent}/>}/>
                 <Route path='/sessions/new' element={<ProtectedRoute component={CreateSessionComponent}/>} />
                 <Route path='sessions/:sessionId' element={<ProtectedRoute component={SessionManagerComponent }/>} >
@@ -83,14 +78,12 @@ function PageRouter() {
                     <Route path='pods/:sessionDeviceId' element={<ProtectedRoute component={PodComponent}/>} />
                     <Route path='pods/:sessionDeviceId/transcripts' element={<ProtectedRoute component={TranscriptsComponent}/>} />
                 </Route>
-                <Route path='/topic-models' element={<ProtectedRoute component={ManageTopicModelsComponent}/>} />
+                <Route path='/topic-models' element={<Navigate replace to="/coding-schemes" />} />
                 <Route path='/coding-schemes' element={<ProtectedRoute component={ManageCodingSchemesComponent}/>} />
                 <Route path='/coding-schemes/new' element={<ProtectedRoute component={CodingSchemeEditorComponent}/>} />
                 <Route path='/coding-schemes/:ref' element={<ProtectedRoute component={CodingSchemeEditorComponent}/>} />
-                <Route path='/file_upload' element={<ProtectedRoute component={FileUploadComponent}/>} />
-                <Route path='/file_upload/new-session' element={<ProtectedRoute component={FileUploadComponent}/>} />
-                <Route path='/topic-list' element={<ProtectedRoute component={TopicListComponent}/>} />
-                <Route path='/topic-list/new-session' element={<ProtectedRoute component={TopicListComponent}/>} />
+                <Route path='/file_upload/*' element={<Navigate replace to="/coding-schemes" />} />
+                <Route path='/topic-list/*' element={<Navigate replace to="/coding-schemes" />} />
                 {/* The Devices page (physical recorder hardware) is gone.
                     Both paths redirect so existing links and bookmarks land
                     somewhere useful instead of a blank shell. Pods are still
@@ -102,7 +95,7 @@ function PageRouter() {
                 <Route path='/students/:studentId' element={<ProtectedRoute component={StudentProfileComponent}/> } />
                 <Route path='/raters' element={<ProtectedRoute component={RatersComponent}/> } />
                 <Route path='/people' element={<Navigate replace to="/students" />} />
-                <Route path='/library' element={<Navigate replace to="/keyword-lists" />} />
+                <Route path='/library' element={<Navigate replace to="/coding-schemes" />} />
                 <Route path='/users' element={<ProtectedRoute component={UsersComponent}/> } />
                 <Route path='/settings' element={<ProtectedRoute component={SettingsComponent}/> } />
                 <Route path='/ops' element={<ProtectedRoute component={OpsComponent}/> } />

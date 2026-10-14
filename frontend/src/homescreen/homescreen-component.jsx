@@ -23,17 +23,12 @@ const GROUPS = [
     },
     {
         icon: wordlist,
-        name: "Keywords & Topics",
+        name: "Library",
         links: [
             {
-                label: "Keyword lists",
-                desc: "Terms to detect as they come up in session",
-                path: "/keyword-lists",
-            },
-            {
-                label: "Topic models",
-                desc: "Models that tag what each utterance is about",
-                path: "/topic-models",
+                label: "Coding schemes",
+                desc: "What the coder codes every utterance for, by session",
+                path: "/coding-schemes",
             },
         ],
     },
