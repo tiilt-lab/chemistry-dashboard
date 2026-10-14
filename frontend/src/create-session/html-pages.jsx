@@ -30,11 +30,13 @@ const textCls =
 // Row is module-level (not defined inside the section) so the inputs keep
 // focus across re-renders.
 function SetupRow({ label, hint, children }) {
+  // Label and hint above the controls: the form card is narrow, so side
+  // by side would squeeze the inputs.
   return (
-    <div className="grid grid-cols-1 gap-2 px-4 py-3 sm:grid-cols-[8.5rem_1fr] sm:gap-5">
-      <div className="sm:pt-2">
-        <div className="text-sm font-semibold text-tiilt-ink">{label}</div>
-        {hint ? <div className="text-xs text-tiilt-muted">{hint}</div> : null}
+    <div className="flex flex-col gap-2 px-4 py-3">
+      <div className="flex flex-wrap items-baseline gap-x-2">
+        <span className="text-sm font-semibold text-tiilt-ink">{label}</span>
+        {hint ? <span className="text-xs text-tiilt-muted">{hint}</span> : null}
       </div>
       <div className="min-w-0">{children}</div>
     </div>
@@ -42,7 +44,7 @@ function SetupRow({ label, hint, children }) {
 }
 
 const smallLabel = "mb-1 block text-xs text-tiilt-muted";
-const teamGrid = "grid grid-cols-[4.5rem_minmax(0,1fr)_5.5rem] items-center gap-3";
+const teamGrid = "grid grid-cols-[4rem_minmax(0,1fr)_5rem] items-center gap-3";
 
 function PodSetupSection({ setup, setSetup, error }) {
   const s = setup || {};
