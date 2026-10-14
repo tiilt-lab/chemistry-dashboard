@@ -271,6 +271,13 @@ function JoinPage() {
     // occupy instead of asking for free text.
     const [joinSetup, setJoinSetup] = useState(null)
     const [roleError, setRoleError] = useState("")
+    // The join refused because another laptop holds the slot: what to retry
+    // with when the group chooses to join as an extra laptop for it.
+    const slotRetry = useRef(null)
+    // Fingerprints already sent over the audio socket, so a participant
+    // added mid-session is enrolled on the spot rather than re-sent with
+    // everyone else on the next reconnect.
+    const sentFingerprints = useRef(new Set())
     // The slot to prefill: a join link may carry it (/join/CODE?group=Table
     // 3&team=Pat, one printed link per slot), and a rejoin keeps the last one.
     const negotiationRole = useRef((() => {
@@ -1143,10 +1150,10 @@ function JoinPage() {
     // and attaches the stored voice print automatically; anyone else just
     // gets the name (fingerprint recordable from the speaker menu).
     const addSpeakerSlot = async (name = "") => {
-        if (!sessionDevice) return
+        if (!sessionDevice) return null
         try {
             const response = await sessionService.addSpeaker(sessionDevice.id)
-            if (response.status !== 200) return
+            if (response.status !== 200) return null
             const speaker = SpeakerModel.fromJson(await response.json())
             setSpeakers([...(speakers.current || []), speaker])
             if ((name || "").trim()) {
@@ -1441,12 +1448,66 @@ function JoinPage() {
             })
             audiows.current.send(done)
             if (isVideo && videows.current) videows.current.send(done)
+            for (const item of pendingFingerprints.current) sentFingerprints.current.add(item.id)
             next("speakers_validated")
         } catch (ex) {
             console.error("fingerprint replay failed", ex)
         } finally {
             replaying.current = false
         }
+    }
+
+    // A participant added after the session started: send only the new
+    // fingerprint(s) and re-validate the roster, so the processors pick the
+    // new voice up without a reconnect (they accept speakers at any time).
+    const flushLateFingerprints = async () => {
+        const ws = audiows.current
+        if (!replayDone.current || !ws || ws.readyState !== WebSocket.OPEN) return
+        const late = pendingFingerprints.current.filter((i) => !sentFingerprints.current.has(i.id))
+        if (late.length === 0) return
+        const isVideo =
+            joinwith.current === "Video" || joinwith.current === "Videocartoonify"
+        try {
+            for (const item of late) {
+                if (item.type === "saved") {
+                    const msg = JSON.stringify({ type: "add-saved-fingerprint", id: item.id, alias: item.alias })
+                    ws.send(msg)
+                    if (isVideo && videows.current) videows.current.send(msg)
+                } else {
+                    const data = await item.blob.arrayBuffer()
+                    const audiodata = await audioContext.current.decodeAudioData(data)
+                    ws.send(JSON.stringify({ type: "speaker", id: item.id, alias: item.alias, size: item.blob.size, blob_type: item.blob.type }))
+                    ws.send(audiodata.getChannelData(0))
+                }
+                sentFingerprints.current.add(item.id)
+            }
+            setSpeakers(
+                (speakers.current || []).map((s) =>
+                    late.some((i) => i.id === s.id) ? { ...s, fingerprinted: true } : s,
+                ),
+            )
+            const done = JSON.stringify({ type: "speaker", id: "done", speakers: speakers.current })
+            ws.send(done)
+            if (isVideo && videows.current) videows.current.send(done)
+        } catch (ex) {
+            console.error("late fingerprint send failed", ex)
+        }
+    }
+
+    // "Add a participant" from the live Options dialog: a new card plus the
+    // recorder for it; confirming the take enrolls them on the spot.
+    const addLateParticipant = async () => {
+        const speaker = await addSpeakerSlot()
+        if (speaker) openForms("fingerprintAudio", speaker)
+        else closeDialog()
+    }
+
+    // Retry a refused join as an extra laptop for the same table and team.
+    const joinAsExtraLaptop = () => {
+        const r = slotRetry.current
+        slotRetry.current = null
+        closeDialog()
+        if (r) requestAccessKey(r.names, r.passcode, r.collaborators, r.l_joinwith, r.negotiation, true)
     }
 
     const saveAudioFingerprint = (audioblob) => {
@@ -1505,6 +1566,8 @@ function JoinPage() {
         )
         currBlob.current = null
         closeDialog()
+        // Mid-session: enrol the new voice now (a no-op before the session starts).
+        flushLateFingerprints()
     }
 
     // A processing service reported it couldn't load a saved fingerprint at
@@ -1903,7 +1966,7 @@ function JoinPage() {
 
 
     // Requests session access from the server.
-    const requestAccessKey = async (names, passcode, collaborators, l_joinwith, negotiation) => {
+    const requestAccessKey = async (names, passcode, collaborators, l_joinwith, negotiation, joinAsExtra = false) => {
         ending.current = false
         setCurrentForm("Connecting")
         const sel = deviceSelection.current || {}
@@ -1964,11 +2027,19 @@ function JoinPage() {
         }
         const mediaType = pickMimeType(constraint)
         const mediaExt = (mediaType !== "" && mediaType.indexOf("webm") !== -1) ? "webm" : (mediaType !== "" && mediaType.indexOf("mp4") !== -1) ? "mp4" : ""
-        sessionService.joinByodSession(names, passcode, collaborators, negotiation).then(
+        sessionService.joinByodSession(names, passcode, collaborators, negotiation, joinAsExtra).then(
             (response) => {
                 const joinFailed = (message) => {
                     setDisplayText(message)
                     setCurrentForm("JoinError")
+                    disconnect(true)
+                }
+                // Another laptop holds this slot: offer to join as an extra
+                // one for the same table and team instead of a dead end.
+                const slotTaken = (message) => {
+                    slotRetry.current = { names, passcode, collaborators, l_joinwith, negotiation }
+                    setDisplayText(message)
+                    setCurrentForm("SlotTaken")
                     disconnect(true)
                 }
                 if (response.status === 200) {
@@ -2024,15 +2095,17 @@ function JoinPage() {
                     if (response.status === 429) {
                         message = "Too many join attempts from this network. Wait a minute and try again."
                     }
+                    let taken = false
                     response
                         .json()
                         .then(
                             (jsonObj) => {
                                 if (jsonObj && jsonObj["message"]) message = jsonObj["message"]
+                                taken = !!(jsonObj && jsonObj["slot_taken"])
                             },
                             () => {},
                         )
-                        .finally(() => joinFailed(message))
+                        .finally(() => (taken ? slotTaken(message) : joinFailed(message)))
                 }
             },
             (apierror) => {
@@ -2729,6 +2802,8 @@ function JoinPage() {
             joinSetup={joinSetup}
             roleError={roleError}
             savedRole={negotiationRole.current}
+            joinAsExtraLaptop={joinAsExtraLaptop}
+            addLateParticipant={addLateParticipant}
             wrongInput={wrongInput}
             changeTouppercase={changeTouppercase}
             joinwith={joinwith.current}

@@ -20,8 +20,9 @@ function defaultSessionName() {
   ).replace(",", "");
 }
 
-// The form's pod setup, as the Viking negotiation class runs it: ten tables
-// of six, two teams of three, one laptop per team.
+// The form's pod setup: a two-team, three-a-side, one-laptop-per-team shape
+// by default, with the team names left for the instructor to type (the
+// code knows no case's sides).
 export const DEFAULT_POD_SETUP = {
   enabled: false,
   groupCount: 10,
@@ -29,11 +30,23 @@ export const DEFAULT_POD_SETUP = {
   teamsPerGroup: 2,
   groupSize: 6,
   teams: [
-    { name: "Pat", size: 3 },
-    { name: "Sandy", size: 3 },
+    { name: "", size: 3 },
+    { name: "", size: 3 },
   ],
   devices: "team",
 };
+
+// Why the setup cannot be sent yet, or null.
+export function podSetupProblem(setup) {
+  if (!setup || !setup.enabled) return null;
+  if (setup.teamsPerGroup === 2) {
+    const names = setup.teams.slice(0, 2).map((t) => (t.name || "").trim());
+    if (names.some((n) => !n)) return "Name both teams in the pod setup.";
+    if (names[0].toLowerCase() === names[1].toLowerCase()) return "The two teams need different names.";
+  }
+  if (!(setup.groupPrefix || "").trim()) return "Say what the groups are called (for example Table).";
+  return null;
+}
 
 // What the API gets for the form's pod setup (null when it is off).
 export function podConfigFromSetup(setup) {
@@ -106,6 +119,7 @@ function CreateSessionComponent(props) {
     changedState && prevState.podSetup ? prevState.podSetup : DEFAULT_POD_SETUP
   );
   const negotiationPaired = podSetup.enabled && podSetup.teamsPerGroup === 2 && podSetup.devices === "team";
+  const podSetupError = podSetupProblem(podSetup);
   const [selectedKeywordList] = useState(changedState ? prevState.selectedKeywordList : null);
   const [selectedTopicModel] = useState(changedState ? prevState.selectedTopicModel : null);
   const [selectedDevices, setSelectedDevices] = useState([]);
@@ -209,6 +223,7 @@ function CreateSessionComponent(props) {
   }
 
   const createSession = ()=> {
+    if (podSetupError) return;
     {
       // Name is pre-filled with the date-stamped default; if the user
       // clears it, fall back to a fresh one rather than sending blank.
@@ -353,6 +368,7 @@ function CreateSessionComponent(props) {
     negotiationPaired = {negotiationPaired}
     podSetup = {podSetup}
     setPodSetup = {setPodSetup}
+    podSetupError = {podSetupError}
     goToSettings = {goToSettings}
     goToDevices = {goToDevices}
     devices = {devices}

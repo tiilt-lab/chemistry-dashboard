@@ -24,14 +24,15 @@ import {
     startRunPolling,
 } from "./negotiation-coding-helpers"
 
-// Negotiation coding for the Kellogg "Viking" case (3-on-3, Pat vs Sandy).
+// Negotiation coding for negotiation classes (built for the Kellogg "Viking"
+// case; the two sides are named by the session's pod setup).
 // A local LLM codes each utterance on emotion, interests/rights/power,
 // frame and listening moves; this panel runs it, assigns speakers to teams,
 // and shows the per-team roll-up, the de-escalation timeline and the coded
 // utterances. Hidden unless the session opted in or a run already exists,
 // so other classes never see it.
 //
-// Two setups. One laptop per table: speakers are assigned to Pat or Sandy
+// Two setups. One laptop per table: speakers are assigned to a team
 // by name here. Two laptops per table, one per side (session.negotiation_
 // paired): teams are fixed by device, the pair shares one run, and this
 // panel shows both devices and lets a mistyped table/side be corrected.
@@ -48,8 +49,7 @@ const BADGE_TONE = {
     "frame:past_blame": "orange",
     "frame:future_problem_solving": "teal",
 }
-// Pill tone per team: by position in the session's team list, so custom
-// team names colour like Pat/Sandy do.
+// Pill tone per team: by position in the session's team list.
 const TEAM_TONES = ["brand", "teal", "orange", "danger"]
 const toneFor = (team, names) => {
     const i = (names || []).indexOf(team)
@@ -169,7 +169,7 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
 
     const codes = (data && data.codes) || []
     const teams = (data && data.teams) || {}
-    // The team names in play: the run's, else the session's pod setup, else Pat/Sandy.
+    // The team names in play: the run's, else the session's pod setup, else placeholders.
     const names = teamNamesOf(data, session)
     const tags = speakerTags(tagCounts, codes, { ...teams, ...teamsDraft })
     const teamsDirty = !sameTeams(teamsDraft, teams, names)

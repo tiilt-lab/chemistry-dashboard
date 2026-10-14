@@ -34,21 +34,25 @@ function SlotPicker({ setup, paired, savedRole, error }) {
     const groups = (setup && setup.groups) || []
     const teams = (setup && setup.teams) || []
     const twoTeams = paired && teams.length >= 2
-    const fallbackTeams = [
-        { name: "Pat", size: null },
-        { name: "Sandy", size: null },
-    ]
-    const teamOptions = twoTeams ? teams : paired ? fallbackTeams : []
+    // A paired session always carries its team names in the setup; without
+    // them (never the normal case) the team is typed instead of picked.
+    const teamOptions = twoTeams ? teams : []
+    const typeTeam = paired && !twoTeams
     const groupSize = setup && setup.group_size
     // Controlled, seeded from the saved/linked slot: the option lists arrive
     // with the session lookup, after the first paint, and an uncontrolled
     // select would keep whatever it showed when it mounted.
+    // "Other…" lets a laptop join as a group that is not on the list (an
+    // extra table, a late-formed group): the custom label is typed below.
+    const OTHER = "__other__"
     const [group, setGroup] = useState((savedRole && savedRole.group) || "")
     const [side, setSide] = useState((savedRole && savedRole.side) || "")
     useEffect(() => {
         if (savedRole && savedRole.group) setGroup(savedRole.group)
         if (savedRole && savedRole.side) setSide(savedRole.side)
     }, [savedRole])
+    const listed = groups.length === 0 || groups.includes(group) || group === "" || group === OTHER
+    const selectValue = groups.includes(group) ? group : group === "" ? "" : OTHER
     const intro = twoTeams
         ? `This session runs groups of ${groupSize} as ${teams.map((t) => `${t.name} (${t.size})`).join(" vs ")}, each team on its own laptop. Pick the slot this laptop occupies; everything it hears and sees counts for that team.`
         : paired
@@ -62,19 +66,34 @@ function SlotPicker({ setup, paired, savedRole, error }) {
                     Table or breakout group
                 </label>
                 {groups.length > 0 ? (
-                    <select
-                        id="negGroup"
-                        className={dlgSelect}
-                        value={groups.includes(group) ? group : ""}
-                        onChange={(e) => setGroup(e.target.value)}
-                    >
-                        <option value="">Choose…</option>
-                        {groups.map((g) => (
-                            <option key={g} value={g}>
-                                {g}
-                            </option>
-                        ))}
-                    </select>
+                    <>
+                        <select
+                            id="negGroup"
+                            className={dlgSelect}
+                            value={selectValue}
+                            onChange={(e) => setGroup(e.target.value)}
+                        >
+                            <option value="">Choose…</option>
+                            {groups.map((g) => (
+                                <option key={g} value={g}>
+                                    {g}
+                                </option>
+                            ))}
+                            <option value={OTHER}>Other / a new group…</option>
+                        </select>
+                        {selectValue === OTHER ? (
+                            <input
+                                className={dlgInput + " mt-2"}
+                                id="negGroupCustom"
+                                maxLength={32}
+                                autoFocus
+                                value={group === OTHER ? "" : group}
+                                onChange={(e) => setGroup(e.target.value || OTHER)}
+                                placeholder="Name your group, e.g. Table 11"
+                            />
+                        ) : null}
+                        {!listed ? null : null}
+                    </>
                 ) : (
                     <input
                         className={dlgInput}
@@ -86,6 +105,21 @@ function SlotPicker({ setup, paired, savedRole, error }) {
                     />
                 )}
             </div>
+            {typeTeam ? (
+                <div>
+                    <label htmlFor="negSide" className={fieldLabel}>
+                        This laptop records (team name)
+                    </label>
+                    <input
+                        className={dlgInput}
+                        id="negSide"
+                        maxLength={16}
+                        value={side}
+                        onChange={(e) => setSide(e.target.value)}
+                        placeholder="Team name"
+                    />
+                </div>
+            ) : null}
             {teamOptions.length > 0 ? (
                 <div>
                     <label htmlFor="negSide" className={fieldLabel}>
@@ -115,9 +149,12 @@ function SlotPicker({ setup, paired, savedRole, error }) {
 // null for a session without a pod setup.
 function readNegotiationRole() {
     const group = document.getElementById("negGroup")
+    const custom = document.getElementById("negGroupCustom")
     const side = document.getElementById("negSide")
     if (!group && !side) return null
-    return { group: group ? group.value.trim() : "", side: side ? side.value : "" }
+    let label = group ? group.value.trim() : ""
+    if (label === "__other__") label = custom ? custom.value.trim() : ""
+    return { group: label, side: side ? side.value : "" }
 }
 
 // Speaker name as an inline editor: click the name to type. Committing
@@ -575,6 +612,10 @@ function ByodJoinPage(props) {
                                                 one from each card, or type an
                                                 enrolled username as the name
                                                 to use a saved fingerprint.
+                                                One more person than expected?
+                                                Add a card for them; someone
+                                                arriving later can be added
+                                                from Options during the session.
                                             </div>
                                         </div>
                                         <div className="mt-2 h-fit w-[300px] sm:w-[400px] lg:w-3xl">
@@ -1016,6 +1057,13 @@ function ByodJoinPage(props) {
                                 {props.previewLabel}
                             </button>
                             <button
+                                className={style2["basic-button"]}
+                                title="Someone joined your group late? Add a card and record their voice; they are picked up from now on."
+                                onClick={props.addLateParticipant}
+                            >
+                                Add a participant
+                            </button>
+                            <button
                                 className={style2["cancel-button"]}
                                 onClick={props.closeDialog}
                             >
@@ -1071,6 +1119,18 @@ function ByodJoinPage(props) {
                     ))
                 }
             </GenericDialogBox>
+
+            <DialogBoxTwoOption
+                show={props.currentForm === "SlotTaken"}
+                itsclass={style["dialog-window"]}
+                heading={"That slot is already connected"}
+                body={
+                    (props.displayText || "") +
+                    " Yes joins this laptop as an extra one for the same table and team (it gets its own speaker cards); Cancel goes back so you can pick another slot."
+                }
+                deletebuttonaction={props.joinAsExtraLaptop}
+                cancelbuttonaction={props.closeDialog}
+            />
 
             <DialogBoxTwoOption
                 show={props.currentForm === "ConfirmEndRec"}

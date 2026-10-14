@@ -1,8 +1,9 @@
 """Negotiation coding: every utterance of a pod's transcript coded on four
 dimensions (emotion, rights/interests/power, frame, listening moves) by the
 local llama-server, rolled up per team and per speaker, plus a de-escalation
-timeline. Built for the Kellogg "Viking" case (Pat's team vs Sandy's team);
-the codebook is src/server/negotiation_codebook.json.
+timeline. Built for the Kellogg "Viking" case; the codebook is
+src/server/negotiation_codebook.json. Team names come from the session's pod
+setup (pod_config.py); nothing here knows a case's sides by name.
 
 Import-light on purpose: everything above ``run_coding`` is pure (prompt,
 chunking, parsing/repair, pair merging, rollup, timeline) and runs with a fake
@@ -49,7 +50,10 @@ PAIR_START_TOLERANCE = 1.5   # s: starts this close are the same moment ...
 PAIR_OVERLAP_MIN = 0.5       # ... or the two overlap this share of the shorter one
 PAIR_TEXT_SIMILARITY = 0.5   # token ratio from which two copies are one utterance
 
-TEAMS = ("Pat", "Sandy")   # the Viking default; a session's pod setup may name others
+# Placeholder team names for a session whose setup names none; every real
+# run takes its names from the session (run_names / device_team_names).
+DEFAULT_TEAMS = ("Team A", "Team B")
+TEAMS = DEFAULT_TEAMS
 UNASSIGNED = "unassigned"
 DIMENSIONS = ("emotion", "rip", "frame", "listening")
 CODEBOOK_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "negotiation_codebook.json")
@@ -101,15 +105,17 @@ def _line(u):
     return "[%d] %s: %s" % (u["index"], u.get("speaker_tag") or "?", (u.get("text") or "").strip())
 
 
-def build_prompt(codebook, utterances, context):
+def build_prompt(codebook, utterances, context, names=DEFAULT_TEAMS):
     """Chat messages coding ``utterances`` with ``context`` (the preceding
     utterances) shown read-only. Each utterance is {index, speaker_tag, text};
     the index is its position in the WHOLE transcript and the model echoes it
-    back, so chunking never renumbers anything."""
+    back, so chunking never renumbers anything. ``names`` are the two sides
+    as the session calls them."""
     facts = "".join("- %s\n" % f for f in codebook.get("case_facts") or [])
+    sides = " versus ".join("%s's team" % n for n in names)
     system = (
-        "You code utterances from a recorded classroom negotiation exercise (the Viking Investments "
-        "case: Pat's team versus Sandy's team). For EVERY utterance in the CODE section give codes on "
+        "You code utterances from a recorded classroom negotiation exercise (%s). "
+        "For EVERY utterance in the CODE section give codes on " % sides +
         "four dimensions, using ONLY the codes defined here. Judge each utterance by its own "
         "words in the light of what came before; apply the decision rules literally.\n\n"
         + ("CASE FACTS (so references in the transcript resolve):\n" + facts + "\n" if facts else "")
@@ -410,13 +416,13 @@ def validate_codes(items, codebook, indices):
     return out, invalid
 
 
-def code_utterances(codebook, utterances, llm=None, size=CHUNK_SIZE, context=CONTEXT_SIZE):
+def code_utterances(codebook, utterances, llm=None, size=CHUNK_SIZE, context=CONTEXT_SIZE, names=DEFAULT_TEAMS):
     """Every utterance coded, chunk by chunk. Returns (codes aligned with
     ``utterances``, each the utterance dict plus its four codes; invalid_codes)."""
     llm = llm or call_llm
     coded, invalid = [], 0
     for ctx, chunk in chunks(utterances, size, context):
-        items = extract_array(llm(build_prompt(codebook, chunk, ctx)))
+        items = extract_array(llm(build_prompt(codebook, chunk, ctx, names)))
         if not items:
             raise RuntimeError("LLM returned no parseable codes for utterances %d-%d"
                                % (chunk[0]["index"], chunk[-1]["index"]))
@@ -599,10 +605,10 @@ def _side_of(device, names=TEAMS):
 
 
 def _session_names(session):
-    # The session's team names (pod setup); the Viking pair without one.
+    # The session's team names (pod setup); the placeholder pair without one.
     getter = getattr(session, "team_names", None)
     names = getter() if callable(getter) else None
-    return tuple(names) if names and len(names) >= 2 else TEAMS
+    return tuple(names) if names and len(names) >= 2 else DEFAULT_TEAMS
 
 
 def device_team_names(session_device_id):
@@ -617,13 +623,14 @@ def run_names(run):
     return device_team_names(run.session_device_id)
 
 
-def run_sides(run, names=TEAMS):
-    """{device id: team} for the run's devices. A single device counts only
-    when it has a side (a paired session's lone pod). In a paired run a
-    missing side is the complement of the other's, both missing makes the
-    first device the first team, and two devices claiming one side give the
-    partner the other."""
+def run_sides(run, names=None):
+    """{device id: team} for the run's devices (``names`` default to the
+    run's session's). A single device counts only when it has a side (a
+    paired session's lone pod). In a paired run a missing side is the
+    complement of the other's, both missing makes the first device the first
+    team, and two devices claiming one side give the partner the other."""
     import database
+    names = tuple(names) if names else run_names(run)
     first = database.get_session_devices(id=run.session_device_id)
     if not run.is_paired():
         side = _side_of(first, names)
@@ -670,10 +677,26 @@ def resolve_pair(session_device_id):
     session = database.get_sessions(id=device.session_id)
     if session is None or not getattr(session, "negotiation_paired", False):
         return device.id, None
+    names = _session_names(session)
+    # A group's pair is the first device (lowest id) of each side; an extra
+    # laptop joined for a slot ("Table 3 Pat 2") is coded on its own, with
+    # its side stamped, rather than pairing the other side twice.
+    my_side = _side_of(device, names)
+    primaries = {}
+    for d in database.get_negotiation_group_devices(device):
+        side = _side_of(d, names)
+        if side and side not in primaries:
+            primaries[side] = d
+    if my_side and primaries[my_side].id != device.id:
+        return device.id, None
     partner = database.get_negotiation_partner(device)
     if partner is None:
         return device.id, None
-    names = _session_names(session)
+    partner_side = _side_of(partner, names)
+    if partner_side:
+        if partner_side == my_side:
+            return device.id, None      # only this side has joined so far
+        partner = primaries[partner_side]
     first, second = sorted((device, partner), key=lambda d: _pair_rank(d, names))
     return first.id, second.id
 
@@ -707,7 +730,7 @@ def run_coding(session_device_id, teams=None, llm=call_llm, run_id=None, codeboo
         else:
             rows = database.get_transcripts(session_device_id=run.session_device_id)
             utterances = utterances_from_rows(rows, sides.get(run.session_device_id))
-        coded, invalid = code_utterances(codebook, utterances, llm)
+        coded, invalid = code_utterances(codebook, utterances, llm, names=names)
         database.add_negotiation_codes(run.id, coded)
         if teams is None:
             teams = database.get_negotiation_run(run.id).teams_dict()

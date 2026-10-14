@@ -247,21 +247,14 @@ def create_session(user, **kwargs):
         negotiation_coding = False
     if not isinstance(negotiation_coding, bool):
         return json_response({'message': 'negotiationCoding must be true or false.'}, 400)
-    # Two devices per breakout group, one per side of the table: teams are
-    # fixed by device (each pod's join names its group and side). Only
-    # meaningful with negotiation coding on. Absent/null = one device per group.
-    negotiation_paired = request.json.get('negotiationPaired', False)
-    if negotiation_paired is None:
-        negotiation_paired = False
-    if not isinstance(negotiation_paired, bool):
-        return json_response({'message': 'negotiationPaired must be true or false.'}, 400)
     # The pod setup (pod_config.py): people and teams per group, device per
     # team or per group, preset group labels. Absent/null = free-form join.
+    # Two devices per group, one per team, is what makes a session "paired"
+    # (teams fixed by device); there is no separate flag for it.
     pod_config, bad_setup = pod_setup.normalize(request.json.get('podConfig'))
     if bad_setup:
         return json_response({'message': bad_setup}, 400)
-    if pod_config and pod_setup.paired(pod_config):
-        negotiation_paired = True
+    negotiation_paired = bool(pod_config) and pod_setup.paired(pod_config)
     folder = request.json.get('folder', None)
     if folder == -1:
         folder = None
@@ -292,7 +285,7 @@ def byod_join_session(**kwargs):
     # Sessions with a pod setup: the join form says which slot this device
     # occupies, the breakout group ("Table 3") and, when each team records
     # from its own laptop, which team. The team must be one of the session's
-    # configured names (Pat/Sandy without a setup).
+    # configured names.
     target = database.get_sessions(active=True, passcode=passcode, first=True)
     names = target.team_names() if target is not None else None
     ok, message, negotiation_group, negotiation_side = SessionDevice.verify_negotiation(
@@ -303,13 +296,20 @@ def byod_join_session(**kwargs):
         # Pre-create the slot's speaker cards from the setup (its team's
         # size, or the group size) so the roster page starts filled in.
         collaborators = pod_setup.speaker_slots(target.pod_config_dict(), negotiation_side)
+    # A slot another laptop still holds is refused with 409 unless the
+    # client asks to join as an extra laptop for it ("<slot> 2").
+    join_as_extra = request.json.get('joinAsExtra', False) is True
     success, data = session_handler.byod_join_session(name, passcode, collaborators,
                                                       negotiation_group=negotiation_group,
-                                                      negotiation_side=negotiation_side)
+                                                      negotiation_side=negotiation_side,
+                                                      join_as_extra=join_as_extra)
     if success:
         return json_response(data)
-    else:
-        return json_response({'message': data}, 400)
+    if isinstance(data, str) and data.endswith(database.SLOT_TAKEN_SUFFIX):
+        return json_response({'message': data + ' If that laptop died or you are adding a second one, '
+                                         'join as an extra laptop for the same table and team.',
+                              'slot_taken': True}, 409)
+    return json_response({'message': data}, 400)
 
 # Same as /api/sessions/byod but bypasses the passcode.
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices', methods=['POST'])

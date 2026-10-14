@@ -3,11 +3,14 @@ import { formatSeconds, stringToDate } from "../../globals"
 // Pure helpers for the negotiation-coding panel (no React) so the roll-up,
 // filters, clock formatting and polling can be unit-tested in node.
 
-export const TEAMS = ["Pat", "Sandy"]   // the Viking default; a session's pod setup may name others
+// Placeholder names for a session whose pod setup names no teams; every
+// real session names its own (nothing here knows a case's sides).
+export const DEFAULT_TEAMS = ["Team A", "Team B"]
+export const TEAMS = DEFAULT_TEAMS
 export const UNASSIGNED = "unassigned"
 
 // The team names in play: the run's (server-stamped), else the session's
-// pod setup when it has two or more teams, else the Viking default.
+// pod setup when it has two or more teams, else the placeholders.
 export function teamNamesOf(data, session) {
     const fromRun = data && Array.isArray(data.team_names) ? data.team_names.filter(Boolean) : []
     if (fromRun.length >= 2) return fromRun

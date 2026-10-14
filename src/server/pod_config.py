@@ -7,8 +7,8 @@ whether the two pods of a group are coded together).
 
     {
       "group_size": 6,                       # people per breakout group
-      "teams": [{"name": "Pat", "size": 3},  # 0 or 1 entries = no team split
-                {"name": "Sandy", "size": 3}],
+      "teams": [{"name": "Buyer", "size": 3},  # 0 or 1 entries = no team split
+                {"name": "Seller", "size": 3}],
       "devices_per_group": "team" | "group", # one laptop per team, or per group
       "groups": ["Table 1", ..., "Table 10"] # preset labels; [] = free text
     }
@@ -26,7 +26,9 @@ NAME_MAX = 16          # team name (fits session_device.negotiation_side)
 LABEL_MAX = 32         # group label (fits session_device.negotiation_group)
 _NAME_RE = re.compile(r"^[a-zA-Z0-9' ]+$")
 DEVICES = ("group", "team")
-DEFAULT_TEAMS = ("Pat", "Sandy")
+# Placeholder names for a session whose setup names no teams (nothing in the
+# code knows any particular case's sides; a class names its own).
+DEFAULT_TEAMS = ("Team A", "Team B")
 
 
 def _clean(text, limit, what):
@@ -133,7 +135,7 @@ def normalize(raw):
 
 
 def team_names(config):
-    """The team names a device may record for; the Viking default when the
+    """The team names a device may record for; the placeholder pair when the
     session has no setup or no team split."""
     teams = (config or {}).get("teams") or []
     if len(teams) >= 2:

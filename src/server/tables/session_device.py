@@ -23,9 +23,9 @@ class SessionDevice(db.Model):
     # None. The _posthoc_models_json guard only protects against bad JSON.
     posthoc_models = db.Column(db.Text, nullable=True)
     # Negotiation classes with one device per team (session.negotiation_paired):
-    # the breakout group this device belongs to ("Table 3") and the side of the
-    # case it records ("Pat" or "Sandy"), so its transcript, faces and gestures
-    # all count for that team. NULL on every other session. Mapped columns:
+    # the breakout group this device belongs to ("Table 3") and the team it
+    # records (one of the session's pod-setup team names), so its transcript,
+    # faces and gestures all count for that team. NULL elsewhere. Mapped columns:
     # migration 5d6e7f809102 must be applied before this code is deployed.
     negotiation_group = db.Column(db.String(32), nullable=True)
     negotiation_side = db.Column(db.String(16), nullable=True)
@@ -45,7 +45,6 @@ class SessionDevice(db.Model):
     KEY_MAX_LENGTH = 64
     NAME_MAX_LENGTH = 64
     NAME_CHARS = 'a-zA-Z0-9\': '
-    NEGOTIATION_SIDES = ('Pat', 'Sandy')
     NEGOTIATION_GROUP_MAX_LENGTH = 32
 
     def __hash__(self):
@@ -105,9 +104,11 @@ class SessionDevice(db.Model):
     def verify_negotiation(group=None, side=None, names=None):
         """(ok, message, clean group, clean side) for a device's role.
         Blank/None clears a field; the side is matched case-insensitively
-        against ``names`` (the session's team names; Pat/Sandy by default);
-        the group is a short label with the device-name character set."""
-        names = tuple(names) if names else SessionDevice.NEGOTIATION_SIDES
+        against ``names`` (the session's team names; the placeholder pair
+        when the session has none); the group is a short label with the
+        device-name character set."""
+        import pod_config
+        names = tuple(names) if names else pod_config.DEFAULT_TEAMS
         clean_group = (group or '').strip() if isinstance(group, str) or group is None else None
         if clean_group is None:
             return False, 'Group must be text.', None, None
@@ -127,6 +128,6 @@ class SessionDevice(db.Model):
         return True, None, clean_group or None, clean_side
 
     def negotiation_label(self):
-        # "Table 3 · Pat" for the overview and the coding panel; None if unset.
+        # "Table 3 · <team>" for the overview and the coding panel; None if unset.
         parts = [p for p in (self.negotiation_group, self.negotiation_side) if p]
         return ' \u00b7 '.join(parts) if parts else None

@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, afterEach } from "vitest"
 import {
-    rollupTable,
+    rollupTable as rollupTableBase,
     fmtClock,
     fmtElapsed,
     describeRun,
     speakerTags,
-    assignedTeams,
-    sameTeams,
-    teamOf,
+    assignedTeams as assignedTeamsBase,
+    sameTeams as sameTeamsBase,
+    teamOf as teamOfBase,
     teamNamesOf,
     roleLabel,
     badgeCodes,
@@ -16,6 +16,14 @@ import {
     filterKey,
     startRunPolling,
 } from "./negotiation-coding-helpers"
+
+// The fixtures below are the Viking case (Pat vs Sandy); those names come
+// from a session's pod setup, so every call passes them explicitly.
+const VIKING = ["Pat", "Sandy"]
+const rollupTable = (summary, names = VIKING) => rollupTableBase(summary, names)
+const assignedTeams = (draft, names = VIKING) => assignedTeamsBase(draft, names)
+const sameTeams = (a, b, names = VIKING) => sameTeamsBase(a, b, names)
+const teamOf = (row, teams, names = VIKING) => teamOfBase(row, teams, names)
 
 const summary = {
     by_team: {
@@ -148,10 +156,10 @@ describe("team helpers", () => {
         expect(teamOf({ speaker_tag: "b", team: null }, {})).toBe("unassigned")
     })
     it("takes team names from the run, else the session's pod setup, else Pat/Sandy", () => {
-        expect(teamNamesOf(null, null)).toEqual(["Pat", "Sandy"])
+        expect(teamNamesOf(null, null)).toEqual(["Team A", "Team B"])
         expect(teamNamesOf({ team_names: ["Buyer", "Seller"] }, null)).toEqual(["Buyer", "Seller"])
         expect(teamNamesOf({ team_names: ["Only"] }, { pod_config: { teams: [{ name: "A" }, { name: "B" }] } })).toEqual(["A", "B"])
-        expect(teamNamesOf({}, { pod_config: { teams: [{ name: "A" }] } })).toEqual(["Pat", "Sandy"])
+        expect(teamNamesOf({}, { pod_config: { teams: [{ name: "A" }] } })).toEqual(["Team A", "Team B"])
         expect(teamOf({ speaker_tag: "x", team: "Buyer" }, {}, ["Buyer", "Seller"])).toBe("Buyer")
         expect(teamOf({ speaker_tag: "x", team: "Pat" }, {}, ["Buyer", "Seller"])).toBe("unassigned")
         expect(assignedTeams({ a: "Buyer", b: "Pat" }, ["Buyer", "Seller"])).toEqual({ a: "Buyer" })

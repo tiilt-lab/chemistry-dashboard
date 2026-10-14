@@ -2,7 +2,7 @@ import { ApiService } from "./api-service"
 
 // Negotiation coding (Kellogg "Viking" case): a local LLM codes every
 // utterance of a pod's transcript on four dimensions, rolled up per team
-// (Pat vs Sandy) and per speaker. Every call resolves to { status, body }
+// (the two sides named by the session's pod setup) and per speaker. Every call resolves to { status, body }
 // where body is the parsed JSON (null when the response has none, e.g. a
 // 404 for a pod that was never coded) so callers branch on the status.
 const base = (sessionId, sessionDeviceId) =>
@@ -25,7 +25,7 @@ export class NegotiationCodingService {
             .then(parse)
     }
 
-    // Queue a (re-)run. teams is optional {speaker_tag: "Pat"|"Sandy"};
+    // Queue a (re-)run. teams is optional {speaker_tag: <team name>};
     // resolves 202 {run_id, status: "queued"}.
     run(sessionId, sessionDeviceId, teams) {
         const body = teams && Object.keys(teams).length > 0 ? { teams } : {}

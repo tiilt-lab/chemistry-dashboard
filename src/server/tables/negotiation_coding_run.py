@@ -26,7 +26,7 @@ class NegotiationCodingRun(db.Model):
     status = db.Column(db.String(16), nullable=False)
     model = db.Column(db.String(128))
     codebook_version = db.Column(db.String(32))
-    teams = db.Column(db.Text)      # JSON {speaker_tag: "Pat" | "Sandy"}
+    teams = db.Column(db.Text)      # JSON {speaker_tag: <team name from the pod setup>}
     summary = db.Column(db.Text)    # JSON, negotiation_coding.summarize()
     error = db.Column(db.Text)
     created_at = db.Column(db.DateTime, nullable=False)

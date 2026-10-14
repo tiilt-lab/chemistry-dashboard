@@ -47,7 +47,7 @@ def _pod_or_404(session_device_id, session_id):
 
 
 def _teams_from_body(session_device_id):
-    # Team names come from the session's pod setup (Pat/Sandy without one).
+    # Team names come from the session's pod setup.
     body = request.get_json(silent=True) or {}
     teams, error = negotiation_coding.validate_teams(
         body.get('teams'), negotiation_coding.device_team_names(session_device_id))
@@ -137,7 +137,7 @@ def export_negotiation_coding(session_id, session_device_id, **kwargs):
 @wrappers.verify_session_access
 def set_negotiation_role(session_id, session_device_id, **kwargs):
     """Paired sessions: which breakout group this pod belongs to and which
-    side of the table it records ({"group": "Table 3", "side": "Pat"}; blank
+    side of the table it records ({"group": "Table 3", "side": "<team>"}; blank
     clears). Fixes a mis-entered join; the next run picks it up."""
     missing = _pod_or_404(session_device_id, session_id)
     if missing:

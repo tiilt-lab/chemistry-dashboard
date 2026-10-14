@@ -12,7 +12,7 @@ export interface SessionDeviceJson {
   posthoc_analyzed_date?: string | null
   posthoc_models?: Record<string, string> | null
   // Paired negotiation sessions: breakout group ("Table 3") and the side of
-  // the table this device records ("Pat" | "Sandy"); null elsewhere.
+  // the table this device records (a team name from the pod setup); null elsewhere.
   negotiation_group?: string | null
   negotiation_side?: string | null
 }

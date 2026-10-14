@@ -12,6 +12,7 @@ import { Camera, Chevron } from "@/Icons"
 import { StatusPill } from "../components/status-pill"
 import { ToastStack } from "../components/toast"
 import { QrCode } from "../components/qr-code"
+import { slotLinks, slotLinksText } from "./slot-links"
 
 
 // null (hide) for missing durations, else SessionModel's shared H:MM:SS.
@@ -84,7 +85,9 @@ function TriageBadges({ alerts, connected }) {
     ))
 }
 
-function PodRow({ device, enrich, alerts, onOpen, checked, onToggle, queue, index, lastSpoke, renameInline, onDelete }) {
+const SIDE_TONES = ["brand", "teal", "orange", "danger"]
+
+function PodRow({ device, enrich, alerts, onOpen, checked, onToggle, queue, index, lastSpoke, renameInline, onDelete, teamNames }) {
     const e = enrich || {}
     const name =
         device.name && String(device.name).trim()
@@ -183,11 +186,9 @@ function PodRow({ device, enrich, alerts, onOpen, checked, onToggle, queue, inde
                     {device.negotiation_group || device.negotiation_side ? (
                         <StatusPill
                             tone={
-                                device.negotiation_side === "Pat"
-                                    ? "brand"
-                                    : device.negotiation_side === "Sandy"
-                                      ? "teal"
-                                      : "neutral"
+                                (teamNames || []).indexOf(device.negotiation_side) >= 0
+                                    ? SIDE_TONES[(teamNames || []).indexOf(device.negotiation_side) % SIDE_TONES.length]
+                                    : "neutral"
                             }
                             className="text-[11px]"
                             title="Negotiation table and side this laptop records"
@@ -405,8 +406,11 @@ function ProjectOverlay({ passcode, joinLink, onClose }) {
     )
 }
 
-function LobbyHero({ passcode, joinLink, copyJoinLink, onLock, deviceCount }) {
+function LobbyHero({ passcode, joinLink, copyJoinLink, onLock, deviceCount, slots }) {
     const [projecting, setProjecting] = useState(false)
+    // Per-slot links (pod setup): one per table and team, to print or paste.
+    const [showSlots, setShowSlots] = useState(false)
+    const links = slots || []
     // Same card before and after the first group joins — only the status
     // line changes, so the join info never jumps around mid-class.
     const joined = deviceCount > 0
@@ -454,7 +458,57 @@ function LobbyHero({ passcode, joinLink, copyJoinLink, onLock, deviceCount }) {
                 <button className={btnSecondary} onClick={onLock}>
                     Lock joining
                 </button>
+                {links.length > 0 ? (
+                    <button className={btnSecondary} onClick={() => setShowSlots(!showSlots)}>
+                        {showSlots ? "Hide slot links" : `Slot links (${links.length})`}
+                    </button>
+                ) : null}
             </div>
+            {showSlots ? (
+                <div className="w-full text-left">
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-tiilt-muted">
+                        <span>
+                            One link per table and team: it opens the join page with
+                            the slot already chosen. Paste them into a slide or print
+                            them as QR codes.
+                        </span>
+                        <button
+                            className={btnSecondary + " text-xs"}
+                            onClick={() => navigator.clipboard.writeText(slotLinksText(links))}
+                        >
+                            Copy all
+                        </button>
+                    </div>
+                    <ul className="max-h-72 divide-y divide-tiilt-line overflow-y-auto rounded-lg border border-tiilt-line bg-white">
+                        {links.map((l) => (
+                            <li key={l.url} className="flex items-center gap-3 px-3 py-1.5 text-xs">
+                                <span className="w-44 flex-none font-semibold text-tiilt-ink">{l.label}</span>
+                                <a
+                                    href={l.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="min-w-0 grow truncate font-ahamono text-tiilt-muted underline decoration-tiilt-line underline-offset-2 hover:text-tiilt"
+                                >
+                                    {l.url.replace(/^https?:\/\//, "")}
+                                </a>
+                                <button
+                                    className="flex-none cursor-pointer rounded px-2 py-0.5 text-tiilt hover:bg-tiilt-soft"
+                                    onClick={() => navigator.clipboard.writeText(l.url)}
+                                >
+                                    Copy
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                    <div className="mt-2 text-xs text-tiilt-muted">
+                        An extra table or group joins with the plain link above and
+                        picks &quot;Other / a new group&quot;. A second laptop for a slot
+                        that is already connected can join as an extra laptop for it.
+                        Someone arriving late is added from Options on the group&apos;s
+                        own screen.
+                    </div>
+                </div>
+            ) : null}
             <div className="text-xs text-tiilt-muted">
                 Groups appear here the moment they connect.
             </div>
@@ -542,6 +596,7 @@ function PodsOverviewPages(props) {
                                             copyJoinLink={props.copyJoinLink}
                                             onLock={() => props.setPasscodeState("lock")}
                                             deviceCount={props.sessionDevices.length}
+                                            slots={slotLinks(props.session, props.joinLink)}
                                         />
                                     </div>
                                 ) : (
@@ -688,6 +743,7 @@ function PodsOverviewPages(props) {
                                                         onToggle={() => props.toggleSelect(device.id)}
                                                         queue={props.queueState && props.queueState[device.id]}
                                                         renameInline={props.renamePodInline}
+                                                        teamNames={((props.session && props.session.pod_config && props.session.pod_config.teams) || []).map((t) => t && t.name)}
                                                         onDelete={
                                                             props.canDeletePod &&
                                                             props.canDeletePod(device)

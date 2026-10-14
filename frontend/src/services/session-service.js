@@ -340,12 +340,15 @@ class SessionService {
     return this.api.httpRequestCall("api/v1/sessions", "POST", body);
   }
 
-  joinByodSession(name, passcode, collaborators, negotiation) {
+  joinByodSession(name, passcode, collaborators, negotiation, joinAsExtra) {
     const body = {
       name: name,
       passcode: passcode,
       collaborators: collaborators,
     };
+    // A slot another laptop still holds is refused (409 slot_taken) unless
+    // the group asks to join as an extra laptop for it ("<slot> 2").
+    if (joinAsExtra === true) body.joinAsExtra = true;
     // Paired negotiation sessions: which table and side this laptop records
     // ({group, side}); omitted entirely for every other join.
     if (negotiation && (negotiation.group || negotiation.side)) {

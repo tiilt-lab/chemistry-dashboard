@@ -1,6 +1,6 @@
 import React from "react";
 import { EmptyState } from "../components/empty-state";
-import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel } from "../components/dialog-styles"
+import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel, dlgError } from "../components/dialog-styles"
 import { pageShell, formCard } from "../components/layout-styles"
 import { Appheader } from "../header/header-component";
 import { GenericDialogBox } from "../dialog/dialog-component";
@@ -25,9 +25,9 @@ const textCls =
   "h-9 w-full rounded-lg border border-tiilt-line bg-white px-2 text-sm text-tiilt-ink outline-none focus-visible:border-tiilt focus-visible:ring-[3px] focus-visible:ring-tiilt/30";
 
 // How a breakout group is composed and which laptop records what. The join
-// page turns this into the slots a device can occupy ("Table 3 · Pat's
+// page turns this into the slots a device can occupy ("Table 3 · <team>'s
 // team"), names the pod after its slot and pre-creates its speaker cards.
-function PodSetupSection({ setup, setSetup }) {
+function PodSetupSection({ setup, setSetup, error }) {
   const s = setup || {};
   const set = (patch) => setSetup({ ...s, ...patch });
   const setTeam = (i, patch) =>
@@ -116,6 +116,7 @@ function PodSetupSection({ setup, setSetup }) {
                       type="text"
                       maxLength={16}
                       value={t.name}
+                      placeholder={`Team ${i + 1} name`}
                       onChange={(e) => setTeam(i, { name: e.target.value })}
                       className={textCls + " w-28"}
                     />
@@ -177,6 +178,7 @@ function PodSetupSection({ setup, setSetup }) {
               ))}
             </div>
           ) : null}
+          {error ? <div className={dlgError}>{error}</div> : null}
         </div>
       ) : null}
     </div>
@@ -299,7 +301,7 @@ function CreateSessionPage(props) {
                   </span>
                 </label>
               </div>
-              <PodSetupSection setup={props.podSetup} setSetup={props.setPodSetup} />
+              <PodSetupSection setup={props.podSetup} setSetup={props.setPodSetup} error={props.podSetupError} />
               <div>
                 <label className={fieldLabel}>Negotiation coding</label>
                 <label
@@ -322,7 +324,7 @@ function CreateSessionPage(props) {
                     <span className="block text-xs text-tiilt-muted">
                       A local model codes each utterance for emotion,
                       interests/rights/power, frame and listening moves, rolled
-                      up per team (Pat vs Sandy) on the pod page.
+                      up per team (the teams named in the pod setup) on the pod page.
                     </span>
                   </span>
                 </label>
@@ -339,7 +341,7 @@ function CreateSessionPage(props) {
               <div className={footerRow}>
                 <button
                   className={dlgPrimary + " w-full"}
-                  onClick={props.createSession}
+                  onClick={props.createSession} disabled={!!props.podSetupError}
                 >
                   Start session
                 </button>
@@ -424,7 +426,7 @@ function CreateSessionPage(props) {
                 </button>
                 <button
                   className={dlgPrimary + " flex-1"}
-                  onClick={props.createSession}
+                  onClick={props.createSession} disabled={!!props.podSetupError}
                 >
                   Start session
                 </button>

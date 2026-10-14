@@ -181,9 +181,10 @@ def queue_negotiation_coding(session, session_devices):
     return queued
 
 
-def byod_join_session(name, passcode, collaborators, negotiation_group=None, negotiation_side=None):
+def byod_join_session(name, passcode, collaborators, negotiation_group=None, negotiation_side=None, join_as_extra=False):
     success, session_device, speakers = database.create_byod_session_device(
-        passcode, name, collaborators, negotiation_group=negotiation_group, negotiation_side=negotiation_side)
+        passcode, name, collaborators, negotiation_group=negotiation_group, negotiation_side=negotiation_side,
+        join_as_extra=join_as_extra)
     if success:
         session = database.get_sessions(id=session_device.session_id)
         RedisSessions.create_device_key(session_device.processing_key, session.id)

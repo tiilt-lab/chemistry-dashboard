@@ -18,7 +18,7 @@ def test_nothing_set_means_no_setup():
         assert pc.normalize(raw) == (None, None)
     assert pc.loads(None) is None and pc.loads("not json") is None and pc.loads("[1]") is None
     assert pc.dumps(None) is None
-    assert pc.slots(None) == [] and pc.speaker_slots(None) == 0 and pc.team_names(None) == ("Pat", "Sandy")
+    assert pc.slots(None) == [] and pc.speaker_slots(None) == 0 and pc.team_names(None) == ("Team A", "Team B")
     assert pc.paired(None) is False
 
 
@@ -42,7 +42,7 @@ def test_one_device_per_group_with_free_text_groups():
     config, err = pc.normalize({"group_size": "4"})
     assert err is None and config == {"group_size": 4, "teams": [], "devices_per_group": "group", "groups": []}
     assert pc.slots(config) == [{"group": None, "team": None, "size": 4, "label": ""}]
-    assert pc.team_names(config) == ("Pat", "Sandy") and not pc.paired(config)
+    assert pc.team_names(config) == ("Team A", "Team B") and not pc.paired(config)   # no teams: placeholders
     config, _ = pc.normalize({"teams": [{"name": "A", "size": 2}, {"name": "B", "size": 4}], "groups": ["Left", "Right"]})
     assert config["group_size"] == 6 and config["devices_per_group"] == "group"
     assert [x["label"] for x in pc.slots(config)] == ["Left", "Right"] and pc.slots(config)[0]["size"] == 6

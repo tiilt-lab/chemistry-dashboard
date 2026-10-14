@@ -781,7 +781,25 @@ def next_group_letter_name(session_id):
         i += 1
     return 'Group ' + letters(i)
 
-def create_byod_session_device(passcode, name, collaborators, negotiation_group=None, negotiation_side=None):
+# The join refusal for a slot another laptop holds; the route turns it into
+# a 409 so the join page can offer to join as an extra laptop instead.
+SLOT_TAKEN_SUFFIX = "is already connected from another laptop."
+
+
+def next_extra_device_name(session_id, name):
+    """"<name> 2", "<name> 3", ...: the first suffix that is free or belongs
+    to a disconnected pod (which the join then resumes)."""
+    n = 2
+    while True:
+        candidate = "%s %d" % (name, n)
+        existing = get_session_devices(session_id=session_id, name=candidate, first=True)
+        if existing is None or not existing.connected:
+            return candidate
+        n += 1
+
+
+def create_byod_session_device(passcode, name, collaborators, negotiation_group=None, negotiation_side=None,
+                               join_as_extra=False):
     session = get_sessions(active=True, passcode=passcode, first=True)
     speakers = []
     if not session:
@@ -792,10 +810,15 @@ def create_byod_session_device(passcode, name, collaborators, negotiation_group=
         role = ' '.join(p for p in (negotiation_group, negotiation_side) if p)
         name = role if role else next_group_letter_name(session.id)
     duplicate = get_session_devices(session_id=session.id, name=name, first=True)
+    if duplicate and duplicate.connected and join_as_extra:
+        # A second laptop for the same slot (the first one died, or a team
+        # brought two): "<slot> 2", same table and team, its own roster.
+        name = next_extra_device_name(session.id, name)
+        duplicate = get_session_devices(session_id=session.id, name=name, first=True)
     if duplicate:
         if duplicate.connected: # User signed into a device already in use.
             if negotiation_group or negotiation_side:
-                return False, "%s is already connected from another laptop. Pick your own table and team." % name, speakers
+                return False, "%s %s" % (name, SLOT_TAKEN_SUFFIX), speakers
             return False, "Name already in use.", speakers
         else: # User signed back into existing device.
             duplicate.removed = False
@@ -1996,6 +2019,18 @@ def get_latest_negotiation_run(session_device_id):
                        NegotiationCodingRun.partner_device_id == session_device_id)) \
         .order_by(NegotiationCodingRun.id.desc()).first()
 
+def get_negotiation_group_devices(session_device):
+    """Every device of the pod's breakout group (same session and
+    negotiation_group, not removed), itself included, by id."""
+    if session_device is None or not session_device.negotiation_group:
+        return [session_device] if session_device is not None else []
+    return db.session.query(SessionDevice) \
+        .filter(SessionDevice.session_id == session_device.session_id,
+                SessionDevice.negotiation_group == session_device.negotiation_group,
+                SessionDevice.removed == False) \
+        .order_by(SessionDevice.id.asc()).all()   # noqa: E712
+
+
 def get_negotiation_partner(session_device):
     """In a paired session, the other device of the pod's breakout group
     (same negotiation_group, not removed): the one on the other side if
@@ -2003,12 +2038,7 @@ def get_negotiation_partner(session_device):
     pod has no group or no partner yet."""
     if session_device is None or not session_device.negotiation_group:
         return None
-    others = db.session.query(SessionDevice) \
-        .filter(SessionDevice.session_id == session_device.session_id,
-                SessionDevice.negotiation_group == session_device.negotiation_group,
-                SessionDevice.id != session_device.id,
-                SessionDevice.removed == False) \
-        .order_by(SessionDevice.id.asc()).all()   # noqa: E712
+    others = [d for d in get_negotiation_group_devices(session_device) if d.id != session_device.id]
     if not others:
         return None
     opposite = [d for d in others if d.negotiation_side and d.negotiation_side != session_device.negotiation_side]

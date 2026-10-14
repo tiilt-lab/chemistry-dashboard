@@ -21,6 +21,7 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "src", "server"))
 sys.path.insert(0, HERE)
 import negotiation_coding as engine  # noqa: E402
+VIKING_TEAMS = ("Pat", "Sandy")   # the Viking case's sides (the engine takes names from the session)
 import metrics as M  # noqa: E402
 
 FONT = "Arial"
@@ -155,7 +156,7 @@ def engine_codes(rows):
                       "frame": m.get("frame"), "listening": m.get("listening") or []})
         # The team column names Pat or Sandy; the original sample tags a session
         # instead, so fall back to the speaker's own name when it is a team name.
-        team = r["team"] if r["team"] in engine.TEAMS else (r["speaker"] if r["speaker"] in engine.TEAMS else None)
+        team = r["team"] if r["team"] in VIKING_TEAMS else (r["speaker"] if r["speaker"] in VIKING_TEAMS else None)
         if team:
             teams[r["speaker"]] = team
     return codes, teams

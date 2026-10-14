@@ -94,6 +94,9 @@ VIKING = [
      dict(emotion="defusing", rip="none", frame="future_problem_solving", listening=["acknowledge"])),
 ]
 TEAMS = {"Pat": "Pat", "Sandy": "Sandy"}
+VIKING_NAMES = ("Pat", "Sandy")   # the Viking case's sides, as a session's pod setup would name them
+VIKING_SETUP_SINGLE = {"group_size": 6, "teams": [{"name": "Pat", "size": 3}, {"name": "Sandy", "size": 3}],
+                       "devices_per_group": "group", "groups": []}
 
 
 def _utterances(n=None):
@@ -339,7 +342,7 @@ def test_code_utterances_fails_loudly_on_an_unparseable_chunk():
 # --------------------------------------------------- rollup and timeline
 
 def test_rollup_counts_every_code_per_team_and_speaker():
-    r = nc.rollup(_gold_codes(), TEAMS, CODEBOOK)
+    r = nc.rollup(_gold_codes(), TEAMS, CODEBOOK, VIKING_NAMES)
     assert set(r["by_team"]) == {"Pat", "Sandy", "unassigned"}
     pat, sandy, none = r["by_team"]["Pat"], r["by_team"]["Sandy"], r["by_team"]["unassigned"]
     assert (pat["utterances"], sandy["utterances"], none["utterances"]) == (7, 7, 0)
@@ -356,11 +359,12 @@ def test_rollup_counts_every_code_per_team_and_speaker():
 
 
 def test_unassigned_speakers_roll_into_unassigned():
-    r = nc.rollup(_gold_codes(), {"Pat": "Pat"}, CODEBOOK)
+    r = nc.rollup(_gold_codes(), {"Pat": "Pat"}, CODEBOOK, VIKING_NAMES)
     assert r["by_team"]["Sandy"]["utterances"] == 0
     assert r["by_team"]["unassigned"]["utterances"] == 7
     assert r["by_speaker"]["Sandy"]["team"] == "unassigned"
-    assert nc.rollup([], None, CODEBOOK)["by_team"]["Pat"]["utterances"] == 0
+    assert nc.rollup([], None, CODEBOOK, VIKING_NAMES)["by_team"]["Pat"]["utterances"] == 0
+    assert set(nc.rollup([], None, CODEBOOK)["by_team"]) == {"Team A", "Team B", "unassigned"}   # placeholder names
 
 
 def test_timeline_landmarks_on_the_fixture():
@@ -381,12 +385,12 @@ def test_timeline_landmarks_on_the_fixture():
 
 
 def test_summarize_has_the_three_sections():
-    s = nc.summarize(_gold_codes(), TEAMS, CODEBOOK)
+    s = nc.summarize(_gold_codes(), TEAMS, CODEBOOK, names=VIKING_NAMES)
     assert set(s) == {"by_team", "by_speaker", "timeline"}
 
 
 def test_team_dynamics_answer_the_debrief_questions():
-    dyn = nc.team_dynamics(_gold_codes(), TEAMS)
+    dyn = nc.team_dynamics(_gold_codes(), TEAMS, VIKING_NAMES)
     assert dyn["Pat"] == {"opening_move": "interest", "rip_sequence": ["interest", "power", "interest"],
                           "last_escalating": 60, "first_interest_question": 30}
     # Sandy's first three minutes: one power, one interest, one right -> the one reached for first
@@ -394,18 +398,19 @@ def test_team_dynamics_answer_the_debrief_questions():
                             "last_escalating": 45, "first_interest_question": None}
     assert dyn["unassigned"] == {"opening_move": "none", "rip_sequence": [], "last_escalating": None,
                                  "first_interest_question": None}
-    assert nc.team_dynamics([], TEAMS)["Pat"]["opening_move"] == "none"
-    s = nc.summarize(_gold_codes(), TEAMS, CODEBOOK)
+    assert nc.team_dynamics([], TEAMS, VIKING_NAMES)["Pat"]["opening_move"] == "none"
+    s = nc.summarize(_gold_codes(), TEAMS, CODEBOOK, names=VIKING_NAMES)
     assert s["by_team"]["Sandy"]["opening_move"] == "power" and s["by_team"]["Pat"]["last_escalating"] == 60
     assert "opening_move" not in s["by_speaker"]["Pat"]
 
 
 def test_validate_teams():
-    assert nc.validate_teams(None) == ({}, None)
-    assert nc.validate_teams({"A": "pat", "B": "SANDY", "C": None, "D": ""}) == ({"A": "Pat", "B": "Sandy"}, None)
-    assert nc.validate_teams({"A": "Coach"})[0] is None
-    assert nc.validate_teams(["Pat"])[0] is None
-    assert nc.team_of("A", {"A": "Pat"}) == "Pat" and nc.team_of("B", {"A": "Pat"}) == "unassigned"
+    assert nc.validate_teams(None, VIKING_NAMES) == ({}, None)
+    assert nc.validate_teams({"A": "pat", "B": "SANDY", "C": None, "D": ""}, VIKING_NAMES) == ({"A": "Pat", "B": "Sandy"}, None)
+    assert nc.validate_teams({"A": "Coach"}, VIKING_NAMES)[0] is None
+    assert nc.validate_teams(["Pat"], VIKING_NAMES)[0] is None
+    assert nc.validate_teams({"A": "Pat"})[1] == "team for speaker 'A' must be Team A or Team B."   # no setup: placeholders
+    assert nc.team_of("A", {"A": "Pat"}, VIKING_NAMES) == "Pat" and nc.team_of("B", {"A": "Pat"}, VIKING_NAMES) == "unassigned"
 
 
 # ------------------------------------- run_coding, routes and persistence
@@ -498,6 +503,9 @@ def _session(env):
     env.db.session.add(user)
     env.db.session.flush()
     session = Session(user.id, "S%d" % n)
+    # Every test session names its sides through the pod setup, as a real
+    # negotiation session does (nothing in the code knows Pat and Sandy).
+    session.pod_config = json.dumps(VIKING_SETUP_SINGLE)
     env.db.session.add(session)
     env.db.session.commit()
     return session
@@ -839,6 +847,17 @@ def test_queue_leg_source_contracts():
 HANDLER = ("src", "server", "handlers", "session_handler.py")
 
 
+def test_prompt_names_the_sides_as_the_session_does():
+    messages = nc.build_prompt(CODEBOOK, _utterances()[:2], [], ("Buyer", "Seller"))
+    assert "Buyer's team versus Seller's team" in messages[0]["content"]
+    assert "Pat's team versus" not in messages[0]["content"]
+    default = nc.build_prompt(CODEBOOK, _utterances()[:2], [])
+    assert "Team A's team versus Team B's team" in default[0]["content"]
+    src = _read("src", "server", "negotiation_coding.py")
+    assert 'DEFAULT_TEAMS = ("Team A", "Team B")' in src
+    assert '"Pat"' not in src and "Sandy" not in src.replace("Table 3 Pat 2", "")
+
+
 def test_create_session_route_reads_negotiation_coding_defaulting_off():
     create = _func_source(_read("src", "server", "routes", "session.py"), "create_session")
     assert "request.json.get('negotiationCoding', False)" in create
@@ -904,7 +923,7 @@ def test_session_model_column_json_and_blueprint_registration():
     sd = _read("src", "server", "tables", "session_device.py")
     assert "negotiation_group = db.Column(db.String(32), nullable=True)" in sd
     assert "negotiation_side = db.Column(db.String(16), nullable=True)" in sd
-    assert "NEGOTIATION_SIDES = ('Pat', 'Sandy')" in sd
+    assert "NEGOTIATION_SIDES" not in sd and "'Pat'" not in sd   # team names come from the pod setup
     dc = _read("src", "server", "discussion_capture.py")
     assert "from routes.negotiation_coding import api_routes as negotiation_coding_api" in dc
     assert "app.register_blueprint(negotiation_coding_api)" in dc
@@ -1056,13 +1075,13 @@ def test_merge_paired_ties_go_to_the_fuller_text_then_the_earlier_row():
 
 
 def test_team_of_code_prefers_the_stamped_team_and_rollup_keys_shared_tags_apart():
-    assert nc.team_of_code({"speaker_tag": "Pat", "team": "Sandy"}, TEAMS) == "Sandy"
-    assert nc.team_of_code({"speaker_tag": "Pat", "team": "nonsense"}, TEAMS) == "Pat"
-    assert nc.team_of_code({"speaker_tag": "Coach"}, TEAMS) == nc.UNASSIGNED
-    assert nc.other_team("Pat") == "Sandy" and nc.other_team("Sandy") == "Pat"
+    assert nc.team_of_code({"speaker_tag": "Pat", "team": "Sandy"}, TEAMS, VIKING_NAMES) == "Sandy"
+    assert nc.team_of_code({"speaker_tag": "Pat", "team": "nonsense"}, TEAMS, VIKING_NAMES) == "Pat"
+    assert nc.team_of_code({"speaker_tag": "Coach"}, TEAMS, VIKING_NAMES) == nc.UNASSIGNED
+    assert nc.other_team("Pat", VIKING_NAMES) == "Sandy" and nc.other_team("Sandy", VIKING_NAMES) == "Pat"
     codes = [dict(u, team=("Pat" if u["index"] % 2 == 0 else "Sandy"), speaker_tag=None, **VIKING[u["index"]][2])
              for u in _utterances()]
-    summary = nc.summarize(codes, {}, CODEBOOK, extra={"cross_talk": {"dropped": 3}, "pods": None})
+    summary = nc.summarize(codes, {}, CODEBOOK, extra={"cross_talk": {"dropped": 3}, "pods": None}, names=VIKING_NAMES)
     assert summary["by_team"]["Pat"]["utterances"] == 7 and summary["by_team"]["Sandy"]["utterances"] == 7
     assert summary["by_team"][nc.UNASSIGNED]["utterances"] == 0
     assert set(summary["by_speaker"]) == {"", " (Sandy)"}   # the untagged voice on both sides, kept apart
@@ -1075,6 +1094,7 @@ def _paired_session(env, group="Table 1", sides=("Pat", "Sandy")):
     session = _session(env)
     session.negotiation_coding = True
     session.negotiation_paired = True
+    session.pod_config = json.dumps(dict(VIKING_SETUP_SINGLE, devices_per_group="team"))
     env.db.session.commit()
     pods = []
     for side in sides:
@@ -1194,10 +1214,13 @@ def test_resolve_pair_partner_lookup_and_lone_pods(env):
     assert d.get_negotiation_partner(pat) is None and env.engine.resolve_pair(pat.id) == (pat.id, None)
     sandy.removed = False
     env.db.session.commit()
-    # two pods on the same side still pair (the lower id is first); an unpaired session never pairs
+    # two pods on the same side never pair: the second is an extra laptop,
+    # coded alone, and the first waits for the other side; an unpaired
+    # session never pairs
     sandy.negotiation_side = "Pat"
     env.db.session.commit()
-    assert env.engine.resolve_pair(sandy.id) == (pat.id, sandy.id)
+    assert env.engine.resolve_pair(sandy.id) == (sandy.id, None)
+    assert env.engine.resolve_pair(pat.id) == (pat.id, None)
     session.negotiation_paired = False
     env.db.session.commit()
     assert env.engine.resolve_pair(sandy.id) == (sandy.id, None)
@@ -1241,19 +1264,20 @@ def test_byod_join_stores_the_role_and_names_the_pod_after_it(env):
     assert ok and same.id == named.id and same.negotiation_group == "Table 8"   # blank keeps the role
     ok, plain, _ = d.create_byod_session_device(session.passcode, "", 0)
     assert ok and plain.name.startswith("Group ") and plain.negotiation_group is None
-    assert SessionDevice.verify_negotiation("Table 1", "SANDY") == (True, None, "Table 1", "Sandy")
+    assert SessionDevice.verify_negotiation("Table 1", "SANDY", VIKING_NAMES) == (True, None, "Table 1", "Sandy")
+    assert SessionDevice.verify_negotiation("Table 1", "SANDY") == (False, "Side must be Team A or Team B.", None, None)
     assert SessionDevice.verify_negotiation("", "") == (True, None, None, None)
     assert SessionDevice.verify_negotiation(None, None) == (True, None, None, None)
-    assert SessionDevice.verify_negotiation("Table 1", 3)[0] is False
-    assert SessionDevice.verify_negotiation(3, "Pat")[0] is False
+    assert SessionDevice.verify_negotiation("Table 1", 3, VIKING_NAMES)[0] is False
+    assert SessionDevice.verify_negotiation(3, "Pat", VIKING_NAMES)[0] is False
     assert device.negotiation_label() == "Table 7 \u00b7 Sandy" and plain.negotiation_label() is None
 
 
 def test_create_session_and_join_routes_read_the_pairing_fields():
     src = _read("src", "server", "routes", "session.py")
     create = _func_source(src, "create_session")
-    assert "request.json.get('negotiationPaired', False)" in create
-    assert "if not isinstance(negotiation_paired, bool):" in create
+    assert "negotiationPaired" not in create   # pairing follows the pod setup, no separate flag
+    assert "negotiation_paired = bool(pod_config) and pod_setup.paired(pod_config)" in create
     assert "negotiation_paired=negotiation_paired and negotiation_coding" in create
     join = _func_source(src, "byod_join_session")
     assert "SessionDevice.verify_negotiation(" in join
@@ -1302,8 +1326,8 @@ def test_engine_rolls_up_under_the_sessions_own_team_names():
     summary = nc.summarize(codes, {}, CODEBOOK, names=names)
     assert set(summary["by_team"]) == {"Buyer", "Seller", nc.UNASSIGNED}
     assert summary["by_team"]["Buyer"]["utterances"] == 7 and summary["by_team"]["Seller"]["opening_move"] in ("none", "power", "interest", "right")
-    # the Viking default still applies when nothing names the teams
-    assert set(nc.rollup(codes, {}, CODEBOOK)["by_team"]) == {"Pat", "Sandy", nc.UNASSIGNED}
+    # placeholder names apply when nothing names the teams
+    assert set(nc.rollup(codes, {}, CODEBOOK)["by_team"]) == {"Team A", "Team B", nc.UNASSIGNED}
 
 
 def test_paired_run_uses_the_setups_team_names(env):
@@ -1350,13 +1374,13 @@ def test_join_validates_the_team_against_the_setup_and_presizes_the_roster(env):
     names = session.team_names()
     assert SessionDevice.verify_negotiation("Table 1", "seller", names) == (True, None, "Table 1", "Seller")
     assert SessionDevice.verify_negotiation("Table 1", "Pat", names) == (False, "Side must be Buyer or Seller.", None, None)
-    assert SessionDevice.verify_negotiation("Table 1", "Pat") == (True, None, "Table 1", "Pat")   # no setup: Viking default
+    assert SessionDevice.verify_negotiation("Table 1", "Pat") == (False, "Side must be Team A or Team B.", None, None)   # no setup: placeholders
     ok, device, speakers = d.create_byod_session_device(session.passcode, "", 0, "Table 1", "Seller")
     assert ok and device.name == "Table 1 Seller"
     device.connected = True
     env.db.session.commit()
     ok, message, _ = d.create_byod_session_device(session.passcode, "", 0, "Table 1", "Seller")
-    assert not ok and message == "Table 1 Seller is already connected from another laptop. Pick your own table and team."
+    assert not ok and message == "Table 1 Seller " + d.SLOT_TAKEN_SUFFIX
     ok, message, _ = d.create_byod_session_device(session.passcode, "Table 1 Seller", 0)
     assert not ok and message == "Name already in use."
     # the route pre-sizes the roster from the slot: its team's size, else the group's
@@ -1367,7 +1391,56 @@ def test_join_validates_the_team_against_the_setup_and_presizes_the_roster(env):
     assert "collaborators = pod_setup.speaker_slots(target.pod_config_dict(), negotiation_side)" in join
     create = _func_source(src, "create_session")
     assert "pod_setup.normalize(request.json.get('podConfig'))" in create
-    assert "negotiation_paired = True" in create and "pod_config=pod_config" in create
+    assert "negotiation_paired = bool(pod_config) and pod_setup.paired(pod_config)" in create
+    assert "pod_config=pod_config" in create and "negotiationPaired" not in create
     handler = _func_source(_read(*HANDLER), "create_session")
     assert "session.pod_config = pod_setup.dumps(pod_config)" in handler
     assert "negotiation_paired = pod_setup.paired(pod_config)" in handler
+
+
+def test_extra_laptop_for_a_slot_is_coded_alone_and_the_pair_stays_the_first_devices(env):
+    from tables.session_device import SessionDevice
+    d = env.database
+    session, (pat, sandy) = _paired_session(env, group="Table 5")
+    extra = SessionDevice(session.id, None, "Table 5 Pat 2")
+    extra.negotiation_group, extra.negotiation_side = "Table 5", "Pat"
+    env.db.session.add(extra)
+    env.db.session.commit()
+    assert [x.id for x in d.get_negotiation_group_devices(pat)] == [pat.id, sandy.id, extra.id]
+    assert env.engine.resolve_pair(pat.id) == (pat.id, sandy.id)
+    assert env.engine.resolve_pair(sandy.id) == (pat.id, sandy.id)     # never paired with the extra
+    assert env.engine.resolve_pair(extra.id) == (extra.id, None)       # coded alone, side stamped
+    run = d.create_negotiation_run(extra.id, "m", "viking-v2")
+    assert env.engine.run_sides(run) == {extra.id: "Pat"}
+
+
+def test_join_as_extra_laptop_takes_the_next_free_suffix(env):
+    d = env.database
+    session = _session(env)
+    session.passcode = "EXTRA%d" % session.id
+    env.db.session.commit()
+    ok, first, _ = d.create_byod_session_device(session.passcode, "", 0, "Table 1", "Pat")
+    first.connected = True
+    env.db.session.commit()
+    ok, message, _ = d.create_byod_session_device(session.passcode, "", 0, "Table 1", "Pat")
+    assert not ok and message.endswith(d.SLOT_TAKEN_SUFFIX)
+    ok, second, _ = d.create_byod_session_device(session.passcode, "", 0, "Table 1", "Pat", join_as_extra=True)
+    assert ok and second.name == "Table 1 Pat 2" and (second.negotiation_group, second.negotiation_side) == ("Table 1", "Pat")
+    second.connected = True
+    env.db.session.commit()
+    ok, third, _ = d.create_byod_session_device(session.passcode, "", 0, "Table 1", "Pat", join_as_extra=True)
+    assert ok and third.name == "Table 1 Pat 3"
+    # a disconnected extra is resumed rather than skipped
+    second.connected = False
+    env.db.session.commit()
+    ok, again, _ = d.create_byod_session_device(session.passcode, "", 0, "Table 1", "Pat", join_as_extra=True)
+    assert ok and again.id == second.id
+    # without the flag the slot stays refused; a free slot never needs it
+    ok, message, _ = d.create_byod_session_device(session.passcode, "", 0, "Table 1", "Pat")
+    assert not ok
+    ok, other, _ = d.create_byod_session_device(session.passcode, "", 0, "Table 1", "Sandy", join_as_extra=True)
+    assert ok and other.name == "Table 1 Sandy"
+    src = _read("src", "server", "routes", "session.py")
+    join = _func_source(src, "byod_join_session")
+    assert "join_as_extra = request.json.get('joinAsExtra', False) is True" in join
+    assert "'slot_taken': True}, 409)" in join

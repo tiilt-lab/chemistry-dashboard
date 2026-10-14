@@ -38,6 +38,9 @@ def _load_engine(path=ENGINE_PATH):
 
 engine = _load_engine()
 CODEBOOK = engine.load_codebook()
+# The gold scenarios are the Viking case, whose sides are Pat and Sandy; the
+# engine itself takes team names from each session's pod setup.
+VIKING_TEAMS = ("Pat", "Sandy")
 
 DEFAULT_LLM_URL = engine.llm_url()          # honours NEGOTIATION_LLM_URL like production
 DEFAULT_MODEL = engine.llm_model()          # honours NEGOTIATION_LLM_MODEL
@@ -77,7 +80,7 @@ def chunk_utterances(utts, size=CHUNK_SIZE, context=CONTEXT_UTTERANCES):
 
 
 def build_messages(to_code, context=()):
-    return engine.build_prompt(CODEBOOK, list(to_code), list(context))
+    return engine.build_prompt(CODEBOOK, list(to_code), list(context), VIKING_TEAMS)
 
 
 def call_llm(messages, url=DEFAULT_LLM_URL, model=DEFAULT_MODEL, timeout=DEFAULT_TIMEOUT_S):
