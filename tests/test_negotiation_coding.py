@@ -1258,6 +1258,34 @@ def test_role_route_sets_group_and_side_with_validation(env):
                  session_device_id=_pod(env, _session(env), with_transcripts=False).id).status_code == 404
 
 
+def test_first_group_to_join_starts_the_session_clock(env):
+    # A session created days ahead (QR code on a slide) counts from its
+    # first join; later joins, re-joins and extra devices leave it alone.
+    from datetime import datetime, timedelta, timezone
+    d = env.database
+    session = _session(env)
+    session.passcode = "VIKING%d" % session.id
+    ahead = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)
+    session.creation_date = ahead
+    env.db.session.commit()
+    assert session.get_length() > 2 * 24 * 3600 - 5
+    ok, first, _ = d.create_byod_session_device(session.passcode, "", 0, "Table 1", "Pat")
+    assert ok and session.get_length() < 5
+    started = session.creation_date
+    ok, second, _ = d.create_byod_session_device(session.passcode, "", 0, "Table 2", "Pat")
+    assert ok and second.id != first.id and session.creation_date == started
+    ok, again, _ = d.create_byod_session_device(session.passcode, first.name, 0, "Table 1", "Pat")
+    assert ok and again.id == first.id and session.creation_date == started
+    # A session whose pods were registered at creation never resets.
+    other = _session(env)
+    other.passcode = "VIKING%d" % other.id
+    other.creation_date = ahead
+    env.db.session.commit()
+    _pod(env, other, with_transcripts=False)
+    ok, _dev, _ = d.create_byod_session_device(other.passcode, "", 0)
+    assert ok and other.creation_date == ahead
+
+
 def test_byod_join_stores_the_role_and_names_the_pod_after_it(env):
     from tables.session_device import SessionDevice
     d = env.database

@@ -829,6 +829,13 @@ def create_byod_session_device(passcode, name, collaborators, negotiation_group=
             db.session.commit()
             return True, duplicate, get_speakers(session_device_id=duplicate.id)
     else: # New session device.
+        if not get_session_devices(session_id=session.id, first=True):
+            # The first group to join starts the session clock. A session
+            # set up ahead of class (its QR code on a slide, the lobby
+            # waiting a day or more) would otherwise stamp every
+            # transcript, the length and the auto-close from the moment
+            # the instructor pressed Start.
+            session.creation_date = datetime.now(timezone.utc).replace(tzinfo=None)
         session_device = SessionDevice(session.id, None, name)
         session_device.negotiation_group = negotiation_group
         session_device.negotiation_side = negotiation_side
