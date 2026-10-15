@@ -21,6 +21,7 @@ const StudentSessionDashboard = lazy(() => import('../student-dashboard/student-
 const ExpertRatingComponent = lazy(() => import('../expert-rating/expert-rating-component').then(m => ({ default: m.ExpertRatingComponent })))
 const CreateSessionComponent = lazy(() => import('../create-session/create-session-component').then(m => ({ default: m.CreateSessionComponent })))
 const PodsOverviewComponent = lazy(() => import('../pods-overview/pods-overview-component').then(m => ({ default: m.PodsOverviewComponent })))
+const SessionDevicesComponent = lazy(() => import('../session-devices/session-devices-component').then(m => ({ default: m.SessionDevicesComponent })))
 const DiscussionGraphComponent = lazy(() => import('../discussion-graph/discussion-graph-component').then(m => ({ default: m.DiscussionGraphComponent })))
 const SettingsComponent = lazy(() => import('../settings/settings-component').then(m => ({ default: m.SettingsComponent })))
 const OpsComponent = lazy(() => import('../ops/ops-component').then(m => ({ default: m.OpsComponent })))
@@ -74,6 +75,7 @@ function PageRouter() {
                 <Route path='sessions/:sessionId' element={<ProtectedRoute component={SessionManagerComponent }/>} >
                     <Route path='' element={<Navigate to="overview"  />} />
                     <Route path='overview' element={<ProtectedRoute component={PodsOverviewComponent}/>} />
+                    <Route path='devices' element={<ProtectedRoute component={SessionDevicesComponent}/>} />
                     <Route path='graph' element={<ProtectedRoute component={DiscussionGraphComponent}/>} />
                     <Route path='pods/:sessionDeviceId' element={<ProtectedRoute component={PodComponent}/>} />
                     <Route path='pods/:sessionDeviceId/transcripts' element={<ProtectedRoute component={TranscriptsComponent}/>} />

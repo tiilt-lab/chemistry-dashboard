@@ -1782,6 +1782,46 @@ def get_session_triage(session_id):
     return out
 
 
+def get_session_live_status(session_id):
+    # The Devices tab during class: every pod of the session with whether it
+    # is connected, how long ago it last produced speech, and how many
+    # utterances it has. Whether audio is actually STREAMING comes from the
+    # audio service's presence key and is merged in by the route (Redis, not
+    # the DB). Ages are seconds on the session clock, like transcript
+    # start_time, so they are right whatever the server's timezone.
+    from datetime import datetime
+    session = get_sessions(id=session_id, first=True)
+    if session is None or session.creation_date is None:
+        return None, []
+    session_now = max(0.0, (datetime.now(timezone.utc).replace(tzinfo=None) - session.creation_date).total_seconds())
+    speech = {}
+    rows = db.session.query(
+        Transcript.session_device_id,
+        func.max(Transcript.start_time + Transcript.length),
+        func.count(Transcript.id)) \
+        .join(SessionDevice, Transcript.session_device_id == SessionDevice.id) \
+        .filter(SessionDevice.session_id == session_id) \
+        .group_by(Transcript.session_device_id).all()
+    for device_id, last_end, count in rows:
+        speech[device_id] = (last_end, count)
+    out = []
+    for d in get_session_devices(session_id=session_id):
+        if getattr(d, 'removed', False):
+            continue
+        last_end, count = speech.get(d.id, (None, 0))
+        out.append({
+            'id': d.id,
+            'name': d.name,
+            'negotiation_group': d.negotiation_group,
+            'negotiation_side': d.negotiation_side,
+            'connected': bool(d.connected),
+            'processing_key': d.processing_key,
+            'utterances': int(count),
+            'last_speech_age': None if last_end is None else int(max(0.0, session_now - float(last_end))),
+        })
+    return int(session_now), out
+
+
 def get_student_longitudinal(username):
     # A student's trajectory across every session they took part in: per-session
     # speaking share (transcript) + average attention (video), chronologically,

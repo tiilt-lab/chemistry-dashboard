@@ -1020,6 +1020,34 @@ def get_session_triage(session_id, **kwargs):
     return json_response(database.get_session_triage(session_id))
 
 
+def _streaming_processing_keys():
+    # Pods whose audio service presence key is alive: the service sets
+    # live_pod:<processing_key> on Start recording and refreshes it every 20 s
+    # while audio streams, so "present" means audio reached the server within
+    # the last minute. None when Redis cannot be read: the tab then shows the
+    # connection state alone instead of claiming nobody is streaming.
+    try:
+        from redis_helper import r as redis_client
+        import live_presence
+        return set(live_presence.live_keys(redis_client))
+    except Exception as e:  # noqa: BLE001 - presence is advisory
+        logging.warning('live presence unavailable: %s', e)
+        return None
+
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/devices/live', methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_read_access
+def get_session_devices_live(session_id, **kwargs):
+    # The Devices tab: per pod, connected / streaming audio / last speech.
+    session_now, devices = database.get_session_live_status(session_id)
+    streaming = _streaming_processing_keys()
+    for d in devices:
+        key = d.pop('processing_key', None)
+        d['streaming'] = None if streaming is None else (key is not None and key in streaming)
+    return json_response({'now': session_now, 'devices': devices})
+
+
 @api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/dynamics', methods=['GET'])
 @wrappers.verify_device_read_access
 def get_pod_dynamics(session_id, session_device_id, **kwargs):
