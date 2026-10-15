@@ -161,6 +161,11 @@ class SessionService {
     return this._get(`api/v1/sessions/${sessionId}/devices`, {}, opts);
   }
 
+  // Devices tab: per pod, connected / streaming audio / last speech age.
+  getSessionLive(sessionId, opts = {}) {
+    return this._get(`api/v1/sessions/${sessionId}/devices/live`, {}, opts);
+  }
+
   getSessionDeviceTranscripts(sessionId, sessionDeviceId, startTime = 0) {
     return this.api.httpRequestCall(
       `api/v1/sessions/${sessionId}/devices/${sessionDeviceId}/transcripts`,

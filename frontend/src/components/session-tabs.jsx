@@ -11,6 +11,7 @@ export function SessionTabs() {
             label="Session views"
             tabs={[
                 { label: "Overview", to: `/sessions/${sessionId}/overview` },
+                { label: "Devices", to: `/sessions/${sessionId}/devices` },
                 { label: "Discussion graph", to: `/sessions/${sessionId}/graph` },
             ]}
         />
