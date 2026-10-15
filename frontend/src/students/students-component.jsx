@@ -230,8 +230,8 @@ function StudentsComponent(props) {
             setStatus("Please enter a username.")
             return
         }
-        if (username.length < 5 || username.length > 10) {
-            setStatus("Username must be 5-10 characters.")
+        if (username.length < 5 || username.length > 20) {
+            setStatus("Username must be 5-20 characters.")
             return
         }
         setCurrentForm("Loading")
@@ -1012,14 +1012,14 @@ function StudentsComponent(props) {
                     <div className={dlgBody}>
                         <div className={dlgHeading}>Add student</div>
                         <label htmlFor="stuUsername" className={dlgLabel}>
-                            Username (5-10 characters)
+                            Username (5-20 characters)
                         </label>
                         <input
                             id="stuUsername"
                             className={dlgInput}
                             type="text"
                             minLength={5}
-                            maxLength={10}
+                            maxLength={20}
                         />
                         <label htmlFor="stuGroup" className={dlgLabel}>
                             Group (optional)

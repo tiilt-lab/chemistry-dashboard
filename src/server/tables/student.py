@@ -9,7 +9,7 @@ class Student(db.Model):
     # team, nothing else. Old records keep their names for display.
     lastname = db.Column(db.String(50), nullable=True)
     firstname = db.Column(db.String(50), nullable=True)
-    username = db.Column(db.String(10), nullable=False)
+    username = db.Column(db.String(20), nullable=False)
     # The group (table) and team (or role) the student typed when enrolling,
     # as the class names them. The coding pass reads the team off the
     # profile when the session's devices did not fix it.
@@ -21,7 +21,7 @@ class Student(db.Model):
 
     LAST_NAME_MAX_LENGTH = 50
     FIRST_NAME_MAX_LENGTH = 50
-    USER_NAME_MAX_LENGTH = 10
+    USER_NAME_MAX_LENGTH = 20
     USER_NAME_MIN_LENGTH = 5
     LABEL_MAX_LENGTH = 64
 
