@@ -523,8 +523,8 @@ function SignupPage() {
             setAlertMessage("Please enter a username");
             setShowAlert(true);
             document.getElementById("username").focus();
-        } else if (username.length < 5 || username.length > 10) {
-            setAlertMessage("The username should be 5 to 10 characters");
+        } else if (username.length < 5 || username.length > 20) {
+            setAlertMessage("The username should be 5 to 20 characters");
             setShowAlert(true);
             document.getElementById("username").focus();
         } else if (tooLong) {

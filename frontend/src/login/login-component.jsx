@@ -1,12 +1,20 @@
-import { useNavigate, Link } from "react-router-dom"
+import { useNavigate, useLocation, Link } from "react-router-dom"
 import { InlineSpinner } from "../components/inline-spinner"
 import { btnPrimaryTall } from "../components/dialog-styles"
 import { useEffect, useState } from "react"
 import { AuthService } from "../services/auth-service"
 import { BrandCard } from "../components/brand-panel"
+import { useSignedIn } from "../landing-page/landing-page-components"
 
 function LoginPage() {
     const navigate = useNavigate()
+    const location = useLocation()
+    // Where to go once signed in: the protected page that sent the user
+    // here (ProtectedRoute passes it as state), else the dashboard.
+    const from = (location.state && location.state.from) || "/home"
+    // Already signed in (a bookmark, a stale tab, the browser Back
+    // button): no password prompt, straight on.
+    const signedIn = useSignedIn()
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [showPassword, setShowPassword] = useState(false)
@@ -16,8 +24,11 @@ function LoginPage() {
     const [authObject, setAuthObject] = useState(null)
 
     useEffect(() => {
+        if (signedIn) {
+            return navigate(from, { replace: true })
+        }
         if (loginStatus.status === 200 && authObject !== null) {
-            return navigate("/home")
+            return navigate(from)
         } else if (loginStatus.status === 400) {
             setLoading(false)
             setErrors({
@@ -29,7 +40,7 @@ function LoginPage() {
             setLoading(false)
             setErrors({ form: "Invalid email or password." })
         }
-    }, [loginStatus, authObject, navigate])
+    }, [loginStatus, authObject, navigate, from, signedIn])
 
     const handleSubmit = (event) => {
         event.preventDefault()

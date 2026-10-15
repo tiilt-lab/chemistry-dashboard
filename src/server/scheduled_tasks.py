@@ -6,7 +6,12 @@ import database
 import logging
 import watchers
 
-TIMEOUT = 10 * 60 # Time in seconds without transcripts before timeout occurs
+# Seconds without transcripts (no group connected, nobody watching) before
+# a running session stops itself. 24 h rather than 10 min: a session opened
+# the day before class, or one that spans a morning and an afternoon
+# section with a lunch gap between them, has to still be running when the
+# groups come back. A forgotten session now closes itself the next day.
+TIMEOUT = 24 * 60 * 60
 WATCH_TIMEOUT = 5 * 60 # Dashboard poll recency that still counts as "watched"
 TOKEN_RETENTION = timedelta(days=30) # Used/expired account_token rows older than this are purged
 _last_token_purge = None
@@ -57,7 +62,7 @@ def _check_transcripts():
 			if length > TIMEOUT:
 				transcripts = database.get_transcripts(session_id=session.id, start_time=max(length - TIMEOUT, 0), end_time=-1)
 				if len(transcripts) == 0:
-					logging.info('Session {0}: no transcripts, no connected devices, and unwatched for {1} minutes - stopping.'.format(session.id, int(TIMEOUT / 60)))
+					logging.info('Session {0}: no transcripts, no connected devices, and unwatched for {1} hours - stopping.'.format(session.id, TIMEOUT // 3600))
 					session_handler.end_session(session.id)
 	except Exception:
 		# The auto-close job failing silently means sessions never end; log

@@ -1,6 +1,9 @@
-import { useNavigate } from "react-router-dom"
+import { Navigate, useNavigate } from "react-router-dom"
+import { useEffect, useState } from "react"
 import { updateTime } from "../utilities/helper-functions"
 import { BrandCard } from "../components/brand-panel"
+import { AuthService } from "../services/auth-service"
+import { getAuthCache, setAuthCache } from "../routes/protected-route"
 
 import { btnPrimaryTall as primaryClass, btnSecondaryTall as secondaryClass } from "../components/dialog-styles"
 
@@ -10,8 +13,36 @@ const timeOfDay = updateTime()
 const linkBtn =
     "cursor-pointer rounded-lg border border-tiilt-line bg-white px-3 py-2 text-sm font-semibold text-tiilt-ink transition hover:border-tiilt hover:bg-tiilt-soft hover:text-tiilt"
 
+// True once a live instructor login is known: from the route cache (an
+// in-app navigation back here) or from /me on a fresh load.
+function useSignedIn() {
+    const [signedIn, setSignedIn] = useState(() => getAuthCache() !== null)
+    useEffect(() => {
+        if (signedIn) return undefined
+        let cancelled = false
+        new AuthService().meStatus().then((r) => {
+            if (cancelled) return
+            if (r.status === "ok" && r.user && Object.keys(r.user).length !== 0) {
+                setAuthCache(r.user)
+                setSignedIn(true)
+            }
+        })
+        return () => {
+            cancelled = true
+        }
+    }, [signedIn])
+    return signedIn
+}
+
 function LandingPageComponent() {
     const navigate = useNavigate()
+    // A signed-in instructor goes straight to the dashboard. This page
+    // offered "Sign in" to everyone, so opening nublinc.com in a new tab
+    // looked like being logged out, and people signed in again while
+    // their session (and the other tab) were still perfectly alive.
+    // Anonymous visitors see the page immediately; nothing waits on /me.
+    const signedIn = useSignedIn()
+    if (signedIn) return <Navigate replace to="/home" />
 
     return (
         <BrandCard>
@@ -94,3 +125,4 @@ function LandingPageComponent() {
     )
 }
 export default LandingPageComponent
+export { useSignedIn }
