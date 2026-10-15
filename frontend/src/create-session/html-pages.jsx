@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { EmptyState } from "../components/empty-state";
 import { dlgWindow, dlgHeading, dlgInput, dlgPrimary, dlgCancel, dlgError } from "../components/dialog-styles"
 import { pageShell, formCard } from "../components/layout-styles"
-import { setupTeams, MAX_TEAMS, MIN_CUSTOM_TEAMS } from "./pod-setup"
+import { setupTeams, MAX_TEAMS, MIN_CUSTOM_TEAMS, deviceTotal } from "./pod-setup"
 import { Appheader } from "../header/header-component";
 import { GenericDialogBox } from "../dialog/dialog-component";
 import { AppFolderSelectComponent } from "../components/folder-select/folder-select-component";
@@ -63,9 +63,14 @@ function PodSetupSection({ setup, setSetup, error }) {
       : `${prefix} 1, ${prefix} 2 … ${prefix} ${s.groupCount}`;
   const teamName = (t, i) => (t.name || "").trim() || `Team ${i + 1}`;
   const groupsWord = s.groupCount === 1 ? "group" : "groups";
+  // Device totals: the session needs this many laptops in the room, so the
+  // labels say it outright instead of leaving the multiplication to the
+  // instructor ("12 groups, one device per team" is 24 laptops).
+  const perGroupTotal = deviceTotal(s.groupCount);
+  const perTeamTotal = deviceTotal(s.groupCount * 2);
   const summary = hasTeams
-    ? `${s.groupCount} ${groupsWord} of ${groupSize}: ${teams.map((t, i) => `${teamName(t, i)} ${t.size}`).join(" vs ")}, ${twoTeams && s.devices === "team" ? "one device per team" : "one device per group"}.`
-    : `${s.groupCount} ${groupsWord} of ${groupSize}, one device per group.`;
+    ? `${s.groupCount} ${groupsWord} of ${groupSize}: ${teams.map((t, i) => `${teamName(t, i)} ${t.size}`).join(" vs ")}, ${twoTeams && s.devices === "team" ? `one device per team ${perTeamTotal}` : `one device per group ${perGroupTotal}`}.`
+    : `${s.groupCount} ${groupsWord} of ${groupSize}, one device per group ${perGroupTotal}.`;
   return (
     <div>
       <label className={fieldLabel}>Pod setup</label>
@@ -221,8 +226,8 @@ function PodSetupSection({ setup, setSetup, error }) {
             {twoTeams ? (
               <div className="flex flex-col gap-2">
                 {[
-                  ["group", "One device per group", "One microphone and camera for the whole table."],
-                  ["team", "One device per team", "Each team joins from its own device and picks its table and team; everything that device hears and sees counts for that team."],
+                  ["group", `One device per group ${perGroupTotal}`, "One microphone and camera for the whole table."],
+                  ["team", `One device per team ${perTeamTotal}`, "Each team joins from its own device and picks its table and team; everything that device hears and sees counts for that team."],
                 ].map(([value, title, desc]) => (
                   <label
                     key={value}
@@ -248,7 +253,7 @@ function PodSetupSection({ setup, setSetup, error }) {
                 ))}
               </div>
             ) : (
-              <div className="pt-2 text-sm text-tiilt-ink">One device per group</div>
+              <div className="pt-2 text-sm text-tiilt-ink">One device per group {perGroupTotal}</div>
             )}
           </SetupRow>
 
