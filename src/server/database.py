@@ -2092,14 +2092,23 @@ def get_latest_negotiation_run(session_device_id):
 
 def get_negotiation_group_devices(session_device):
     """Every device of the pod's breakout group (same session and
-    negotiation_group, not removed), itself included, by id."""
+    negotiation_group), itself always included, by id.
+
+    While the session is live a pod that left it (removed) is out of the
+    pairing. Once the session has ended the flag says nothing: end_session
+    marks EVERY pod removed before it queues the coding, so filtering on it
+    there left each pod without its own group (KeyError in resolve_pair)
+    and no class was ever coded at its end."""
     if session_device is None or not session_device.negotiation_group:
         return [session_device] if session_device is not None else []
-    return db.session.query(SessionDevice) \
+    query = db.session.query(SessionDevice) \
         .filter(SessionDevice.session_id == session_device.session_id,
-                SessionDevice.negotiation_group == session_device.negotiation_group,
-                SessionDevice.removed == False) \
-        .order_by(SessionDevice.id.asc()).all()   # noqa: E712
+                SessionDevice.negotiation_group == session_device.negotiation_group)
+    session = get_sessions(id=session_device.session_id)
+    if session is not None and session.end_date is None:
+        query = query.filter(or_(SessionDevice.removed == False,   # noqa: E712
+                                 SessionDevice.id == session_device.id))
+    return query.order_by(SessionDevice.id.asc()).all()
 
 
 def get_negotiation_partner(session_device):
