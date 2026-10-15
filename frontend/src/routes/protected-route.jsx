@@ -10,6 +10,10 @@ import { backoffDelay } from "../globals";
 // background and bounces the user to /login if the session has died.
 let cachedUser = null;
 export const clearAuthCache = () => { cachedUser = null; };
+// The public pages (landing, login) seed the cache when they find a live
+// session, so the dashboard they send the user to renders at once.
+export const getAuthCache = () => cachedUser;
+export const setAuthCache = (user) => { cachedUser = user; };
 
 function ProtectedRoute({ component: Component }) {
     const location = useLocation();
