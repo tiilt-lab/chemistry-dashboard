@@ -262,54 +262,76 @@ def _prefer(a, b):
     return (a, b) if a["transcript_id"] <= b["transcript_id"] else (b, a)
 
 
+def _neighbours(pool, i, reach):
+    # The pool entries that could share pool[i]'s moment: forward until a
+    # start passes its end plus the tolerance, backward while a start within
+    # ``reach`` (the longest utterance plus the tolerance) could still
+    # overlap it.
+    u = pool[i]
+    horizon = _span(u)[1] + PAIR_START_TOLERANCE
+    for j in range(i + 1, len(pool)):
+        if pool[j]["start_time"] > horizon:
+            break
+        yield pool[j]
+    floor = u["start_time"] - reach
+    for j in range(i - 1, -1, -1):
+        if pool[j]["start_time"] < floor:
+            break
+        yield pool[j]
+
+
 def merge_paired(rows_by_device, sides):
     """One conversation from two devices' transcripts. ``rows_by_device`` maps
     device id -> transcript rows, ``sides`` device id -> team. Rows are put
-    on one timeline; for a pair of same-moment utterances from the two
-    devices, a text match (>= PAIR_TEXT_SIMILARITY) keeps the better-
-    attributed copy ("duplicate"), an unmatched voice against a matched one
-    drops the unmatched copy ("bleed": the far side heard faintly), and
-    anything else stays (both sides really talking at once). Returns
-    (utterances in time order, re-indexed, each with team and
-    session_device_id; dropped: [{transcript_id, kept_transcript_id, reason,
-    similarity}])."""
+    on one timeline and each utterance looks for its best text match among
+    the other device's same-moment utterances, earlier or later. A text
+    match (>= PAIR_TEXT_SIMILARITY) keeps the better-attributed copy
+    ("duplicate"), an unmatched voice against a matched one drops the
+    unmatched copy ("bleed": the far side heard faintly), and anything else
+    stays (both sides really talking at once). The two recognizers cut the
+    speech differently, so a kept copy stays in play for further pieces of
+    the same utterance from the other device; when a later piece is the
+    better copy it takes over, and the drops already pointed at the first
+    copy follow it. Returns (utterances in time order, re-indexed, each with
+    team and session_device_id; dropped: [{transcript_id,
+    kept_transcript_id, reason, similarity}])."""
     pool = []
     for device_id, rows in rows_by_device.items():
         pool.extend(_utterance(r, sides.get(device_id)) for r in rows)
     pool.sort(key=lambda u: (u["start_time"], u["transcript_id"]))
-    kept, dropped, settled = [], [], set()
+    reach = max((_span(u)[1] - _span(u)[0] for u in pool), default=0.0) + PAIR_START_TOLERANCE
+    kept, dropped, dropped_ids = {}, [], set()      # kept: transcript_id -> utterance
     for i, u in enumerate(pool):
-        if u["transcript_id"] in settled:
+        if u["transcript_id"] in dropped_ids:
             continue
-        horizon = _span(u)[1] + PAIR_START_TOLERANCE
         best, best_sim = None, -1.0
-        for v in pool[i + 1:]:
-            if v["start_time"] > horizon:
-                break
-            if v["session_device_id"] == u["session_device_id"] or v["transcript_id"] in settled:
+        for v in _neighbours(pool, i, reach):
+            if v["session_device_id"] == u["session_device_id"] or v["transcript_id"] in dropped_ids:
                 continue
             if not same_moment(u, v):
                 continue
             sim = text_similarity(u["text"], v["text"])
             if sim > best_sim:
                 best, best_sim = v, sim
-        if best is None:
-            kept.append(u)
-            continue
-        if best_sim >= PAIR_TEXT_SIMILARITY:
+        if best is not None and best_sim >= PAIR_TEXT_SIMILARITY:
             winner, loser, reason = _prefer(u, best) + ("duplicate",)
-        elif bool(u.get("speaker_tag")) != bool(best.get("speaker_tag")):
+        elif best is not None and bool(u.get("speaker_tag")) != bool(best.get("speaker_tag")):
             winner, loser = (u, best) if u.get("speaker_tag") else (best, u)
             reason = "bleed"
         else:
-            kept.append(u)
+            kept.setdefault(u["transcript_id"], u)
             continue
-        settled.add(loser["transcript_id"])
-        settled.add(winner["transcript_id"])
-        kept.append(winner)
+        if kept.pop(loser["transcript_id"], None) is not None:
+            # The loser stood for earlier pieces of this utterance; they
+            # follow the winner.
+            for d in dropped:
+                if d["kept_transcript_id"] == loser["transcript_id"]:
+                    d["kept_transcript_id"] = winner["transcript_id"]
+        dropped_ids.add(loser["transcript_id"])
+        kept.setdefault(winner["transcript_id"], winner)
         dropped.append({"transcript_id": loser["transcript_id"], "kept_transcript_id": winner["transcript_id"],
                         "reason": reason, "similarity": round(best_sim, 2)})
-    kept.sort(key=lambda u: (u["start_time"], u["transcript_id"]))
+    kept = sorted(kept.values(), key=lambda u: (u["start_time"], u["transcript_id"]))
     for i, u in enumerate(kept):
         u["index"] = i
     return kept, dropped
