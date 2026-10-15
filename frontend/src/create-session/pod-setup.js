@@ -37,6 +37,19 @@ export function podConfigFromSetup(setup) {
     }
 }
 
+// How many devices the setup asks for: one per group, or one per team when
+// two teams each record from their own device.
+export function deviceCount(setup) {
+    const groups = setup && Number(setup.groupCount) > 0 ? Number(setup.groupCount) : 0
+    const perTeam = !!setup && setupTeams(setup).length === 2 && setup.devices === "team"
+    return groups * (perTeam ? 2 : 1)
+}
+
+// "(24 devices total)" for the device choice labels and the summary line.
+export function deviceTotal(count) {
+    return `(${count} ${count === 1 ? "device" : "devices"} total)`
+}
+
 // Why the setup cannot be sent yet, or null.
 export function podSetupProblem(setup) {
     if (!setup || !setup.enabled) return null
