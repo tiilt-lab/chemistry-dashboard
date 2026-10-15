@@ -748,7 +748,10 @@ def resolve_pair(session_device_id):
         side = _side_of(d, names)
         if side and side not in primaries:
             primaries[side] = d
-    if my_side and primaries[my_side].id != device.id:
+    # The pod is always in its own group list; .get() keeps a surprise from
+    # the lookup a lone run rather than a crash that queues nothing.
+    mine = primaries.get(my_side) if my_side else None
+    if mine is not None and mine.id != device.id:
         return device.id, None
     partner = database.get_negotiation_partner(device)
     if partner is None:

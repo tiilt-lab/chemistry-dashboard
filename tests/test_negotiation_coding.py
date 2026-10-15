@@ -1212,6 +1212,31 @@ def test_run_sides_fills_in_a_missing_or_clashing_side(env):
     assert env.engine.run_pods(run, {a.id: "Pat"})[1] == {"id": b.id, "name": "Lone", "group": "Table 2", "side": None}
 
 
+def test_resolve_pair_after_the_session_ended(env):
+    # end_session marks every pod removed before it queues the coding (the
+    # flag means "not in the live session any more"); the pairing must still
+    # see the whole group, or no class is ever coded at its end.
+    from datetime import datetime
+    d = env.database
+    session, (pat, sandy) = _paired_session(env, group="Table 5")
+    session.end_date = datetime(2026, 10, 16, 15, 10)
+    pat.removed = sandy.removed = True
+    pat.connected = sandy.connected = False
+    env.db.session.commit()
+    assert d.get_negotiation_partner(pat).id == sandy.id
+    assert env.engine.resolve_pair(pat.id) == (pat.id, sandy.id)
+    assert env.engine.resolve_pair(sandy.id) == (pat.id, sandy.id)
+
+
+def test_resolve_pair_keeps_a_removed_pod_in_its_own_group_while_live(env):
+    # A pod that left the live session still resolves (manual "Run coding"
+    # on it) instead of raising on its own missing side.
+    session, (pat, sandy) = _paired_session(env, group="Table 6")
+    pat.removed = True
+    env.db.session.commit()
+    assert env.engine.resolve_pair(pat.id) == (pat.id, sandy.id)
+
+
 def test_resolve_pair_partner_lookup_and_lone_pods(env):
     d = env.database
     session, (pat, sandy) = _paired_session(env, group="Table 3")
