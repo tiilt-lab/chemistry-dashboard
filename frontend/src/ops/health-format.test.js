@@ -14,12 +14,14 @@ describe("health formatting", () => {
         expect(cpuPercent({ load_1: 40, cores: 16 })).toBe(100)
         expect(cpuPercent(null)).toBeNull()
     })
-    it("the verdict trips on the worst problem first", () => {
-        const ok = { services: { a: { active: "active" } }, gpu: { mem_pct: 50 }, disk: { used_pct: 40 }, host_ram: { used_pct: 30 }, cpu: { load_1: 1, cores: 8 } }
+    it("the verdict trips on the worst problem first, judging GPU and disk on what is left", () => {
+        const ok = { services: { a: { active: "active" } }, gpu: { mem_used_mb: 39200, mem_total_mb: 49152, mem_pct: 80 }, disk: { used_pct: 83, free_gb: 125 }, host_ram: { used_pct: 60 }, cpu: { load_1: 1, cores: 8 } }
         expect(healthVerdict(ok)).toMatchObject({ tone: "teal" })
-        expect(healthVerdict({ ...ok, gpu: { mem_pct: 85 } })).toMatchObject({ tone: "orange" })
-        expect(healthVerdict({ ...ok, gpu: { mem_pct: 95 } })).toMatchObject({ tone: "danger" })
-        expect(healthVerdict({ ...ok, services: { audio: { active: "failed" } }, gpu: { mem_pct: 95 } })).toMatchObject({ tone: "danger", text: "Service down: audio" })
+        expect(healthVerdict({ ...ok, gpu: { mem_used_mb: 44000, mem_total_mb: 49152 } })).toMatchObject({ tone: "orange" })
+        expect(healthVerdict({ ...ok, gpu: { mem_used_mb: 46500, mem_total_mb: 49152 } })).toMatchObject({ tone: "danger" })
+        expect(healthVerdict({ ...ok, disk: { used_pct: 95, free_gb: 30 } })).toMatchObject({ tone: "orange" })
+        expect(healthVerdict({ ...ok, disk: { used_pct: 99, free_gb: 5 } })).toMatchObject({ tone: "danger" })
+        expect(healthVerdict({ ...ok, services: { audio: { active: "failed" } }, disk: { free_gb: 5 } })).toMatchObject({ tone: "danger", text: "Service down: audio" })
         expect(healthVerdict({ ...ok, cpu: { load_1: 9, cores: 8 } })).toMatchObject({ tone: "orange" })
         expect(healthVerdict(null)).toBeNull()
     })
