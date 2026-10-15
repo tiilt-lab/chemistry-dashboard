@@ -1,0 +1,6 @@
+# Fingerprints gitleaks must skip (commit:file:rule:line). Both are fake
+# recording keys ("<device id>-<uuid>") in test fixtures that the
+# generic-api-key rule mistakes for credentials; the current lines carry a
+# gitleaks:allow comment, these entries cover the commits that introduced them.
+1c3228a55320f3c9d90537045d4befdda0cf59f5:tests/test_phase2_posthoc_fragments.py:generic-api-key:15
+ce0cd21794860c1f1fd88292be41f60a6dc47442:tests/test_recording_filename.py:generic-api-key:24

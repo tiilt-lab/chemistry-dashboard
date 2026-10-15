@@ -3,7 +3,7 @@ caller's own, with create / update / delete for the latter. Admins and supers
 see and may edit everyone's. The create-session form lists them; a session
 stores the chosen one's ref.
 """
-from flask import Blueprint, request, session as flask_session
+from flask import Blueprint, request
 from utility import json_response
 import coding_schemes as cs
 import database
