@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src", "common"
 
 from recording_filename import parse_recording_filename  # noqa: E402
 
-KEY = "1323-987a6e43-1533-4b4c-8fbd-88f46af87d24"
+KEY = "1323-987a6e43-1533-4b4c-8fbd-88f46af87d24"  # gitleaks:allow (fake recording key)
 
 
 def test_space_before_paren_does_not_leak_into_key():

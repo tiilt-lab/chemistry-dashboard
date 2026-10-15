@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src", "common"
 import recording_fragments as rf  # noqa: E402
 from recording_filename import parse_recording_filename  # noqa: E402
 
-KEY = "1177-9defadb1-50f2-45ef-a2d0-e8d218cfd098"
+KEY = "1177-9defadb1-50f2-45ef-a2d0-e8d218cfd098"  # gitleaks:allow (fake recording key)
 A = "/rec/%s (Fri Aug  7 18:30:28 2026)_orig.wav" % KEY
 B = "/rec/%s (Fri Aug  7 18:35:37 2026)_orig.wav" % KEY
 C = "/rec/%s (Fri Aug  7 18:42:08 2026)_orig.wav" % KEY
