@@ -1086,6 +1086,38 @@ def test_merge_paired_ties_go_to_the_fuller_text_then_the_earlier_row():
     assert "team" not in kept[0]
 
 
+def test_merge_paired_fragment_cannot_shield_the_real_duplicate():
+    # Session 435 at 06:14: the Sandy laptop cut a one-word tail ("Pays.")
+    # off the previous utterance just before a line both laptops heard in
+    # full. The fragment is bleed against the Pat copy; that must not take
+    # the Pat copy out of play, or the Sandy copy survives and the transcript
+    # shows the line twice under two speakers. The Sandy copy is the better
+    # attribution, so it is the one kept, and the fragment's drop follows it.
+    pat = [_row(1, 1, 374, "So one million this week, four hundred in the spring work, rent deferred. Did I get that right?",
+                "Pat", sim=0.19, closed_world=True, length=7)]
+    sandy = [_row(2, 2, 373, "Pays.", None, length=0),
+             _row(3, 2, 374, "So, one million this week, four hundred against spring work, rent deferred. Did I get that right?",
+                  "Sandy", sim=0.36, closed_world=True, length=8)]
+    kept, dropped = nc.merge_paired({1: pat, 2: sandy}, SIDES)
+    assert [u["transcript_id"] for u in kept] == [3]
+    assert {d["transcript_id"]: (d["kept_transcript_id"], d["reason"]) for d in dropped} == {
+        2: (3, "bleed"), 1: (3, "duplicate")}
+
+
+def test_merge_paired_pairs_every_piece_of_a_differently_cut_utterance():
+    # The Pat laptop heard one utterance; the Sandy laptop cut the same words
+    # in two. Both pieces are copies of the one Pat row, including the second,
+    # which starts after the Pat row has already matched the first.
+    pat = [_row(1, 1, 0, "So what I'm hearing is that the supplier deadline is the real problem more than the total",
+                "Pat", sim=0.8, length=8)]
+    sandy = [_row(2, 2, 0.3, "So what I'm hearing is that the supplier deadline", "Riley", sim=0.3, closed_world=True, length=4),
+             _row(3, 2, 4.5, "is the real problem more than the total", "Riley", sim=0.3, closed_world=True, length=3.5)]
+    kept, dropped = nc.merge_paired({1: pat, 2: sandy}, SIDES)
+    assert [u["transcript_id"] for u in kept] == [1]
+    assert {d["transcript_id"]: (d["kept_transcript_id"], d["reason"]) for d in dropped} == {
+        2: (1, "duplicate"), 3: (1, "duplicate")}
+
+
 def test_team_of_code_prefers_the_stamped_team_and_rollup_keys_shared_tags_apart():
     assert nc.team_of_code({"speaker_tag": "Pat", "team": "Sandy"}, TEAMS, VIKING_NAMES) == "Sandy"
     assert nc.team_of_code({"speaker_tag": "Pat", "team": "nonsense"}, TEAMS, VIKING_NAMES) == "Pat"
