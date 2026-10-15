@@ -3,6 +3,7 @@
 uptimes). Read-only, best-effort — every probe degrades to None rather than
 failing the whole response, so the ops view still renders during trouble.
 """
+import os
 import shutil
 import subprocess
 import time
@@ -88,6 +89,18 @@ def _services():
     return out
 
 
+def _cpu():
+    # Load averages against the core count: 100% means one runnable task per
+    # core on average over the last minute (the session page's "server load").
+    try:
+        one, five, fifteen = os.getloadavg()
+        cores = os.cpu_count() or 1
+        return {"load_1": round(one, 2), "load_5": round(five, 2), "load_15": round(fifteen, 2),
+                "cores": cores, "pct": int(round(100.0 * one / cores))}
+    except Exception:
+        return None
+
+
 def _live_pods():
     # Connected devices across active sessions (the live-recording count).
     try:
@@ -119,6 +132,7 @@ def _queue():
 @wrappers.verify_login()
 def health(**kwargs):
     return json_response({
+        "cpu": _cpu(),
         "gpu": _gpu(),
         "host_ram": _host_ram(),
         "disk": _disk(),

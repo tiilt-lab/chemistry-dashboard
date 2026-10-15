@@ -22,6 +22,7 @@ const ExpertRatingComponent = lazy(() => import('../expert-rating/expert-rating-
 const CreateSessionComponent = lazy(() => import('../create-session/create-session-component').then(m => ({ default: m.CreateSessionComponent })))
 const PodsOverviewComponent = lazy(() => import('../pods-overview/pods-overview-component').then(m => ({ default: m.PodsOverviewComponent })))
 const SessionDevicesComponent = lazy(() => import('../session-devices/session-devices-component').then(m => ({ default: m.SessionDevicesComponent })))
+const SessionHealthComponent = lazy(() => import('../session-health/session-health-component').then(m => ({ default: m.SessionHealthComponent })))
 const DiscussionGraphComponent = lazy(() => import('../discussion-graph/discussion-graph-component').then(m => ({ default: m.DiscussionGraphComponent })))
 const SettingsComponent = lazy(() => import('../settings/settings-component').then(m => ({ default: m.SettingsComponent })))
 const OpsComponent = lazy(() => import('../ops/ops-component').then(m => ({ default: m.OpsComponent })))
@@ -77,6 +78,7 @@ function PageRouter() {
                     <Route path='overview' element={<ProtectedRoute component={PodsOverviewComponent}/>} />
                     <Route path='devices' element={<ProtectedRoute component={SessionDevicesComponent}/>} />
                     <Route path='graph' element={<ProtectedRoute component={DiscussionGraphComponent}/>} />
+                    <Route path='server' element={<ProtectedRoute component={SessionHealthComponent}/>} />
                     <Route path='pods/:sessionDeviceId' element={<ProtectedRoute component={PodComponent}/>} />
                     <Route path='pods/:sessionDeviceId/transcripts' element={<ProtectedRoute component={TranscriptsComponent}/>} />
                 </Route>
