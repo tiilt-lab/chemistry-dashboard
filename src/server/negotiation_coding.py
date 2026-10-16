@@ -65,7 +65,9 @@ PAIR_TEXT_SIMILARITY = 0.5   # token ratio from which two copies are one utteran
 # minimum stays well above the two or three words of "yeah, exactly".
 PAIR_ANCHOR_SIMILARITY = 0.6  # token ratio from which a cross-device match anchors the clock alignment
 PAIR_ANCHOR_MIN_TOKENS = 6    # anchors need this many words: short lines repeat
-PAIR_SEARCH_WINDOW = 60.0     # s: how far apart the two clocks may be
+PAIR_SEARCH_WINDOW = 600.0    # s: how far apart the two clocks may be (2026-10-16: up to 260 s)
+PAIR_VOTE_BIN = 2.0           # s: candidate offsets are binned this coarsely to find the dominant one
+PAIR_ANCHOR_SPREAD = 30.0     # s: anchors this far from the dominant offset are repeats, not the clock
 PAIR_MIN_ANCHORS = 3          # fewer than this: the clocks are taken as equal
 PAIR_ANCHOR_NEIGHBOURS = 5    # the offset at a moment is the median of this many nearest anchors
 PAIR_ALIGNED_TOLERANCE = 5.0  # s: after alignment, how differently the two recognizers may cut a start
@@ -347,10 +349,14 @@ class ClockAlignment(object):
 def estimate_clock_offset(reference, other, reference_device=None, other_device=None):
     """ClockAlignment of ``other`` (one device's utterances) against
     ``reference`` (the other device's), or None when fewer than
-    PAIR_MIN_ANCHORS utterances match well enough to tell. An anchor is a
+    PAIR_MIN_ANCHORS utterances match well enough to tell. A candidate is a
     reference utterance of at least PAIR_ANCHOR_MIN_TOKENS words whose best
     text match on the other device, within PAIR_SEARCH_WINDOW, reaches
-    PAIR_ANCHOR_SIMILARITY."""
+    PAIR_ANCHOR_SIMILARITY. The clocks may be minutes apart (a backlog
+    replayed at the wrong time), so the window is wide and a negotiation
+    repeats its phrases; the candidates therefore vote, in PAIR_VOTE_BIN
+    bins, for the dominant offset, and only those within PAIR_ANCHOR_SPREAD
+    of it become anchors."""
     others = sorted(other, key=lambda u: float(u.get("start_time") or 0))
     starts = [float(u.get("start_time") or 0) for u in others]
     anchors = []
@@ -372,6 +378,14 @@ def estimate_clock_offset(reference, other, reference_device=None, other_device=
         if best is not None and best_sim >= PAIR_ANCHOR_SIMILARITY:
             other_start = float(best.get("start_time") or 0)
             anchors.append((other_start, other_start - t))
+    if len(anchors) < PAIR_MIN_ANCHORS:
+        return None
+    votes = {}
+    for _, offset in anchors:
+        b = round(offset / PAIR_VOTE_BIN)
+        votes[b] = votes.get(b, 0) + 1
+    dominant = max(votes, key=lambda b: (votes[b], -abs(b))) * PAIR_VOTE_BIN
+    anchors = [a for a in anchors if abs(a[1] - dominant) <= PAIR_ANCHOR_SPREAD]
     if len(anchors) < PAIR_MIN_ANCHORS:
         return None
     # Two recognizers cut the same speech a second or so apart either way;

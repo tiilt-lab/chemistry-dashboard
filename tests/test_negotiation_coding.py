@@ -1163,6 +1163,30 @@ def test_merge_paired_aligns_two_clocks_that_drift_apart():
     assert all(abs(p.start_time - s_.start_time) > nc.PAIR_START_TOLERANCE for p, s_ in zip(pat, sandy))
 
 
+def test_merge_paired_finds_clocks_minutes_apart_despite_repeated_phrases():
+    # 2026-10-16, Group 6: one laptop stamped everything 191 s later than
+    # the other, from the first minute, so no copy was ever within the old
+    # 60 s search window. A negotiation also repeats itself: the same line
+    # said again two minutes later must not pull the estimate away.
+    sides = {1: "Sandy", 2: "Pat"}
+    sandy, pat = [], []
+    lines = SPEECH + SPEECH[:3]                       # three lines said twice, ~2.5 min apart
+    for k, text in enumerate(lines):
+        t = 100 + 20 * k
+        sandy.append(_long(1 + k, 1, t, text, "Sandy", sim=0.6))
+        pat.append(_long(101 + k, 2, t + 191.0, text, "Pat", sim=0.85))
+    diagnostics = {}
+    kept, dropped = nc.merge_paired({1: sandy, 2: pat}, sides, diagnostics)
+    assert len(kept) == len(lines) and len(dropped) == len(lines)
+    assert {d["reason"] for d in dropped} == {"duplicate"}
+    summary = diagnostics["alignment"]
+    # The repeats' candidates point 160 s off the dominant offset and are
+    # excluded from the anchors; the eight distinct lines carry the estimate.
+    assert summary["anchors"] == len(SPEECH)
+    assert all(o["offset"] == 191.0 for o in summary["offsets"])
+    assert [round(u["start_time"]) for u in kept] == [100 + 20 * k for k in range(len(lines))]
+
+
 def test_merge_paired_clocks_taken_as_equal_without_enough_anchors():
     # Two short lines cannot anchor a clock; the plain tolerance applies and
     # the far-apart copies are, correctly, left alone.
