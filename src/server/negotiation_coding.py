@@ -57,12 +57,18 @@ CALM_WINDOW = 120       # s: no escalation this long = sustained de-escalation
 PAIR_START_TOLERANCE = 1.5   # s: starts this close are the same moment ...
 PAIR_OVERLAP_MIN = 0.5       # ... or the two overlap this share of the shorter one
 PAIR_TEXT_SIMILARITY = 0.5   # token ratio from which two copies are one utterance
-PAIR_ANCHOR_SIMILARITY = 0.7  # token ratio from which a cross-device match anchors the clock alignment
-PAIR_ANCHOR_MIN_TOKENS = 8    # anchors need this many words: short lines repeat
+# Tuned on the real rows of 2026-10-16 (Group 1: 853 rows, clocks 18 then
+# 6 s apart; Group 3: 1200 rows, one laptop reconnecting, offsets wandering
+# 1 to 8 s). With 0.7/8 words/3 s, 7 clear duplicates survived in Group 3
+# and 4 in Group 1; with these values 0 and 3, at the cost of 20-odd more
+# rows dropped per group. Short lines repeat in a negotiation, so the anchor
+# minimum stays well above the two or three words of "yeah, exactly".
+PAIR_ANCHOR_SIMILARITY = 0.6  # token ratio from which a cross-device match anchors the clock alignment
+PAIR_ANCHOR_MIN_TOKENS = 6    # anchors need this many words: short lines repeat
 PAIR_SEARCH_WINDOW = 60.0     # s: how far apart the two clocks may be
 PAIR_MIN_ANCHORS = 3          # fewer than this: the clocks are taken as equal
-PAIR_ANCHOR_NEIGHBOURS = 7    # the offset at a moment is the median of this many nearest anchors
-PAIR_ALIGNED_TOLERANCE = 3.0  # s: after alignment, how differently the two recognizers may cut a start
+PAIR_ANCHOR_NEIGHBOURS = 5    # the offset at a moment is the median of this many nearest anchors
+PAIR_ALIGNED_TOLERANCE = 5.0  # s: after alignment, how differently the two recognizers may cut a start
 
 # Placeholder team names for a session whose setup names none; every real
 # run takes its names from the session (run_names / device_team_names).
