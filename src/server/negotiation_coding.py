@@ -78,7 +78,22 @@ PAIR_ALIGNED_TOLERANCE = 5.0  # s: after alignment, how differently the two reco
 # PAIR_COVER_RUN tokens or more, by the other laptop's kept utterances at the
 # same moment is a copy of them and is dropped ("covered").
 PAIR_COVERED_SHARE = 0.6
-PAIR_COVER_RUN = 3
+PAIR_COVER_RUN = 3           # ... but a two- or three-word fragment must simply appear whole
+PAIR_KEEP_REMAINDER = 3      # a covered utterance keeps its words when this many in a row are its own
+# A far-side row is one laptop's hearing of the other laptop's side. Where
+# the near laptop has a row of its own in the same moment, the far hearing is
+# redundant whatever its words say (the two recognizers rarely agree on them).
+FAR_SIDE_OVERLAP = 0.3       # share of the far row's span a near row must overlap ...
+FAR_SIDE_PAD = 0.5           # ... with the near row's span padded by this (the cuts never line up exactly)
+# Sentence stitching (post): the recognizers cut speech at pauses, not at
+# sentences, so one speaker's sentence arrives in pieces and a piece often
+# starts with the tail word of the previous speaker's sentence ("it. What's
+# bothering me most?"). Pieces are stitched back into sentences before coding.
+STITCH_LEAD_WORDS = 3        # a sentence end within this many words of the start is a tail of the previous line
+STITCH_GAP = 1.5             # s between a speaker's pieces for them to be one sentence
+STITCH_MAX_SECONDS = 30.0    # a stitched sentence never spans more than this
+STITCH_MAX_WORDS = 70
+_SENTENCE_END = re.compile(r"[.?!]['\"\)\]]*$")
 
 # Placeholder team names for a session whose setup names none; every real
 # run takes its names from the session (run_names / device_team_names).
@@ -291,6 +306,53 @@ def _prefer(a, b):
     if la != lb:
         return (a, b) if la > lb else (b, a)
     return (a, b) if a["transcript_id"] <= b["transcript_id"] else (b, a)
+
+
+def _far_side_yields(pool, dropped, dropped_ids):
+    """A far-side row (named from the partner's roster) goes wherever the
+    near laptop has a row of its own overlapping FAR_SIDE_OVERLAP of its
+    span, whatever either says: the near laptop heard its own side better,
+    and the two recognizers' words rarely match well enough for the text
+    rules. A far row the near laptop missed stays (its team already flipped
+    by line_team)."""
+    for u in pool:
+        if not (u.get("confidence") or {}).get("far_side"):
+            continue
+        u0, u1 = _span(u)
+        span = max(u1 - u0, 0.1)
+        for v in pool:
+            if v["session_device_id"] == u["session_device_id"] or v["transcript_id"] in dropped_ids:
+                continue
+            if (v.get("confidence") or {}).get("far_side"):
+                continue
+            v0, v1 = _span(v)
+            overlap = min(u1, v1 + FAR_SIDE_PAD) - max(u0, v0 - FAR_SIDE_PAD)
+            if overlap / span >= FAR_SIDE_OVERLAP:
+                dropped_ids.add(u["transcript_id"])
+                dropped.append({"transcript_id": u["transcript_id"], "kept_transcript_id": v["transcript_id"],
+                                "reason": "far_side", "similarity": round(overlap / span, 2)})
+                break
+
+
+def _composite(a, b):
+    """True when the longer of two same-moment utterances is a composite:
+    both laptops named their OWN speaker with a clear match (neither far
+    side, neither a closed-world pick), the speakers differ, and the shorter
+    sits almost whole inside the longer. One recognizer ran the far side's
+    tail into its own speaker's reply; the pair is not two copies of one
+    thing, and the coverage pass trims the composite to its own words."""
+    if (a.get("speaker_tag") or "") == (b.get("speaker_tag") or "") or not a.get("speaker_tag") or not b.get("speaker_tag"):
+        return False
+    for u in (a, b):
+        conf = u.get("confidence") or {}
+        if conf.get("far_side") or conf.get("closed_world") or match_strength(u) < 0.5:
+            return False
+    ta, tb = _utterance_tokens(a), _utterance_tokens(b)
+    short, long_ = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+    if not short or len(long_) < 1.5 * len(short):
+        return False
+    matched = sum(size for _, _, size in difflib.SequenceMatcher(None, short, long_, autojunk=False).get_matching_blocks())
+    return matched >= 0.8 * len(short)
 
 
 def _neighbours(pool, i, reach, tolerance=PAIR_START_TOLERANCE):
@@ -562,6 +624,8 @@ def merge_paired(rows_by_device, sides, diagnostics=None, recordings=None):
     pool.sort(key=lambda u: (u["start_time"], u["transcript_id"]))
     reach = max((_span(u)[1] - _span(u)[0] for u in pool), default=0.0) + tolerance
     kept, dropped, dropped_ids = {}, [], set()      # kept: transcript_id -> utterance
+    if len(by_device) == 2:
+        _far_side_yields(pool, dropped, dropped_ids)
     for i, u in enumerate(pool):
         if u["transcript_id"] in dropped_ids:
             continue
@@ -574,6 +638,11 @@ def merge_paired(rows_by_device, sides, diagnostics=None, recordings=None):
             sim = text_similarity(u["text"], v["text"])
             if sim > best_sim:
                 best, best_sim = v, sim
+        if best is not None and best_sim >= PAIR_TEXT_SIMILARITY and _composite(u, best):
+            # Not two copies of one line: the longer one also holds the
+            # other laptop's own speaker. Both stay; _drop_covered trims.
+            kept.setdefault(u["transcript_id"], u)
+            continue
         if best is not None and best_sim >= PAIR_TEXT_SIMILARITY:
             winner, loser, reason = _prefer(u, best) + ("duplicate",)
             # The kept copy says what both recognizers heard.
@@ -604,46 +673,180 @@ def merge_paired(rows_by_device, sides, diagnostics=None, recordings=None):
     return kept, dropped
 
 
-def _covered_share(u, others):
-    """Share of ``u``'s words found, in runs of PAIR_COVER_RUN or more, in
-    the other laptop's utterances ``others`` (time order) taken together."""
-    mine = _utterance_tokens(u)
+def _words_and_tokens(text):
+    """[(word as written, token)] for a text; words with no letters or digits
+    (a lone dash) are dropped so words and tokens stay one to one."""
+    out = []
+    for w in _WORD_RE.findall(text or ""):
+        tok = re.sub(r"[^a-z0-9']", "", w.lower())
+        if tok:
+            out.append((w, tok))
+    return out
+
+
+def _coverage(u, others):
+    """(share, covered mask, words) of ``u``'s words found in the other
+    laptop's utterances ``others`` (time order) taken together, in runs of
+    PAIR_COVER_RUN tokens or more; a shorter utterance must appear whole."""
+    pairs = _words_and_tokens(u.get("text"))
+    mine = [t for _, t in pairs]
     if not mine:
-        return 0.0
-    theirs = [tok for v in others for tok in _utterance_tokens(v)]
+        return 0.0, [], pairs
+    theirs = [t for v in others for _, t in _words_and_tokens(v.get("text"))]
     if not theirs:
-        return 0.0
-    matched = sum(size for _, _, size in difflib.SequenceMatcher(None, mine, theirs, autojunk=False).get_matching_blocks()
-                  if size >= PAIR_COVER_RUN)
-    return matched / float(len(mine))
+        return 0.0, [False] * len(mine), pairs
+    run_min = min(PAIR_COVER_RUN, len(mine))
+    covered = [False] * len(mine)
+    for i, _j, size in difflib.SequenceMatcher(None, mine, theirs, autojunk=False).get_matching_blocks():
+        if size >= run_min:
+            for k in range(i, i + size):
+                covered[k] = True
+    return sum(covered) / float(len(mine)), covered, pairs
+
+
+def _longest_uncovered(covered):
+    best, run_start = (0, 0), None
+    for i, c in enumerate(list(covered) + [True]):
+        if not c and run_start is None:
+            run_start = i
+        elif c and run_start is not None:
+            if i - run_start > best[0] - best[1]:
+                best = (i, run_start)
+            run_start = None
+    return best[1], best[0]      # [start, end)
 
 
 def _drop_covered(kept, dropped, tolerance):
-    """Second pass over the kept utterances: the one most covered by the
-    other laptop's kept utterances overlapping it in time goes, as long as
-    the share reaches PAIR_COVERED_SHARE; repeat until none does. Two
-    people really talking at once share no runs of words, so they stay."""
+    """Second pass over the kept utterances. The two recognizers cut speech
+    at different points, so a laptop's hearing of the far side can be a
+    two-word sliver ("read. What") or a composite that runs the far side's
+    tail into its own speaker's reply. Each round: among the utterances
+    covered (PAIR_COVERED_SHARE of their words, in runs of PAIR_COVER_RUN,
+    found in the other laptop's overlapping utterances) first trim the one
+    with the longest run of its own words, when that run reaches
+    PAIR_KEEP_REMAINDER: a composite loses the words the other laptop has
+    and keeps its own speaker's. Only when no covered utterance has words of
+    its own is the most covered one dropped. Trimming first keeps a near
+    laptop's clean line from looking redundant against a composite. One-word
+    utterances are never covered: "yeah" is anyone's. Two people really
+    talking at once share no runs of words, so they stay."""
     while True:
         rows = sorted(kept.values(), key=lambda u: (u["start_time"], u["transcript_id"]))
-        best, best_share = None, 0.0
+        covered = []       # (share, remainder length, u, mask, pairs, others)
         for u in rows:
+            if u.get("trimmed") or len(_utterance_tokens(u)) < 2:
+                continue
             u0, u1 = _span(u)
             others = [v for v in rows
                       if v["session_device_id"] != u["session_device_id"]
                       and _span(v)[0] <= u1 + tolerance and _span(v)[1] >= u0 - tolerance]
             if not others:
                 continue
-            share = _covered_share(u, others)
-            if share > best_share:
-                best, best_share, best_others = u, share, others
-        if best is None or best_share < PAIR_COVERED_SHARE:
+            share, mask, pairs = _coverage(u, others)
+            if share >= PAIR_COVERED_SHARE:
+                start, end = _longest_uncovered(mask)
+                covered.append((share, end - start, u, mask, pairs, others, start, end))
+        if not covered:
             return kept
-        kept.pop(best["transcript_id"])
+        trimmable = [c for c in covered if c[1] >= PAIR_KEEP_REMAINDER]
+        if trimmable:
+            _share, _n, u, _mask, pairs, _others, start, end = max(trimmable, key=lambda c: (c[1], c[0]))
+            u["text"] = " ".join(w for w, _ in pairs[start:end])
+            u["trimmed"] = True
+            u.pop("_tokens", None)
+            logging.info("paired merge: trimmed transcript %s to its own %d words", u["transcript_id"], end - start)
+            continue
+        share, _n, u, _mask, _pairs, others, _s, _e = max(covered, key=lambda c: c[0])
+        kept.pop(u["transcript_id"])
         for d in dropped:
-            if d["kept_transcript_id"] == best["transcript_id"]:
-                d["kept_transcript_id"] = best_others[0]["transcript_id"]
-        dropped.append({"transcript_id": best["transcript_id"], "kept_transcript_id": best_others[0]["transcript_id"],
-                        "reason": "covered", "similarity": round(best_share, 2)})
+            if d["kept_transcript_id"] == u["transcript_id"]:
+                d["kept_transcript_id"] = others[0]["transcript_id"]
+        dropped.append({"transcript_id": u["transcript_id"], "kept_transcript_id": others[0]["transcript_id"],
+                        "reason": "covered", "similarity": round(share, 2)})
+
+
+# ------------------------------------------------------- sentence stitching
+
+def _ends_sentence(text):
+    return bool(_SENTENCE_END.search((text or "").strip()))
+
+
+def _leading_tail(text):
+    """(tail, rest) when a sentence ends within the first STITCH_LEAD_WORDS
+    words of ``text`` and more words follow: the tail is the end of the
+    previous speaker's sentence that landed in this segment."""
+    words = (text or "").split()
+    for i in range(min(STITCH_LEAD_WORDS, len(words) - 1)):
+        if _ends_sentence(words[i]):
+            return " ".join(words[:i + 1]), " ".join(words[i + 1:])
+    return None, text
+
+
+def stitch_sentences(utterances, dropped=None):
+    """Post: the kept utterances in time order, stitched back into sentences.
+    (1) A leading sentence tail ("it." in "it. What's bothering me most?")
+    moves to the previous utterance when that one does not end a sentence
+    and started within STITCH_GAP seconds of this one ending its tail.
+    (2) Consecutive utterances of one speaker on one device within
+    STITCH_GAP become one turn, sentence ends or not: a turn is the unit a
+    negotiation move is coded on, and the recognizer's cuts fall at pauses.
+    (3) An unnamed piece between two pieces of one speaker, within the gap on
+    both sides, is that speaker's. Each stitched utterance keeps the first
+    piece's transcript_id, lists the others in ``stitched_from`` and carries
+    the sentence in ``text``; nothing exceeds STITCH_MAX_SECONDS or
+    STITCH_MAX_WORDS. ``dropped`` receives pieces emptied by (1)."""
+    rows = sorted((dict(u) for u in utterances), key=lambda u: (u["start_time"], u["transcript_id"]))
+    # (1) leading tails
+    out = []
+    for u in rows:
+        tail, rest = _leading_tail(u.get("text"))
+        prev = out[-1] if out else None
+        if tail and prev is not None and not _ends_sentence(prev.get("text")) \
+                and float(u["start_time"]) - _span(prev)[1] <= STITCH_GAP:
+            prev["text"] = ((prev.get("text") or "").rstrip() + " " + tail).strip()
+            prev["length"] = max(float(prev.get("length") or 0), float(u["start_time"]) - float(prev["start_time"]) + 0.5)
+            prev.setdefault("stitched_from", []).append(u["transcript_id"])
+            if not rest.strip():
+                if dropped is not None:
+                    dropped.append({"transcript_id": u["transcript_id"], "kept_transcript_id": prev["transcript_id"],
+                                    "reason": "fragment", "similarity": 1.0})
+                continue
+            u["text"] = rest
+            u["start_time"] = float(u["start_time"]) + 0.3   # the tail took the first beat
+            u["length"] = max(float(u.get("length") or 0) - 0.3, 0.1)
+        out.append(u)
+    # (3) unnamed pieces between one speaker's pieces
+    for i in range(1, len(out) - 1):
+        u, prev, nxt = out[i], out[i - 1], out[i + 1]
+        if not u.get("speaker_tag") and prev.get("speaker_tag") and prev.get("speaker_tag") == nxt.get("speaker_tag") \
+                and float(u["start_time"]) - _span(prev)[1] <= STITCH_GAP and float(nxt["start_time"]) - _span(u)[1] <= STITCH_GAP:
+            u["speaker_tag"] = prev["speaker_tag"]
+            u["team"] = prev.get("team", u.get("team"))
+            u["adopted"] = True
+    # (2) one speaker's consecutive pieces
+    stitched = []
+    for u in out:
+        prev = stitched[-1] if stitched else None
+        same = prev is not None and u.get("speaker_tag") and u.get("speaker_tag") == prev.get("speaker_tag") \
+            and u.get("session_device_id") == prev.get("session_device_id")
+        gap_ok = prev is not None and float(u["start_time"]) - _span(prev)[1] <= STITCH_GAP
+        if same and gap_ok:
+            words = len((prev.get("text") or "").split()) + len((u.get("text") or "").split())
+            if _span(u)[1] - float(prev["start_time"]) <= STITCH_MAX_SECONDS and words <= STITCH_MAX_WORDS:
+                prev["text"] = ((prev.get("text") or "").rstrip() + " " + (u.get("text") or "").strip()).strip()
+                prev["length"] = _span(u)[1] - float(prev["start_time"])
+                seen = prev.setdefault("stitched_from", [])
+                for tid in [u["transcript_id"]] + list(u.get("stitched_from") or []):
+                    if tid not in seen and tid != prev["transcript_id"]:
+                        seen.append(tid)
+                continue
+        stitched.append(u)
+    for i, u in enumerate(stitched):
+        u["index"] = i
+        if u.get("stitched_from") or u.get("trimmed"):
+            u["_text"] = u["text"]
+            u["_stitched"] = list(u.get("stitched_from") or [])
+    return stitched
 
 
 # ------------------------------------------------------------------- llm
@@ -999,12 +1202,19 @@ def code_row(code, transcript, teams=None, sides=None, names=TEAMS):
     # the device heard it from across the table.
     device_id = transcript.session_device_id
     conf = _attribution_confidence(transcript)
+    values = dict(code.values())
+    # A stitched or trimmed utterance was coded as the sentence the model saw,
+    # not the stored fragment; show that sentence.
+    presented = values.pop("_text", None)
+    stitched = values.pop("_stitched", None) or []
     row = {"transcript_id": transcript.id, "session_device_id": device_id,
            "start_time": transcript.start_time, "length": transcript.length,
-           "speaker_tag": transcript.speaker_tag, "text": transcript.transcript,
+           "speaker_tag": transcript.speaker_tag,
+           "text": presented if presented else transcript.transcript,
            "team": line_team(transcript, sides, teams, names),
-           "far_side": bool(conf and conf.get("far_side"))}
-    row.update(code.values())
+           "far_side": bool(conf and conf.get("far_side")),
+           "stitched_from": stitched}
+    row.update(values)
     return row
 
 
@@ -1149,6 +1359,11 @@ def run_coding(session_device_id, teams=None, llm=call_llm, run_id=None, codeboo
         else:
             rows = database.get_transcripts(session_device_id=run.session_device_id)
             utterances = utterances_from_rows(rows, sides.get(run.session_device_id))
+        utterances = stitch_sentences(utterances, dropped if run.is_paired() else None)
+        if run.is_paired():
+            extra["cross_talk"]["dropped"] = len(dropped)
+            extra["cross_talk"]["kept"] = len(utterances)
+            extra["cross_talk"]["detail"] = dropped[:500]
         coded, invalid = code_utterances(codebook, utterances, llm, names=names)
         database.add_negotiation_codes(run.id, coded, list(codebook["dimensions"]))
         if teams is None:
