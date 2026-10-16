@@ -1,0 +1,51 @@
+# The Flask API server alone (src/server + src/common): sign-in, sessions,
+# dashboards, every /api route, Socket.IO, migrations. No CUDA, no models,
+# about 1 GB installed. The audio/video processors need
+# src/requirements-unified.txt on a GPU machine instead.
+#
+# Versions are the ones pinned in src/requirements-unified.txt so the dev
+# server behaves like production; when one of them moves there, move it
+# here too. Transitive dependencies are left to pip.
+#
+# Python 3.11 to 3.13. Usage: see README.md, "Development".
+
+# Web framework + extensions
+Flask==3.1.3
+Werkzeug==3.1.8
+MarkupSafe==3.0.3
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.1.0
+Flask-SocketIO==5.6.1
+Flask-Limiter==4.1.1
+python-socketio==5.16.3
+python-engineio==4.13.3
+simple-websocket==1.1.0
+gunicorn==26.2.0
+
+# Database, cache, scheduling
+SQLAlchemy==2.0.51
+alembic==1.18.5
+mysql-connector-python==9.7.0
+redis==8.0.1
+APScheduler==3.11.3
+
+# Device websocket (Twisted/autobahn) and post-hoc queue client
+Twisted==26.4.0
+autobahn==26.6.2
+websockets==16.0
+
+# Routes' own imports
+requests==2.34.2
+python-dotenv==1.2.2
+google-genai==2.10.0
+prometheus_client==0.25.0
+psutil==7.2.2
+numpy==2.4.6
+scipy==1.18.0
+pandas==3.0.3
+gensim==4.4.0
+spacy==3.8.14
+joblib==1.5.3
+PyPDF2==3.0.1
+# Topic modelling also wants the spaCy English model, installed separately
+# when you need it:  python -m spacy download en_core_web_sm

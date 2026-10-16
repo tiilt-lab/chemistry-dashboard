@@ -49,6 +49,15 @@ def database_name():
     # database on the same server without editing config.ini.
     return os.environ.get('DC_DATABASE_NAME') or str(config['server'].get('database_name', 'discussion_capture'))
 
+def database_host():
+    # Where MySQL listens. Overridable so a development checkout can use the
+    # container from deploy/dev/docker-compose.yml on a non-default port
+    # beside a MySQL that already owns 3306.
+    return str(config['server'].get('database_host', 'localhost'))
+
+def database_port():
+    return int(config['server'].get('database_port', 3306))
+
 def root_dir():
     return str(config['rootpath']['root_dir'])
 

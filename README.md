@@ -122,8 +122,8 @@ plus CUDA 12.8 and cuDNN from NVIDIA's apt repos. The pinned torch wheels are
 cu128 builds — a driver from the 570 series works; CUDA 13-only setups don't.
 
 Python 3.13 is required for the unified venv (via miniforge/conda, deadsnakes,
-or a system python3.13). Node 20 is required for the frontend (via
-[nvm](https://github.com/nvm-sh/nvm): `nvm install 20`).
+or a system python3.13). Node 24 (the version CI builds with) for the
+frontend (via [nvm](https://github.com/nvm-sh/nvm): `nvm install 24`).
 
 ### 2. Clone and create the Python environment
 
@@ -243,15 +243,78 @@ Log in at your domain and create a session.
 
 ## Development
 
-Dev mode without nginx — Vite proxies `/api` and `/socket.io` (see
-`frontend/vite.config.js`):
+Most PRs touch the frontend, the Flask routes or the analytics, and none of
+that needs a GPU: the CI checks run on a plain laptop, and so does the API
+server with the frontend dev server in front of it. Only the audio and video
+processors need the CUDA machine.
+
+### The checks CI runs
+
+Python 3.11 or newer and Node 24 (the version CI uses):
 
 ```bash
-src/venv-unified/bin/python src/server/discussion_capture.py
-cd frontend && npm start        # http://localhost:3000
+python3 -m venv .venv-ci
+.venv-ci/bin/pip install pytest ruff==0.16.2 numpy scipy flask==3.1.3 requests==2.34.2 prometheus_client==0.25.0 moviepy==2.2.1
+.venv-ci/bin/python -m pytest tests/ -q        # unit + contract tests, no DB or GPU
+.venv-ci/bin/ruff check src                    # must report no violations
+cd frontend && npm ci && npm run lint && npm run typecheck && npm test && npm run build
 ```
 
-Run any processor by hand the same way (stop its systemd unit first):
+The fifth check, the migration round trip against a real MySQL, needs the
+containers from the next section and an empty database:
+
+```bash
+docker compose -f deploy/dev/docker-compose.yml exec mysql mysql -uroot -proot -e 'CREATE DATABASE IF NOT EXISTS blinc'
+DC_DATABASE_URL=mysql+mysqlconnector://root:root@127.0.0.1:3306/blinc src/venv-server/bin/python src/server/migrations/run_migrations.py roundtrip
+```
+
+### Running the site without a GPU
+
+```bash
+# 1. MySQL and Redis in Docker. The data lives in a named volume and
+#    survives restarts; `down -v` wipes it.
+docker compose -f deploy/dev/docker-compose.yml up -d
+
+# 2. A server-only Python environment: Flask, the MySQL driver and what the
+#    routes import. About 1 GB, no CUDA. Python 3.11 to 3.13.
+python3 -m venv src/venv-server
+src/venv-server/bin/pip install -r src/requirements-server.txt
+
+# 3. Configuration. The example already matches the containers (user blinc,
+#    database discussion_capture, localhost ports). Set root_dir to a
+#    directory you can write to; uploads and voice prints go there.
+cp src/server/config.ini.example src/server/config.ini
+mkdir -p ~/blinc-data        # then root_dir=/home/<you>/blinc-data in config.ini
+
+# 4. Schema, then a first login (role 2 = admin).
+(cd src/server && ../venv-server/bin/flask --app discussion_capture db upgrade)
+(cd src/server && ../venv-server/bin/python create_user.py)
+
+# 5. Run. Vite proxies /api and /socket.io to :5001 (frontend/vite.config.js).
+DC_PORT=5001 src/venv-server/bin/python src/server/discussion_capture.py
+cd frontend && npm ci && npm start              # http://localhost:3000
+```
+
+Everything the browser asks the Flask server for works: sign-in, sessions,
+People and Students, the dashboard pages, every `/api` route. Nothing that
+needs a processor does: live capture, voice enrollment, transcription, video,
+post-hoc runs. Gemini requests fail until a real `GOOGLE_API_KEY` is in
+`src/server/.env`; the server starts without one.
+
+If a MySQL or Redis already listens on this machine, start the containers on
+other ports and point the server at them:
+
+```bash
+BLINC_MYSQL_PORT=3307 BLINC_REDIS_PORT=6380 docker compose -f deploy/dev/docker-compose.yml up -d
+# in config.ini: database_port=3307 and redis_port=6380
+DC_PORT=5091 DC_DEVICE_WS_PORT=9091 src/venv-server/bin/python src/server/discussion_capture.py
+cd frontend && DC_API_TARGET=http://localhost:5091 npm start
+```
+
+### Processors by hand
+
+On the GPU machine, run any processor from the unified venv the same way
+(stop its systemd unit first):
 
 ```bash
 src/venv-unified/bin/python src/audio_processing/server.py
@@ -260,8 +323,6 @@ export PYTHONPATH=src/video_processing:src/video_processing/yolo_head   # video 
 src/venv-unified/bin/python src/video_processing/server.py
 src/venv-unified/bin/python src/video_processing/server_posthoc.py
 ```
-
-Frontend checks: `npm run lint`, `npm test` (vitest), `npm run typecheck`.
 
 **Mic/camera over plain HTTP** (LAN testing): Chrome blocks capture on
 insecure origins. Add your server's address at

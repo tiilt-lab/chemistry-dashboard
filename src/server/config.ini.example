@@ -21,8 +21,16 @@ domain=localhost:3000
 
 # MySQL user (password is derived as user:user) and database name.
 # Give each instance its own database to isolate schema/migrations.
-database_user=vagrant
+# These defaults match the development containers in
+# deploy/dev/docker-compose.yml and the install steps in README.md.
+database_user=blinc
 database_name=discussion_capture
+
+# Where MySQL listens. Defaults: localhost:3306. Set when the server is
+# elsewhere or on another port (e.g. the dev container started with
+# BLINC_MYSQL_PORT=3307).
+#database_host=localhost
+#database_port=3306
 
 # Redis connection. Defaults: localhost:6379, db 0.
 # Give each instance a distinct redis_db to isolate the SocketIO message

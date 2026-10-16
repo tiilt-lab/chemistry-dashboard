@@ -1,0 +1,42 @@
+# MySQL and Redis for a development checkout of the Flask server. Production
+# (nublinc.com) uses the host's own MySQL and Redis; nothing here touches it.
+#
+#   docker compose -f deploy/dev/docker-compose.yml up -d
+#   docker compose -f deploy/dev/docker-compose.yml down       # keeps the data
+#   docker compose -f deploy/dev/docker-compose.yml down -v    # wipes the data
+#
+# The server's defaults (src/server/config.ini.example) match this file:
+# user blinc, password blinc, database discussion_capture, localhost:3306
+# and localhost:6379. If a MySQL or Redis already listens on those ports,
+# start on others and tell the server with database_port / redis_port in
+# config.ini:
+#   BLINC_MYSQL_PORT=3307 BLINC_REDIS_PORT=6380 docker compose -f deploy/dev/docker-compose.yml up -d
+name: blinc-dev
+
+services:
+  mysql:
+    # Same major version as production (8.0.x).
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: discussion_capture
+      # The server derives the password from the user name (user:user).
+      MYSQL_USER: blinc
+      MYSQL_PASSWORD: blinc
+    ports:
+      - "127.0.0.1:${BLINC_MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:${BLINC_REDIS_PORT:-6379}:6379"
+
+volumes:
+  mysql-data:
