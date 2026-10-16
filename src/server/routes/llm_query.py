@@ -29,7 +29,7 @@ class _LLMBusy(Exception):
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-# Fail loudly at startup instead of 400ing every LLM request at runtime:
+# Warn loudly at startup instead of 400ing every LLM request at runtime:
 # real Google API keys are 39 chars starting with "AIza".
 if not GOOGLE_API_KEY or len(GOOGLE_API_KEY) < 30 or not GOOGLE_API_KEY.startswith("AIza"):
     logging.warning(
@@ -39,7 +39,18 @@ if not GOOGLE_API_KEY or len(GOOGLE_API_KEY) < 30 or not GOOGLE_API_KEY.startswi
         len(GOOGLE_API_KEY or ""),
     )
 
-client = genai.Client(api_key=GOOGLE_API_KEY)
+# The Gemini client is built on first use: genai.Client raises when there is
+# no key at all, which used to stop the whole server from starting on a
+# development machine without one. Without a key only the Gemini fallback
+# fails, per request; the local Ollama path is unaffected.
+_client = None
+
+
+def _gemini_client():
+    global _client
+    if _client is None:
+        _client = genai.Client(api_key=GOOGLE_API_KEY)
+    return _client
 
 
 # ---------------------------------------------------------------------------
@@ -344,7 +355,7 @@ def call_gemini_with_retry(prompt, max_retries=5):
     iter = 0
     for attempt in range(max_retries):
         try:
-            response = client.models.generate_content(
+            response = _gemini_client().models.generate_content(
                 model=models[iter],
                 contents=prompt
             )

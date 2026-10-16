@@ -5,6 +5,12 @@ import eslint from "vite-plugin-eslint"
 import tailwindcss from "@tailwindcss/vite"
 
 
+// The API the dev server proxies to. 5001 is where gunicorn listens on the
+// production host, so a dev frontend there talks to the live API; a server
+// started by hand on another port is reached with
+//     DC_API_TARGET=http://localhost:5091 npm start
+const apiTarget = process.env.DC_API_TARGET || "http://localhost:5001"
+
 export default defineConfig(() => {
     return {
         plugins: [
@@ -24,11 +30,11 @@ export default defineConfig(() => {
             port: 3000,
             proxy: {
                 "/api": {
-                    target: "http://localhost:5001",
+                    target: apiTarget,
                     changeOrigin: false,
                 },
                 "/socket.io": {
-                    target: "http://localhost:5001",
+                    target: apiTarget,
                     changeOrigin: false,
                     ws: true,
                 },

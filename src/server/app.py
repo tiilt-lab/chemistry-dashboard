@@ -82,7 +82,8 @@ socketio = SocketIO(app, async_mode='threading', log=logger, cors_allowed_origin
 
 # Create database
 DATABASE_FILE = os.path.dirname(os.path.abspath(__file__)) + '/discussion_capture.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://{0}@localhost:3306/{1}'.format(cf.database_user(), cf.database_name())
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://{0}@{1}:{2}/{3}'.format(
+    cf.database_user(), cf.database_host(), cf.database_port(), cf.database_name())
 # Pool sized for the threaded server. The defaults (5 + 10 overflow, 30 s wait,
 # no pre-ping) time out once ~15 slow requests hold connections, and hand out a
 # dead connection after a MySQL restart. MySQL max_connections is 151.
