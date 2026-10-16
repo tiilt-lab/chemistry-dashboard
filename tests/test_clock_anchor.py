@@ -61,9 +61,14 @@ def test_server_wires_the_anchor_into_the_stream():
     here = os.path.dirname(__file__)
     with open(os.path.join(here, "..", "src", "audio_processing", "server.py")) as f:
         src = f.read()
-    assert "self.clock = clock_anchor.ClockAnchor(time.time())" in src
+    assert "self.clock = clock_anchor.ClockAnchor(time.time(), getattr(self.config, 'reported_backlog', 0.0))" in src
     assert src.index("self.enqueue_latest_audio_chunk(asr_data)") < src.index("self._track_clock()")
     assert "self.config.start_offset += late" in src and "self.config.start_offset += delta" in src
+    # audio received before the stream is ready is counted against the report
+    assert "discarded = self.clock.discard(self._raw_seconds(data))" in src
+    assert "self.config.start_offset += discarded" in src
+    with open(os.path.join(here, "..", "src", "audio_processing", "processing_config.py")) as f:
+        assert "config.reported_backlog = offset" in f.read()
     assert "live_presence.set_clock(r, key, clock)" in src and "live_presence.clear_clock(r, key)" in src
 
 
@@ -90,22 +95,72 @@ def test_a_long_hiccup_is_corrected_then_undone_when_the_audio_arrives():
     assert moved > RE_ANCHOR_THRESHOLD and a.corrected == moved
     t = 30.0 + RE_ANCHOR_SUSTAIN + RE_ANCHOR_THRESHOLD + 3.0
     a.frame(t, t)                                                         # the held audio lands
-    undone, _ = _stream(a, t, RE_ANCHOR_SUSTAIN + 2.0, audio_at=t)
+    # the settle window after the burst, then the sustain window, then the undo
+    undone, _ = _stream(a, t, 25.0, audio_at=t)
     assert undone < 0 and abs(a.corrected) < 0.5
 
 
-def test_replayed_backlog_audio_from_the_past_is_left_where_its_samples_put_it():
-    # A reconnect: the client reports its backlog in the start message (the
-    # service subtracts it from start_offset) and drains it at once, so
-    # audio runs "ahead" of real time from the first frame. No correction
-    # has been made, so nothing is undone.
-    a = ClockAnchor(0.0)
+def test_replayed_backlog_that_arrives_as_promised_moves_nothing():
+    # A reconnect: the browser reports 100 s of queued audio (the service has
+    # taken it off start_offset) and drains it over the first seconds. The
+    # audio then leads real time by exactly the promised 100 s: no move.
+    a = ClockAnchor(0.0, reported_backlog=100.0)
     a.first_frame(0.1)
-    total, _ = _stream(a, 0.1, 60.0, audio_at=100.0)   # 100 s of backlog already counted
-    assert total == 0.0 and a.corrected == 0.0 and a.drift < -90
+    audio = 0.0
+    for i in range(1, 41):                       # the replay: 100 s of audio in 4 s ...
+        audio += 2.5 + 0.1                       # ... while live capture keeps arriving behind it
+        assert a.frame(audio, 0.1 + i * 0.1) == 0.0
+    total, _ = _stream(a, 4.1, 60.0, audio_at=audio)
+    assert total == 0.0 and a.corrected == 0.0 and abs(a.drift) < 0.5
+
+
+def test_a_promised_backlog_that_never_arrives_is_corrected():
+    # 2026-10-16, Groups 2, 4 and 6: the browser promised up to 196 s of
+    # queued audio, start_offset was moved back for it, and the frames were
+    # lost. The audio then runs where it should be minus 196 s, for the
+    # whole session, unless the clock moves forward again.
+    a = ClockAnchor(0.0, reported_backlog=196.0)
+    a.first_frame(0.2)
+    total, _ = _stream(a, 0.2, 40.0)
+    assert 195.0 <= total <= 197.0 and abs(a.drift) < 0.5
+    assert a.snapshot()["corrected"] == round(total, 1)
+
+
+def test_audio_discarded_before_the_stream_was_ready_moves_the_clock_at_once():
+    # The same loss, but seen: the service received the frames while still
+    # setting up and could not count them. It knows their duration, so the
+    # clock moves forward immediately and the expectation shrinks to match.
+    a = ClockAnchor(0.0, reported_backlog=196.0)
+    assert a.discard(190.0) == 190.0 and a.discarded == 190.0 and a.expected_lead == 6.0
+    assert a.discard(0.0) == 0.0
+    a.first_frame(0.3)
+    audio = 0.0
+    for i in range(1, 7):                        # the remaining 6 s replay quickly
+        audio += 1.0
+        a.frame(audio, 0.3 + i * 0.05)
+    total, _ = _stream(a, 0.6, 30.0, audio_at=audio)
+    assert total == 0.0 and abs(a.drift) < 0.5
+    assert a.snapshot()["discarded"] == 190.0
+
+
+def test_no_judgement_while_a_replay_is_still_arriving():
+    # A 60 s replay trickling in over 20 s on a slow link: the lead keeps
+    # growing, so the anchor waits instead of mistaking the early shortfall
+    # for a stall.
+    a = ClockAnchor(0.0, reported_backlog=60.0)
+    a.first_frame(0.0)
+    audio, moved = 0.0, 0.0
+    t = 0.0
+    while t < 20.0:
+        t += 0.5
+        audio += 1.5 + 0.5                       # 3 s of audio per real second: replay + live
+        moved += a.frame(audio, t)
+    assert moved == 0.0
+    total, _ = _stream(a, 20.0, 30.0, audio_at=audio)
+    assert total == 0.0 and abs(a.drift) < 1.0
 
 
 def test_snapshot_is_what_the_devices_tab_shows():
     a = ClockAnchor(100.0)
     a.first_frame(118.0)
-    assert a.snapshot() == {"drift": 0.0, "corrected": 0.0, "late_start": 18.0}
+    assert a.snapshot() == {"drift": 0.0, "corrected": 0.0, "late_start": 18.0, "discarded": 0.0}

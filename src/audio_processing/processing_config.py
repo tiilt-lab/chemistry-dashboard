@@ -90,11 +90,16 @@ class ProcessingConfig:
             logging.warning('Invalid key sent by device.')
             return False, "Invalid key."
 
-        return True, ProcessingConfig(auth_key, session_key, server_start, start_offset,
-                                      sample_rate, encoding, channels, transcribe, keywords,
-                                      doa, features, tag, diarization, embeddings_file,
-                                      topic_model, owner,sessionId,deviceId,videocartoonify,mimeExtension,
-                                      asr=asr)
+        config = ProcessingConfig(auth_key, session_key, server_start, start_offset,
+                                  sample_rate, encoding, channels, transcribe, keywords,
+                                  doa, features, tag, diarization, embeddings_file,
+                                  topic_model, owner,sessionId,deviceId,videocartoonify,mimeExtension,
+                                  asr=asr)
+        # The seconds of queued audio the browser said it would replay, already
+        # taken off start_offset above; the clock anchor expects the audio to
+        # lead real time by this much (clock_anchor.py).
+        config.reported_backlog = offset
+        return True, config
 
     def is_valid_key(self):
         return RedisSessions.get_device_key(self.auth_key) is not None
