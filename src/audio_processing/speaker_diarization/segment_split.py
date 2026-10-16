@@ -1,10 +1,17 @@
 """Interruption handling for live attribution.
 
-Tier 1 — split at the speaker change: most classroom "interruption" is rapid
-alternation, not sustained double-talk. A short embedding window slides
-across the segment; when the best-matching participant flips and stays
-flipped, the segment is split at the nearest word boundary and each part is
-attributed independently — two clean rows instead of one smeared abstain.
+Tier 1 — split at the speaker changes: most classroom "interruption" is
+rapid alternation, not sustained double-talk. A short embedding window
+slides across the segment. Where the voice on one side of a point stops
+resembling the voice on the other (the cosine distance between the mean
+embeddings of the windows just before and just after rises past
+CHANGE_DISTANCE), the segment is split at the nearest word boundary and
+each part is attributed independently -- clean rows instead of one smeared
+name. The detection reads the embeddings themselves, not the roster, so it
+finds any number of turns and finds the other team's speaker even though
+no enrolled print matches them (that part is left unnamed rather than
+given the nearest own-team name). A sustained flip of the best-matching
+print is still taken as a boundary too.
 
 Tier 2 — name the overlap: when two participants BOTH score strongly across
 the same span (true simultaneous speech), the span is marked contested with
@@ -30,6 +37,8 @@ MIN_PART_S = 0.8     # never emit a fragment shorter than this
 WIN_FLOOR = 0.15     # a window vote needs at least this sim to count
 CONTEST_FLOOR = 0.25   # both voices at/above this across the span -> contested
 CONTEST_SHARE = 0.25   # each contested voice must win >= this share of windows
+CHANGE_CONTEXT = 2     # windows on each side of a point that are compared ...
+CHANGE_DISTANCE = 0.4  # ... and the cosine distance between their means that marks a change
 
 
 def _embed(int16_audio, verification):
@@ -74,8 +83,8 @@ def _score_prints(utt, fingerprints, verification):
     return scored
 
 
-def _window_votes(int16_audio, fingerprints, verification):
-    """Per-window winner labels across the clip: [(t_center, alias|None, sim)]."""
+def _window_embeddings(int16_audio, verification):
+    """(centers, unit embeddings or None) for the sliding windows of a clip."""
     n = len(int16_audio)
     win, hop = int(WIN_S * SR), int(HOP_S * SR)
     clips, centers = [], []
@@ -97,6 +106,13 @@ def _window_votes(int16_audio, fingerprints, verification):
                 embs.append(_embed(clip, verification))
             except Exception:
                 embs.append(None)
+    return centers, embs
+
+
+def _window_votes(int16_audio, fingerprints, verification, windows=None):
+    """Per-window winner labels across the clip: [(t_center, alias|None, sim)].
+    ``windows``: (centers, embs) already computed, else computed here."""
+    centers, embs = windows if windows is not None else _window_embeddings(int16_audio, verification)
     votes = []
     for t, utt in zip(centers, embs):
         scored = []
@@ -110,6 +126,39 @@ def _window_votes(int16_audio, fingerprints, verification):
         else:
             votes.append((t, None, 0.0))
     return votes
+
+
+def _change_points(centers, embs, context=CHANGE_CONTEXT, distance=CHANGE_DISTANCE,
+                   min_part_s=MIN_PART_S):
+    """Times (clip-relative) where the voice changes: the cosine distance
+    between the mean embedding of ``context`` windows before a point and
+    ``context`` after it peaks above ``distance``. Peaks closer than
+    ``min_part_s`` keep the stronger one. Roster-free: a voice no print
+    matches still changes the embedding."""
+    pairs = [(t, e) for t, e in zip(centers, embs) if e is not None]
+    if len(pairs) < 2 * context + 1:
+        return []
+    times = [t for t, _ in pairs]
+    vecs = np.stack([e for _, e in pairs])
+    scores = []
+    for i in range(context, len(pairs) - context + 1):
+        left = vecs[i - context:i].mean(axis=0)
+        right = vecs[i:i + context].mean(axis=0)
+        cos = float(np.dot(left, right) / ((np.linalg.norm(left) * np.linalg.norm(right)) + 1e-9))
+        scores.append((i, 1.0 - cos))
+    peaks = []
+    for k, (i, d) in enumerate(scores):
+        if d < distance:
+            continue
+        prev_d = scores[k - 1][1] if k > 0 else -1.0
+        next_d = scores[k + 1][1] if k + 1 < len(scores) else -1.0
+        if d >= prev_d and d >= next_d:
+            peaks.append(((times[i - 1] + times[i]) / 2.0, d))
+    kept = []
+    for t, d in sorted(peaks, key=lambda p: -p[1]):
+        if all(abs(t - u) >= min_part_s for u, _ in kept):
+            kept.append((t, d))
+    return sorted(t for t, _ in kept)
 
 
 def _change_point(votes):
@@ -166,10 +215,14 @@ def split_and_attribute(int16_audio, words, seg_start, seg_end,
         whole['alias'], whole['speaker_id'], whole['confidence'] = decide(int16_audio)
         return [whole]
 
-    votes = _window_votes(int16_audio, fingerprints, verification)
-    cp = _change_point(votes)
+    windows = _window_embeddings(int16_audio, verification)
+    votes = _window_votes(int16_audio, fingerprints, verification, windows)
+    cps = _change_points(*windows)
+    flip = _change_point(votes)
+    if flip is not None and all(abs(flip - t) >= MIN_PART_S for t in cps):
+        cps = sorted(cps + [flip])
 
-    if cp is None:
+    if not cps:
         whole['alias'], whole['speaker_id'], whole['confidence'] = decide(int16_audio)
         # Contested = two voices each winning solid shares of the windows
         # (ping-pong too fast to split). Checked even when the whole-segment
@@ -185,31 +238,49 @@ def split_and_attribute(int16_audio, words, seg_start, seg_end,
                          contested, whole['alias'])
         return [whole]
 
-    # split at the word boundary nearest the change point
-    cp_abs = seg_start + cp
-    best_i, best_d = None, None
-    for i in range(1, len(words)):
-        boundary = words[i][1]  # start of word i
-        d = abs(boundary - cp_abs)
-        if best_d is None or d < best_d:
-            best_i, best_d = i, d
-    left_end = words[best_i - 1][2]
-    right_start = words[best_i][1]
-    if (left_end - seg_start) < MIN_PART_S or (seg_end - right_start) < MIN_PART_S:
+    # Each change point snaps to the nearest word boundary; a boundary that
+    # would leave a part shorter than MIN_PART_S is dropped.
+    cuts = []
+    for cp in cps:
+        cp_abs = seg_start + cp
+        best_i, best_d = None, None
+        for i in range(1, len(words)):
+            d = abs(words[i][1] - cp_abs)
+            if best_d is None or d < best_d:
+                best_i, best_d = i, d
+        if best_i is not None and (not cuts or best_i > cuts[-1]):
+            cuts.append(best_i)
+    spans = []
+    lo = 0
+    for i in cuts + [len(words)]:
+        if i <= lo:
+            continue
+        s_t = seg_start if lo == 0 else words[lo][1]
+        e_t = seg_end if i == len(words) else words[i - 1][2]
+        spans.append([s_t, e_t, lo, i])
+        lo = i
+    merged = []
+    for span in spans:
+        if merged and (span[1] - span[0]) < MIN_PART_S:
+            merged[-1][1], merged[-1][3] = span[1], span[3]
+        else:
+            merged.append(span)
+    if len(merged) > 1 and (merged[0][1] - merged[0][0]) < MIN_PART_S:
+        merged[1][0], merged[1][2] = merged[0][0], merged[0][2]
+        merged.pop(0)
+    if len(merged) < 2:
         whole['alias'], whole['speaker_id'], whole['confidence'] = decide(int16_audio)
         return [whole]
 
-    a0 = int((0) * SR)
-    a1 = int((left_end - seg_start) * SR)
-    b0 = int((right_start - seg_start) * SR)
     parts = []
-    for (s, e, sl, clip) in [
-            (seg_start, left_end, (0, best_i), int16_audio[a0:a1]),
-            (right_start, seg_end, (best_i, len(words)), int16_audio[b0:])]:
-        alias, sid, conf = decide(clip)
-        parts.append({'start': s, 'end': e, 'text_slice': sl,
+    for s_t, e_t, w0, w1 in merged:
+        a0 = max(0, int((s_t - seg_start) * SR))
+        a1 = min(len(int16_audio), int((e_t - seg_start) * SR))
+        alias, sid, conf = decide(int16_audio[a0:a1])
+        parts.append({'start': s_t, 'end': e_t, 'text_slice': (w0, w1),
                       'alias': alias, 'speaker_id': sid, 'contested': None,
                       'confidence': conf})
-    logging.info('segment split at %.1fs: %s | %s',
-                 cp_abs, parts[0]['alias'], parts[1]['alias'])
+    logging.info('segment split at %s: %s',
+                 ', '.join('%.1fs' % (seg_start + c) for c in cps),
+                 ' | '.join(str(p['alias']) for p in parts))
     return parts
