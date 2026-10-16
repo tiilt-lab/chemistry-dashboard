@@ -525,20 +525,21 @@ def merge_paired(rows_by_device, sides, diagnostics=None, recordings=None):
     session_device_id; dropped: [{transcript_id, kept_transcript_id,
     reason, similarity}])."""
     by_device = {}
+    names = tuple(sorted(set(v for v in sides.values() if v))) or TEAMS
     for device_id, rows in rows_by_device.items():
-        by_device[device_id] = [_utterance(r, sides.get(device_id)) for r in rows]
+        units = []
+        for r in rows:
+            team = sides.get(device_id)
+            if team and len(set(sides.values())) == 2:
+                # The same rule as the read-back (line_team): a line named
+                # from the partner's roster belongs to the other side.
+                team = line_team(r, sides, None, names)
+            units.append(_utterance(r, team))
+        by_device[device_id] = units
     tolerance = PAIR_START_TOLERANCE
     alignment = None
     if len(by_device) == 2:
         reference_device, other_device = sorted(by_device)
-        # A line this laptop named from the partner's roster was said on the
-        # other side of the table: it belongs to that side's team.
-        for dev, other in ((reference_device, other_device), (other_device, reference_device)):
-            far_team = sides.get(other)
-            if far_team:
-                for u in by_device[dev]:
-                    if (u.get("confidence") or {}).get("far_side"):
-                        u["team"] = far_team
         if recordings:
             try:
                 anchors = acoustic_anchors(recordings.get(reference_device), recordings.get(other_device))
@@ -976,16 +977,33 @@ def validate_teams(teams, names=TEAMS):
 
 # --------------------------------------------------------- orchestration
 
+def line_team(transcript, sides=None, teams=None, names=TEAMS):
+    """The team a transcript line counts for. In a paired session that is
+    its device's side, except that a line the device named from the partner
+    pod's roster (confidence.far_side: heard across the table) belongs to
+    the other side. Without a side it is the tag's assignment, else
+    "unassigned". The one rule for the run, the read-back and the re-roll,
+    so a person is never on two teams at once."""
+    side = (sides or {}).get(getattr(transcript, "session_device_id", None))
+    if side in names:
+        conf = _attribution_confidence(transcript)
+        if conf and conf.get("far_side"):
+            return other_team(side, names)
+        return side
+    return team_of(getattr(transcript, "speaker_tag", None) or "", teams, names)
+
+
 def code_row(code, transcript, teams=None, sides=None, names=TEAMS):
     # One entry of the API's "codes" list: the utterance, its codes (one key
-    # per dimension of the run's scheme) and its team (its device's side
-    # when the device has one, else its tag's assignment, else "unassigned").
+    # per dimension of the run's scheme), its team (line_team) and whether
+    # the device heard it from across the table.
     device_id = transcript.session_device_id
-    side = (sides or {}).get(device_id)
+    conf = _attribution_confidence(transcript)
     row = {"transcript_id": transcript.id, "session_device_id": device_id,
            "start_time": transcript.start_time, "length": transcript.length,
            "speaker_tag": transcript.speaker_tag, "text": transcript.transcript,
-           "team": side if side in names else team_of(transcript.speaker_tag or "", teams, names)}
+           "team": line_team(transcript, sides, teams, names),
+           "far_side": bool(conf and conf.get("far_side"))}
     row.update(code.values())
     return row
 

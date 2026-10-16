@@ -639,7 +639,7 @@ def test_routes_post_get_put_export_and_session_list(env):
     assert payload["pods"] == [{"id": pod.id, "name": pod.name, "group": None, "side": None}]
     assert len(payload["codes"]) == 14
     first = payload["codes"][0]
-    assert set(first) == {"transcript_id", "session_device_id", "start_time", "length", "speaker_tag", "team",
+    assert set(first) == {"transcript_id", "session_device_id", "start_time", "length", "speaker_tag", "team", "far_side",
                           "text", "emotion", "rip", "frame", "listening"}
     assert (first["start_time"], first["speaker_tag"], first["team"], first["frame"]) == (0, "Pat", "Pat", "past_blame")
     assert first["session_device_id"] == pod.id
@@ -1474,6 +1474,32 @@ def test_far_side_match_is_the_weaker_copy_and_belongs_to_the_other_team():
     assert kept[0]["team"] == "Sandy" and dropped == []
 
 
+def test_code_row_puts_a_far_side_line_on_the_other_team():
+    # Session 436: nine jacob lines recorded by the Team A laptop (heard across
+    # the table, named from the partner roster) were read back as Team A,
+    # although the run had counted them for Team B. One rule now: the device's
+    # side, flipped for a far-side line, for the run, the read-back and the
+    # re-roll alike.
+    sides = {1: "Team A", 2: "Team B"}
+    names = ("Team A", "Team B")
+    far = types.SimpleNamespace(id=9, session_device_id=1, start_time=5.0, length=3, speaker_tag="jacob",
+                                transcript="the loan is due", _voice_features_json=lambda: {"confidence": {"sim": 0.5, "far_side": True}})
+    near = types.SimpleNamespace(id=10, session_device_id=1, start_time=9.0, length=3, speaker_tag="chenghong",
+                                 transcript="we agree", _voice_features_json=lambda: {"confidence": {"sim": 0.7}})
+    assert nc.line_team(far, sides, None, names) == "Team B"
+    assert nc.line_team(near, sides, None, names) == "Team A"
+    code = types.SimpleNamespace(values=lambda: {"emotion": "neutral"})
+    row_far = nc.code_row(code, far, {}, sides, names)
+    row_near = nc.code_row(code, near, {}, sides, names)
+    assert row_far["team"] == "Team B" and row_far["far_side"] is True and row_far["emotion"] == "neutral"
+    assert row_near["team"] == "Team A" and row_near["far_side"] is False
+    # without a side (single pod) the tag's assignment decides, far side or not
+    assert nc.line_team(far, {}, {"jacob": "Team B"}, names) == "Team B"
+    # the merge applies the same rule to a kept far-side line
+    kept, _ = nc.merge_paired({1: [far], 2: []}, sides)
+    assert kept[0]["team"] == "Team B"
+
+
 def test_resolve_pair_after_the_session_ended(env):
     # end_session marks every pod removed before it queues the coding (the
     # flag means "not in the live session any more"); the pairing must still
@@ -1859,7 +1885,7 @@ def test_a_session_codes_with_the_scheme_it_chose(env):
     assert [dim["key"] for dim in payload["codebook"]["dimensions"]] == ["move", "tone"]
     assert payload["codebook"]["dimensions"][0]["codes"][1]["label"] == "Builds on"
     assert set(payload["codes"][0]) == {"transcript_id", "session_device_id", "start_time", "length", "speaker_tag",
-                                        "team", "text", "move", "tone"}
+                                        "team", "far_side", "text", "move", "tone"}
     assert payload["codes"][0]["move"] == "proposes" and payload["codes"][0]["tone"] == ["playful"]
     assert payload["codes"][1]["tone"] == []
     by_team = payload["summary"]["by_team"]
