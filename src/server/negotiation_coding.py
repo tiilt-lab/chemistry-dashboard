@@ -218,12 +218,23 @@ def chunks(utterances, size=CHUNK_SIZE, context=CONTEXT_SIZE):
 
 
 def _utterance(r, team=None):
+    conf = _attribution_confidence(r)
+    speaker_tag = r.speaker_tag
+    # A far-side name given by the closed-world rule is a guess on a faint
+    # match (rows from before 2026-10-16 18:07, when the service stopped
+    # making them): shinbrooke's own laptop handed "the bank doesn't wait"
+    # to jacob at 0.13. Unnamed is truer, and the stitcher then gives the
+    # piece to the speaker talking on either side of it.
+    if conf and conf.get("far_side") and conf.get("closed_world"):
+        speaker_tag = None
+        conf = dict(conf)
+        conf["guessed"] = True
+        conf.pop("far_side", None)
     u = {"transcript_id": r.id, "start_time": r.start_time, "length": r.length,
-         "speaker_tag": r.speaker_tag, "text": r.transcript,
+         "speaker_tag": speaker_tag, "text": r.transcript,
          "session_device_id": getattr(r, "session_device_id", None)}
     if team:
         u["team"] = team
-    conf = _attribution_confidence(r)
     if conf is not None:
         u["confidence"] = conf
     return u
@@ -1190,7 +1201,7 @@ def line_team(transcript, sides=None, teams=None, names=TEAMS):
     side = (sides or {}).get(getattr(transcript, "session_device_id", None))
     if side in names:
         conf = _attribution_confidence(transcript)
-        if conf and conf.get("far_side"):
+        if conf and conf.get("far_side") and not conf.get("closed_world"):
             return other_team(side, names)
         return side
     return team_of(getattr(transcript, "speaker_tag", None) or "", teams, names)
