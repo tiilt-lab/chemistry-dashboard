@@ -26,6 +26,10 @@ export class TranscriptModel {
   // voices that overlapped when the segment could not be cleanly attributed.
   speaker_confidence;
   contested;
+  // True when this pod's microphone heard the speaker from the other side of
+  // the table and named them from the partner pod's roster: shown muted on
+  // this pod's page, counted for their own team in coding.
+  far_side;
 
   static fromJson(json, speaker_metrics) {
     const model = new TranscriptModel();
@@ -54,6 +58,7 @@ export class TranscriptModel {
         ? vf.confidence.percent
         : null;
     model.contested = Array.isArray(vf.contested) ? vf.contested : null;
+    model.far_side = !!(vf.confidence && vf.confidence.far_side === true);
     return model;
   }
 
