@@ -16,6 +16,19 @@ const FEATURE_FIELDS = [
 // inline so a reviewer can spot the shaky attributions to fix first. Amber
 // below ~55% (or when two voices overlapped), muted otherwise. Nothing renders
 // when there is no score — a clustering-fallback or pre-confidence transcript.
+// Marks a line this microphone heard from the other side of the table.
+function FarSideTag({ farSide }) {
+    if (!farSide) return null
+    return (
+        <span
+            title="Heard from the other side of the table and named from the partner pod's roster; counted for that team."
+            className="rounded bg-tiilt-ground px-1 text-[10px] tracking-wide text-tiilt-muted uppercase"
+        >
+            across the table
+        </span>
+    )
+}
+
 function ConfidenceTag({ percent, contested }) {
     if (percent == null) return null
     const low = contested || percent < 55
@@ -118,10 +131,16 @@ function TranscriptPanel({
         await onEditText(t.id, clean)
     }
 
-    const speakerColors = buildSpeakerColors(transcripts)
+    // Lines this microphone heard from the other side of the table (named
+    // from the partner pod's roster) are this pod's hearing, not its team:
+    // muted and marked, hidden on request, and never in the legend.
+    const [hideFarSide, setHideFarSide] = useState(false)
+    const farSideCount = (transcripts || []).filter((t) => t.far_side).length
+    const speakerColors = buildSpeakerColors((transcripts || []).filter((t) => !t.far_side))
     const speakers = Object.keys(speakerColors)
 
     const list = (transcripts || []).filter((t) => {
+        if (hideFarSide && t.far_side) return false
         if (start === undefined || end === undefined) return true
         return t.start_time >= start && t.start_time <= end
     })
@@ -175,8 +194,19 @@ function TranscriptPanel({
                 ) : (
                     <span />
                 )}
-                {speakers.length > 0 ? (
-                    <span className="flex flex-wrap gap-x-3 gap-y-1">
+                {speakers.length > 0 || farSideCount > 0 ? (
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        {farSideCount > 0 ? (
+                            <label className="flex cursor-pointer items-center gap-1.5" title="Lines this laptop heard from the other side of the table. They are named from the partner pod's roster and counted for that team.">
+                                <input
+                                    type="checkbox"
+                                    className="h-3.5 w-3.5 cursor-pointer accent-tiilt"
+                                    checked={hideFarSide}
+                                    onChange={() => setHideFarSide(!hideFarSide)}
+                                />
+                                <span>hide {farSideCount} from across the table</span>
+                            </label>
+                        ) : null}
                         {speakers.map((tag) => (
                             <span
                                 key={tag}
@@ -215,7 +245,7 @@ function TranscriptPanel({
                         {list.map((t, index) => {
                             const isSelected = t.start_time === selectedTime
                             const isPlaying = index === playingIndex
-                            const color = t.speaker_tag
+                            const color = t.speaker_tag && !t.far_side
                                 ? speakerColors[t.speaker_tag]
                                 : "#d5cde4"
                             return (
@@ -240,6 +270,7 @@ function TranscriptPanel({
                                     className={
                                         (onEditText ? "cursor-text" : "cursor-pointer") +
                                         " rounded-r-lg border-l-[3px] py-1 pr-2 pl-3 transition " +
+                                        (t.far_side ? "opacity-60 " : "") +
                                         (isSelected
                                             ? "bg-tiilt-soft"
                                             : isPlaying
@@ -291,6 +322,7 @@ function TranscriptPanel({
                                                             contested={t.contested}
                                                         />
                                                     ) : null}
+                                                    <FarSideTag farSide={t.far_side} />
                                                 </span>
                                             ) : t.speaker_tag ? (
                                                 <span className="flex flex-wrap items-center gap-x-1">
@@ -304,6 +336,7 @@ function TranscriptPanel({
                                                         percent={t.speaker_confidence}
                                                         contested={t.contested}
                                                     />
+                                                    <FarSideTag farSide={t.far_side} />
                                                 </span>
                                             ) : (
                                                 <span className="text-tiilt-muted">—</span>

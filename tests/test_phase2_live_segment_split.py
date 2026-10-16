@@ -193,3 +193,30 @@ def test_roster_merges_own_and_far_side_speakers():
     route = open(os.path.join(os.path.dirname(__file__), "..", "src", "server", "routes", "callback.py")).read()
     assert "'/api/v1/callback/partner_speakers/<path:key>'" in route
     assert "json_response({'partner_speakers': database.partner_speaker_aliases(session_device)})" in route
+
+
+def test_a_faint_far_side_voice_is_not_named_by_the_closed_world_rule(monkeypatch):
+    # Session 436, 2026-10-16: the Team B laptop named a "[laughter]" after
+    # chenghong (far side) at sim 0.09 by closed-world. Below the gates a
+    # far-side alias abstains; an own-team alias may still be picked.
+    clip = _audio(3, seed=12)
+    utt = ss._embed(clip, FakeEcapa())
+    # a reference that scores about 0.15 against utt: mostly orthogonal
+    orth = np.array([1.0, 0.0, 0.0]) - float(utt[0]) * utt
+    orth = orth / np.linalg.norm(orth)
+    faint = 0.15 * utt + np.sqrt(1 - 0.15 ** 2) * orth
+    faint = faint / np.linalg.norm(faint)
+    silent = np.cross(utt, orth)                           # orthogonal to utt: scores 0
+    refs = {"A": silent, "B": faint}
+    monkeypatch.setattr(ss.pyd, "_print_embedding", lambda alias, raw, v: refs.get(alias))
+    ss.pyd._SESSION_ACC.clear()
+    roster = {7: {"alias": "A", "data": b"x"}, "far:B": {"alias": "B", "data": None, "far_side": True}}
+    alias, sid, conf = ss.pyd.checkFingerprints(clip.tobytes(), roster, FakeEcapa())
+    sim_b = float(np.dot(utt, refs["B"]))
+    assert ss.pyd.NOISE_FLOOR <= sim_b < ss.pyd.ACCEPT_LOW, sim_b   # the closed-world zone
+    assert alias is None and sid == -1 and conf is None
+    # the same faint score on an own-team alias is still a closed-world pick
+    refs["A"], refs["B"] = faint, silent
+    alias, sid, conf = ss.pyd.checkFingerprints(clip.tobytes(), roster, FakeEcapa())
+    assert alias == "A" and sid == 7 and conf["closed_world"] is True
+    ss.pyd._SESSION_ACC.clear()

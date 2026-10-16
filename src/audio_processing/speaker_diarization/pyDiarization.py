@@ -197,8 +197,12 @@ def checkFingerprints(x, fingerprints, verification):
   accepted = (best_sim >= ACCEPT_SURE
               or (best_sim >= ACCEPT_SIM and margin >= ACCEPT_MARGIN)
               or (best_sim >= ACCEPT_LOW and margin >= ACCEPT_LOW_MARGIN))
+  # A far-side name is only ever given on a clear match: the closed-world
+  # rule ("best of the roster beats unknown") is about this pod's own
+  # people, and naming a faint noise after someone across the table puts
+  # their name on the wrong pod's page for nothing.
   if not accepted and CLOSED_WORLD and own_scored == own_total \
-      and best_sim >= NOISE_FLOOR:
+      and best_sim >= NOISE_FLOOR and not far_side:
     # roster is complete: best-of-roster beats "unknown". Low-confidence
     # (below the gates) — logged as such, and deliberately NOT fed to
     # session adaptation.
