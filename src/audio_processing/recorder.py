@@ -27,7 +27,11 @@ class WaveRecorder:
             return
         try:
             dtype = np.float32 if self.depth == 4 else np.int16
-            if os.path.getsize(self.dat_filename) == 0:
+            # No frame ever arrived (a pod that joined and left in seconds)
+            # means the .dat was never created; that is an empty recording,
+            # not a failed close.
+            if (not os.path.exists(self.dat_filename)
+                    or os.path.getsize(self.dat_filename) == 0):
                 all_data = np.zeros((0, self.channels), dtype=dtype)
             else:
                 # memmap instead of read(): a multi-hour multi-channel .dat is
@@ -41,7 +45,8 @@ class WaveRecorder:
                     (chunk_length, self.channels))
             wavfile.write(self.wav_filename, self.sample_rate, all_data)
             del all_data
-            os.remove(self.dat_filename)
+            if os.path.exists(self.dat_filename):
+                os.remove(self.dat_filename)
             self.closed = True
         except Exception:
             logging.exception('WaveRecorder close failed for %s', self.dat_filename)
