@@ -1364,6 +1364,33 @@ def test_stitching_returns_the_tail_word_and_joins_a_speakers_pieces():
     assert nc._leading_tail("Yeah.") == (None, "Yeah.")
 
 
+def test_a_far_side_name_from_the_closed_world_rule_is_a_guess_and_the_piece_goes_to_its_neighbours():
+    # Session 436 at 02:41, recorded before the service stopped naming the
+    # far side on faint matches: shinbrooke's own laptop gave "the bank
+    # doesn't wait," to jacob (far side, closed world, sim 0.13) between two
+    # of her own pieces. Unnamed, the stitcher gives it to her, and her turn
+    # reads whole; the team never flips.
+    def guessed(i, start, text, length=1.0):
+        return types.SimpleNamespace(
+            id=i, session_device_id=1, start_time=start, length=length, speaker_tag="jacob", transcript=text,
+            _voice_features_json=lambda: {"confidence": {"percent": 10, "sim": 0.132, "margin": 0.08, "far_side": True, "closed_world": True}})
+    near = [_row(100143, 1, 161.0, "The oak supplier doesn't wait,", "shinbrooke", sim=0.26, length=2),
+            guessed(100144, 163.0, "the bank doesn't wait,"),
+            _row(100145, 1, 164.0, "and I lose the house my kid.", "shinbrooke", sim=0.24, length=1),
+            _row(100148, 1, 165.0, "Is that what you want? Is that the plan?", "shinbrooke", sim=0.09, closed_world=True, length=3)]
+    far = [_row(100147, 2, 169.0, "No! Nobody on this side wants you to go under.", "jacob", sim=0.55, length=3)]
+    sides = {1: "Team A", 2: "Team B"}
+    kept, dropped = nc.merge_paired({1: near, 2: far}, sides)
+    bank = next(u for u in kept if u["transcript_id"] == 100144)
+    assert bank["speaker_tag"] is None and bank["team"] == "Team A" and bank["confidence"]["guessed"] is True
+    assert nc.line_team(near[1], sides, None, ("Team A", "Team B")) == "Team A"
+    out = nc.stitch_sentences(kept)
+    assert [(u["speaker_tag"], u["team"], u["text"]) for u in out] == [
+        ("shinbrooke", "Team A", "The oak supplier doesn't wait, the bank doesn't wait, and I lose the house my kid. Is that what you want? Is that the plan?"),
+        ("jacob", "Team B", "No! Nobody on this side wants you to go under."),
+    ]
+
+
 def test_merge_paired_clocks_taken_as_equal_without_enough_anchors():
     # Two short lines cannot anchor a clock; the plain tolerance applies and
     # the far-apart copies are, correctly, left alone.
