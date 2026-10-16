@@ -164,3 +164,32 @@ def test_a_change_too_close_to_the_edge_is_not_a_part(monkeypatch):
     monkeypatch.setattr(ss, "_score_prints", lambda utt, fp, v: [(0.9, "A", 7)])
     parts = ss.split_and_attribute(clip, _words(0.0, 12.0), 0.0, 12.0, {7: {"alias": "A", "data": b""}}, FakeEcapa())
     assert len(parts) == 1 and parts[0]["text_slice"] == (0, 24)
+# ------------------------------------------------------------ far side
+
+def test_a_far_side_winner_is_named_without_a_local_speaker_id(monkeypatch):
+    clip = _audio(3, seed=11)
+    utt = ss._embed(clip, FakeEcapa())                      # exactly what the matcher will embed
+    refs = {"A": np.array([1.0, 0.0, 0.0]), "B": utt}       # B (the far side) is a perfect match
+    monkeypatch.setattr(ss.pyd, "_print_embedding", lambda alias, raw, v: refs.get(alias))
+    ss.pyd._SESSION_ACC.clear()
+    roster = {7: {"alias": "A", "data": b"x"}, "far:B": {"alias": "B", "data": None, "far_side": True}}
+    alias, sid, conf = ss.pyd.checkFingerprints(clip.tobytes(), roster, FakeEcapa())
+    assert alias == "B" and sid == -1 and conf["far_side"] is True and conf["sim"] >= 0.99
+    # an own-team winner keeps its local id and no far_side flag
+    refs["A"], refs["B"] = utt, np.array([1.0, 0.0, 0.0])
+    alias, sid, conf = ss.pyd.checkFingerprints(clip.tobytes(), roster, FakeEcapa())
+    assert alias == "A" and sid == 7 and "far_side" not in conf
+    ss.pyd._SESSION_ACC.clear()
+
+
+def test_roster_merges_own_and_far_side_speakers():
+    src = open(os.path.join(os.path.dirname(__file__), "..", "src", "audio_processing", "processor.py")).read()
+    assert "def setFarSideSpeakers(self, aliases):" in src and "def roster(self):" in src
+    assert src.count("self.roster()") == 2                  # split_and_attribute and checkFingerprints
+    srv = open(os.path.join(os.path.dirname(__file__), "..", "src", "audio_processing", "server.py")).read()
+    assert "(body or {}).get('partner_speakers')" in srv and "callbacks.get_partner_speakers" in srv
+    cb = open(os.path.join(os.path.dirname(__file__), "..", "src", "audio_processing", "callbacks.py")).read()
+    assert "def get_partner_speakers(source):" in cb and "'/partner_speakers/'" in cb
+    route = open(os.path.join(os.path.dirname(__file__), "..", "src", "server", "routes", "callback.py")).read()
+    assert "'/api/v1/callback/partner_speakers/<path:key>'" in route
+    assert "json_response({'partner_speakers': database.partner_speaker_aliases(session_device)})" in route

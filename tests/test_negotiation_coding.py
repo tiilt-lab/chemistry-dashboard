@@ -1441,6 +1441,39 @@ def test_run_sides_fills_in_a_missing_or_clashing_side(env):
     assert env.engine.run_pods(run, {a.id: "Pat"})[1] == {"id": b.id, "name": "Lone", "group": "Table 2", "side": None}
 
 
+def test_partner_speaker_aliases_are_the_far_side_of_the_table(env):
+    d = env.database
+    session, (pat, sandy) = _paired_session(env, group="Table 7")
+    assert d.partner_speaker_aliases(pat) == [] and d.partner_speaker_aliases(sandy) == []
+    d.create_speaker(sandy.id, "Sandy1G7")
+    d.create_speaker(sandy.id, "Sandy2G7")
+    d.create_speaker(pat.id, "Pat1G7")
+    assert sorted(d.partner_speaker_aliases(pat)) == ["Sandy1G7", "Sandy2G7"]
+    assert d.partner_speaker_aliases(sandy) == ["Pat1G7"]
+    # a pod outside any group has no far side
+    lone = _pod(env, session, with_transcripts=False)
+    assert d.partner_speaker_aliases(lone) == []
+    assert d.partner_speaker_aliases(None) == []
+
+
+def test_far_side_match_is_the_weaker_copy_and_belongs_to_the_other_team():
+    # The Pat laptop named a line from the partner roster (far_side): it is
+    # Sandy's line heard across the table. It yields to the Sandy laptop's
+    # copy, and when it stands alone it is stamped with Sandy's team.
+    def far_row(i, device, start, text, tag, sim):
+        return types.SimpleNamespace(
+            id=i, session_device_id=device, start_time=start, length=6, speaker_tag=tag, transcript=text,
+            _voice_features_json=lambda: {"confidence": {"percent": 70, "sim": sim, "margin": 0.2, "far_side": True}})
+    pat = [far_row(1, 1, 10.0, "we never agreed to a change order in writing", "Sandy", 0.72)]
+    sandy = [_row(2, 2, 10.4, "we never agreed to a change order in writing", "Sandy", sim=0.6)]
+    kept, dropped = nc.merge_paired({1: pat, 2: sandy}, SIDES)
+    assert [u["transcript_id"] for u in kept] == [2] and dropped[0]["transcript_id"] == 1
+    assert nc.match_strength(nc._utterance(pat[0])) < nc.match_strength(nc._utterance(sandy[0]))
+    alone = [far_row(3, 1, 50.0, "if you force me into bankruptcy you may not recover the money", "Sandy", 0.7)]
+    kept, dropped = nc.merge_paired({1: alone, 2: []}, SIDES)
+    assert kept[0]["team"] == "Sandy" and dropped == []
+
+
 def test_resolve_pair_after_the_session_ended(env):
     # end_session marks every pod removed before it queues the coding (the
     # flag means "not in the live session any more"); the pairing must still

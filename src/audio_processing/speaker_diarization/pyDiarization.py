@@ -179,15 +179,25 @@ def checkFingerprints(x, fingerprints, verification):
   margin = best_sim - runner_up
   # Confidence travels with the assignment so the transcript can show how sure
   # the match was. 'closed_world' flags a below-gate best-of-roster pick, which
-  # is the one most likely to need a human's eye.
+  # is the one most likely to need a human's eye. 'far_side' means the winner
+  # is a partner-pod speaker heard across the table: named, but no local
+  # speaker row.
   conf = {'percent': confidence_percent(best_sim, margin),
           'sim': round(float(best_sim), 3),
           'margin': round(float(margin), 3)}
+  far_side = bool((fingerprints.get(best_id) or {}).get('far_side'))
+  if far_side:
+    conf['far_side'] = True
+    best_id = -1
+  # "Roster complete" counts this pod's own speakers only: a far-side alias
+  # without an enrolled print is simply not a reference.
+  own_total = sum(1 for info in fingerprints.values() if not (info or {}).get('far_side'))
+  own_scored = sum(1 for s in scored if not (fingerprints.get(s[2]) or {}).get('far_side'))
 
   accepted = (best_sim >= ACCEPT_SURE
               or (best_sim >= ACCEPT_SIM and margin >= ACCEPT_MARGIN)
               or (best_sim >= ACCEPT_LOW and margin >= ACCEPT_LOW_MARGIN))
-  if not accepted and CLOSED_WORLD and len(scored) == len(fingerprints) \
+  if not accepted and CLOSED_WORLD and own_scored == own_total \
       and best_sim >= NOISE_FLOOR:
     # roster is complete: best-of-roster beats "unknown". Low-confidence
     # (below the gates) — logged as such, and deliberately NOT fed to
