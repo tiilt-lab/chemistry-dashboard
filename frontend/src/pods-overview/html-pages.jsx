@@ -361,7 +361,7 @@ function RecordingBanner({ session, deviceCount, passcode, onShare, onEnd }) {
     )
 }
 
-// Waiting room shown while the session is live but no group has joined yet:
+// Waiting room shown while the session is live but no device has joined yet:
 // the share code/QR is the whole page instead of a hidden dialog.
 function ProjectOverlay({ passcode, joinLink, onClose }) {
     useEffect(() => {
@@ -427,9 +427,9 @@ function LobbyHero({ passcode, joinLink, copyJoinLink, onLock, deviceCount, slot
                 />
                 {joined
                     ? deviceCount +
-                      (deviceCount === 1 ? " group has" : " groups have") +
+                      (deviceCount === 1 ? " device has" : " devices have") +
                       " joined — the code stays open for more"
-                    : "Waiting for groups to join…"}
+                    : "Waiting for devices to join…"}
             </div>
             <div className="rounded-xl bg-tiilt-soft/50 px-8 py-4">
                 <div className="font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase">
