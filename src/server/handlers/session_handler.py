@@ -10,6 +10,7 @@ from redis_helper import RedisSessions
 import posthoc_queue
 import negotiation_coding
 import pod_config as pod_setup
+import session_clock
 
 def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder, asr=None, live_video_analytics=True, negotiation_coding_enabled=False, negotiation_paired=False, pod_config=None, coding_scheme=None, live_video_analyses=None, join_mode=None, passcode=None):
     session, keywords = database.create_session(user_id, keyword_list_id, topic_model_id, name, folder)
@@ -206,12 +207,31 @@ def queue_negotiation_coding(session, session_devices):
     return queued
 
 
+def sync_session_clock(session):
+    """Make the processors' session clock the database's (session_clock.py):
+    the first device to join moves session.creation_date, and the audio
+    service stamps transcripts against ``server_start`` in the session's
+    Redis config, written at creation. Idempotent; returns True when the
+    config was rewritten."""
+    config, previous = session_clock.synced_config(RedisSessions.get_session(session.id), session.creation_date)
+    if config is None:
+        return False
+    logging.info('session %s: session clock moved to %s (processors had %s)',
+                 session.id, config['server_start'], previous)
+    RedisSessions.create_session(session.id, config)
+    return True
+
+
 def byod_join_session(name, passcode, collaborators, negotiation_group=None, negotiation_side=None, join_as_extra=False):
     success, session_device, speakers = database.create_byod_session_device(
         passcode, name, collaborators, negotiation_group=negotiation_group, negotiation_side=negotiation_side,
         join_as_extra=join_as_extra)
     if success:
         session = database.get_sessions(id=session_device.session_id)
+        # The first device to join starts the session clock; the processors
+        # must read the same start, or their transcripts are stamped against
+        # the moment the session was set up.
+        sync_session_clock(session)
         RedisSessions.create_device_key(session_device.processing_key, session.id)
         socketio_helper.update_session_device(session_device)
         return True, {'session': session.json(), 'session_device': session_device.json(), 'key': session_device.processing_key, 'speakers': [speaker.json() for speaker in speakers]}

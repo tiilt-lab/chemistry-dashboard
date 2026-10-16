@@ -878,6 +878,20 @@ def test_create_session_route_reads_negotiation_coding_defaulting_off():
     assert create.index("negotiationCoding") < create.index("session_handler.create_session(")
 
 
+def test_byod_join_moves_the_processors_clock_with_the_databases():
+    # The first device to join moves session.creation_date (the dashboard's
+    # clock); the processors stamp against server_start in the session's
+    # Redis config. The join handler must bring the two together, before
+    # the device's key exists, or the first transcripts are stamped against
+    # the moment the session was set up (session 434, 2026-10-16).
+    join = _func_source(_read(*HANDLER), "byod_join_session")
+    assert join.index("database.create_byod_session_device(") < join.index("sync_session_clock(session)")
+    assert join.index("sync_session_clock(session)") < join.index("RedisSessions.create_device_key(")
+    sync = _func_source(_read(*HANDLER), "sync_session_clock")
+    assert "session_clock.synced_config(RedisSessions.get_session(session.id), session.creation_date)" in sync
+    assert "RedisSessions.create_session(session.id, config)" in sync
+
+
 def test_handler_stores_the_flag_and_queues_coding_at_session_end():
     s = _read(*HANDLER)
     create = _func_source(s, "create_session")
