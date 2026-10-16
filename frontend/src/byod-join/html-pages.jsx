@@ -347,8 +347,11 @@ function ByodJoinPage(props) {
     // and mic check are visible without an extra tap.
     const [editCode, setEditCode] = useState(false)
     // Controlled so the inline device check can follow the selection (a
-    // camera preview only when joining with video).
-    const [joinwithSel, setJoinwithSel] = useState("Video")
+    // camera preview only when joining with video). Audio is the default:
+    // nearly every class records audio only, and a team that leaves this
+    // alone should not be asked for camera permission or stream video the
+    // instructor never looks at. Video stays one tap away in the list.
+    const [joinwithSel, setJoinwithSel] = useState("Audio")
     // Collapsed extras (the Polar H10 toggle); everything essential is
     // visible without it.
     const [showAdvanced, setShowAdvanced] = useState(false)
