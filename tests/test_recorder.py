@@ -40,3 +40,16 @@ def test_recorder_source_has_no_print_on_write_paths():
                            "audio_processing", "recorder.py")) as f:
         src = f.read()
     assert "print(" not in src, "recorder.py must use logging, not print (systemd swallows stdout)"
+
+
+def test_wave_recorder_close_without_a_single_frame_is_an_empty_recording(tmp_path, caplog):
+    # A pod that joins and leaves within seconds never writes a frame, so the
+    # .dat is never created. close() used to raise FileNotFoundError from
+    # os.path.getsize and log a traceback; it is an empty recording.
+    rec = WaveRecorder(os.path.join(str(tmp_path), "clip"), 16000, 2, 1)
+    with caplog.at_level(logging.ERROR):
+        rec.close()
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+    assert rec.closed is True
+    assert os.path.exists(rec.wav_filename)
+    assert not os.path.exists(rec.dat_filename)

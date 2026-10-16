@@ -350,3 +350,38 @@ def test_fifo_wait_is_bounded_by_the_request_timeout(plenty_of_vram):
     assert 0.05 < time.monotonic() - t0 < 0.35
     a.join()
     assert h.order() == ["warm-0", "A-0"] and h.pool.waiting == 0
+
+
+# -- idle reaper vs a freshly spawned worker ---------------------------------
+#
+# 2026-10-16 19:08-19:10 UTC: _last_used started at 0.0 and was only stamped by
+# a served window, so the reaper judged a worker that had just come up to be
+# idle for >900 s and shut it down a second after "ready"; the next window
+# relaunched it and the cycle repeated every tick. The afternoon class lost its
+# first two minutes of transcripts to that.
+
+def test_a_worker_that_just_came_up_is_not_idle(monkeypatch):
+    started = []
+    monkeypatch.setattr(cw.threading, "Thread",
+                        lambda *a, **k: type("T", (), {"start": lambda self: started.append(k.get("name"))})())
+    slot = cw._WorkerSlot(0)
+    slot._proc = object()
+    assert slot._idle_too_long(), "sanity: the old comparison against 0.0 called a fresh worker idle"
+    slot._became_ready({"batch": True, "protocol": 2})
+    assert not slot._idle_too_long()
+    assert slot.batch_capable is True
+    assert started == ["crisper-idle-reaper-0"], "the reaper thread still starts once on first ready"
+    slot._became_ready({"batch": False})
+    assert started == ["crisper-idle-reaper-0"], "and only once"
+
+
+def test_a_worker_is_idle_only_after_the_full_window_without_a_request():
+    slot = cw._WorkerSlot(1)
+    slot._reaper_started = True
+    slot._proc = object()
+    slot._became_ready({})
+    now = time.time()
+    assert not slot._idle_too_long(now=now + cw._WorkerSlot.IDLE_SHUTDOWN_SECONDS - 1)
+    assert slot._idle_too_long(now=now + cw._WorkerSlot.IDLE_SHUTDOWN_SECONDS + 1)
+    slot._proc = None
+    assert not slot._idle_too_long(now=now + 10_000), "nothing to reap when no worker is running"

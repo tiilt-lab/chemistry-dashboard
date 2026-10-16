@@ -413,10 +413,21 @@ class _WorkerSlot(_StatusSource):
             self._kill()
             self._failed(reason, MSG_RESTARTING)
             raise WorkerUnavailable("%s: %s" % (self.name, reason))
+        self._became_ready(hello)
+
+    def _became_ready(self, hello):
         self.batch_capable = bool(hello.get("batch"))
         logging.info("%s ready (pid %s, protocol %s, batch %s)", self.name,
                      getattr(self._proc, "pid", "?"), hello.get("protocol", 1),
                      "yes" if self.batch_capable else "no")
+        # A worker that has just come up has not been idle. Before this the
+        # reaper compared against the 0.0 the slot starts with (or the
+        # timestamp of the previous incarnation's last window) and shut a
+        # fresh worker down a second after it loaded; the next window
+        # relaunched it, and the cycle repeated every reaper tick until a
+        # window happened to land inside the gap. 2026-10-16 19:08-19:10 UTC
+        # it cost the afternoon class its first two minutes of transcripts.
+        self._last_used = time.time()
         if not self._reaper_started:
             self._reaper_started = True
             threading.Thread(target=self._reap_idle, daemon=True,
@@ -447,11 +458,17 @@ class _WorkerSlot(_StatusSource):
         while True:
             time.sleep(60)
             with self._lock:
-                if (self._proc is not None
-                        and time.time() - self._last_used > self.IDLE_SHUTDOWN_SECONDS):
+                if self._idle_too_long():
                     logging.info("%s idle >%ds — shutting down to free GPU memory",
                                  self.name, self.IDLE_SHUTDOWN_SECONDS)
                     self._shutdown()
+
+    def _idle_too_long(self, now=None):
+        """Is a running worker past IDLE_SHUTDOWN_SECONDS since its last
+        window (or since it came up, whichever is later)?"""
+        return (self._proc is not None
+                and (time.time() if now is None else now) - self._last_used
+                > self.IDLE_SHUTDOWN_SECONDS)
 
     # -- API ----------------------------------------------------------------
 
