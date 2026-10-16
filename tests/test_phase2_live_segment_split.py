@@ -95,3 +95,72 @@ def test_a_window_whose_scoring_fails_abstains_alone(monkeypatch):
     votes = ss._window_votes(_audio(2.0), {"1": {"alias": "ann"}}, m)
     assert [v[1] for v in votes] == ["ann", None, "ann"]
     assert votes[1][2] == 0.0
+
+
+# ---------------------------------------------------------------- changes
+
+def _voice(seconds, mean, scale, seed):
+    """A 'speaker' for FakeEcapa: noise with its own mean and spread, so its
+    windows embed to one direction and another speaker's to another."""
+    rng = np.random.RandomState(seed)
+    return (rng.randn(int(seconds * SR)) * scale + mean).astype(np.int16)
+
+
+def _words(seg_start, seconds, every=0.5):
+    n = int(seconds / every)
+    return [("w%d" % i, seg_start + i * every, seg_start + (i + 1) * every - 0.05) for i in range(n)]
+
+
+def test_change_points_find_every_turn_without_the_roster():
+    # A (4 s), B (4 s), A (4 s): two boundaries near 4 and 8 s, found from
+    # the embeddings alone.
+    clip = np.concatenate([_voice(4, 3000, 800, 1), _voice(4, -6000, 300, 2), _voice(4, 3000, 800, 3)])
+    centers, embs = ss._window_embeddings(clip, FakeEcapa())
+    cps = ss._change_points(centers, embs)
+    assert len(cps) == 2, cps
+    assert abs(cps[0] - 4.0) <= 0.6 and abs(cps[1] - 8.0) <= 0.6, cps
+    # one voice throughout: nothing
+    one = _voice(12, 3000, 800, 4)
+    assert ss._change_points(*ss._window_embeddings(one, FakeEcapa())) == []
+
+
+def test_split_attributes_each_turn_and_leaves_the_far_side_unnamed(monkeypatch):
+    # The roster knows A only; B is the other team. The segment still splits
+    # at both turns, A's parts are named and B's part is left unnamed rather
+    # than given A's name.
+    clip = np.concatenate([_voice(4, 3000, 800, 1), _voice(4, -6000, 300, 2), _voice(4, 3000, 800, 3)])
+    seg_start = 100.0
+    words = _words(seg_start, 12.0)
+
+    def fake_check(raw, fingerprints, verification):
+        x = np.frombuffer(raw, dtype=np.int16)
+        return ("A", 7, {"sim": 0.8}) if x.mean() > 0 else (None, -1, None)
+
+    monkeypatch.setattr(ss.pyd, "checkFingerprints", fake_check)
+    monkeypatch.setattr(ss, "_score_prints", lambda utt, fp, v: [(0.5, "A", 7)] if utt[0] > 0 else [])
+    parts = ss.split_and_attribute(clip, words, seg_start, seg_start + 12.0, {7: {"alias": "A", "data": b""}}, FakeEcapa())
+    assert [p["alias"] for p in parts] == ["A", None, "A"]
+    # the cuts fall on the word boundaries nearest 4 s and 8 s (within a word)
+    cuts = [p["text_slice"][1] for p in parts[:-1]]
+    assert abs(cuts[0] - 8) <= 1 and abs(cuts[1] - 16) <= 1, cuts
+    assert [p["text_slice"][0] for p in parts] == [0] + cuts and parts[-1]["text_slice"][1] == 24
+    assert parts[0]["start"] == seg_start and parts[-1]["end"] == seg_start + 12.0
+    assert parts[1]["start"] == words[cuts[0]][1] and parts[0]["end"] == words[cuts[0] - 1][2]
+
+
+def test_split_keeps_one_part_when_the_voice_does_not_change(monkeypatch):
+    clip = _voice(12, 3000, 800, 4)
+    monkeypatch.setattr(ss.pyd, "checkFingerprints", lambda raw, fp, v: ("A", 7, {"sim": 0.9}))
+    monkeypatch.setattr(ss, "_score_prints", lambda utt, fp, v: [(0.9, "A", 7)])
+    parts = ss.split_and_attribute(clip, _words(0.0, 12.0), 0.0, 12.0, {7: {"alias": "A", "data": b""}}, FakeEcapa())
+    assert len(parts) == 1 and parts[0]["alias"] == "A" and parts[0]["text_slice"] == (0, 24)
+
+
+def test_a_change_too_close_to_the_edge_is_not_a_part(monkeypatch):
+    # B speaks for half a second at the very end: shorter than MIN_PART_S, so
+    # it folds into A's part instead of becoming a sliver.
+    clip = np.concatenate([_voice(11.5, 3000, 800, 1), _voice(0.5, -6000, 300, 2)])
+    monkeypatch.setattr(ss.pyd, "checkFingerprints", lambda raw, fp, v: ("A", 7, {"sim": 0.9}))
+    monkeypatch.setattr(ss, "_score_prints", lambda utt, fp, v: [(0.9, "A", 7)])
+    parts = ss.split_and_attribute(clip, _words(0.0, 12.0), 0.0, 12.0, {7: {"alias": "A", "data": b""}}, FakeEcapa())
+    assert len(parts) == 1 and parts[0]["text_slice"] == (0, 24)
