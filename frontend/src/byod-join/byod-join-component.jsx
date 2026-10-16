@@ -1,5 +1,6 @@
 import { useReducer, useEffect, useState, useRef, useCallback } from "react"
 import { joinWithDefault } from "./join-mode"
+import { stampedFrame, FRAME_HEADER_BYTES } from "./audio-frame"
 import { POD_ON_COLOR as POD_COLOR } from "../components/pod-colors"
 import { useNavigate, useParams } from "react-router-dom"
 import { SessionService } from "../services/session-service"
@@ -35,7 +36,11 @@ const AUDIO_SEND_CAP_BYTES = 1 * 1024 * 1024
 const VIDEO_SEND_CAP_BYTES = 8 * 1024 * 1024
 // Audio captured while the sockets are down is kept (bounded) and re-sent
 // with its offset on reconnect: ~3 min of 16 kHz float32 mono.
-const AUDIO_BACKLOG_CAP_BYTES = 12 * 1024 * 1024
+// Audio queued while the socket is down or not yet streaming. 96 MB is
+// about 25 minutes at 16 kHz float32: a whole lost connection's worth, so a
+// reconnect replays everything the group said meanwhile. Each frame carries
+// its capture time (audio-frame.js), so the replay lands where it happened.
+const AUDIO_BACKLOG_CAP_BYTES = 96 * 1024 * 1024
 // Live poll: 2 s keeps the pod screen live; with after_id most responses
 // are empty. A full re-fetch every FULL_REFRESH_EVERY polls picks up rows
 // changed after insertion (speaker metrics attach later).
@@ -633,8 +638,11 @@ function JoinPage() {
                 )
                 workletNode.current = workletProcessor
                 // 4096 float32 samples per message (~4/s at 16 kHz).
-                workletProcessor.port.onmessage = (data) =>
-                    sendAudioFrame(data.data.buffer)
+                // Each frame is stamped with its capture time before it is
+                // sent or queued (audio-frame.js), so a replay lands where
+                // it was captured.
+                workletProcessor.port.onmessage = (e) =>
+                    sendAudioFrame(stampedFrame(e.data))
                 // When a specific channel was picked on the device check
                 // page, feed only that channel to the sender (the worklet
                 // forwards its first input channel); otherwise send the
@@ -1027,7 +1035,9 @@ function JoinPage() {
     // was spoken. 0 on a first connection, exactly as before.
     const audioBacklogSeconds = () => {
         const rate = audioContext.current ? audioContext.current.sampleRate : 16000
-        return Math.round((audioBacklog.current.bytes / (4 * rate)) * 100) / 100
+        const frames = audioBacklog.current.chunks.length
+        const audioBytes = Math.max(0, audioBacklog.current.bytes - frames * FRAME_HEADER_BYTES)
+        return Math.round((audioBytes / (4 * rate)) * 100) / 100
     }
 
     // Drop bookkeeping + the small non-blocking notice (throttled: audio
@@ -2299,6 +2309,11 @@ function JoinPage() {
             // 0 on a first connection; on a reconnect the seconds of audio
             // queued while offline (see audioBacklogSeconds).
             start_time: audioBacklogSeconds(),
+            // Every frame carries the AudioContext time of its first sample
+            // (audio-frame.js); context_time is that clock right now, so the
+            // server can map it onto the session clock.
+            frame_timestamps: true,
+            context_time: audioContext.current.currentTime,
             sample_rate: audioContext.current.sampleRate,
             encoding: "pcm_f32le",
             channels: 1,

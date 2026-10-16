@@ -25,7 +25,14 @@ def test_valid_message_returns_parsed_primitives():
     ok, res = validate_start_message(_msg())
     assert ok is True
     assert res == {"auth_key": "abc", "encoding": "pcm_f32le", "sample_rate": 48000,
-                   "channels": 2, "offset": 1.5, "sessionId": 3, "deviceId": 7}
+                   "channels": 2, "offset": 1.5, "sessionId": 3, "deviceId": 7,
+                   "frame_timestamps": False, "context_time": 0.0}
+
+
+def test_stamped_frames_are_announced_with_the_context_clock():
+    ok, res = validate_start_message(_msg(frame_timestamps=True, context_time=12.75))
+    assert ok and res["frame_timestamps"] is True and res["context_time"] == 12.75
+    assert validate_start_message(_msg(context_time="now")) == (False, "context_time must be a float.")
 
 
 def test_non_integer_fields_are_rejected_with_specific_messages():
