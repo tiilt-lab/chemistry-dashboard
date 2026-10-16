@@ -221,6 +221,16 @@ def add_students(**kwargs):
         # replaces the stored voice print / face embedding under the same
         # alias.
         name_matches = student.identity_matches(group_name, team_name)
+        # A record that never got its voice print (the student closed the
+        # page mid-recording, or the upload failed) is unclaimed: whoever
+        # registers the username next takes it over, with the group and team
+        # typed now, so a half-finished sign-up is not a dead end. There is
+        # no print to protect yet.
+        unclaimed = student.biometric_captured != 'yes'
+        if unclaimed and not name_matches:
+            database.update_student(student.id, group_name=group_name or "", team_name=team_name or "")
+            database.save_changes()
+            name_matches = True
         body = {'message': "Username already exists.",
                 "data": student.json(),
                 "reenroll_allowed": name_matches}

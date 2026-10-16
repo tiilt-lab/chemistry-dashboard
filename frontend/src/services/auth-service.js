@@ -122,9 +122,11 @@ class AuthService {
                 const student = StudentModel.fromJson(err["data"] );
                 student.enrollment_token = err["enrollment_token"]  // only present when the name matched
                 // Re-enrollment is self-service: proceed to the recording page
-                // whenever the entered name matches the existing record (the
-                // server checks). A new recording replaces the old biometrics.
-                if (err["reenroll_allowed"] || student.biometric_captured !== "yes"){
+                // when the server allowed it (the entered group and team match
+                // the record, or the record never got its voice print) — which
+                // is exactly when it minted a token. Going on without one only
+                // ends in the sockets' "Enrollment not authorised" refusal.
+                if (err["reenroll_allowed"] && student.enrollment_token){
                   setStudentObject(student)
                 }else{
                   setAlertMessage("That username already belongs to a different student. If it's yours, enter your group and team exactly as you registered them — otherwise pick a different username.")
