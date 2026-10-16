@@ -2199,7 +2199,10 @@ def add_negotiation_codes(run_id, codes, dimensions=None):
     db.session.query(NegotiationCode).filter(NegotiationCode.run_id == run_id).delete()
     rows = []
     for c in codes:
-        keys = dimensions if dimensions else [k for k in c if k not in meta]
+        keys = list(dimensions) if dimensions else [k for k in c if k not in meta]
+        # The sentence the model saw, when it was stitched or trimmed from
+        # the stored fragments (negotiation_coding.stitch_sentences).
+        keys += [k for k in ('_text', '_stitched') if k in c and k not in keys]
         rows.append(NegotiationCode(run_id, c['transcript_id'], {k: c.get(k) for k in keys}))
     db.session.add_all(rows)
     db.session.commit()

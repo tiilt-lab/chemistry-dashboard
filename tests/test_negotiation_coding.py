@@ -639,7 +639,7 @@ def test_routes_post_get_put_export_and_session_list(env):
     assert payload["pods"] == [{"id": pod.id, "name": pod.name, "group": None, "side": None}]
     assert len(payload["codes"]) == 14
     first = payload["codes"][0]
-    assert set(first) == {"transcript_id", "session_device_id", "start_time", "length", "speaker_tag", "team", "far_side",
+    assert set(first) == {"transcript_id", "session_device_id", "start_time", "length", "speaker_tag", "team", "far_side", "stitched_from",
                           "text", "emotion", "rip", "frame", "listening"}
     assert (first["start_time"], first["speaker_tag"], first["team"], first["frame"]) == (0, "Pat", "Pat", "past_blame")
     assert first["session_device_id"] == pod.id
@@ -1088,7 +1088,9 @@ def test_merge_paired_ties_go_to_the_fuller_text_then_the_earlier_row():
     a = _row(1, 1, 0, "we both let that slide", "Pat", sim=0.7)
     b = _row(2, 2, 0.5, "the contract says changes must be in writing but we both let that slide", "Sandy", sim=0.72)
     kept, dropped = nc.merge_paired({1: [a], 2: [b]}, SIDES)
-    assert [u["transcript_id"] for u in kept] == [2] and dropped[0]["reason"] == "duplicate"
+    # Two clear own-team names on one stretch, the shorter inside the longer:
+    # a composite rather than two copies, so the coverage pass settles it.
+    assert [u["transcript_id"] for u in kept] == [2] and dropped[0]["reason"] == "covered"
     c = _row(3, 1, 0, "same words here", "Pat")
     d = _row(4, 2, 0, "same words here", "Sandy")
     kept, _ = nc.merge_paired({1: [c], 2: [d]}, SIDES)
@@ -1203,9 +1205,9 @@ def test_merge_paired_drops_a_straddler_covered_by_the_other_laptops_pieces():
     pat = [_row(1, 1, 100.0, pat1, "Pat", sim=0.8, length=12), _row(3, 1, 112.0, pat2, "Pat", sim=0.8, length=10)]
     sandy_rows = [_row(2, 2, 103.0, sandy, "Sandy", sim=0.7, length=12)]
     kept, dropped = nc.merge_paired({1: pat, 2: sandy_rows}, SIDES)
-    assert [u["transcript_id"] for u in kept] == [1, 3]
-    assert len(dropped) == 1 and dropped[0]["transcript_id"] == 2 and dropped[0]["reason"] == "covered"
-    assert dropped[0]["similarity"] >= 0.8
+    # The straddler is covered but keeps the four words only it heard.
+    assert [u["transcript_id"] for u in kept] == [1, 2, 3] and dropped == []
+    assert kept[1]["trimmed"] is True and kept[1]["text"] == "I understand that."
     # Two people really talking at once share no runs of words: both stay.
     a = _row(10, 1, 200.0, "I can call the loan whenever I want and you know it", "Pat", sim=0.8, length=5)
     b = _row(11, 2, 200.5, "Can we slow this down for a minute and look at the numbers", "Sandy", sim=0.8, length=5)
@@ -1259,6 +1261,107 @@ def test_merge_paired_aligns_from_the_recordings_when_they_carry_a_clock(tmp_pat
     assert diagnostics["alignment"] is None and dropped == []
     # recordings without a sidecar are ignored
     assert nc.recordings_of("nobody", str(tmp_path)) == []
+
+
+def test_a_two_word_sliver_of_the_far_side_is_covered_and_a_reply_is_trimmed():
+    # Session 436 at 02:33: the Team A laptop heard jacob across the table in
+    # three pieces; "read. What" (two words) survived the merge because
+    # coverage wanted runs of three. And its recognizer ran the tail of
+    # jacob's line into shinbrooke's reply, so her reply was dropped as
+    # covered. Now: a short fragment must appear whole to be covered (it
+    # does, and goes); a covered line that still holds four words in a row
+    # of its own keeps them.
+    pat = [_row(100137, 1, 153.0, "OK, let's take the invoice as read. What happens on your side if it", "jacob", sim=0.7, length=4),
+           _row(100138, 1, 157.0, "isn't paid in full on day fifteen?", "jacob", sim=0.7, length=2)]
+    sandy = [_row(100139, 2, 153.0, "Let's take the invoice as", "jacob", sim=0.4, length=2),
+             _row(100140, 2, 155.0, "read. What", "jacob", sim=0.4, length=1),
+             _row(100141, 2, 156.0, "happens on your side", "jacob", sim=0.4, length=1),
+             _row(100142, 2, 157.0, "if it isn't paid in full on day fifteen? What happens is we go under.", "shinbrooke", sim=0.8, length=4),
+             _row(100143, 2, 161.0, "Yeah.", "shinbrooke", sim=0.6, length=1)]
+    kept, dropped = nc.merge_paired({1: pat, 2: sandy}, SIDES)
+    assert [u["transcript_id"] for u in kept] == [100137, 100138, 100142, 100143]
+    assert {d["transcript_id"] for d in dropped} == {100139, 100140, 100141}
+    reply = next(u for u in kept if u["transcript_id"] == 100142)
+    assert reply["trimmed"] is True and reply["text"] == "What happens is we go under."
+    # a one-word utterance is never covered, even if the word appears opposite
+    assert next(u for u in kept if u["transcript_id"] == 100143)["text"] == "Yeah."
+
+
+def _far(i, device, start, text, tag, length=2.0, sim=0.4):
+    return types.SimpleNamespace(
+        id=i, session_device_id=device, start_time=start, length=length, speaker_tag=tag, transcript=text,
+        _voice_features_json=lambda: {"confidence": {"percent": 40, "sim": sim, "margin": 0.1, "far_side": True}})
+
+
+def test_far_side_rows_yield_in_time_to_the_near_laptop_whatever_the_words():
+    # Session 436 at 03:44: chenghong talking; her own laptop and the far
+    # laptop each cut her sentence into pieces whose words disagree ("emails
+    # you'd have" / "email so you'd have know"), so no text rule paired them
+    # and the coded transcript interleaved both. A far row the near laptop
+    # covers in time goes; the one it missed stays, on her team.
+    near = [_row(100182, 1, 222.0, "And frankly,", "chenghong", sim=0.6, length=1),
+            _row(100183, 1, 224.0, "if you'd if you'd re-", None, length=2),
+            _row(100189, 1, 225.0, "Your [UH] project manager's emails you'd have", "chenghong", sim=0.7, length=3),
+            _row(100190, 1, 228.0, "know about the", "chenghong", sim=0.6, length=2),
+            _row(100191, 1, 230.0, "oak in March.", "chenghong", sim=0.6, length=1)]
+    far = [_far(100184, 2, 223.0, "And frankly if", "chenghong", 1.0),
+           _far(100185, 2, 224.0, "you if you'd read your our project", "chenghong", 3.0),
+           _far(100186, 2, 227.0, "manager's email so you'd have know", "chenghong", 2.0),
+           _far(100188, 2, 236.0, "in March, don't put that.", "chenghong", 1.0)]     # nothing near here
+    kept, dropped = nc.merge_paired({1: near, 2: far}, {1: "Team A", 2: "Team B"})
+    assert {d["transcript_id"] for d in dropped if d["reason"] == "far_side"} == {100184, 100185, 100186}
+    assert [u["transcript_id"] for u in kept] == [100182, 100183, 100189, 100190, 100191, 100188]
+    lone = kept[-1]
+    assert lone["team"] == "Team A"          # heard by the Team B laptop, said on Team A's side
+
+
+def test_stitching_returns_the_tail_word_and_joins_a_speakers_pieces():
+    # Session 436 at 03:29. jacob (Team B laptop): "I'm sorry we're in this"
+    # then "spot. Tell me what's bothering you most about"; shinbrooke (Team A
+    # laptop): "it. What's bothering me most?" then "that I trusted your
+    # people." The "spot." and the "it." are the tails of jacob's sentences.
+    rows = [
+        dict(transcript_id=100172, session_device_id=1, start_time=208.0, length=1.0, speaker_tag="jacob", team="Team B",
+             text="I'm sorry we're in this"),
+        dict(transcript_id=100173, session_device_id=1, start_time=209.0, length=2.0, speaker_tag="jacob", team="Team B",
+             text="spot. Tell me what's bothering you most about"),
+        dict(transcript_id=100171, session_device_id=2, start_time=211.0, length=2.0, speaker_tag="shinbrooke", team="Team A",
+             text="it. What's bothering me most?"),
+        dict(transcript_id=100178, session_device_id=2, start_time=213.0, length=2.0, speaker_tag="shinbrooke", team="Team A",
+             text="that I trusted your people."),
+    ]
+    dropped = []
+    out = nc.stitch_sentences(rows, dropped)
+    assert [(u["speaker_tag"], u["text"]) for u in out] == [
+        ("jacob", "I'm sorry we're in this spot. Tell me what's bothering you most about it."),
+        ("shinbrooke", "What's bothering me most? that I trusted your people."),
+    ]
+    assert out[0]["transcript_id"] == 100172 and sorted(out[0]["stitched_from"]) == [100171, 100173]
+    assert out[0]["_text"] == out[0]["text"] and out[0]["_stitched"] == out[0]["stitched_from"]
+    assert out[1]["transcript_id"] == 100171 and out[1]["stitched_from"] == [100178]
+    assert [u["index"] for u in out] == [0, 1] and dropped == []
+    # an unnamed piece between one speaker's pieces is theirs, and the whole
+    # sentence becomes one utterance
+    pieces = [dict(transcript_id=1, session_device_id=1, start_time=222.0, length=1.0, speaker_tag="chenghong", team="Team A", text="And frankly,"),
+              dict(transcript_id=2, session_device_id=1, start_time=224.0, length=2.0, speaker_tag=None, team="Team A", text="if you'd if you'd re-"),
+              dict(transcript_id=3, session_device_id=1, start_time=225.0, length=3.0, speaker_tag="chenghong", team="Team A", text="Your [UH] project manager's emails you'd have"),
+              dict(transcript_id=4, session_device_id=1, start_time=228.0, length=2.0, speaker_tag="chenghong", team="Team A", text="know about the"),
+              dict(transcript_id=5, session_device_id=1, start_time=230.0, length=1.0, speaker_tag="chenghong", team="Team A", text="oak in March.")]
+    out = nc.stitch_sentences(pieces)
+    assert len(out) == 1 and out[0]["speaker_tag"] == "chenghong"
+    assert out[0]["text"] == "And frankly, if you'd if you'd re- Your [UH] project manager's emails you'd have know about the oak in March."
+    assert out[0]["stitched_from"] == [2, 3, 4, 5]
+    # one speaker's consecutive sentences within the gap are one turn; past
+    # the gap, or from another speaker, they stay apart
+    two = [dict(transcript_id=1, session_device_id=1, start_time=0.0, length=2.0, speaker_tag="a", text="We agree on the price."),
+           dict(transcript_id=2, session_device_id=1, start_time=2.5, length=2.0, speaker_tag="a", text="Now the dates."),
+           dict(transcript_id=3, session_device_id=1, start_time=9.0, length=2.0, speaker_tag="a", text="And the deposit."),
+           dict(transcript_id=4, session_device_id=2, start_time=11.5, length=2.0, speaker_tag="b", text="Fine.")]
+    assert [u["text"] for u in nc.stitch_sentences(two)] == ["We agree on the price. Now the dates.", "And the deposit.", "Fine."]
+    # a tail is only returned to a line that did not finish its sentence
+    assert nc._leading_tail("it. What's bothering me most?") == ("it.", "What's bothering me most?")
+    assert nc._leading_tail("What's bothering me most?") == (None, "What's bothering me most?")
+    assert nc._leading_tail("Yeah.") == (None, "Yeah.")
 
 
 def test_merge_paired_clocks_taken_as_equal_without_enough_anchors():
@@ -1885,7 +1988,7 @@ def test_a_session_codes_with_the_scheme_it_chose(env):
     assert [dim["key"] for dim in payload["codebook"]["dimensions"]] == ["move", "tone"]
     assert payload["codebook"]["dimensions"][0]["codes"][1]["label"] == "Builds on"
     assert set(payload["codes"][0]) == {"transcript_id", "session_device_id", "start_time", "length", "speaker_tag",
-                                        "team", "far_side", "text", "move", "tone"}
+                                        "team", "far_side", "stitched_from", "text", "move", "tone"}
     assert payload["codes"][0]["move"] == "proposes" and payload["codes"][0]["tone"] == ["playful"]
     assert payload["codes"][1]["tone"] == []
     by_team = payload["summary"]["by_team"]
