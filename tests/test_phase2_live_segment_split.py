@@ -138,6 +138,7 @@ def test_split_attributes_each_turn_and_leaves_the_far_side_unnamed(monkeypatch)
 
     monkeypatch.setattr(ss.pyd, "checkFingerprints", fake_check)
     monkeypatch.setattr(ss, "_score_prints", lambda utt, fp, v: [(0.5, "A", 7)] if utt[0] > 0 else [])
+    monkeypatch.setattr(ss, "EMBEDDING_CHANGE_POINTS", True)    # the roster-free cut, off by default
     parts = ss.split_and_attribute(clip, words, seg_start, seg_start + 12.0, {7: {"alias": "A", "data": b""}}, FakeEcapa())
     assert [p["alias"] for p in parts] == ["A", None, "A"]
     # the cuts fall on the word boundaries nearest 4 s and 8 s (within a word)
@@ -220,3 +221,15 @@ def test_a_faint_far_side_voice_is_not_named_by_the_closed_world_rule(monkeypatc
     alias, sid, conf = ss.pyd.checkFingerprints(clip.tobytes(), roster, FakeEcapa())
     assert alias == "A" and sid == 7 and conf["closed_world"] is True
     ss.pyd._SESSION_ACC.clear()
+
+
+def test_embedding_cuts_are_off_by_default_until_a_segmentation_model_replaces_them(monkeypatch):
+    # The same three-turn clip, roster knowing A only: without the roster-free
+    # cut (measured as unreliable on real embeddings) the roster sees no
+    # sustained flip (A / unmatched / A), so the segment stays one part.
+    clip = np.concatenate([_voice(4, 3000, 800, 1), _voice(4, -6000, 300, 2), _voice(4, 3000, 800, 3)])
+    monkeypatch.setattr(ss.pyd, "checkFingerprints", lambda raw, fp, v: ("A", 7, {"sim": 0.6}))
+    monkeypatch.setattr(ss, "_score_prints", lambda utt, fp, v: [(0.5, "A", 7)] if utt[0] > 0 else [])
+    assert ss.EMBEDDING_CHANGE_POINTS is False
+    parts = ss.split_and_attribute(clip, _words(100.0, 12.0), 100.0, 112.0, {7: {"alias": "A", "data": b""}}, FakeEcapa())
+    assert len(parts) == 1
