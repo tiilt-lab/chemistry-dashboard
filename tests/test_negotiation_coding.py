@@ -1180,7 +1180,9 @@ def test_merge_paired_finds_clocks_minutes_apart_despite_repeated_phrases():
     assert len(kept) == len(lines) and len(dropped) == len(lines)
     assert {d["reason"] for d in dropped} == {"duplicate"}
     summary = diagnostics["alignment"]
-    assert summary["anchors"] == len(lines)
+    # The repeats' candidates point 160 s off the dominant offset and are
+    # excluded from the anchors; the eight distinct lines carry the estimate.
+    assert summary["anchors"] == len(SPEECH)
     assert all(o["offset"] == 191.0 for o in summary["offsets"])
     assert [round(u["start_time"]) for u in kept] == [100 + 20 * k for k in range(len(lines))]
 
