@@ -50,6 +50,9 @@ function CreateSessionComponent(props) {
   // Pre-filled with the date-stamped default so the field is never blank;
   // still editable, and createSession keeps its own fallback for safety.
   const [sessionName, setSessionName] = useState(changedState ? prevState.sessionName : defaultSessionName());
+  // The join code, when the starter wants a particular one (printed
+  // materials carry it). Blank = the server draws a random word.
+  const [passcode, setPasscode] = useState(changedState && typeof prevState.passcode === "string" ? prevState.passcode : "");
   // Participant devices are always allowed: the passcode this generates is
   // the only way pods can join at all (dedicated hardware pods are gone),
   // so the old "Allow participant devices" toggle was removed from the UI.
@@ -218,7 +221,7 @@ function CreateSessionComponent(props) {
       const deviceIds = selectedDevices.map(d => d.id);
       const keywordListId = (selectedKeywordList) ? selectedKeywordList.id : null;
       const topicModelId = (selectedTopicModel) ? selectedTopicModel.id : null;
-      const fetchData = new SessionService().createNewSession(finalName, deviceIds, keywordListId, topicModelId, byod, features, doa, folder, null, liveVideoAnalyses.length > 0, negotiationCoding, negotiationCoding && negotiationPaired, podConfigFromSetup(podSetup), codingScheme || null, liveVideoAnalyses, joinMode)
+      const fetchData = new SessionService().createNewSession(finalName, deviceIds, keywordListId, topicModelId, byod, features, doa, folder, null, liveVideoAnalyses.length > 0, negotiationCoding, negotiationCoding && negotiationPaired, podConfigFromSetup(podSetup), codingScheme || null, liveVideoAnalyses, joinMode, passcode)
       fetchData.then(
         response=>{
           if(response.status === 200){
@@ -344,6 +347,8 @@ function CreateSessionComponent(props) {
     currentMenu = {currentMenu}
     sessionName = {sessionName}
     setSessionName = {setSessionName}
+    passcode = {passcode}
+    setPasscode = {setPasscode}
     folderPath = {folderPath}
     negotiationCoding = {negotiationCoding}
     codingScheme = {codingScheme}

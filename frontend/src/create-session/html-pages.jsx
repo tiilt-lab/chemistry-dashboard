@@ -448,6 +448,26 @@ function CreateSessionPage(props) {
                 />
               </div>
               <div>
+                <label htmlFor="txtPasscode" className={fieldLabel}>
+                  Join code <span className="font-normal text-tiilt-muted">(optional)</span>
+                </label>
+                <input
+                  id="txtPasscode"
+                  className={dlgInput + " uppercase"}
+                  value={props.passcode}
+                  onChange={(event) => props.setPasscode(event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16))}
+                  maxLength="16"
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck="false"
+                  placeholder="Leave blank for a random word"
+                />
+                <p className="mt-1 text-xs text-tiilt-muted">
+                  The word in the join link and QR code, 3 to 16 letters or digits. Type the one on
+                  materials you have already printed; it must not be in use by another open session.
+                </p>
+              </div>
+              <div>
                 <label className={fieldLabel}>Folder</label>
                 <button
                   type="button"

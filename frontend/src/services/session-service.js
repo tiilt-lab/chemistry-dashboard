@@ -321,7 +321,8 @@ class SessionService {
     podConfig,
     codingScheme,
     liveVideoAnalyses,
-    joinMode
+    joinMode,
+    passcode
   ) {
     const body = {
       name: name,
@@ -352,6 +353,8 @@ class SessionService {
     // What the join page's "Join with" list opens on ("audio" | "video");
     // omitted = audio.
     if (joinMode === "audio" || joinMode === "video") body.joinMode = joinMode;
+    // A chosen join code (printed materials carry it); omitted = a random word.
+    if (typeof passcode === "string" && passcode.trim()) body.passcode = passcode.trim();
 
     return this.api.httpRequestCall("api/v1/sessions", "POST", body);
   }
