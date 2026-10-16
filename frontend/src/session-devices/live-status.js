@@ -51,7 +51,7 @@ export function clockNote(d) {
     const c = d && d.clock
     if (!c) return null
     const drift = Number(c.drift) || 0
-    const corrected = (Number(c.corrected) || 0) + (Number(c.late_start) || 0)
+    const corrected = (Number(c.corrected) || 0) + (Number(c.late_start) || 0) + (Number(c.discarded) || 0)
     if (Math.abs(drift) > CLOCK_WARN_S) {
         const n = Math.round(Math.abs(drift))
         return {

@@ -231,7 +231,25 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
     def getRunning(self):
         return self.running
 
+    def _raw_seconds(self, data):
+        # Duration of a browser frame as sent (float32/int16 at the stream's
+        # rate and channel count), for the clock's discard accounting.
+        cfg = self.config
+        if cfg is None or not cfg.sample_rate or not cfg.channels:
+            return 0.0
+        return len(data) / float(cfg.depth * cfg.sample_rate * cfg.channels)
+
     def process_binary(self, data):
+        # Audio arriving before the stream is ready (the start message still
+        # being handled, or the speaker fingerprints still awaited) used to
+        # vanish silently. The browser had promised it in its start message
+        # and the clock was moved back for it, so count what is discarded
+        # (clock_anchor.discard) and move the clock forward again.
+        if self.stream_data == 'audio' and self.clock is not None and (not self.running or self.awaitingSpeakers) \
+                and not (self.awaitingSpeakers and self.currSpeaker):
+            discarded = self.clock.discard(self._raw_seconds(data))
+            if discarded and self.config is not None:
+                self.config.start_offset += discarded
         if self.running and not self.awaitingSpeakers:
             if self.stream_data == 'audio':
                 if cf.record_original():
@@ -440,7 +458,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         self._ingest = asr_ingest.IngestCounter()
         # start_offset was computed for this moment; the audio decides from
         # here (clock_anchor.py).
-        self.clock = clock_anchor.ClockAnchor(time.time())
+        self.clock = clock_anchor.ClockAnchor(time.time(), getattr(self.config, 'reported_backlog', 0.0))
         self.asr_audio_queue = queue.Queue(maxsize=asr_ingest.QUEUE_CHUNKS)
         self.asr_transcript_queue = queue.Queue()
         # The session's locked-at-creation ASR choice wins; the deployment
