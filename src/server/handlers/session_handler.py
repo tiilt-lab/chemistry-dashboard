@@ -11,7 +11,7 @@ import posthoc_queue
 import negotiation_coding
 import pod_config as pod_setup
 
-def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder, asr=None, live_video_analytics=True, negotiation_coding_enabled=False, negotiation_paired=False, pod_config=None, coding_scheme=None, live_video_analyses=None, join_mode=None):
+def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder, asr=None, live_video_analytics=True, negotiation_coding_enabled=False, negotiation_paired=False, pod_config=None, coding_scheme=None, live_video_analyses=None, join_mode=None, passcode=None):
     session, keywords = database.create_session(user_id, keyword_list_id, topic_model_id, name, folder)
     # What the join page's "Join with" list opens on (join_mode.py); None is
     # stored as NULL and reads back as audio.
@@ -51,7 +51,12 @@ def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod
         session.negotiation_paired = bool(negotiation_paired)
         database.save_changes()
     if byod:
-        session = database.generate_session_passcode(session.id)
+        if passcode:
+            # The starter's own code (validated and checked for clashes by the
+            # route); a lost race falls back to a random word, see database.
+            session, _ = database.assign_session_passcode(session.id, passcode)
+        else:
+            session = database.generate_session_passcode(session.id)
     keywords = [keyword.keyword for keyword in keywords]
     config = {
         'server_start': str(session.creation_date),

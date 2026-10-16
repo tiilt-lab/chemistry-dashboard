@@ -15,6 +15,7 @@ import utility
 import json
 import pod_config as pod_setup
 import join_mode as join_mode_lib
+import passcode_rules
 import coding_schemes as coding_scheme_lib
 import watchers
 from datetime import datetime, timezone
@@ -280,6 +281,17 @@ def create_session(user, **kwargs):
     join_mode, bad_join_mode = join_mode_lib.normalize(request.json.get('joinMode'))
     if bad_join_mode:
         return json_response({'message': bad_join_mode}, 400)
+    # A chosen join code (passcode_rules.py), for a replacement session whose
+    # code is already on printed materials. Blank = a random word as before.
+    # Refused while another open session owns it: the join page resolves a
+    # code to one open session, and two would route a class to the wrong one.
+    passcode, bad_passcode = passcode_rules.normalize(request.json.get('passcode'))
+    if bad_passcode:
+        return json_response({'message': bad_passcode}, 400)
+    if passcode:
+        taken_by = database.passcode_in_use(passcode)
+        if taken_by is not None:
+            return json_response({'message': passcode_rules.in_use_message(passcode, taken_by.name)}, 400)
     folder = request.json.get('folder', None)
     if folder == -1:
         folder = None
@@ -292,7 +304,8 @@ def create_session(user, **kwargs):
                                                  negotiation_coding_enabled=negotiation_coding,
                                                  negotiation_paired=negotiation_paired and negotiation_coding,
                                                  pod_config=pod_config, coding_scheme=coding_scheme,
-                                                 live_video_analyses=live_video_analyses, join_mode=join_mode)
+                                                 live_video_analyses=live_video_analyses, join_mode=join_mode,
+                                                 passcode=passcode)
     return json_response(new_session.json())
 
 @api_routes.route('/api/v1/sessions/byod', methods=['POST'])

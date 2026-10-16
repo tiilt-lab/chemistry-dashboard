@@ -709,6 +709,31 @@ def generate_session_passcode(session_id):
         if not any(s.id < session.id for s in clashes):
             return session
 
+def passcode_in_use(passcode, exclude_session_id=None):
+    """The open session that owns this join code, or None. Ended sessions
+    free their code, so only active ones count."""
+    for s in get_sessions(active=True, passcode=passcode):
+        if s.id != exclude_session_id:
+            return s
+    return None
+
+def assign_session_passcode(session_id, passcode):
+    """Give the session the join code its starter chose (passcode_rules.py).
+    Printed materials carry the code, so a replacement session for the same
+    class keeps it. (session, taken_by): taken_by is the earlier open session
+    that won the same code in a race, in which case this session was given a
+    random word instead (same post-commit rule as generate_session_passcode:
+    the earliest session keeps the code)."""
+    session = get_sessions(id=session_id)
+    session.passcode = passcode
+    db.session.commit()
+    taken_by = passcode_in_use(passcode, exclude_session_id=session.id)
+    if taken_by is not None and taken_by.id < session.id:
+        logging.warning('session %s: join code %s was taken by session %s meanwhile; drawing a random word',
+                        session.id, passcode, taken_by.id)
+        return generate_session_passcode(session.id), taken_by
+    return session, None
+
 # -------------------------
 # SessionDevice
 # -------------------------
