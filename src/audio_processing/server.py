@@ -27,6 +27,7 @@ import safe_names
 import redis_client  # shared lazy client (src/common); enrollment tokens live beside the session keys
 from enrollment_token import enrollment_allows
 import live_presence  # live_pod:<key> keys the post-hoc services defer to (src/common)
+import clock_anchor  # the pod's clock on the session timeline, anchored to the audio actually received
 from audio_buffer import AudioBuffer
 import asr_ingest  # reactor-side ingest bookkeeping (stamped chunks, drop counter)
 import live_metrics  # Prometheus exporter accessors (src/common/blinc_metrics)
@@ -87,6 +88,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         self._fingerprint_lock = threading.Lock()
         # LoopingCall refreshing this pod's live_pod:<key> presence.
         self._presence = None
+        self.clock = None
         # Last asr_status state sent to this pod (read by live_metrics).
         self.asr_state = 'ok'
 
@@ -241,6 +243,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                 self.audio_buffer.append(data)
                 asr_data = self.reduce_channels(1, data)
                 self.enqueue_latest_audio_chunk(asr_data)
+                self._track_clock()
                 # Save audio data.
                 if cf.record_reduced():
                     self.redu_recorder.write(asr_data)
@@ -435,6 +438,9 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
     def signal_start(self):
         self.audio_buffer = AudioBuffer(self.config)
         self._ingest = asr_ingest.IngestCounter()
+        # start_offset was computed for this moment; the audio decides from
+        # here (clock_anchor.py).
+        self.clock = clock_anchor.ClockAnchor(time.time())
         self.asr_audio_queue = queue.Queue(maxsize=asr_ingest.QUEUE_CHUNKS)
         self.asr_transcript_queue = queue.Queue()
         # The session's locked-at-creation ASR choice wins; the deployment
@@ -451,18 +457,47 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         self.running = True
         self._start_presence()
 
+    def _track_clock(self):
+        # The pod's clock (clock_anchor.py): stamps count the samples
+        # received, so audio that begins late or stalls drifts from real
+        # time. Reactor thread; start_offset is read by the processor thread
+        # per utterance, so a move applies from the next transcript on.
+        clock = self.clock
+        if clock is None:
+            return
+        now = time.time()
+        if clock.first_frame_at is None:
+            late = clock.first_frame(now)
+            if late:
+                self.config.start_offset += late
+                logging.info('%s: audio began %.1f s after the start message; clock anchored to the first frame',
+                             self.config.auth_key, late)
+            return
+        delta = clock.frame(self._ingest.seconds(self._ingest.samples_received), now)
+        if delta:
+            self.config.start_offset += delta
+            logging.warning('%s: pod clock moved %+.1f s (audio was running %.1f s %s real time)',
+                            self.config.auth_key, delta, abs(delta), 'behind' if delta > 0 else 'ahead of')
+
     # Live presence (common/live_presence): while this pod streams, the
     # post-hoc services see live_pod:<processing_key> and defer GPU-heavy
     # jobs. Redis I/O runs off the reactor (a stalled Redis must not stall
     # ingest) and is best effort: the key's TTL covers a crashed process.
+    # The pod's clock report rides along for the Devices tab.
     def _mark_live(self):
         key = self.config.auth_key
+        clock = self.clock.snapshot() if self.clock is not None else None
 
         def _fail(f):
             logging.warning('live presence refresh failed for %s: %s', key, f.getErrorMessage())
 
-        reactor_safety.defer_blocking(
-            lambda: live_presence.mark_live(redis_client._redis(), key)).addErrback(_fail)
+        def _refresh():
+            r = redis_client._redis()
+            live_presence.mark_live(r, key)
+            if clock is not None:
+                live_presence.set_clock(r, key, clock)
+
+        reactor_safety.defer_blocking(_refresh).addErrback(_fail)
 
     def _start_presence(self):
         self._presence = task.LoopingCall(self._mark_live)
@@ -479,8 +514,12 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                 logging.warning('live presence clear failed for %s (TTL will expire it): %s',
                                 key, f.getErrorMessage())
 
-            reactor_safety.defer_blocking(
-                lambda: live_presence.clear_live(redis_client._redis(), key)).addErrback(_fail)
+            def _clear():
+                r = redis_client._redis()
+                live_presence.clear_live(r, key)
+                live_presence.clear_clock(r, key)
+
+            reactor_safety.defer_blocking(_clear).addErrback(_fail)
 
     def send_close(self, message):
         self.send_json({'type': 'end', 'message': message})

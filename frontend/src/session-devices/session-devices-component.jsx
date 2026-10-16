@@ -125,7 +125,7 @@ function SessionDevicesComponent() {
                                     <tbody>
                                         {rows.map((r, i) => {
                                             const d = r.device
-                                            const attention = r.state.attention
+                                            const attention = r.state.attention || (r.clock && r.clock.attention)
                                             return (
                                                 <tr
                                                     key={d ? `d${d.id}` : `s${i}`}
@@ -150,7 +150,15 @@ function SessionDevicesComponent() {
                                                                     {r.state.label}
                                                                 </StatusPill>
                                                             </span>
-                                                            {attention ? <span className="text-xs text-tiilt-muted">{r.state.hint}</span> : null}
+                                                            {r.state.attention ? <span className="text-xs text-tiilt-muted">{r.state.hint}</span> : null}
+                                                            {r.clock ? (
+                                                                <span
+                                                                    title={r.clock.hint}
+                                                                    className={"text-xs " + (r.clock.attention ? "font-semibold text-tiilt-orange" : "text-tiilt-muted")}
+                                                                >
+                                                                    {r.clock.label}
+                                                                </span>
+                                                            ) : null}
                                                         </div>
                                                     </td>
                                                     <td className="px-3 py-2 whitespace-nowrap text-tiilt-muted">

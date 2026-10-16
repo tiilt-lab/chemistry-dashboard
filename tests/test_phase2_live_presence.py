@@ -135,3 +135,20 @@ def test_audio_server_uses_the_processing_key_as_the_pod_key():
         body = s[s.index(fn):]
         body = body[:body.index("\n    def ", 10)]
         assert re.search(r"key = self\.config\.auth_key", body), fn
+
+
+def test_clock_report_is_published_read_back_and_cleared():
+    r = FakeRedis()
+    live_presence.set_clock(r, "k1", {"drift": 17.6, "corrected": 0.0, "late_start": 0.0}, ttl=30)
+    live_presence.set_clock(r, "k2", {"drift": 0.1, "corrected": 12.0, "late_start": 6.0})
+    assert live_presence.clocks(r) == {
+        "k1": {"drift": 17.6, "corrected": 0.0, "late_start": 0.0},
+        "k2": {"drift": 0.1, "corrected": 12.0, "late_start": 6.0},
+    }
+    # the clock key is not a presence key
+    assert live_presence.live_count(r) == 0
+    live_presence.clear_clock(r, "k1")
+    assert set(live_presence.clocks(r)) == {"k2"}
+    # garbage left by an older service is skipped, not raised
+    r.set(live_presence.make_clock_key("k3"), "not json")
+    assert set(live_presence.clocks(r)) == {"k2"}

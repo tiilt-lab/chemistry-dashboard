@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { expectedSlots, deviceState, buildRows, summarize, formatAge, QUIET_WARN_S, LISTENING_GRACE_MS } from "./live-status"
+import { expectedSlots, deviceState, buildRows, summarize, formatAge, QUIET_WARN_S, LISTENING_GRACE_MS, clockNote, CLOCK_WARN_S } from "./live-status"
 
 const viking = {
     groups: ["Group 1", "Group 2"],
@@ -84,5 +84,31 @@ describe("ages", () => {
         expect(formatAge(125)).toBe("2 min")
         expect(formatAge(3700)).toBe("1 h 1 min")
         expect(formatAge(null)).toBe("—")
+    })
+})
+
+describe("clock note", () => {
+    const base = { id: 1, connected: true, streaming: true, last_speech_age: 10 }
+    it("is nothing without a report, or while the clock is fine", () => {
+        expect(clockNote(null)).toBeNull()
+        expect(clockNote(base)).toBeNull()
+        expect(clockNote({ ...base, clock: { drift: 0.4, corrected: 0, late_start: 0.3 } })).toBeNull()
+    })
+    it("warns while the audio runs more than the threshold from real time, either way", () => {
+        expect(clockNote({ ...base, clock: { drift: CLOCK_WARN_S + 15, corrected: 0, late_start: 0 } })).toMatchObject({
+            key: "clock-drift", label: "clock −18 s", attention: true,
+        })
+        expect(clockNote({ ...base, clock: { drift: -5.2, corrected: 0, late_start: 0 } })).toMatchObject({
+            key: "clock-drift", label: "clock +5 s", attention: true,
+        })
+    })
+    it("notes a correction quietly once the drift is gone", () => {
+        const note = clockNote({ ...base, clock: { drift: 0.2, corrected: 12, late_start: 6 } })
+        expect(note).toMatchObject({ key: "clock-corrected", label: "clock corrected 18 s", attention: false })
+    })
+    it("puts the note on the row and counts a warning as attention", () => {
+        const rows = buildRows(null, [{ ...base, name: "Pod", clock: { drift: 9, corrected: 0, late_start: 0 } }], { now: 0 })
+        expect(rows[0].clock.key).toBe("clock-drift")
+        expect(summarize(rows).attention).toBe(1)
     })
 })
