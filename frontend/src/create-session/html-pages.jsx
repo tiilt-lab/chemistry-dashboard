@@ -331,6 +331,49 @@ function AdvancedAnalysisSection({ analyses, toggle }) {
   );
 }
 
+// How the devices join: what the join page's "Join with" list opens on.
+// Teams can still change it on the day; this only saves the common case
+// from a camera-permission prompt (audio classes) or from every team having
+// to pick Video by hand (video classes).
+const JOIN_MODES = [
+  ["audio", "Audio", "Microphone only. No camera permission is asked for."],
+  ["video", "Video", "Microphone and camera, for sessions that record or analyse video."],
+];
+
+function JoinModeSection({ value, onChange }) {
+  return (
+    <div>
+      <label className={fieldLabel}>Devices join with</label>
+      <div className="flex flex-col gap-2">
+        {JOIN_MODES.map(([mode, title, desc]) => (
+          <label
+            key={mode}
+            htmlFor={`joinMode-${mode}`}
+            className={
+              "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2 transition " +
+              (value === mode ? "border-tiilt bg-tiilt-soft/60" : "border-tiilt-line bg-white hover:bg-tiilt-soft/30")
+            }
+          >
+            <input
+              id={`joinMode-${mode}`}
+              type="radio"
+              name="joinMode"
+              className="mt-0.5 h-4 w-4 flex-none cursor-pointer accent-tiilt"
+              checked={value === mode}
+              onChange={() => onChange(mode)}
+            />
+            <span>
+              <span className="block text-sm font-semibold text-tiilt-ink">{title}</span>
+              <span className="block text-xs text-tiilt-muted">{desc}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+      <p className="mt-1.5 text-xs text-tiilt-muted">What the "Join with" list opens on; a team can still change it when joining.</p>
+    </div>
+  );
+}
+
 // Coding: which scheme (Library) codes every utterance after a pod finishes.
 function CodingSection({ schemes, value, onChange, paired, goToSchemes }) {
   const list = schemes || [];
@@ -416,6 +459,7 @@ function CreateSessionPage(props) {
                 </button>
               </div>
               <PodSetupSection setup={props.podSetup} setSetup={props.setPodSetup} error={props.podSetupError} />
+              <JoinModeSection value={props.joinMode} onChange={props.setJoinMode} />
               <CodingSection
                 schemes={props.codingSchemes}
                 value={props.codingScheme}

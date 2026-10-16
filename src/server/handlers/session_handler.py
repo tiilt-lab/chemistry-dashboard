@@ -11,8 +11,13 @@ import posthoc_queue
 import negotiation_coding
 import pod_config as pod_setup
 
-def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder, asr=None, live_video_analytics=True, negotiation_coding_enabled=False, negotiation_paired=False, pod_config=None, coding_scheme=None, live_video_analyses=None):
+def create_session(user_id, name, devices, keyword_list_id, topic_model_id, byod, features, doa, folder, asr=None, live_video_analytics=True, negotiation_coding_enabled=False, negotiation_paired=False, pod_config=None, coding_scheme=None, live_video_analyses=None, join_mode=None):
     session, keywords = database.create_session(user_id, keyword_list_id, topic_model_id, name, folder)
+    # What the join page's "Join with" list opens on (join_mode.py); None is
+    # stored as NULL and reads back as audio.
+    if join_mode:
+        session.join_mode = join_mode
+        database.save_changes()
     # Which video analyses run live (None = both when live analytics is on).
     if live_video_analyses is not None:
         session.live_video_analyses = ','.join(live_video_analyses)

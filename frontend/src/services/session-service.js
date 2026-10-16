@@ -320,7 +320,8 @@ class SessionService {
     negotiationPaired,
     podConfig,
     codingScheme,
-    liveVideoAnalyses
+    liveVideoAnalyses,
+    joinMode
   ) {
     const body = {
       name: name,
@@ -348,6 +349,9 @@ class SessionService {
     // Which video analyses run during class ("attention", "emotion"); an
     // empty list records only. Omitted = both when liveVideoAnalytics is true.
     if (Array.isArray(liveVideoAnalyses)) body.liveVideoAnalyses = liveVideoAnalyses;
+    // What the join page's "Join with" list opens on ("audio" | "video");
+    // omitted = audio.
+    if (joinMode === "audio" || joinMode === "video") body.joinMode = joinMode;
 
     return this.api.httpRequestCall("api/v1/sessions", "POST", body);
   }
