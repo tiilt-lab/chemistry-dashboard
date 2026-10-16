@@ -1053,16 +1053,32 @@ def _streaming_processing_keys():
         return None
 
 
+def _pod_clocks():
+    # clock_pod:<processing_key> -> the audio service's clock report for the
+    # pod (drift from real time, corrections made). Advisory like presence.
+    try:
+        from redis_helper import r as redis_client
+        import live_presence
+        return live_presence.clocks(redis_client)
+    except Exception as e:  # noqa: BLE001 - advisory
+        logging.warning('pod clocks unavailable: %s', e)
+        return {}
+
+
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices/live', methods=['GET'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_read_access
 def get_session_devices_live(session_id, **kwargs):
-    # The Devices tab: per pod, connected / streaming audio / last speech.
+    # The Devices tab: per pod, connected / streaming audio / last speech,
+    # and the pod's clock report (clock_anchor.py) when the audio service
+    # published one.
     session_now, devices = database.get_session_live_status(session_id)
     streaming = _streaming_processing_keys()
+    clocks = _pod_clocks()
     for d in devices:
         key = d.pop('processing_key', None)
         d['streaming'] = None if streaming is None else (key is not None and key in streaming)
+        d['clock'] = clocks.get(key) if key is not None else None
     return json_response({'now': session_now, 'devices': devices})
 
 

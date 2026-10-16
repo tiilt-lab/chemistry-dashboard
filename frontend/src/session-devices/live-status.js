@@ -10,6 +10,10 @@ export const QUIET_WARN_S = 120
 // A pod that has only just started streaming gets this long before "no
 // speech yet" becomes a warning; speech takes ~15-25 s to be recognised.
 export const LISTENING_GRACE_MS = 90000
+// The audio service reports each pod's clock (drift from real time, and the
+// corrections it has made). Uncorrected drift past this is worth a look: the
+// pod's transcript times are off by that much.
+export const CLOCK_WARN_S = 3
 
 export function formatAge(seconds) {
     if (seconds == null || isNaN(seconds)) return "—"
@@ -38,6 +42,37 @@ export function expectedSlots(podConfig) {
         else slots.push({ group, team: null })
     }
     return slots
+}
+
+// The clock note for a device, or null: a warning while its audio runs
+// more than CLOCK_WARN_S from real time, a quiet note once the service has
+// corrected it (so a reader knows why earlier times moved).
+export function clockNote(d) {
+    const c = d && d.clock
+    if (!c) return null
+    const drift = Number(c.drift) || 0
+    const corrected = (Number(c.corrected) || 0) + (Number(c.late_start) || 0)
+    if (Math.abs(drift) > CLOCK_WARN_S) {
+        const n = Math.round(Math.abs(drift))
+        return {
+            key: "clock-drift",
+            label: `clock ${drift > 0 ? "−" : "+"}${n} s`,
+            tone: "orange",
+            attention: true,
+            hint: `This laptop's audio is running ${n} s ${drift > 0 ? "behind" : "ahead of"} real time, so its transcript times are off by that much until the server corrects it.`,
+        }
+    }
+    if (corrected >= 1) {
+        const n = Math.round(corrected)
+        return {
+            key: "clock-corrected",
+            label: `clock corrected ${n} s`,
+            tone: "neutral",
+            attention: false,
+            hint: `The server moved this laptop's clock by ${n} s to match real time.`,
+        }
+    }
+    return null
 }
 
 const norm = (v) => (v == null ? "" : String(v).trim().toLowerCase())
@@ -111,6 +146,7 @@ export function buildRows(podConfig, devices, { streamingSince = {}, now = Date.
             first,
             device,
             state: deviceState(device, { sinceStreamingMs: since }),
+            clock: clockNote(device),
         }
     }
     const rows = []
@@ -135,7 +171,7 @@ export function summarize(rows) {
             if (r.device.streaming) out.streaming += 1
             if (r.state.key === "speaking") out.speaking += 1
         }
-        if (r.state.attention) out.attention += 1
+        if (r.state.attention || (r.clock && r.clock.attention)) out.attention += 1
     }
     out.joined = joinedSlots.size
     return out

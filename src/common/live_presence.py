@@ -16,9 +16,14 @@ the caller, which decides whether presence is best-effort (audio server) or
 must fail closed (post-hoc side).
 """
 
+import json
+
 PREFIX = 'live_pod:'
 DEFAULT_TTL = 60
 REFRESH_SECONDS = 20  # well under TTL/2 so one missed refresh never drops presence
+# The pod's clock report (clock_anchor.snapshot(): drift, corrected,
+# late_start in seconds), refreshed with presence, shown on the Devices tab.
+CLOCK_PREFIX = 'clock_pod:'
 
 
 def make_key(processing_key):
@@ -48,3 +53,34 @@ def live_keys(r):
 def live_count(r):
     """How many pods are live right now (0 = safe to take the GPU)."""
     return len(live_keys(r))
+
+
+def make_clock_key(processing_key):
+    return CLOCK_PREFIX + str(processing_key)
+
+
+def set_clock(r, key, report, ttl=DEFAULT_TTL):
+    """Publish pod ``key``'s clock report (a small dict) for another ``ttl`` s."""
+    r.set(make_clock_key(key), json.dumps(report), ex=int(ttl))
+
+
+def clear_clock(r, key):
+    r.delete(make_clock_key(key))
+
+
+def clocks(r):
+    """{processing_key: report} for every pod with a live clock report."""
+    out = {}
+    for k in r.scan_iter(match=CLOCK_PREFIX + '*', count=100):
+        if isinstance(k, bytes):
+            k = k.decode('utf-8', 'replace')
+        raw = r.get(k)
+        if raw is None:
+            continue
+        if isinstance(raw, bytes):
+            raw = raw.decode('utf-8', 'replace')
+        try:
+            out[k[len(CLOCK_PREFIX):]] = json.loads(raw)
+        except ValueError:
+            continue
+    return out
