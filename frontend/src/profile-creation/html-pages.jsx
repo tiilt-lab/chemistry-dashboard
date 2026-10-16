@@ -47,10 +47,10 @@ function ProfileCreationPage(props) {
                             <input
                                 id="username"
                                 minLength={5}
-                                maxLength={10}
+                                maxLength={20}
                                 autoCapitalize="off"
                                 spellCheck="false"
-                                placeholder="5–10 letters and numbers"
+                                placeholder="5–20 letters and numbers"
                                 className={inputClass}
                             />
                             <span className="text-xs text-tiilt-muted">

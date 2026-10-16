@@ -56,6 +56,26 @@ def test_routes_take_group_and_team_and_prove_reenrollment_with_them():
     assert "edits = {}" in src  # non-admins never edit the labels
 
 
+def test_half_finished_signup_is_reclaimable_and_the_page_only_proceeds_with_a_token():
+    # A student whose recording never uploaded (biometric_captured stays
+    # "no") retried with a differently typed group, got "Username already
+    # exists" without a token, and the page still sent them on to the
+    # recorder, where the socket refused them: a dead end (2026-10-16).
+    s = _read("src", "server", "routes", "student.py")
+    add = next(n for n in ast.walk(ast.parse(s)) if isinstance(n, ast.FunctionDef) and n.name == "add_students")
+    src = ast.unparse(add)
+    assert "unclaimed = student.biometric_captured != 'yes'" in src
+    claim = s[s.index("if unclaimed and not name_matches:"):s.index("body = {'message': \"Username already exists.\"")]
+    assert 'database.update_student(student.id, group_name=group_name or "", team_name=team_name or "")' in claim
+    assert "name_matches = True" in claim
+    svc = _read("frontend", "src", "services", "auth-service.js")
+    assert 'if (err["reenroll_allowed"] && student.enrollment_token){' in svc
+    assert 'student.biometric_captured !== "yes"' not in svc
+    page = _read("frontend", "src", "profile-creation", "html-pages.jsx")
+    assert "maxLength={20}" in page and "maxLength={10}" not in page, "username box must take the 20-char limit"
+    assert "5–20 letters and numbers" in page
+
+
 def test_migration_adds_the_labels_and_relaxes_the_names():
     m = _read("src", "server", "migrations", "versions", "9a1b2c3d4e5f_student_group_team.py")
     assert "revision = '9a1b2c3d4e5f'" in m and "down_revision = '809102132435'" in m
