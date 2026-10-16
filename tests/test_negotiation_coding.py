@@ -1187,6 +1187,80 @@ def test_merge_paired_finds_clocks_minutes_apart_despite_repeated_phrases():
     assert [round(u["start_time"]) for u in kept] == [100 + 20 * k for k in range(len(lines))]
 
 
+def test_merge_paired_drops_a_straddler_covered_by_the_other_laptops_pieces():
+    # Group 5, 2026-10-16 17:49: Pat's laptop cut one stretch of speech into
+    # two utterances; Sandy's laptop made one that straddles the tail of the
+    # first and the head of the second. Whole-utterance matching sees two
+    # half matches and keeps all three; the words of the straddler are
+    # almost all in the other two, so it is a copy and goes.
+    pat1 = ("Two million dollars for the project itself. Forget the $400 million. Where did $two million come "
+            "from? Oh, hold on. I'm talking about the loan here. Hold on. If if oh look, if you loan if I if you "
+            "loan me twenty thousand dollars, alright, that's my problem. Alright?")
+    sandy = ("If I if you loan me twenty thousand dollars, alright, that's my problem. Alright, I understand that. "
+             "If you owe loan me four hundred thousand dollars, that's your problem, dude. OK? Yeah. Alright, like.")
+    pat2 = ("If you owe loan me four hundred thousand dollars, that's your problem, dude. OK? Yeah. OK. So that's "
+            "weird enough. But here's the thing. You want your four hundred thousand dollars back, you gotta have.")
+    pat = [_row(1, 1, 100.0, pat1, "Pat", sim=0.8, length=12), _row(3, 1, 112.0, pat2, "Pat", sim=0.8, length=10)]
+    sandy_rows = [_row(2, 2, 103.0, sandy, "Sandy", sim=0.7, length=12)]
+    kept, dropped = nc.merge_paired({1: pat, 2: sandy_rows}, SIDES)
+    assert [u["transcript_id"] for u in kept] == [1, 3]
+    assert len(dropped) == 1 and dropped[0]["transcript_id"] == 2 and dropped[0]["reason"] == "covered"
+    assert dropped[0]["similarity"] >= 0.8
+    # Two people really talking at once share no runs of words: both stay.
+    a = _row(10, 1, 200.0, "I can call the loan whenever I want and you know it", "Pat", sim=0.8, length=5)
+    b = _row(11, 2, 200.5, "Can we slow this down for a minute and look at the numbers", "Sandy", sim=0.8, length=5)
+    kept, dropped = nc.merge_paired({1: [a], 2: [b]}, SIDES)
+    assert [u["transcript_id"] for u in kept] == [10, 11] and dropped == []
+
+
+def test_merge_paired_aligns_from_the_recordings_when_they_carry_a_clock(tmp_path):
+    # Both laptops recorded the same table; the Pat laptop's clock ran 191 s
+    # ahead (its sidecar says its recording starts 191 s later on the
+    # session clock than it really did). The sound, not the words, aligns
+    # them: a few short lines that would never anchor a text estimate.
+    import numpy as np
+    from scipy.io import wavfile
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src", "common"))
+    import recording_sidecar
+    SR = 16000
+    rng = np.random.default_rng(7)
+    x = np.zeros(int(90 * SR), dtype=np.float32)
+    t = 0.0
+    while t < 90:
+        burst, gap = rng.uniform(0.4, 2.5), rng.uniform(0.2, 1.5)
+        s_, e_ = int(t * SR), min(len(x), int((t + burst) * SR))
+        x[s_:e_] = (rng.standard_normal(max(0, e_ - s_)) * 0.3).astype(np.float32)
+        t += burst + gap
+    sandy_wav = str(tmp_path / "s-key (Fri Oct 16 14:00:00 2026)_redu.wav")
+    pat_wav = str(tmp_path / "p-key (Fri Oct 16 14:00:00 2026)_redu.wav")
+    wavfile.write(sandy_wav, SR, (x * 32767).astype(np.int16))
+    wavfile.write(pat_wav, SR, ((x * 0.5 + rng.standard_normal(len(x)) * 0.01) * 32767).astype(np.int16))
+    recording_sidecar.write(sandy_wav, {"processing_key": "s-key", "start_offset": 1000.0, "moves": []})
+    recording_sidecar.write(pat_wav, {"processing_key": "p-key", "start_offset": 1191.0, "moves": []})
+    sides = {1: "Sandy", 2: "Pat"}
+    sandy = [_row(1, 1, 1010.0, "fine by me", "Sandy", sim=0.6, length=2),
+             _row(2, 1, 1040.0, "no", "Sandy", sim=0.6, length=1),
+             _row(3, 1, 1070.0, "we agree then", "Sandy", sim=0.6, length=2)]
+    pat = [_row(11, 2, 1201.0, "fine by me", "Pat", sim=0.85, length=2),
+           _row(12, 2, 1231.0, "no", "Pat", sim=0.85, length=1),
+           _row(13, 2, 1261.0, "we agree then", "Pat", sim=0.85, length=2)]
+    recordings = {1: nc.recordings_of("s-key", str(tmp_path)), 2: nc.recordings_of("p-key", str(tmp_path))}
+    assert [p for p, _ in recordings[2]] == [pat_wav]
+    diagnostics = {}
+    kept, dropped = nc.merge_paired({1: sandy, 2: pat}, sides, diagnostics, recordings)
+    assert diagnostics["alignment"]["method"] == "acoustic"
+    assert abs(diagnostics["alignment"]["offset_min"] - 191.0) < 0.1 and abs(diagnostics["alignment"]["offset_max"] - 191.0) < 0.1
+    assert [u["transcript_id"] for u in kept] == [11, 12, 13]
+    assert [round(u["start_time"]) for u in kept] == [1010, 1040, 1070]
+    assert len(dropped) == 3 and {d["reason"] for d in dropped} == {"duplicate"}
+    # without recordings the same rows cannot be aligned (too few, too short)
+    diagnostics = {}
+    kept, dropped = nc.merge_paired({1: sandy, 2: pat}, sides, diagnostics)
+    assert diagnostics["alignment"] is None and dropped == []
+    # recordings without a sidecar are ignored
+    assert nc.recordings_of("nobody", str(tmp_path)) == []
+
+
 def test_merge_paired_clocks_taken_as_equal_without_enough_anchors():
     # Two short lines cannot anchor a clock; the plain tolerance applies and
     # the far-apart copies are, correctly, left alone.

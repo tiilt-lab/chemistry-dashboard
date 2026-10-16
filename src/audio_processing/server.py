@@ -28,6 +28,7 @@ import redis_client  # shared lazy client (src/common); enrollment tokens live b
 from enrollment_token import enrollment_allows
 import live_presence  # live_pod:<key> keys the post-hoc services defer to (src/common)
 import clock_anchor  # the pod's clock on the session timeline, anchored to the audio actually received
+import recording_sidecar  # <recording>.clock.json: how the recording's samples map to the session clock
 from audio_buffer import AudioBuffer
 import asr_ingest  # reactor-side ingest bookkeeping (stamped chunks, drop counter)
 import live_metrics  # Prometheus exporter accessors (src/common/blinc_metrics)
@@ -89,6 +90,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         # LoopingCall refreshing this pod's live_pod:<key> presence.
         self._presence = None
         self.clock = None
+        self.recording_paths = []
         # Last asr_status state sent to this pod (read by live_metrics).
         self.asr_state = 'ok'
 
@@ -220,9 +222,11 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                     if cf.record_original():
                         filename = os.path.join(cf.recordings_folder(), "{0} ({1})_orig".format(self.config.auth_key, str(time.ctime())))
                         self.orig_recorder = WaveRecorder(filename, self.config.sample_rate, self.config.depth, self.config.channels)
+                        self.recording_paths.append(filename)
                     if cf.record_reduced():
                         filename = os.path.join(cf.recordings_folder(), "{0} ({1})_redu".format(self.config.auth_key, str(time.ctime())))
                         self.redu_recorder = WaveRecorder(filename, 16000, 2, 1)
+                        self.recording_paths.append(filename)
                 self.signal_start()
                 self.send_json({'type':'start'})
                 logging.info('Audio process connected')
@@ -250,6 +254,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
             discarded = self.clock.discard(self._raw_seconds(data))
             if discarded and self.config is not None:
                 self.config.start_offset += discarded
+                self._clock_moved(discarded)
         if self.running and not self.awaitingSpeakers:
             if self.stream_data == 'audio':
                 if cf.record_original():
@@ -459,6 +464,8 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         # start_offset was computed for this moment; the audio decides from
         # here (clock_anchor.py).
         self.clock = clock_anchor.ClockAnchor(time.time(), getattr(self.config, 'reported_backlog', 0.0))
+        self.clock_moves = []
+        self._write_clock_sidecars()
         self.asr_audio_queue = queue.Queue(maxsize=asr_ingest.QUEUE_CHUNKS)
         self.asr_transcript_queue = queue.Queue()
         # The session's locked-at-creation ASR choice wins; the deployment
@@ -475,6 +482,29 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         self.running = True
         self._start_presence()
 
+    def _write_clock_sidecars(self):
+        # Beside each recording of this connection: where sample 0 sits on
+        # the session clock and every move made since, so the recording can
+        # be placed on the session clock afterwards (recording_sidecar.py).
+        if not self.recording_paths or self.config is None:
+            return
+        info = {'processing_key': self.config.auth_key, 'session_id': self.config.sessionId,
+                'device_id': self.config.deviceId, 'start_offset': round(float(self.config.start_offset), 3),
+                'reported_backlog': round(float(getattr(self.config, 'reported_backlog', 0.0) or 0.0), 3),
+                'moves': list(self.clock_moves)}
+        for base in self.recording_paths:
+            try:
+                recording_sidecar.write(base + '.wav', info)
+            except Exception:
+                logging.exception('%s: could not write the clock sidecar for %s', self.config.auth_key, base)
+
+    def _clock_moved(self, delta):
+        # A move is at the audio position where it took effect; the sidecar's
+        # start_offset stays the value the first sample was stamped with.
+        at = self._ingest.seconds(self._ingest.samples_received) if self._ingest is not None else 0.0
+        self.clock_moves.append({'at': round(float(at), 3), 'delta': round(float(delta), 3)})
+        self._write_clock_sidecars()
+
     def _track_clock(self):
         # The pod's clock (clock_anchor.py): stamps count the samples
         # received, so audio that begins late or stalls drifts from real
@@ -488,12 +518,14 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
             late = clock.first_frame(now)
             if late:
                 self.config.start_offset += late
+                self._clock_moved(late)
                 logging.info('%s: audio began %.1f s after the start message; clock anchored to the first frame',
                              self.config.auth_key, late)
             return
         delta = clock.frame(self._ingest.seconds(self._ingest.samples_received), now)
         if delta:
             self.config.start_offset += delta
+            self._clock_moved(delta)
             logging.warning('%s: pod clock moved %+.1f s (audio was running %.1f s %s real time)',
                             self.config.auth_key, delta, abs(delta), 'behind' if delta > 0 else 'ahead of')
 

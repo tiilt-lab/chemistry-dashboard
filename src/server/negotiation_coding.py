@@ -71,6 +71,14 @@ PAIR_ANCHOR_SPREAD = 30.0     # s: anchors this far from the dominant offset are
 PAIR_MIN_ANCHORS = 3          # fewer than this: the clocks are taken as equal
 PAIR_ANCHOR_NEIGHBOURS = 5    # the offset at a moment is the median of this many nearest anchors
 PAIR_ALIGNED_TOLERANCE = 5.0  # s: after alignment, how differently the two recognizers may cut a start
+# The two recognizers also cut the same stretch of speech at different
+# points: one laptop makes two utterances where the other makes one that
+# straddles them, and a straddler matches neither half well enough to be a
+# duplicate. A kept utterance whose words are this far covered, in runs of
+# PAIR_COVER_RUN tokens or more, by the other laptop's kept utterances at the
+# same moment is a copy of them and is dropped ("covered").
+PAIR_COVERED_SHARE = 0.6
+PAIR_COVER_RUN = 3
 
 # Placeholder team names for a session whose setup names none; every real
 # run takes its names from the session (run_names / device_team_names).
@@ -315,10 +323,11 @@ class ClockAlignment(object):
     median over the nearest anchors, so a step (a reconnect, a stall) moves
     it where it happened instead of smearing it over the session."""
 
-    def __init__(self, anchors, reference_device, other_device):
+    def __init__(self, anchors, reference_device, other_device, method="text"):
         self.anchors = sorted(anchors)
         self.reference_device = reference_device
         self.other_device = other_device
+        self.method = method
 
     def at(self, t):
         # The median of the nearest anchors (fewer when there are few, so a
@@ -342,8 +351,8 @@ class ClockAlignment(object):
         samples = [{"at": round(float(t), 1), "offset": round(self.at(t), 1)}
                    for t in range(int(first), int(last) + 1, 600)]
         return {"reference_device": self.reference_device, "other_device": self.other_device,
-                "anchors": len(self.anchors), "offset_min": round(min(offsets), 1),
-                "offset_max": round(max(offsets), 1), "offsets": samples}
+                "method": self.method, "anchors": len(self.anchors),
+                "offset_min": round(min(offsets), 2), "offset_max": round(max(offsets), 2), "offsets": samples}
 
 
 def estimate_clock_offset(reference, other, reference_device=None, other_device=None):
@@ -396,6 +405,78 @@ def estimate_clock_offset(reference, other, reference_device=None, other_device=
     return ClockAlignment(anchors, reference_device, other_device)
 
 
+def audio_recordings_dir():
+    """Where the live audio service keeps the pods' recordings
+    (``<key> (<start>)_redu.wav`` and their clock sidecars). The two
+    services share this host and checkout; DC_AUDIO_RECORDINGS_DIR points
+    elsewhere when they do not."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    return os.environ.get("DC_AUDIO_RECORDINGS_DIR") or os.path.join(here, "..", "audio_processing", "recordings")
+
+
+def recordings_of(processing_key, directory=None):
+    """The reduced (16 kHz mono) recordings of a pod that carry a clock
+    sidecar, oldest first. Recordings from before the sidecar existed cannot
+    be placed on the session clock and are left out."""
+    import glob
+    import recording_sidecar
+    directory = directory or audio_recordings_dir()
+    out = []
+    for path in sorted(glob.glob(os.path.join(directory, glob.escape(str(processing_key)) + "*_redu.wav"))):
+        info = recording_sidecar.read(path)
+        if info is not None:
+            out.append((path, info))
+    return out
+
+
+def _pod_envelope(recordings):
+    """(timeline_start, envelope) of a pod on its own transcript clock from
+    its recordings, read in blocks so a long one never sits in memory."""
+    import wave
+    import audio_align
+    import recording_sidecar
+    import numpy as np
+
+    def _blocks(w, frames):
+        # The reduced recordings are 16-bit mono; read ten seconds at a time.
+        while True:
+            raw = w.readframes(frames)
+            if not raw:
+                return
+            yield np.frombuffer(raw, dtype="<i2").astype(np.float32) / 32768.0
+
+    segments = []
+    for path, info in recordings:
+        with wave.open(path, "rb") as w:
+            sr = w.getframerate()
+            if w.getsampwidth() != 2 or w.getnchannels() != 1:
+                logging.warning("paired merge: %s is not 16-bit mono; skipped for alignment", path)
+                continue
+            env = audio_align.envelope_of_blocks(_blocks(w, sr * 10), sr)
+        # The sidecar maps sample 0 to the session clock; clock moves inside
+        # a recording are rare and small next to the window, so the start is
+        # what places it.
+        segments.append((recording_sidecar.session_time(info, 0.0), env))
+    return audio_align.place_on_timeline(segments)
+
+
+def acoustic_anchors(reference_recordings, other_recordings):
+    """[(other_time, other_time - reference_time)] from the two pods' sound:
+    both microphones heard the same table, so cross-correlating their
+    loudness envelopes (audio_align) gives, per window, how far the other
+    pod's transcript clock runs ahead of the reference pod's. Empty when
+    either side has no recording with a clock sidecar."""
+    import audio_align
+    if not reference_recordings or not other_recordings:
+        return []
+    ref_start, ref_env = _pod_envelope(reference_recordings)
+    other_start, other_env = _pod_envelope(other_recordings)
+    anchors = []
+    for t_ref, lag, _score in audio_align.windowed_offsets(ref_start, ref_env, other_start, other_env):
+        anchors.append((t_ref + lag, lag))
+    return anchors
+
+
 _WORD_RE = re.compile(r"\S+")
 
 
@@ -417,7 +498,7 @@ def merge_texts(primary, secondary):
     return " ".join(out)
 
 
-def merge_paired(rows_by_device, sides, diagnostics=None):
+def merge_paired(rows_by_device, sides, diagnostics=None, recordings=None):
     """One conversation from two devices' transcripts. ``rows_by_device`` maps
     device id -> transcript rows, ``sides`` device id -> team. Rows are put
     on one timeline and each utterance looks for its best text match among
@@ -433,10 +514,13 @@ def merge_paired(rows_by_device, sides, diagnostics=None):
     second device's starts are shifted by the offset estimate_clock_offset
     finds (the original stamp stays in ``device_start_time``), and a
     duplicate's kept copy carries the words of both renderings
-    (merge_texts). ``diagnostics``, when a dict, receives the alignment
-    found (or None). Returns (utterances in time order, re-indexed, each
-    with team and session_device_id; dropped: [{transcript_id,
-    kept_transcript_id, reason, similarity}])."""
+    (merge_texts). ``recordings``, when given, maps device id -> the pod's
+    recordings with clock sidecars (recordings_of); the alignment then comes
+    from the sound itself (acoustic_anchors) and the text is the fallback.
+    ``diagnostics``, when a dict, receives the alignment found (or None).
+    Returns (utterances in time order, re-indexed, each with team and
+    session_device_id; dropped: [{transcript_id, kept_transcript_id,
+    reason, similarity}])."""
     by_device = {}
     for device_id, rows in rows_by_device.items():
         by_device[device_id] = [_utterance(r, sides.get(device_id)) for r in rows]
@@ -444,8 +528,17 @@ def merge_paired(rows_by_device, sides, diagnostics=None):
     alignment = None
     if len(by_device) == 2:
         reference_device, other_device = sorted(by_device)
-        alignment = estimate_clock_offset(by_device[reference_device], by_device[other_device],
-                                          reference_device, other_device)
+        if recordings:
+            try:
+                anchors = acoustic_anchors(recordings.get(reference_device), recordings.get(other_device))
+            except Exception:  # noqa: BLE001 - the sound is a bonus; the text still works
+                logging.exception("paired merge: acoustic alignment failed; using the text")
+                anchors = []
+            if len(anchors) >= PAIR_MIN_ANCHORS:
+                alignment = ClockAlignment(anchors, reference_device, other_device, method="acoustic")
+        if alignment is None:
+            alignment = estimate_clock_offset(by_device[reference_device], by_device[other_device],
+                                              reference_device, other_device)
         if alignment is not None:
             tolerance = PAIR_ALIGNED_TOLERANCE
             for u in by_device[other_device]:
@@ -491,11 +584,54 @@ def merge_paired(rows_by_device, sides, diagnostics=None):
         kept.setdefault(winner["transcript_id"], winner)
         dropped.append({"transcript_id": loser["transcript_id"], "kept_transcript_id": winner["transcript_id"],
                         "reason": reason, "similarity": round(best_sim, 2)})
+    kept = _drop_covered(kept, dropped, tolerance)
     kept = sorted(kept.values(), key=lambda u: (u["start_time"], u["transcript_id"]))
     for i, u in enumerate(kept):
         u["index"] = i
         u.pop("_tokens", None)
     return kept, dropped
+
+
+def _covered_share(u, others):
+    """Share of ``u``'s words found, in runs of PAIR_COVER_RUN or more, in
+    the other laptop's utterances ``others`` (time order) taken together."""
+    mine = _utterance_tokens(u)
+    if not mine:
+        return 0.0
+    theirs = [tok for v in others for tok in _utterance_tokens(v)]
+    if not theirs:
+        return 0.0
+    matched = sum(size for _, _, size in difflib.SequenceMatcher(None, mine, theirs, autojunk=False).get_matching_blocks()
+                  if size >= PAIR_COVER_RUN)
+    return matched / float(len(mine))
+
+
+def _drop_covered(kept, dropped, tolerance):
+    """Second pass over the kept utterances: the one most covered by the
+    other laptop's kept utterances overlapping it in time goes, as long as
+    the share reaches PAIR_COVERED_SHARE; repeat until none does. Two
+    people really talking at once share no runs of words, so they stay."""
+    while True:
+        rows = sorted(kept.values(), key=lambda u: (u["start_time"], u["transcript_id"]))
+        best, best_share = None, 0.0
+        for u in rows:
+            u0, u1 = _span(u)
+            others = [v for v in rows
+                      if v["session_device_id"] != u["session_device_id"]
+                      and _span(v)[0] <= u1 + tolerance and _span(v)[1] >= u0 - tolerance]
+            if not others:
+                continue
+            share = _covered_share(u, others)
+            if share > best_share:
+                best, best_share, best_others = u, share, others
+        if best is None or best_share < PAIR_COVERED_SHARE:
+            return kept
+        kept.pop(best["transcript_id"])
+        for d in dropped:
+            if d["kept_transcript_id"] == best["transcript_id"]:
+                d["kept_transcript_id"] = best_others[0]["transcript_id"]
+        dropped.append({"transcript_id": best["transcript_id"], "kept_transcript_id": best_others[0]["transcript_id"],
+                        "reason": "covered", "similarity": round(best_share, 2)})
 
 
 # ------------------------------------------------------------------- llm
@@ -972,7 +1108,12 @@ def run_coding(session_device_id, teams=None, llm=call_llm, run_id=None, codeboo
         if run.is_paired():
             rows_by_device = {d: database.get_transcripts(session_device_id=d) for d in run.device_ids()}
             diagnostics = {}
-            utterances, dropped = merge_paired(rows_by_device, sides, diagnostics)
+            recordings = {}
+            for d in run.device_ids():
+                pod = database.get_session_devices(id=d)
+                if pod is not None and pod.processing_key:
+                    recordings[d] = recordings_of(pod.processing_key)
+            utterances, dropped = merge_paired(rows_by_device, sides, diagnostics, recordings)
             extra["cross_talk"] = {"dropped": len(dropped), "kept": len(utterances),
                                    "alignment": diagnostics.get("alignment"),
                                    "detail": dropped[:500]}

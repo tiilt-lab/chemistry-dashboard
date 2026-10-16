@@ -69,6 +69,10 @@ def test_server_wires_the_anchor_into_the_stream():
     assert "self.config.start_offset += discarded" in src
     with open(os.path.join(here, "..", "src", "audio_processing", "processing_config.py")) as f:
         assert "config.reported_backlog = offset" in f.read()
+    # every clock move is written to the recordings' sidecars
+    assert src.count("self._clock_moved(") == 3
+    assert "recording_sidecar.write(base + '.wav', info)" in src
+    assert src.index("self.clock = clock_anchor.ClockAnchor(") < src.index("self._write_clock_sidecars()")
     assert "live_presence.set_clock(r, key, clock)" in src and "live_presence.clear_clock(r, key)" in src
 
 
