@@ -1104,6 +1104,91 @@ def test_merge_paired_fragment_cannot_shield_the_real_duplicate():
         2: (3, "bleed"), 1: (3, "duplicate")}
 
 
+def _long(i, device, start, text, tag, sim=0.8):
+    return _row(i, device, start, text, tag, sim=sim, length=6)
+
+
+SPEECH = [
+    "You went on vacation and left Alex in charge of the whole account",
+    "That is ridiculous you signed off on the change order yourself",
+    "Do you understand that I need the money by Friday or we are done",
+    "If you force me into bankruptcy you may not recover the money at all",
+    "I can call the loan whenever I want and you know that perfectly well",
+    "Fine then tell me what is bothering you most about this arrangement",
+    "What has to happen in the next fifteen days for both of us to survive",
+    "How can we structure this so you can make the investment on time",
+]
+
+
+def test_merge_paired_aligns_two_clocks_that_drift_apart():
+    # Group 1 on 2026-10-16: one laptop stamped everything 18 s later than
+    # the other for half an hour, then 6 s later. The copies are never within
+    # the plain tolerance, so without alignment every line reached the model
+    # twice. Here the Sandy laptop (device 1, the reference clock) is on
+    # time and the Pat laptop (device 2) runs late; Pat's copies have the
+    # stronger attribution and are the ones kept, on the reference clock.
+    sides = {1: "Sandy", 2: "Pat"}
+    sandy, pat = [], []
+    for k, text in enumerate(SPEECH):
+        t = 100 + 20 * k
+        offset = 18.0 if k < 4 else 6.0
+        sandy.append(_long(1 + k, 1, t, text, "Sandy", sim=0.6))
+        pat.append(_long(101 + k, 2, t + offset, text, "Pat", sim=0.85))
+    diagnostics = {}
+    kept, dropped = nc.merge_paired({1: sandy, 2: pat}, sides, diagnostics)
+    assert len(kept) == len(SPEECH)
+    assert {d["reason"] for d in dropped} == {"duplicate"} and len(dropped) == len(SPEECH)
+    assert all(u["session_device_id"] == 2 and u["team"] == "Pat" for u in kept)
+    assert [round(u["start_time"]) for u in kept] == [100 + 20 * k for k in range(len(SPEECH))]
+    assert [u["device_start_time"] - u["start_time"] for u in kept] == [18.0] * 4 + [6.0] * 4
+    summary = diagnostics["alignment"]
+    assert (summary["reference_device"], summary["other_device"], summary["anchors"]) == (1, 2, len(SPEECH))
+    assert (summary["offset_min"], summary["offset_max"]) == (6.0, 18.0)
+    assert [o["offset"] for o in summary["offsets"]] == [18.0]
+    # Without alignment the old rule would have found none of them.
+    assert all(abs(p.start_time - s_.start_time) > nc.PAIR_START_TOLERANCE for p, s_ in zip(pat, sandy))
+
+
+def test_merge_paired_clocks_taken_as_equal_without_enough_anchors():
+    # Two short lines cannot anchor a clock; the plain tolerance applies and
+    # the far-apart copies are, correctly, left alone.
+    pat = [_row(1, 1, 20, "fine by me", "Pat", sim=0.8), _row(2, 1, 40, "no", "Pat", sim=0.8)]
+    sandy = [_row(11, 2, 2, "fine by me", "Sandy", sim=0.8), _row(12, 2, 22, "no", "Sandy", sim=0.8)]
+    diagnostics = {}
+    kept, dropped = nc.merge_paired({1: pat, 2: sandy}, SIDES, diagnostics)
+    assert diagnostics["alignment"] is None and dropped == [] and len(kept) == 4
+    assert all("device_start_time" not in u for u in kept)
+
+
+def test_merge_texts_keeps_the_primary_words_and_adds_what_only_the_other_heard():
+    sandy = ("I mean, you also went behind our back, but we, I was on vacation, we've had a "
+             "relationship for a long time, and I hear from Alex that you're trying to.")
+    pat = ("I mean, you also went behind our back. Like we I was on vacation, we've had a "
+           "relationship for a long time and I hear from Alex that you're")
+    # Sandy's copy leads: its punctuation stays, its "but we," beats Pat's
+    # "Like we" on the same stretch, and nothing of Pat's is appended because
+    # Pat heard nothing Sandy missed.
+    assert nc.merge_texts(sandy, pat) == sandy
+    # Pat's copy leads: the tail only Sandy heard is added, in place.
+    merged = nc.merge_texts(pat, sandy)
+    assert merged.startswith("I mean, you also went behind our back. Like we I was on vacation")
+    assert merged.endswith("and I hear from Alex that you're trying to.")
+    # A run of words only the other side heard lands where it belongs.
+    assert nc.merge_texts("we were talking under confidence", "I think we were talking to Alex under confidence") == \
+        "I think we were talking to Alex under confidence"
+    assert nc.merge_texts("", "only here") == "only here" and nc.merge_texts("only here", "") == "only here"
+
+
+def test_merge_paired_duplicate_kept_copy_carries_both_renderings():
+    pat = [_long(1, 1, 10, "I mean you also went behind our back like we I was on vacation", "Pat", sim=0.9)]
+    sandy = [_long(2, 2, 10.5, "you also went behind our back but we I was on vacation and I hear from Alex", "Sandy", sim=0.6)]
+    kept, dropped = nc.merge_paired({1: pat, 2: sandy}, SIDES)
+    assert [u["transcript_id"] for u in kept] == [1] and dropped[0]["reason"] == "duplicate"
+    assert kept[0]["merged_from"] == [2]
+    assert kept[0]["text"] == "I mean you also went behind our back like we I was on vacation and I hear from Alex"
+    assert "_tokens" not in kept[0]
+
+
 def test_merge_paired_pairs_every_piece_of_a_differently_cut_utterance():
     # The Pat laptop heard one utterance; the Sandy laptop cut the same words
     # in two. Both pieces are copies of the one Pat row, including the second,

@@ -25,6 +25,7 @@ must be OFF — ``chat_template_kwargs.enable_thinking=false`` in the request
 AND ``/no_think`` at the end of the prompt — or Qwen 3 spends the whole token
 budget thinking and returns nothing; temperature 0; strict JSON array back.
 """
+import bisect
 import difflib
 import json
 import logging
@@ -47,10 +48,21 @@ CALM_WINDOW = 120       # s: no escalation this long = sustained de-escalation
 # Paired sessions: both microphones hear the whole table, so the two
 # transcripts are merged on the session clock (transcript.start_time counts
 # from the session's creation on every pod) and the far side's copy of an
-# utterance is dropped.
+# utterance is dropped. The two clocks are not equal, though: a laptop's
+# stamps count the audio samples it sent from the moment its stream
+# started, so a late microphone, a stalled tab or a replayed backlog shifts
+# one device by seconds for the rest of the session (Group 1 on 2026-10-16
+# ran 18 s apart, then 5 s). The offset is estimated from utterances both
+# devices heard and taken out before the copies are matched.
 PAIR_START_TOLERANCE = 1.5   # s: starts this close are the same moment ...
 PAIR_OVERLAP_MIN = 0.5       # ... or the two overlap this share of the shorter one
 PAIR_TEXT_SIMILARITY = 0.5   # token ratio from which two copies are one utterance
+PAIR_ANCHOR_SIMILARITY = 0.7  # token ratio from which a cross-device match anchors the clock alignment
+PAIR_ANCHOR_MIN_TOKENS = 8    # anchors need this many words: short lines repeat
+PAIR_SEARCH_WINDOW = 60.0     # s: how far apart the two clocks may be
+PAIR_MIN_ANCHORS = 3          # fewer than this: the clocks are taken as equal
+PAIR_ANCHOR_NEIGHBOURS = 7    # the offset at a moment is the median of this many nearest anchors
+PAIR_ALIGNED_TOLERANCE = 3.0  # s: after alignment, how differently the two recognizers may cut a start
 
 # Placeholder team names for a session whose setup names none; every real
 # run takes its names from the session (run_names / device_team_names).
@@ -220,13 +232,13 @@ def _span(u):
     return start, start + max(float(u.get("length") or 0), 0.0)
 
 
-def same_moment(a, b):
+def same_moment(a, b, tolerance=PAIR_START_TOLERANCE):
     """Two utterances from different devices that started within
-    PAIR_START_TOLERANCE of each other, or overlap for at least
-    PAIR_OVERLAP_MIN of the shorter one."""
+    ``tolerance`` of each other, or overlap for at least PAIR_OVERLAP_MIN of
+    the shorter one."""
     a0, a1 = _span(a)
     b0, b1 = _span(b)
-    if abs(a0 - b0) <= PAIR_START_TOLERANCE:
+    if abs(a0 - b0) <= tolerance:
         return True
     shorter = min(a1 - a0, b1 - b0)
     return shorter > 0 and (min(a1, b1) - max(a0, b0)) / shorter >= PAIR_OVERLAP_MIN
@@ -262,13 +274,13 @@ def _prefer(a, b):
     return (a, b) if a["transcript_id"] <= b["transcript_id"] else (b, a)
 
 
-def _neighbours(pool, i, reach):
+def _neighbours(pool, i, reach, tolerance=PAIR_START_TOLERANCE):
     # The pool entries that could share pool[i]'s moment: forward until a
     # start passes its end plus the tolerance, backward while a start within
     # ``reach`` (the longest utterance plus the tolerance) could still
     # overlap it.
     u = pool[i]
-    horizon = _span(u)[1] + PAIR_START_TOLERANCE
+    horizon = _span(u)[1] + tolerance
     for j in range(i + 1, len(pool)):
         if pool[j]["start_time"] > horizon:
             break
@@ -280,7 +292,112 @@ def _neighbours(pool, i, reach):
         yield pool[j]
 
 
-def merge_paired(rows_by_device, sides):
+def _utterance_tokens(u):
+    toks = u.get("_tokens")
+    if toks is None:
+        toks = u["_tokens"] = _tokens(u.get("text"))
+    return toks
+
+
+class ClockAlignment(object):
+    """The offset of one device's clock relative to the other's, estimated
+    from utterances both heard (``anchors``: [(other device's start, other
+    start - reference start)], keyed on the other device's clock because
+    that is the clock ``at`` is asked about). The offset at a moment is the
+    median over the nearest anchors, so a step (a reconnect, a stall) moves
+    it where it happened instead of smearing it over the session."""
+
+    def __init__(self, anchors, reference_device, other_device):
+        self.anchors = sorted(anchors)
+        self.reference_device = reference_device
+        self.other_device = other_device
+
+    def at(self, t):
+        # The median of the nearest anchors (fewer when there are few, so a
+        # step is not averaged away); when those straddle a step, i.e. they
+        # disagree by more than the aligned tolerance, the nearest anchor in
+        # time decides.
+        if not self.anchors:
+            return 0.0
+        k = min(PAIR_ANCHOR_NEIGHBOURS, max(3, len(self.anchors) // 4))
+        near = sorted(self.anchors, key=lambda a: abs(a[0] - t))[:k]
+        offsets = sorted(a[1] for a in near)
+        if offsets[-1] - offsets[0] > PAIR_ALIGNED_TOLERANCE:
+            return near[0][1]
+        return offsets[len(offsets) // 2]
+
+    def summary(self):
+        offsets = [a[1] for a in self.anchors]
+        # The offset every ten minutes of the other device's clock, for the
+        # run's record: a reader sees a step at a glance.
+        first, last = self.anchors[0][0], self.anchors[-1][0]
+        samples = [{"at": round(float(t), 1), "offset": round(self.at(t), 1)}
+                   for t in range(int(first), int(last) + 1, 600)]
+        return {"reference_device": self.reference_device, "other_device": self.other_device,
+                "anchors": len(self.anchors), "offset_min": round(min(offsets), 1),
+                "offset_max": round(max(offsets), 1), "offsets": samples}
+
+
+def estimate_clock_offset(reference, other, reference_device=None, other_device=None):
+    """ClockAlignment of ``other`` (one device's utterances) against
+    ``reference`` (the other device's), or None when fewer than
+    PAIR_MIN_ANCHORS utterances match well enough to tell. An anchor is a
+    reference utterance of at least PAIR_ANCHOR_MIN_TOKENS words whose best
+    text match on the other device, within PAIR_SEARCH_WINDOW, reaches
+    PAIR_ANCHOR_SIMILARITY."""
+    others = sorted(other, key=lambda u: float(u.get("start_time") or 0))
+    starts = [float(u.get("start_time") or 0) for u in others]
+    anchors = []
+    for a in reference:
+        ta = _utterance_tokens(a)
+        if len(ta) < PAIR_ANCHOR_MIN_TOKENS:
+            continue
+        t = float(a.get("start_time") or 0)
+        lo = bisect.bisect_left(starts, t - PAIR_SEARCH_WINDOW)
+        hi = bisect.bisect_right(starts, t + PAIR_SEARCH_WINDOW)
+        best, best_sim = None, 0.0
+        for b in others[lo:hi]:
+            tb = _utterance_tokens(b)
+            if len(tb) < PAIR_ANCHOR_MIN_TOKENS:
+                continue
+            sim = difflib.SequenceMatcher(None, ta, tb).ratio()
+            if sim > best_sim:
+                best, best_sim = b, sim
+        if best is not None and best_sim >= PAIR_ANCHOR_SIMILARITY:
+            other_start = float(best.get("start_time") or 0)
+            anchors.append((other_start, other_start - t))
+    if len(anchors) < PAIR_MIN_ANCHORS:
+        return None
+    # Two recognizers cut the same speech a second or so apart either way;
+    # that is jitter the matching tolerances absorb, not a clock offset, and
+    # shifting stamps by it would only move real times around.
+    if max(abs(a[1]) for a in anchors) <= PAIR_ALIGNED_TOLERANCE:
+        return None
+    return ClockAlignment(anchors, reference_device, other_device)
+
+
+_WORD_RE = re.compile(r"\S+")
+
+
+def merge_texts(primary, secondary):
+    """One rendering of an utterance from two recognizers' copies: the
+    primary's words as written (its punctuation and casing included), plus
+    any run of words only the secondary heard, in place. Where the two
+    disagree on the same stretch the primary wins: it is the copy with the
+    stronger attribution, i.e. the nearer microphone."""
+    pw = [(w, re.sub(r"[^a-z0-9']", "", w.lower())) for w in _WORD_RE.findall(primary or "")]
+    sw = [(w, re.sub(r"[^a-z0-9']", "", w.lower())) for w in _WORD_RE.findall(secondary or "")]
+    pn, sn = [n for _, n in pw], [n for _, n in sw]
+    out = []
+    for op, i1, i2, j1, j2 in difflib.SequenceMatcher(None, pn, sn, autojunk=False).get_opcodes():
+        if op == "insert":
+            out.extend(w for w, _ in sw[j1:j2])
+        else:
+            out.extend(w for w, _ in pw[i1:i2])
+    return " ".join(out)
+
+
+def merge_paired(rows_by_device, sides, diagnostics=None):
     """One conversation from two devices' transcripts. ``rows_by_device`` maps
     device id -> transcript rows, ``sides`` device id -> team. Rows are put
     on one timeline and each utterance looks for its best text match among
@@ -292,29 +409,52 @@ def merge_paired(rows_by_device, sides):
     speech differently, so a kept copy stays in play for further pieces of
     the same utterance from the other device; when a later piece is the
     better copy it takes over, and the drops already pointed at the first
-    copy follow it. Returns (utterances in time order, re-indexed, each with
-    team and session_device_id; dropped: [{transcript_id,
+    copy follow it. Before any of that the two clocks are aligned: the
+    second device's starts are shifted by the offset estimate_clock_offset
+    finds (the original stamp stays in ``device_start_time``), and a
+    duplicate's kept copy carries the words of both renderings
+    (merge_texts). ``diagnostics``, when a dict, receives the alignment
+    found (or None). Returns (utterances in time order, re-indexed, each
+    with team and session_device_id; dropped: [{transcript_id,
     kept_transcript_id, reason, similarity}])."""
-    pool = []
+    by_device = {}
     for device_id, rows in rows_by_device.items():
-        pool.extend(_utterance(r, sides.get(device_id)) for r in rows)
+        by_device[device_id] = [_utterance(r, sides.get(device_id)) for r in rows]
+    tolerance = PAIR_START_TOLERANCE
+    alignment = None
+    if len(by_device) == 2:
+        reference_device, other_device = sorted(by_device)
+        alignment = estimate_clock_offset(by_device[reference_device], by_device[other_device],
+                                          reference_device, other_device)
+        if alignment is not None:
+            tolerance = PAIR_ALIGNED_TOLERANCE
+            for u in by_device[other_device]:
+                u["device_start_time"] = u["start_time"]
+                u["start_time"] = float(u["start_time"]) - alignment.at(float(u["start_time"]))
+    if diagnostics is not None:
+        diagnostics["alignment"] = alignment.summary() if alignment is not None else None
+    pool = [u for units in by_device.values() for u in units]
     pool.sort(key=lambda u: (u["start_time"], u["transcript_id"]))
-    reach = max((_span(u)[1] - _span(u)[0] for u in pool), default=0.0) + PAIR_START_TOLERANCE
+    reach = max((_span(u)[1] - _span(u)[0] for u in pool), default=0.0) + tolerance
     kept, dropped, dropped_ids = {}, [], set()      # kept: transcript_id -> utterance
     for i, u in enumerate(pool):
         if u["transcript_id"] in dropped_ids:
             continue
         best, best_sim = None, -1.0
-        for v in _neighbours(pool, i, reach):
+        for v in _neighbours(pool, i, reach, tolerance):
             if v["session_device_id"] == u["session_device_id"] or v["transcript_id"] in dropped_ids:
                 continue
-            if not same_moment(u, v):
+            if not same_moment(u, v, tolerance):
                 continue
             sim = text_similarity(u["text"], v["text"])
             if sim > best_sim:
                 best, best_sim = v, sim
         if best is not None and best_sim >= PAIR_TEXT_SIMILARITY:
             winner, loser, reason = _prefer(u, best) + ("duplicate",)
+            # The kept copy says what both recognizers heard.
+            winner["text"] = merge_texts(winner["text"], loser["text"])
+            winner.pop("_tokens", None)
+            winner.setdefault("merged_from", []).append(loser["transcript_id"])
         elif best is not None and bool(u.get("speaker_tag")) != bool(best.get("speaker_tag")):
             winner, loser = (u, best) if u.get("speaker_tag") else (best, u)
             reason = "bleed"
@@ -334,6 +474,7 @@ def merge_paired(rows_by_device, sides):
     kept = sorted(kept.values(), key=lambda u: (u["start_time"], u["transcript_id"]))
     for i, u in enumerate(kept):
         u["index"] = i
+        u.pop("_tokens", None)
     return kept, dropped
 
 
@@ -810,8 +951,10 @@ def run_coding(session_device_id, teams=None, llm=call_llm, run_id=None, codeboo
         extra = {"pods": run_pods(run, sides)}
         if run.is_paired():
             rows_by_device = {d: database.get_transcripts(session_device_id=d) for d in run.device_ids()}
-            utterances, dropped = merge_paired(rows_by_device, sides)
+            diagnostics = {}
+            utterances, dropped = merge_paired(rows_by_device, sides, diagnostics)
             extra["cross_talk"] = {"dropped": len(dropped), "kept": len(utterances),
+                                   "alignment": diagnostics.get("alignment"),
                                    "detail": dropped[:500]}
         else:
             rows = database.get_transcripts(session_device_id=run.session_device_id)
