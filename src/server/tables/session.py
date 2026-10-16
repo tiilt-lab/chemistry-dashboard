@@ -2,6 +2,7 @@ from app import db
 from datetime import datetime, timezone
 from utility import verify_characters
 import pod_config as _pod_config
+import join_mode as _join_mode
 
 class Session(db.Model):
     __tablename__ = 'session'
@@ -45,6 +46,10 @@ class Session(db.Model):
     # the built-in negotiation scheme (sessions from before the column).
     # Mapped column: migration 7f8091021324 first.
     coding_scheme = db.Column(db.String(64), nullable=True)
+    # How this session's devices join by default (join_mode.py): 'audio' or
+    # 'video', what the join page's "Join with" list opens on. NULL = audio.
+    # Mapped column: migration c1d2e3f4a5b6 first.
+    join_mode = db.Column(db.String(8), nullable=True)
 
     keywords = db.relationship("Keyword", lazy='joined', uselist=True, cascade="all, delete", passive_deletes=True)
 
@@ -111,7 +116,9 @@ class Session(db.Model):
             negotiation_coding=bool(self.negotiation_coding),
             negotiation_paired=bool(self.negotiation_paired),
             pod_config=self.pod_config_dict(),
-            coding_scheme=self.coding_scheme
+            coding_scheme=self.coding_scheme,
+            # NULL (rows from before the column) reads as audio.
+            join_mode=_join_mode.effective(self.join_mode),
         )
 
     @staticmethod

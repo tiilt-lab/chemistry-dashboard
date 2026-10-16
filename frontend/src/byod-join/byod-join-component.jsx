@@ -1,4 +1,5 @@
 import { useReducer, useEffect, useState, useRef, useCallback } from "react"
+import { joinWithDefault } from "./join-mode"
 import { POD_ON_COLOR as POD_COLOR } from "../components/pod-colors"
 import { useNavigate, useParams } from "react-router-dom"
 import { SessionService } from "../services/session-service"
@@ -178,6 +179,7 @@ function JoinPage() {
         if (code.length < 3) {
             setPairedSession(false)
             setJoinSetup(null)
+            setJoinWithDefault("Audio")
             return undefined
         }
         let cancelled = false
@@ -191,11 +193,13 @@ function JoinPage() {
                     const setup = found && found.pod_config && typeof found.pod_config === "object" ? found.pod_config : null
                     setJoinSetup(setup)
                     setPairedSession(!!(found && found.negotiation_paired === true))
+                    setJoinWithDefault(joinWithDefault(found))
                 })
                 .catch(() => {
                     if (!cancelled) {
                         setJoinSetup(null)
                         setPairedSession(false)
+                        setJoinWithDefault("Audio")
                     }
                 })
         }, 400)
@@ -270,6 +274,9 @@ function JoinPage() {
     // once the passcode resolves: the form then lists the slots a laptop can
     // occupy instead of asking for free text.
     const [joinSetup, setJoinSetup] = useState(null)
+    // What "Join with" opens on for the session being joined (join-mode.js):
+    // the session starter's choice, Audio until the passcode lookup answers.
+    const [joinWithDefaultSel, setJoinWithDefault] = useState("Audio")
     const [roleError, setRoleError] = useState("")
     // The join refused because another laptop holds the slot: what to retry
     // with when the group chooses to join as an extra laptop for it.
@@ -2800,6 +2807,7 @@ function JoinPage() {
             savedName={name.current}
             pairedSession={pairedSession}
             joinSetup={joinSetup}
+            joinWithDefault={joinWithDefaultSel}
             roleError={roleError}
             savedRole={negotiationRole.current}
             joinAsExtraLaptop={joinAsExtraLaptop}

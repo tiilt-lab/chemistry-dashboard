@@ -26,6 +26,7 @@ SCHEMES = "7f8091021324"  # coding_scheme table, session.coding_scheme, negotiat
 LIVE_ANALYSES = "809102132435"  # session.live_video_analyses
 STUDENT_GROUP_TEAM = "9a1b2c3d4e5f"  # student.group_name/team_name; first and last name optional
 STUDENT_USERNAME_20 = "ba756b7c0126"  # student.username widened to 20 characters
+SESSION_JOIN_MODE = "c1d2e3f4a5b6"  # session.join_mode: what "Join with" opens on
 
 
 def _read(*parts):
@@ -76,7 +77,7 @@ def test_single_root_and_single_head():
     assert roots == ["d7cd8fa96963"], "expected one root, got %s" % roots
     referenced = {d for downs, _ in revs.values() for d in downs}
     heads = sorted(set(revs) - referenced)
-    assert heads == [STUDENT_USERNAME_20], "chain must have exactly one head: %s" % heads
+    assert heads == [SESSION_JOIN_MODE], "chain must have exactly one head: %s" % heads
 
 
 def test_phase2_migrations_are_chained_after_phase1():
@@ -91,6 +92,7 @@ def test_phase2_migrations_are_chained_after_phase1():
     assert revs[LIVE_ANALYSES][0] == (SCHEMES,)
     assert revs[STUDENT_GROUP_TEAM][0] == (LIVE_ANALYSES,)
     assert revs[STUDENT_USERNAME_20][0] == (STUDENT_GROUP_TEAM,)
+    assert revs[SESSION_JOIN_MODE][0] == (STUDENT_USERNAME_20,)
     assert revs[NEGOTIATION][0] == (LIVE_VIDEO,)
 
 

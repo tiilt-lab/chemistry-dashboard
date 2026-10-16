@@ -14,6 +14,7 @@ import database
 import utility
 import json
 import pod_config as pod_setup
+import join_mode as join_mode_lib
 import coding_schemes as coding_scheme_lib
 import watchers
 from datetime import datetime, timezone
@@ -275,6 +276,10 @@ def create_session(user, **kwargs):
     if bad_setup:
         return json_response({'message': bad_setup}, 400)
     negotiation_paired = bool(pod_config) and pod_setup.paired(pod_config)
+    # How the devices join by default: what "Join with" opens on (join_mode.py).
+    join_mode, bad_join_mode = join_mode_lib.normalize(request.json.get('joinMode'))
+    if bad_join_mode:
+        return json_response({'message': bad_join_mode}, 400)
     folder = request.json.get('folder', None)
     if folder == -1:
         folder = None
@@ -287,7 +292,7 @@ def create_session(user, **kwargs):
                                                  negotiation_coding_enabled=negotiation_coding,
                                                  negotiation_paired=negotiation_paired and negotiation_coding,
                                                  pod_config=pod_config, coding_scheme=coding_scheme,
-                                                 live_video_analyses=live_video_analyses)
+                                                 live_video_analyses=live_video_analyses, join_mode=join_mode)
     return json_response(new_session.json())
 
 @api_routes.route('/api/v1/sessions/byod', methods=['POST'])

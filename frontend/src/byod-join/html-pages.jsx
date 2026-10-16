@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { btnPrimary, btnPrimaryTall, btnSecondaryTall, dlgInput, dlgSelect, dlgPrimary, dlgError } from "../components/dialog-styles"
 import { pageShell, formCard } from "../components/layout-styles"
 import { PodMicRing } from "../components/pod-mic-ring"
@@ -347,11 +347,15 @@ function ByodJoinPage(props) {
     // and mic check are visible without an extra tap.
     const [editCode, setEditCode] = useState(false)
     // Controlled so the inline device check can follow the selection (a
-    // camera preview only when joining with video). Audio is the default:
-    // nearly every class records audio only, and a team that leaves this
-    // alone should not be asked for camera permission or stream video the
-    // instructor never looks at. Video stays one tap away in the list.
-    const [joinwithSel, setJoinwithSel] = useState("Audio")
+    // camera preview only when joining with video). It opens on what the
+    // session starter chose (props.joinWithDefault, from the passcode
+    // lookup; Audio until then and for sessions that chose nothing), and
+    // follows that answer until the team touches the list themselves.
+    const [joinwithSel, setJoinwithSel] = useState(props.joinWithDefault || "Audio")
+    const joinwithTouched = useRef(false)
+    useEffect(() => {
+        if (!joinwithTouched.current && props.joinWithDefault) setJoinwithSel(props.joinWithDefault)
+    }, [props.joinWithDefault])
     // Collapsed extras (the Polar H10 toggle); everything essential is
     // visible without it.
     const [showAdvanced, setShowAdvanced] = useState(false)
@@ -486,11 +490,10 @@ function ByodJoinPage(props) {
                                                     id="joinwith"
                                                     className={dlgSelect}
                                                     value={joinwithSel}
-                                                    onChange={(e) =>
-                                                        setJoinwithSel(
-                                                            e.target.value,
-                                                        )
-                                                    }
+                                                    onChange={(e) => {
+                                                        joinwithTouched.current = true
+                                                        setJoinwithSel(e.target.value)
+                                                    }}
                                                 >
                                                     {/* "Video (cartoon)" was dropped: the
                                                         deployment has cartoonize=false, so it

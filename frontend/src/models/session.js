@@ -94,6 +94,8 @@ export class SessionModel {
     model.coding_scheme = json['coding_scheme'] || null
     model.negotiation_paired = json['negotiation_paired'] === true
     model.pod_config = json['pod_config'] && typeof json['pod_config'] === 'object' ? json['pod_config'] : null
+    // What the join page's "Join with" list opens on; the server sends audio unless video was chosen.
+    model.join_mode = json['join_mode'] === 'video' ? 'video' : 'audio'
     model.owner = json['owner'] != null ? json['owner'] : null
     model.owned = json['owned'] !== false
     // Rename / move / delete allowed: owner, super, or an editor of its folder.

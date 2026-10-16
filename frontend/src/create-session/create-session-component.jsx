@@ -83,6 +83,20 @@ function CreateSessionComponent(props) {
   );
   const toggleLiveVideoAnalysis = (key) =>
     setLiveVideoAnalyses((list) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]));
+  // What the join page's "Join with" list opens on. Audio unless the
+  // starter picks Video; choosing a live video analysis switches it to
+  // Video on their behalf until they pick for themselves (joinModeChosen).
+  const [joinMode, setJoinModeState] = useState(
+    changedState && (prevState.joinMode === "audio" || prevState.joinMode === "video") ? prevState.joinMode : "audio"
+  );
+  const [joinModeChosen, setJoinModeChosen] = useState(changedState ? !!prevState.joinModeChosen : false);
+  const setJoinMode = (mode) => {
+    setJoinModeChosen(true);
+    setJoinModeState(mode);
+  };
+  useEffect(() => {
+    if (!joinModeChosen) setJoinModeState(liveVideoAnalyses.length > 0 ? "video" : "audio");
+  }, [liveVideoAnalyses, joinModeChosen]);
   // Pod setup: how a breakout group is composed and which laptop records
   // what. Off = the free-form join (any group name, roster sized on the
   // speaker page). With two teams and one laptop per team the two pods of
@@ -204,7 +218,7 @@ function CreateSessionComponent(props) {
       const deviceIds = selectedDevices.map(d => d.id);
       const keywordListId = (selectedKeywordList) ? selectedKeywordList.id : null;
       const topicModelId = (selectedTopicModel) ? selectedTopicModel.id : null;
-      const fetchData = new SessionService().createNewSession(finalName, deviceIds, keywordListId, topicModelId, byod, features, doa, folder, null, liveVideoAnalyses.length > 0, negotiationCoding, negotiationCoding && negotiationPaired, podConfigFromSetup(podSetup), codingScheme || null, liveVideoAnalyses)
+      const fetchData = new SessionService().createNewSession(finalName, deviceIds, keywordListId, topicModelId, byod, features, doa, folder, null, liveVideoAnalyses.length > 0, negotiationCoding, negotiationCoding && negotiationPaired, podConfigFromSetup(podSetup), codingScheme || null, liveVideoAnalyses, joinMode)
       fetchData.then(
         response=>{
           if(response.status === 200){
@@ -337,6 +351,8 @@ function CreateSessionComponent(props) {
     codingSchemes = {codingSchemes}
     liveVideoAnalyses = {liveVideoAnalyses}
     toggleLiveVideoAnalysis = {toggleLiveVideoAnalysis}
+    joinMode = {joinMode}
+    setJoinMode = {setJoinMode}
     goToCodingSchemes = {() => navigate('/coding-schemes')}
     negotiationPaired = {negotiationPaired}
     podSetup = {podSetup}
