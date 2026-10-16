@@ -45,6 +45,7 @@ RE_ANCHOR_SUSTAIN = 8.0     # s: how long the drift must hold before the clock m
 SETTLE_MIN_SECONDS = 5.0    # s: no drift judgement before this much real time has passed ...
 SETTLE_WINDOW = 5.0         # s: ... or while the audio lead still grew by more than
 SETTLE_LEAD_GROWTH = 1.0    # s over the last SETTLE_WINDOW (a replay still arriving)
+STAMP_SNAP = 0.25           # s: a stamped frame this far from where the sample count puts it moves the clock
 
 
 class ClockAnchor(object):
@@ -126,6 +127,19 @@ class ClockAnchor(object):
         self.corrected += delta
         self.drift = 0.0
         self._over_since = None
+        return delta
+
+    def stamped_frame(self, stamped_session_time, counted_session_time):
+        """Seconds to add to start_offset for a frame that carries its
+        capture time (audio-frame.js): the difference between where the
+        stamp puts the frame on the session clock and where the sample
+        count does, when it exceeds STAMP_SNAP. No heuristics: the stamp is
+        the truth, so a late start, a replay or a gap all land at once."""
+        delta = float(stamped_session_time) - float(counted_session_time)
+        self.drift = 0.0
+        if abs(delta) < STAMP_SNAP:
+            return 0.0
+        self.corrected += delta
         return delta
 
     def snapshot(self):

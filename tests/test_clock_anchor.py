@@ -65,12 +65,12 @@ def test_server_wires_the_anchor_into_the_stream():
     assert src.index("self.enqueue_latest_audio_chunk(asr_data)") < src.index("self._track_clock()")
     assert "self.config.start_offset += late" in src and "self.config.start_offset += delta" in src
     # audio received before the stream is ready is counted against the report
-    assert "discarded = self.clock.discard(self._raw_seconds(data))" in src
+    assert "discarded = self.clock.discard(self._raw_seconds(payload))" in src
     assert "self.config.start_offset += discarded" in src
     with open(os.path.join(here, "..", "src", "audio_processing", "processing_config.py")) as f:
         assert "config.reported_backlog = offset" in f.read()
     # every clock move is written to the recordings' sidecars
-    assert src.count("self._clock_moved(") == 3
+    assert src.count("self._clock_moved(") == 4   # late start, drift, discard, stamp
     assert "recording_sidecar.write(base + '.wav', info)" in src
     assert src.index("self.clock = clock_anchor.ClockAnchor(") < src.index("self._write_clock_sidecars()")
     assert "live_presence.set_clock(r, key, clock)" in src and "live_presence.clear_clock(r, key)" in src
@@ -168,3 +168,38 @@ def test_snapshot_is_what_the_devices_tab_shows():
     a = ClockAnchor(100.0)
     a.first_frame(118.0)
     assert a.snapshot() == {"drift": 0.0, "corrected": 0.0, "late_start": 18.0, "discarded": 0.0}
+
+
+def test_stamped_frames_snap_the_clock_to_their_capture_time():
+    # A client that stamps its frames needs no heuristics: the stamp says
+    # where the frame sits on the session clock, the sample count says where
+    # the service would have put it, and any real difference moves the clock
+    # at once, either way. Jitter below STAMP_SNAP is ignored.
+    from clock_anchor import STAMP_SNAP
+    a = ClockAnchor(0.0)
+    assert a.stamped_frame(100.0, 100.0 + STAMP_SNAP / 2) == 0.0
+    assert a.stamped_frame(118.0, 100.0) == 18.0 and a.corrected == 18.0      # a late first frame
+    assert a.stamped_frame(50.0, 56.0) == -6.0 and a.corrected == 12.0        # a replay from the past
+    assert a.drift == 0.0
+
+
+def test_server_handles_stamped_frames_and_the_timeline():
+    here = os.path.dirname(__file__)
+    with open(os.path.join(here, "..", "src", "audio_processing", "server.py")) as f:
+        src = f.read()
+    # the stamp is read when the client announced it, NaN meaning none
+    assert "struct.unpack('<d', bytes(data[:8]))" in src and "(t if t == t else None), data[8:]" in src
+    # frames before the stream is ready are held when stamped, discarded (and accounted) otherwise
+    assert "self._hold_frame(stamp, payload)" in src and "self.clock.discard(self._raw_seconds(payload))" in src
+    # held frames are placed once the speaker handshake is over
+    assert src.index('logging.info("Done awaiting all speakers info")') < src.index("self._flush_held_frames()")
+    # a stamped frame snaps the clock and goes to the pod's timeline track
+    assert "delta = self.clock.stamped_frame(stamped, counted)" in src
+    assert "self.timeline.write(asr_data, self.config.capture_origin + stamp)" in src
+    assert "self.timeline.finalize()" in src and "'timeline': True" in src
+    # fingerprint blobs are never mistaken for stamped frames
+    assert "not (self.running and self.awaitingSpeakers and self.currSpeaker)" in src
+    with open(os.path.join(here, "..", "src", "audio_processing", "processing_config.py")) as f:
+        cfg = f.read()
+    assert "config.frame_timestamps = res['frame_timestamps']" in cfg
+    assert "config.capture_origin = (start_offset + offset) - res['context_time'] if res['frame_timestamps'] else None" in cfg

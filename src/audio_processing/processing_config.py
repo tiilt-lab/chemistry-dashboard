@@ -99,6 +99,12 @@ class ProcessingConfig:
         # taken off start_offset above; the clock anchor expects the audio to
         # lead real time by this much (clock_anchor.py).
         config.reported_backlog = offset
+        # Stamped frames (audio-frame.js): a frame's capture time t sits at
+        # capture_origin + t on the session clock, where capture_origin pins
+        # the browser's context clock to the session clock at the moment the
+        # start message was sent (one network trip of error).
+        config.frame_timestamps = res['frame_timestamps']
+        config.capture_origin = (start_offset + offset) - res['context_time'] if res['frame_timestamps'] else None
         return True, config
 
     def is_valid_key(self):

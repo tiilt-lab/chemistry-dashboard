@@ -52,7 +52,17 @@ def validate_start_message(data):
     if sample_rate not in SAMPLE_RATES:
         return False, "Unsupported sample rate."
 
+    # Frames carry their capture time (the browser's AudioContext clock) when
+    # the client says so; context_time is that clock at the moment it sent
+    # this message, which pins it to the session clock.
+    frame_timestamps = bool(data.get('frame_timestamps', False))
+    try:
+        context_time = float(data.get('context_time', 0.0) or 0.0)
+    except (TypeError, ValueError):
+        return False, "context_time must be a float."
     return True, {
+        'frame_timestamps': frame_timestamps,
+        'context_time': context_time,
         'auth_key': auth_key,
         'encoding': encoding,
         'sample_rate': sample_rate,

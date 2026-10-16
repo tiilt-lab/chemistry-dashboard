@@ -29,6 +29,8 @@ from enrollment_token import enrollment_allows
 import live_presence  # live_pod:<key> keys the post-hoc services defer to (src/common)
 import clock_anchor  # the pod's clock on the session timeline, anchored to the audio actually received
 import recording_sidecar  # <recording>.clock.json: how the recording's samples map to the session clock
+import timeline_recorder  # one track per pod on the session clock, across reconnects (stamped frames)
+import struct
 from audio_buffer import AudioBuffer
 import asr_ingest  # reactor-side ingest bookkeeping (stamped chunks, drop counter)
 import live_metrics  # Prometheus exporter accessors (src/common/blinc_metrics)
@@ -91,6 +93,9 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         self._presence = None
         self.clock = None
         self.recording_paths = []
+        self.timeline = None
+        self._held = []          # stamped frames that arrived before the stream was ready
+        self._held_bytes = 0
         # Last asr_status state sent to this pod (read by live_metrics).
         self.asr_state = 'ok'
 
@@ -124,6 +129,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                     entry["alias"] = speaker["alias"]
                 self.processor.setSpeakerFingerprints(self.speakers)
                 logging.info("Done awaiting all speakers info")
+                self._flush_held_frames()
             else:
                 self.currSpeaker = data['id']
                 self.currAlias = data['alias']
@@ -243,35 +249,91 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
             return 0.0
         return len(data) / float(cfg.depth * cfg.sample_rate * cfg.channels)
 
+    HELD_MAX_BYTES = 300 * 16000 * 4   # 300 s of 16 kHz float32: a whole pre-Start buffer
+
+    def _split_stamp(self, data):
+        # (capture time or None, samples): a client that said frame_timestamps
+        # prefixes every worklet frame with its AudioContext time as a
+        # little-endian float64 (audio-frame.js). NaN means an older worklet.
+        cfg = self.config
+        if cfg is not None and getattr(cfg, 'frame_timestamps', False) and len(data) >= 8:
+            (t,) = struct.unpack('<d', bytes(data[:8]))
+            return (t if t == t else None), data[8:]
+        return None, data
+
+    def _hold_frame(self, stamp, payload):
+        # The stream is not ready (speaker fingerprints still arriving); a
+        # stamped frame loses nothing by waiting, it lands by its stamp.
+        if self._held_bytes + len(payload) > self.HELD_MAX_BYTES:
+            self.clock.discard(self._raw_seconds(payload))
+            return
+        self._held.append((stamp, bytes(payload)))
+        self._held_bytes += len(payload)
+
+    def _flush_held_frames(self):
+        held, self._held, self._held_bytes = self._held, [], 0
+        if held and self.running and not self.awaitingSpeakers and self.stream_data == 'audio':
+            logging.info('%s: %d held frames placed by their stamps', self.config.auth_key, len(held))
+            for stamp, payload in held:
+                self._process_audio_frame(payload, stamp)
+
+    def _process_audio_frame(self, data, stamp=None):
+        if cf.record_original():
+            # Save audio data.
+            self.orig_recorder.write(data)
+        # Convert all audio to pcm_i16le
+        data = self.reformat_data(data)
+        data = self.resample_data(data)
+        counted_before = self._ingest.seconds(self._ingest.samples_received)
+        self.audio_buffer.append(data)
+        asr_data = self.reduce_channels(1, data)
+        self.enqueue_latest_audio_chunk(asr_data)
+        if stamp is not None and getattr(self.config, 'capture_origin', None) is not None:
+            self._track_stamped(stamp, counted_before)
+        else:
+            self._track_clock()
+        # Save audio data.
+        if cf.record_reduced():
+            self.redu_recorder.write(asr_data)
+        if stamp is not None and self.timeline is not None and getattr(self.config, 'capture_origin', None) is not None:
+            self.timeline.write(asr_data, self.config.capture_origin + stamp)
+
+    def _track_stamped(self, stamp, counted_before):
+        # A stamped frame says where it sits on the session clock; the sample
+        # count says where the service would have put it. Any difference past
+        # STAMP_SNAP moves the clock, at once and in either direction.
+        if self.clock.first_frame_at is None:
+            self.clock.first_frame_at = time.time()
+        stamped = self.config.capture_origin + stamp
+        counted = self.config.start_offset + counted_before
+        delta = self.clock.stamped_frame(stamped, counted)
+        if delta:
+            self.config.start_offset += delta
+            self._clock_moved(delta)
+            log = logging.warning if abs(delta) >= 1.0 else logging.info
+            log('%s: pod clock moved %+.2f s to the frame stamps', self.config.auth_key, delta)
+
     def process_binary(self, data):
-        # Audio arriving before the stream is ready (the start message still
-        # being handled, or the speaker fingerprints still awaited) used to
-        # vanish silently. The browser had promised it in its start message
-        # and the clock was moved back for it, so count what is discarded
-        # (clock_anchor.discard) and move the clock forward again.
-        if self.stream_data == 'audio' and self.clock is not None and (not self.running or self.awaitingSpeakers) \
-                and not (self.awaitingSpeakers and self.currSpeaker):
-            discarded = self.clock.discard(self._raw_seconds(data))
-            if discarded and self.config is not None:
-                self.config.start_offset += discarded
-                self._clock_moved(discarded)
-        if self.running and not self.awaitingSpeakers:
-            if self.stream_data == 'audio':
-                if cf.record_original():
-                    # Save audio data.
-                    self.orig_recorder.write(data)
-                # Convert all audio to pcm_i16le
-                data = self.reformat_data(data)
-                data = self.resample_data(data)
-                self.audio_buffer.append(data)
-                asr_data = self.reduce_channels(1, data)
-                self.enqueue_latest_audio_chunk(asr_data)
-                self._track_clock()
-                # Save audio data.
-                if cf.record_reduced():
-                    self.redu_recorder.write(asr_data)
-    
-        elif self.running and self.awaitingSpeakers:
+        if self.stream_data == 'audio' and self.config is not None and not (self.running and self.awaitingSpeakers and self.currSpeaker):
+            stamp, payload = self._split_stamp(data)
+            if not self.running or self.awaitingSpeakers:
+                # Audio arriving before the stream is ready (the speaker
+                # fingerprints still awaited) used to vanish silently. A
+                # stamped frame is held and placed by its stamp when the
+                # stream is ready; an unstamped one is still dropped, but the
+                # clock is moved forward by what it had promised and never
+                # counted (clock_anchor.discard).
+                if stamp is not None:
+                    self._hold_frame(stamp, payload)
+                elif self.clock is not None:
+                    discarded = self.clock.discard(self._raw_seconds(payload))
+                    if discarded:
+                        self.config.start_offset += discarded
+                        self._clock_moved(discarded)
+                return
+            self._process_audio_frame(payload, stamp)
+            return
+        if self.running and self.awaitingSpeakers:
             if self.currSpeaker:
                 new_data = self.reformat_data(data)
                 self.speakers[self.currSpeaker] = {"alias": self.currAlias, "data": new_data}
@@ -466,6 +528,11 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         self.clock = clock_anchor.ClockAnchor(time.time(), getattr(self.config, 'reported_backlog', 0.0))
         self.clock_moves = []
         self._write_clock_sidecars()
+        # Stamped frames can be placed on the session clock exactly, so they
+        # also go to the pod's single timeline track (timeline_recorder.py),
+        # which a reconnect appends to.
+        if getattr(self.config, 'frame_timestamps', False) and self.stream_data == 'audio' and cf.record_reduced():
+            self.timeline = timeline_recorder.for_pod(cf.recordings_folder(), self.config.auth_key)
         self.asr_audio_queue = queue.Queue(maxsize=asr_ingest.QUEUE_CHUNKS)
         self.asr_transcript_queue = queue.Queue()
         # The session's locked-at-creation ASR choice wins; the deployment
@@ -615,6 +682,16 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         recorders = []
         if cf.record_reduced() and getattr(self, 'redu_recorder', None):
             recorders.append(self.redu_recorder)
+        if self.timeline is not None and self.timeline.start is not None:
+            # The timeline's samples sit on the session clock directly.
+            self.timeline.finalize()
+            try:
+                recording_sidecar.write(self.timeline.wav, {
+                    'processing_key': self.config.auth_key, 'session_id': self.config.sessionId,
+                    'device_id': self.config.deviceId, 'start_offset': round(self.timeline.start, 3),
+                    'timeline': True, 'moves': []})
+            except Exception:
+                logging.exception('%s: could not write the timeline sidecar', self.config.auth_key)
         if cf.record_original() and getattr(self, 'orig_recorder', None):
             recorders.append(self.orig_recorder)
         if recorders:
