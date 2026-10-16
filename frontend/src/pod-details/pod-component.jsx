@@ -1,7 +1,7 @@
 import { SessionService } from "../services/session-service";
 import { SessionDeviceModel } from "../models/session-device";
 import { SpeakerModel } from "../models/speaker";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
 import { ApiService } from "../services/api-service";
 import { PodComponentPages } from "./html-pages";
@@ -23,12 +23,23 @@ const SLUG_VIEWS = Object.fromEntries(
 );
 
 function PodComponent() {
-  const [sessionDevice, setSessionDevice] = useState({});
-  const [session, setSession] = useState({});
-  const [transcripts, setTranscripts] = useState([]);
-  const [videoMetrics, setVideoMetrics] = useState([])
-  const [displayTranscripts, setDisplayTranscripts] = useState([]);
-  const [displayVideoMetrics, setDisplayVideoMetrics] = useState([])
+  const [activeSessionService] = useOutletContext();
+  const { sessionId, sessionDeviceId } = useParams();
+  // Start from what the session store already holds (the overview loaded
+  // it): session and pod first, so the first paint has the title and the
+  // time window, then the pod's rows below.
+  const [sessionDevice, setSessionDevice] = useState(() => activeSessionService.getSessionDevice(sessionDeviceId) || {});
+  const [session, setSession] = useState(() => activeSessionService.getSession() || {});
+  // Rows too, so the first paint shows them instead of an empty panel that
+  // fills in a moment later. Live updates arrive through the subscriptions
+  // in the mount effect.
+  const [transcripts, setTranscripts] = useState(() =>
+    filterSortByDevice(activeSessionService.getTranscripts().getValue(), sessionDeviceId, "start_time"));
+  const [videoMetrics, setVideoMetrics] = useState(() =>
+    filterSortByDevice(activeSessionService.getVideoMetrics().getValue(), sessionDeviceId, "time_stamp"));
+  // False until the store has received the session's transcript history;
+  // the page shows a spinner rather than "no transcript" meanwhile.
+  const [transcriptsReady, setTranscriptsReady] = useState(() => activeSessionService.transcriptsReady.getValue());
   const [currentTranscript, setCurrentTranscript] = useState({});
   const [currentForm, setCurrentForm] = useState("");
   // Human-visible reason when the AI reflection can't load (LLM/api errors
@@ -38,14 +49,9 @@ function PodComponent() {
   const [subscriptions] = useState([]);
   const [deleteDeviceToggle, setDeleteDeviceToggle] = useState(false);
   const [timeRange, setTimeRange] = useState([0, 1]);
-  const [startTime, setStartTime] = useState();
-  const [endTime, setEndTime] = useState();
-  const [activeSessionService] = useOutletContext();
   const [details, setDetails] = useState("Group");
   const [speakers, setSpeakers] = useState([]);
   const [selectedSpkrId1, setSelectedSpkrId1] = useState(-1);
-  const [spkr1Transcripts, setSpkr1Transcripts] = useState([]);
-  const [spkr1VideoMetrics, setSpkr1VideoMetrics] = useState([])
   const [open, setOpen] = useState(true);
   const [selectedSpkralias, setSelectedSpkralias] = useState("");
   const [participantIDReflectionDashboard, setParticipantIDRefectionDashboard] = useState("")
@@ -54,7 +60,6 @@ function PodComponent() {
   const [llmPendingFor, setLlmPendingFor] = useState("")
   const latestParticipantRequest = useRef("")
   const prefetchStarted = useRef(false)
-  const { sessionId, sessionDeviceId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const synthesizedFeedbackMetrics = useRef(null);
   const participants = useRef([])
@@ -92,30 +97,20 @@ function PodComponent() {
           .catch(() => {});
       }
     }
-    if (transcripts.length <= 0) {
-      const transcriptObs = activeSessionService.getTranscripts();
-      //const transcriptSub = activeSessionService.getSessionDeviceTranscripts(sessionDeviceId, setTranscripts);
-
-      // Keep the SUBSCRIPTION (what .subscribe returns), not the observable
-      // — the old code pushed the observable, so cleanup never unsubscribed
-      // and every pod visit leaked a live subscription firing setState on an
-      // unmounted component for the rest of the session.
-      const transcriptSub = transcriptObs.subscribe((e) => {
-        if (Object.keys(e).length !== 0) {
-          const data = filterSortByDevice(e, sessionDeviceId, "start_time");
-          setTranscripts(data);
-          // console.log(data,session, 'testing refresh still debugging ...')
-
-          const sessionLen =
-            Object.keys(session).length > 0 ? session.length : 0;
-          //console.log("Start and end times changed default useeffect");
-          setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100);
-          setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100);
-        }
-      });
-
-      subscriptions.push(transcriptSub);
-    }
+    // Keep the SUBSCRIPTION (what .subscribe returns), not the observable
+    // — the old code pushed the observable, so cleanup never unsubscribed
+    // and every pod visit leaked a live subscription firing setState on an
+    // unmounted component for the rest of the session. Always subscribe:
+    // the initial state came from the store, but live rows still arrive
+    // through here.
+    subscriptions.push(
+      activeSessionService.getTranscripts().subscribe((e) => {
+        setTranscripts(filterSortByDevice(e || [], sessionDeviceId, "start_time"));
+      }),
+    );
+    subscriptions.push(
+      activeSessionService.transcriptsReady.subscribe((ready) => setTranscriptsReady(!!ready)),
+    );
     if (synthesizedFeedbackMetrics.current === null) {
       const fetchData = new SessionService().getSynthesizedFeedbackMetrics(sessionId, sessionDeviceId);
       fetchData.then(
@@ -134,24 +129,11 @@ function PodComponent() {
 
 
 
-    if (videoMetrics.length <= 0) {
-      const videoMetricsObs = activeSessionService.getVideoMetrics();
-      const videoMetricsSub = videoMetricsObs.subscribe((e) => {
-        if (Object.keys(e).length !== 0) {
-          const data = filterSortByDevice(e, sessionDeviceId, "time_stamp");
-          setVideoMetrics(data);
-          // console.log(data,session, 'testing refresh still debugging ...')
-
-          const sessionLen =
-            Object.keys(session).length > 0 ? session.length : 0;
-          //console.log("Start and end times changed default useeffect");
-          setStartTime(Math.round(sessionLen * timeRange[0] * 100) / 100);
-          setEndTime(Math.round(sessionLen * timeRange[1] * 100) / 100);
-        }
-      });
-
-      subscriptions.push(videoMetricsSub);
-    }
+    subscriptions.push(
+      activeSessionService.getVideoMetrics().subscribe((e) => {
+        setVideoMetrics(filterSortByDevice(e || [], sessionDeviceId, "time_stamp"));
+      }),
+    );
 
 
     // Refresh based on timeslider. Local id, not the intervalId state: the
@@ -173,27 +155,36 @@ function PodComponent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
+  // The visible window and everything filtered by it are derived during
+  // render, not set from effects: with effects the first paint showed an
+  // empty panel and empty charts, then filled in one or two frames later.
+  // The window is re-read when the data or the slider changes (a live
+  // session's length grows with the clock, so the end moves with new rows).
+  const { startTime, endTime } = useMemo(() => {
     const sessionLen = Object.keys(session).length > 0 ? session.length : 0;
-    const sTime = Math.round(sessionLen * timeRange[0] * 100) / 100;
-    const eTime = Math.round(sessionLen * timeRange[1] * 100) / 100;
-    setStartTime(sTime);
-    setEndTime(eTime);
-    generateDisplayTranscripts(sTime, eTime);
-    generateDisplayVideoMetrics(sTime, eTime);
-  }, [startTime, endTime, transcripts, videoMetrics, timeRange]);
-
-  useEffect(() => {
-    if (displayTranscripts) {
-      setSpeakerTranscripts();
-    }
-
-    if (displayVideoMetrics) {
-      setSpeakerVideoMetrics()
-    }
-
-
-  }, [displayTranscripts, displayVideoMetrics, selectedSpkrId1, details]);
+    return {
+      startTime: Math.round(sessionLen * timeRange[0] * 100) / 100,
+      endTime: Math.round(sessionLen * timeRange[1] * 100) / 100,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, timeRange, transcripts, videoMetrics]);
+  const displayTranscripts = useMemo(
+    () => transcripts.filter((t) => t.start_time >= startTime && t.start_time <= endTime),
+    [transcripts, startTime, endTime],
+  );
+  const displayVideoMetrics = useMemo(
+    () => videoMetrics.filter((v) => v.time_stamp >= startTime && v.time_stamp <= endTime),
+    [videoMetrics, startTime, endTime],
+  );
+  const spkr1Transcripts = useMemo(
+    () => displayTranscripts.filter((t) => t.speaker_id === selectedSpkrId1),
+    [displayTranscripts, selectedSpkrId1],
+  );
+  const spkr1VideoMetrics = useMemo(() => {
+    const speaker = speakers.find((sp) => sp.id === selectedSpkrId1);
+    if (!speaker) return [];
+    return displayVideoMetrics.filter((v) => v.student_username === speaker.alias);
+  }, [displayVideoMetrics, selectedSpkrId1, speakers]);
 
   useEffect(() => {
     if (sessionDeviceId && session.id) getSpeakersRef.current();
@@ -214,51 +205,6 @@ function PodComponent() {
     setTimeRange(values);
   };
 
-  const setSpeakerTranscripts = () => {
-    if (displayTranscripts.length) {
-      setSpkr1Transcripts(
-        displayTranscripts.reduce((values, transcript) => {
-
-          if (transcript.speaker_id === selectedSpkrId1
-          ) {
-            values.push(transcript);
-          }
-          return values;
-        }, [])
-      );
-    } else {
-      setSpkr1Transcripts([]);
-    }
-  };
-
-  const setSpeakerVideoMetrics = () => {
-
-    if (displayVideoMetrics.length) {
-      let speakerAlias1 = getSpeakerAliasFromID(selectedSpkrId1)
-      setSpkr1VideoMetrics(
-        displayVideoMetrics.reduce((values, videometrics) => {
-          if (videometrics.student_username === speakerAlias1
-          ) {
-            values.push(videometrics)
-          }
-          return values
-        }, []),
-      )
-    } else {
-      setSpkr1VideoMetrics([])
-    }
-  }
-  const generateDisplayTranscripts = (s, e) => {
-    setDisplayTranscripts(
-      transcripts.filter((t) => t.start_time >= s && t.start_time <= e)
-    );
-  };
-
-  const generateDisplayVideoMetrics = (s, e) => {
-    setDisplayVideoMetrics(
-      videoMetrics.filter((v) => v.time_stamp >= s && v.time_stamp <= e),
-    )
-  }
 
   const getSpeakerAliasFromID = (selectedSpkrId) => {
     if (selectedSpkrId !== -1) {
@@ -300,7 +246,8 @@ function PodComponent() {
     if(details === "Reflection Dashboard"){
       return Object.keys(llmSessionAnalysis.current).length <= 0
     }else{
-    return session === null || transcripts === null;
+    // The store has not delivered this session's transcript history yet.
+    return !transcriptsReady;
     }
   };
 

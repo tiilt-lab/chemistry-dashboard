@@ -8,6 +8,9 @@ import { SpeakerMetricsModel } from "../models/speaker-metrics"
 import { SpeakerVideoMetricsModel } from "../models/speaker-video-metrics"
 import { maxId } from "../globals"
 
+// Quiet period that ends a digest burst (see emitAfterBurst).
+const DIGEST_BURST_MS = 80
+
 export class ActiveSessionService {
     socketService = new SocketService()
     sessionService = new SessionService()
@@ -16,6 +19,15 @@ export class ActiveSessionService {
     sessionDeviceSource = new BehaviorSubject([])
     transcriptSource = new BehaviorSubject([])
     videoMetricSource = new BehaviorSubject([])
+    // True once the first transcript digest burst for this session has
+    // landed (an empty session still gets one, empty, digest event), so a
+    // pod page can hold a spinner instead of saying "no transcript" for the
+    // moment before the history arrives.
+    transcriptsReady = new BehaviorSubject(false)
+    // Digest pages arrive within milliseconds of each other (first 200 rows,
+    // then 1000 a page). The subjects emit once per burst, so a page renders
+    // the history once instead of once per page.
+    digestTimers = {}
 
     socket
     sessionId
@@ -90,7 +102,20 @@ export class ActiveSessionService {
         return fields
     }
 
+    // Emit `source` after a short quiet period instead of on every digest
+    // page: consecutive pages are collapsed into one notification. The value
+    // itself is already updated in place, so getValue() is current meanwhile.
+    emitAfterBurst(source, key, onEmit) {
+        clearTimeout(this.digestTimers[key])
+        this.digestTimers[key] = setTimeout(() => {
+            delete this.digestTimers[key]
+            source.next(source.getValue())
+            if (onEmit) onEmit()
+        }, DIGEST_BURST_MS)
+    }
+
     initializeSocket() {
+        this.transcriptsReady.next(false)
         // Create Socket.
         this.socket = this.socketService.createSocket(
             "session",
@@ -210,7 +235,9 @@ export class ActiveSessionService {
                     transcripts.push(transcript_model)
                 }
             }
-            this.transcriptSource.next(transcripts)
+            this.emitAfterBurst(this.transcriptSource, "transcripts", () =>
+                this.transcriptsReady.next(true),
+            )
         })
 
         // Initial digest of speaker video metrics. Skip ids already present
@@ -228,7 +255,7 @@ export class ActiveSessionService {
                     videoMetrics.push(speaker_video_metrics)
                 }
             }
-            this.videoMetricSource.next(videoMetrics)
+            this.emitAfterBurst(this.videoMetricSource, "video")
         })
 
         // Update speaker video metrics.
@@ -254,6 +281,9 @@ export class ActiveSessionService {
         }
         this.initialized = false
         this.sessionId = null
+        for (const key of Object.keys(this.digestTimers)) clearTimeout(this.digestTimers[key])
+        this.digestTimers = {}
+        this.transcriptsReady.next(false)
         this.sessionSource.next(null)
         this.sessionDeviceSource.next([])
         this.transcriptSource.next([])

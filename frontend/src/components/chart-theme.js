@@ -11,4 +11,9 @@ export function applyChartTheme() {
     Chart.defaults.borderColor = dark
         ? "rgba(168, 159, 192, 0.18)"
         : "rgba(103, 94, 125, 0.15)"
+    // Live data: a pod's charts receive the stored history in a couple of
+    // bursts and then a row every few seconds. Chart.js animates every
+    // update by default (about a second each), which read as the charts
+    // flickering; they now redraw in place.
+    Chart.defaults.animation = false
 }
