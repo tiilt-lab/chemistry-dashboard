@@ -89,7 +89,20 @@ def device_connected(**kwargs):
     room_name = str(session_device.session_id)
     socketio.emit('device_update', json.dumps(session_device.json()), room=room_name, namespace="/session")
     logging.info('Device {0} connected to the Audio Processing Service.'.format(session_device.id))
+    # The far side of the table: the partner pod's speakers, for the
+    # service's roster (it hears them too). Refreshed by the route below.
+    return json_response({'partner_speakers': database.partner_speaker_aliases(session_device)})
   return json_response()
+
+
+@api_routes.route('/api/v1/callback/partner_speakers/<path:key>', methods=['GET'])
+@wrappers.verify_local
+def partner_speakers(key, **kwargs):
+  # The audio service re-asks while it streams: the partner pod may join,
+  # or add speakers, after this pod connected.
+  session_device = database.get_session_devices(processing_key=key)
+  aliases = database.partner_speaker_aliases(session_device) if session_device else []
+  return json_response({'partner_speakers': aliases})
 
 @api_routes.route('/api/v1/callback/disconnect', methods=['POST'])
 @wrappers.verify_local

@@ -2,6 +2,7 @@ import os
 import sys
 import config
 import requests
+import urllib.parse
 import logging
 from datetime import datetime, timezone
 
@@ -134,7 +135,33 @@ def post_connect(source):
                                 source, connection['time'].replace(' ', 'T'))
     logging.info('connect callback for %s: %s', source,
                  response.status_code if response is not None else 'failed')
-    return response is not None and response.status_code == 200
+    if response is None or response.status_code != 200:
+        return None
+    # The reply carries the partner pod's speakers (the far side of the
+    # table) for the roster; an older API returns {}.
+    try:
+        body = response.json()
+    except ValueError:
+        body = {}
+    return body if isinstance(body, dict) else {}
+
+
+def get_partner_speakers(source):
+    """The partner pod's speaker aliases right now, or None when the API
+    could not be asked (the roster then keeps what it has)."""
+    url = _callback_base() + '/partner_speakers/' + urllib.parse.quote(str(source), safe='')
+    try:
+        response = requests.get(url, timeout=callbacks_common.CALLBACK_TIMEOUT)
+    except Exception as e:
+        logging.info('partner speakers lookup failed for %s: %s', source, e)
+        return None
+    if response.status_code != 200:
+        return None
+    try:
+        aliases = response.json().get('partner_speakers')
+    except (ValueError, AttributeError):
+        return None
+    return [a for a in aliases if a] if isinstance(aliases, list) else None
 
 
 def post_transcript_features(source, updates):

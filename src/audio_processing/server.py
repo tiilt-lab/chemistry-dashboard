@@ -236,7 +236,11 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                 self.signal_start()
                 self.send_json({'type':'start'})
                 logging.info('Audio process connected')
-                reactor_safety.defer_blocking(callbacks.post_connect, self.config.auth_key)
+                # The reply names the partner pod's speakers (the far side of
+                # the table) for the roster; refreshed with presence below.
+                reactor_safety.defer_blocking(callbacks.post_connect, self.config.auth_key) \
+                    .addCallback(lambda body: self._set_far_side((body or {}).get('partner_speakers'))) \
+                    .addErrback(lambda f: logging.warning('connect callback failed: %s', f.getErrorMessage()))
 
     def getRunning(self):
         return self.running
@@ -601,9 +605,21 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
     # jobs. Redis I/O runs off the reactor (a stalled Redis must not stall
     # ingest) and is best effort: the key's TTL covers a crashed process.
     # The pod's clock report rides along for the Devices tab.
+    def _set_far_side(self, aliases):
+        if aliases is None or self.processor is None:
+            return
+        self.processor.setFarSideSpeakers(aliases)
+
     def _mark_live(self):
         key = self.config.auth_key
         clock = self.clock.snapshot() if self.clock is not None else None
+        # Every third refresh (~60 s): the partner pod may have joined or
+        # added speakers since this pod connected.
+        self._presence_ticks = getattr(self, '_presence_ticks', 0) + 1
+        if self._presence_ticks % 3 == 1:
+            reactor_safety.defer_blocking(callbacks.get_partner_speakers, key) \
+                .addCallback(self._set_far_side) \
+                .addErrback(lambda f: logging.info('partner speakers refresh failed: %s', f.getErrorMessage()))
 
         def _fail(f):
             logging.warning('live presence refresh failed for %s: %s', key, f.getErrorMessage())

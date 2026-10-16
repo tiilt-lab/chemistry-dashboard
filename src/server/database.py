@@ -2149,6 +2149,17 @@ def get_negotiation_partner(session_device):
     opposite = [d for d in others if d.negotiation_side and d.negotiation_side != session_device.negotiation_side]
     return (opposite or others)[0]
 
+def partner_speaker_aliases(session_device):
+    """Aliases of the partner pod's speakers in a paired session (the far
+    side of the table, which this pod's microphone hears too), [] when the
+    pod has no partner. The audio service adds them to its roster so a line
+    from across the table is named after its speaker instead of the nearest
+    own-team voice."""
+    partner = get_negotiation_partner(session_device)
+    if partner is None:
+        return []
+    return [s.alias for s in get_speakers(session_device_id=partner.id) if s.alias]
+
 def set_session_device_negotiation(session_device_id, group, side):
     session_device = get_session_devices(id=session_device_id)
     if session_device is None:

@@ -275,7 +275,10 @@ def match_strength(u):
         strength = float(sim)
     except (TypeError, ValueError):
         return 0.5
-    return strength - (0.3 if conf.get("closed_world") else 0.0)
+    # A far-side match (the other team's voice, named from the partner pod's
+    # roster) is this microphone hearing across the table: real, but the
+    # weaker copy whenever the near laptop has one.
+    return strength - (0.3 if conf.get("closed_world") else 0.0) - (0.3 if conf.get("far_side") else 0.0)
 
 
 def _prefer(a, b):
@@ -528,6 +531,14 @@ def merge_paired(rows_by_device, sides, diagnostics=None, recordings=None):
     alignment = None
     if len(by_device) == 2:
         reference_device, other_device = sorted(by_device)
+        # A line this laptop named from the partner's roster was said on the
+        # other side of the table: it belongs to that side's team.
+        for dev, other in ((reference_device, other_device), (other_device, reference_device)):
+            far_team = sides.get(other)
+            if far_team:
+                for u in by_device[dev]:
+                    if (u.get("confidence") or {}).get("far_side"):
+                        u["team"] = far_team
         if recordings:
             try:
                 anchors = acoustic_anchors(recordings.get(reference_device), recordings.get(other_device))

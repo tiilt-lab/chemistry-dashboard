@@ -60,6 +60,11 @@ class AudioProcessor:
         self.asr_complete = False
         self.topic_model = None
         self.fingerprints = None
+        # The partner pod's speakers (the far side of the table), as
+        # references without join-time audio: _print_embedding loads their
+        # enrolled prints. Named 'far:<alias>' so a match reports no local
+        # speaker id and flags itself far_side.
+        self.far_side = {}
         self.cohesion_window = 20
         # Stages that already logged a traceback this session (see _optional).
         self._stage_failures = set()
@@ -111,6 +116,20 @@ class AudioProcessor:
                     os.remove(_old)
             except OSError:
                 pass
+
+    def setFarSideSpeakers(self, aliases):
+        own = {info.get('alias') for info in (self.fingerprints or {}).values()}
+        far = {'far:%s' % a: {'alias': a, 'data': None, 'far_side': True}
+               for a in (aliases or []) if a and a not in own}
+        if set(far) != set(self.far_side):
+            logging.info('far-side roster: %s', sorted(info['alias'] for info in far.values()))
+        self.far_side = far
+
+    def roster(self):
+        """This pod's speakers plus the far side, for matching."""
+        merged = dict(self.fingerprints or {})
+        merged.update(self.far_side)
+        return merged
 
     def setSpeakerFingerprints(self, fingerprints):
         self.fingerprints = fingerprints
@@ -291,7 +310,7 @@ class AudioProcessor:
                     try:
                         parts = segment_split.split_and_attribute(
                             np.frombuffer(audio_data, dtype=np.int16), word_tuples,
-                            start_time, end_time, self.fingerprints,
+                            start_time, end_time, self.roster(),
                             self.diarization_model)
                     except Exception as e:
                         logging.warning('segment split failed (%s); whole-segment matching', e)
@@ -299,7 +318,7 @@ class AudioProcessor:
                     # Unattributed rather than lost if matching fails too.
                     tag, sid, conf = self._optional(
                         'fingerprint match',
-                        lambda: checkFingerprints(audio_data, self.fingerprints, self.diarization_model),
+                        lambda: checkFingerprints(audio_data, self.roster(), self.diarization_model),
                         default=(None, -1, None))
                     parts = [{'start': start_time, 'end': end_time,
                               'text_slice': (0, len(words)), 'alias': tag,
