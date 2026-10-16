@@ -33,12 +33,20 @@ WIN_S = 1.0          # sliding embedding window — must be SHORTER than a
                      # conversational turn or every window mixes two voices
 HOP_S = 0.5
 MIN_SPLIT_S = 3.0    # segments shorter than this are single-decision
-MIN_PART_S = 0.8     # never emit a fragment shorter than this
+MIN_PART_S = 1.5     # never emit a fragment shorter than this (a name needs that much voice)
 WIN_FLOOR = 0.15     # a window vote needs at least this sim to count
 CONTEST_FLOOR = 0.25   # both voices at/above this across the span -> contested
 CONTEST_SHARE = 0.25   # each contested voice must win >= this share of windows
 CHANGE_CONTEXT = 2     # windows on each side of a point that are compared ...
 CHANGE_DISTANCE = 0.4  # ... and the cosine distance between their means that marks a change
+# Measured on 2026-10-16's recordings (ECAPA, 1 s windows, 0.5 s hop): within
+# ONE speaker the boundary score has a median of 0.37 and reaches 0.84; a real
+# change peaks at 0.85-0.99. The distributions overlap, so no threshold tells
+# them apart and the roster-free cut chopped sentences into one-second pieces
+# that were then named unreliably (test session 436: 1.7 s average piece
+# against 4.6 s before). Off until a trained segmentation model replaces it
+# (pyannote segmentation 3.0 or NeMo Sortformer, both in the post-hoc venvs).
+EMBEDDING_CHANGE_POINTS = False
 
 
 def _embed(int16_audio, verification):
@@ -217,7 +225,7 @@ def split_and_attribute(int16_audio, words, seg_start, seg_end,
 
     windows = _window_embeddings(int16_audio, verification)
     votes = _window_votes(int16_audio, fingerprints, verification, windows)
-    cps = _change_points(*windows)
+    cps = _change_points(*windows) if EMBEDDING_CHANGE_POINTS else []
     flip = _change_point(votes)
     if flip is not None and all(abs(flip - t) >= MIN_PART_S for t in cps):
         cps = sorted(cps + [flip])
