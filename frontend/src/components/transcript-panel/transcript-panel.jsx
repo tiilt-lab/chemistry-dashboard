@@ -220,7 +220,7 @@ function TranscriptPanel({
                                 : "#d5cde4"
                             return (
                                 <li
-                                    key={index}
+                                    key={t.id != null ? t.id : index}
                                     ref={
                                         isSelected
                                             ? selectedRef

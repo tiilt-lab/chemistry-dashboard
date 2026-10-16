@@ -79,6 +79,10 @@ function PodComponentPages(props) {
                                     props.setSelectedMomentIdAndIndex
                                 }
                             />
+                        ) : props.loading(props.details) ? (
+                            <div className="flex w-full justify-center py-16">
+                                <AppSpinner></AppSpinner>
+                            </div>
                         ) : (
                             <AppInfographicsComparison
                                 displayTranscripts={props.displayTranscripts}
@@ -109,7 +113,8 @@ function PodComponentPages(props) {
                         )}
                     </div>
                 </div>
-                {props.loading(props.details) ? (
+                {props.details === "Reflection Dashboard" &&
+                props.loading(props.details) ? (
                     <AppSpinner></AppSpinner>
                 ) : (
                     <></>
