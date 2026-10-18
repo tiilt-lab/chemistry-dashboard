@@ -19,3 +19,8 @@ paths = [
   '''audio_processing/source_seperation/.*\.ipynb''',
   '''src/audio_processing/source_seperation/.*\.ipynb''',
 ]
+# A pod's recording key ("<session_device id>-<uuid>") names its recording
+# files and appears in tests and logs; it is a file name, not a credential.
+regexes = [
+  '''\b\d{1,6}-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b''',
+]
