@@ -2094,6 +2094,34 @@ def mark_session_device_posthoc(session_device_id, models=None, durations=None):
     return True
 
 
+def audio_posthoc_status(session_device_id):
+    """'running' while the audio post-hoc service is on the pod, 'done' when
+    a completed AUDIO analysis is recorded on it, else 'missing'. The one
+    definition the coding pipeline gates on (negotiation coding is its last
+    stage), so it reads exactly what posthoc_completed writes for scope
+    audio: the analysed date plus audio provenance in posthoc_models (the
+    service's model choices carry ``asr``; the durations blob gets an
+    ``audio`` entry). A video-only completion sets the date too and does
+    not count; neither does a date from before provenance was kept."""
+    import posthoc_state
+    if 'audio' in (posthoc_state.running_detail(session_device_id).get('scopes') or ()):
+        return 'running'
+    device = get_session_devices(id=session_device_id)
+    if device is None or device.posthoc_analyzed_date is None:
+        return 'missing'
+    models = device._posthoc_models_json()
+    if not isinstance(models, dict):
+        return 'missing'
+    durations = models.get('durations')
+    if 'asr' in models or (isinstance(durations, dict) and 'audio' in durations):
+        return 'done'
+    return 'missing'
+
+
+def audio_posthoc_done(session_device_id):
+    return audio_posthoc_status(session_device_id) == 'done'
+
+
 # -------------------------
 # Negotiation coding (negotiation_coding.py)
 # -------------------------

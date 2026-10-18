@@ -7,6 +7,8 @@ import os
 import sys
 import types
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src", "server"))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -51,3 +53,26 @@ def test_restart_requeues_a_job_the_runner_was_on(monkeypatch):
     assert q._requeue_running() == 1
     assert q.status() == [{"session_id": 1, "device_id": 12, "state": "queued",
                            "error": None, "started_at": None, "finished_at": None}]
+
+
+def test_coding_jobs_audio_gate_persists_and_a_job_without_one_is_never_gated(monkeypatch):
+    monkeypatch.setattr(redis_sync, "_client", FakeRedis())
+    assert q.enqueue_coding(1, 13, 6) is True                      # queued before the gate existed
+    assert q.enqueue_coding(1, 11, 5, after_audio=["11", 12]) is True
+    plain, gated = q._all_jobs()
+    assert "after_audio" not in plain
+    assert gated["after_audio"] == [11, 12] and q._load(gated["id"])["after_audio"] == [11, 12]
+    assert q._requeue_running() == 0
+    assert q._load(gated["id"])["after_audio"] == [11, 12]        # a restart keeps the gate
+    assert q.status(1) == [{"session_id": 1, "device_id": 13, "state": "queued",
+                            "error": None, "started_at": None, "finished_at": None},
+                           {"session_id": 1, "device_id": 11, "state": "queued",
+                            "error": None, "started_at": None, "finished_at": None}]
+    monkeypatch.setattr(q, "_audio_done", lambda d: pytest.fail("a job without the field consults nothing"))
+    assert q._audio_prerequisites(plain) == ([], [])
+    assert q._next_queued()["id"] == plain["id"]
+    monkeypatch.setattr(q, "_audio_done", lambda d: d == 11)
+    monkeypatch.setattr(q, "_scope_running", lambda d, s: False)
+    assert q._audio_prerequisites(gated) == ([], [12])             # 12: nothing will analyse it
+    q.enqueue(1, [12], legs=("audio",))
+    assert q._audio_prerequisites(gated) == ([12], [])             # now its audio leg is ahead

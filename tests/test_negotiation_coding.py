@@ -446,11 +446,15 @@ def _ours(module):
 
 
 @pytest.fixture(scope="module")
-def env():
+def env(tmp_path_factory):
     loaded = sys.modules.get("app")
     if loaded is not None and not getattr(loaded, "_phase1_stub", False):
         pytest.skip("the real app module is loaded in this process")
     before = dict(sys.modules)
+    # The pods' recordings live in a temp folder here, never the host's.
+    recordings = str(tmp_path_factory.mktemp("recordings"))
+    previous_dir = os.environ.get("DC_AUDIO_RECORDINGS_DIR")
+    os.environ["DC_AUDIO_RECORDINGS_DIR"] = recordings
 
     flask_app = flask.Flask("negotiation")
     flask_app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite://"
@@ -465,7 +469,16 @@ def env():
                  ADMIN_ROLES=("admin", "super"))
     _stub_module("config")
     enqueue_coding = _Recorder(True)
-    _stub_module("posthoc_queue", enqueue_coding=enqueue_coding)
+    enqueue = _Recorder([])
+    _stub_module("posthoc_queue", enqueue_coding=enqueue_coding, enqueue=enqueue)
+    # The post-hoc tracker: a pod id in audio_running means the audio
+    # service is on it (what database.audio_posthoc_status reads).
+    audio_running = set()
+    _stub_module("posthoc_state",
+                 running_detail=lambda d: {"running": d in audio_running,
+                                           "scopes": ["audio"] if d in audio_running else [],
+                                           "started_at": None},
+                 is_running=lambda d: d in audio_running)
 
     for name in ("database", "negotiation_coding"):
         sys.modules.pop(name, None)  # rebound to the stub app below
@@ -491,9 +504,14 @@ def env():
               if not any(type(c.type).__module__.startswith("sqlalchemy.dialects.mysql") for c in t.columns)]
     app_stub.db.metadata.create_all(app_stub.db.engine, tables=tables)
     yield types.SimpleNamespace(database=database, routes=routes, scheme_routes=scheme_routes, engine=engine,
-                                flask_app=flask_app, db=app_stub.db, enqueue_coding=enqueue_coding)
+                                flask_app=flask_app, db=app_stub.db, enqueue_coding=enqueue_coding,
+                                enqueue=enqueue, audio_running=audio_running, recordings=recordings)
     app_stub.db.session.remove()
     ctx.pop()
+    if previous_dir is None:
+        os.environ.pop("DC_AUDIO_RECORDINGS_DIR", None)
+    else:
+        os.environ["DC_AUDIO_RECORDINGS_DIR"] = previous_dir
     for name, module in list(sys.modules.items()):
         if name not in before and _ours(module):
             del sys.modules[name]
@@ -609,7 +627,9 @@ def test_routes_post_get_put_export_and_session_list(env):
     assert resp.status_code == 202
     body = resp.get_json()
     assert body["status"] == "queued" and isinstance(body["run_id"], int)
-    assert env.enqueue_coding.calls == [((session.id, pod.id, body["run_id"]), {})]
+    # no recording and no analysis: nothing to wait for, coded as it stands
+    assert env.enqueue_coding.calls == [((session.id, pod.id, body["run_id"]), {"after_audio": []})]
+    assert env.enqueue.calls == []
     # queued again with new teams: the same run, teams updated, no second row
     resp2 = _call(env, r.start_negotiation_coding, "POST", {"teams": TEAMS}, **ids)
     assert resp2.get_json()["run_id"] == body["run_id"]
@@ -620,11 +640,13 @@ def test_routes_post_get_put_export_and_session_list(env):
     # GET while queued: the run, no codes, no summary
     payload = _call(env, r.get_negotiation_coding, "GET", **ids).get_json()
     assert payload["run"]["status"] == "queued" and payload["codes"] == [] and payload["summary"] is None
+    assert payload["waiting_for"] == []
 
     # the coding leg runs
     env.engine.run_coding(pod.id, llm=gold_llm, run_id=body["run_id"])
     payload = _call(env, r.get_negotiation_coding, "GET", **ids).get_json()
-    assert set(payload) == {"run", "mode", "codebook", "team_names", "pods", "teams", "codes", "summary"}
+    assert set(payload) == {"run", "mode", "codebook", "team_names", "pods", "waiting_for", "teams", "codes",
+                            "summary"}
     assert payload["team_names"] == ["Pat", "Sandy"]
     assert payload["codebook"]["ref"] == "builtin:negotiation"
     assert [d["key"] for d in payload["codebook"]["dimensions"]] == ["emotion", "rip", "frame", "listening"]
@@ -636,7 +658,9 @@ def test_routes_post_get_put_export_and_session_list(env):
                                    "utterances_coded", "invalid_codes"}
     assert payload["run"]["status"] == "done" and payload["teams"] == TEAMS
     assert payload["mode"] == "single" and payload["run"]["partner_device_id"] is None
-    assert payload["pods"] == [{"id": pod.id, "name": pod.name, "group": None, "side": None}]
+    assert payload["pods"] == [{"id": pod.id, "name": pod.name, "group": None, "side": None,
+                                "audio_posthoc_done": False}]
+    assert payload["summary"]["pods"] == [{"id": pod.id, "name": pod.name, "group": None, "side": None}]
     assert len(payload["codes"]) == 14
     first = payload["codes"][0]
     assert set(first) == {"transcript_id", "session_device_id", "start_time", "length", "speaker_tag", "adopted", "team",
@@ -679,7 +703,8 @@ def test_routes_post_get_put_export_and_session_list(env):
     overview = {e["device_id"]: e for e in resp.get_json()}
     assert set(overview) == {pod.id, empty.id}
     assert set(overview[pod.id]) == {"device_id", "device_name", "negotiation_group", "negotiation_side",
-                                     "run", "mode", "codebook", "team_names", "pods", "teams", "summary"}
+                                     "run", "mode", "codebook", "team_names", "pods", "waiting_for", "teams",
+                                     "summary"}
     assert overview[pod.id]["mode"] == "single"
     assert overview[pod.id]["run"]["status"] == "done" and overview[pod.id]["summary"]["timeline"]["first_escalating"] == 15
     assert overview[empty.id]["run"] is None and overview[empty.id]["summary"] is None
@@ -709,6 +734,143 @@ def test_queue_coding_run_reuses_a_queued_run_else_creates_one(env, pod):
     c = env.engine.queue_coding_run(pod.session_id, pod.id)
     assert c.id != a.id and c.status == "queued" and c.codebook_version == "viking-v2"
     assert [call[0][2] for call in env.enqueue_coding.calls] == [a.id, a.id, c.id]
+
+
+# ------------------------------------- coding after the post-hoc audio
+
+def _record(env, device, name="k"):
+    # A capture of the pod as the live audio service names it.
+    path = os.path.join(env.recordings, "%d-%s (Fri Oct 16 10:00:00 2026)_orig.wav" % (device.id, name))
+    open(path, "wb").close()
+    return path
+
+
+def _audio_analysed(env, device):
+    # What routes/callback.posthoc_completed records for scope audio.
+    env.database.mark_session_device_posthoc(device.id, models={"asr": "whisperx", "diarizer": "pyannote"},
+                                             durations={"audio": 60})
+
+
+def test_audio_posthoc_done_reads_what_the_completion_callback_writes(env):
+    d = env.database
+    pod = _pod(env, _session(env), with_transcripts=False)
+    assert d.audio_posthoc_status(pod.id) == "missing" and d.audio_posthoc_done(pod.id) is False
+    # a video-only completion stamps the date too and does not count
+    d.mark_session_device_posthoc(pod.id, models={"emotion_model": "x"}, durations={"video": 30})
+    assert d.audio_posthoc_status(pod.id) == "missing"
+    _audio_analysed(env, pod)
+    assert d.audio_posthoc_done(pod.id) is True
+    # the service on the pod again: its results are on the way, not done
+    env.audio_running.add(pod.id)
+    assert d.audio_posthoc_status(pod.id) == "running" and d.audio_posthoc_done(pod.id) is False
+    env.audio_running.discard(pod.id)
+    assert d.audio_posthoc_done(pod.id) is True
+    # a date from before provenance was kept says nothing about audio
+    pod.posthoc_models = None
+    env.db.session.commit()
+    assert d.audio_posthoc_status(pod.id) == "missing"
+    assert d.audio_posthoc_done(999999) is False
+
+
+def test_has_audio_recording_sees_the_capture_being_written_and_not_a_sidecar(env):
+    session = _session(env)
+    pod = _pod(env, session, with_transcripts=False)
+    assert env.engine.has_audio_recording(pod.id) is False
+    open(os.path.join(env.recordings, "%d-k (t)_redu.clock.json" % pod.id), "w").close()
+    assert env.engine.has_audio_recording(pod.id) is False
+    # the .dat the live service is still writing when the session ends
+    open(os.path.join(env.recordings, "%d-k (t)_redu.dat" % pod.id), "w").close()
+    assert env.engine.has_audio_recording(pod.id) is True
+    # pod 7's files are not pod 70's
+    open(os.path.join(env.recordings, "%d0-k (t)_orig.wav" % pod.id), "w").close()
+    assert env.engine.has_audio_recording(pod.id * 10) is True
+    assert env.engine.has_audio_recording(pod.id * 100) is False
+    assert env.engine.has_audio_recording("junk") is False
+
+
+def test_coding_waits_for_the_pairs_audio_legs_queued_partner_first(env):
+    d, r = env.database, env.routes
+    session, (pat, sandy) = _paired_session(env, group="Table 8")
+    for pod, tag in ((pat, "Pat"), (sandy, "Sandy")):
+        _add(env, pod, 0, "Where is the money?", tag)
+        _record(env, pod)
+    ids = dict(session_id=session.id, session_device_id=sandy.id)
+    env.enqueue.calls.clear()
+    env.enqueue_coding.calls.clear()
+    body = _call(env, r.start_negotiation_coding, "POST", {}, **ids).get_json()
+    assert (body["session_device_id"], body["partner_device_id"]) == (pat.id, sandy.id)
+    # the partner's audio leg, then the first device's, then the coding job
+    # gated on both
+    assert env.enqueue.calls == [((session.id, [sandy.id]), {"legs": ("audio",)}),
+                                 ((session.id, [pat.id]), {"legs": ("audio",)})]
+    assert env.enqueue_coding.calls == [((session.id, pat.id, body["run_id"]), {"after_audio": [pat.id, sandy.id]})]
+    payload = _call(env, r.get_negotiation_coding, "GET", **ids).get_json()
+    assert payload["run"]["status"] == "queued" and payload["waiting_for"] == [pat.id, sandy.id]
+    assert [(p["id"], p["audio_posthoc_done"]) for p in payload["pods"]] == [(pat.id, False), (sandy.id, False)]
+
+    # Pat's analysis lands: only Sandy's is still waited for
+    _audio_analysed(env, pat)
+    payload = _call(env, r.get_negotiation_coding, "GET", **ids).get_json()
+    assert payload["waiting_for"] == [sandy.id]
+    assert [p["audio_posthoc_done"] for p in payload["pods"]] == [True, False]
+
+    # Sandy's is in flight at the service: waited for, not queued a second time
+    env.audio_running.add(sandy.id)
+    env.enqueue.calls.clear()
+    env.enqueue_coding.calls.clear()
+    again = _call(env, r.start_negotiation_coding, "POST", {}, **ids).get_json()
+    assert again["run_id"] == body["run_id"]              # the queued run is reused
+    assert env.enqueue.calls == []
+    assert env.enqueue_coding.calls == [((session.id, pat.id, body["run_id"]), {"after_audio": [pat.id, sandy.id]})]
+    assert _call(env, r.get_negotiation_coding, "GET", **ids).get_json()["waiting_for"] == [sandy.id]
+    env.audio_running.discard(sandy.id)
+    _audio_analysed(env, sandy)
+
+    # both analysed: a coding-only job that runs as soon as it is reached
+    d.update_negotiation_run(body["run_id"], status="done")
+    env.enqueue.calls.clear()
+    env.enqueue_coding.calls.clear()
+    third = _call(env, r.start_negotiation_coding, "POST", {}, **ids).get_json()
+    assert third["run_id"] != body["run_id"]
+    assert env.enqueue.calls == []
+    assert env.enqueue_coding.calls == [((session.id, pat.id, third["run_id"]), {"after_audio": [pat.id, sandy.id]})]
+    payload = _call(env, r.get_negotiation_coding, "GET", **ids).get_json()
+    assert payload["waiting_for"] == [] and [p["audio_posthoc_done"] for p in payload["pods"]] == [True, True]
+
+    # a settled run waits for nothing, whatever the pods' state now
+    d.update_negotiation_run(third["run_id"], status="done")
+    pat.posthoc_analyzed_date = None
+    env.db.session.commit()
+    payload = _call(env, r.get_negotiation_coding, "GET", **ids).get_json()
+    assert payload["waiting_for"] == [] and [p["audio_posthoc_done"] for p in payload["pods"]] == [False, True]
+
+
+def test_a_pod_with_nothing_to_analyse_is_not_waited_for(env):
+    r = env.routes
+    session, (pat, sandy) = _paired_session(env, group="Table 9")
+    _add(env, pat, 0, "Where is the money?", "Pat")
+    _add(env, sandy, 2, "In the lake.", "Sandy")
+    _record(env, sandy)                      # Pat's laptop kept no recording
+    ids = dict(session_id=session.id, session_device_id=pat.id)
+    env.enqueue.calls.clear()
+    env.enqueue_coding.calls.clear()
+    body = _call(env, r.start_negotiation_coding, "POST", {}, **ids).get_json()
+    assert env.enqueue.calls == [((session.id, [sandy.id]), {"legs": ("audio",)})]
+    assert env.enqueue_coding.calls == [((session.id, pat.id, body["run_id"]), {"after_audio": [sandy.id]})]
+    payload = _call(env, r.get_negotiation_coding, "GET", **ids).get_json()
+    assert payload["waiting_for"] == [sandy.id]
+    assert [p["audio_posthoc_done"] for p in payload["pods"]] == [False, False]
+
+
+def test_fail_run_marks_a_pending_run_error_with_the_message(env, pod):
+    d = env.database
+    run = d.create_negotiation_run(pod.id, "m", "viking-v2")
+    env.engine.fail_run(run.id, "post-hoc audio analysis of pod 7 failed; coding not run")
+    assert d.get_negotiation_run(run.id).status == "error"
+    assert d.get_negotiation_run(run.id).error == "post-hoc audio analysis of pod 7 failed; coding not run"
+    env.engine.fail_run(run.id, "again")                  # a settled run is left alone
+    assert d.get_negotiation_run(run.id).error.startswith("post-hoc audio")
+    env.engine.fail_run(999999, "nobody")                 # no such run: nothing to do
 
 
 # ------------------------------------------------ the queue's coding leg
@@ -839,6 +1001,129 @@ def test_clear_pending_marks_dropped_coding_runs_cancelled(fake, monkeypatch):
     assert q._all_jobs() == []
 
 
+# --------------------------------- the coding job waits for the audio legs
+
+def _audio_state(monkeypatch, done=(), running=()):
+    # What the runner sees of the pods' audio analyses: recorded complete
+    # (database.audio_posthoc_done) or the service on the pod (posthoc_state).
+    state = {"done": set(done), "running": set(running)}
+    monkeypatch.setattr(q, "_audio_done", lambda d: d in state["done"])
+    monkeypatch.setattr(q, "_scope_running", lambda d, s: s == "audio" and d in state["running"])
+    return state
+
+
+def _audio_service(monkeypatch, state, log, outcome=None):
+    # The audio leg behind _run_leg: runs to completion and, as the
+    # completion callback would, records the pod analysed; or refuses.
+    monkeypatch.setattr(q, "_job_base", lambda job: {"sessiondeviceid": job["device_id"]})
+    monkeypatch.setattr(q, "_mint", lambda d: "t")
+    monkeypatch.setattr(q, "_audio_produced_output", lambda d: True)
+    monkeypatch.setattr(q, "_maybe_recycle_audio_service", lambda: None)
+    monkeypatch.setattr(q, "_live_pods", lambda: 0)
+
+    def run_leg(url, init, start, device_id, scope, deadline):
+        log.append(("audio", device_id))
+        if outcome is None:
+            state["done"].add(device_id)
+        return outcome
+    monkeypatch.setattr(q, "_run_leg", run_leg)
+
+
+def test_gated_coding_job_is_skipped_by_both_picks_until_the_audio_is_recorded(fake, monkeypatch):
+    state = _audio_state(monkeypatch)
+    assert q.enqueue(1, [11], legs=("audio",)) == [11]
+    assert q.enqueue_coding(1, 11, 5, after_audio=[11]) is True
+    assert q.enqueue_coding(1, 12, 6) is True              # ungated: runs when reached
+    audio, gated, plain = q._all_jobs()
+    assert gated["after_audio"] == [11] and "after_audio" not in plain
+    assert q._audio_prerequisites(gated) == ([11], [])
+    assert q._audio_prerequisites(plain) == ([], [])
+    # the normal pick is the audio job; beside a class (where it may not
+    # run) the gated coding job waits and the ungated one is what runs
+    assert q._next_queued()["id"] == audio["id"]
+    assert q._next_queued(beside_class=True)["id"] == plain["id"]
+    q._remove(plain)
+    assert q._next_queued(beside_class=True) is None
+    # the audio job running: still to come, still waiting
+    audio["state"] = "running"
+    q._save(audio)
+    assert q._next_queued() is None and q._next_queued(beside_class=True) is None
+    # the analysis recorded: the coding job is next
+    state["done"].add(11)
+    assert q._next_queued()["id"] == gated["id"]
+    assert q._next_queued(beside_class=True)["id"] == gated["id"]
+    assert q._audio_prerequisites(gated) == ([], [])
+
+
+def test_coding_runs_once_the_pods_audio_leg_has_finished(fake, monkeypatch):
+    log = []
+    state = _audio_state(monkeypatch)
+    _audio_service(monkeypatch, state, log)
+    _stub_engine(monkeypatch, run_coding=lambda d, run_id=None: log.append(("coding", d, run_id)))
+    q.enqueue(1, [11], legs=("audio",))
+    q.enqueue_coding(1, 11, 5, after_audio=[11])
+    q._worker_loop()
+    assert log == [("audio", 11), ("coding", 11, 5)]
+    assert [(j["device_id"], j.get("legs"), j["state"], j["error"]) for j in q._all_jobs()] == \
+        [(11, ["audio"], "done", None), (11, ["coding"], "done", None)]
+
+
+def test_coding_fails_with_the_reason_when_the_pods_audio_job_errored(fake, monkeypatch):
+    log = []
+    state = _audio_state(monkeypatch)
+    _audio_service(monkeypatch, state, log, outcome="No audio captured for this group.")
+    failed = _Recorder()
+    _stub_engine(monkeypatch, run_coding=lambda *a, **k: pytest.fail("coding must not run"), fail_run=failed)
+    q.enqueue(1, [11], legs=("audio",))
+    q.enqueue_coding(1, 11, 5, after_audio=[11])
+    q._worker_loop()
+    audio, coding = q._all_jobs()
+    assert audio["state"] == "error" and audio["error"] == "audio: No audio captured for this group."
+    msg = "post-hoc audio analysis of pod 11 failed; coding not run (audio: No audio captured for this group.)"
+    assert coding["state"] == "error" and coding["error"] == msg
+    assert failed.calls == [((5, msg), {})]
+    assert log == [("audio", 11)]
+
+
+def test_coding_waits_on_the_service_and_fails_when_nothing_will_finish_the_analysis(fake, monkeypatch):
+    # No audio job on the queue (the pod's run was started from its page):
+    # waited for while the service is on it; once it is off without a
+    # completion recorded, nothing will ever satisfy the gate.
+    state = _audio_state(monkeypatch, running=[11])
+    monkeypatch.setattr(q, "_live_pods", lambda: 0)
+    failed = _Recorder()
+    _stub_engine(monkeypatch, run_coding=lambda *a, **k: pytest.fail("coding must not run"), fail_run=failed)
+    q.enqueue_coding(1, 11, 5, after_audio=[11])
+    job = q._all_jobs()[0]
+    assert q._audio_prerequisites(job) == ([11], [])
+    q._worker_loop()
+    assert q._all_jobs()[0]["state"] == "queued" and failed.calls == []
+    state["running"].clear()
+    assert q._audio_prerequisites(job) == ([], [11])
+    q._worker_loop()
+    msg = "post-hoc audio analysis of pod 11 failed; coding not run"
+    assert q._all_jobs()[0]["state"] == "error" and q._all_jobs()[0]["error"] == msg
+    assert failed.calls == [((5, msg), {})]
+
+
+def test_audio_already_recorded_runs_the_coding_as_before(fake, monkeypatch):
+    _audio_state(monkeypatch, done=[11])
+    ran = _driven_loop(monkeypatch, live=0)
+    q.enqueue_coding(1, 11, 5, after_audio=[11])
+    q._worker_loop()
+    assert ran.calls == [((11,), {"run_id": 5})] and q._all_jobs()[0]["state"] == "done"
+    # a job queued before the gate existed consults nothing
+    monkeypatch.setattr(q, "_audio_done", lambda d: pytest.fail("a legacy job is never gated"))
+    q.enqueue_coding(1, 12, 6)
+    q._worker_loop()
+    assert ran.calls[-1] == ((12,), {"run_id": 6}) and q._all_jobs()[-1]["state"] == "done"
+
+
+def test_wake_nudges_the_runner(fake):
+    q.wake()
+    assert fake.lrange(q._KEY_WAKE, 0, -1) == ["1"]
+
+
 def test_queue_leg_source_contracts():
     s = _read("src", "server", "posthoc_queue.py")
     assert 'LEGS = ("audio", "video", "coding")' in s and 'DEFAULT_LEGS = ("audio", "video")' in s
@@ -853,6 +1138,11 @@ def test_queue_leg_source_contracts():
     assert "NEGOTIATION_CODING_WAIT_FOR_IDLE" in _func_source(s, "_needs_idle")
     run_job = _func_source(s, "_run_job")
     assert run_job.index('if scope == "coding":') < run_job.index("base = _job_base(job)")
+    assert run_job.index("_require_audio(job)") < run_job.index("_run_coding_leg(job)")
+    # the audio completion callback wakes the runner for the coding job waiting on it
+    cb = _func_source(_read("src", "server", "routes", "callback.py"), "posthoc_completed")
+    assert "if (scope or 'audio') == 'audio':" in cb
+    assert cb.index("posthoc_state.mark_done(device.id, scope)") < cb.index("posthoc_queue.wake()")
 
 
 # ---------------------------------------- session flag, end hook, migration
@@ -1507,7 +1797,7 @@ def test_paired_run_codes_both_pods_merged_with_teams_by_side(env):
     assert resp.status_code == 202
     body = resp.get_json()
     assert (body["session_device_id"], body["partner_device_id"]) == (pat.id, sandy.id)
-    assert env.enqueue_coding.calls == [((session.id, pat.id, body["run_id"]), {})]
+    assert env.enqueue_coding.calls == [((session.id, pat.id, body["run_id"]), {"after_audio": []})]
     run = d.get_negotiation_run(body["run_id"])
     assert run.partner_device_id == sandy.id and run.is_paired() and run.device_ids() == [pat.id, sandy.id]
     # either pod finds the run; POST again on the other pod reuses it
@@ -1519,8 +1809,10 @@ def test_paired_run_codes_both_pods_merged_with_teams_by_side(env):
     for pod in (pat, sandy):
         payload = _call(env, r.get_negotiation_coding, "GET", session_id=session.id, session_device_id=pod.id).get_json()
         assert payload["run"]["id"] == run.id and payload["mode"] == "paired"
-        assert payload["pods"] == [{"id": pat.id, "name": "Table 1 Pat", "group": "Table 1", "side": "Pat"},
-                                   {"id": sandy.id, "name": "Table 1 Sandy", "group": "Table 1", "side": "Sandy"}]
+        assert payload["pods"] == [{"id": pat.id, "name": "Table 1 Pat", "group": "Table 1", "side": "Pat",
+                                    "audio_posthoc_done": False},
+                                   {"id": sandy.id, "name": "Table 1 Sandy", "group": "Table 1", "side": "Sandy",
+                                    "audio_posthoc_done": False}]
     assert len(payload["codes"]) == 14 and payload["run"]["utterances_coded"] == 14
     assert [c["team"] for c in payload["codes"]] == [tag for tag, _, _ in VIKING]
     assert [c["session_device_id"] for c in payload["codes"]] == [pat.id if tag == "Pat" else sandy.id for tag, _, _ in VIKING]

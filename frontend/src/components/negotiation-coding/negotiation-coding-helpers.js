@@ -151,12 +151,18 @@ export function isActiveStatus(status) {
     return status === "queued" || status === "running"
 }
 
-// One-line status for the header pill: { tone, text }.
-export function describeRun(run, now = Date.now()) {
+// One-line status for the header pill: { tone, text }. waitingFor names
+// the pods a queued run is waiting on post-hoc audio for (waitingAudioPods).
+export function describeRun(run, now = Date.now(), waitingFor = []) {
     if (!run || !run.status) return { tone: "neutral", text: "Never run" }
     switch (run.status) {
         case "queued":
-            return { tone: "orange", text: "Queued" }
+            return waitingFor && waitingFor.length > 0
+                ? {
+                      tone: "orange",
+                      text: `Queued · waiting for post-hoc audio analysis of ${waitingFor.join(", ")}`,
+                  }
+                : { tone: "orange", text: "Queued" }
         case "running": {
             const e = elapsedSince(run.started_at, now)
             return { tone: "orange", text: e ? `Running · ${e}` : "Running" }
@@ -174,6 +180,29 @@ export function describeRun(run, now = Date.now()) {
         default:
             return { tone: "neutral", text: String(run.status) }
     }
+}
+
+// The pods a queued run is waiting on post-hoc audio for, by name: the GET
+// payload's waiting_for ids against its pods.
+export function waitingAudioPods(data) {
+    const ids = (data && data.waiting_for) || []
+    const pods = (data && data.pods) || []
+    return ids.map((id) => {
+        const p = pods.find((x) => x && x.id === id)
+        return p ? p.name || roleLabel(p.group, p.side) || `Pod ${p.id}` : `Pod ${id}`
+    })
+}
+
+// The run button. Coding is the last stage of the post-hoc pipeline: a pod
+// of the run whose post-hoc audio analysis is not recorded complete gets
+// that first, and the label says so.
+export function runButtonLabel(data) {
+    const run = data && data.run
+    const pods = (data && data.pods) || []
+    if (pods.some((p) => p && p.audio_posthoc_done === false)) {
+        return run ? "Re-run post-hoc audio and coding" : "Run post-hoc audio, then coding"
+    }
+    return run ? "Re-run coding" : "Run coding"
 }
 
 // Every speaker tag the editor should offer: those in the transcript

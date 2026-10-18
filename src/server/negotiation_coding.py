@@ -528,6 +528,31 @@ def recordings_of(processing_key, directory=None):
     return out
 
 
+def has_audio_recording(session_device_id):
+    """Whether the live audio service kept a recording of the pod — what a
+    post-hoc audio leg analyses: a ``<pod id>-…`` capture in the recordings
+    directory, the ``.dat`` still being written while the pod streams (the
+    session-end hook runs before the pods hang up) or the ``.wav`` closed
+    at disconnect. The clock sidecars beside them are not recordings."""
+    import glob
+    try:
+        prefix = "%d-" % int(session_device_id)
+    except (TypeError, ValueError):
+        return False
+    paths = glob.glob(os.path.join(audio_recordings_dir(), glob.escape(prefix) + "*"))
+    return any(p.endswith((".wav", ".dat")) for p in paths)
+
+
+def audio_gate(session_device_ids):
+    """The pods of a coding run whose post-hoc audio analysis the coding
+    waits for: every covered pod whose analysis is recorded complete, in
+    flight, or still to be run (a recording to analyse). A pod with none of
+    those has nothing to wait for and is coded as it stands."""
+    import database
+    return [d for d in session_device_ids
+            if database.audio_posthoc_status(d) != "missing" or has_audio_recording(d)]
+
+
 def _pod_envelope(recordings):
     """(timeline_start, envelope) of a pod on its own transcript clock from
     its recordings, read in blocks so a long one never sits in memory."""
@@ -1563,9 +1588,15 @@ def run_payload(run, with_codes=True):
     import coding_schemes as coding_scheme
     names = run_names(run)
     sides = run_sides(run, names)
+    pods = run_pods(run, sides)
+    for pod in pods:
+        pod["audio_posthoc_done"] = database.audio_posthoc_done(pod["id"])
+    # A queued run is waiting on these pods' audio analyses (the gate its
+    # job was queued with, audio_gate); the panel names them.
+    waiting = [p["id"] for p in pods if not p["audio_posthoc_done"]] if run.status == "queued" else []
     payload = {"run": run.json(), "mode": "paired" if run.is_paired() else "single",
                "codebook": coding_scheme.panel_json(codebook_for_device(run.session_device_id)),
-               "team_names": list(names), "pods": run_pods(run, sides),
+               "team_names": list(names), "pods": pods, "waiting_for": audio_gate(waiting),
                "teams": run.teams_dict(), "summary": run.summary_dict()}
     if with_codes:
         teams = payload["teams"]
@@ -1577,7 +1608,14 @@ def queue_coding_run(session_id, session_device_id, teams=None, partner_device_i
     """A run row for the pod (and its partner, in a paired session) and a
     coding job on the post-hoc queue. A run still queued for the same
     device(s) is reused (its teams updated when given) rather than stacking
-    a second identical run behind it."""
+    a second identical run behind it.
+
+    Coding is the last stage of the post-hoc pipeline: it codes the post-hoc
+    transcripts. A covered pod whose audio analysis is neither recorded
+    complete nor in flight gets its audio leg queued ahead (when it has a
+    recording to analyse), and the coding job waits for every gated pod's
+    analysis (``after_audio``) — with all of them already analysed it runs
+    as soon as it is reached, as before."""
     import database
     import posthoc_queue
     run = database.get_latest_negotiation_run(session_device_id)
@@ -1589,13 +1627,27 @@ def queue_coding_run(session_id, session_device_id, teams=None, partner_device_i
         run = database.create_negotiation_run(session_device_id, llm_model(),
                                               codebook_for_device(session_device_id)["version"], teams or {},
                                               partner_device_id=partner_device_id)
-    posthoc_queue.enqueue_coding(session_id, session_device_id, run.id)
+    covered = [d for d in (session_device_id, partner_device_id) if d is not None]
+    gated = audio_gate(covered)
+    # The partner's audio job ahead of the first device's: the queue is
+    # sequential, so the pair is analysed in one fixed order whichever pod
+    # the instructor clicked. One pending GPU job per pod is the queue's rule.
+    for d in reversed(gated):
+        if database.audio_posthoc_status(d) == "missing":
+            posthoc_queue.enqueue(session_id, [d], legs=("audio",))
+    posthoc_queue.enqueue_coding(session_id, session_device_id, run.id, after_audio=gated)
     return run
 
 
-def cancel_run(run_id, reason):
-    # A queued job dropped from the queue: the row must not say "queued" forever.
+def fail_run(run_id, error):
+    """A queued run the queue will never execute (its audio prerequisite
+    failed, or it was dropped): the row must not say "queued" forever."""
     import database
     run = database.get_negotiation_run(run_id)
     if run is not None and run.status in ("queued", "running"):
-        database.update_negotiation_run(run_id, status="error", finished_at=_now(), error="cancelled: " + reason)
+        database.update_negotiation_run(run_id, status="error", finished_at=_now(), error=error)
+
+
+def cancel_run(run_id, reason):
+    # A queued job dropped from the queue.
+    fail_run(run_id, "cancelled: " + reason)

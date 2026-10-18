@@ -4,6 +4,8 @@ import {
     fmtClock,
     fmtElapsed,
     describeRun,
+    waitingAudioPods,
+    runButtonLabel,
     speakerTags,
     assignedTeams as assignedTeamsBase,
     sameTeams as sameTeamsBase,
@@ -122,6 +124,46 @@ describe("describeRun", () => {
             tone: "danger",
             text: "Error: model timed out",
         })
+    })
+
+    it("names the pods a queued run is waiting on post-hoc audio for", () => {
+        expect(describeRun({ status: "queued" }, Date.now(), ["Group 8 Sandy"])).toEqual({
+            tone: "orange",
+            text: "Queued · waiting for post-hoc audio analysis of Group 8 Sandy",
+        })
+        expect(describeRun({ status: "queued" }, Date.now(), ["Group 8 Pat", "Group 8 Sandy"]).text).toBe(
+            "Queued · waiting for post-hoc audio analysis of Group 8 Pat, Group 8 Sandy",
+        )
+        expect(describeRun({ status: "queued" }, Date.now(), []).text).toBe("Queued")
+        // only a queued run waits
+        expect(describeRun({ status: "running", started_at: null }, Date.now(), ["Group 8 Sandy"]).text).toBe(
+            "Running",
+        )
+    })
+})
+
+describe("the post-hoc audio gate in the GET payload", () => {
+    const pods = [
+        { id: 1, name: "Group 8 Pat", group: "Group 8", side: "Pat", audio_posthoc_done: true },
+        { id: 2, name: "", group: "Group 8", side: "Sandy", audio_posthoc_done: false },
+    ]
+
+    it("waitingAudioPods names the waiting pods, by name then role then id", () => {
+        expect(waitingAudioPods({ pods, waiting_for: [2] })).toEqual(["Group 8 · Sandy"])
+        expect(waitingAudioPods({ pods, waiting_for: [1, 2, 9] })).toEqual(["Group 8 Pat", "Group 8 · Sandy", "Pod 9"])
+        expect(waitingAudioPods({ pods: [{ id: 3 }], waiting_for: [3] })).toEqual(["Pod 3"])
+        expect(waitingAudioPods({ pods, waiting_for: [] })).toEqual([])
+        expect(waitingAudioPods(null)).toEqual([])
+        expect(waitingAudioPods({ run: { status: "done" } })).toEqual([])
+    })
+
+    it("runButtonLabel says audio comes first while a pod's analysis is not recorded", () => {
+        expect(runButtonLabel(null)).toBe("Run coding")
+        expect(runButtonLabel({ run: { status: "done" }, pods: [pods[0]] })).toBe("Re-run coding")
+        expect(runButtonLabel({ run: { status: "done" }, pods })).toBe("Re-run post-hoc audio and coding")
+        expect(runButtonLabel({ run: null, pods })).toBe("Run post-hoc audio, then coding")
+        // an older payload without the flag reads as before
+        expect(runButtonLabel({ run: { status: "done" }, pods: [{ id: 1, name: "Pod" }] })).toBe("Re-run coding")
     })
 })
 
