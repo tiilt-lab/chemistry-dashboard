@@ -97,6 +97,7 @@ function PodComponentPages(props) {
                                 session={props.session}
                                 sessionDevice={props.viewDevice || props.sessionDevice}
                                 group={props.group}
+                                groupVersion={props.groupVersion}
                                 groupName={props.groupName}
                                 viewDeviceId={props.viewDeviceId}
                                 onSelectView={props.setViewDeviceId}

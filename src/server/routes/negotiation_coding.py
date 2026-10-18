@@ -302,24 +302,50 @@ def list_session_groups(session_id, **kwargs):
     return json_response({'teams': list(names), 'groups': groups})
 
 
-@api_routes.route('/api/v1/sessions/<int:session_id>/groups/<path:group>/transcript', methods=['GET'])
-@wrappers.verify_login(public=True)
-@wrappers.verify_session_read_access
-def get_group_transcript(session_id, group, **kwargs):
-    """One group's conversation: the merge of its primary laptops' rows, the
-    engine the coder reads, each line saying which laptop heard it, with the
-    group's laptops as views. The clocks are aligned from the text (the
-    acoustic alignment the coder uses reads both recordings end to end, too
-    slow for a page load)."""
+def _group_merge(session_id, group):
+    """(payload, devices) of one group's merged transcript, or (None, None)
+    when the session has no such group. The clocks are aligned from the
+    text (the acoustic alignment the coder uses reads both recordings end
+    to end, too slow for a page load)."""
     names = negotiation_coding._session_names(database.get_sessions(id=session_id))
     devices = [d for d in database.get_session_devices(session_id=session_id)
                if (getattr(d, 'negotiation_group', None) or '') == group]
     if not devices:
-        return json_response({'message': 'No such group.'}, 404)
+        return None, None
     pods = negotiation_coding.group_pods(devices, names, database.session_device_transcript_count)
     primary_ids = [p['id'] for p in pods if p['primary']]
     rows_by_device = {d: database.get_transcripts(session_device_id=d) for d in primary_ids}
     payload = negotiation_coding.group_transcript([d for d in devices if d.id in primary_ids],
                                                   rows_by_device, names)
     payload.update({'group': group, 'teams': list(names), 'pods': pods})
+    return payload, devices
+
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/groups/<path:group>/transcript', methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_read_access
+def get_group_transcript(session_id, group, **kwargs):
+    """One group's conversation: the merge of its primary laptops' rows, the
+    engine the coder reads, each line saying which laptop heard it, with the
+    group's laptops as views."""
+    payload, _devices = _group_merge(session_id, group)
+    if payload is None:
+        return json_response({'message': 'No such group.'}, 404)
     return json_response(payload)
+
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/groups/<path:group>/dynamics', methods=['GET'])
+@wrappers.verify_login(public=True)
+@wrappers.verify_session_read_access
+def get_group_dynamics(session_id, group, **kwargs):
+    """The group's conversation dynamics over its merged transcript: what the
+    pod route gives for one laptop, for the whole table, each line counted
+    once. Recomputed from the rows as they stand, so a finished post-hoc
+    run shows at once."""
+    payload, devices = _group_merge(session_id, group)
+    if payload is None:
+        return json_response({'message': 'No such group.'}, 404)
+    enrolled = []
+    for d in devices:
+        enrolled += [s.alias for s in database.get_speakers(session_device_id=d.id) if s.alias]
+    return json_response(negotiation_coding.group_dynamics(payload['lines'], enrolled=sorted(set(enrolled))))

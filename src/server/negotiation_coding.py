@@ -256,7 +256,8 @@ def _utterance(r, team=None):
     u = {"transcript_id": r.id, "start_time": r.start_time, "length": r.length,
          "speaker_tag": speaker_tag, "text": r.transcript,
          "session_device_id": getattr(r, "session_device_id", None),
-         "speaker_id": getattr(r, "speaker_id", None)}
+         "speaker_id": getattr(r, "speaker_id", None),
+         "question": bool(getattr(r, "question", False))}
     if team:
         u["team"] = team
     if conf is not None:
@@ -1703,7 +1704,7 @@ def group_line(u):
     line = {"id": u["transcript_id"], "session_device_id": u.get("session_device_id"),
             "start_time": u["start_time"], "length": u.get("length"),
             "transcript": u.get("text"), "speaker_tag": u.get("speaker_tag") or u.get("_speaker"),
-            "speaker_id": u.get("speaker_id"),
+            "speaker_id": u.get("speaker_id"), "question": bool(u.get("question")),
             "team": u.get("team"), "far_side": bool(conf.get("far_side")),
             "speaker_confidence": conf.get("percent"), "adopted": bool(u.get("adopted")),
             "stitched_from": list(u.get("stitched_from") or []),
@@ -1727,3 +1728,19 @@ def group_transcript(devices, rows_by_device, names=TEAMS, recordings=None):
     stitched = stitch_sentences(utterances, dropped)
     return {"lines": [group_line(u) for u in stitched], "dropped": dropped,
             "alignment": diagnostics.get("alignment")}
+
+
+def group_dynamics(lines, enrolled=None):
+    """The conversation dynamics of a group's merged transcript: the same
+    per-speaker equity, response network and talk metrics a single pod
+    gets (analytics.compute_conversation_dynamics / compute_talk_metrics),
+    over the merged lines (group_line dicts) of both laptops, so a line is
+    counted once and under the laptop that heard its speaker best."""
+    from analytics import compute_conversation_dynamics, compute_talk_metrics
+    ordered = sorted(lines, key=lambda l: (float(l.get("start_time") or 0), l.get("id") or 0))
+    named = [(l["speaker_tag"], l["start_time"], l.get("length")) for l in ordered if l.get("speaker_tag")]
+    result = compute_conversation_dynamics(named)
+    result["talk"] = compute_talk_metrics(
+        [(l.get("speaker_tag"), l["start_time"], l.get("length"), l.get("question"), l.get("transcript")) for l in ordered],
+        enrolled=list(enrolled or []))
+    return result

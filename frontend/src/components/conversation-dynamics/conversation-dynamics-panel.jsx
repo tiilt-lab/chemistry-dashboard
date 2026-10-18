@@ -227,27 +227,32 @@ function EquityTimeline({ timeline, colorOf }) {
 
 // Per-speaker speaking-time equity + a who-follows-whom response network,
 // derived from the pod's diarized transcript.
-export function ConversationDynamicsPanel({ sessionId, sessionDeviceId }) {
+// group: a breakout group's name -> the dynamics of its merged transcript
+// (both laptops, each line once) instead of this laptop's rows alone.
+// refreshKey: anything that changes when the rows did (the pod's analysed
+// date, or the group merge's version), so a finished post-hoc run shows
+// without a reload.
+export function ConversationDynamicsPanel({ sessionId, sessionDeviceId, group, refreshKey }) {
     useIsDark() // re-render on theme toggle: speaker colors resolve per-theme
     const [data, setData] = useState(null)
     const [error, setError] = useState(false)
 
     useEffect(() => {
-        if (!sessionId || !sessionDeviceId) return
+        if (!sessionId || (!sessionDeviceId && !group)) return
         let alive = true
+        setError(false)
+        const url = group
+            ? `api/v1/sessions/${sessionId}/groups/${encodeURIComponent(group)}/dynamics`
+            : `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/dynamics`
         new ApiService()
-            .httpRequestCall(
-                `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/dynamics`,
-                "GET",
-                {},
-            )
+            .httpRequestCall(url, "GET", {})
             .then((r) => (r.status === 200 ? r.json() : Promise.reject()))
             .then((d) => alive && setData(d))
             .catch(() => alive && setError(true))
         return () => {
             alive = false
         }
-    }, [sessionId, sessionDeviceId])
+    }, [sessionId, sessionDeviceId, group, refreshKey])
 
     if (error)
         return (

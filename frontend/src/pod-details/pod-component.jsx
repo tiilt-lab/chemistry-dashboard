@@ -37,6 +37,7 @@ function PodComponent() {
   // own rows), and the per-laptop analyses follow the laptop chosen as the
   // view, which also drives the player.
   const [group, setGroup] = useState(null);
+  const [groupVersion, setGroupVersion] = useState(0);   // bumps on every merge load: panels refetch
   const [viewDeviceId, setViewDeviceId] = useState(() => parseInt(sessionDeviceId, 10));
   const [scope, setScope] = useState("group");
   const groupName = (sessionDevice && sessionDevice.negotiation_group) || null;
@@ -69,7 +70,10 @@ function PodComponent() {
       .getGroupTranscript(session.id, groupName)
       .then((r) => (r.status === 200 ? r.json() : null))
       .then((d) => {
-        if (d && seq === groupFetchSeq.current) setGroup(d);
+        if (d && seq === groupFetchSeq.current) {
+          setGroup(d);
+          setGroupVersion((v) => v + 1);
+        }
       })
       .catch(() => {});
   };
@@ -723,6 +727,7 @@ function PodComponent() {
     <PodComponentPages
       sessionDevice={sessionDevice}
       group={group}
+      groupVersion={groupVersion}
       groupName={groupName}
       viewDeviceId={viewDeviceId}
       setViewDeviceId={setViewDeviceId}
