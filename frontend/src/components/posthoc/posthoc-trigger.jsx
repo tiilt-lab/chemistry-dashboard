@@ -216,14 +216,19 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                         if (streamsRef.current[label] !== "running") {
                             setAction("full")
                             setStream(label, "running")
-                            updateMeta(label, {
-                                startedAt:
-                                    (streamMetaRef.current[label] || {})
-                                        .startedAt || Date.now(),
-                                message:
-                                    "Running in the background (started before this page load)",
-                            })
                         }
+                        // The status reply carries the run's stage and
+                        // percent; the progress pushes keep them current.
+                        updateMeta(label, {
+                            startedAt: msg.started_at
+                                ? msg.started_at * 1000
+                                : (streamMetaRef.current[label] || {}).startedAt || Date.now(),
+                            message:
+                                msg.message ||
+                                (streamMetaRef.current[label] || {}).message ||
+                                "Running in the background (started before this page load)",
+                            ...(typeof msg.percent === "number" ? { percent: msg.percent } : {}),
+                        })
                         if (!timer) timer = setInterval(ask, 15000)
                     } else if (streamsRef.current[label] === "running") {
                         setStream(label, "done")

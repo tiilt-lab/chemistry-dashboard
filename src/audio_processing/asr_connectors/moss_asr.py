@@ -88,6 +88,14 @@ class MossASR(PosthocFileASR):
         self.running = False
         self.diarizer_used = None
         self.lock = threading.Lock()
+        # For the progress bar: the stage this pass is in and the worker's
+        # latest progress sidecar (audio_reached_s / audio_s / tok_per_s).
+        self.stage = None
+        self.progress = None
+        self.emitted_total = None
+
+    def _on_progress(self, progress):
+        self.progress = progress
 
     def _fetch_naming_rows(self):
         if self.naming_rows is not None:
@@ -137,10 +145,12 @@ class MossASR(PosthocFileASR):
 
     def _transcribe_file(self):
         try:
+            self.stage = "transcribing"
             result = run_moss(self.audio_file, hotwords=self.hotwords, max_new_tokens=self.max_new_tokens,
-                              handle=getattr(self, "worker", None))
+                              handle=getattr(self, "worker", None), on_progress=self._on_progress)
             turns = result["turns"]
             self.diarizer_used = "moss"
+            self.stage = "naming"
             named, roster = {}, {}
             try:
                 out = self._name_turns(turns)
@@ -169,6 +179,8 @@ class MossASR(PosthocFileASR):
                 asr_result.named_by_asr = True
                 self.transcript_queue.put(asr_result)
                 emitted += 1
+            self.emitted_total = emitted
+            self.stage = "done"
             logging.info("MOSS: emitted %d transcript results", emitted)
         except Exception as e:
             logging.error("MOSS transcription failed: %s", e, exc_info=True)

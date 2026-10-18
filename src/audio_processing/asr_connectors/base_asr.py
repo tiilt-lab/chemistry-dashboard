@@ -22,6 +22,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import time
 import threading
 from contextlib import contextmanager
 
@@ -110,13 +111,25 @@ def worker_python(venv_dir, levels_up):
     return dedicated if os.path.exists(dedicated) else sys.executable
 
 
-def run_json_worker(build_argv, timeout, handle=None):
+def read_progress(path):
+    """The worker's progress sidecar (``<out>.progress``, JSON) or None."""
+    try:
+        with open(path) as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def run_json_worker(build_argv, timeout, handle=None, on_progress=None, progress_interval=2.0):
     """Run a subprocess that writes its result as JSON to a temp path and
     return the parsed dict. ``build_argv(out_path)`` returns the full argv with
     ``out_path`` placed wherever that worker expects it (the two workers put it
     at different positions). Raises RuntimeError on a non-zero exit, a timeout
     (the worker's process group is killed first) or a cancel through
-    ``handle`` (a WorkerHandle). Always removes the temp file.
+    ``handle`` (a WorkerHandle). Always removes the temp file. With
+    ``on_progress``, the worker's ``<out>.progress`` sidecar is read every
+    ``progress_interval`` seconds while it runs and handed to the callback.
     """
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tf:
         out_path = tf.name
@@ -127,8 +140,22 @@ def run_json_worker(build_argv, timeout, handle=None):
                                 stderr=subprocess.PIPE, start_new_session=True)
         if handle is not None:
             handle.attach(proc)
+        deadline = time.time() + timeout
         try:
-            _, stderr = proc.communicate(timeout=timeout)
+            while True:
+                wait = timeout if on_progress is None else max(0.1, min(progress_interval, deadline - time.time()))
+                try:
+                    _, stderr = proc.communicate(timeout=wait)
+                    break
+                except subprocess.TimeoutExpired:
+                    if time.time() >= deadline:
+                        raise
+                    progress = read_progress(out_path + ".progress")
+                    if progress is not None:
+                        try:
+                            on_progress(progress)
+                        except Exception:  # noqa: BLE001 - a reporting hiccup never fails the run
+                            pass
         except subprocess.TimeoutExpired:
             _signal_group(proc, signal.SIGTERM)
             try:

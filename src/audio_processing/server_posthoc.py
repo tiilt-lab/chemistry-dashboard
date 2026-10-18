@@ -472,7 +472,13 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
             sdid = str(data.get('sessiondeviceid', ''))
             match = next((k for k in list(running_audio_processes.keys())
                           if k.startswith(sdid + '-')), None)
-            self.send_json({'type': 'posthoc_status', 'running': match is not None})
+            status = {'type': 'posthoc_status', 'running': match is not None}
+            if match is not None:
+                # The live numbers too, so a page that opens mid-run shows
+                # the stage and percent before the next push lands.
+                last = getattr(running_audio_processes.get(match), '_last_progress', None) or {}
+                status.update({k: last[k] for k in ('percent', 'message', 'started_at', 'stage') if k in last})
+            self.send_json(status)
             if match is not None:
                 # Re-attach the running processor to THIS socket so live
                 # progress / completion stream to the reconnected client, and
@@ -639,6 +645,11 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         self._run_active = True  # run may now finish in the background if the client leaves
         self.processor.start()
         self._preempt_watch.start()
+        # The progress bar: every 5 s the processor reads the connector's
+        # stage (MOSS's audio position while transcribing) and its own
+        # counters and pushes one message to the attached page.
+        self._progress_loop = task.LoopingCall(self.processor.report_progress)
+        self._progress_loop.start(5.0, now=False)
         return True
 
 
@@ -711,6 +722,9 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         # the claim + GPU lease, and detaches from the connection manager.
         self._run_active = False
         _M_RUNS.labels(_run_outcome(success, self._preempt_watch)).inc()
+        loop = getattr(self, '_progress_loop', None)
+        if loop is not None and loop.running:
+            loop.stop()
         try:
             if self.config:
                 running_audio_processes.pop(self.config.auth_key, None)
