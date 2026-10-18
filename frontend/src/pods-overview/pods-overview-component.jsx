@@ -297,6 +297,11 @@ function PodsOverviewComponent(props) {
     navigate("/sessions/" + session.id + "/pods/" + sessionDevice.id);
   };
 
+  // A breakout table: both laptops' transcripts merged, either recording.
+  const goToTable = (group) => {
+    navigate("/sessions/" + session.id + "/tables/" + encodeURIComponent(group));
+  };
+
   // Inline group rename, same UX as the Manage Sessions inline rename.
   // Mutate the store's device object too: the 2s poll copies the same model
   // instances, so a purely-local state update would be overwritten until the
@@ -539,6 +544,7 @@ function PodsOverviewComponent(props) {
       cancelDeletePod={() => setPodToDelete(null)}
       confirmDeletePod={confirmDeletePod}
       goToDevice={goToDevice}
+      goToTable={goToTable}
       currentForm={currentForm}
       closeDialog={closeDialog}
       setPasscodeState={setPasscodeState}

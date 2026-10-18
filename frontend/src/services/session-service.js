@@ -174,6 +174,21 @@ class SessionService {
     );
   }
 
+  // A session's breakout tables (negotiation groups) and one table's merged
+  // transcript: the conversation the coder reads, with the group's laptops
+  // as media sources.
+  getSessionTables(sessionId) {
+    return this.api.httpRequestCall(`api/v1/sessions/${sessionId}/tables`, "GET", {});
+  }
+
+  getTableTranscript(sessionId, group) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/tables/${encodeURIComponent(group)}/transcript`,
+      "GET",
+      {}
+    );
+  }
+
   getSessionDeviceSpeakers(sessionId, sessionDeviceId) {
     return this.api.httpRequestCall(
       `api/v1/sessions/${sessionId}/devices/${sessionDeviceId}/speakers`,
