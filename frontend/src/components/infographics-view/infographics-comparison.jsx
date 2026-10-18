@@ -374,13 +374,15 @@ function AppInfographicsComparison(props) {
                   node: (
                       <AppSectionBoxComponent
                           type={"w-full"}
-                          heading={"Conversation dynamics"}
+                          heading={groupScope ? "Conversation dynamics (whole group)" : "Conversation dynamics"}
                           badge={"verbal · evidence-backed"}
                           badgeTone={"teal"}
                       >
                           <ConversationDynamicsPanel
                               sessionId={props.session.id}
                               sessionDeviceId={props.sessionDevice.id}
+                              group={groupScope ? props.groupName : null}
+                              refreshKey={groupScope ? props.groupVersion : props.sessionDevice.posthoc_analyzed_date}
                           />
                       </AppSectionBoxComponent>
                   ),

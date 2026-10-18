@@ -19,9 +19,9 @@ def _device(id, name, group="Group 7", side=None):
     return types.SimpleNamespace(id=id, name=name, negotiation_group=group, negotiation_side=side, session_id=434)
 
 
-def _row(id, device, start, text, speaker=None, length=4):
+def _row(id, device, start, text, speaker=None, length=4, question=False):
     return types.SimpleNamespace(id=id, session_device_id=device, start_time=start, length=length,
-                                 speaker_tag=speaker, transcript=text)
+                                 speaker_tag=speaker, transcript=text, question=question)
 
 
 def test_primaries_are_each_sides_lowest_id_laptop_with_transcripts():
@@ -74,3 +74,20 @@ def test_group_transcript_merges_both_laptops_into_one_conversation():
         assert {"id", "start_time", "length", "transcript", "speaker_tag", "team", "session_device_id"} <= set(l)
     assert lines[0]["team"] == "Pat" and jing[0]["team"] == "Sandy"
     assert out["alignment"] is None or isinstance(out["alignment"], dict)
+
+
+def test_group_dynamics_counts_each_merged_line_once_under_its_speaker():
+    pat, sandy = _device(1, "Pat laptop", side="Pat"), _device(2, "Sandy laptop", side="Sandy")
+    rows = {
+        1: [_row(11, 1, 100.0, "We hold four hundred thousand dollars of your debt.", "Pat1G7", length=5),
+            _row(12, 1, 106.0, "So what are you thinking?", "Pat1G7", length=2, question=True)],
+        2: [_row(21, 2, 100.2, "We hold four hundred thousand dollars of your debt.", None, length=5),
+            _row(22, 2, 112.0, "The market is really bad right now.", "Jing", length=4),
+            _row(23, 2, 116.0, "If we can get through this hardship together.", "Jing", length=4)],
+    }
+    out = nc.group_transcript([pat, sandy], rows, NAMES)
+    assert all("question" in l for l in out["lines"])
+    dyn = nc.group_dynamics(out["lines"], enrolled=["Pat1G7", "Jing"])
+    names = {s["name"] for s in dyn["speakers"]}
+    assert names == {"Pat1G7", "Jing"}                      # Sandy's unnamed copy of Pat's line is folded, not a third voice
+    assert "talk" in dyn and dyn["talk"]

@@ -180,6 +180,14 @@ class SessionService {
     return this.api.httpRequestCall(`api/v1/sessions/${sessionId}/groups`, "GET", {});
   }
 
+  getGroupDynamics(sessionId, group) {
+    return this.api.httpRequestCall(
+      `api/v1/sessions/${sessionId}/groups/${encodeURIComponent(group)}/dynamics`,
+      "GET",
+      {}
+    );
+  }
+
   getGroupTranscript(sessionId, group) {
     return this.api.httpRequestCall(
       `api/v1/sessions/${sessionId}/groups/${encodeURIComponent(group)}/transcript`,
