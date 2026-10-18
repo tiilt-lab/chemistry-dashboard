@@ -38,6 +38,44 @@ PROMPT = ("Transcribe the audio. For each segment, start with the timestamp and 
           "then the spoken text, and end with the segment timestamp.")
 
 
+def audio_seconds(path):
+    """The recording's length in seconds. The pods' recordings are 32-bit
+    float WAV (format 3, or WAVE_FORMAT_EXTENSIBLE 0xFFFE), which the wave
+    module refuses ("unknown format: 65534"); soundfile reads every WAV, and
+    without it the RIFF header gives the same answer."""
+    try:
+        import soundfile
+        return float(soundfile.info(path).duration)
+    except Exception:
+        pass
+    try:
+        with wave.open(path) as w:
+            return w.getnframes() / float(w.getframerate())
+    except Exception:
+        pass
+    import struct
+    with open(path, "rb") as f:
+        riff, _size, wave_id = struct.unpack("<4sI4s", f.read(12))
+        if riff != b"RIFF" or wave_id != b"WAVE":
+            raise ValueError("not a WAV file: %s" % path)
+        rate = channels = bits = None
+        while True:
+            head = f.read(8)
+            if len(head) < 8:
+                break
+            chunk, size = struct.unpack("<4sI", head)
+            if chunk == b"fmt ":
+                body = f.read(size)
+                _fmt, channels, rate, _bps, _align, bits = struct.unpack("<HHIIHH", body[:16])
+            elif chunk == b"data":
+                if not rate or not channels or not bits:
+                    raise ValueError("WAV data before fmt: %s" % path)
+                return size / float(rate * channels * bits // 8)
+            else:
+                f.seek(size + (size & 1), 1)
+    raise ValueError("no data chunk in WAV: %s" % path)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("audio")
@@ -65,8 +103,7 @@ def main():
     processor = AutoProcessor.from_pretrained(MODEL, trust_remote_code=True)
     load_s = time.time() - t0
     prompt = PROMPT + (" Hotwords: " + a.hotwords if a.hotwords.strip() else "")
-    with wave.open(a.audio) as w:
-        audio_s = w.getnframes() / w.getframerate()
+    audio_s = audio_seconds(a.audio)
 
     class Store:
         cap = 0; pos = None; n_keys = None; prefill = True
