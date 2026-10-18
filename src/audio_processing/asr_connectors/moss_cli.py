@@ -30,7 +30,7 @@ import time
 import wave
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # HERE: the siblings below, as a script or a worker
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 
 MODEL = "OpenMOSS-Team/MOSS-Transcribe-Diarize"

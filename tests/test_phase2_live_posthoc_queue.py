@@ -392,7 +392,7 @@ def test_scope_running_uses_running_detail_when_the_tracker_has_it(q, monkeypatc
 
 # ---- model choices on the audio trigger ----------------------------------
 
-def test_audio_leg_defaults_to_diarizen_unless_the_job_names_a_diarizer(q, monkeypatch):
+def test_audio_leg_defaults_to_moss_and_diarizen_unless_the_job_names_them(q, monkeypatch):
     seen = []
 
     class Capture(Services):
@@ -406,4 +406,5 @@ def test_audio_leg_defaults_to_diarizen_unless_the_job_names_a_diarizer(q, monke
     q._worker_loop()
     audio = [i for i in seen if i["type"] == "Initialize_audio_processing_analytics"]
     assert [(i["sessiondeviceid"], i["diarizer"]) for i in audio] == [(10, "diarizen"), (11, "nemotron3")]
-    assert all(i["asr"] == "whisperx" for i in audio)
+    # MOSS is the post-hoc engine since #244; a job may still name another.
+    assert all(i["asr"] == "moss" for i in audio)
