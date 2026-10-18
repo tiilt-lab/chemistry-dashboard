@@ -18,6 +18,7 @@ once (the CUDA OOMs of 09-23/24). A run now:
 Redis trouble counts as busy: a run that starts blind could land on a class.
 """
 import logging
+import subprocess
 import threading
 
 from distributed_claim import compare_and_delete, compare_and_expire
@@ -198,10 +199,32 @@ def live_pods_present(r):
         return True
 
 
-def acquire_for_run(r, owner, ttl=DEFAULT_TTL, slots=1):
+def gpu_free_mib(index=0):
+    """Free memory on the GPU in MiB as the driver sees it (every process
+    counted, not just ours), or None when it cannot be read. Asks nvidia-smi
+    so the caller never creates a CUDA context (~250 MiB) just to look."""
+    try:
+        out = subprocess.run(['nvidia-smi', '--id=%d' % index, '--query-gpu=memory.free',
+                              '--format=csv,noheader,nounits'],
+                             capture_output=True, text=True, timeout=10)
+        if out.returncode == 0 and out.stdout.strip():
+            return int(float(out.stdout.strip().splitlines()[0]))
+        logging.debug('gpu_free_mib: nvidia-smi exited %s: %s', out.returncode, (out.stderr or '').strip())
+    except Exception as e:
+        logging.debug('gpu_free_mib: unavailable (%s)', e)
+    return None
+
+
+def acquire_for_run(r, owner, ttl=DEFAULT_TTL, slots=1, min_free_mib=0):
     """Lease for one post-hoc run with its heartbeat running, or None when the
     GPU must not be touched (a live pod streams, every slot is held, or Redis
-    cannot answer). The caller releases it in a finally."""
+    cannot answer). The caller releases it in a finally.
+
+    With ``min_free_mib`` the card's free memory is checked once the slot is
+    ours (so no other post-hoc run can be mid-load): a short card hands the
+    slot back and returns None, and the run defers like any gpu_busy instead
+    of loading its models beside llama-server or an experiment and dying in a
+    CUDA OOM mid-run. An unreadable nvidia-smi does not block."""
     try:
         n = live_pod_count(r)
     except Exception as e:
@@ -214,5 +237,12 @@ def acquire_for_run(r, owner, ttl=DEFAULT_TTL, slots=1):
     if not lease.try_acquire():
         logging.info('GPU lease for %s refused: held by %s', owner, lease.holders())
         return None
+    if min_free_mib:
+        free = gpu_free_mib()
+        if free is not None and free < min_free_mib:
+            lease.release()
+            logging.info('GPU lease for %s deferred: %d MiB free on the GPU, %d MiB needed '
+                         '(other processes hold the rest)', owner, free, min_free_mib)
+            return None
     lease.start_heartbeat()
     return lease

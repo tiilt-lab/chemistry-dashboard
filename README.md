@@ -268,6 +268,14 @@ docker compose -f deploy/dev/docker-compose.yml exec mysql mysql -uroot -proot -
 DC_DATABASE_URL=mysql+mysqlconnector://root:root@127.0.0.1:3306/blinc src/venv-server/bin/python src/server/migrations/run_migrations.py roundtrip
 ```
 
+### GPU memory and the post-hoc services
+
+One 48 GB card serves the live classes, the two post-hoc services, llama-server and whatever experiment is running, so the post-hoc services claim GPU memory only while a run is on:
+
+- Model weights load on the first run, not at start-up (`src/video_processing/server_posthoc.py` `_load_once`, `src/audio_processing/server_posthoc.py` `get_semantic_model`). A freshly started service holds nothing on the card.
+- A service with no run for `DC_POSTHOC_IDLE_RECYCLE_S` seconds (default 180) exits and systemd restarts it. Exiting is the one way every CUDA allocation (PyTorch's cache, CTranslate2, cuDNN workspaces) comes back; the audio service used to keep ~9 GB and the video service 13 GB between runs. The queue treats a refused connection during the restart as "retry in 20 s" (`posthoc_queue._ServiceUnavailable`), not as a failed pod.
+- Before loading, a run checks the card's free memory with `nvidia-smi` (every process counted) against `DC_AUDIO_POSTHOC_MIN_FREE_MIB` (8192) or `DC_VIDEO_POSTHOC_MIN_FREE_MIB` (14336). A short card hands the GPU lease back and the run defers with the usual `gpu_busy` reply instead of dying in a CUDA OOM beside llama-server (`gpu_lease.acquire_for_run(min_free_mib=...)`).
+
 ### Running the site without a GPU
 
 ```bash

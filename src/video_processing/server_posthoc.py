@@ -118,7 +118,14 @@ def install_metrics():
 # timer a no-op (its own completion re-arms it). Dashboard status probes
 # connect every couple of minutes, so a busy socket at fire time just
 # defers the check rather than abandoning it.
-IDLE_RECYCLE_SECONDS = 600
+# Memory policy (2026-10-18): this process holds GPU memory only while a run
+# is on. Weights load on the first run (see _load_once), and a service with no
+# run for IDLE_RECYCLE_SECONDS exits so systemd restarts it with nothing
+# loaded: the one way every CUDA allocation (PyTorch's cache, cuDNN
+# workspaces) comes back to the card that llama-server and the live classes
+# share. A run also defers while fewer than _MIN_FREE_MIB are free.
+IDLE_RECYCLE_SECONDS = int(os.environ.get('DC_POSTHOC_IDLE_RECYCLE_S', '180'))
+_MIN_FREE_MIB = int(os.environ.get('DC_VIDEO_POSTHOC_MIN_FREE_MIB', '14336'))
 _idle_recycle = None
 
 def schedule_idle_recycle(delay=IDLE_RECYCLE_SECONDS):
@@ -135,7 +142,7 @@ def _idle_recycle_fire():
     if cm.get_number_of_connections() > 0:
         schedule_idle_recycle(60)
         return
-    logging.info('Analysis queue empty for {0}s - exiting to reclaim run memory (systemd restarts the service).'.format(IDLE_RECYCLE_SECONDS))
+    logging.info('No post-hoc run for {0}s - exiting to hand the GPU memory back (systemd restarts the service).'.format(IDLE_RECYCLE_SECONDS))
     reactor.stop()
 
 # Lazy per-run model caches so a post-hoc run can request a different emotion /
@@ -144,6 +151,31 @@ def _idle_recycle_fire():
 # config-selected singletons already loaded above. The object/face/head
 # detector stays config-level: it is the heavy, CUDA-lock-serialized model
 # shared across concurrent runs.
+_LOADED = set()          # id() of every model object whose weights are on the GPU
+_LOAD_LOCK = threading.RLock()
+
+
+def _load_once(obj, loader, what):
+    """Run ``loader`` the first time ``obj`` is needed; later calls are free.
+    Weights used to load at start-up, which left 13 GB of Gaze-LLE, YOLO11,
+    the head detector and hsemotion on the card between runs for nobody."""
+    if id(obj) in _LOADED:
+        return obj
+    with _LOAD_LOCK:
+        if id(obj) not in _LOADED:
+            t0 = time.time()
+            loader()
+            _LOADED.add(id(obj))
+            logging.info("Loaded %s in %.1fs", what, time.time() - t0)
+    return obj
+
+
+def ensure_shared_models():
+    """The object/face/head detector every run shares (CUDA-lock serialized)."""
+    _load_once(image_object_detection, lambda: image_object_detection.init_model(batch_size),
+               "object/face/head detector")
+
+
 _EMOTION_CACHE = {cf.emotion_model(): facial_emotion_detector}
 _ATTENTION_CACHE = {cf.attention_model(): attention_detection}
 # Serialize cache-miss loads so two concurrent runs requesting the same
@@ -161,7 +193,8 @@ def get_emotion_detector(name=None):
                     _EMOTION_CACHE[name] = EmotionDetectionModelV2()
                 else:
                     _EMOTION_CACHE[name] = EmotionDetectionModelV1()
-    return _EMOTION_CACHE[name]
+    det = _EMOTION_CACHE[name]
+    return _load_once(det, det.load_model, "emotion backend '%s'" % name)
 
 def get_attention_detector(name=None):
     name = (name or cf.attention_model()).strip()
@@ -177,15 +210,15 @@ def get_attention_detector(name=None):
                     _ATTENTION_CACHE[name] = PageAttentionDetection()
                 else:
                     _ATTENTION_CACHE[name] = AttentionDetection()
-                # Cache-miss backends are constructed lazily, so load weights
-                # now: a bad selection (e.g. PAGE without its checkpoint)
-                # fails here — surfaced to the client — instead of mid-run.
-                try:
-                    _ATTENTION_CACHE[name].init_model(batch_size)
-                except Exception:
-                    del _ATTENTION_CACHE[name]
-                    raise
-    return _ATTENTION_CACHE[name]
+    # Weights load here, on first use: a bad selection (e.g. PAGE without its
+    # checkpoint) fails now — surfaced to the client — instead of mid-run.
+    det = _ATTENTION_CACHE[name]
+    try:
+        return _load_once(det, lambda: det.init_model(batch_size), "attention backend '%s'" % name)
+    except Exception:
+        with _MODEL_CACHE_LOCK:
+            _ATTENTION_CACHE.pop(name, None)
+        raise
 
 class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
 
@@ -302,7 +335,8 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                     # (audit C.1): refuse while a class streams or another
                     # run holds the slot; the queue re-enqueues on gpu_busy.
                     self._gpu_lease = acquire_for_run(
-                        redis_client._redis(), owner='video-posthoc:%d:%s' % (os.getpid(), key))
+                        redis_client._redis(), owner='video-posthoc:%d:%s' % (os.getpid(), key),
+                        min_free_mib=_MIN_FREE_MIB)
                     if self._gpu_lease is None:
                         _M_GPU_BUSY.inc()
                         running_video_processes.pop(key, None)
@@ -311,6 +345,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                     # Optional per-run model choices from the trigger UI; fall
                     # back to the deployment config when the field is absent.
                     try:
+                        ensure_shared_models()
                         self.facial_emotion_detector = get_emotion_detector(data.get('emotion_model'))
                         self.attention_detection = get_attention_detector(data.get('attention_model'))
                     except Exception as e:
@@ -586,10 +621,10 @@ if __name__ == '__main__':
     log_console.setFormatter(log_format)
     logger.addHandler(log_console)
 
-    # Init and load share model resources
-    image_object_detection.init_model(batch_size) 
-    attention_detection.init_model(batch_size) 
-    facial_emotion_detector.load_model() 
+    # Model weights load on the first run (_load_once); an idle service holds
+    # no GPU memory.
+    logging.info('Video post-hoc models load on the first run; idle recycle after %ss, '
+                 'runs defer below %d MiB free.', IDLE_RECYCLE_SECONDS, _MIN_FREE_MIB)
     # image_object_detection.start()
     # video_metric_analytics.start() 
 

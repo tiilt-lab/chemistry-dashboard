@@ -261,3 +261,57 @@ def test_watcher_on_preempt_exception_does_not_kill_the_flag():
     w = gl.PreemptionWatcher(r, on_preempt=boom, interval=999)
     r.set("live_pod:a", "1", ex=60)
     assert w.check_once() is True and w.preempted is True
+
+
+# --- free-memory admission (2026-10-18): a run defers instead of OOM-ing when
+# another process (llama-server, an experiment) holds the card ---------------
+
+def _no_class(monkeypatch):
+    monkeypatch.setattr(gl, "live_pod_count", lambda r: 0)
+
+
+def test_short_gpu_hands_the_slot_back_and_defers(monkeypatch):
+    _no_class(monkeypatch)
+    monkeypatch.setattr(gl, "gpu_free_mib", lambda: 4000)
+    r = FakeRedis()
+    assert gl.acquire_for_run(r, "audio-posthoc:1:k", min_free_mib=8192) is None
+    assert r.get("gpu_lease:0") is None          # released: the next attempt can take it
+
+
+def test_enough_free_memory_keeps_the_slot(monkeypatch):
+    _no_class(monkeypatch)
+    monkeypatch.setattr(gl, "gpu_free_mib", lambda: 30000)
+    r = FakeRedis()
+    lease = gl.acquire_for_run(r, "video-posthoc:1:k", min_free_mib=14336)
+    assert lease is not None and r.get("gpu_lease:0") == "video-posthoc:1:k"
+    lease.release()
+
+
+def test_unreadable_free_memory_does_not_block(monkeypatch):
+    _no_class(monkeypatch)
+    monkeypatch.setattr(gl, "gpu_free_mib", lambda: None)
+    lease = gl.acquire_for_run(FakeRedis(), "audio-posthoc:1:k", min_free_mib=8192)
+    assert lease is not None
+    lease.release()
+
+
+def test_no_floor_never_asks_the_driver(monkeypatch):
+    _no_class(monkeypatch)
+    def boom():
+        raise AssertionError("gpu_free_mib must not be called without a floor")
+    monkeypatch.setattr(gl, "gpu_free_mib", boom)
+    lease = gl.acquire_for_run(FakeRedis(), "audio-posthoc:1:k")
+    assert lease is not None
+    lease.release()
+
+
+def test_gpu_free_mib_reads_nvidia_smi_and_tolerates_its_absence(monkeypatch):
+    class Done:
+        returncode, stdout, stderr = 0, "12345\n", ""
+    monkeypatch.setattr(gl.subprocess, "run", lambda *a, **k: Done())
+    assert gl.gpu_free_mib() == 12345
+
+    def missing(*a, **k):
+        raise FileNotFoundError("nvidia-smi")
+    monkeypatch.setattr(gl.subprocess, "run", missing)
+    assert gl.gpu_free_mib() is None
