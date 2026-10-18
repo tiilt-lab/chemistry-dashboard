@@ -60,6 +60,32 @@ class _GpuBusy(Exception):
         super().__init__("GPU busy, retry in %.0fs" % self.retry_after)
 
 
+class _ServiceUnavailable(_GpuBusy):
+    """The service did not accept the connection: it is restarting (its idle
+    recycle hands the GPU memory back by exiting; the RSS recycle and deploys
+    restart it too) or down. Handled like gpu_busy: the job goes back on the
+    queue and is retried after a short wait instead of being marked failed."""
+    RETRY = 20.0
+
+    def __init__(self, url, cause):
+        super().__init__(self.RETRY)
+        self.args = ("service at %s not accepting connections (%s); retry in %.0fs"
+                     % (url, cause, self.retry_after),)
+
+
+async def _connect(url):
+    """Open a leg's websocket: returns (context manager, connection); the
+    caller closes it through the manager's __aexit__. A refused, reset or
+    timed-out connect is the service restarting, not a failed run."""
+    import websockets
+    manager = websockets.connect(url, open_timeout=15)
+    try:
+        ws = await manager.__aenter__()
+    except (OSError, asyncio.TimeoutError, TimeoutError) as e:
+        raise _ServiceUnavailable(url, e.__class__.__name__) from e
+    return manager, ws
+
+
 # State lives in Redis so the gunicorn API workers (enqueue/status/clear) and
 # the coordinator (the one runner, coordinator.py) see one queue:
 #   posthoc_queue:jobs      list of job ids, head = next to run
@@ -312,16 +338,17 @@ def _run_leg(url, init, start_type, device_id, scope, deadline):
     """One leg end to end: Initialize, start, then watch it run. Returns an
     error string when the service refused the trigger, None when the leg
     finished; raises _GpuBusy (defer the job) or _LegTimeout (cancel it)."""
-    import websockets
-
     async def go():
-        async with websockets.connect(url, open_timeout=15) as ws:
+        manager, ws = await _connect(url)
+        try:
             err = await _init_phase(ws, init, start_type)
             if err:
                 return err
             if not await _run_phase(ws, device_id, scope, deadline):
                 raise _LegTimeout(scope)
             return None
+        finally:
+            await manager.__aexit__(None, None, None)
 
     return asyncio.run(go())
 

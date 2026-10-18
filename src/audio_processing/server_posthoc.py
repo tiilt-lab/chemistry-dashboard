@@ -38,12 +38,13 @@ from speechbrain.inference import SpeakerRecognition
 from sentence_transformers import SentenceTransformer
 
 cm = ConnectionManager()
-semantic_model = SentenceTransformer("all-mpnet-base-v2")
 
 # P&I semantic-cohesion embedder, selectable per run. bge-large-en-v1.5 (open
 # SOTA sentence embedder) is the default; mpnet kept for comparability with
-# historical metrics. Loaded lazily, cached for the server lifetime.
-_EMBEDDERS = {"all-mpnet-base-v2": semantic_model}
+# historical metrics. Every embedder loads on first use (get_semantic_model)
+# and is cached for the process lifetime, so a fresh service holds no GPU
+# memory until a run asks for it (memory policy below).
+_EMBEDDERS = {}
 _EMBEDDER_IDS = {
     "bge-large-en-v1.5": "BAAI/bge-large-en-v1.5",
     "all-mpnet-base-v2": "all-mpnet-base-v2",
@@ -59,7 +60,6 @@ def get_semantic_model(name=None):
         _EMBEDDERS[key] = SentenceTransformer(_EMBEDDER_IDS[key])
     return _EMBEDDERS[key]
 diarization_model = SpeakerRecognition.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb", savedir="pretrained_models/pretrained_ecapa")
-semantic_model.share_memory()
 STOP_SIGNAL = object()
 
 # Cross-process registry of pods currently under posthoc processing. Fuses a
@@ -117,6 +117,38 @@ def install_metrics():
     bm.callback_gauge('posthoc_connections', 'Open websocket connections on the post-hoc server',
                       lambda: cm.get_number_of_connections())
     return bm.start_exporter(bm.port_for('audio_posthoc'))
+
+
+# Memory policy (2026-10-18): this process holds GPU memory only while a run
+# is on. WhisperX, the aligner and pyannote are per-run objects already, yet
+# the long-lived process kept ~9 GB of CUDA allocations after a run (observed
+# while the diarization bake-off and llama-server fought over the card). A
+# service with no run for IDLE_RECYCLE_SECONDS exits; systemd restarts it
+# (Restart=always) holding nothing until the next run. A run also defers
+# while fewer than _MIN_FREE_MIB are free (gpu_lease.acquire_for_run).
+IDLE_RECYCLE_SECONDS = int(os.environ.get('DC_POSTHOC_IDLE_RECYCLE_S', '180'))
+_MIN_FREE_MIB = int(os.environ.get('DC_AUDIO_POSTHOC_MIN_FREE_MIB', '8192'))
+_idle_recycle = None
+
+
+def schedule_idle_recycle(delay=IDLE_RECYCLE_SECONDS):
+    global _idle_recycle
+    if _idle_recycle is not None and _idle_recycle.active():
+        _idle_recycle.cancel()
+    _idle_recycle = reactor.callLater(delay, _idle_recycle_fire)
+
+
+def _idle_recycle_fire():
+    global _idle_recycle
+    _idle_recycle = None
+    if running_audio_processes:
+        return
+    if cm.get_number_of_connections() > 0:
+        schedule_idle_recycle(60)
+        return
+    logging.info('No post-hoc run for %ss - exiting to hand the GPU memory back '
+                 '(systemd restarts the service).', IDLE_RECYCLE_SECONDS)
+    reactor.stop()
 
 class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
 
@@ -501,7 +533,8 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         # a class is streaming or another run holds the slot. The caller
         # replies gpu_busy and releases the pod claim.
         self._gpu_lease = acquire_for_run(
-            redis_client._redis(), owner='audio-posthoc:%d:%s' % (os.getpid(), self.config.auth_key))
+            redis_client._redis(), owner='audio-posthoc:%d:%s' % (os.getpid(), self.config.auth_key),
+            min_free_mib=_MIN_FREE_MIB)
         if self._gpu_lease is None:
             return False
         # Every remaining engine transcribes the whole file before emitting
@@ -688,6 +721,8 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                 pass
         except Exception as e:
             logging.warning("on_run_complete worker teardown failed: %s", e)
+        if not running_audio_processes:
+            reactor.callFromThread(schedule_idle_recycle)
 
 
 if __name__ == '__main__':
