@@ -171,6 +171,29 @@ class _Pipeline:
         self.torch = torch
         monkeypatch.setitem(sys.modules, "torch", torch)
 
+        # CI has no pandas: this is the sliver of DataFrame the connector
+        # (pd.DataFrame(rows), len) and these stubs (column select,
+        # itertuples, iterrows) touch.
+        class _Frame:
+            def __init__(this, rows):
+                this.rows = [dict(r) for r in rows]
+
+            def __len__(this):
+                return len(this.rows)
+
+            def __getitem__(this, cols):
+                return _Frame([{c: r[c] for c in cols} for r in this.rows])
+
+            def itertuples(this, index=False):
+                return (tuple(r.values()) for r in this.rows)
+
+            def iterrows(this):
+                return ((i, r) for i, r in enumerate(this.rows))
+
+        pandas = types.ModuleType("pandas")
+        pandas.DataFrame = _Frame
+        monkeypatch.setitem(sys.modules, "pandas", pandas)
+
         wx = types.ModuleType("whisperx")
         wx.load_model = lambda *a, **k: types.SimpleNamespace(transcribe=lambda *a, **k: dict(segments))
         wx.load_audio = lambda path: "audio:" + path
