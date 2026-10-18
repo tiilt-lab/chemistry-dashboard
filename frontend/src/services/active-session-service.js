@@ -129,12 +129,41 @@ export class ActiveSessionService {
             const index = currentDevices.findIndex(
                 (d) => d.id === updatedDevice.id,
             )
+            const before = index !== -1 ? currentDevices[index] : null
             if (index !== -1) {
                 currentDevices[index] = updatedDevice
                 this.sessionDeviceSource.next(currentDevices)
             } else {
                 currentDevices.push(updatedDevice)
                 this.sessionDeviceSource.next(currentDevices)
+            }
+            // A post-hoc run just finished for this pod (the server sends
+            // the pod with its new analysed date): its rows were rewritten,
+            // so take them from the server rather than trust what streamed
+            // in meanwhile.
+            if (
+                before &&
+                updatedDevice.posthoc_analyzed_date &&
+                updatedDevice.posthoc_analyzed_date !== before.posthoc_analyzed_date
+            ) {
+                this.reloadDeviceTranscripts(updatedDevice.id)
+            }
+        })
+
+        // A post-hoc re-run wiped the pod's stored results before posting the
+        // new ones: drop them here too, or the new rows stack on the old
+        // until a reload.
+        this.socket.on("analysis_reset", (e) => {
+            const data = JSON.parse(e)
+            const deviceId = data.session_device_id
+            if ((data.scope || "audio") === "video") {
+                this.videoMetricSource.next(
+                    this.videoMetricSource.getValue().filter((v) => v.session_device_id !== deviceId),
+                )
+            } else {
+                this.transcriptSource.next(
+                    this.transcriptSource.getValue().filter((t) => t.session_device_id !== deviceId),
+                )
             }
         })
 
@@ -306,6 +335,24 @@ export class ActiveSessionService {
 
     getTranscripts() {
         return this.transcriptSource
+    }
+
+    // The pod's rows as the server holds them now, replacing what the page
+    // accumulated: after a post-hoc run every row of the pod is new, and a
+    // live event missed meanwhile would otherwise leave the panel stale.
+    reloadDeviceTranscripts(deviceId) {
+        const sessionId = this.sessionId
+        if (!sessionId || !this.sessionService.getSessionDeviceTranscripts) return Promise.resolve()
+        return this.sessionService
+            .getSessionDeviceTranscripts(sessionId, deviceId)
+            .then((r) => (r && r.status === 200 ? r.json() : null))
+            .then((rows) => {
+                if (!Array.isArray(rows) || this.sessionId !== sessionId) return
+                const fresh = TranscriptModel.fromJsonList(rows.map((row) => ({ keywords: [], ...row })))
+                const kept = this.transcriptSource.getValue().filter((t) => t.session_device_id !== deviceId)
+                this.transcriptSource.next(kept.concat(fresh))
+            })
+            .catch(() => {})
     }
 
 

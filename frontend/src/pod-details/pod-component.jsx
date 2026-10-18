@@ -78,6 +78,32 @@ function PodComponent() {
     loadGroup();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupName, session.id]);
+  // A finished post-hoc run reaches the page as a device update with a new
+  // analysed date (the store reloads that pod's rows on it). This pod's
+  // record refreshes, and the group's merge is rebuilt when any of the
+  // group's laptops was re-analysed.
+  const loadGroupRef = useRef(null);
+  loadGroupRef.current = loadGroup;
+  const groupNameRef = useRef(groupName);
+  groupNameRef.current = groupName;
+  const analysedKeyRef = useRef("");
+  useEffect(() => {
+    const urlId = parseInt(sessionDeviceId, 10);
+    const sub = activeSessionService.sessionDeviceSource.subscribe((devices) => {
+      const list = devices || [];
+      const mine = list.find((d) => d.id === urlId);
+      if (mine) setSessionDevice((prev) => (prev && prev.posthoc_analyzed_date === mine.posthoc_analyzed_date && prev.name === mine.name ? prev : mine));
+      const name = groupNameRef.current || (mine && mine.negotiation_group);
+      const key = list
+        .filter((d) => d.id === urlId || (name && d.negotiation_group === name))
+        .map((d) => d.id + ":" + (d.posthoc_analyzed_date || ""))
+        .join("|");
+      if (analysedKeyRef.current && key !== analysedKeyRef.current && loadGroupRef.current) loadGroupRef.current();
+      analysedKeyRef.current = key;
+    });
+    return () => sub.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionDeviceId]);
   // False until the store has received the session's transcript history;
   // the page shows a spinner rather than "no transcript" meanwhile.
   const [transcriptsReady, setTranscriptsReady] = useState(() => activeSessionService.transcriptsReady.getValue());
