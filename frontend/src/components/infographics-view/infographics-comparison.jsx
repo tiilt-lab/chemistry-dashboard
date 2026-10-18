@@ -2,7 +2,6 @@ import { AppSectionBoxComponent } from "../section-box/section-box-component"
 import { TranscriptPanel } from "../transcript-panel/transcript-panel"
 import { VideoAnalyticsPanel } from "../video-analytics/video-analytics-panel"
 import { ConversationDynamicsPanel } from "../conversation-dynamics/conversation-dynamics-panel"
-import { DiscussionSummaryPanel } from "../discussion-summary/discussion-summary-panel"
 import { VideoPlayer } from "../video-player/video-player"
 import { AudioPlayer } from "../audio-player/audio-player"
 import { lineAt, seekFor, toMergedClock } from "../../pod-details/group-time"
@@ -28,52 +27,93 @@ const AppIndividualVideoFeaturesComponent = lazy(() =>
     })),
 )
 
-// The laptops of a breakout group as views of one conversation: pick which
-// recording plays (video or audio), whether the transcript is the group's
-// merge or this laptop's own rows, and whether the view follows the speaker.
+// The laptops of a breakout group as views of one conversation: one card
+// per laptop across the width, offering only the recordings it has (video,
+// audio), then the transcript scope and the follow toggle.
 function GroupViewBar({ group, viewId, viewKind, videoMissing, onSelectView, scope, onSelectScope, follow, onFollow }) {
     const pods = group.pods || []
-    const button = (active, onClick, title, label, disabled) => (
-        <button
-            type="button"
-            disabled={disabled}
-            onClick={onClick}
-            title={title}
-            className={
-                "cursor-pointer rounded-md px-2 py-0.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 " +
-                (active ? "bg-tiilt text-white" : "bg-white text-tiilt hover:bg-tiilt-soft")
-            }
-        >
-            {label}
-        </button>
-    )
+    const kindButton = (p, kind, label, title) => {
+        const active = viewId === p.id && viewKind === kind
+        return (
+            <button
+                key={kind}
+                type="button"
+                onClick={() => onSelectView(p.id, kind)}
+                title={title}
+                className={
+                    "flex-1 cursor-pointer rounded-md px-3 py-1.5 text-sm font-semibold transition " +
+                    (active ? "bg-tiilt text-white shadow-sm" : "bg-tiilt-ground text-tiilt hover:bg-tiilt-soft")
+                }
+            >
+                {label}
+            </button>
+        )
+    }
+    const cols = pods.length >= 3 ? "lg:grid-cols-3" : "sm:grid-cols-2"
     return (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-tiilt-ground px-3 py-2">
-            <span className="text-xs font-semibold text-tiilt-muted">View</span>
-            {pods.map((p) => (
-                <span key={p.id} className="flex items-center gap-1 rounded-md border border-tiilt-line bg-white/60 px-1.5 py-0.5">
-                    <span
-                        className="text-xs font-semibold text-tiilt-ink"
-                        title={p.primary ? "Carries the merged transcript" : "A view only: this laptop's rows are not merged"}
-                    >
-                        {p.side ? `${p.side} · ${p.name}` : p.name}
-                    </span>
-                    {!videoMissing[p.id]
-                        ? button(viewId === p.id && viewKind === "video", () => onSelectView(p.id, "video"), "Play this laptop's video", "Video")
-                        : null}
-                    {button(viewId === p.id && viewKind === "audio", () => onSelectView(p.id, "audio"), "Play this laptop's audio recording", "Audio")}
+        <div className="flex w-full flex-col gap-3">
+            <div className={"grid w-full grid-cols-1 gap-3 " + cols}>
+                {pods.map((p) => {
+                    const video = p.has_video !== false && !videoMissing[p.id]
+                    const audio = p.has_audio !== false
+                    const current = viewId === p.id
+                    return (
+                        <div
+                            key={p.id}
+                            className={
+                                "flex flex-col gap-2 rounded-xl border bg-white p-3 transition " +
+                                (current ? "border-tiilt ring-2 ring-tiilt/20" : "border-tiilt-line")
+                            }
+                        >
+                            <div className="flex items-center gap-2">
+                                {p.side ? (
+                                    <span className="rounded-full bg-tiilt-soft px-2 py-0.5 text-[11px] font-semibold text-tiilt">
+                                        {p.side}
+                                    </span>
+                                ) : null}
+                                <span className="min-w-0 truncate text-sm font-semibold text-tiilt-ink" title={p.name}>
+                                    {p.name}
+                                </span>
+                                {current ? (
+                                    <span className="ml-auto text-[11px] font-semibold text-tiilt">Viewing</span>
+                                ) : null}
+                            </div>
+                            <div className="text-xs text-tiilt-muted">
+                                {p.primary ? "Carries the merged transcript" : "A view only: its rows are not merged"}
+                            </div>
+                            <div className="flex gap-2">
+                                {video ? kindButton(p, "video", "Video", "Play this laptop's video") : null}
+                                {audio ? kindButton(p, "audio", "Audio", "Play this laptop's audio recording") : null}
+                                {!video && !audio ? (
+                                    <span className="text-xs text-tiilt-muted">No recording to play</span>
+                                ) : null}
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+            <div className="flex flex-wrap items-center gap-3 rounded-lg bg-tiilt-ground px-3 py-2">
+                <span className="text-xs font-semibold text-tiilt-muted">Transcript</span>
+                <span className="flex items-center gap-1 rounded-md border border-tiilt-line bg-white p-0.5" title="Whose transcript the panel shows">
+                    {[["group", "Whole group"], ["device", "This laptop"]].map(([value, label]) => (
+                        <button
+                            key={value}
+                            type="button"
+                            onClick={() => onSelectScope && onSelectScope(value)}
+                            className={
+                                "cursor-pointer rounded px-3 py-1 text-xs font-semibold transition " +
+                                (scope === value ? "bg-tiilt text-white" : "text-tiilt hover:bg-tiilt-soft")
+                            }
+                        >
+                            {label}
+                        </button>
+                    ))}
                 </span>
-            ))}
-            <span className="ml-auto flex items-center gap-2">
-                <span className="flex items-center gap-1 rounded-md border border-tiilt-line bg-white/60 px-1.5 py-0.5" title="Whose transcript the panel shows">
-                    {button(scope === "group", () => onSelectScope && onSelectScope("group"), "The group's merged, coded transcript", "Group")}
-                    {button(scope === "device", () => onSelectScope && onSelectScope("device"), "This laptop's own rows, as recorded", "This laptop")}
-                </span>
-                <label className="flex cursor-pointer items-center gap-1 text-xs text-tiilt-muted" title="Play each line from the laptop that heard it">
+                <label className="ml-auto flex cursor-pointer items-center gap-1.5 text-xs text-tiilt-muted" title="Play each line from the laptop that heard it">
                     <input type="checkbox" className="accent-tiilt" checked={follow} onChange={(e) => onFollow(e.target.checked)} />
                     Follow the speaker
                 </label>
-            </span>
+            </div>
         </div>
     )
 }
@@ -118,15 +158,25 @@ function AppInfographicsComparison(props) {
         const line = (props.displayTranscripts || []).find((l) => l.start_time === selectedTime)
         return line ? seekFor(line, viewId, alignment) : selectedTime
     })()
+    const podOf = (deviceId) => ((props.group && props.group.pods) || []).find((p) => p.id === deviceId)
+    const hasVideo = (deviceId) => {
+        const p = podOf(deviceId)
+        return !!p && p.has_video !== false && !viewVideoMissing[deviceId]
+    }
     const switchView = (deviceId, kind) => {
         // Land the new view on the moment playing now: select that line, the
-        // new player seeks to it.
+        // new player seeks to it. A laptop without video plays its audio.
         const at = playbackTime
         const line = lineAt(props.displayTranscripts || [], at)
         if (line) setSelectedTime(line.start_time)
-        setViewKind(kind === "video" && viewVideoMissing[deviceId] ? "audio" : kind)
+        setViewKind(kind === "video" && !hasVideo(deviceId) ? "audio" : kind)
         if (props.onSelectView && deviceId !== viewId) props.onSelectView(deviceId)
     }
+    // The first laptop's kind: video when it has one, else audio.
+    useEffect(() => {
+        if (props.group && viewId != null && viewKind === "video" && !hasVideo(viewId)) setViewKind("audio")
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [props.group, viewId])
     const onGroupPlaybackTime = (deviceSeconds) => {
         const merged = groupScope ? toMergedClock(deviceSeconds, viewId, alignment) : deviceSeconds
         setPlaybackTime(merged)
@@ -259,7 +309,7 @@ function AppInfographicsComparison(props) {
                   node: (
                       <AppSectionBoxComponent
                           type={"w-full"}
-                          heading={props.group ? "Group video & transcript" : "Session video & transcript"}
+                          heading={"Transcript"}
                       >
                           <div className="flex w-full flex-col gap-3">
                               {props.group ? (
@@ -280,7 +330,7 @@ function AppInfographicsComparison(props) {
                                   same slot, synced to the transcript. In a
                                   group the player is the chosen view's. */}
                               {props.sessionDevice.has_video === false || videoMissing ||
-                              (props.group && (viewKind === "audio" || viewVideoMissing[viewId])) ? (
+                              (props.group && (viewKind === "audio" || !hasVideo(viewId))) ? (
                                   <AudioPlayer
                                       key={"a" + props.sessionDevice.id}
                                       sessionId={props.session.id}
@@ -353,21 +403,6 @@ function AppInfographicsComparison(props) {
                         },
                     ]
                   : []),
-              {
-                  key: "summary",
-                  modality: "Record & logs",
-                  node: (
-                      <AppSectionBoxComponent
-                          type={"w-full"}
-                          heading={"AI discussion summary"}
-                      >
-                          <DiscussionSummaryPanel
-                              sessionId={props.session.id}
-                              sessionDeviceId={props.sessionDevice.id}
-                          />
-                      </AppSectionBoxComponent>
-                  ),
-              },
               {
                   key: "dynamics",
                   modality: "Verbal",
@@ -483,7 +518,7 @@ function AppInfographicsComparison(props) {
                   node: (
                       <AppSectionBoxComponent
                           type={"w-full"}
-                          heading={"Speakers"}
+                          heading={groupScope ? "Speakers (both teams)" : "Speakers"}
                       >
                           <SpeakerCardsPanel
                               sessionId={props.session.id}
@@ -491,6 +526,8 @@ function AppInfographicsComparison(props) {
                               speakers={props.speakers}
                               transcripts={props.displayTranscripts}
                               onOpenSpeaker={props.loadSpeakerMetrics}
+                              group={groupScope ? props.groupName : null}
+                              refreshKey={groupScope ? props.groupVersion : props.sessionDevice.posthoc_analyzed_date}
                           />
                       </AppSectionBoxComponent>
                   ),

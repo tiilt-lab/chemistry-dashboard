@@ -18,6 +18,7 @@ import csv
 import importlib
 import io
 import json
+import logging
 
 from flask import Blueprint, request, make_response, session as flask_session
 from app import limiter, socketio
@@ -317,8 +318,22 @@ def _group_merge(session_id, group):
     rows_by_device = {d: database.get_transcripts(session_device_id=d) for d in primary_ids}
     payload = negotiation_coding.group_transcript([d for d in devices if d.id in primary_ids],
                                                   rows_by_device, names)
+    for pod in pods:
+        pod['has_video'], pod['has_audio'] = _pod_media(pod['id'])
     payload.update({'group': group, 'teams': list(names), 'pods': pods})
     return payload, devices
+
+
+def _pod_media(session_device_id):
+    """(has video, has audio) for the view bar: whether the pod has a playable
+    recording of each kind (the lookups the /video and /audio routes use)."""
+    try:
+        from routes import session as pod_routes
+        return (bool(pod_routes._find_original_video(session_device_id)),
+                bool(pod_routes._find_pod_audio(session_device_id)))
+    except Exception as e:  # noqa: BLE001 - a lookup problem must not hide the transcript
+        logging.info('pod media lookup failed for %s: %s', session_device_id, e)
+        return None, None
 
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/groups/<path:group>/transcript', methods=['GET'])

@@ -260,10 +260,12 @@ function PodComponent() {
     return displayVideoMetrics.filter((v) => v.student_username === speaker.alias);
   }, [displayVideoMetrics, selectedSpkrId1, speakers]);
 
+  const groupPodKey = groupScope && group && group.pods ? group.pods.map((p) => p.id).join(",") : "";
   useEffect(() => {
     if (viewDeviceId && session.id) getSpeakersRef.current();
     else setSpeakers([]);
-  }, [viewDeviceId, session]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewDeviceId, session, groupPodKey]);
 
   useEffect(() => {
     if (participantIDReflectionDashboard !== "") {
@@ -326,23 +328,29 @@ function PodComponent() {
   };
 
   const getSpeakersRef = useRef(null);
+  // The speakers the page works with: in group scope every laptop's roster
+  // (both teams, one card per student), else the view laptop's.
   const getSpeakers = () => {
-    const fetchData = new SessionService().getSessionDeviceSpeakers(
-      session.id,
-      viewDeviceId
-    );
-    fetchData.then(
-      (response) => {
-        if (response.status === 200)
-          response.json().then((jsonObj) => {
-            const input = SpeakerModel.fromJsonList(jsonObj)
-            setSpeakers(input && input.length ? input : []);
-          });
-      },
-      (apierror) => {
-        console.error("podcomponent func getspeakers 1", apierror);
-      }
-    );
+    const ids = groupScope && group && group.pods && group.pods.length
+      ? group.pods.map((p) => p.id)
+      : [viewDeviceId];
+    Promise.all(ids.map((id) =>
+      new SessionService().getSessionDeviceSpeakers(session.id, id)
+        .then((r) => (r.status === 200 ? r.json() : []))
+        .catch((apierror) => { console.error("podcomponent func getspeakers 1", apierror); return []; })
+    )).then((lists) => {
+      const seen = new Set();
+      const merged = [];
+      lists.forEach((jsonObj) => {
+        (SpeakerModel.fromJsonList(jsonObj || []) || []).forEach((sp) => {
+          const key = sp.alias || sp.id;
+          if (seen.has(key)) return;
+          seen.add(key);
+          merged.push(sp);
+        });
+      });
+      setSpeakers(merged);
+    });
   };
   getSpeakersRef.current = getSpeakers;
 
