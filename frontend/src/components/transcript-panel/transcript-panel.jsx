@@ -31,6 +31,20 @@ function FarSideTag({ farSide }) {
 
 // The laptop that heard a merged line (the table view's transcript joins
 // both laptops of a breakout group); absent on a single pod's transcript.
+// A line that started before the previous one ended: cross-talk, which a
+// list in start order would otherwise show as orderly turns.
+function OverlapTag({ overlaps }) {
+    if (!overlaps) return null
+    return (
+        <span
+            title="Spoken over the previous line"
+            className="rounded bg-tiilt-orange/15 px-1 text-[10px] font-semibold text-tiilt-orange-text"
+        >
+            over
+        </span>
+    )
+}
+
 function PodTag({ label }) {
     if (!label) return null
     return (
@@ -257,6 +271,9 @@ function TranscriptPanel({
                 >
                     <ul className="flex flex-col gap-0.5">
                         {list.map((t, index) => {
+                            const prev = index > 0 ? list[index - 1] : null
+                            const overlaps = !!prev && prev.length != null && t.length != null &&
+                                t.start_time < prev.start_time + prev.length - 0.3
                             const isSelected = t.start_time === selectedTime
                             const isPlaying = index === playingIndex
                             const color = t.speaker_tag && !t.far_side
@@ -338,6 +355,7 @@ function TranscriptPanel({
                                                     ) : null}
                                                     <FarSideTag farSide={t.far_side} />
                                                     <PodTag label={t.pod_label} />
+                                                    <OverlapTag overlaps={overlaps} />
                                                 </span>
                                             ) : t.speaker_tag ? (
                                                 <span className="flex flex-wrap items-center gap-x-1">
@@ -353,11 +371,13 @@ function TranscriptPanel({
                                                     />
                                                     <FarSideTag farSide={t.far_side} />
                                                     <PodTag label={t.pod_label} />
+                                                    <OverlapTag overlaps={overlaps} />
                                                 </span>
                                             ) : (
                                                 <span className="flex flex-wrap items-center gap-x-1">
                                                     <span className="text-tiilt-muted">—</span>
                                                     <PodTag label={t.pod_label} />
+                                                    <OverlapTag overlaps={overlaps} />
                                                 </span>
                                             )}
                                         </div>

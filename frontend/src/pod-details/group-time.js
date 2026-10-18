@@ -1,4 +1,4 @@
-// Clocks of a breakout table. The merged transcript sits on the reference
+// Clocks of a breakout group. The merged transcript sits on the reference
 // laptop's session clock; the merge shifted the other laptop's lines by the
 // offset it estimated (alignment.offsets: {at, offset} samples on the other
 // laptop's clock, merged = device - offset). The players run on their own

@@ -28,7 +28,6 @@ const SettingsComponent = lazy(() => import('../settings/settings-component').th
 const OpsComponent = lazy(() => import('../ops/ops-component').then(m => ({ default: m.OpsComponent })))
 const PodComponent = lazy(() => import('../pod-details/pod-component').then(m => ({ default: m.PodComponent })))
 const TranscriptsComponent = lazy(() => import('../transcripts/transcripts-component').then(m => ({ default: m.TranscriptsComponent })))
-const TableComponent = lazy(() => import('../table-view/table-component').then(m => ({ default: m.TableComponent })))
 const ManageCodingSchemesComponent = lazy(() => import('../coding-schemes/manage-coding-schemes-component').then(m => ({ default: m.ManageCodingSchemesComponent })))
 const CodingSchemeEditorComponent = lazy(() => import('../coding-schemes/coding-scheme-editor-component').then(m => ({ default: m.CodingSchemeEditorComponent })))
 const StudentsComponent = lazy(() => import('../students/students-component').then(m => ({ default: m.StudentsComponent })))
@@ -82,7 +81,6 @@ function PageRouter() {
                     <Route path='server' element={<ProtectedRoute component={SessionHealthComponent}/>} />
                     <Route path='pods/:sessionDeviceId' element={<ProtectedRoute component={PodComponent}/>} />
                     <Route path='pods/:sessionDeviceId/transcripts' element={<ProtectedRoute component={TranscriptsComponent}/>} />
-                    <Route path='tables/:group' element={<ProtectedRoute component={TableComponent}/>} />
                 </Route>
                 <Route path='/topic-models' element={<Navigate replace to="/coding-schemes" />} />
                 <Route path='/coding-schemes' element={<ProtectedRoute component={ManageCodingSchemesComponent}/>} />

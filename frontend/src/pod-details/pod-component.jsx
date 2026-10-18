@@ -6,6 +6,7 @@ import { useNavigate, useOutletContext, useParams, useSearchParams } from "react
 import { ApiService } from "../services/api-service";
 import { PodComponentPages } from "./html-pages";
 import { filterSortByDevice } from "../globals";
+import { decorateLines } from "./group-time";
 
 // The dashboard views live in the URL (?view=...&speaker=...) so they are
 // linkable, bookmarkable, and reload/back-button safe. "Group" is the clean
@@ -30,6 +31,16 @@ function PodComponent() {
   // time window, then the pod's rows below.
   const [sessionDevice, setSessionDevice] = useState(() => activeSessionService.getSessionDevice(sessionDeviceId) || {});
   const [session, setSession] = useState(() => activeSessionService.getSession() || {});
+  // A breakout group's laptops record the same conversation from their own
+  // sides: the pod page of any of them is the group's page. The transcript
+  // is the merge the coder reads (scope "group"; "device" = this laptop's
+  // own rows), and the per-laptop analyses follow the laptop chosen as the
+  // view, which also drives the player.
+  const [group, setGroup] = useState(null);
+  const [viewDeviceId, setViewDeviceId] = useState(() => parseInt(sessionDeviceId, 10));
+  const [scope, setScope] = useState("group");
+  const groupName = (sessionDevice && sessionDevice.negotiation_group) || null;
+  const viewDeviceRef = useRef(parseInt(sessionDeviceId, 10));
   // Rows too, so the first paint shows them instead of an empty panel that
   // fills in a moment later. Live updates arrive through the subscriptions
   // in the mount effect.
@@ -37,6 +48,36 @@ function PodComponent() {
     filterSortByDevice(activeSessionService.getTranscripts().getValue(), sessionDeviceId, "start_time"));
   const [videoMetrics, setVideoMetrics] = useState(() =>
     filterSortByDevice(activeSessionService.getVideoMetrics().getValue(), sessionDeviceId, "time_stamp"));
+  // The view follows the URL's laptop whenever the URL changes; the video
+  // metrics follow the view.
+  useEffect(() => {
+    setViewDeviceId(parseInt(sessionDeviceId, 10));
+    setScope("group");
+  }, [sessionDeviceId]);
+  useEffect(() => {
+    viewDeviceRef.current = viewDeviceId;
+    setVideoMetrics(filterSortByDevice(activeSessionService.getVideoMetrics().getValue() || [], viewDeviceId, "time_stamp"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewDeviceId]);
+  // The group's merged transcript, refetched after a correction so the merge
+  // reflects the edited row.
+  const groupFetchSeq = useRef(0);
+  const loadGroup = () => {
+    if (!groupName || !session.id) return;
+    const seq = ++groupFetchSeq.current;
+    new SessionService()
+      .getGroupTranscript(session.id, groupName)
+      .then((r) => (r.status === 200 ? r.json() : null))
+      .then((d) => {
+        if (d && seq === groupFetchSeq.current) setGroup(d);
+      })
+      .catch(() => {});
+  };
+  useEffect(() => {
+    setGroup(null);
+    loadGroup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupName, session.id]);
   // False until the store has received the session's transcript history;
   // the page shows a spinner rather than "no transcript" meanwhile.
   const [transcriptsReady, setTranscriptsReady] = useState(() => activeSessionService.transcriptsReady.getValue());
@@ -131,7 +172,7 @@ function PodComponent() {
 
     subscriptions.push(
       activeSessionService.getVideoMetrics().subscribe((e) => {
-        setVideoMetrics(filterSortByDevice(e || [], sessionDeviceId, "time_stamp"));
+        setVideoMetrics(filterSortByDevice(e || [], viewDeviceRef.current, "time_stamp"));
       }),
     );
 
@@ -168,9 +209,12 @@ function PodComponent() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, timeRange, transcripts, videoMetrics]);
+  const groupLines = useMemo(() => (group ? decorateLines(group.lines, group.pods) : []), [group]);
+  const groupScope = !!group && scope === "group";
+  const sourceTranscripts = groupScope ? groupLines : transcripts;
   const displayTranscripts = useMemo(
-    () => transcripts.filter((t) => t.start_time >= startTime && t.start_time <= endTime),
-    [transcripts, startTime, endTime],
+    () => sourceTranscripts.filter((t) => t.start_time >= startTime && t.start_time <= endTime),
+    [sourceTranscripts, startTime, endTime],
   );
   const displayVideoMetrics = useMemo(
     () => videoMetrics.filter((v) => v.time_stamp >= startTime && v.time_stamp <= endTime),
@@ -187,9 +231,9 @@ function PodComponent() {
   }, [displayVideoMetrics, selectedSpkrId1, speakers]);
 
   useEffect(() => {
-    if (sessionDeviceId && session.id) getSpeakersRef.current();
+    if (viewDeviceId && session.id) getSpeakersRef.current();
     else setSpeakers([]);
-  }, [sessionDeviceId, session]);
+  }, [viewDeviceId, session]);
 
   useEffect(() => {
     if (participantIDReflectionDashboard !== "") {
@@ -255,16 +299,14 @@ function PodComponent() {
   const getSpeakers = () => {
     const fetchData = new SessionService().getSessionDeviceSpeakers(
       session.id,
-      sessionDeviceId
+      viewDeviceId
     );
     fetchData.then(
       (response) => {
         if (response.status === 200)
           response.json().then((jsonObj) => {
             const input = SpeakerModel.fromJsonList(jsonObj)
-            if (input && input.length) {
-              setSpeakers(input);
-            }
+            setSpeakers(input && input.length ? input : []);
           });
       },
       (apierror) => {
@@ -309,8 +351,11 @@ function PodComponent() {
   // inline like a title rename: click the text, Enter/blur saves.
   const [editDraft, setEditDraft] = useState("");
   const [podEditing, setPodEditing] = useState(false);
-  const roster = [...new Set(speakers.map((s) => s.alias).filter(Boolean))].sort();
-  const tagCounts = transcripts.reduce((m, t) => {
+  // In group scope the roster also holds every name the merge carries, so a
+  // line heard by the other laptop can be given to one of its students.
+  const roster = [...new Set(speakers.map((s) => s.alias).filter(Boolean)
+    .concat(groupScope ? groupLines.map((l) => l.speaker_tag).filter(Boolean) : []))].sort();
+  const tagCounts = sourceTranscripts.reduce((m, t) => {
     if (t.speaker_tag) m[t.speaker_tag] = (m[t.speaker_tag] || 0) + 1;
     return m;
   }, {});
@@ -318,18 +363,16 @@ function PodComponent() {
   // Reassign any row by id (transcript panel); the dialog variant below
   // just targets the currently open transcript.
   const reassignTranscriptRow = async (transcriptId, alias, applyToTag, guest) => {
-    const target = transcripts.find((t) => t.id === transcriptId);
+    const target = sourceTranscripts.find((t) => t.id === transcriptId) || transcripts.find((t) => t.id === transcriptId);
     const oldTag = target ? target.speaker_tag : null;
     const res = await new ApiService().httpRequestCall(
       `api/v1/transcripts/${transcriptId}/reassign`, "POST",
       { alias, apply_to_tag: !!applyToTag, allow_guest: !!guest });
     if (res.status !== 200) return;
-    setTranscripts(transcripts.map((row) => {
-      const hit = applyToTag && oldTag
-        ? row.speaker_tag === oldTag
-        : row.id === transcriptId;
-      return hit ? { ...row, speaker_tag: alias } : row;
-    }));
+    const hitRow = (row) => (applyToTag && oldTag ? row.speaker_tag === oldTag : row.id === transcriptId);
+    setTranscripts(transcripts.map((row) => (hitRow(row) ? { ...row, speaker_tag: alias } : row)));
+    setGroup((g) => (g ? { ...g, lines: g.lines.map((row) => (hitRow(row) ? { ...row, speaker_tag: alias } : row)) } : g));
+    loadGroup();
     if (currentTranscript && currentTranscript.id === transcriptId) {
       setCurrentTranscript({ ...currentTranscript, speaker_tag: alias });
     }
@@ -361,13 +404,15 @@ function PodComponent() {
   // Inline correction from the transcript panel (id + text, no dialog).
   const editTranscriptText = async (transcriptId, text) => {
     const clean = (text || "").trim();
-    const orig = transcripts.find((t) => t.id === transcriptId);
+    const orig = sourceTranscripts.find((t) => t.id === transcriptId);
     if (!clean || !orig || orig.transcript === clean) return;
     const res = await new ApiService().httpRequestCall(
       `api/v1/transcripts/${transcriptId}/edit_text`, "POST", { transcript: clean });
     if (res.status !== 200) return;
     setTranscripts(transcripts.map((row) =>
       row.id === transcriptId ? { ...row, transcript: clean } : row));
+    setGroup((g) => (g ? { ...g, lines: g.lines.map((row) => (row.id === transcriptId ? { ...row, transcript: clean } : row)) } : g));
+    loadGroup();
     if (currentTranscript && currentTranscript.id === transcriptId) {
       setCurrentTranscript({ ...currentTranscript, transcript: clean });
     }
@@ -651,6 +696,13 @@ function PodComponent() {
   return (
     <PodComponentPages
       sessionDevice={sessionDevice}
+      group={group}
+      groupName={groupName}
+      viewDeviceId={viewDeviceId}
+      setViewDeviceId={setViewDeviceId}
+      viewDevice={activeSessionService.getSessionDevice(viewDeviceId) || sessionDevice}
+      scope={groupScope ? "group" : "device"}
+      setScope={setScope}
       navigateToSession={navigateToSession}
       setRange={ResetTimeRange}
       onClickedTimeline={onClickedTimeline}

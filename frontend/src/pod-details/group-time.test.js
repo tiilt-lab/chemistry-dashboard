@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest"
-import { toDeviceClock, toMergedClock, seekFor, decorateLines, lineAt } from "./table-time"
+import { toDeviceClock, toMergedClock, seekFor, decorateLines, lineAt } from "./group-time"
 
 const alignment = { reference_device: 1, other_device: 2, offsets: [{ at: 100, offset: 2 }, { at: 700, offset: 3 }] }
 
-describe("table clocks", () => {
+describe("group clocks", () => {
     it("is the identity on the reference laptop", () => {
         expect(toDeviceClock(150, 1, alignment)).toBe(150)
         expect(toMergedClock(150, 1, alignment)).toBe(150)

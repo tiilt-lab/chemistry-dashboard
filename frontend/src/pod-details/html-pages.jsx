@@ -20,7 +20,12 @@ function PodComponentPages(props) {
                             : "") +
                         (props.details === "Group" ||
                         props.details === "Reflection Dashboard"
-                            ? props.sessionDevice.name
+                            ? props.groupName
+                                ? props.groupName +
+                                  (props.viewDevice && props.viewDevice.name
+                                      ? " · " + props.viewDevice.name
+                                      : "")
+                                : props.sessionDevice.name
                             : props.selectedSpkralias)
                     }
                     leftText={false}
@@ -90,7 +95,13 @@ function PodComponentPages(props) {
                                 fromclient={false}
                                 onClickedTimeline={props.onClickedTimeline}
                                 session={props.session}
-                                sessionDevice={props.sessionDevice}
+                                sessionDevice={props.viewDevice || props.sessionDevice}
+                                group={props.group}
+                                groupName={props.groupName}
+                                viewDeviceId={props.viewDeviceId}
+                                onSelectView={props.setViewDeviceId}
+                                scope={props.scope}
+                                onSelectScope={props.setScope}
                                 setRange={props.setRange}
                                 startTime={props.startTime}
                                 endTime={props.endTime}

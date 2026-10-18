@@ -255,7 +255,8 @@ def _utterance(r, team=None):
         conf.pop("far_side", None)
     u = {"transcript_id": r.id, "start_time": r.start_time, "length": r.length,
          "speaker_tag": speaker_tag, "text": r.transcript,
-         "session_device_id": getattr(r, "session_device_id", None)}
+         "session_device_id": getattr(r, "session_device_id", None),
+         "speaker_id": getattr(r, "speaker_id", None)}
     if team:
         u["team"] = team
     if conf is not None:
@@ -1653,21 +1654,22 @@ def cancel_run(run_id, reason):
     fail_run(run_id, "cancelled: " + reason)
 
 
-# ----------------------------------------------------------------- tables
+# ----------------------------------------------------------------- groups
 #
-# A table is a breakout group: the laptops that share a negotiation_group.
-# The table view shows the one conversation the coder reads (merge_paired,
-# then stitch_sentences, over the group's primary laptops) and offers every
-# laptop of the group as a media source.
+# A group is a breakout table: the laptops that share a negotiation_group,
+# each recording the same conversation from its own side. The group view
+# shows the one conversation the coder reads (merge_paired, then
+# stitch_sentences, over the group's primary laptops) and offers every
+# laptop of the group as a view of it.
 
-def table_pods(devices, names=TEAMS, transcript_count=None):
-    """The laptops of one group for the table view: [{id, name, side,
-    primary, transcripts}] in side order, then id. A side's primary is its
-    lowest-id laptop with transcripts, the rule resolve_pair codes by; an
-    extra laptop that joined the same slot is a media source only, so the
-    side's hearing is not merged twice. ``transcript_count`` maps a device
-    id to its row count (database.session_device_transcript_count); without
-    it every laptop counts as recorded."""
+def group_pods(devices, names=TEAMS, transcript_count=None):
+    """The laptops of one group: [{id, name, side, primary, transcripts}]
+    in side order, then id. A side's primary is its lowest-id laptop with
+    transcripts, the rule resolve_pair codes by; an extra laptop that joined
+    the same slot is a view only, so the side's hearing is not merged twice.
+    ``transcript_count`` maps a device id to its row count
+    (database.session_device_transcript_count); without it every laptop
+    counts as recorded."""
     count = transcript_count or (lambda device_id: 1)
     pods, primaries = [], set()
     for d in sorted(devices, key=lambda d: _pair_rank(d, names)):
@@ -1682,25 +1684,26 @@ def table_pods(devices, names=TEAMS, transcript_count=None):
     return pods
 
 
-def session_tables(devices, names=TEAMS, transcript_count=None):
-    """The session's tables, [{group, pods}] in group order; laptops without
-    a group make no table."""
+def session_groups(devices, names=TEAMS, transcript_count=None):
+    """The session's groups, [{group, pods}] in group order; laptops without
+    a group make no group."""
     groups = {}
     for d in devices:
         group = getattr(d, "negotiation_group", None)
         if group:
             groups.setdefault(group, []).append(d)
-    return [{"group": g, "pods": table_pods(groups[g], names, transcript_count)}
+    return [{"group": g, "pods": group_pods(groups[g], names, transcript_count)}
             for g in sorted(groups, key=group_sort_key)]
 
 
-def table_line(u):
+def group_line(u):
     """A merged utterance as the transcript panel's row (id, transcript,
     speaker_tag, ...) plus which laptop heard it and what was folded in."""
     conf = u.get("confidence") or {}
     line = {"id": u["transcript_id"], "session_device_id": u.get("session_device_id"),
             "start_time": u["start_time"], "length": u.get("length"),
             "transcript": u.get("text"), "speaker_tag": u.get("speaker_tag") or u.get("_speaker"),
+            "speaker_id": u.get("speaker_id"),
             "team": u.get("team"), "far_side": bool(conf.get("far_side")),
             "speaker_confidence": conf.get("percent"), "adopted": bool(u.get("adopted")),
             "stitched_from": list(u.get("stitched_from") or []),
@@ -1712,15 +1715,15 @@ def table_line(u):
     return line
 
 
-def table_transcript(devices, rows_by_device, names=TEAMS, recordings=None):
-    """The one conversation of a table as the coder reads it: merge_paired
+def group_transcript(devices, rows_by_device, names=TEAMS, recordings=None):
+    """The one conversation of a group as the coder reads it: merge_paired
     over the primary laptops' rows (``rows_by_device``: device id -> rows),
     then stitch_sentences. Returns {lines, dropped, alignment}: lines are
-    table_line dicts in time order, dropped the merge's record of what was
+    group_line dicts in time order, dropped the merge's record of what was
     folded or left out, alignment the clock offset found (or None)."""
     sides = {d.id: _side_of(d, names) for d in devices if d.id in rows_by_device}
     diagnostics = {}
     utterances, dropped = merge_paired(rows_by_device, sides, diagnostics, recordings)
     stitched = stitch_sentences(utterances, dropped)
-    return {"lines": [table_line(u) for u in stitched], "dropped": dropped,
+    return {"lines": [group_line(u) for u in stitched], "dropped": dropped,
             "alignment": diagnostics.get("alignment")}
