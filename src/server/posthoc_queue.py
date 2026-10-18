@@ -597,7 +597,7 @@ def _run_job(job):
             init = dict(base, type="Initialize_audio_processing_analytics",
                         asr=models.get("asr", "whisperx"),
                         scorer=models.get("scorer"),
-                        diarizer=models.get("diarizer", "pyannote"),
+                        diarizer=models.get("diarizer", "diarizen"),
                         embedder=models.get("embedder"))
             start = "start_posthoc_audio_processing"
         else:

@@ -342,7 +342,12 @@ insecure origins. Add your server's address at
   would shadow the real one): build `src/venv-crisper` from
   `src/requirements-crisper.txt`.
 - **Sortformer diarization** uses a separate NeMo venv (`src/venv-nemo`).
-- Neither is needed unless you select those backends.
+- **Post-hoc speaker diarization** offers two models, each in its own venv:
+  **DiariZen** (the default, `src/venv-diarizen`) and **Nemotron-3**
+  (`src/venv-nemo3`); build recipes, model ids and licences in
+  `src/requirements-unified.README.md`. When one fails the audio service
+  runs the other.
+- None is needed unless you select those backends.
 
 ## TODO
 
