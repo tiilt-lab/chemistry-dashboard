@@ -63,6 +63,7 @@ function VideoPlayer({
     transcripts,
     onPlaybackTime,
     onSegments,
+    onMissing,
 }) {
     const ref = useRef(null)
     const canvasRef = useRef(null)
@@ -126,7 +127,12 @@ function VideoPlayer({
                 if (onSegments) onSegments(segs)
                 setStatus("ready")
             })
-            .catch(() => !cancelled && setStatus("missing"))
+            .catch(() => {
+                if (cancelled) return
+                setStatus("missing")
+                // Lets the analysis view fall back to the audio player.
+                if (onMissing) onMissing()
+            })
         return () => {
             cancelled = true
         }

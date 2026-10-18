@@ -32,6 +32,7 @@ import io
 import os
 import base64
 import time
+import wave
 
 # Below this much free disk, new sessions are refused (see create_session).
 MIN_FREE_DISK_FRACTION = 0.10
@@ -663,6 +664,70 @@ def _video_segments(session_id, session_device_id):
     return segments
 
 
+def _audio_dir():
+    return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                        'audio_processing', 'recordings')
+
+
+def _find_pod_audio(session_device_id):
+    """The pod's playable recording: the session-timeline wav the live service
+    writes next to the per-connection segments (one file on the session clock,
+    reconnect gaps closed), or, for pods from before the timeline existed, the
+    first per-connection recording."""
+    d = _audio_dir()
+    matches = glob.glob(os.path.join(d, '{0}-*_timeline_redu.wav'.format(session_device_id)))
+    if matches:
+        return os.path.realpath(matches[0])
+    segments = (glob.glob(os.path.join(d, '{0}-*_redu.wav'.format(session_device_id)))
+                or glob.glob(os.path.join(d, '{0}-*_orig.wav'.format(session_device_id))))
+    segments = sorted((os.path.realpath(m) for m in segments), key=_recording_stamp)
+    return segments[0] if segments else None
+
+
+def _audio_clock(path):
+    # The recording's clock sidecar (src/common/recording_sidecar.py): session
+    # seconds of sample 0 and the clock moves made while it ran.
+    try:
+        with open(os.path.splitext(path)[0] + '.clock.json') as f:
+            info = json.load(f)
+    except (OSError, ValueError):
+        return None
+    return info if isinstance(info, dict) and 'start_offset' in info else None
+
+
+def _audio_duration(path):
+    try:
+        with wave.open(path) as w:
+            return w.getnframes() / float(w.getframerate())
+    except Exception as e:
+        logging.warning('audio duration failed for %s: %s', path, e)
+        return None
+
+
+def _audio_segments(info, duration):
+    """The recording's session<->audio map in the video player's segment form
+    [{start, video_start, duration}] (video-time.js): a clock move in the
+    sidecar (at audio second ``at`` the session clock jumps by ``delta``)
+    splits the recording the way a disconnect splits a video, so the same
+    piecewise mapping serves both players. No sidecar: one segment at 0."""
+    if not info:
+        return [{'start': 0.0, 'video_start': 0.0, 'duration': duration}]
+    session = float(info.get('start_offset') or 0.0)
+    cursor = 0.0
+    segments = []
+    for move in sorted(info.get('moves') or [], key=lambda m: float(m.get('at') or 0.0)):
+        at = float(move.get('at') or 0.0)
+        if at <= cursor:            # a move at the very start just shifts the offset
+            session += float(move.get('delta') or 0.0)
+            continue
+        segments.append({'start': session, 'video_start': cursor, 'duration': at - cursor})
+        session += (at - cursor) + float(move.get('delta') or 0.0)
+        cursor = at
+    segments.append({'start': session, 'video_start': cursor,
+                     'duration': (duration - cursor) if duration is not None else None})
+    return segments
+
+
 def prewarm_video_cache():
     # Remux every pod recording into the fixed cache in the background at
     # server start (newest first, within the LRU cap), so the first viewer of
@@ -735,6 +800,33 @@ def get_session_device_video_info(session_id, session_device_id, **kwargs):
         # segments is the full layout the player maps against (see below).
         'offset': _video_start_offset(session_id, session_device_id),
         'segments': _video_segments(session_id, session_device_id),
+    })
+
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/audio', methods=['GET'])
+@wrappers.verify_device_read_access
+def get_session_device_audio(session_id, session_device_id, **kwargs):
+    # The pod's recording for playback in the analysis view (audio pods have
+    # no video; video pods get this too). Range requests make seeking work.
+    path = _find_pod_audio(session_device_id)
+    if path is None:
+        abort(404)
+    return send_file(path, mimetype='audio/wav', conditional=True)
+
+
+@api_routes.route('/api/v1/sessions/<int:session_id>/device/<int:session_device_id>/audio/info', methods=['GET'])
+@wrappers.verify_device_read_access
+def get_session_device_audio_info(session_id, session_device_id, **kwargs):
+    path = _find_pod_audio(session_device_id)
+    if path is None:
+        return json_response({'message': 'No recording.'}, 404)
+    duration = _audio_duration(path)
+    info = _audio_clock(path)
+    return json_response({
+        'duration': duration,
+        'offset': float(info.get('start_offset') or 0.0) if info else 0.0,
+        'segments': _audio_segments(info, duration),
+        'timeline': bool(info and info.get('timeline')),
     })
 
 
@@ -998,6 +1090,31 @@ def _pod_ids_with_recordings():
         return _recordings_cache[1]
 
 
+_audio_cache = (0.0, frozenset())
+
+
+def _pod_ids_with_audio():
+    # session_device_ids with an audio recording on disk (the playable
+    # timeline wav or a per-connection segment); same cache policy as above.
+    global _audio_cache
+    with _recordings_cache_lock:
+        stamp, cached = _audio_cache
+        now = time.monotonic()
+        if now - stamp < _RECORDINGS_CACHE_TTL:
+            return cached
+        ids = set()
+        try:
+            for fn in os.listdir(_audio_dir()):
+                if fn.endswith('.wav'):
+                    prefix = fn.split('-', 1)[0]
+                    if prefix.isdigit():
+                        ids.add(int(prefix))
+        except OSError:
+            pass
+        _audio_cache = (now, frozenset(ids))
+        return _audio_cache[1]
+
+
 @api_routes.route('/api/v1/sessions/<int:session_id>/devices', methods=['GET'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_read_access
@@ -1012,6 +1129,7 @@ def session_devices(session_id, **kwargs):
         speaker_counts = database.get_pod_speaker_counts(session_id)
         video_pods = database.get_pod_video_presence(session_id)
         recorded = _pod_ids_with_recordings()
+        audio_recorded = _pod_ids_with_audio()
         result = []
         for device in devices:
             data = device.json()
@@ -1023,8 +1141,11 @@ def session_devices(session_id, **kwargs):
             # metrics, or a recording file); pods that truly recorded
             # nothing should be flagged, not analyzed.
             data['has_data'] = (durations.get(device.id) is not None) \
-                or (device.id in video_pods) or (device.id in recorded)
+                or (device.id in video_pods) or (device.id in recorded) \
+                or (device.id in audio_recorded)
             data['has_video'] = (device.id in video_pods) or (device.id in recorded)
+            # The analysis view plays the audio recording for pods without video.
+            data['has_audio'] = device.id in audio_recorded
             data['analysis_running'] = posthoc_state.is_running(device.id)
             result.append(data)
         return json_response(result)
