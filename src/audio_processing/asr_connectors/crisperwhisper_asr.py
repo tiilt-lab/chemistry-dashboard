@@ -10,7 +10,8 @@ and all inference goes through crisper_worker.py subprocesses:
   - CrisperWhisperASR (live): every pod's windows go through one process-
     wide WorkerPool of DC_ASR_WORKERS (default 2) persistent --serve workers,
     each a ~3-4GB model copy on the GPU. A window transcribes in ~1s and a
-    pod produces one per 12s, so one worker saturates at ~10-12 talking
+    pod produces one every 10-16s (cut at a pause, asr_ingest "window
+    cuts"), so one worker saturates at ~10-12 talking
     pods; the second slot is spawned lazily — only once a window has waited
     on a busy first slot — and only while the card still has
     MIN_FREE_VRAM_MIB free. Windows are dispatched FIFO across pods (no pod
@@ -46,7 +47,8 @@ from collections import deque
 
 from .base_asr import (BaseASR, AsrResult, PosthocFileASR, worker_python,
                        run_json_worker, POSTHOC_WORKER_TIMEOUT)
-from asr_ingest import WindowAssembler, make_speech_gate  # audio_processing/ is on sys.path
+from asr_ingest import (WindowAssembler, make_frame_scorer, make_speech_gate,  # audio_processing/ is on sys.path
+                        window_settings)
 
 _WORKER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "crisper_worker.py")
 # Per-slot worker stderr, appended for the life of the service:
@@ -214,6 +216,33 @@ def _split_segments(words, max_gap=1.0, max_len=15.0):
     if current:
         segments.append(current)
     return segments
+
+
+# A word is the window's when it ENDS this far before the window's cap cut;
+# later than that it may be clipped, and the next window (which hears the
+# carry again) owns it. Twice the timestamp jitter CrisperWhisper shows.
+SEAM_MARGIN_SECONDS = 0.25
+
+
+def _seam_words(words, window, length_seconds, margin=SEAM_MARGIN_SECONDS):
+    """The window's words with the seam duplicates dropped.
+
+    After a cap cut (asr_ingest.WindowAssembler) the next window hears the
+    last CARRY seconds again. A word belongs to exactly one of the two by
+    where it ends against the seam, the cut less ``margin``: the capped
+    window keeps the words ending at or before it, the window after keeps
+    the words ending after it. A word under the cut is thus emitted once,
+    whole, by the window that heard all of it. Times are window-relative;
+    a plain tuple window (no cut information) keeps every word.
+    """
+    overlap = float(getattr(window, "overlap", 0.0) or 0.0)
+    if getattr(window, "capped", False):
+        seam = float(length_seconds) - margin
+        words = [w for w in words if w[2] <= seam]
+    if overlap > 0:
+        seam = overlap - margin
+        words = [w for w in words if w[2] > seam]
+    return words
 
 
 def _emit_segments(transcript_queue, words, offset=0.0):
@@ -826,11 +855,14 @@ _pool = WorkerPool()
 
 
 class CrisperWhisperASR(BaseASR):
-    """Live connector: fixed windows against the worker pool.
+    """Live connector: pause-cut windows against the worker pool.
 
     Two threads: ``_processing`` only drains the ingest queue and assembles
     windows (so a slow or saturated pool can never stop it draining, which is
-    what made the reactor's queue fill and evict audio), and ``_transcribing``
+    what made the reactor's queue fill and evict audio); the assembler scores
+    each half-second frame on that thread and closes a window at a pause
+    (asr_ingest "window cuts", DC_ASR_WINDOW_*) rather than at a sample
+    count, so a word is no longer split between two windows. ``_transcribing``
     feeds completed windows to the pool one at a time, so this pod's windows
     are transcribed in order whichever slot serves them. Window start times
     come from the chunks' absolute sample offsets (asr_ingest), not from how
@@ -844,6 +876,10 @@ class CrisperWhisperASR(BaseASR):
     thread (a Silero session per pod) and any failure in it fails OPEN.
     """
 
+    # The shortest window (DC_ASR_WINDOW_SECONDS; the instance carries the
+    # configured value for the caption-lag proxy in live_metrics). Windows
+    # close at a pause between this and DC_ASR_WINDOW_CAP_SECONDS, see
+    # asr_ingest "window cuts".
     WINDOW_SECONDS = 12.0
     # ~2 min of audio waiting on the pool; beyond that the OLDEST window is
     # dropped so captions stay live rather than minutes stale.
@@ -851,7 +887,13 @@ class CrisperWhisperASR(BaseASR):
 
     def __init__(self, audio_queue, transcript_queue, config, media_type, interval):
         super().__init__(audio_queue, transcript_queue, config, media_type, interval)
-        self._assembler = WindowAssembler(self.SAMPLE_RATE, self.DEPTH, self.WINDOW_SECONDS)
+        settings = window_settings()
+        self.WINDOW_SECONDS = settings["window_seconds"]
+        # The frame scorer (a detector of this pod's own, DC_ASR_VAD) is
+        # built on the first chunk, on the ingest thread; without one the
+        # assembler cuts blind at WINDOW_SECONDS.
+        self._assembler = WindowAssembler(self.SAMPLE_RATE, self.DEPTH,
+                                          scorer_factory=make_frame_scorer, **settings)
         self._window_queue = queue_module.Queue(maxsize=self.MAX_PENDING_WINDOWS)
         # Set by the server: callable(state, message) that tells this pod's
         # client whether ASR is 'ok' or 'degraded'.
@@ -964,10 +1006,12 @@ class CrisperWhisperASR(BaseASR):
             if window is None:
                 break
             if self._admit(*window):
-                self._flush(*window)
+                self._flush(window[0], window[1], window)
         self.transcript_queue.put(None)
 
-    def _flush(self, start_seconds, pcm):
+    def _flush(self, start_seconds, pcm, window=None):
+        # ``window`` is the assembler's Window (how it was cut) when there is
+        # one; the words at a carry seam are then dropped on one side.
         tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
         try:
             with wave.open(tmp.name, "wb") as wf:
@@ -979,8 +1023,9 @@ class CrisperWhisperASR(BaseASR):
             if data.get("error"):
                 logging.warning("CrisperWhisper window failed: %s", data["error"])
             else:
-                _emit_segments(self.transcript_queue, data.get("words", []),
-                               offset=start_seconds)
+                words = _seam_words(data.get("words", []), window,
+                                    len(pcm) / float(self.DEPTH * self.SAMPLE_RATE))
+                _emit_segments(self.transcript_queue, words, offset=start_seconds)
         except WorkerUnavailable as e:
             # Already WARNed once by the slot/pool; one INFO line per lost window.
             logging.info("CrisperWhisper window at %.1fs skipped: %s", start_seconds, e)

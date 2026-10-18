@@ -11,15 +11,19 @@ visible, and they live here so they can be unit-tested without a reactor:
     queue, so they stay on the same clock as AudioBuffer (which keeps every
     byte) and ``extract()`` returns the audio the words were spoken in.
   * IngestCounter — received/dropped totals plus the rate-limited WARNING.
-  * WindowAssembler — turns stamped chunks into fixed-length windows, zero-
-    filling a short gap left by dropped chunks and restarting on a long one.
+  * WindowAssembler — turns stamped chunks into windows cut at pauses (see
+    "window cuts" below), zero-filling a short gap left by dropped chunks
+    and restarting on a long one.
 
 The voice-activity gate lives here too (applied by the connector's flush
 thread, before a window is submitted to the GPU pool):
 
-  * EnergyGate / SileroDetector — decide whether a window holds any speech.
+  * EnergyGate / SileroDetector — decide whether a window holds any speech,
+    and score single frames for the assembler's cut search.
   * SpeechGate — per-connection wrapper: warm-up, counters, the INFO line.
   * make_speech_gate — picks the detector from DC_ASR_VAD (off|energy|silero).
+  * make_frame_scorer / window_settings — the assembler's own detector and
+    the DC_ASR_WINDOW_* cut settings.
 
 A skipped window never touches the timeline: window start times come from
 the absolute sample offsets above, so window k+1 starts exactly where it
@@ -105,23 +109,117 @@ class IngestCounter:
         return text
 
 
-class WindowAssembler:
-    """Assemble stamped chunks into windows of at least ``window_seconds``.
+# --- window cuts ---------------------------------------------------------------
+#
+# A window used to close every 12 s of samples, blind to the speech in it. A
+# word under the cut was heard in halves, one in each window, and the
+# recognizer dropped it: on session 434, laptop 1436, 60 of 481 rows ran to
+# the 12 s cap and "you guys have taken" vanished at the 81868 s cut while
+# the partner laptop, whose clock cut half a second later, kept it.
+#
+# The assembler now scores every quarter-second frame as it arrives (the
+# same detectors as the gate, on an instance of its own; a frame is quiet
+# only when all of it is) and closes the window in front of the first quiet
+# frame once it is WINDOW seconds long. A talker who never
+# pauses is cut when the window reaches CAP seconds, at the quietest frame
+# seen since WINDOW, and the last CARRY seconds before that cut are heard
+# again at the head of the next window, so the word under the cut is whole
+# there; the connector drops the duplicate words at the seam by their
+# timestamps (crisperwhisper_asr._seam_words). Windows are never trimmed and
+# every window's start is the true offset of its first sample, carried
+# audio included.
+#
+#   DC_ASR_WINDOW_SECONDS        shortest window; the pause search starts here (10)
+#   DC_ASR_WINDOW_CAP_SECONDS    longest window (16)
+#   DC_ASR_WINDOW_CARRY_SECONDS  audio heard again after a cap cut (1.0)
+#   DC_ASR_WINDOW_QUIET          a frame scoring at or below this is a pause (0.5)
+#
+# WINDOW = CAP = 12 with CARRY = 0 is the old blind cut, so a rollback is
+# three environment values. With DC_ASR_VAD=off nothing scores the frames
+# and the window closes at WINDOW seconds, blind, as before.
 
-    Each window is ``(start_seconds, pcm_bytes)`` where ``start_seconds`` is
-    the absolute offset of the window's first sample. A gap shorter than a
+WINDOW_ENV = "DC_ASR_WINDOW_SECONDS"
+WINDOW_CAP_ENV = "DC_ASR_WINDOW_CAP_SECONDS"
+WINDOW_CARRY_ENV = "DC_ASR_WINDOW_CARRY_SECONDS"
+WINDOW_QUIET_ENV = "DC_ASR_WINDOW_QUIET"
+WINDOW_SECONDS_DEFAULT = 10.0
+WINDOW_CAP_DEFAULT = 16.0
+WINDOW_CARRY_DEFAULT = 1.0
+WINDOW_QUIET_DEFAULT = 0.5
+CUT_FRAME_SECONDS = 0.25   # the cut search's frame: a pause this long can take the cut
+FRAME_SECONDS = 0.5        # the gate's frame: speech in any frame keeps the window
+
+
+class Window(tuple):
+    """A ``(start_seconds, pcm)`` window that also says how it was cut.
+
+    ``overlap`` seconds at its head were already in the previous window (the
+    carry after a cap cut); ``capped`` means this window ended at the cap and
+    its last CARRY seconds are heard again in the next one. A plain tuple
+    consumer (the queue, the gate, the flush) sees no difference.
+    """
+
+    def __new__(cls, start_seconds, pcm, overlap=0.0, capped=False):
+        self = super().__new__(cls, (start_seconds, pcm))
+        self.overlap = float(overlap)
+        self.capped = bool(capped)
+        return self
+
+    @property
+    def start(self):
+        return self[0]
+
+    @property
+    def pcm(self):
+        return self[1]
+
+
+class WindowAssembler:
+    """Assemble stamped chunks into windows cut at pauses.
+
+    Each window is ``(start_seconds, pcm_bytes)`` (a Window) where
+    ``start_seconds`` is the absolute offset of the window's first sample.
+    A window closes at the first quiet frame once it holds ``window_seconds``
+    of audio, at the quietest frame seen when it reaches ``cap_seconds`` (the
+    last ``carry_seconds`` then open the next window too), or at
+    ``window_seconds`` exactly when nothing scores the frames. ``frame_scorer``
+    is an object with ``frame_score(pcm) -> [0, 1]`` (EnergyGate,
+    SileroDetector); ``scorer_factory`` builds one lazily on the thread that
+    adds audio, and a scorer that cannot be built or that fails later is
+    dropped with a WARNING: blind cuts, never lost audio. A gap shorter than a
     window (a few dropped chunks) is zero-filled so the audio stays on the
     clock; a longer gap closes the current window and starts a new one at the
     new offset. Unstamped ``bytes`` are assumed contiguous with the previous
     chunk.
     """
 
-    def __init__(self, sample_rate=SAMPLE_RATE, depth=DEPTH, window_seconds=12.0):
+    def __init__(self, sample_rate=SAMPLE_RATE, depth=DEPTH, window_seconds=12.0,
+                 cap_seconds=None, carry_seconds=0.0, quiet=WINDOW_QUIET_DEFAULT,
+                 frame_scorer=None, scorer_factory=None, frame_seconds=CUT_FRAME_SECONDS):
         self.sample_rate = sample_rate
         self.depth = depth
+        self.frame_samples = max(1, int(frame_seconds * sample_rate))
         self.window_samples = int(window_seconds * sample_rate)
+        cap = window_seconds if cap_seconds is None else max(float(cap_seconds), float(window_seconds))
+        # Cuts and the carry sit on the frame grid so the scores stay aligned
+        # with the buffer across a cut: the cap rounds down to whole frames
+        # (never below the shortest window), the carry to the nearest frame.
+        self.cap_samples = max(self.window_samples,
+                               int(cap * sample_rate) // self.frame_samples * self.frame_samples)
+        carry = int(round(float(carry_seconds or 0.0) / frame_seconds)) * self.frame_samples
+        self.carry_samples = max(0, min(carry, self.cap_samples - self.frame_samples))
+        self.quiet = float(quiet)
+        self._scorer = frame_scorer
+        self._scorer_factory = scorer_factory
+        self._scorer_failed = False
         self._buffer = bytearray()
         self._start = None  # sample offset of self._buffer[0]
+        self._scores = []   # one speech score per complete frame of the buffer
+        self._overlap = 0   # samples at the buffer's head the previous window also held
+
+    @property
+    def scoring(self):
+        return self._scorer is not None
 
     def _expected(self):
         return (self._start or 0) + len(self._buffer) // self.depth
@@ -141,18 +239,134 @@ class WindowAssembler:
             elif gap > 0:
                 self._buffer.extend(bytes(gap * self.depth))
         self._buffer.extend(chunk)
-        if len(self._buffer) // self.depth >= self.window_samples:
-            windows.append(self.flush())
+        self._score_new_frames()
+        while True:
+            cut = self._cut()
+            if cut is None:
+                break
+            windows.append(self._emit(*cut))
         return windows
 
     def flush(self):
         """Emit whatever is buffered (the final partial window), or None."""
         if len(self._buffer) < self.depth:
+            self._buffer = bytearray()
+            self._scores = []
+            self._overlap = 0
             return None
-        window = (self._start / float(self.sample_rate), bytes(self._buffer))
+        window = Window(self._start / float(self.sample_rate), bytes(self._buffer),
+                        overlap=self._overlap / float(self.sample_rate))
         self._start += len(self._buffer) // self.depth
         self._buffer = bytearray()
+        self._scores = []
+        self._overlap = 0
         return window
+
+    # -- scoring and the cut --------------------------------------------------
+
+    def _build_scorer(self):
+        if self._scorer_factory is None or self._scorer_failed:
+            return
+        try:
+            self._scorer = self._scorer_factory()
+        except Exception as e:
+            # Blind cuts are only the old behaviour, never lost audio.
+            logging.warning("ASR windows: frame scorer unavailable, cutting every "
+                            "%.1fs blind: %s", self.window_samples / float(self.sample_rate), e)
+            self._scorer_failed = True
+            return
+        self._scorer_factory = None
+        self._log_mode()
+
+    def _log_mode(self):
+        sr = float(self.sample_rate)
+        if self._scorer is None:
+            logging.info("ASR windows: fixed %.1fs cuts (no frame scorer)", self.window_samples / sr)
+        else:
+            logging.info("ASR windows: cut at pauses (%s) between %.1fs and %.1fs, carry %.1fs",
+                         getattr(self._scorer, "name", type(self._scorer).__name__),
+                         self.window_samples / sr, self.cap_samples / sr, self.carry_samples / sr)
+
+    def _score_new_frames(self):
+        if self._scorer is None:
+            self._build_scorer()
+            if self._scorer is None:
+                return
+        frame_bytes = self.frame_samples * self.depth
+        complete = len(self._buffer) // frame_bytes
+        while len(self._scores) < complete:
+            i = len(self._scores)
+            frame = bytes(self._buffer[i * frame_bytes:(i + 1) * frame_bytes])
+            try:
+                self._scores.append(float(self._scorer.frame_score(frame)))
+            except Exception as e:
+                logging.warning("ASR windows: frame scorer (%s) failed, cutting every %.1fs "
+                                "blind from now on: %s", getattr(self._scorer, "name", "?"),
+                                self.window_samples / float(self.sample_rate), e)
+                self._scorer = None
+                self._scorer_failed = True
+                self._scores = []
+                return
+
+    def _cut(self):
+        """(samples into the buffer to cut at, carry samples) or None."""
+        n = len(self._buffer) // self.depth
+        if n < self.window_samples:
+            return None
+        if self._scorer is None:
+            return n, 0                                          # blind: the whole buffer, as before
+        first = -(-self.window_samples // self.frame_samples)   # first frame starting at/after WINDOW
+        for i in range(first, len(self._scores)):
+            if self._scores[i] <= self.quiet:
+                return i * self.frame_samples, 0                 # a pause: cut in front of it
+        if n < self.cap_samples:
+            return None
+        band = self._scores[first:]
+        if band:
+            quietest = first + min(range(len(band)), key=band.__getitem__)
+            return quietest * self.frame_samples, self.carry_samples
+        return n, self.carry_samples                             # WINDOW = CAP: the old cut, whole buffer
+
+    def _emit(self, cut, carry):
+        sr = float(self.sample_rate)
+        window = Window(self._start / sr, bytes(self._buffer[:cut * self.depth]),
+                        overlap=self._overlap / sr, capped=carry > 0)
+        keep = cut - carry
+        del self._buffer[:keep * self.depth]
+        self._start += keep
+        self._overlap = carry
+        # Cuts and the carry are frame multiples whenever frames are scored.
+        self._scores = self._scores[keep // self.frame_samples:] if keep % self.frame_samples == 0 else []
+        return window
+
+
+def _env_float(environ, name, default, low, high=None):
+    raw = (environ.get(name) or "").strip()
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        logging.warning("%s=%r is not a number; using %g", name, raw, default)
+        return default
+    if value < low or (high is not None and value > high):
+        logging.warning("%s=%g is outside [%g, %s]; using %g", name, value, low,
+                        "inf" if high is None else "%g" % high, default)
+        return default
+    return value
+
+
+def window_settings(environ=os.environ):
+    """WindowAssembler keyword arguments from DC_ASR_WINDOW_* (defaults
+    10 / 16 / 1.0 / 0.5). The cap never falls below the shortest window."""
+    window = _env_float(environ, WINDOW_ENV, WINDOW_SECONDS_DEFAULT, 1.0)
+    cap = _env_float(environ, WINDOW_CAP_ENV, WINDOW_CAP_DEFAULT, 1.0)
+    if cap < window:
+        logging.warning("%s=%g is below %s=%g; the cap is the window", WINDOW_CAP_ENV, cap, WINDOW_ENV, window)
+        cap = window
+    return {"window_seconds": window, "cap_seconds": cap,
+            "carry_seconds": _env_float(environ, WINDOW_CARRY_ENV, WINDOW_CARRY_DEFAULT, 0.0),
+            "quiet": _env_float(environ, WINDOW_QUIET_ENV, WINDOW_QUIET_DEFAULT, 0.0, 1.0)}
 
 
 # --- voice-activity gate -----------------------------------------------------
@@ -171,7 +385,7 @@ class WindowAssembler:
 
 VAD_ENV = "DC_ASR_VAD"
 VAD_MODES = ("off", "energy", "silero")
-FRAME_SECONDS = 0.5     # decision granularity: speech in any frame keeps the window
+# FRAME_SECONDS (above): decision granularity, speech in any frame keeps the window
 WARMUP_WINDOWS = 2      # a connection's first windows are always transcribed
 SILENCE_DB = -120.0     # level reported for an all-zero frame (log10(0) guard)
 
@@ -260,6 +474,27 @@ class EnergyGate:
         self._in_speech = state
         return speech
 
+    def frame_score(self, pcm):
+        """Speech score of one frame (whatever its length) for the window cut
+        search, in [0, 1]: 1 at or above the on threshold, 0 at or below off,
+        linear between. The frame's level joins the history (this instance
+        belongs to the assembler, which hands it every frame once), so the
+        room is learned here too. Empty: 1, never a cut point."""
+        samples = pcm_to_float(pcm, self.depth)
+        if samples.size == 0:
+            return 1.0
+        levels = frame_levels_db(samples, self.sample_rate, samples.size / float(self.sample_rate))
+        if levels.size == 0:
+            return 1.0
+        on, off = self.thresholds()
+        self._levels.extend(levels.tolist())
+        level = float(levels.max())
+        if level >= on:
+            return 1.0
+        if level <= off or on <= off:
+            return 0.0
+        return (level - off) / (on - off)
+
 
 _silero = {}  # import cache: {"module": silero_vad} or {"error": text}
 
@@ -345,6 +580,20 @@ class SileroDetector:
             if self._chunk_prob(chunk) >= self.threshold:
                 return True
         return False
+
+    def frame_score(self, pcm):
+        """The highest speech probability over the frame's 512-sample chunks,
+        for the window cut search. Streaming: the model state carries from
+        frame to frame (this instance belongs to the assembler and never
+        judges whole windows). Shorter than a chunk: 1, never a cut point."""
+        samples = pcm_to_float(pcm, self.depth)
+        end = len(samples) // self.CHUNK * self.CHUNK
+        if end == 0:
+            return 1.0
+        best = 0.0
+        for i in range(0, end, self.CHUNK):
+            best = max(best, float(self._chunk_prob(np.ascontiguousarray(samples[i:i + self.CHUNK]))))
+        return best
 
 
 class SpeechGate:
@@ -436,3 +685,16 @@ def make_speech_gate(mode=None, environ=os.environ, **gate_kw):
     else:
         raise ValueError("unknown VAD mode %r" % (mode,))
     return SpeechGate(detector, **gate_kw)
+
+
+def make_frame_scorer(mode=None, environ=os.environ):
+    """The assembler's frame scorer per DC_ASR_VAD (a detector of its own, on
+    the thread that adds audio), or None when 'off': the cut is then blind."""
+    mode = vad_mode(environ) if mode is None else mode
+    if mode == "off":
+        return None
+    if mode == "silero":
+        return SileroDetector()
+    if mode == "energy":
+        return EnergyGate()
+    raise ValueError("unknown VAD mode %r" % (mode,))
