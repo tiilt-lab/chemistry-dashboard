@@ -315,10 +315,14 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                                         byte_audio_data = self.read_bytes_from_wav(wavObj)
                             except (FileNotFoundError, wave.Error) as e:
                                 # One roster member without a usable enrollment
-                                # must not abort the whole run.
-                                logging.warning('skipping speaker %r: no voice print or readable recording (%s)',
+                                # must not abort the whole run, and must still
+                                # count: the metrics are per roster member, and
+                                # MOSS names such a student from a session
+                                # print (a pod whose roster had no prints at all
+                                # divided its metrics by zero participants).
+                                logging.warning('speaker %r has no voice print or readable recording (%s); kept on the roster without one',
                                                 speaker.get("alias"), e)
-                                continue
+                                byte_audio_data = b''
                             self.speakers[speaker["id"]] = {"alias": speaker["alias"], "data": byte_audio_data}
 
                         if not self.signal_start():

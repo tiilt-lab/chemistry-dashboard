@@ -116,8 +116,11 @@ class SpeakerProcessor:
     def processResponsivity(self, cross_cohesion):
         responsivity = np.divide(np.sum(cross_cohesion, axis=0), self.tau_window)
         self.internal_cohesion = np.diagonal(responsivity)
-        self.social_impact = np.divide(np.sum(responsivity, axis=0, where=self.ignore_diag), self.participants)
-        self.overall_responsivity = np.divide(np.sum(responsivity, axis=1, where=self.ignore_diag), self.participants)
+        # A roster with no members (every utterance unattributed) divided by
+        # zero here and the NaN failed every metrics post as non-JSON.
+        others = max(self.participants, 1)
+        self.social_impact = np.divide(np.sum(responsivity, axis=0, where=self.ignore_diag), others)
+        self.overall_responsivity = np.divide(np.sum(responsivity, axis=1, where=self.ignore_diag), others)
 
     def calculateNewness(self, embedding, speaker):
         self.embeddings = np.concatenate((self.embeddings, np.array([embedding])))
@@ -186,13 +189,14 @@ class SpeakerProcessor:
         processing_time =  time.time() - processing_timer
         # Snapshot under the lock; the post below is a 30s-timeout HTTP call
         # and holding process_lock across it stalled every other utterance.
+        finite = lambda a: np.nan_to_num(np.asarray(a, dtype=float), nan=0.0, posinf=0.0, neginf=0.0).tolist()  # noqa: E731
         metrics = (speaker_ids,
-                   self.participation_scores.tolist(),
-                   self.internal_cohesion.tolist(),
-                   self.overall_responsivity.tolist(),
-                   self.social_impact.tolist(),
-                   self.newness.tolist(),
-                   self.communication_density.tolist())
+                   finite(self.participation_scores),
+                   finite(self.internal_cohesion),
+                   finite(self.overall_responsivity),
+                   finite(self.social_impact),
+                   finite(self.newness),
+                   finite(self.communication_density))
 
        success = callbacks.post_speaker_transcript_metrics(speaker_transcript_data, *metrics)
 
@@ -200,5 +204,7 @@ class SpeakerProcessor:
           logging.info('[Speaker_Metrics]Processing posted successfully for client {0} (Processing time: {1}) @ {2}'.format(self.auth_key, processing_time, processing_timer))
        else:
           logging.warning('[Speaker_Metrics]Processing results FAILED to post for client {0} (Processing time: {1})'.format(self.auth_key, processing_time))
+       return bool(success)
       except Exception as e:
          logging.error('[Speaker Metrics]Processing FAILED for client {0}: {1}'.format(self.auth_key, e))
+         return False
