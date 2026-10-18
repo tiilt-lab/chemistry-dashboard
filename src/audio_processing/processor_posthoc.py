@@ -206,6 +206,11 @@ class AudioProcessorPosthoc:
                     failure = self._staging.failure()
             except Exception:
                 logging.exception('final live-presence check failed; publishing anyway')
+        # Nothing staged with the recognizer done is a failure, not an empty
+        # pod: publishing would wipe the previous rows and post none (session
+        # 434, pod 1447, 2026-10-18 23:17 UTC). The old results stay.
+        if failure is None and len(self._staging) == 0:
+            failure = 'nothing to publish: the run staged no utterances'
         try:
             if failure is None:
                 self._publish()
@@ -518,27 +523,31 @@ class AudioProcessorPosthoc:
             # Perform Speaker Diarization
             speaker_tag = None
             speaker_id = -1
-            if getattr(transcript_data, 'named_by_asr', False):
-                # MOSS named its clusters on minutes of audio against the
-                # prints of both laptops (moss_naming); a per-piece print
-                # check would only second-guess it on seconds of audio.
-                speaker_tag = getattr(transcript_data, 'speaker_tag', None)
-                confidence = getattr(transcript_data, 'speaker_confidence', None)
-                speaker_id = next((sid for sid, info in (self.fingerprints or {}).items()
-                                   if speaker_tag and (info or {}).get('alias') == speaker_tag), -1)
-            elif self.config.diarization and self.fingerprints and len(self.fingerprints):
-                speaker_tag, speaker_id, confidence = checkFingerprints(
-                        audio_data, self.fingerprints, self.diarization_model)
-                if not speaker_tag:
-                    # Batch ASRs (WhisperX + pyannote) can carry a diarization
-                    # cluster label; better than leaving the utterance untagged
-                    # when fingerprint matching fails.
+            named_by_asr = bool(getattr(transcript_data, 'named_by_asr', False))
+            if named_by_asr or (self.config.diarization and self.fingerprints and len(self.fingerprints)):
+                if named_by_asr:
+                    # MOSS named its clusters on minutes of audio against the
+                    # prints of both laptops (moss_naming); a per-piece print
+                    # check would only second-guess it on seconds of audio.
                     speaker_tag = getattr(transcript_data, 'speaker_tag', None)
-                    # That label is a cluster, not a fingerprint match, so the
-                    # print confidence does not describe it.
-                    confidence = None
+                    confidence = getattr(transcript_data, 'speaker_confidence', None)
+                    speaker_id = next((sid for sid, info in (self.fingerprints or {}).items()
+                                       if speaker_tag and (info or {}).get('alias') == speaker_tag), -1)
+                else:
+                    speaker_tag, speaker_id, confidence = checkFingerprints(
+                            audio_data, self.fingerprints, self.diarization_model)
+                    if not speaker_tag:
+                        # Batch ASRs (WhisperX + pyannote) can carry a diarization
+                        # cluster label; better than leaving the utterance untagged
+                        # when fingerprint matching fails.
+                        speaker_tag = getattr(transcript_data, 'speaker_tag', None)
+                        # That label is a cluster, not a fingerprint match, so the
+                        # print confidence does not describe it.
+                        confidence = None
 
-                # Staged; _publish feeds it to speaker_metrics_process (which
+                # Staged (a named turn too: on 2026-10-18 the named branch
+                # skipped this and a run of 1,129 turns published nothing);
+                # _publish feeds it to speaker_metrics_process (which
                 # computes the GCA metrics and posts) once the run is good.
                 self._staging.add(start_time, 'metrics',
                     {

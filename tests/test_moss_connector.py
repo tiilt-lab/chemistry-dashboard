@@ -138,9 +138,10 @@ def test_a_naming_failure_still_sends_the_transcript(monkeypatch):
 
 def test_the_processor_keeps_a_connector_named_turn_instead_of_rechecking_prints():
     src = open(os.path.join(ROOT, "src", "audio_processing", "processor_posthoc.py")).read()
-    i = src.index("if getattr(transcript_data, 'named_by_asr', False):")
-    assert i < src.index("checkFingerprints(\n", i) if "checkFingerprints(\n" in src[i:] else i < src.index("checkFingerprints(", i)
-    assert "speaker_confidence" in src[i:i + 900]
+    i = src.index("if named_by_asr or (self.config.diarization and self.fingerprints and len(self.fingerprints)):")
+    j = src.index("if named_by_asr:", i)
+    assert j < src.index("checkFingerprints(", i)
+    assert "speaker_confidence" in src[j:j + 900]
 
 
 def test_connector_reports_a_failed_pass_then_ends_the_stream(monkeypatch):
