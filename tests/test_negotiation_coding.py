@@ -639,8 +639,9 @@ def test_routes_post_get_put_export_and_session_list(env):
     assert payload["pods"] == [{"id": pod.id, "name": pod.name, "group": None, "side": None}]
     assert len(payload["codes"]) == 14
     first = payload["codes"][0]
-    assert set(first) == {"transcript_id", "session_device_id", "start_time", "length", "speaker_tag", "team", "far_side", "stitched_from",
-                          "text", "emotion", "rip", "frame", "listening"}
+    assert set(first) == {"transcript_id", "session_device_id", "start_time", "length", "speaker_tag", "adopted", "team",
+                          "far_side", "closed_world", "match_sim", "stitched_from", "text", "emotion", "rip", "frame", "listening"}
+    assert first["adopted"] is False and first["closed_world"] is False and first["match_sim"] is None
     assert (first["start_time"], first["speaker_tag"], first["team"], first["frame"]) == (0, "Pat", "Pat", "past_blame")
     assert first["session_device_id"] == pod.id
     assert payload["codes"][8]["listening"] == ["paraphrase", "check_understanding"]
@@ -2014,8 +2015,8 @@ def test_a_session_codes_with_the_scheme_it_chose(env):
     assert payload["codebook"]["name"] == "Discussion liveliness"
     assert [dim["key"] for dim in payload["codebook"]["dimensions"]] == ["move", "tone"]
     assert payload["codebook"]["dimensions"][0]["codes"][1]["label"] == "Builds on"
-    assert set(payload["codes"][0]) == {"transcript_id", "session_device_id", "start_time", "length", "speaker_tag",
-                                        "team", "far_side", "stitched_from", "text", "move", "tone"}
+    assert set(payload["codes"][0]) == {"transcript_id", "session_device_id", "start_time", "length", "speaker_tag", "adopted",
+                                        "team", "far_side", "closed_world", "match_sim", "stitched_from", "text", "move", "tone"}
     assert payload["codes"][0]["move"] == "proposes" and payload["codes"][0]["tone"] == ["playful"]
     assert payload["codes"][1]["tone"] == []
     by_team = payload["summary"]["by_team"]
@@ -2113,3 +2114,191 @@ def test_teams_are_read_off_speaker_names_when_nobody_assigned(env):
     assert ok
     run3 = env.engine.run_coding(pod.id, llm=gold_llm)
     assert run3.teams_dict()["Pat1"] == "Sandy" and run3.teams_dict()["Pat2"] == "Pat"
+
+
+# ------------------------------------------- 2026-10-18: after session 434
+
+def test_stitching_drops_non_speech_rows_and_adopts_short_unnamed_pieces():
+    # Session 434 (2026-10-16): 2-6% of every group's coded lines were event
+    # tags alone ("[breath]"), and most unnamed lines were one- or two-word
+    # pieces next to a named line of the same laptop ("[UH] So", "Yeah.").
+    assert nc.is_non_speech("[breath] [breath]") and nc.is_non_speech(" [laughter]. ") and nc.is_non_speech("[UM] [UH]")
+    assert not nc.is_non_speech("[UM] yes") and not nc.is_non_speech("") and not nc.is_non_speech("Yeah.")
+    assert nc.lexical_words("[UH] So we need") == ["So", "we", "need"]
+    rows = [
+        dict(transcript_id=1, session_device_id=1, start_time=0.0, length=1.0, speaker_tag=None, team="Pat", text="[breath]"),
+        dict(transcript_id=2, session_device_id=1, start_time=1.0, length=0.5, speaker_tag=None, team="Pat", text="[UH] So"),
+        dict(transcript_id=3, session_device_id=1, start_time=2.0, length=3.0, speaker_tag="Pat1", team="Pat", text="we need the money by Friday."),
+        dict(transcript_id=4, session_device_id=1, start_time=5.5, length=0.5, speaker_tag=None, team="Pat", text="Yeah."),
+        dict(transcript_id=5, session_device_id=2, start_time=6.5, length=2.0, speaker_tag="Sandy1", team="Sandy", text="That is not possible."),
+        dict(transcript_id=6, session_device_id=2, start_time=9.0, length=1.0, speaker_tag=None, team="Sandy", text="[laughter] [breath]"),
+        dict(transcript_id=7, session_device_id=2, start_time=12.0, length=2.0, speaker_tag=None, team="Sandy", text="I would need to talk to my supplier first."),
+        # a short unnamed piece on the OTHER laptop is nobody's
+        dict(transcript_id=8, session_device_id=1, start_time=14.5, length=0.5, speaker_tag=None, team="Pat", text="Mm-hmm."),
+    ]
+    dropped = []
+    out = nc.stitch_sentences(rows, dropped)
+    assert [(u["speaker_tag"], u["team"], u["text"]) for u in out] == [
+        ("Pat1", "Pat", "[UH] So we need the money by Friday. Yeah."),
+        ("Sandy1", "Sandy", "That is not possible."),
+        (None, "Sandy", "I would need to talk to my supplier first."),
+        (None, "Pat", "Mm-hmm."),
+    ]
+    assert out[0]["transcript_id"] == 2 and out[0]["stitched_from"] == [3, 4] and out[0]["_speaker"] == "Pat1"
+    assert "_speaker" not in out[2] and "_speaker" not in out[3]
+    assert [(d["transcript_id"], d["reason"], d["kept_transcript_id"]) for d in dropped] == [
+        (1, "non_speech", None), (6, "non_speech", None)]
+    # without a list to report to, the rows are simply left out
+    assert len(nc.stitch_sentences(rows)) == 4
+
+
+def test_code_row_shows_an_adopted_name_and_the_match_flags():
+    adopted = types.SimpleNamespace(values=lambda: {"emotion": "neutral", "rip": "none", "frame": "none", "listening": [],
+                                                    "_text": "[UH] So we need the money.", "_stitched": [3], "_speaker": "Pat1"})
+    row = nc.code_row(adopted, _row(2, 1, 1.0, "[UH] So", None, length=1), {}, {1: "Pat", 2: "Sandy"}, ("Pat", "Sandy"))
+    assert (row["speaker_tag"], row["adopted"], row["text"], row["stitched_from"]) == ("Pat1", True, "[UH] So we need the money.", [3])
+    assert (row["closed_world"], row["match_sim"], row["far_side"]) == (False, None, False)
+    assert "_speaker" not in row and "_text" not in row
+    plain = types.SimpleNamespace(values=lambda: {"emotion": "neutral", "rip": "none", "frame": "none", "listening": []})
+    row = nc.code_row(plain, _row(3, 1, 2.0, "we need the money.", "Pat1", sim=0.17, closed_world=True), {}, {1: "Pat", 2: "Sandy"}, ("Pat", "Sandy"))
+    assert (row["speaker_tag"], row["adopted"], row["closed_world"], row["match_sim"]) == ("Pat1", False, True, 0.17)
+
+
+def test_code_utterances_in_parallel_keeps_transcript_order(monkeypatch):
+    import threading
+    calls, lock = [], threading.Lock()
+
+    def slow_then_fast(messages):
+        idx = _code_indices(messages)
+        with lock:
+            calls.append(idx[0])
+        # the first chunk answers last
+        __import__("time").sleep(0.05 if idx[0] == 0 else 0.0)
+        return json.dumps([{"i": i, "emotion": "neutral", "rip": "none", "frame": "none", "listening": []} for i in idx])
+
+    utts = _utterances(23)
+    coded, invalid = nc.code_utterances(CODEBOOK, utts, slow_then_fast, size=5, context=2, parallel=3)
+    assert [c["index"] for c in coded] == list(range(23)) and invalid == 0
+    assert sorted(calls) == [0, 5, 10, 15, 20]
+    assert all(c["emotion"] == "neutral" for c in coded)
+    # the knob: NEGOTIATION_LLM_PARALLEL, 1 when unset or unreadable
+    monkeypatch.delenv("NEGOTIATION_LLM_PARALLEL", raising=False)
+    assert nc.llm_parallel() == 1
+    monkeypatch.setenv("NEGOTIATION_LLM_PARALLEL", "4")
+    assert nc.llm_parallel() == 4
+    monkeypatch.setenv("NEGOTIATION_LLM_PARALLEL", "many")
+    assert nc.llm_parallel() == 1
+    # a chunk that fails still fails the run
+    def broken(messages):
+        return "nothing" if _code_indices(messages)[0] == 10 else slow_then_fast(messages)
+    with pytest.raises(RuntimeError, match="utterances 10-14"):
+        nc.code_utterances(CODEBOOK, utts, broken, size=5, context=2, parallel=3)
+
+
+def test_export_row_and_group_order():
+    assert nc.clock_text(63524.0) == "17:38:44" and nc.clock_text(None) == "" and nc.clock_text(5) == "0:00:05"
+    assert sorted(["Group 10", "Group 2", "", "Group 1"], key=nc.group_sort_key) == ["Group 1", "Group 2", "Group 10", ""]
+    pods = {1: {"name": "Group 2 Pat", "group": "Group 2", "side": "Pat"}}
+    code = {"session_device_id": 1, "team": "Sandy", "speaker_tag": "Sand1", "adopted": False, "far_side": True,
+            "closed_world": False, "match_sim": 0.61, "transcript_id": 9, "start_time": 63524.0, "length": 2.0,
+            "text": "No, we can't.", "stitched_from": [10, 11], "emotion": "escalating", "rip": "none", "frame": "none",
+            "listening": ["closed_question", "ask_why"]}
+    assert nc.export_row(code, pods, ["emotion", "rip", "frame", "listening"], 19) == [
+        "Group 2", "Group 2 Pat", "Pat", "Sandy", "Sand1", "yes", "yes", "", 0.61, 19, 9, 63524.0, "17:38:44", 2.0,
+        "No, we can't.", "10;11", "escalating", "none", "none", "closed_question;ask_why"]
+    unnamed = dict(code, speaker_tag=None, adopted=False, far_side=False, match_sim=None, stitched_from=[])
+    assert nc.export_row(unnamed, pods, ["emotion"])[4:9] == ["", "no", "", "", ""]
+    assert nc.export_row(dict(code, adopted=True), pods, [])[5] == "adopted"
+
+
+def test_resolve_pair_prefers_the_pod_that_recorded_something(env):
+    # Group 8 on 2026-10-16: the Sandy laptop joined (no transcripts), was
+    # replaced by "Sandy 2", and the pairing took the empty one.
+    from tables.session_device import SessionDevice
+    d = env.database
+    session, (pat, empty) = _paired_session(env, group="Group 8")
+    sandy2 = SessionDevice(session.id, None, "Sandy 2")
+    sandy2.negotiation_group, sandy2.negotiation_side = "Group 8", "Sandy"
+    env.db.session.add(sandy2)
+    env.db.session.flush()
+    sandy2.create_key()
+    env.db.session.commit()
+    _add(env, pat, 0, "We need the money by Friday.", "Pat", sim=0.8)
+    _add(env, sandy2, 2, "That is not possible.", "Sandy", sim=0.8)
+    assert empty.id < sandy2.id
+    assert d.get_negotiation_partner(pat).id == sandy2.id
+    assert env.engine.resolve_pair(pat.id) == (pat.id, sandy2.id)
+    assert env.engine.resolve_pair(sandy2.id) == (pat.id, sandy2.id)
+    assert env.engine.resolve_pair(empty.id) == (empty.id, None)      # the extra laptop, on its own
+    # with nothing recorded anywhere the lowest id still stands in
+    other, (a, b) = _paired_session(env, group="Group 9")
+    assert env.engine.resolve_pair(a.id) == (a.id, b.id) and d.get_negotiation_partner(b).id == a.id
+
+
+def test_session_exports_cover_every_group_and_every_row(env):
+    from tables.session_device import SessionDevice
+    d, r = env.database, env.routes
+    session, (pat, sandy) = _paired_session(env, group="Group 2")
+    for i, (tag, text, _) in enumerate(VIKING):
+        near, far = (pat, sandy) if tag == "Pat" else (sandy, pat)
+        _add(env, near, 15 * i, text, tag, sim=0.85)
+        _add(env, far, 15 * i + 1, text, tag, sim=0.5, closed_world=True)
+    # after the exchange: a breath, then a short unnamed piece and Pat's line
+    _add(env, pat, 300, "[breath]", None)
+    _add(env, pat, 320, "[UM] So", None)
+    _add(env, pat, 331, "Let us settle this today.", "Pat", sim=0.9)
+    # a second group, one laptop, so the file holds two groups in order
+    pat10 = SessionDevice(session.id, None, "Group 10 Pat")
+    pat10.negotiation_group, pat10.negotiation_side = "Group 10", "Pat"
+    env.db.session.add(pat10)
+    env.db.session.flush()
+    pat10.create_key()
+    env.db.session.commit()
+    _add(env, pat10, 0, VIKING[0][1], "Pat", sim=0.7)
+    _add(env, pat10, 15, VIKING[1][1], "Sandy", sim=0.7)
+    first, partner = env.engine.resolve_pair(pat.id)
+    run = env.engine.queue_coding_run(session.id, first, partner_device_id=partner)
+    env.engine.run_coding(pat.id, llm=gold_llm, run_id=run.id)
+    run10 = env.engine.queue_coding_run(session.id, pat10.id)
+    env.engine.run_coding(pat10.id, llm=gold_llm, run_id=run10.id)
+
+    resp = _call(env, r.export_session_negotiation_coding, "GET", session_id=session.id)
+    assert resp.status_code == 200 and resp.headers["Content-Type"] == "text/csv; charset=utf-8"
+    assert resp.headers["Content-Disposition"] == "attachment; filename=negotiation_coding_session%d.csv" % session.id
+    rows = list(csv.reader(io.StringIO(resp.data.decode("utf-8"))))
+    assert rows[0] == list(nc.EXPORT_COLUMNS) + ["emotion", "rip", "frame", "listening"]
+    assert [row[0] for row in rows[1:]] == ["Group 2"] * 15 + ["Group 10"] * 2
+    assert [row[3] for row in rows[1:16]] == [tag for tag, _, _ in VIKING] + ["Pat"]
+    assert rows[1][1:6] == ["Group 2 Pat", "Pat", "Pat", "Pat", "yes"] and rows[1][9] == str(run.id)
+    assert rows[2][1:4] == ["Group 2 Sandy", "Sandy", "Sandy"]
+    assert rows[1][12] == "0:00:00" and rows[2][12] == "0:00:15"
+    stitched = rows[15]
+    assert stitched[4:6] == ["Pat", "adopted"] and stitched[14] == "[UM] So Let us settle this today."
+    assert rows[16][3:6] == ["Pat", "Pat", "yes"] and rows[17][3:5] == ["Pat", "Sandy"]   # a lone sided pod: its side
+    assert all(row[16] in ("escalating", "defusing", "neutral") for row in rows[1:])
+
+    resp = _call(env, r.export_session_transcript, "GET", session_id=session.id)
+    assert resp.status_code == 200
+    assert resp.headers["Content-Disposition"] == "attachment; filename=negotiation_transcript_session%d.csv" % session.id
+    rows = list(csv.reader(io.StringIO(resp.data.decode("utf-8"))))
+    assert rows[0][:17] == ["group", "pod", "side", "team", "speaker_tag", "named", "far_side", "closed_world", "match_sim",
+                            "transcript_id", "start_time", "clock", "length", "text", "status", "kept_as", "run_id"]
+    assert len(rows) == 1 + 28 + 3 + 2
+    by_text = {}
+    for row in rows[1:]:
+        by_text.setdefault((row[1], row[13]), row)
+    coded = [row for row in rows[1:] if row[14] == "coded"]
+    assert len(coded) == 17
+    assert by_text[("Group 2 Pat", "[breath]")][14:16] == ["dropped:non_speech", ""]
+    assert by_text[("Group 2 Pat", "[UM] So")][14] == "coded" and by_text[("Group 2 Pat", "[UM] So")][5] == "no"
+    settle = by_text[("Group 2 Pat", "Let us settle this today.")]
+    assert settle[14] == "stitched" and settle[15] == by_text[("Group 2 Pat", "[UM] So")][9]
+    far_copy = by_text[("Group 2 Sandy", VIKING[0][1])]
+    assert far_copy[14] == "dropped:duplicate" and far_copy[15] == by_text[("Group 2 Pat", VIKING[0][1])][9]
+    assert far_copy[7] == "yes" and far_copy[8] == "0.5" and far_copy[3] == "Sandy"
+    assert by_text[("Group 10 Pat", VIKING[1][1])][3] == "Pat" and by_text[("Group 10 Pat", VIKING[1][1])][16] == str(run10.id)
+    # a pod nobody coded: every row uncoded
+    stray = _pod(env, session)
+    rows = list(csv.reader(io.StringIO(_call(env, r.export_session_transcript, "GET", session_id=session.id).data.decode("utf-8"))))
+    assert sum(1 for row in rows[1:] if row[1] == stray.name and row[14] == "uncoded") == 14
+    assert [row[0] for row in rows[1:]][-14:] == [""] * 14      # unnamed groups last

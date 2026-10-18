@@ -299,7 +299,7 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
                             {run.model ? ` · ${run.model}` : null}
                             {run.codebook_version ? ` · codebook ${run.codebook_version}` : null}
                             {crossTalk && typeof crossTalk.dropped === "number"
-                                ? ` · ${crossTalk.dropped} cross-talk copies dropped`
+                                ? ` · ${crossTalk.dropped} rows left out (copies, far side, non-speech)`
                                 : null}
                         </span>
                     ) : null}
@@ -311,6 +311,26 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
                             className={btnSecondarySm}
                         >
                             Export CSV
+                        </a>
+                    ) : null}
+                    {hasResults ? (
+                        <a
+                            href={svc.sessionExportCsvUrl(sessionId)}
+                            download
+                            className={btnSecondarySm}
+                            title="Every group's coded transcript in one CSV"
+                        >
+                            All groups CSV
+                        </a>
+                    ) : null}
+                    {hasResults ? (
+                        <a
+                            href={svc.sessionTranscriptCsvUrl(sessionId)}
+                            download
+                            className={btnSecondarySm}
+                            title="Every transcript row of every pod, with what the coding did with it"
+                        >
+                            Full transcript CSV
                         </a>
                     ) : null}
                     <button

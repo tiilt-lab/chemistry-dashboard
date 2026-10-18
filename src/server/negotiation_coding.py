@@ -93,7 +93,23 @@ STITCH_LEAD_WORDS = 3        # a sentence end within this many words of the star
 STITCH_GAP = 1.5             # s between a speaker's pieces for them to be one sentence
 STITCH_MAX_SECONDS = 30.0    # a stitched sentence never spans more than this
 STITCH_MAX_WORDS = 70
+STITCH_SHORT_WORDS = 3       # an unnamed piece this short next to a named piece on the same laptop is that speaker's
 _SENTENCE_END = re.compile(r"[.?!]['\"\)\]]*$")
+# The recognizer's event tags ("[breath]", "[laughter]", "[UM] [UH]") on
+# their own are not an utterance: nothing to code and nobody to name. Such
+# rows are left out of the coding (dropped, reason "non_speech"); on
+# 2026-10-16 they were 2-6% of every group's coded lines, most of them unnamed.
+_NON_SPEECH = re.compile(r"^(\s*\[[a-z_\- ]+\][.,!?]*\s*)+$", re.I)
+_TAG = re.compile(r"\[[a-z_\- ]+\]", re.I)
+_LEXICAL_WORD = re.compile(r"[a-z0-9']+", re.I)
+# Chat completions in flight at once for one run (NEGOTIATION_LLM_PARALLEL):
+# the llama-server has four slots, so a run's chunks can go four at a time,
+# at the price of more GPU load beside a live class. 1 = one after another.
+DEFAULT_LLM_PARALLEL = 1
+# How many of the rows left out of a run are listed, with their reason, in
+# the run's record (summary.cross_talk.detail): the transcript export reads
+# it. A group's two laptops leave out 300-600 rows (2026-10-16).
+DROP_DETAIL_MAX = 1500
 
 # Placeholder team names for a session whose setup names none; every real
 # run takes its names from the session (run_names / device_team_names).
@@ -110,6 +126,13 @@ def llm_url():
 
 def llm_model():
     return os.environ.get("NEGOTIATION_LLM_MODEL") or DEFAULT_LLM_MODEL
+
+
+def llm_parallel():
+    try:
+        return max(1, int(os.environ.get("NEGOTIATION_LLM_PARALLEL") or DEFAULT_LLM_PARALLEL))
+    except ValueError:
+        return DEFAULT_LLM_PARALLEL
 
 
 def load_codebook(path=CODEBOOK_PATH):
@@ -782,6 +805,17 @@ def _ends_sentence(text):
     return bool(_SENTENCE_END.search((text or "").strip()))
 
 
+def is_non_speech(text):
+    """True for a row that is only recognizer event tags ("[breath]")."""
+    text = (text or "").strip()
+    return bool(text) and bool(_NON_SPEECH.match(text))
+
+
+def lexical_words(text):
+    """The words of a text, event tags left out."""
+    return _LEXICAL_WORD.findall(_TAG.sub(" ", text or ""))
+
+
 def _leading_tail(text):
     """(tail, rest) when a sentence ends within the first STITCH_LEAD_WORDS
     words of ``text`` and more words follow: the tail is the end of the
@@ -805,8 +839,24 @@ def stitch_sentences(utterances, dropped=None):
     both sides, is that speaker's. Each stitched utterance keeps the first
     piece's transcript_id, lists the others in ``stitched_from`` and carries
     the sentence in ``text``; nothing exceeds STITCH_MAX_SECONDS or
-    STITCH_MAX_WORDS. ``dropped`` receives pieces emptied by (1)."""
+    STITCH_MAX_WORDS. (4) A short unnamed piece (STITCH_SHORT_WORDS words or
+    fewer) right after or right before a named piece on the same device,
+    within the gap, is that speaker's: "[UH] So" before a sentence, "Yeah."
+    after one. An adopted piece carries ``_speaker`` so the stored codes
+    show the name the coder saw. Rows of event tags alone ("[breath]") are
+    not utterances and are left out first. ``dropped`` receives pieces
+    emptied by (1) and the non-speech rows."""
     rows = sorted((dict(u) for u in utterances), key=lambda u: (u["start_time"], u["transcript_id"]))
+    # (0) event tags alone
+    speech = []
+    for u in rows:
+        if is_non_speech(u.get("text")):
+            if dropped is not None:
+                dropped.append({"transcript_id": u["transcript_id"], "kept_transcript_id": None,
+                                "reason": "non_speech", "similarity": 1.0})
+            continue
+        speech.append(u)
+    rows = speech
     # (1) leading tails
     out = []
     for u in rows:
@@ -834,6 +884,26 @@ def stitch_sentences(utterances, dropped=None):
             u["speaker_tag"] = prev["speaker_tag"]
             u["team"] = prev.get("team", u.get("team"))
             u["adopted"] = True
+    # (4) short unnamed pieces beside a named piece on the same device
+    for i, u in enumerate(out):
+        if u.get("speaker_tag") or len(lexical_words(u.get("text"))) > STITCH_SHORT_WORDS:
+            continue
+        owners = []
+        if i > 0:
+            prev = out[i - 1]
+            gap = float(u["start_time"]) - _span(prev)[1]
+            if prev.get("speaker_tag") and prev.get("session_device_id") == u.get("session_device_id") and gap <= STITCH_GAP:
+                owners.append((max(gap, 0.0), prev))
+        if i + 1 < len(out):
+            nxt = out[i + 1]
+            gap = float(nxt["start_time"]) - _span(u)[1]
+            if nxt.get("speaker_tag") and nxt.get("session_device_id") == u.get("session_device_id") and gap <= STITCH_GAP:
+                owners.append((max(gap, 0.0), nxt))
+        if owners:
+            owner = min(owners, key=lambda o: o[0])[1]
+            u["speaker_tag"] = owner["speaker_tag"]
+            u["team"] = owner.get("team", u.get("team"))
+            u["adopted"] = True
     # (2) one speaker's consecutive pieces
     stitched = []
     for u in out:
@@ -857,6 +927,8 @@ def stitch_sentences(utterances, dropped=None):
         if u.get("stitched_from") or u.get("trimmed"):
             u["_text"] = u["text"]
             u["_stitched"] = list(u.get("stitched_from") or [])
+        if u.get("adopted") and u.get("speaker_tag"):
+            u["_speaker"] = u["speaker_tag"]
     return stitched
 
 
@@ -992,17 +1064,32 @@ def validate_codes(items, codebook, indices):
     return out, invalid
 
 
-def code_utterances(codebook, utterances, llm=None, size=CHUNK_SIZE, context=CONTEXT_SIZE, names=DEFAULT_TEAMS):
+def code_utterances(codebook, utterances, llm=None, size=CHUNK_SIZE, context=CONTEXT_SIZE, names=DEFAULT_TEAMS,
+                    parallel=None):
     """Every utterance coded, chunk by chunk. Returns (codes aligned with
-    ``utterances``, each the utterance dict plus its four codes; invalid_codes)."""
+    ``utterances``, each the utterance dict plus its four codes; invalid_codes).
+    ``parallel`` chunks are coded at once (default NEGOTIATION_LLM_PARALLEL);
+    the result is in transcript order whatever the order the answers came."""
     llm = llm or call_llm
-    coded, invalid = [], 0
-    for ctx, chunk in chunks(utterances, size, context):
+    parts = list(chunks(utterances, size, context))
+
+    def one(part):
+        ctx, chunk = part
         items = extract_array(llm(build_prompt(codebook, chunk, ctx, names)))
         if not items:
             raise RuntimeError("LLM returned no parseable codes for utterances %d-%d"
                                % (chunk[0]["index"], chunk[-1]["index"]))
-        by_index, bad = validate_codes(items, codebook, [u["index"] for u in chunk])
+        return validate_codes(items, codebook, [u["index"] for u in chunk])
+
+    workers = max(1, int(parallel if parallel is not None else llm_parallel()))
+    if workers > 1 and len(parts) > 1:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=min(workers, len(parts))) as pool:
+            results = list(pool.map(one, parts))
+    else:
+        results = [one(part) for part in parts]
+    coded, invalid = [], 0
+    for (_ctx, chunk), (by_index, bad) in zip(parts, results):
         invalid += bad
         coded.extend(dict(u, **by_index[u["index"]]) for u in chunk)
     return coded, invalid
@@ -1189,6 +1276,44 @@ def validate_teams(teams, names=TEAMS):
     return clean, None
 
 
+# ------------------------------------------------------------- export
+
+EXPORT_COLUMNS = ("group", "pod", "side", "team", "speaker_tag", "named", "far_side", "closed_world", "match_sim",
+                  "run_id", "transcript_id", "start_time", "clock", "length", "text", "stitched_from")
+
+
+def clock_text(seconds):
+    """Session-clock seconds as h:mm:ss (what the transcript panel shows)."""
+    try:
+        s = int(round(float(seconds)))
+    except (TypeError, ValueError):
+        return ""
+    return "%d:%02d:%02d" % (s // 3600, s % 3600 // 60, s % 60)
+
+
+def _natural(text):
+    return [int(p) if p.isdigit() else p.lower() for p in re.split(r"(\d+)", str(text or ""))]
+
+
+def group_sort_key(group):
+    """"Group 2" before "Group 10"; unnamed groups last."""
+    return (group in (None, ""), _natural(group))
+
+
+def export_row(code, pods, dims, run_id=None):
+    """One CSV row (EXPORT_COLUMNS then the scheme's dimensions) for a
+    code_row dict; ``pods`` maps device id -> {name, group, side}."""
+    pod = pods.get(code.get("session_device_id")) or {}
+    named = "adopted" if code.get("adopted") else ("yes" if code.get("speaker_tag") else "no")
+    values = [";".join(code[d]) if isinstance(code.get(d), list) else (code.get(d) or "") for d in dims]
+    return [pod.get("group") or "", pod.get("name") or "", pod.get("side") or "", code.get("team") or "",
+            code.get("speaker_tag") or "", named, "yes" if code.get("far_side") else "",
+            "yes" if code.get("closed_world") else "", "" if code.get("match_sim") is None else code["match_sim"],
+            "" if run_id is None else run_id, code.get("transcript_id"), code.get("start_time"),
+            clock_text(code.get("start_time")), code.get("length"), code.get("text") or "",
+            ";".join(str(t) for t in (code.get("stitched_from") or []))] + values
+
+
 # --------------------------------------------------------- orchestration
 
 def line_team(transcript, sides=None, teams=None, names=TEAMS):
@@ -1218,12 +1343,18 @@ def code_row(code, transcript, teams=None, sides=None, names=TEAMS):
     # not the stored fragment; show that sentence.
     presented = values.pop("_text", None)
     stitched = values.pop("_stitched", None) or []
+    # An unnamed fragment the stitcher gave to the speaker around it was
+    # coded, and is shown, under that name.
+    adopted = values.pop("_speaker", None)
     row = {"transcript_id": transcript.id, "session_device_id": device_id,
            "start_time": transcript.start_time, "length": transcript.length,
-           "speaker_tag": transcript.speaker_tag,
+           "speaker_tag": transcript.speaker_tag or adopted,
+           "adopted": bool(adopted and not transcript.speaker_tag),
            "text": presented if presented else transcript.transcript,
            "team": line_team(transcript, sides, teams, names),
            "far_side": bool(conf and conf.get("far_side")),
+           "closed_world": bool(conf and conf.get("closed_world")),
+           "match_sim": conf.get("sim") if conf else None,
            "stitched_from": stitched}
     row.update(values)
     return row
@@ -1313,7 +1444,12 @@ def resolve_pair(session_device_id):
     # its side stamped, rather than pairing the other side twice.
     my_side = _side_of(device, names)
     primaries = {}
-    for d in database.get_negotiation_group_devices(device):
+    # A side's primary is its pod with transcripts (a laptop that joined,
+    # recorded nothing and was replaced by another must not stand in for
+    # the side: Group 8 on 2026-10-16 paired an empty pod and coded the
+    # real one alone), the lowest id among those.
+    for d in sorted(database.get_negotiation_group_devices(device),
+                    key=lambda d: (not database.session_device_transcript_count(d.id), d.id)):
         side = _side_of(d, names)
         if side and side not in primaries:
             primaries[side] = d
@@ -1366,15 +1502,20 @@ def run_coding(session_device_id, teams=None, llm=call_llm, run_id=None, codeboo
             utterances, dropped = merge_paired(rows_by_device, sides, diagnostics, recordings)
             extra["cross_talk"] = {"dropped": len(dropped), "kept": len(utterances),
                                    "alignment": diagnostics.get("alignment"),
-                                   "detail": dropped[:500]}
+                                   "detail": dropped[:DROP_DETAIL_MAX]}
         else:
             rows = database.get_transcripts(session_device_id=run.session_device_id)
             utterances = utterances_from_rows(rows, sides.get(run.session_device_id))
-        utterances = stitch_sentences(utterances, dropped if run.is_paired() else None)
-        if run.is_paired():
+            dropped = []
+        utterances = stitch_sentences(utterances, dropped)
+        if run.is_paired() or dropped:
+            # Everything left out of the coding and why (duplicates, far-side
+            # copies, fragments, non-speech rows); a single pod's record has
+            # no alignment.
+            extra.setdefault("cross_talk", {"alignment": None})
             extra["cross_talk"]["dropped"] = len(dropped)
             extra["cross_talk"]["kept"] = len(utterances)
-            extra["cross_talk"]["detail"] = dropped[:500]
+            extra["cross_talk"]["detail"] = dropped[:DROP_DETAIL_MAX]
         coded, invalid = code_utterances(codebook, utterances, llm, names=names)
         database.add_negotiation_codes(run.id, coded, list(codebook["dimensions"]))
         if teams is None:
