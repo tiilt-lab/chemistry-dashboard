@@ -4,6 +4,7 @@ import { VideoAnalyticsPanel } from "../video-analytics/video-analytics-panel"
 import { ConversationDynamicsPanel } from "../conversation-dynamics/conversation-dynamics-panel"
 import { DiscussionSummaryPanel } from "../discussion-summary/discussion-summary-panel"
 import { VideoPlayer } from "../video-player/video-player"
+import { AudioPlayer } from "../audio-player/audio-player"
 import { PosthocTrigger } from "../posthoc/posthoc-trigger"
 import { NegotiationCodingPanel } from "../negotiation-coding/negotiation-coding-panel"
 import { ModelNote } from "../model-note/model-note"
@@ -35,6 +36,7 @@ function AppInfographicsComparison(props) {
     // show each line on the video's clock (recording-relative) rather than
     // session time — the two differ by however long setup ran before recording.
     const [videoSegments, setVideoSegments] = useState(null)
+    const [videoMissing, setVideoMissing] = useState(false)
     // Session-relative playhead of the discussion video, so the transcript can
     // follow along while it plays.
     const [playbackTime, setPlaybackTime] = useState(null)
@@ -162,14 +164,28 @@ function AppInfographicsComparison(props) {
                           heading={"Session video & transcript"}
                       >
                           <div className="flex w-full flex-col gap-3">
-                              <VideoPlayer
-                                  sessionId={props.session.id}
-                                  sessionDeviceId={props.sessionDevice.id}
-                                  selectedTime={selectedTime}
-                                  transcripts={props.displayTranscripts}
-                                  onPlaybackTime={setPlaybackTime}
-                                  onSegments={setVideoSegments}
-                              />
+                              {/* Audio-only pods (and pods whose video is
+                                  missing) play their audio recording in the
+                                  same slot, synced to the transcript. */}
+                              {props.sessionDevice.has_video === false || videoMissing ? (
+                                  <AudioPlayer
+                                      sessionId={props.session.id}
+                                      sessionDeviceId={props.sessionDevice.id}
+                                      selectedTime={selectedTime}
+                                      onPlaybackTime={setPlaybackTime}
+                                      onSegments={setVideoSegments}
+                                  />
+                              ) : (
+                                  <VideoPlayer
+                                      sessionId={props.session.id}
+                                      sessionDeviceId={props.sessionDevice.id}
+                                      selectedTime={selectedTime}
+                                      transcripts={props.displayTranscripts}
+                                      onPlaybackTime={setPlaybackTime}
+                                      onSegments={setVideoSegments}
+                                      onMissing={() => setVideoMissing(true)}
+                                  />
+                              )}
                               <TranscriptPanel
                                   transcripts={props.displayTranscripts}
                                   start={props.startTime}
