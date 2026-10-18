@@ -23,6 +23,7 @@ from speaker_metrics import speaker_metrics
 from features_detector import features_detector
 from keyword_detector import keyword_detector
 from doa.doa_respeaker_v2_6mic_array import calculateDOA
+import recording_sidecar
 from speaker_diarization.pyDiarization import clusterSpectralEmbeddings
 from speaker_diarization.pyDiarization import embedSignal, checkFingerprints, part_voice_features
 from speaker_diarization.pyDiarization import getSpectralEmbeddings
@@ -434,8 +435,11 @@ class AudioProcessorPosthoc:
                 features = scorer_factory.get_scorer(
                     self.scorer or cf.scorer()).detect_features(transcript_text)
 
-            start_time += self.config.start_offset
-            end_time += self.config.start_offset
+            # Recording seconds -> the session clock, through the clock moves
+            # the recording's sidecar recorded (none for a timeline recording).
+            clock = {'start_offset': self.config.start_offset, 'moves': getattr(self.config, 'clock_moves', None) or []}
+            start_time = recording_sidecar.session_time(clock, start_time)
+            end_time = recording_sidecar.session_time(clock, end_time)
             
             # Perform Speaker Diarization
             speaker_tag = None

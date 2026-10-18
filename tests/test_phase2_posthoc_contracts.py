@@ -230,11 +230,13 @@ def test_stale_claims_are_cleared_at_service_start():
 
 # ---- 5. fragment-aware recordings (audit E.2) ---------------------------------
 
-def test_audio_lookup_orders_and_joins_fragments():
+def test_audio_lookup_takes_the_timeline_or_stitches_fragments_on_the_session_clock():
     body = _def(AUDIO, "get_audio_file_path")
-    assert "recording_fragments.select_recording(files)" in body
-    assert "recording_fragments.join_fragments(to_join, chosen)" in body
+    assert "recording_fragments.choose_recording(files, server_start)" in body
+    assert "recording_fragments.select_recording(files)" in body        # the fallback when the chooser fails
+    assert "self.clock_info = clock" in body
     assert "file_path = files[0]" not in AUDIO
+    assert AUDIO.count("conf_val.update(self._clock_fields())") == 3
 
 
 # ---- 6. connection leak + dead sweep (audit C.6) -------------------------------

@@ -75,3 +75,23 @@ def session_time(info, audio_seconds):
         if float(move.get('at', 0.0)) <= float(audio_seconds):
             t += float(move.get('delta') or 0.0)
     return t
+
+
+def recording_time(info, session_seconds):
+    """Seconds into the recording at session clock ``session_seconds``: the
+    inverse of session_time. A moment inside a forward jump (a gap the
+    clock moved over) lands on the move itself; a moment the clock covered
+    twice (a backward move) is taken from the later audio."""
+    t = float(session_seconds) - float(info.get('start_offset') or 0.0)
+    shift = 0.0
+    for move in sorted(info.get('moves') or [], key=lambda m: float(m.get('at') or 0.0)):
+        at, delta = float(move.get('at') or 0.0), float(move.get('delta') or 0.0)
+        candidate = t - shift
+        if delta >= 0:
+            if candidate >= at + delta:
+                shift += delta
+            elif candidate > at:
+                return at
+        elif candidate > at:
+            shift += delta
+    return t - shift

@@ -13,6 +13,7 @@ from gpu_lease import acquire_for_run, live_pods_present, PreemptionWatcher, GPU
 import os
 import time
 import logging
+from datetime import datetime
 import threading
 import wave
 import config as cf
@@ -256,7 +257,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                 # used to leak a trailing space into the key, so the source no
                 # longer matched session_device.processing_key and every DB
                 # callback silently no-oped. See tests/test_recording_filename.py.
-                key, off_set_date = parse_recording_filename(self.audio_file)
+                key = recording_fragments.pod_key(self.audio_file); off_set_date = parse_recording_filename(self.audio_file)[1]
  
                  #keep track of currently running posthoc audio analytics
                 # Atomic cross-process claim; False if a run for this pod is
@@ -271,6 +272,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                 try:
                     conf_val = {'key':key,'encoding': "pcm_f32le", 'sample_rate': self.sample_rate,'channels': 1,'sessionid': self.sessionid,'deviceid': self.session_device_id,
                                 'tag': self.run_tagging, 'server_start':self.server_start,'keywords':self.keywords,'transcribe':self.run_transcribe,'features':self.run_features,'doa':self.run_doa,'topic_model':self.topic_model_choice,'owner':1,'off_set_date':off_set_date}
+                    conf_val.update(self._clock_fields())
                     valid, result = ProcessingConfig.from_json(conf_val,source="posthoc processing")
                     if not valid:
                         # registry.pop releases the cross-process claim too.
@@ -354,7 +356,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                 # used to leak a trailing space into the key, so the source no
                 # longer matched session_device.processing_key and every DB
                 # callback silently no-oped. See tests/test_recording_filename.py.
-                key, off_set_date = parse_recording_filename(self.audio_file)
+                key = recording_fragments.pod_key(self.audio_file); off_set_date = parse_recording_filename(self.audio_file)[1]
             else:
                 key = "No key"
                 off_set_date = "Sat Jun 27 18:17:13 2026" #this is just a generic date
@@ -366,6 +368,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
 
             conf_val = {'key':key,'encoding': "pcm_f32le", 'sample_rate': self.sample_rate,'channels': 1,'sessionid': self.sessionid,'deviceid': self.session_device_id,
                             'tag': True, 'server_start':self.server_start,'keywords':self.keywords,'transcribe':True,'features':True,'doa':True,'topic_model':None,'owner':1,'off_set_date':off_set_date}
+            conf_val.update(self._clock_fields())
             valid, result = ProcessingConfig.from_json(conf_val,source="posthoc processing")
             if not valid:
                 # Release the claim or this pod is blocked until restart.
@@ -400,7 +403,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                 # used to leak a trailing space into the key, so the source no
                 # longer matched session_device.processing_key and every DB
                 # callback silently no-oped. See tests/test_recording_filename.py.
-                key, off_set_date = parse_recording_filename(self.audio_file)
+                key = recording_fragments.pod_key(self.audio_file); off_set_date = parse_recording_filename(self.audio_file)[1]
  
                  #keep track of currently running posthoc audio analytics
                 if not _claim(key):
@@ -409,6 +412,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
 
                 conf_val = {'key':key,'encoding': "pcm_f32le", 'sample_rate': self.sample_rate,'channels': 1,'sessionid': self.sessionid,'deviceid': self.session_device_id,
                                 'tag': True, 'server_start':self.server_start,'keywords':self.keywords,'transcribe':True,'features':True,'doa':True,'topic_model':None,'owner':1,'off_set_date':off_set_date}
+                conf_val.update(self._clock_fields())
                 valid, result = ProcessingConfig.from_json(conf_val,source="posthoc processing")
                 if not valid:
                     # Release the claim or this pod is blocked until restart.
@@ -505,21 +509,38 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         # arbitrary one. Take the _orig fragments in start-time order and,
         # when there are several, analyse their ffmpeg join (cached next to
         # them, rebuilt only when a fragment is newer) (audit E.2).
-        chosen, to_join = recording_fragments.select_recording(files)
+        # The session timeline when the live service wrote one, else the
+        # fragments stitched onto the session clock, else the one fragment;
+        # with the clock the run's rows are stamped by (recording_fragments).
+        server_start = None
+        try:
+            server_start = datetime.strptime(str(self.server_start), "%Y-%m-%dT%H:%M:%S.%fZ")
+        except (TypeError, ValueError):
+            pass
+        try:
+            chosen, clock = recording_fragments.choose_recording(files, server_start)
+            if chosen and (recording_fragments.STITCHED_TAG in os.path.basename(str(chosen))
+                           or recording_fragments.F32_TAG in os.path.basename(str(chosen))):
+                _M_FRAGMENT_JOINS.labels('ok').inc()
+        except Exception as e:
+            _M_FRAGMENT_JOINS.labels('failed').inc()
+            logging.warning("recording selection failed for %s (%s); using the first fragment", prefix, e)
+            chosen, _ = recording_fragments.select_recording(files)
+            clock = recording_fragments.fragment_clock(chosen, server_start) if chosen else None
         if chosen is None:
             logging.info("No file found")
             return None
-        if to_join:
-            logging.info("Joining %d recording fragments for %s -> %s", len(to_join), prefix, chosen)
-            try:
-                recording_fragments.join_fragments(to_join, chosen)
-                _M_FRAGMENT_JOINS.labels('ok').inc()
-            except Exception as e:
-                _M_FRAGMENT_JOINS.labels('failed').inc()
-                logging.warning("fragment join failed for %s (%s); using the first fragment", prefix, e)
-                chosen = to_join[0]
-        logging.info("Found: {0}".format(chosen))
+        self.clock_info = clock
+        logging.info("Found: {0} (clock {1})".format(chosen, clock))
         return Path(chosen)
+
+    def _clock_fields(self):
+        """The recording's clock for ProcessingConfig: where its first sample
+        sits on the session clock and the moves inside it."""
+        clock = getattr(self, 'clock_info', None)
+        if not clock:
+            return {}
+        return {'clock_start_offset': float(clock.get('start_offset') or 0.0), 'clock_moves': list(clock.get('moves') or [])}
 
     def read_bytes_from_wav(self,wav):
         return audio_bytes.read_bytes_from_wav(wav)
