@@ -536,7 +536,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                                    audio_file=self.audio_file, model_size=cf.whisper_model_size(),
                                    diarize=(getattr(self, 'diarizer_choice', None) == 'pyannote'),
                                    diarizer=(getattr(self, 'diarizer_choice', None)
-                                             if getattr(self, 'diarizer_choice', None) in ('pyannote', 'sortformer', 'diarizen') else None),
+                                             if getattr(self, 'diarizer_choice', None) in ('nemotron3', 'diarizen') else None),
                                    max_speakers=_max_spk, enrolled=_enr, speaker_model=_spk_model)
         else:
             # CrisperWhisper 2.0: the default, and what any unknown key

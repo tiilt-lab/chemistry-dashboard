@@ -402,8 +402,8 @@ def test_audio_leg_defaults_to_diarizen_unless_the_job_names_a_diarizer(q, monke
 
     Capture(q).install(monkeypatch)
     q.enqueue(1, [10])
-    q.enqueue(1, [11], models={"diarizer": "sortformer"})
+    q.enqueue(1, [11], models={"diarizer": "nemotron3"})
     q._worker_loop()
     audio = [i for i in seen if i["type"] == "Initialize_audio_processing_analytics"]
-    assert [(i["sessiondeviceid"], i["diarizer"]) for i in audio] == [(10, "diarizen"), (11, "sortformer")]
+    assert [(i["sessiondeviceid"], i["diarizer"]) for i in audio] == [(10, "diarizen"), (11, "nemotron3")]
     assert all(i["asr"] == "whisperx" for i in audio)

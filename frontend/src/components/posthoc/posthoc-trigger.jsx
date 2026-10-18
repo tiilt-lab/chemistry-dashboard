@@ -44,12 +44,17 @@ const ASR_OPTIONS = [
     { id: "qwen3-0.6b", label: "Qwen3-ASR 0.6B (open; fast variant)" },
     { id: "crisperwhisper", label: "CrisperWhisper 2.0 (verbatim: fillers, stutters, pause-true timing)" },
 ]
+// Exactly two post-hoc diarizers; each runs in its own venv and the audio
+// service falls back to the other when one fails. Older runs were produced
+// by pyannote / Sortformer / voice prints, which are display-only now
+// (shortName below) and no longer selectable.
 const DIARIZER_OPTIONS = [
-    { id: "fingerprint", label: "ECAPA fingerprint matching (enrolled voices)" },
     { id: "diarizen", label: "DiariZen Large-s80-v2 (WavLM, overlap-aware; research licence)" },
-    { id: "pyannote", label: "pyannote 3.1 clustering (open SOTA; WhisperX only)" },
-    { id: "sortformer", label: "NVIDIA Sortformer streaming 4-spk v2.1 (WhisperX only)" },
+    { id: "nemotron3", label: "Nemotron-3 Diarization (NVIDIA, 8 speakers, streaming-capable; OpenMDW licence)" },
 ]
+// Flip to "nemotron3" to change the default (the queue's own default is the
+// one-liner in src/server/posthoc_queue.py).
+const DIARIZER_DEFAULT = "diarizen"
 const EMBEDDER_OPTIONS = [
     { id: "bge-large-en-v1.5", label: "BGE large v1.5 (open SOTA embedder)" },
     { id: "all-mpnet-base-v2", label: "all-mpnet-base-v2 (matches historical metrics)" },
@@ -114,7 +119,9 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     const asr = asrChoice || podModels.asr || "whisperx"
     const scorer = scorerChoice || podModels.scorer || (models && models.scoring && models.scoring.id) || "liwc"
     const [diarizerChoice, setDiarizerChoice] = useState(null)
-    const diarizer = diarizerChoice || podModels.diarizer || "diarizen"
+    // Prefill from provenance only while that diarizer is still offered.
+    const storedDiarizer = DIARIZER_OPTIONS.some((o) => o.id === podModels.diarizer) ? podModels.diarizer : null
+    const diarizer = diarizerChoice || storedDiarizer || DIARIZER_DEFAULT
     const [embedderChoice, setEmbedderChoice] = useState(null)
     const embedder = embedderChoice || podModels.embedder || "bge-large-en-v1.5"
     // Optional video active-speaker detection (TalkNCE trained on UniTalk):
@@ -348,10 +355,12 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
         if (allSettled && !marked.current && active.some((s) => s === "done")) {
             marked.current = true
             // Record which models produced this re-analysis (provenance).
+            // No `diarizer` here: the audio service reports the one that
+            // actually ran (it falls back to the other model on failure),
+            // and this summary is merged over its callback.
             const modelChoices = {
                 asr,
                 scorer,
-                diarizer,
                 embedder,
                 emotion: models && models.emotion && models.emotion.id,
                 attention,
@@ -649,6 +658,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
             fingerprint: "voice prints",
             sortformer: "Sortformer",
             diarizen: "DiariZen",
+            nemotron3: "Nemotron-3",
             liwc: "LIWC",
             open: "Inquirer",
             llm: "Gemini LLM",

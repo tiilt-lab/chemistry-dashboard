@@ -253,17 +253,23 @@ def test_ticket_gate_still_precedes_every_handler():
 
 # ---- 7. DiariZen as a WhisperX diarizer choice --------------------------------
 
-def test_diarizen_is_a_whisperx_diarizer_choice_and_provenance_names_what_ran():
+def test_new_runs_choose_between_the_two_posthoc_diarizers_and_provenance_names_what_ran():
     start = _def(AUDIO, "signal_start")
-    assert "in ('pyannote', 'sortformer', 'diarizen') else None" in start
+    assert "in ('nemotron3', 'diarizen') else None" in start
+    assert "'pyannote', 'sortformer'" not in start
     assert "'diarizer': self.diarizer_choice," in AUDIO
-    # The connector drops to pyannote when the DiariZen subprocess fails;
-    # the completion payload must then say pyannote, not the request.
+    # The connector runs the other diarizer when the chosen one fails; the
+    # completion payload must then name the one that ran, not the request.
     done = _def(AUDIO, "on_run_complete")
     assert "ran = getattr(self.asr, 'diarizer_used', None)" in done
     _before(done, "choices['diarizer'] = ran",
             "callbacks.post_posthoc_completed(self.config.auth_key, choices)")
     wx = _read("audio_processing", "asr_connectors", "whisperx_asr.py")
-    assert 'if self.diarizer == "diarizen":' in wx
-    assert 'self.diarizer_used = "pyannote"' in wx
-    assert "self.diarizer_used = self.diarizer" in wx
+    assert 'POSTHOC_DIARIZERS = ("diarizen", "nemotron3")' in wx
+    assert "if self.diarizer in POSTHOC_DIARIZERS:" in wx
+    assert "self.diarizer_used = ran" in wx
+    assert "falling back to pyannote" not in wx
+    # The browser's own summary must not overwrite that with the request.
+    trigger = _read("..", "frontend", "src", "components", "posthoc", "posthoc-trigger.jsx")
+    summary = trigger[trigger.index("const modelChoices = {"):trigger.index(".markPosthocCompleted(")]
+    assert "diarizer" not in summary.split("{", 1)[1]
