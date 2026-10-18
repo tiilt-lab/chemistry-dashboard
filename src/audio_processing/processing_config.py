@@ -5,6 +5,20 @@ import json
 import logging
 import config as cf
 
+def posthoc_start_offset(data, server_start, offset=0.0):
+    """Session seconds of the recording's first sample for a post-hoc run:
+    the clock the service read off the recording's sidecar
+    (``clock_start_offset``, recording_fragments.choose_recording), else the
+    file's name stamp against the session's start, as before. The sidecar
+    is the live service's own stamp of that moment; the name stamp can be
+    minutes off once the clock anchor moved (session 434: 68 and 438 s)."""
+    clock = data.get('clock_start_offset')
+    if clock is not None:
+        return max(float(clock) - offset, 0.0)
+    convert_off_set = datetime.strptime(data.get('off_set_date', None), "%a %b %d %H:%M:%S %Y")
+    return max((convert_off_set - server_start).total_seconds() - offset, 0.0)
+
+
 class ProcessingConfig:
     def __init__(self, auth_key, session_key, server_start, start_offset, sample_rate, encoding, channels, transcribe, keywords, doa, features, tag, diarization, embeddings_file, topic_model, owner,sessionId,deviceId,videocartoonify,mimeExtension, asr=None):
         self.auth_key = auth_key
@@ -77,8 +91,7 @@ class ProcessingConfig:
             # Post-hoc re-analysis has no live session key; derive the timing
             # from the stored recording's start instead of Redis session config.
             server_start = datetime.strptime(data.get('server_start', None), "%Y-%m-%dT%H:%M:%S.%fZ")
-            convert_off_set = datetime.strptime(data.get('off_set_date', None), "%a %b %d %H:%M:%S %Y")
-            start_offset = max((convert_off_set - server_start).total_seconds() - offset, 0.0)
+            start_offset = posthoc_start_offset(data, server_start, offset)
             transcribe = data.get('transcribe', True)
             features = data.get('features', False)
             keywords = data.get('keywords', [])
@@ -99,6 +112,9 @@ class ProcessingConfig:
         # taken off start_offset above; the clock anchor expects the audio to
         # lead real time by this much (clock_anchor.py).
         config.reported_backlog = offset
+        # Clock moves inside the recording (recording_sidecar): a post-hoc
+        # run stamps its rows through them; a live run has none yet.
+        config.clock_moves = list(data.get('clock_moves') or [])
         # Stamped frames (audio-frame.js): a frame's capture time t sits at
         # capture_origin + t on the session clock, where capture_origin pins
         # the browser's context clock to the session clock at the moment the

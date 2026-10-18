@@ -451,8 +451,8 @@ def test_posthoc_servers_count_runs_claims_and_lease_refusals(tree, service, reg
 
 def test_audio_posthoc_counts_fragment_joins():
     src = _read("src", "audio_processing", "server_posthoc.py")
-    block = src[src.index("recording_fragments.join_fragments(to_join, chosen)"):]
-    block = block[:block.index("chosen = to_join[0]")]
+    block = src[src.index("recording_fragments.choose_recording(files, server_start)"):]
+    block = block[:block.index("self.clock_info = clock")]
     assert "_M_FRAGMENT_JOINS.labels('ok').inc()" in block and "_M_FRAGMENT_JOINS.labels('failed').inc()" in block
 
 

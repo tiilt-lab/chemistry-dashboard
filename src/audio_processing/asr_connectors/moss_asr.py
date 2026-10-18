@@ -114,9 +114,11 @@ class MossASR(PosthocFileASR):
             return {}
         audio, sr = _read_audio(self.audio_file)
         embed = _embedder(self.speaker_model)
-        start_offset = float(getattr(self.config, "start_offset", 0.0) or 0.0)
-        to_rec = lambda session_t: session_t - start_offset        # noqa: E731
-        to_session = lambda rec_t: rec_t + start_offset             # noqa: E731
+        import recording_sidecar
+        clock = {"start_offset": float(getattr(self.config, "start_offset", 0.0) or 0.0),
+                 "moves": list(getattr(self.config, "clock_moves", None) or [])}
+        to_rec = lambda session_t: recording_sidecar.recording_time(clock, session_t)     # noqa: E731
+        to_session = lambda rec_t: recording_sidecar.session_time(clock, rec_t)           # noqa: E731
         prints, kinds = {}, {}
         for alias in roster:
             vec = _enrolment_print(alias, self.speaker_model)
