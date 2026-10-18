@@ -132,3 +132,31 @@ def test_the_word_timing_helper_matches_the_other_engines():
     # skips tokens; MOSS always emits that shape, so downstream timing is unchanged.
     wx = _read("src", "audio_processing", "asr_connectors", "whisperx_asr.py")
     assert 'words = [(text, segment.get("start", 0.0), segment.get("end", 0.0))]' in wx
+
+
+def test_audio_seconds_reads_the_pods_float_wav(tmp_path, monkeypatch):
+    # The pods record 32-bit float WAV, which the wave module refuses
+    # ("unknown format"); the worker's duration must still come out right,
+    # with or without soundfile on the box.
+    import struct
+    import wave
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "moss_cli", os.path.join(ROOT, "src", "audio_processing", "asr_connectors", "moss_cli.py"))
+    moss_cli = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(moss_cli)
+    rate, seconds = 16000, 2.5
+    frames = int(rate * seconds)
+    data = struct.pack("<%df" % frames, *([0.0] * frames))
+    fmt = struct.pack("<HHIIHH", 3, 1, rate, rate * 4, 4, 32)   # format 3 = IEEE float
+    path = tmp_path / "pod_orig.wav"
+    with open(path, "wb") as f:
+        f.write(b"RIFF" + struct.pack("<I", 4 + 8 + len(fmt) + 8 + len(data)) + b"WAVE")
+        f.write(b"fmt " + struct.pack("<I", len(fmt)) + fmt)
+        f.write(b"data" + struct.pack("<I", len(data)) + data)
+    with pytest.raises(wave.Error):
+        wave.open(str(path))
+    assert moss_cli.audio_seconds(str(path)) == pytest.approx(seconds)
+    # the header fallback alone (no soundfile) agrees
+    monkeypatch.setitem(sys.modules, "soundfile", None)
+    assert moss_cli.audio_seconds(str(path)) == pytest.approx(seconds)
