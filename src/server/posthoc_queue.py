@@ -595,7 +595,7 @@ def _run_job(job):
         url = _leg_url(scope)
         if scope == "audio":
             init = dict(base, type="Initialize_audio_processing_analytics",
-                        asr=models.get("asr", "whisperx"),
+                        asr=models.get("asr", "moss"),
                         scorer=models.get("scorer"),
                         diarizer=models.get("diarizer", "diarizen"),
                         embedder=models.get("embedder"))

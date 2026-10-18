@@ -39,6 +39,7 @@ const STARTED_ACKS = new Set([
 // alternative implementations today; the rest are shown (single option,
 // locked) so it is explicit what computes each result.
 const ASR_OPTIONS = [
+    { id: "moss", label: "MOSS-Transcribe-Diarize (default: transcript + speakers in one pass, punctuated)" },
     { id: "whisperx", label: "WhisperX (open SOTA: batched + word-aligned)" },
     { id: "qwen3", label: "Qwen3-ASR 1.7B (open; leaderboard-best WER, slower)" },
     { id: "qwen3-0.6b", label: "Qwen3-ASR 0.6B (open; fast variant)" },
@@ -116,7 +117,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     // data on screen), so the panel reads as current -> next; the open SOTA
     // stack is the fallback for pods that predate provenance stamping.
     const podModels = (sessionDevice && sessionDevice.posthoc_models) || {}
-    const asr = asrChoice || podModels.asr || "whisperx"
+    const asr = asrChoice || podModels.asr || "moss"
     const scorer = scorerChoice || podModels.scorer || (models && models.scoring && models.scoring.id) || "liwc"
     const [diarizerChoice, setDiarizerChoice] = useState(null)
     // Prefill from provenance only while that diarizer is still offered.
@@ -746,9 +747,10 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                 </SelectorRow>
                 <SelectorRow name="Speaker identification" field="diarizer" value={diarizer}>
                     <select
+                        title={asr === "moss" ? "MOSS labels the speakers itself; the diarizer is not used" : undefined}
                         value={diarizer}
                         onChange={(e) => setDiarizerChoice(e.target.value)}
-                        disabled={running}
+                        disabled={running || asr === "moss"}
                         className={selectCls}
                     >
                         {DIARIZER_OPTIONS.map((o) => (
@@ -757,6 +759,11 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                             </option>
                         ))}
                     </select>
+                    {asr === "moss" ? (
+                        <p className="mt-1 text-xs text-tiilt-muted">
+                            MOSS names its own speakers from the voice prints; the diarizer above is not used.
+                        </p>
+                    ) : null}
                 </SelectorRow>
                 <SelectorRow name="Active speaker detection" field={null} value={asd}>
                     <select

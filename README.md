@@ -343,6 +343,17 @@ insecure origins. Add your server's address at
   `src/requirements-crisper.txt`.
 - **Sortformer diarization** uses a separate NeMo venv (`src/venv-nemo`).
 - **Post-hoc speaker diarization** offers two models, each in its own venv:
+
+### MOSS end to end (the default post-hoc engine)
+
+The default post-hoc run is [MOSS-Transcribe-Diarize](https://huggingface.co/OpenMOSS-Team/MOSS-Transcribe-Diarize) (OpenMOSS 0.9B, Apache-2.0): one model listens to the whole recording and writes timestamped, speaker-labelled, punctuated turns, so there is no separate diarizer, aligner or word-assignment step. Its labels (S01, S02, ...) are named against the enrolled voice prints by the same reconciliation the external diarizers use (`asr_connectors/cluster_reconcile.py`). The diarizer choice in the trigger applies to the WhisperX and Qwen3 recognizers only.
+
+- Engine: `src/audio_processing/asr_connectors/moss_asr.py` runs `moss_cli.py` in `src/venv-granite` (transformers 5.x, the OpenMOSS package from `~/src/MOSS-Transcribe-Diarize`, Triton) through `moss_run.py`, like the Nemotron and DiariZen wrappers.
+- The decode loop is our own (`moss_cli.py`): the model in bf16 (Qwen3's MLP overflows fp16 on an hour of audio and emits only "!"), a pre-allocated fp16 KV cache, a Triton split-key kernel for the single-query step (`triton_decode.py`), the step replayed as a CUDA graph, and the vocabulary projection in fp32. On the Quadro RTX 8000 (Turing) it does about 42 tokens/s, an hour of audio in 16 minutes; HF generate managed 2 to 3.
+- Turing GPUs have no PyTorch flash attention; `flash_turing_attn.py` registers the [flash-attention-turing](https://github.com/ssiu/flash-attention-turing) port as the `turing_fa` backend for the encoder and prefill. Build it once into the venv: clone to `~/src/flash-attention-turing` (or set `FLASH_ATTENTION_TURING_DIR`), then `MAX_JOBS=4 src/venv-granite/bin/pip install -v . --no-build-isolation` (about 6 minutes). On an Ampere-or-newer GPU the loop runs on PyTorch's own kernels without it.
+- Budget: the cache is sized at launch for `--max-new-tokens` (default 40,000, about 10 tokens per audio second); a recording past 70 minutes needs a larger value. Progress is written to `<out>.progress` while a pass runs.
+- Measured on the Viking class, Group 7 (2026-10-18): 94% of speech named on both laptops, 19 unnamed merged lines against 50 to 71 for the other engines, punctuation and no doubled words; cross-laptop agreement 83%, a little under the diarizer-plus-recognizer pairs.
+
   **DiariZen** (the default, `src/venv-diarizen`) and **Nemotron-3**
   (`src/venv-nemo3`); build recipes, model ids and licences in
   `src/requirements-unified.README.md`. When one fails the audio service
