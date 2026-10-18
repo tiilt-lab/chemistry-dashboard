@@ -41,6 +41,45 @@ from asr_connectors.base_asr import AsrFailed
 NANO = 1000000000
 
 
+# The post-hoc audio run as one bar: transcription (the long stage; MOSS
+# reports its audio position), naming, per-utterance scoring, publishing.
+# The weights are the stages' measured shares of wall time on this GPU
+# (an hour of audio: ~15 min transcribing, seconds naming, ~1.5 min scoring
+# and publishing), so the page's remaining-time estimate holds across them.
+STAGE_RANGES = {'transcribing': (0, 82), 'naming': (82, 84), 'scoring': (84, 96), 'publishing': (96, 100)}
+
+
+def _clock(seconds):
+    seconds = int(round(float(seconds or 0)))
+    return '%d:%02d' % (seconds // 60, seconds % 60)
+
+
+def progress_of(stage, worker_progress=None, done=0, total=None, published=0, publish_total=None):
+    """(percent 0-100, message) for the run's stage. ``worker_progress`` is
+    the connector worker's sidecar while transcribing; ``done``/``total``
+    the utterances scored; ``published``/``publish_total`` the rows posted."""
+    lo, hi = STAGE_RANGES.get(stage, (0, 0))
+    if stage == 'transcribing':
+        wp = worker_progress or {}
+        audio = float(wp.get('audio_s') or 0.0)
+        reached = float(wp.get('audio_reached_s') or 0.0)
+        share = min(reached / audio, 1.0) if audio > 0 else 0.0
+        rate = wp.get('tok_per_s')
+        msg = 'Transcribing %s of %s' % (_clock(reached), _clock(audio)) if audio > 0 else 'Transcribing'
+        if rate:
+            msg += ' (%d tokens/s)' % int(rate)
+        return int(round(lo + (hi - lo) * share)), msg
+    if stage == 'naming':
+        return lo, 'Naming the speakers'
+    if stage == 'scoring':
+        share = min(float(done) / total, 1.0) if total else 0.0
+        return int(round(lo + (hi - lo) * share)), 'Scoring utterances %d of %s' % (done, total if total else '?')
+    if stage == 'publishing':
+        share = min(float(published) / publish_total, 1.0) if publish_total else 0.0
+        return int(round(lo + (hi - lo) * share)), 'Publishing %d of %s' % (published, publish_total if publish_total else '?')
+    return 0, 'Starting'
+
+
 class AudioProcessorPosthoc:
     def __init__(self, audio_buffer, transcript_queue, diarization_model,
                  semantic_model, config, scorer=None):
@@ -94,6 +133,12 @@ class AudioProcessorPosthoc:
         self._started_at = time.time()  # epoch; sent to clients so elapsed survives refresh
         self.running = True
         self.asr_complete = False
+        self.utterances_seen = 0
+        self.utterances_done = 0
+        self.utterances_total = None
+        self.published = 0
+        self.publish_total = None
+        self.publishing = False
         # Fresh latch per run (start may be called again to reprocess).
         self._latch = CompletionLatch(self.__complete_callback)
         self._staging = RunStaging()
@@ -179,6 +224,8 @@ class AudioProcessorPosthoc:
 
     def _publish(self):
         staged = self._staging.ordered()
+        self.publishing, self.publish_total, self.published = True, len(staged), 0
+        self.report_progress()
         # Only now does the previous analysis go: its replacement is complete.
         callbacks.post_posthoc_reset(self.config.auth_key, 'audio')
         posted = 0
@@ -195,6 +242,9 @@ class AudioProcessorPosthoc:
                 else:
                     logging.warning("Transcript @ %s FAILED to post for client %s",
                                     payload['start_time'], self.config.auth_key)
+            self.published = posted
+            if posted % 25 == 0:
+                self.report_progress()
         logging.info('Posted %d/%d utterances for %s', posted, len(staged), self.config.auth_key)
         # The processor - not the stream reader - knows when every utterance
         # has been fully processed; signal the client here so completion is
@@ -246,6 +296,34 @@ class AudioProcessorPosthoc:
                 self.web_socket_connection.on_run_complete(success=success)
         except Exception as ex:
             logging.warning("on_run_complete notify failed: %s", ex)
+
+    def progress_snapshot(self):
+        """The run's progress message for the trigger UI, from the stage the
+        connector is in and this processor's own counters."""
+        asr = (getattr(self, '_run_parts', None) or {}).get('asr')
+        stage = getattr(asr, 'stage', None)
+        if self.publishing:
+            percent, message = progress_of('publishing', published=self.published, publish_total=self.publish_total)
+        elif stage in ('transcribing', 'naming'):
+            percent, message = progress_of(stage, worker_progress=getattr(asr, 'progress', None))
+        elif self.asr_complete or stage == 'done' or self.utterances_seen:
+            percent, message = progress_of('scoring', done=self.utterances_done, total=self.utterances_total or self.utterances_seen or None)
+        else:
+            percent, message = progress_of('transcribing', worker_progress=getattr(asr, 'progress', None))
+        return {'type': 'progress', 'stage': stage if stage in ('transcribing', 'naming') else ('publishing' if self.publishing else 'scoring'),
+                'percent': percent, 'message': message, 'started_at': getattr(self, '_started_at', None)}
+
+    def report_progress(self):
+        """Store the latest progress (replayed to a reconnecting page) and
+        push it to the attached page. Safe from any thread; never raises."""
+        try:
+            if not self.running:
+                return
+            self._last_progress = self.progress_snapshot()
+            if self.web_socket_connection is not None:
+                self.send_json(self._last_progress)
+        except Exception as e:  # noqa: BLE001 - reporting must not touch the run
+            logging.debug('progress report skipped: %s', e)
 
     def add_websocket_connection(self, web_socket):
         self.web_socket_connection = web_socket
@@ -346,6 +424,8 @@ class AudioProcessorPosthoc:
             transcript_data = self.transcript_queue.get()
             if transcript_data is None:
                 self.asr_complete = True
+                self.utterances_total = self.utterances_seen
+                self.report_progress()
             elif isinstance(transcript_data, AsrFailed):
                 # The connector could not transcribe: the run is abandoned at
                 # completion; whatever follows is not worth processing.
@@ -367,16 +447,10 @@ class AudioProcessorPosthoc:
                     transcript_data, transcript_audio_data, start_time, end_time))
                 transcript_thread.daemon = True
                 transcript_thread.start()
-                # Live progress to the trigger UI (utterance count).
+                # Live progress to the trigger UI (the scoring stage's count).
                 self.utterances_seen = getattr(self, 'utterances_seen', 0) + 1
                 if self.utterances_seen % 5 == 0:
-                    try:
-                        self._last_progress = {'type': 'progress',
-                                               'message': 'Processed {0} utterances'.format(self.utterances_seen),
-                                               'started_at': getattr(self, '_started_at', None)}
-                        self.send_json(self._last_progress)
-                    except Exception:
-                        pass
+                    self.report_progress()
         self._latch.mark_asr_complete()
         logging.info('Processing thread stopped for {0}.'.format(
             self.config.auth_key))
@@ -559,6 +633,7 @@ class AudioProcessorPosthoc:
             # through the shared latch (was an unlocked decrement + direct
             # __complete_callback that bypassed the exactly-once guard). In a
             # finally so the early return above still counts down.
+            self.utterances_done = getattr(self, 'utterances_done', 0) + 1
             self._latch.task_done()
 
        

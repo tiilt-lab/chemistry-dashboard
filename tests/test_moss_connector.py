@@ -10,6 +10,7 @@ import pytest
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 sys.path.insert(0, os.path.join(ROOT, "src", "audio_processing"))
+sys.path.insert(0, os.path.join(ROOT, "src", "common"))   # recording_sidecar, as the service has it
 
 from asr_connectors import moss_run  # noqa: E402
 from asr_connectors.base_asr import AsrFailed  # noqa: E402
@@ -21,7 +22,7 @@ from asr_connectors.moss_asr import MossASR  # noqa: E402
 def test_wrapper_builds_the_cli_command_and_sorts_the_turns(monkeypatch):
     seen = {}
 
-    def fake_worker(build_argv, timeout, handle=None):
+    def fake_worker(build_argv, timeout, handle=None, **kwargs):
         seen["argv"] = build_argv("/tmp/out.json"); seen["timeout"] = timeout; seen["handle"] = handle
         return {"turns": [{"start": 5.0, "end": 7.0, "speaker": "S02", "text": "later"},
                           {"start": 1.0, "end": 1.0, "speaker": "S01", "text": "zero length"},

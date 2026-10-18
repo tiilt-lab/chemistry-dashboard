@@ -13,11 +13,13 @@ DEFAULT_MAX_NEW_TOKENS = 40000   # about 10 tokens per audio second; an hour nee
 
 
 def run_moss(audio_file, hotwords=None, max_new_tokens=DEFAULT_MAX_NEW_TOKENS, handle=None,
-             timeout=POSTHOC_WORKER_TIMEOUT):
+             timeout=POSTHOC_WORKER_TIMEOUT, on_progress=None):
     """Transcribe + diarize ``audio_file`` in one pass. Returns the CLI's dict:
     ``turns`` = [{start, end, speaker, text}], plus run statistics. Raises
     RuntimeError when the venv is missing, the worker fails, times out or is
-    cancelled through ``handle``."""
+    cancelled through ``handle``. ``on_progress`` receives the worker's
+    progress sidecar (generated_tokens, audio_reached_s, audio_s, pct,
+    tok_per_s) every couple of seconds while it decodes."""
     if not os.path.exists(_GRANITE_PYTHON):
         raise RuntimeError("MOSS venv missing at {0}".format(_GRANITE_PYTHON))
 
@@ -28,7 +30,7 @@ def run_moss(audio_file, hotwords=None, max_new_tokens=DEFAULT_MAX_NEW_TOKENS, h
         return cmd
 
     logging.info("MOSS: launching end-to-end transcription for %s", audio_file)
-    result = run_json_worker(argv, timeout, handle=handle)
+    result = run_json_worker(argv, timeout, handle=handle, on_progress=on_progress)
     turns = [t for t in result.get("turns", []) if t.get("end", 0) > t.get("start", 0)]
     result["turns"] = sorted(turns, key=lambda t: (t["start"], t["end"]))
     if result.get("capped"):
