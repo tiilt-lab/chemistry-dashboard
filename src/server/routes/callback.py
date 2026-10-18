@@ -182,6 +182,11 @@ def posthoc_reset(**kwargs):
             # flight (it is derived from the transcripts being deleted).
             posthoc_state.remember_duration(device.id, database.get_pod_duration(device.id))
             database.delete_pod_analysis(device.id, scope=scope)
+            # Open pages hold the old rows and would stack the new run's rows
+            # on them (the rows stream in on transcript_update) until a
+            # reload: tell them the pod's results are gone.
+            socketio.emit('analysis_reset', json.dumps({'session_device_id': device.id, 'scope': scope}),
+                          room=str(device.session_id), namespace="/session")
         # A second reset within one run (the wipe at the end) must not
         # restart the clock the completion duration is measured from.
         if posthoc_state.elapsed_seconds(device.id, scope) is None:
@@ -252,6 +257,11 @@ def posthoc_completed(**kwargs):
         posthoc_state.mark_done(device.id, scope)
         logging.info('Post-hoc marked complete for device %d (server-side, %s: %ss).',
                      device.id, scope or 'audio', elapsed)
+        # The pod as it now stands (analysed date, provenance): open pages
+        # reload the pod's rows on this, so the finalized transcript shows
+        # without a page reload.
+        device = database.get_session_devices(id=device.id) or device
+        socketio.emit('device_update', json.dumps(device.json()), room=str(device.session_id), namespace="/session")
         if (scope or 'audio') == 'audio':
             # A coding job may be waiting on exactly this (after_audio):
             # have the runner re-scan now, not at its next idle wake.

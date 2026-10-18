@@ -169,6 +169,11 @@ def test_posthoc_failed_route_clears_the_running_flag_and_touches_nothing_else()
     assert "if content.get('wipe', True):" in reset
     _before(reset, "if content.get('wipe', True):", "database.delete_pod_analysis(")
     assert "if posthoc_state.elapsed_seconds(device.id, scope) is None:" in reset
+    # An open page drops the pod's rows on the wipe and reloads them on the
+    # completion, so a post-hoc rewrite shows without a page reload.
+    _before(reset, "database.delete_pod_analysis(", "socketio.emit('analysis_reset'")
+    completed = _def(ROUTES, "posthoc_completed")
+    _before(completed, "database.mark_session_device_posthoc(", "socketio.emit('device_update'")
 
 
 def test_posthoc_failed_callback_contract(monkeypatch):
