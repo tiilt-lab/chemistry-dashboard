@@ -237,9 +237,13 @@ class AudioProcessorPosthoc:
         for kind, payload in staged:
             if kind == 'metrics':
                 # GCA metrics are order-dependent: feed them in discussion
-                # order (not thread-finish order); it posts each one.
-                self.speaker_metrics_process.process_transcript(payload, action="posthoc_processing")
-                posted += 1
+                # order (not thread-finish order); it posts each one and says
+                # whether the post landed (on 2026-10-18 every post of a run
+                # failed and the count still said 1129/1129).
+                if self.speaker_metrics_process.process_transcript(payload, action="posthoc_processing"):
+                    posted += 1
+                else:
+                    logging.warning("Metrics @ %s FAILED to post for client %s", payload['start_time'], self.config.auth_key)
             else:
                 success, transcript_id = callbacks.post_transcripts(**payload)
                 if success:
@@ -251,6 +255,10 @@ class AudioProcessorPosthoc:
             if posted % 25 == 0:
                 self.report_progress()
         logging.info('Posted %d/%d utterances for %s', posted, len(staged), self.config.auth_key)
+        if staged and posted < len(staged):
+            # The previous rows are gone and the new ones are incomplete: say
+            # so (posthoc_failed, no "Analyzed" stamp) rather than complete.
+            raise RuntimeError('posted %d of %d utterances' % (posted, len(staged)))
         # The processor - not the stream reader - knows when every utterance
         # has been fully processed; signal the client here so completion is
         # correct even when the reader finishes in seconds (unpaced batch ASR).
