@@ -536,7 +536,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                                    audio_file=self.audio_file, model_size=cf.whisper_model_size(),
                                    diarize=(getattr(self, 'diarizer_choice', None) == 'pyannote'),
                                    diarizer=(getattr(self, 'diarizer_choice', None)
-                                             if getattr(self, 'diarizer_choice', None) in ('pyannote', 'sortformer') else None),
+                                             if getattr(self, 'diarizer_choice', None) in ('pyannote', 'sortformer', 'diarizen') else None),
                                    max_speakers=_max_spk, enrolled=_enr, speaker_model=_spk_model)
         else:
             # CrisperWhisper 2.0: the default, and what any unknown key
@@ -648,7 +648,15 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
             if self.config:
                 running_audio_processes.pop(self.config.auth_key, None)
                 if success:
-                    callbacks.post_posthoc_completed(self.config.auth_key, getattr(self, 'model_choices', None))
+                    # Provenance names the diarizer that actually ran: the
+                    # WhisperX connector drops to pyannote when DiariZen fails.
+                    ran = getattr(self.asr, 'diarizer_used', None)
+                    choices = getattr(self, 'model_choices', None)
+                    if ran and choices and choices.get('diarizer') != ran:
+                        logging.info("Diarizer provenance: requested %s, ran %s",
+                                     choices.get('diarizer'), ran)
+                        choices['diarizer'] = ran
+                    callbacks.post_posthoc_completed(self.config.auth_key, choices)
                 cm.remove(self, self.config.session_key, self.config.auth_key)
         except Exception as e:
             logging.warning("on_run_complete cleanup failed: %s", e)

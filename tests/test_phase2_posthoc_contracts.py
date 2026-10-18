@@ -249,3 +249,21 @@ def test_ticket_gate_still_precedes_every_handler():
     for src in (AUDIO, VIDEO):
         body = _def(src, "process_json")
         _before(body, "if data['type'] in _TICKETED_TYPES and not self._authorised(data):", "if data['type'] ==")
+
+
+# ---- 7. DiariZen as a WhisperX diarizer choice --------------------------------
+
+def test_diarizen_is_a_whisperx_diarizer_choice_and_provenance_names_what_ran():
+    start = _def(AUDIO, "signal_start")
+    assert "in ('pyannote', 'sortformer', 'diarizen') else None" in start
+    assert "'diarizer': self.diarizer_choice," in AUDIO
+    # The connector drops to pyannote when the DiariZen subprocess fails;
+    # the completion payload must then say pyannote, not the request.
+    done = _def(AUDIO, "on_run_complete")
+    assert "ran = getattr(self.asr, 'diarizer_used', None)" in done
+    _before(done, "choices['diarizer'] = ran",
+            "callbacks.post_posthoc_completed(self.config.auth_key, choices)")
+    wx = _read("audio_processing", "asr_connectors", "whisperx_asr.py")
+    assert 'if self.diarizer == "diarizen":' in wx
+    assert 'self.diarizer_used = "pyannote"' in wx
+    assert "self.diarizer_used = self.diarizer" in wx

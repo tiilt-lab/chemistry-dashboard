@@ -334,7 +334,11 @@ insecure origins. Add your server's address at
   would shadow the real one): build `src/venv-crisper` from
   `src/requirements-crisper.txt`.
 - **Sortformer diarization** uses a separate NeMo venv (`src/venv-nemo`).
-- Neither is needed unless you select those backends.
+- **DiariZen diarization** (the post-hoc default) uses a separate venv
+  (`src/venv-diarizen`); build recipe, model and licence in
+  `src/requirements-unified.README.md`.
+- None is needed unless you select those backends (a missing DiariZen venv
+  falls back to pyannote 3.1).
 
 ## TODO
 

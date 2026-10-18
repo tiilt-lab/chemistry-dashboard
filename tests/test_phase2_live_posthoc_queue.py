@@ -388,3 +388,22 @@ def test_scope_running_uses_running_detail_when_the_tracker_has_it(q, monkeypatc
     assert q._scope_running(10, "audio") is False
     monkeypatch.setattr(q, "posthoc_state", types.SimpleNamespace(is_running=lambda d: True))
     assert q._scope_running(10, "audio") is True   # old tracker: any scope
+
+
+# ---- model choices on the audio trigger ----------------------------------
+
+def test_audio_leg_defaults_to_diarizen_unless_the_job_names_a_diarizer(q, monkeypatch):
+    seen = []
+
+    class Capture(Services):
+        def run_leg(self, url, init, *rest):
+            seen.append(dict(init))
+            return Services.run_leg(self, url, init, *rest)
+
+    Capture(q).install(monkeypatch)
+    q.enqueue(1, [10])
+    q.enqueue(1, [11], models={"diarizer": "sortformer"})
+    q._worker_loop()
+    audio = [i for i in seen if i["type"] == "Initialize_audio_processing_analytics"]
+    assert [(i["sessiondeviceid"], i["diarizer"]) for i in audio] == [(10, "diarizen"), (11, "sortformer")]
+    assert all(i["asr"] == "whisperx" for i in audio)

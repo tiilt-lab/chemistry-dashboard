@@ -35,12 +35,18 @@ class WhisperXASR(PosthocFileASR):
         self.enrolled = enrolled
         self.speaker_model = speaker_model
         # Optional speaker-diarization pass. 'pyannote' (open SOTA clustering;
-        # gated weights need HUGGING_FACE_HUB_TOKEN) or 'sortformer' (NVIDIA
-        # streaming Sortformer 4-spk, runs in its own NeMo venv). Segments get
-        # cluster labels attached as .speaker_tag on each AsrResult. The bare
-        # `diarize` bool is the legacy pyannote switch.
+        # gated weights need HUGGING_FACE_HUB_TOKEN), 'sortformer' (NVIDIA
+        # streaming Sortformer 4-spk, runs in its own NeMo venv) or 'diarizen'
+        # (WavLM-based, overlap-aware; own venv, falls back to pyannote).
+        # Segments get cluster labels attached as .speaker_tag on each
+        # AsrResult. The bare `diarize` bool is the legacy pyannote switch.
         self.diarizer = diarizer or ("pyannote" if diarize else None)
         self.diarize = self.diarizer is not None
+        # The diarizer that actually attached labels (None until it ran, and
+        # 'pyannote' when DiariZen fell back) — server_posthoc stamps it into
+        # the run's model provenance so the record never names a diarizer
+        # that did not run.
+        self.diarizer_used = None
         self.running = False
 
     # start()/stop()/_drain_queue() come from PosthocFileASR. WhisperX reads
@@ -136,21 +142,37 @@ class WhisperXASR(PosthocFileASR):
             result = whisperx.align(result["segments"], align_model,
                                     metadata, audio, device)
             cluster_map = {}
-            if self.diarizer == "sortformer":
-                import pandas as pd
-                from whisperx.diarize import assign_word_speakers
+            # DiariZen and Sortformer both run as subprocesses in their own
+            # venvs and hand back (start, end, label) turns; the attachment
+            # and enrolled-voice reconciliation below are shared.
+            ext_turns = None
+            if self.diarizer == "diarizen":
+                from asr_connectors.diarizen_diar import run_diarizen
+                logging.info("WhisperX: running DiariZen diarization (DiariZen venv)")
+                try:
+                    ext_turns = run_diarizen(self.audio_file)
+                except Exception as e:
+                    # A missing venv/model or a subprocess failure must not
+                    # leave the pod without diarization: drop to pyannote 3.1.
+                    logging.warning("WhisperX: DiariZen failed, falling back to "
+                                    "pyannote 3.1: %s", e)
+            elif self.diarizer == "sortformer":
                 from asr_connectors.sortformer_diar import run_sortformer
                 logging.info("WhisperX: running Sortformer diarization (NeMo venv)")
-                sf_turns = run_sortformer(self.audio_file)
+                ext_turns = run_sortformer(self.audio_file)
+            if ext_turns is not None:
+                import pandas as pd
+                from whisperx.diarize import assign_word_speakers
                 diarize_segments = pd.DataFrame(
-                    [{"start": s, "end": e, "speaker": spk} for s, e, spk in sf_turns])
+                    [{"start": s, "end": e, "speaker": spk} for s, e, spk in ext_turns])
                 if len(diarize_segments):
                     result = assign_word_speakers(diarize_segments, result)
-                logging.info("WhisperX: Sortformer diarization attached")
-                if self.enrolled and self.speaker_model and sf_turns:
+                self.diarizer_used = self.diarizer
+                logging.info("WhisperX: %s diarization attached", self.diarizer)
+                if self.enrolled and self.speaker_model and ext_turns:
                     from asr_connectors.cluster_reconcile import build_cluster_to_enrolled_map
                     cluster_map = build_cluster_to_enrolled_map(
-                        self.audio_file, sf_turns, self.enrolled, self.speaker_model)
+                        self.audio_file, ext_turns, self.enrolled, self.speaker_model)
             elif self.diarize:
                 import os
                 from whisperx.diarize import DiarizationPipeline, assign_word_speakers
@@ -159,7 +181,8 @@ class WhisperXASR(PosthocFileASR):
                 diarizer = DiarizationPipeline(model_name="pyannote/speaker-diarization-3.1", token=token, device=device)
                 diarize_segments = diarizer(audio, max_speakers=self.max_speakers)
                 result = assign_word_speakers(diarize_segments, result)
-                logging.info("WhisperX: diarization attached")
+                self.diarizer_used = "pyannote"
+                logging.info("WhisperX: pyannote diarization attached")
                 if self.enrolled and self.speaker_model:
                     from asr_connectors.cluster_reconcile import build_cluster_to_enrolled_map
                     turns = [(row['start'], row['end'], row['speaker'])

@@ -46,6 +46,7 @@ const ASR_OPTIONS = [
 ]
 const DIARIZER_OPTIONS = [
     { id: "fingerprint", label: "ECAPA fingerprint matching (enrolled voices)" },
+    { id: "diarizen", label: "DiariZen Large-s80-v2 (WavLM, overlap-aware; research licence)" },
     { id: "pyannote", label: "pyannote 3.1 clustering (open SOTA; WhisperX only)" },
     { id: "sortformer", label: "NVIDIA Sortformer streaming 4-spk v2.1 (WhisperX only)" },
 ]
@@ -113,7 +114,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     const asr = asrChoice || podModels.asr || "whisperx"
     const scorer = scorerChoice || podModels.scorer || (models && models.scoring && models.scoring.id) || "liwc"
     const [diarizerChoice, setDiarizerChoice] = useState(null)
-    const diarizer = diarizerChoice || podModels.diarizer || "pyannote"
+    const diarizer = diarizerChoice || podModels.diarizer || "diarizen"
     const [embedderChoice, setEmbedderChoice] = useState(null)
     const embedder = embedderChoice || podModels.embedder || "bge-large-en-v1.5"
     // Optional video active-speaker detection (TalkNCE trained on UniTalk):
@@ -647,6 +648,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
             pyannote: "pyannote",
             fingerprint: "voice prints",
             sortformer: "Sortformer",
+            diarizen: "DiariZen",
             liwc: "LIWC",
             open: "Inquirer",
             llm: "Gemini LLM",
