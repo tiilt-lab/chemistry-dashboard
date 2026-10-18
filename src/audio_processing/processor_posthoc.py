@@ -440,7 +440,15 @@ class AudioProcessorPosthoc:
             # Perform Speaker Diarization
             speaker_tag = None
             speaker_id = -1
-            if self.config.diarization and self.fingerprints and len(self.fingerprints):
+            if getattr(transcript_data, 'named_by_asr', False):
+                # MOSS named its clusters on minutes of audio against the
+                # prints of both laptops (moss_naming); a per-piece print
+                # check would only second-guess it on seconds of audio.
+                speaker_tag = getattr(transcript_data, 'speaker_tag', None)
+                confidence = getattr(transcript_data, 'speaker_confidence', None)
+                speaker_id = next((sid for sid, info in (self.fingerprints or {}).items()
+                                   if speaker_tag and (info or {}).get('alias') == speaker_tag), -1)
+            elif self.config.diarization and self.fingerprints and len(self.fingerprints):
                 speaker_tag, speaker_id, confidence = checkFingerprints(
                         audio_data, self.fingerprints, self.diarization_model)
                 if not speaker_tag:

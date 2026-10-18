@@ -166,6 +166,30 @@ def enqueue_posthoc_local(**kwargs):
     return json_response({'queued': added})
 
 
+@api_routes.route('/api/v1/callback/naming_rows/<path:key>', methods=['GET'])
+@wrappers.verify_local
+def naming_rows(key, **kwargs):
+    """What the post-hoc naming step (asr_connectors/moss_naming.py) cuts its
+    session voice prints from: this pod's and its partner's transcript rows
+    as they stand, each with the live service's name, confidence and
+    far-side flag. Asked before the run's rows are wiped, so a re-run names
+    from the live pipeline's hearing of the same class."""
+    device = database.get_session_devices(processing_key=key)
+    if device is None:
+        return json_response({'message': 'Unknown pod.'}, 404)
+    partner = database.get_negotiation_partner(device)
+    rows = []
+    for d in [device] + ([partner] if partner is not None else []):
+        for t in database.get_transcripts(session_device_id=d.id):
+            vf = t._voice_features_json() if callable(getattr(t, '_voice_features_json', None)) else None
+            conf = (vf or {}).get('confidence') if isinstance(vf, dict) else None
+            conf = conf if isinstance(conf, dict) else {}
+            rows.append({'device': d.id, 'start_time': t.start_time, 'length': t.length,
+                         'speaker_tag': t.speaker_tag, 'sim': conf.get('sim'), 'far_side': bool(conf.get('far_side'))})
+    return json_response({'device': device.id, 'partner': partner.id if partner is not None else None,
+                          'partner_speakers': database.partner_speaker_aliases(device), 'rows': rows})
+
+
 @api_routes.route('/api/v1/callback/posthoc_reset', methods=['POST'])
 @wrappers.verify_local
 def posthoc_reset(**kwargs):

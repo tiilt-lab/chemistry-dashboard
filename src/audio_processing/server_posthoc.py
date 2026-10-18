@@ -292,6 +292,9 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
 
 
                         #start processing
+                        # Every student on the roster, print or not: the MOSS
+                        # naming step makes session prints for the printless.
+                        self.roster_aliases = [str(sp.get("alias")) for sp in data['speakers'] if sp.get("alias")]
                         for speaker in data['speakers']:
                             try:
                                 alias = safe_names.safe_name(speaker["alias"])
@@ -571,7 +574,8 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
             from asr_connectors.moss_asr import MossASR
             self.asr = MossASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval,
                                audio_file=self.audio_file, hotwords=list(getattr(self, 'keywords', None) or []),
-                               enrolled=_enrolled, speaker_model=diarization_model if _enrolled else None)
+                               enrolled=_enrolled, speaker_model=diarization_model,
+                               roster=list(getattr(self, 'roster_aliases', None) or []))
         elif getattr(self, 'asr_choice', None) == 'whisperx':
             from asr_connectors.whisperx_asr import WhisperXASR
             self.asr = WhisperXASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval,

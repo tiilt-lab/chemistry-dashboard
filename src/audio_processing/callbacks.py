@@ -146,6 +146,25 @@ def post_connect(source):
     return body if isinstance(body, dict) else {}
 
 
+def get_naming_rows(source):
+    """This pod's and its partner's transcript rows with the live names and
+    confidences (callback naming_rows), or None when the API could not be
+    asked; the MOSS naming step then has only the enrolment prints."""
+    url = _callback_base() + '/naming_rows/' + urllib.parse.quote(str(source), safe='')
+    try:
+        response = requests.get(url, timeout=callbacks_common.CALLBACK_TIMEOUT * 4)
+    except Exception as e:
+        logging.info('naming rows lookup failed for %s: %s', source, e)
+        return None
+    if response.status_code != 200:
+        return None
+    try:
+        body = response.json()
+    except ValueError:
+        return None
+    return body if isinstance(body, dict) and isinstance(body.get('rows'), list) else None
+
+
 def get_partner_speakers(source):
     """The partner pod's speaker aliases right now, or None when the API
     could not be asked (the roster then keeps what it has)."""
