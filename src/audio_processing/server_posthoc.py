@@ -180,7 +180,8 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
             # the deployment config when absent.
             # Google Cloud Speech was removed and plain Whisper retired:
             # a re-run requested under either key runs CrisperWhisper.
-            self.asr_choice = data.get('asr') or cf.asr()
+            # MOSS end to end is the post-hoc default (2026-10-18); the live service keeps cf.asr().
+            self.asr_choice = data.get('asr') or 'moss'
             if self.asr_choice in ('google-cloud-speech', 'google', 'whisper'):
                 self.asr_choice = 'crisperwhisper'
             self.scorer_choice = data.get('scorer') or None
@@ -530,6 +531,14 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                                 audio_file=self.audio_file, model_id=qwen_model,
                                 diarize=(getattr(self, 'diarizer_choice', None) == 'pyannote'),
                                 max_speakers=_max_spk, enrolled=_enr, speaker_model=_spk_model)
+        elif getattr(self, 'asr_choice', None) == 'moss':
+            # MOSS end to end (the default): transcript + speakers in one pass over the
+            # whole recording; its anonymous labels are named against the enrolled
+            # voice prints whenever the pod has any, so no diarizer choice applies.
+            from asr_connectors.moss_asr import MossASR
+            self.asr = MossASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval,
+                               audio_file=self.audio_file, hotwords=list(getattr(self, 'keywords', None) or []),
+                               enrolled=_enrolled, speaker_model=diarization_model if _enrolled else None)
         elif getattr(self, 'asr_choice', None) == 'whisperx':
             from asr_connectors.whisperx_asr import WhisperXASR
             self.asr = WhisperXASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval,
