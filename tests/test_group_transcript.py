@@ -1,6 +1,6 @@
-"""The table view's data (src/server/negotiation_coding.py, tables section):
+"""The group view's data (src/server/negotiation_coding.py, groups section):
 which laptops of a breakout group carry the merged transcript, the session's
-tables in order, and the merged lines in the transcript panel's shape."""
+groups in order, and the merged lines in the transcript panel's shape."""
 import os
 import sys
 import types
@@ -28,27 +28,27 @@ def test_primaries_are_each_sides_lowest_id_laptop_with_transcripts():
     devices = [_device(3, "Sandy laptop", side="Sandy"), _device(1, "Pat laptop", side="Pat"),
                _device(2, "Pat laptop 2", side="Pat"), _device(4, "Empty Sandy", side="Sandy")]
     counts = {1: 0, 2: 120, 3: 80, 4: 0}
-    pods = nc.table_pods(devices, NAMES, lambda d: counts[d])
+    pods = nc.group_pods(devices, NAMES, lambda d: counts[d])
     assert [p["id"] for p in pods] == [1, 2, 3, 4]          # side order, then id
     assert [p["primary"] for p in pods] == [False, True, True, False]
     assert pods[1]["transcripts"] == 120 and pods[0]["side"] == "Pat"
 
 
-def test_an_extra_laptop_on_a_side_is_a_media_source_only():
+def test_an_extra_laptop_on_a_side_is_a_view_only():
     devices = [_device(1, "Pat", side="Pat"), _device(2, "Pat 2", side="Pat"), _device(3, "Sandy", side="Sandy")]
-    pods = nc.table_pods(devices, NAMES)
+    pods = nc.group_pods(devices, NAMES)
     assert [(p["id"], p["primary"]) for p in pods] == [(1, True), (2, False), (3, True)]
 
 
-def test_session_tables_sort_naturally_and_skip_ungrouped_laptops():
+def test_session_groups_sort_naturally_and_skip_ungrouped_laptops():
     devices = [_device(1, "a", "Group 10", "Pat"), _device(2, "b", "Group 2", "Sandy"),
                _device(3, "hallway", None, None), _device(4, "c", "Group 2", "Pat")]
-    tables = nc.session_tables(devices, NAMES)
+    tables = nc.session_groups(devices, NAMES)
     assert [t["group"] for t in tables] == ["Group 2", "Group 10"]
     assert [p["id"] for p in tables[0]["pods"]] == [4, 2]
 
 
-def test_table_transcript_merges_both_laptops_into_one_conversation():
+def test_group_transcript_merges_both_laptops_into_one_conversation():
     pat, sandy = _device(1, "Pat laptop", side="Pat"), _device(2, "Sandy laptop", side="Sandy")
     rows = {
         1: [_row(11, 1, 100.0, "We hold four hundred thousand dollars of your debt.", "Pat1G7"),
@@ -58,7 +58,7 @@ def test_table_transcript_merges_both_laptops_into_one_conversation():
             _row(22, 2, 112.0, "The market is really bad right now.", "Jing"),
             _row(23, 2, 116.0, "If we can get through this hardship together.", "Jing")],
     }
-    out = nc.table_transcript([pat, sandy], rows, NAMES)
+    out = nc.group_transcript([pat, sandy], rows, NAMES)
     lines = out["lines"]
     texts = [(l["session_device_id"], l["speaker_tag"], l["transcript"]) for l in lines]
     # Pat's own laptop keeps Pat's line; Sandy's copy of it is folded in.

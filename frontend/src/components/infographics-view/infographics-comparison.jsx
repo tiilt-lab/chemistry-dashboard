@@ -5,6 +5,7 @@ import { ConversationDynamicsPanel } from "../conversation-dynamics/conversation
 import { DiscussionSummaryPanel } from "../discussion-summary/discussion-summary-panel"
 import { VideoPlayer } from "../video-player/video-player"
 import { AudioPlayer } from "../audio-player/audio-player"
+import { lineAt, seekFor, toMergedClock } from "../../pod-details/group-time"
 import { PosthocTrigger } from "../posthoc/posthoc-trigger"
 import { NegotiationCodingPanel } from "../negotiation-coding/negotiation-coding-panel"
 import { ModelNote } from "../model-note/model-note"
@@ -15,7 +16,7 @@ import { SessionVitals } from "../session-vitals/session-vitals"
 import { SpeakerCardsPanel } from "../speaker-cards/speaker-cards-panel"
 import { JointAttentionPanel } from "../joint-attention/joint-attention-panel"
 import { HeartRatePanel } from "../heart-rate/heart-rate-panel"
-import React, { useState, useEffect, lazy, Suspense } from "react"
+import React, { useState, useEffect, useRef, lazy, Suspense } from "react"
 import { ApiService } from "../../services/api-service"
 
 // Heaviest chunk in the app (~288 KB). Only rendered when a pod has video
@@ -26,6 +27,65 @@ const AppIndividualVideoFeaturesComponent = lazy(() =>
         default: m.AppIndividualVideoFeaturesComponent,
     })),
 )
+
+// The laptops of a breakout group as views of one conversation: pick which
+// recording plays (video or audio), whether the transcript is the group's
+// merge or this laptop's own rows, and whether the view follows the speaker.
+function GroupViewBar({ group, viewId, viewKind, videoMissing, onSelectView, scope, onSelectScope, follow, onFollow }) {
+    const pods = group.pods || []
+    const button = (active, onClick, title, label, disabled) => (
+        <button
+            type="button"
+            disabled={disabled}
+            onClick={onClick}
+            title={title}
+            className={
+                "cursor-pointer rounded-md px-2 py-0.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 " +
+                (active ? "bg-tiilt text-white" : "bg-white text-tiilt hover:bg-tiilt-soft")
+            }
+        >
+            {label}
+        </button>
+    )
+    return (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-tiilt-ground px-3 py-2">
+            <span className="text-xs font-semibold text-tiilt-muted">View</span>
+            {pods.map((p) => (
+                <span key={p.id} className="flex items-center gap-1 rounded-md border border-tiilt-line bg-white/60 px-1.5 py-0.5">
+                    <span
+                        className="text-xs font-semibold text-tiilt-ink"
+                        title={p.primary ? "Carries the merged transcript" : "A view only: this laptop's rows are not merged"}
+                    >
+                        {p.side ? `${p.side} · ${p.name}` : p.name}
+                    </span>
+                    {!videoMissing[p.id]
+                        ? button(viewId === p.id && viewKind === "video", () => onSelectView(p.id, "video"), "Play this laptop's video", "Video")
+                        : null}
+                    {button(viewId === p.id && viewKind === "audio", () => onSelectView(p.id, "audio"), "Play this laptop's audio recording", "Audio")}
+                </span>
+            ))}
+            <span className="ml-auto flex items-center gap-2">
+                <span className="flex items-center gap-1 rounded-md border border-tiilt-line bg-white/60 px-1.5 py-0.5" title="Whose transcript the panel shows">
+                    {button(scope === "group", () => onSelectScope && onSelectScope("group"), "The group's merged, coded transcript", "Group")}
+                    {button(scope === "device", () => onSelectScope && onSelectScope("device"), "This laptop's own rows, as recorded", "This laptop")}
+                </span>
+                <label className="flex cursor-pointer items-center gap-1 text-xs text-tiilt-muted" title="Play each line from the laptop that heard it">
+                    <input type="checkbox" className="accent-tiilt" checked={follow} onChange={(e) => onFollow(e.target.checked)} />
+                    Follow the speaker
+                </label>
+            </span>
+        </div>
+    )
+}
+
+function groupSummary(group, lines) {
+    const primaries = (group.pods || []).filter((p) => p.primary).map((p) => p.name)
+    const a = group.alignment
+    return (
+        `${(lines || []).length} lines merged from ${primaries.join(" and ") || "no laptop"}` +
+        (a ? ` · clocks aligned by ${a.method} (${a.offset_min} to ${a.offset_max} s)` : "")
+    )
+}
 
 function AppInfographicsComparison(props) {
     // Shared selection linking the transcript with the Expression & Thinking
@@ -40,6 +100,44 @@ function AppInfographicsComparison(props) {
     // Session-relative playhead of the discussion video, so the transcript can
     // follow along while it plays.
     const [playbackTime, setPlaybackTime] = useState(null)
+    // A breakout group: props.group holds the merged transcript's pods and
+    // clock alignment, props.viewDeviceId the laptop whose recording plays
+    // and whose per-laptop analyses show. In group scope the transcript is
+    // on the merged clock, the player on its laptop's clock; seeks and the
+    // playhead cross that mapping. "Follow the speaker" moves the view to
+    // the laptop that heard the line now playing.
+    const groupScope = !!props.group && props.scope === "group"
+    const alignment = props.group ? props.group.alignment : null
+    const [viewKind, setViewKind] = useState("video") // video | audio
+    const [viewVideoMissing, setViewVideoMissing] = useState({})
+    const [follow, setFollow] = useState(false)
+    const lastSwitch = useRef(0)
+    const viewId = props.viewDeviceId != null ? props.viewDeviceId : props.sessionDevice && props.sessionDevice.id
+    const playerSeek = (() => {
+        if (selectedTime == null || !groupScope) return selectedTime
+        const line = (props.displayTranscripts || []).find((l) => l.start_time === selectedTime)
+        return line ? seekFor(line, viewId, alignment) : selectedTime
+    })()
+    const switchView = (deviceId, kind) => {
+        // Land the new view on the moment playing now: select that line, the
+        // new player seeks to it.
+        const at = playbackTime
+        const line = lineAt(props.displayTranscripts || [], at)
+        if (line) setSelectedTime(line.start_time)
+        setViewKind(kind === "video" && viewVideoMissing[deviceId] ? "audio" : kind)
+        if (props.onSelectView && deviceId !== viewId) props.onSelectView(deviceId)
+    }
+    const onGroupPlaybackTime = (deviceSeconds) => {
+        const merged = groupScope ? toMergedClock(deviceSeconds, viewId, alignment) : deviceSeconds
+        setPlaybackTime(merged)
+        if (!follow || !groupScope) return
+        const line = lineAt(props.displayTranscripts || [], merged)
+        if (!line || line.session_device_id === viewId) return
+        if (!(props.group.pods || []).some((p) => p.id === line.session_device_id)) return
+        if (Date.now() - lastSwitch.current < 4000) return
+        lastSwitch.current = Date.now()
+        switchView(line.session_device_id, viewKind)
+    }
 
     // Deployment-wide model registry from /api/v1/models (the audio/video
     // services' live config). Used only as the FALLBACK: every module note in
@@ -161,29 +259,55 @@ function AppInfographicsComparison(props) {
                   node: (
                       <AppSectionBoxComponent
                           type={"w-full"}
-                          heading={"Session video & transcript"}
+                          heading={props.group ? "Group video & transcript" : "Session video & transcript"}
                       >
                           <div className="flex w-full flex-col gap-3">
+                              {props.group ? (
+                                  <GroupViewBar
+                                      group={props.group}
+                                      viewId={viewId}
+                                      viewKind={viewKind}
+                                      videoMissing={viewVideoMissing}
+                                      onSelectView={switchView}
+                                      scope={props.scope}
+                                      onSelectScope={props.onSelectScope}
+                                      follow={follow}
+                                      onFollow={setFollow}
+                                  />
+                              ) : null}
                               {/* Audio-only pods (and pods whose video is
                                   missing) play their audio recording in the
-                                  same slot, synced to the transcript. */}
-                              {props.sessionDevice.has_video === false || videoMissing ? (
+                                  same slot, synced to the transcript. In a
+                                  group the player is the chosen view's. */}
+                              {props.sessionDevice.has_video === false || videoMissing ||
+                              (props.group && (viewKind === "audio" || viewVideoMissing[viewId])) ? (
                                   <AudioPlayer
+                                      key={"a" + props.sessionDevice.id}
                                       sessionId={props.session.id}
                                       sessionDeviceId={props.sessionDevice.id}
-                                      selectedTime={selectedTime}
-                                      onPlaybackTime={setPlaybackTime}
+                                      selectedTime={playerSeek}
+                                      onPlaybackTime={onGroupPlaybackTime}
                                       onSegments={setVideoSegments}
                                   />
                               ) : (
                                   <VideoPlayer
+                                      key={"v" + props.sessionDevice.id}
                                       sessionId={props.session.id}
                                       sessionDeviceId={props.sessionDevice.id}
-                                      selectedTime={selectedTime}
-                                      transcripts={props.displayTranscripts}
-                                      onPlaybackTime={setPlaybackTime}
+                                      selectedTime={playerSeek}
+                                      transcripts={
+                                          groupScope
+                                              ? (props.displayTranscripts || []).map((l) => ({ ...l, start_time: seekFor(l, viewId, alignment) }))
+                                              : props.displayTranscripts
+                                      }
+                                      onPlaybackTime={onGroupPlaybackTime}
                                       onSegments={setVideoSegments}
-                                      onMissing={() => setVideoMissing(true)}
+                                      onMissing={() => {
+                                          if (props.group) {
+                                              setViewVideoMissing((m) => ({ ...m, [props.sessionDevice.id]: true }))
+                                              setViewKind("audio")
+                                          } else setVideoMissing(true)
+                                      }}
                                   />
                               )}
                               <TranscriptPanel
@@ -194,9 +318,13 @@ function AppInfographicsComparison(props) {
                                   selectedTime={selectedTime}
                                   onSelectTime={setSelectedTime}
                                   playbackTime={playbackTime}
-                                  videoSegments={videoSegments}
+                                  videoSegments={groupScope ? null : videoSegments}
                                   compact
-                                  transcriptionLabel={transcriptionLabel}
+                                  transcriptionLabel={
+                                      groupScope
+                                          ? groupSummary(props.group, props.displayTranscripts)
+                                          : transcriptionLabel
+                                  }
                                   onEditText={props.editTranscriptText}
                                   onReassignSpeaker={props.reassignTranscriptRow}
                                   roster={props.roster}

@@ -13,7 +13,7 @@ import { StatusPill } from "../components/status-pill"
 import { ToastStack } from "../components/toast"
 import { QrCode } from "../components/qr-code"
 import { slotLinks, slotLinksText } from "./slot-links"
-import { groupByTable, hasTables } from "./table-groups"
+import { devicesByGroup, hasGroups } from "./group-rows"
 
 
 // null (hide) for missing durations, else SessionModel's shared H:MM:SS.
@@ -272,9 +272,10 @@ function teamNamesOf(session) {
     )
 }
 
-// One breakout table's heading in the pod list: its laptops follow. "Open
-// table" shows both laptops' transcripts merged, with either recording.
-function TableHeaderRow({ group, count, onOpen }) {
+// One breakout group's heading in the pod list: its laptops follow, each a
+// view of the same conversation. "Open group" opens the group's analysis
+// (every laptop's view, the merged and coded transcript) on its first laptop.
+function GroupHeaderRow({ group, count, onOpen }) {
     return (
         <tr className="border-t border-tiilt-line bg-tiilt-ground/60">
             <td colSpan={7} className="px-3 py-1.5">
@@ -292,10 +293,10 @@ function TableHeaderRow({ group, count, onOpen }) {
                                 ev.stopPropagation()
                                 onOpen()
                             }}
-                            title="Both laptops' transcripts merged into one conversation, with either recording"
+                            title="The group's analysis: every laptop's view and the merged, coded transcript"
                             className="ml-auto cursor-pointer rounded-md border border-tiilt-line bg-white px-2 py-0.5 text-xs font-semibold text-tiilt transition hover:bg-tiilt-soft"
                         >
-                            Open table
+                            Open group
                         </button>
                     ) : null}
                 </div>
@@ -770,19 +771,19 @@ function PodsOverviewPages(props) {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {(hasTables(props.sessionDevices)
-                                                ? groupByTable(props.sessionDevices, teamNamesOf(props.session))
+                                            {(hasGroups(props.sessionDevices)
+                                                ? devicesByGroup(props.sessionDevices, teamNamesOf(props.session))
                                                 : [{ group: null, devices: props.sessionDevices.map((device, index) => ({ device, index })) }]
-                                            ).map((table) => (
-                                                <React.Fragment key={table.group || "__rest"}>
-                                                    {table.group ? (
-                                                        <TableHeaderRow
-                                                            group={table.group}
-                                                            count={table.devices.length}
-                                                            onOpen={props.goToTable ? () => props.goToTable(table.group) : null}
+                                            ).map((entry) => (
+                                                <React.Fragment key={entry.group || "__rest"}>
+                                                    {entry.group ? (
+                                                        <GroupHeaderRow
+                                                            group={entry.group}
+                                                            count={entry.devices.length}
+                                                            onOpen={() => props.goToDevice(entry.devices[0].device)}
                                                         />
                                                     ) : null}
-                                                    {table.devices.map(({ device, index }) => (
+                                                    {entry.devices.map(({ device, index }) => (
                                                         <PodRow
                                                             key={device.id}
                                                             index={index}

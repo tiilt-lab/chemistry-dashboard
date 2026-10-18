@@ -288,38 +288,38 @@ def list_negotiation_coding(session_id, **kwargs):
     return json_response(result)
 
 
-# ------------------------------------------------------------------ tables
+# ------------------------------------------------------------------ groups
 
-@api_routes.route('/api/v1/sessions/<int:session_id>/tables', methods=['GET'])
+@api_routes.route('/api/v1/sessions/<int:session_id>/groups', methods=['GET'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_read_access
-def list_session_tables(session_id, **kwargs):
-    """The session's breakout tables: each negotiation group with its
+def list_session_groups(session_id, **kwargs):
+    """The session's breakout groups: each negotiation group with its
     laptops and which of them carry the merged transcript."""
     names = negotiation_coding._session_names(database.get_sessions(id=session_id))
     devices = database.get_session_devices(session_id=session_id)
-    tables = negotiation_coding.session_tables(devices, names, database.session_device_transcript_count)
-    return json_response({'teams': list(names), 'tables': tables})
+    groups = negotiation_coding.session_groups(devices, names, database.session_device_transcript_count)
+    return json_response({'teams': list(names), 'groups': groups})
 
 
-@api_routes.route('/api/v1/sessions/<int:session_id>/tables/<path:group>/transcript', methods=['GET'])
+@api_routes.route('/api/v1/sessions/<int:session_id>/groups/<path:group>/transcript', methods=['GET'])
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_read_access
-def get_table_transcript(session_id, group, **kwargs):
-    """One table's conversation: the merge of its primary laptops' rows, the
+def get_group_transcript(session_id, group, **kwargs):
+    """One group's conversation: the merge of its primary laptops' rows, the
     engine the coder reads, each line saying which laptop heard it, with the
-    group's laptops as media sources. The clocks are aligned from the text
-    (the acoustic alignment the coder uses reads both recordings end to end,
-    too slow for a page load)."""
+    group's laptops as views. The clocks are aligned from the text (the
+    acoustic alignment the coder uses reads both recordings end to end, too
+    slow for a page load)."""
     names = negotiation_coding._session_names(database.get_sessions(id=session_id))
     devices = [d for d in database.get_session_devices(session_id=session_id)
                if (getattr(d, 'negotiation_group', None) or '') == group]
     if not devices:
-        return json_response({'message': 'No such table.'}, 404)
-    pods = negotiation_coding.table_pods(devices, names, database.session_device_transcript_count)
+        return json_response({'message': 'No such group.'}, 404)
+    pods = negotiation_coding.group_pods(devices, names, database.session_device_transcript_count)
     primary_ids = [p['id'] for p in pods if p['primary']]
     rows_by_device = {d: database.get_transcripts(session_device_id=d) for d in primary_ids}
-    payload = negotiation_coding.table_transcript([d for d in devices if d.id in primary_ids],
+    payload = negotiation_coding.group_transcript([d for d in devices if d.id in primary_ids],
                                                   rows_by_device, names)
     payload.update({'group': group, 'teams': list(names), 'pods': pods})
     return json_response(payload)

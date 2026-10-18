@@ -1,6 +1,6 @@
-// The pods overview grouped by breakout table. A table is a negotiation
-// group (the laptops sharing device.negotiation_group); laptops without a
-// group follow, ungrouped. Groups sort naturally ("Group 2" before
+// The pods overview grouped by breakout group (the laptops sharing
+// device.negotiation_group, each recording the same conversation from its
+// own side); laptops without a group follow, ungrouped. Groups sort naturally ("Group 2" before
 // "Group 10"), laptops inside a group by side order then name.
 
 function naturalKey(text) {
@@ -13,7 +13,7 @@ function naturalKey(text) {
 // devices: the session's pods as the overview lists them (each keeps its
 // position for the row number); teamNames: the session's side order.
 // Returns [{group, devices: [{device, index}]}], group null for the rest.
-export function groupByTable(devices, teamNames) {
+export function devicesByGroup(devices, teamNames) {
     const sides = teamNames || []
     const groups = new Map()
     const rest = []
@@ -30,7 +30,7 @@ export function groupByTable(devices, teamNames) {
         const i = sides.indexOf(d.negotiation_side)
         return i >= 0 ? i : sides.length
     }
-    const tables = Array.from(groups.keys())
+    const ordered = Array.from(groups.keys())
         .sort((a, b) => (naturalKey(a) < naturalKey(b) ? -1 : naturalKey(a) > naturalKey(b) ? 1 : 0))
         .map((group) => ({
             group,
@@ -39,11 +39,11 @@ export function groupByTable(devices, teamNames) {
                 naturalKey(a.device.name).localeCompare(naturalKey(b.device.name)) ||
                 a.index - b.index),
         }))
-    if (rest.length) tables.push({ group: null, devices: rest })
-    return tables
+    if (rest.length) ordered.push({ group: null, devices: rest })
+    return ordered
 }
 
-// True when the overview should show table headers at all.
-export function hasTables(devices) {
+// True when the overview should show group headers at all.
+export function hasGroups(devices) {
     return (devices || []).some((d) => d && d.negotiation_group)
 }
