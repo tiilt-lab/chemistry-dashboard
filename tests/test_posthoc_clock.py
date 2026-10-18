@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(ROOT, "src", "audio_processing"))
 import recording_fragments as rf  # noqa: E402
 import recording_sidecar as rs  # noqa: E402
 
-KEY = "1436-320e9074-8c20-4f3a-b123-971d9efbdc31"
+KEY = "1436-0f3c2d1e-9a8b-4c7d-8e6f-5a4b3c2d1e0f"  # gitleaks:allow (fake recording key)
 SERVER_START = datetime.datetime(2026, 10, 15, 20, 31, 26)
 
 
