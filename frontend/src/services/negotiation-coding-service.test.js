@@ -92,4 +92,14 @@ describe("NegotiationCodingService", () => {
         await expect(svc.exportCsv(3, 42)).resolves.toEqual({ status: 200, text: "a,b\n1,2\n" })
         expect(calls[0].url).toBe(svc.exportCsvUrl(3, 42))
     })
+
+    it("builds the session-wide CSV URLs from the API endpoint", () => {
+        const svc = new NegotiationCodingService()
+        expect(svc.sessionExportCsvUrl(3)).toBe(
+            svc.api.getEndpoint() + "api/v1/sessions/3/negotiation_coding/export.csv",
+        )
+        expect(svc.sessionTranscriptCsvUrl(3)).toBe(
+            svc.api.getEndpoint() + "api/v1/sessions/3/negotiation_coding/transcript.csv",
+        )
+    })
 })

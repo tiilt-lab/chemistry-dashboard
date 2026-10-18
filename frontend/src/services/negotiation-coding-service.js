@@ -62,6 +62,17 @@ export class NegotiationCodingService {
         return this.api.getEndpoint() + base(sessionId, sessionDeviceId) + "/export.csv"
     }
 
+    // Session-wide downloads (plain links, as above): every group's coded
+    // transcript in one CSV, and every transcript row of every pod with what
+    // the coding did with it (coded / stitched / dropped and why / uncoded).
+    sessionExportCsvUrl(sessionId) {
+        return this.api.getEndpoint() + `api/v1/sessions/${sessionId}/negotiation_coding/export.csv`
+    }
+
+    sessionTranscriptCsvUrl(sessionId) {
+        return this.api.getEndpoint() + `api/v1/sessions/${sessionId}/negotiation_coding/transcript.csv`
+    }
+
     // Fetch the CSV as text (for callers that want to save it themselves).
     exportCsv(sessionId, sessionDeviceId) {
         return this.api

@@ -2146,6 +2146,9 @@ def get_negotiation_partner(session_device):
     others = [d for d in get_negotiation_group_devices(session_device) if d.id != session_device.id]
     if not others:
         return None
+    # A pod that recorded nothing (joined and replaced by another laptop)
+    # is the partner only when nothing else is there.
+    others.sort(key=lambda d: (not session_device_transcript_count(d.id), d.id))
     opposite = [d for d in others if d.negotiation_side and d.negotiation_side != session_device.negotiation_side]
     return (opposite or others)[0]
 
@@ -2202,7 +2205,7 @@ def add_negotiation_codes(run_id, codes, dimensions=None):
         keys = list(dimensions) if dimensions else [k for k in c if k not in meta]
         # The sentence the model saw, when it was stitched or trimmed from
         # the stored fragments (negotiation_coding.stitch_sentences).
-        keys += [k for k in ('_text', '_stitched') if k in c and k not in keys]
+        keys += [k for k in ('_text', '_stitched', '_speaker') if k in c and k not in keys]
         rows.append(NegotiationCode(run_id, c['transcript_id'], {k: c.get(k) for k in keys}))
     db.session.add_all(rows)
     db.session.commit()
