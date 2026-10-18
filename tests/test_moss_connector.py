@@ -48,20 +48,28 @@ def test_wrapper_without_the_venv_raises_before_spawning(monkeypatch):
 
 # --- the connector ------------------------------------------------------------
 
-def _connector(monkeypatch, turns, enrolled=("Pat3G1S32", "Jing Yuan"), reconcile=None):
+def _connector(monkeypatch, turns, roster=("Pat3G1S32",), partner=("Jing Yuan",), audio=None, prints=None, rows=None):
+    """A connector whose recording is synthetic (a speaker = a constant sample
+    value, the embedder a one-hot of it) and whose naming rows come in by
+    hand, so the ported rules run end to end without the model or the API."""
+    import numpy as np
     import asr_connectors.moss_asr as mod
     monkeypatch.setattr(mod, "run_moss", lambda *a, **k: {"turns": turns, "tokens_per_s": 40.0})
-    calls = []
+    sr = 100
+    audio = np.zeros(sr * 200, dtype=np.float32) if audio is None else audio
+    monkeypatch.setattr(mod, "_read_audio", lambda path: (audio, sr))
 
-    def fake_map(audio_file, turn_tuples, enrolled_names, model):
-        calls.append((audio_file, list(turn_tuples), enrolled_names, model))
-        return reconcile or {}
-    stub = types.ModuleType("asr_connectors.cluster_reconcile"); stub.build_cluster_to_enrolled_map = fake_map
-    monkeypatch.setitem(sys.modules, "asr_connectors.cluster_reconcile", stub)
-    asr = MossASR(queue.Queue(), queue.Queue(), config=None, media_type="audio", interval=10,
-                  audio_file="/rec/pod.wav", hotwords=["Viking"], enrolled=list(enrolled), speaker_model="ecapa")
+    def onehot(k):
+        v = np.zeros(8, dtype=np.float32); v[k] = 1.0
+        return v
+    monkeypatch.setattr(mod, "_embedder", lambda model: (lambda sig: onehot(int(round(float(np.mean(sig)))))))
+    monkeypatch.setattr(mod, "_enrolment_print", lambda alias, model: (prints or {}).get(alias))
+    config = types.SimpleNamespace(auth_key="1436-k", start_offset=0.0)
+    asr = MossASR(queue.Queue(), queue.Queue(), config=config, media_type="audio", interval=10,
+                  audio_file="/rec/pod.wav", hotwords=["Viking"], enrolled=None, speaker_model="ecapa",
+                  roster=list(roster), naming_rows={"device": 1436, "partner": 1447, "partner_speakers": list(partner), "rows": rows or []})
     asr.running = True
-    return asr, calls
+    return asr
 
 
 def _drain(q):
@@ -73,28 +81,65 @@ def _drain(q):
             return out
 
 
-def test_connector_names_speakers_from_the_prints_and_emits_one_result_per_turn(monkeypatch):
-    turns = [{"start": 0.0, "end": 2.5, "speaker": "S01", "text": "What time is our flight?"},
-             {"start": 3.0, "end": 4.0, "speaker": "S02", "text": "Three."},
-             {"start": 4.5, "end": 5.0, "speaker": "S03", "text": "  "}]
-    asr, calls = _connector(monkeypatch, turns, reconcile={"S01": "Jing Yuan"})
-    asr._transcribe_file()
-    items = _drain(asr.transcript_queue)
-    results = [i for i in items if i is not None]
-    assert items[-1] is None and len(results) == 2          # the blank turn is skipped
-    assert [r.speaker_tag for r in results] == ["Jing Yuan", "S02"]   # named when a print matched, else the label
-    assert results[0].alternatives[0].transcript == "What time is our flight?"
-    w = results[0].alternatives[0].words[0]
-    assert (w.word, w.start_time.seconds, w.end_time.seconds, w.end_time.nanos) == ("What time is our flight?", 0, 2, 500000000)
-    assert calls[0][0] == "/rec/pod.wav" and calls[0][1] == [(0.0, 2.5, "S01"), (3.0, 4.0, "S02"), (4.5, 5.0, "S03")]
-    assert asr.diarizer_used == "moss" and asr.running is False
+def _audio(spans, sr=100):
+    import numpy as np
+    n = int(max(e for _, e, _ in spans) * sr) + sr
+    a = np.zeros(n, dtype=np.float32)
+    for s, e, k in spans:
+        a[int(s * sr):int(e * sr)] = k
+    return a
 
 
-def test_connector_without_prints_keeps_the_labels_and_skips_reconciliation(monkeypatch):
-    asr, calls = _connector(monkeypatch, [{"start": 0.0, "end": 1.0, "speaker": "S01", "text": "hi"}], enrolled=())
+def _onehot(k):
+    import numpy as np
+    v = np.zeros(8, dtype=np.float32); v[k] = 1.0
+    return v
+
+
+def test_connector_names_speakers_from_both_rosters_prints_and_emits_one_result_per_turn(monkeypatch):
+    # Pat3 (own) has an enrolment print; Jing (far) none, but the live rows named
+    # her confidently for 30 s on this recording, so she gets a session print.
+    turns = [{"start": 0.0, "end": 50.0, "speaker": "S01", "text": "we hold the debt"},
+             {"start": 50.0, "end": 100.0, "speaker": "S02", "text": "the market is bad"},
+             {"start": 100.0, "end": 100.5, "speaker": "S03", "text": "okay"},
+             {"start": 101.0, "end": 102.0, "speaker": "S01", "text": "   "}]
+    audio = _audio([(0, 50, 1), (50, 100, 2), (100, 100.5, 3)])
+    rows = [{"device": 1447, "start_time": 50, "length": 30, "speaker_tag": "Jing Yuan", "sim": 0.8, "far_side": False}]
+    asr = _connector(monkeypatch, turns, audio=audio, prints={"Pat3G1S32": _onehot(1)}, rows=rows)
     asr._transcribe_file()
-    results = [i for i in _drain(asr.transcript_queue) if i is not None]
-    assert [r.speaker_tag for r in results] == ["S01"] and calls == []
+    out = _drain(asr.transcript_queue)
+    assert out[-1] is None and len(out) == 4               # blank-text turn skipped
+    tags = [(r.speaker_tag, r.alternatives[0].transcript) for r in out[:-1]]
+    assert tags == [("Pat3G1S32", "we hold the debt"), ("Jing Yuan", "the market is bad"), (None, "okay")]
+    first, second, third = out[:3]
+    assert first.named_by_asr and first.speaker_confidence["named_by"] == "prints" and first.speaker_confidence["cluster"] == "S01"
+    assert first.speaker_confidence["percent"] >= 0 and "far_side" not in first.speaker_confidence
+    assert second.speaker_confidence["far_side"] is True            # Jing sits across the table
+    assert third.speaker_confidence == {"cluster": "S03"}          # half a second of voice: not scored
+    assert asr.diarizer_used == "moss"
+
+
+def test_connector_without_any_print_keeps_turns_unnamed_and_flagged(monkeypatch):
+    asr = _connector(monkeypatch, [{"start": 0.0, "end": 5.0, "speaker": "S01", "text": "hi"}], roster=(), partner=())
+    asr._transcribe_file()
+    out = _drain(asr.transcript_queue)
+    assert out[0].speaker_tag is None and out[0].named_by_asr and out[0].speaker_confidence == {"cluster": "S01"}
+
+
+def test_a_naming_failure_still_sends_the_transcript(monkeypatch):
+    import asr_connectors.moss_asr as mod
+    asr = _connector(monkeypatch, [{"start": 0.0, "end": 5.0, "speaker": "S01", "text": "hi"}])
+    monkeypatch.setattr(mod, "_read_audio", lambda path: (_ for _ in ()).throw(OSError("no such recording")))
+    asr._transcribe_file()
+    out = _drain(asr.transcript_queue)
+    assert out[0].alternatives[0].transcript == "hi" and out[0].speaker_tag is None and out[-1] is None
+
+
+def test_the_processor_keeps_a_connector_named_turn_instead_of_rechecking_prints():
+    src = open(os.path.join(ROOT, "src", "audio_processing", "processor_posthoc.py")).read()
+    i = src.index("if getattr(transcript_data, 'named_by_asr', False):")
+    assert i < src.index("checkFingerprints(\n", i) if "checkFingerprints(\n" in src[i:] else i < src.index("checkFingerprints(", i)
+    assert "speaker_confidence" in src[i:i + 900]
 
 
 def test_connector_reports_a_failed_pass_then_ends_the_stream(monkeypatch):
