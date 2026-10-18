@@ -118,8 +118,9 @@ def end_session(session_id):
     if session.live_video_analytics is False:
         queue_deferred_video_analysis(session, session_devices)
     # Negotiation classes: the per-utterance LLM coding is queued now, one
-    # coding leg per pod with transcripts (no GPU: it runs beside the next
-    # class). Best effort, like the video legs.
+    # run per pod (pair) with transcripts, behind the pods' post-hoc audio
+    # legs — coding is the last stage and codes the post-hoc transcripts.
+    # Best effort, like the video legs.
     if session.negotiation_coding:
         queue_negotiation_coding(session, session_devices)
 
@@ -183,9 +184,10 @@ def queue_deferred_video_analysis(session, session_devices, recordings_dir=None)
 
 def queue_negotiation_coding(session, session_devices):
     """End of a negotiation_coding session: a coding run per pod that has
-    transcripts (legs=('coding',) on the post-hoc queue). In a paired
-    session the two pods of a breakout group get ONE run, hung off the
-    group's first device. Returns [(pod id, run id)] queued."""
+    transcripts, queued behind the pod's post-hoc audio leg
+    (negotiation_coding.queue_coding_run: audio first, then the gated coding
+    job). In a paired session the two pods of a breakout group get ONE run,
+    hung off the group's first device. Returns [(pod id, run id)] queued."""
     queued, covered = [], set()
     paired = bool(getattr(session, 'negotiation_paired', False))
     for session_device in session_devices:

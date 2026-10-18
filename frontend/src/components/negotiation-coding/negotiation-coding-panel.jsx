@@ -23,6 +23,8 @@ import {
     filterKey,
     filterCodes,
     startRunPolling,
+    waitingAudioPods,
+    runButtonLabel,
 } from "./negotiation-coding-helpers"
 
 // Negotiation coding for negotiation classes (built for the Kellogg "Viking"
@@ -182,7 +184,9 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
     const names = teamNamesOf(data, session)
     const tags = speakerTags(tagCounts, codes, { ...teams, ...teamsDraft })
     const teamsDirty = !sameTeams(teamsDraft, teams, names)
-    const status = describeRun(run, now)
+    // Coding is the last stage: a queued run names the pods whose post-hoc
+    // audio analysis it is waiting for.
+    const status = describeRun(run, now, waitingAudioPods(data))
 
     const runCoding = () => {
         setBusy("run")
@@ -340,7 +344,7 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
                         className={btnPrimarySm + " inline-flex items-center gap-2 disabled:opacity-50"}
                     >
                         {busy === "run" ? <InlineSpinner /> : null}
-                        {run ? "Re-run coding" : "Run coding"}
+                        {runButtonLabel(data)}
                     </button>
                 </div>
                 {loadError ? <div className={dlgError}>{loadError}</div> : null}

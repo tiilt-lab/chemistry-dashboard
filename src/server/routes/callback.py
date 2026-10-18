@@ -252,6 +252,11 @@ def posthoc_completed(**kwargs):
         posthoc_state.mark_done(device.id, scope)
         logging.info('Post-hoc marked complete for device %d (server-side, %s: %ss).',
                      device.id, scope or 'audio', elapsed)
+        if (scope or 'audio') == 'audio':
+            # A coding job may be waiting on exactly this (after_audio):
+            # have the runner re-scan now, not at its next idle wake.
+            import posthoc_queue
+            posthoc_queue.wake()
     return json_response()
 
 

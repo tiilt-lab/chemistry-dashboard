@@ -17,6 +17,16 @@ groups are still on) unless NEGOTIATION_CODING_WAIT_FOR_IDLE=1 makes it
 wait like the rest; while an audio/video job at the head holds for a class
 to end, queued coding jobs behind it run in the meantime.
 
+Coding is the LAST stage of the pipeline: it codes the post-hoc transcripts,
+not the live ones. A coding job carries ``after_audio``, the pods whose
+post-hoc audio analysis must be recorded complete first (the pod and, in a
+paired session, its partner; negotiation_coding.queue_coding_run queues
+their audio legs ahead of it). The runner leaves such a job queued while an
+analysis is still to come and skips to the next runnable job; the API
+wakes it when an audio completion lands (wake). A pod whose analysis can
+no longer come (its audio job errored) fails the coding run with that
+reason instead of holding it forever.
+
 The queue itself is in Redis (keys below); the API workers enqueue, report
 and clear, and only the coordinator process runs jobs (start_runner).
 """
@@ -143,8 +153,18 @@ def _all_jobs():
 
 def _next_queued(beside_class=False):
     # beside_class: only a job that may run while pods are live (_needs_idle).
-    return next((j for j in _all_jobs() if j["state"] == "queued"
-                 and not (beside_class and _needs_idle(j))), None)
+    # A coding job gated on post-hoc audio (after_audio) stays queued while
+    # a pod's analysis is still to come; one whose analysis failed is picked
+    # so it fails with that reason (_require_audio) rather than waits forever.
+    jobs = _all_jobs()
+    for j in jobs:
+        if j["state"] != "queued" or (beside_class and _needs_idle(j)):
+            continue
+        waiting, failed = _audio_prerequisites(j, jobs)
+        if waiting and not failed:
+            continue
+        return j
+    return None
 
 
 def _remove(job):
@@ -173,6 +193,13 @@ def _wake():
         pipe.execute()
     except Exception as e:
         logging.warning("posthoc queue: wake failed (%s); the runner re-scans within %ss", e, _IDLE_WAIT)
+
+
+def wake():
+    """API workers: something a queued job waits for happened (a pod's
+    audio analysis completed, routes/callback.posthoc_completed) — have the
+    runner re-scan now rather than at its next idle wake."""
+    _wake()
 
 
 def _state_file():
@@ -450,6 +477,58 @@ def _needs_idle(job):
     return os.environ.get("NEGOTIATION_CODING_WAIT_FOR_IDLE", "").strip().lower() in ("1", "true", "yes", "on")
 
 
+def _audio_done(device_id):
+    import app as A
+    with A.app.app_context():
+        import database
+        return database.audio_posthoc_done(device_id)
+
+
+def _audio_prerequisites(job, jobs=None):
+    """(waiting, failed) over the pods a coding job is gated on
+    (``after_audio``): those whose post-hoc audio analysis is still to come
+    — a queued/running job with an audio leg here, or the service on it —
+    and those nothing will ever finish: not recorded done and no analysis
+    in flight (the audio job errored, or was never queued). A job without
+    the field (queued before the gate existed) has neither."""
+    pods = job.get("after_audio") or []
+    if not pods:
+        return [], []
+    jobs = _all_jobs() if jobs is None else jobs
+    in_flight = {j["device_id"] for j in jobs
+                 if j["state"] in ("queued", "running") and "audio" in _job_legs(j)}
+    waiting, failed = [], []
+    for d in pods:
+        if _audio_done(d):
+            continue
+        (waiting if d in in_flight or _scope_running(d, "audio") else failed).append(d)
+    return waiting, failed
+
+
+def _require_audio(job):
+    # Right before the coding leg: _next_queued let the job through, so every
+    # after_audio pod is done or past waiting for. The latter fails the run
+    # with the reason on its row (the coding panel shows it) and the job.
+    jobs = _all_jobs()
+    failed = _audio_prerequisites(job, jobs)[1]
+    if not failed:
+        return
+    pod = failed[0]
+    msg = "post-hoc audio analysis of pod %s failed; coding not run" % pod
+    why = next((j["error"] for j in jobs if j["device_id"] == pod
+                and j["state"] == "error" and "audio" in _job_legs(j)), None)
+    if why:
+        msg += " (%s)" % why
+    try:
+        import app as A
+        with A.app.app_context():
+            import negotiation_coding
+            negotiation_coding.fail_run(job.get("run_id"), msg)
+    except Exception as e:
+        logging.warning("posthoc queue: could not mark coding run %s failed: %s", job.get("run_id"), e)
+    raise RuntimeError(msg)
+
+
 def _run_coding_leg(job):
     # In this process, no socket/ticket/lease. The run row (created queued by
     # the API route or end_session, id on the job) is marked running -> done
@@ -479,6 +558,7 @@ def _run_job(job):
             continue
         attempted.append(scope)
         if scope == "coding":
+            _require_audio(job)
             _run_coding_leg(job)
             done.append(scope)
             _save(job)
@@ -693,15 +773,20 @@ def enqueue(session_id, device_ids, models=None, legs=None):
     return added
 
 
-def enqueue_coding(session_id, device_id, run_id):
+def enqueue_coding(session_id, device_id, run_id, after_audio=None):
     """A coding-only job for one pod, reporting to negotiation_coding_run
     ``run_id``. Queued beside (never instead of) the pod's audio/video job;
-    a run already queued or running is not queued twice."""
+    a run already queued or running is not queued twice. ``after_audio``:
+    the pods whose post-hoc audio analysis must be complete before it runs
+    (_audio_prerequisites); none = run as soon as it is reached."""
+    extra = {"legs": ["coding"], "run_id": int(run_id)}
+    if after_audio:
+        extra["after_audio"] = [int(d) for d in after_audio]
     with _mutation():
         if any(j.get("run_id") == int(run_id) and j["state"] in ("queued", "running")
                for j in _all_jobs()):
             return False
-        _append(session_id, device_id, None, {"legs": ["coding"], "run_id": int(run_id)})
+        _append(session_id, device_id, None, extra)
     _wake()
     return True
 
