@@ -36,36 +36,40 @@ function piAverages(transcripts, speakerId) {
     return out
 }
 
+// group: a breakout group's name -> the talk shares come from the group's
+// merged transcript (both laptops) and the cards cover both teams; refreshKey
+// changes when the rows did (a finished post-hoc run), so the cards refetch.
 function SpeakerCardsPanel({
     sessionId,
     sessionDeviceId,
     speakers,
     transcripts,
     onOpenSpeaker,
+    group,
+    refreshKey,
 }) {
     const [dynamics, setDynamics] = useState(null)
 
     useEffect(() => {
-        if (!sessionId || !sessionDeviceId) return
+        if (!sessionId || (!sessionDeviceId && !group)) return
         // Guard against a slow response for a previous pod overwriting the
         // current pod's data after a quick switch.
         let alive = true
+        const url = group
+            ? `api/v1/sessions/${sessionId}/groups/${encodeURIComponent(group)}/dynamics`
+            : `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/dynamics`
         new ApiService()
-            .httpRequestCall(
-                `api/v1/sessions/${sessionId}/device/${sessionDeviceId}/dynamics`,
-                "GET",
-                {},
-            )
+            .httpRequestCall(url, "GET", {})
             .then((r) => (r.status === 200 ? r.json() : null))
             .then((d) => alive && d && setDynamics(d))
             .catch(() => {})
         return () => { alive = false }
-    }, [sessionId, sessionDeviceId])
+    }, [sessionId, sessionDeviceId, group, refreshKey])
 
     if (!speakers || speakers.length === 0)
         return (
             <div className="py-6 text-center text-sm text-tiilt-muted">
-                No speakers identified in this pod yet.
+                {group ? "No speakers identified in this group yet." : "No speakers identified in this pod yet."}
             </div>
         )
 
