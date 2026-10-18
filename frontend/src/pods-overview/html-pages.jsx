@@ -13,6 +13,7 @@ import { StatusPill } from "../components/status-pill"
 import { ToastStack } from "../components/toast"
 import { QrCode } from "../components/qr-code"
 import { slotLinks, slotLinksText } from "./slot-links"
+import { groupByTable, hasTables } from "./table-groups"
 
 
 // null (hide) for missing durations, else SessionModel's shared H:MM:SS.
@@ -264,6 +265,45 @@ function PodRow({ device, enrich, alerts, onOpen, checked, onToggle, queue, inde
 }
 
 // At-a-glance roll-up for the whole session (pods, analyzed, people, time).
+// The session's side names in order (pod setup), for side pills and sorting.
+function teamNamesOf(session) {
+    return ((session && session.pod_config && session.pod_config.teams) || []).map((t) =>
+        typeof t === "string" ? t : t && t.name,
+    )
+}
+
+// One breakout table's heading in the pod list: its laptops follow. "Open
+// table" shows both laptops' transcripts merged, with either recording.
+function TableHeaderRow({ group, count, onOpen }) {
+    return (
+        <tr className="border-t border-tiilt-line bg-tiilt-ground/60">
+            <td colSpan={7} className="px-3 py-1.5">
+                <div className="flex items-center gap-3">
+                    <span className="text-xs font-semibold tracking-wide text-tiilt-ink uppercase">
+                        {group}
+                    </span>
+                    <span className="text-xs text-tiilt-muted">
+                        {count === 1 ? "1 laptop" : `${count} laptops`}
+                    </span>
+                    {onOpen ? (
+                        <button
+                            type="button"
+                            onClick={(ev) => {
+                                ev.stopPropagation()
+                                onOpen()
+                            }}
+                            title="Both laptops' transcripts merged into one conversation, with either recording"
+                            className="ml-auto cursor-pointer rounded-md border border-tiilt-line bg-white px-2 py-0.5 text-xs font-semibold text-tiilt transition hover:bg-tiilt-soft"
+                        >
+                            Open table
+                        </button>
+                    ) : null}
+                </div>
+            </td>
+        </tr>
+    )
+}
+
 function SessionStats({ devices, enriched }) {
     const en = enriched || {}
     const list = devices || []
@@ -730,32 +770,44 @@ function PodsOverviewPages(props) {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {props.sessionDevices.map(
-                                                (device, index) => (
-                                                    <PodRow
-                                                        key={device.id}
-                                                        index={index}
-                                                        lastSpoke={props.lastActivity && props.lastActivity[device.id]}
-                                                        device={device}
-                                                        enrich={props.enriched && props.enriched[device.id]}
-                                                        alerts={props.triage && props.triage[device.id]}
-                                                        checked={props.selected && props.selected[device.id]}
-                                                        onToggle={() => props.toggleSelect(device.id)}
-                                                        queue={props.queueState && props.queueState[device.id]}
-                                                        renameInline={props.renamePodInline}
-                                                        teamNames={((props.session && props.session.pod_config && props.session.pod_config.teams) || []).map((t) => t && t.name)}
-                                                        onDelete={
-                                                            props.canDeletePod &&
-                                                            props.canDeletePod(device)
-                                                                ? () => props.requestDeletePod(device)
-                                                                : null
-                                                        }
-                                                        onOpen={() =>
-                                                            props.goToDevice(device)
-                                                        }
-                                                    />
-                                                ),
-                                            )}
+                                            {(hasTables(props.sessionDevices)
+                                                ? groupByTable(props.sessionDevices, teamNamesOf(props.session))
+                                                : [{ group: null, devices: props.sessionDevices.map((device, index) => ({ device, index })) }]
+                                            ).map((table) => (
+                                                <React.Fragment key={table.group || "__rest"}>
+                                                    {table.group ? (
+                                                        <TableHeaderRow
+                                                            group={table.group}
+                                                            count={table.devices.length}
+                                                            onOpen={props.goToTable ? () => props.goToTable(table.group) : null}
+                                                        />
+                                                    ) : null}
+                                                    {table.devices.map(({ device, index }) => (
+                                                        <PodRow
+                                                            key={device.id}
+                                                            index={index}
+                                                            lastSpoke={props.lastActivity && props.lastActivity[device.id]}
+                                                            device={device}
+                                                            enrich={props.enriched && props.enriched[device.id]}
+                                                            alerts={props.triage && props.triage[device.id]}
+                                                            checked={props.selected && props.selected[device.id]}
+                                                            onToggle={() => props.toggleSelect(device.id)}
+                                                            queue={props.queueState && props.queueState[device.id]}
+                                                            renameInline={props.renamePodInline}
+                                                            teamNames={teamNamesOf(props.session)}
+                                                            onDelete={
+                                                                props.canDeletePod &&
+                                                                props.canDeletePod(device)
+                                                                    ? () => props.requestDeletePod(device)
+                                                                    : null
+                                                            }
+                                                            onOpen={() =>
+                                                                props.goToDevice(device)
+                                                            }
+                                                        />
+                                                    ))}
+                                                </React.Fragment>
+                                            ))}
                                         </tbody>
                                     </table>
                                 </div>

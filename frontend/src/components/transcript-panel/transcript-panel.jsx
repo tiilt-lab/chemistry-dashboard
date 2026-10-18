@@ -29,6 +29,20 @@ function FarSideTag({ farSide }) {
     )
 }
 
+// The laptop that heard a merged line (the table view's transcript joins
+// both laptops of a breakout group); absent on a single pod's transcript.
+function PodTag({ label }) {
+    if (!label) return null
+    return (
+        <span
+            title="The laptop that heard this line"
+            className="rounded bg-tiilt-ground px-1 text-[10px] font-medium text-tiilt-muted"
+        >
+            {label}
+        </span>
+    )
+}
+
 function ConfidenceTag({ percent, contested }) {
     if (percent == null) return null
     const low = contested || percent < 55
@@ -323,6 +337,7 @@ function TranscriptPanel({
                                                         />
                                                     ) : null}
                                                     <FarSideTag farSide={t.far_side} />
+                                                    <PodTag label={t.pod_label} />
                                                 </span>
                                             ) : t.speaker_tag ? (
                                                 <span className="flex flex-wrap items-center gap-x-1">
@@ -337,9 +352,13 @@ function TranscriptPanel({
                                                         contested={t.contested}
                                                     />
                                                     <FarSideTag farSide={t.far_side} />
+                                                    <PodTag label={t.pod_label} />
                                                 </span>
                                             ) : (
-                                                <span className="text-tiilt-muted">—</span>
+                                                <span className="flex flex-wrap items-center gap-x-1">
+                                                    <span className="text-tiilt-muted">—</span>
+                                                    <PodTag label={t.pod_label} />
+                                                </span>
                                             )}
                                         </div>
 
