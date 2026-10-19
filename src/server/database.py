@@ -1014,6 +1014,61 @@ def get_or_add_transcript(session_device_id, start_time, length, transcript, *ar
         return existing, False
     return add_transcript(session_device_id, start_time, length, transcript, *args, **kwargs), True
 
+def publish_transcripts_batch(session_device_id, rows):
+    """A post-hoc publish: hundreds of a run's rows in ONE commit. ``rows``
+    are dicts in discussion order with the add_transcript fields
+    (start_time, length, transcript, question, direction, the five
+    features, topic_id, speaker_tag, speaker_id, voice_features, keywords)
+    and, for a speaker-metrics row, ``metrics``: [{speaker_id,
+    participation_score, internal_cohesion, responsivity, social_impact,
+    newness, communication_density}] (index 0 the group row). Idempotent
+    like get_or_add_transcript: a row already stored on its natural key
+    (device, start, length, text) is returned, not inserted, and its
+    metrics are added only when it has none. Returns [{transcript,
+    created, metrics}] in order, metrics as the stored rows' JSON or None.
+    One request per row took 100 s for a thousand-row pod and left a pod
+    half published across an API restart (2026-10-19)."""
+    existing = {}
+    for t in db.session.query(Transcript).filter(Transcript.session_device_id == session_device_id) \
+                                         .order_by(Transcript.id.asc()).all():
+        existing.setdefault((t.start_time, t.length, t.transcript), t)
+    out, pending = [], []
+    for r in rows:
+        start, length = _as_int(r['start_time']), _as_int(r['length'])
+        natural = (start, length, r['transcript'])
+        t = existing.get(natural)
+        created = t is None
+        if created:
+            t = Transcript(session_device_id, start, length, r['transcript'], bool(r.get('question', False)),
+                           r.get('direction', -1), r.get('emotional_tone', 0), r.get('analytic_thinking', 0),
+                           r.get('clout', 0), r.get('authenticity', 0), r.get('certainty', 0), r.get('topic_id', -1),
+                           r.get('speaker_tag'), r.get('speaker_id', -1), voice_features=r.get('voice_features'))
+            for k in r.get('keywords') or []:
+                t.keywords.append(KeywordUsage(None, k['word'], k['keyword'], k['similarity']))
+            db.session.add(t)
+            existing[natural] = t
+        out.append({'transcript': t, 'created': created, 'metrics': None})
+        pending.append(r.get('metrics'))
+    db.session.flush()                      # ids for the metrics rows
+    for o, mrows in zip(out, pending):
+        if not mrows:
+            continue
+        if not o['created'] and db.session.query(SpeakerTranscriptMetrics) \
+                .filter(SpeakerTranscriptMetrics.transcript_id == o['transcript'].id).first() is not None:
+            continue                        # a replay: the metrics are already there
+        metrics = [SpeakerTranscriptMetrics(m['speaker_id'], o['transcript'].id, m['participation_score'],
+                                            m['internal_cohesion'], m['responsivity'], m['social_impact'],
+                                            m['newness'], m['communication_density']) for m in mrows]
+        db.session.add_all(metrics)
+        o['metrics'] = metrics
+    db.session.flush()
+    for o in out:
+        if o['metrics'] is not None:
+            o['metrics'] = [m.json() for m in o['metrics']]
+    db.session.commit()
+    return out
+
+
 def update_transcript_features_batch(session_device_id, updates):
     # Overwrite the five E&T feature values on existing transcript rows (used
     # by the post-hoc style recomputation). Rows are matched by id AND device

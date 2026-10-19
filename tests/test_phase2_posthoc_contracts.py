@@ -119,10 +119,10 @@ def test_audio_marks_running_at_start_without_wiping_and_wipes_only_at_publish()
     assert PROC.count("callbacks.post_posthoc_reset(") == 1
     publish = _def(PROC, "_publish")
     _before(publish, "staged = self._staging.ordered()", "callbacks.post_posthoc_reset(self.config.auth_key, 'audio')")
-    _before(publish, "callbacks.post_posthoc_reset(self.config.auth_key, 'audio')", "callbacks.post_transcripts(**payload)")
+    _before(publish, "callbacks.post_posthoc_reset(self.config.auth_key, 'audio')", "callbacks.post_transcripts_batch(")
     _before(publish, "callbacks.post_posthoc_reset(self.config.auth_key, 'audio')",
-            "self.speaker_metrics_process.process_transcript(payload, action=\"posthoc_processing\")")
-    _before(publish, "callbacks.post_transcripts(**payload)", "self.send_speaker_taggings()")
+            "self.speaker_metrics_process.metrics_payload(payload, action=\"posthoc_processing\")")
+    _before(publish, "callbacks.post_transcripts_batch(", "self.send_speaker_taggings()")
 
 
 def test_audio_processor_stages_instead_of_posting_per_utterance():

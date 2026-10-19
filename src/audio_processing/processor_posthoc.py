@@ -33,7 +33,7 @@ from topic_modeling.topic_modeling import preprocess_transcript
 import config as cf
 from processing_common import select_topic_id, save_embeddings, load_embeddings
 from completion_latch import CompletionLatch
-from posthoc_staging import RunStaging, PREEMPTED, CANCELLED  # src/common
+from posthoc_staging import RunStaging, PREEMPTED, CANCELLED, batches  # src/common
 from asr_connectors.base_asr import AsrFailed
 # from source_seperation import source_seperation_pre_trained
 # from server.topic_modeling.topicmodeling import get_topics_with_prob
@@ -78,6 +78,9 @@ def progress_of(stage, worker_progress=None, done=0, total=None, published=0, pu
         share = min(float(published) / publish_total, 1.0) if publish_total else 0.0
         return int(round(lo + (hi - lo) * share)), 'Publishing %d of %s' % (published, publish_total if publish_total else '?')
     return 0, 'Starting'
+
+
+PUBLISH_BATCH = 250     # rows per publish request: one commit each on the API
 
 
 class AudioProcessorPosthoc:
@@ -233,27 +236,31 @@ class AudioProcessorPosthoc:
         self.report_progress()
         # Only now does the previous analysis go: its replacement is complete.
         callbacks.post_posthoc_reset(self.config.auth_key, 'audio')
-        posted = 0
+        # Every row is built first, in discussion order (the GCA metrics are
+        # cumulative, so they are computed in that order, not thread-finish
+        # order), then stored a few hundred at a time, one commit each: a
+        # thousand single-row posts took 100 s per pod and left a pod half
+        # published across an API restart (2026-10-19). A row whose metrics
+        # fail is left out and counted against the run, as its lost post was.
+        rows = []
         for kind, payload in staged:
             if kind == 'metrics':
-                # GCA metrics are order-dependent: feed them in discussion
-                # order (not thread-finish order); it posts each one and says
-                # whether the post landed (on 2026-10-18 every post of a run
-                # failed and the count still said 1129/1129).
-                if self.speaker_metrics_process.process_transcript(payload, action="posthoc_processing"):
-                    posted += 1
-                else:
-                    logging.warning("Metrics @ %s FAILED to post for client %s", payload['start_time'], self.config.auth_key)
+                row = self.speaker_metrics_process.metrics_payload(payload, action="posthoc_processing")
+                if row is None:
+                    logging.warning("Metrics @ %s FAILED for client %s", payload['start_time'], self.config.auth_key)
             else:
-                success, transcript_id = callbacks.post_transcripts(**payload)
-                if success:
-                    posted += 1
-                else:
-                    logging.warning("Transcript @ %s FAILED to post for client %s",
-                                    payload['start_time'], self.config.auth_key)
+                row = callbacks.transcript_payload(**payload)
+            if row is not None:
+                rows.append(row)
+        posted = 0
+        for batch in batches(rows, PUBLISH_BATCH):
+            if callbacks.post_transcripts_batch(self.config.auth_key, batch) is None:
+                logging.warning("Batch of %d rows @ %s FAILED to post for client %s",
+                                len(batch), batch[0]['start_time'], self.config.auth_key)
+                break
+            posted += len(batch)
             self.published = posted
-            if posted % 25 == 0:
-                self.report_progress()
+            self.report_progress()
         logging.info('Posted %d/%d utterances for %s', posted, len(staged), self.config.auth_key)
         if staged and posted < len(staged):
             # The previous rows are gone and the new ones are incomplete: say

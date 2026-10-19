@@ -149,62 +149,85 @@ class SpeakerProcessor:
         self.running = False
         self.asr_complete = True
 
+    def compute_metrics(self, speaker_transcript_data, action="realtime_processing"):
+        """The metric arrays once this utterance is counted, in discussion
+        order: (speaker_ids, participation, internal_cohesion, responsivity,
+        social_impact, newness, communication_density) and the seconds the
+        maths took; None when it failed. Posting is the caller's: the live
+        processor posts each (process_transcript), the post-hoc publish
+        batches them (metrics_payload)."""
+        try:
+            with self.process_lock:
+                processing_timer = time.time()
+                speaker_ids = list(self.speakers.keys())
+
+                speaker = speaker_transcript_data['speaker_id']
+                transcript = speaker_transcript_data['transcript']
+                index = self.indicies[speaker] + 1 if speaker != -1 else 0
+                self.contributions[index] += 1
+
+                # Cohesion, responsivity, social impact, and newness each measure an
+                # utterance against the REST of the discussion, so their value is only
+                # meaningful once the whole session exists — and the sentence-embedding
+                # + subspace math is the expensive part of this pipeline. They are a
+                # post-hoc concern: the post-hoc pass rebuilds this state from scratch
+                # over every stored transcript. Live computes participation only, which
+                # keeps the in-class dashboard responsive and frees GPU for ASR and
+                # diarization. (The semantic-metric arrays stay at their zero init and
+                # are overwritten when post-hoc runs.) Every non-realtime caller — the
+                # post-hoc re-analysis and the "pi" metric recomputation — still
+                # computes the full set.
+                if action != "realtime_processing":
+                  embedding = self.semantic_model.encode(transcript)
+                  if self.length > 0:
+                    cross_cohesion = self.calculateCohesionSums(index, embedding, self.semantic_model)
+                    self.processResponsivity(cross_cohesion)
+                    self.calculateNewness(embedding, index)
+                  else:
+                    self.embeddings = np.array([embedding])
+                    self.subspace_basis = normalizeVector(self.embeddings)
+                    self.total_new[index] += 1
+
+                self.length += 1
+                self.prev_window_speakers.append(speaker)
+                self.participation_scores = np.subtract(np.multiply(np.divide(self.contributions, self.length), self.participants), 1)
+
+                processing_time =  time.time() - processing_timer
+                # Snapshot under the lock; the post below is a 30s-timeout HTTP call
+                # and holding process_lock across it stalled every other utterance.
+                finite = lambda a: np.nan_to_num(np.asarray(a, dtype=float), nan=0.0, posinf=0.0, neginf=0.0).tolist()  # noqa: E731
+                metrics = (speaker_ids,
+                           finite(self.participation_scores),
+                           finite(self.internal_cohesion),
+                           finite(self.overall_responsivity),
+                           finite(self.social_impact),
+                           finite(self.newness),
+                           finite(self.communication_density))
+
+            return metrics, processing_time
+        except Exception as e:
+            logging.error('[Speaker Metrics]Processing FAILED for client {0}: {1}'.format(self.auth_key, e))
+            return None
+
+    def metrics_payload(self, speaker_transcript_data, action="posthoc_processing"):
+        """What post_speaker_transcript_metrics would send for this
+        utterance, for a batched publish; None when the metrics failed."""
+        computed = self.compute_metrics(speaker_transcript_data, action)
+        if computed is None:
+            return None
+        metrics, _ = computed
+        return callbacks.speaker_metrics_payload(speaker_transcript_data, *metrics)
+
     def process_transcript(self, speaker_transcript_data, action="realtime_processing"):
-      try:
-       with self.process_lock:
-        processing_timer = time.time()
-        speaker_ids = list(self.speakers.keys())
-
-        speaker = speaker_transcript_data['speaker_id']
-        transcript = speaker_transcript_data['transcript']
-        index = self.indicies[speaker] + 1 if speaker != -1 else 0
-        self.contributions[index] += 1
-
-        # Cohesion, responsivity, social impact, and newness each measure an
-        # utterance against the REST of the discussion, so their value is only
-        # meaningful once the whole session exists — and the sentence-embedding
-        # + subspace math is the expensive part of this pipeline. They are a
-        # post-hoc concern: the post-hoc pass rebuilds this state from scratch
-        # over every stored transcript. Live computes participation only, which
-        # keeps the in-class dashboard responsive and frees GPU for ASR and
-        # diarization. (The semantic-metric arrays stay at their zero init and
-        # are overwritten when post-hoc runs.) Every non-realtime caller — the
-        # post-hoc re-analysis and the "pi" metric recomputation — still
-        # computes the full set.
-        if action != "realtime_processing":
-          embedding = self.semantic_model.encode(transcript)
-          if self.length > 0:
-            cross_cohesion = self.calculateCohesionSums(index, embedding, self.semantic_model)
-            self.processResponsivity(cross_cohesion)
-            self.calculateNewness(embedding, index)
-          else:
-            self.embeddings = np.array([embedding])
-            self.subspace_basis = normalizeVector(self.embeddings)
-            self.total_new[index] += 1
-
-        self.length += 1
-        self.prev_window_speakers.append(speaker)
-        self.participation_scores = np.subtract(np.multiply(np.divide(self.contributions, self.length), self.participants), 1)
-
-        processing_time =  time.time() - processing_timer
-        # Snapshot under the lock; the post below is a 30s-timeout HTTP call
-        # and holding process_lock across it stalled every other utterance.
-        finite = lambda a: np.nan_to_num(np.asarray(a, dtype=float), nan=0.0, posinf=0.0, neginf=0.0).tolist()  # noqa: E731
-        metrics = (speaker_ids,
-                   finite(self.participation_scores),
-                   finite(self.internal_cohesion),
-                   finite(self.overall_responsivity),
-                   finite(self.social_impact),
-                   finite(self.newness),
-                   finite(self.communication_density))
-
-       success = callbacks.post_speaker_transcript_metrics(speaker_transcript_data, *metrics)
-
-       if success:
-          logging.info('[Speaker_Metrics]Processing posted successfully for client {0} (Processing time: {1}) @ {2}'.format(self.auth_key, processing_time, processing_timer))
-       else:
-          logging.warning('[Speaker_Metrics]Processing results FAILED to post for client {0} (Processing time: {1})'.format(self.auth_key, processing_time))
-       return bool(success)
-      except Exception as e:
-         logging.error('[Speaker Metrics]Processing FAILED for client {0}: {1}'.format(self.auth_key, e))
-         return False
+        computed = self.compute_metrics(speaker_transcript_data, action)
+        if computed is None:
+            return False
+        metrics, processing_time = computed
+        success = callbacks.post_speaker_transcript_metrics(speaker_transcript_data, *metrics)
+        if success:
+            logging.info('[Speaker_Metrics]Processing posted successfully for client {0} (Processing time: {1}) @ {2}'.format(
+                self.auth_key, processing_time, speaker_transcript_data.get('start_time')))
+        else:
+            logging.warning('[Speaker_Metrics]Processing results FAILED to post for client {0} (Processing time: {1})'.format(
+                self.auth_key, processing_time))
+        return bool(success)
