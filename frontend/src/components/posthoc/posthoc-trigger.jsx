@@ -41,8 +41,6 @@ const STARTED_ACKS = new Set([
 const ASR_OPTIONS = [
     { id: "moss", label: "MOSS-Transcribe-Diarize (default: transcript + speakers in one pass, punctuated)" },
     { id: "whisperx", label: "WhisperX (open SOTA: batched + word-aligned)" },
-    { id: "qwen3", label: "Qwen3-ASR 1.7B (open; leaderboard-best WER, slower)" },
-    { id: "qwen3-0.6b", label: "Qwen3-ASR 0.6B (open; fast variant)" },
     { id: "crisperwhisper", label: "CrisperWhisper 2.0 (verbatim: fillers, stutters, pause-true timing)" },
 ]
 // Exactly two post-hoc diarizers; each runs in its own venv and the audio
@@ -658,8 +656,8 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
             "google-cloud-speech": "Google STT (retired)",
             whisperx: "WhisperX",
             whisper: "Whisper",
-            qwen3: "Qwen3-ASR",
-            "qwen3-0.6b": "Qwen3-ASR 0.6B",
+            qwen3: "Qwen3-ASR (retired)",
+            "qwen3-0.6b": "Qwen3-ASR 0.6B (retired)",
             pyannote: "pyannote",
             fingerprint: "voice prints",
             sortformer: "Sortformer",

@@ -84,7 +84,7 @@ def diarization_constrain_to_enrolled():
     # When true and a pod's enrolled participants are known, cap pyannote at the
     # enrolled count (max_speakers) and remap each diarization cluster to its
     # nearest enrolled voice print, so utterances resolve to real people instead
-    # of leftover SPEAKER_NN clusters. Only affects the WhisperX/Qwen3 paths.
+    # of leftover SPEAKER_NN clusters. Only affects the WhisperX paths.
     return as_bool(config.get('processing', 'diarization_constrain_to_enrolled',
                           fallback='false'))
 
@@ -95,7 +95,7 @@ def diarization_fallback():
     # clustering *does with* any labels the ASR produced:
     #   'spectral' (default) -- the original ECAPA + spectral clustering.
     #   'pyannote'           -- reuse pyannote 3.1 cluster labels already
-    #                           attached by batch ASR (WhisperX/Qwen3); falls
+    #                           attached by batch ASR (WhisperX); falls
     #                           back to spectral when labels are absent.
     return str(config.get('processing', 'diarization_fallback', fallback='spectral'))
 

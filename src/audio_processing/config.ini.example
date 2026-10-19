@@ -41,14 +41,14 @@ keyword_embedding_threshold=0.28
 # which decides whether the ASR runs pyannote at all. This decides what the
 # fallback clustering does with any labels produced:
 #   spectral  (2020 ECAPA + spectral clustering)
-#   pyannote  (default; reuse pyannote 3.1 labels carried by the WhisperX/Qwen3
+#   pyannote  (default; reuse pyannote 3.1 labels carried by the WhisperX
 #             batch ASR — falls back to spectral when none are present, e.g.
 #             the google/live ASR path)
 diarization_fallback=pyannote
 # When a pod's enrolled participants are known, cap pyannote diarization at the
 # enrolled count (max_speakers) and remap each cluster onto its nearest enrolled
 # voice print, so utterances resolve to real people instead of leftover
-# SPEAKER_NN clusters. WhisperX/Qwen3 (batch ASR) paths only.
+# SPEAKER_NN clusters. WhisperX (batch ASR) paths only.
 diarization_constrain_to_enrolled=false
 # Prosody (#6): per-utterance pitch/energy/voicing via librosa (prosody.py).
 prosody=false

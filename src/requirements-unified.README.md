@@ -23,8 +23,8 @@ Hard pins and why:
 - transformers 5.20.1, tokenizers 0.23.3, huggingface_hub 2.2.0, accelerate
   1.15.0 — the generation the MOSS engine runs on (`src/venv-granite` has the
   same), moved to on 2026-10-19 once the Qwen3-ASR package, which pinned
-  transformers to exactly 4.57.6, was dropped. The Qwen3 connector stays in
-  the code but needs that package installed to run.
+  transformers to exactly 4.57.6, was dropped (the Qwen3 connector itself
+  was removed the same day).
 - whisperx 3.8.6 is installed with `--no-deps` (`requirements-unified-nodeps.txt`):
   the latest release still declares torch 2.8 and huggingface-hub < 1, which
   this stack cannot satisfy, while everything it imports is pinned here.

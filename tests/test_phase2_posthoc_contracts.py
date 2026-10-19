@@ -47,7 +47,7 @@ COMMON_CB = _read("common", "callbacks_common.py")
 
 def test_audio_takes_the_lease_in_signal_start_before_any_model():
     body = _def(AUDIO, "signal_start")
-    for model in ("AudioBuffer(", "Qwen3ASR(", "WhisperXASR(", "CrisperWhisperPosthocASR(",
+    for model in ("AudioBuffer(", "WhisperXASR(", "CrisperWhisperPosthocASR(",
                   "AudioProcessorPosthoc("):
         _before(body, "self._gpu_lease = acquire_for_run(", model)
     assert "return False" in body and body.rstrip().endswith("return True")
@@ -147,12 +147,11 @@ def test_audio_processor_abandons_with_posthoc_failed_and_never_marks_complete()
 
 
 def test_connectors_report_failures_instead_of_swallowing_them():
-    for name in ("qwen3_asr.py", "whisperx_asr.py", "crisperwhisper_asr.py"):
+    for name in ("whisperx_asr.py", "crisperwhisper_asr.py"):
         s = _read("audio_processing", "asr_connectors", name)
         assert "self.fail(e)" in s, name
-    for name in ("qwen3_asr.py", "crisperwhisper_asr.py"):
-        s = _read("audio_processing", "asr_connectors", name)
-        assert "handle=getattr(self, 'worker', None)" in s, name
+    s = _read("audio_processing", "asr_connectors", "crisperwhisper_asr.py")
+    assert "handle=getattr(self, 'worker', None)" in s
     assert "class AsrFailed" in BASE
     assert "self.transcript_queue.put(AsrFailed(self.error))" in _def(BASE, "fail")
 
@@ -298,8 +297,8 @@ def test_moss_runs_skip_the_audio_buffer_the_spectral_tagging_and_the_dead_diari
     # ... and clusters nothing when no embedding was gathered
     _before(_def(PROC, "_publish"), "if self.config.diarization and not self.embeddings:", "self.send_speaker_taggings()")
     # the constrain-to-enrolled knobs exist only for the engines that take them
-    assert start.count("_max_spk, _enr, _spk_model = _constrained()") == 2
-    _before(start, "from asr_connectors.qwen3_asr import Qwen3ASR", "_max_spk, _enr, _spk_model = _constrained()")
+    assert start.count("_max_spk, _enr, _spk_model = _constrained()") == 1
+    _before(start, "from asr_connectors.whisperx_asr import WhisperXASR", "_max_spk, _enr, _spk_model = _constrained()")
     assert "MossASR(" in start and "max_speakers" not in start.split("MossASR(")[1].split("elif")[0]
     # provenance names MOSS as its own diarizer from the start, queue and trigger alike
     assert "self.diarizer_choice = 'moss'" in AUDIO

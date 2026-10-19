@@ -398,7 +398,7 @@ class AudioProcessorPosthoc:
         # 'diarizer' (fingerprint|pyannote) that decides whether the ASR runs
         # pyannote in the first place.
         #   'pyannote' -> reuse the pyannote 3.1 cluster labels the batch ASR
-        #                 (WhisperX/Qwen3) already attached to each utterance,
+        #                 (WhisperX) already attached to each utterance,
         #                 skipping the 2020-era spectral clustering entirely.
         #                 Falls back to spectral if labels are absent (e.g. the
         #                 google/live ASR path, which carries no diarization).
@@ -639,7 +639,7 @@ class AudioProcessorPosthoc:
                             'start': start_time,
                             'end': end_time,
                             # Carried pyannote 3.1 cluster label from batch ASR
-                            # (WhisperX/Qwen3), if any — used by send_speaker_taggings
+                            # (WhisperX), if any — used by send_speaker_taggings
                             # when diarization_fallback='pyannote' to skip clustering.
                             'speaker_tag': getattr(transcript_data, 'speaker_tag', None),
                         })

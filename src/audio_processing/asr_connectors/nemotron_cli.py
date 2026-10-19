@@ -5,7 +5,7 @@ cu128, NeMo from GitHub main): nvidia/Nemotron-3-Diarization needs a
 transformer encoder with self_attention_model='rope', which neither the
 PyPI NeMo 3.0.0 release nor the production src/venv-nemo (NeMo 2.7.3,
 Sortformer) can load. The audio service invokes this as a subprocess and
-reads JSON, exactly like sortformer_cli.py / diarizen_cli.py.
+reads JSON, exactly like diarizen_cli.py.
 
 Usage:
     venv-nemo3/bin/python nemotron_cli.py input.wav --out turns.json \
