@@ -199,6 +199,7 @@ def export_session_negotiation_coding(session_id, **kwargs):
     scheme's dimensions."""
     dims = _session_dims(session_id)
     runs = {run.id: run for run in _latest_runs(session_id).values() if run.status == 'done'}
+    labels = _session_labels(session_id)
     rows = []
     for run in runs.values():
         payload = negotiation_coding.run_payload(run)
@@ -207,7 +208,7 @@ def export_session_negotiation_coding(session_id, **kwargs):
         group = next((p['group'] for p in payload['pods'] if p['group']), None) or ''
         for c in payload['codes']:
             rows.append((negotiation_coding.group_sort_key(group), float(c['start_time'] or 0), c['transcript_id'],
-                         negotiation_coding.export_row(c, pods, dims, run.id)))
+                         negotiation_coding.export_row(c, pods, dims, run.id, labels.get(group))))
     rows.sort(key=lambda r: r[:3])
     buf = io.StringIO()
     writer = csv.writer(buf)
@@ -230,6 +231,7 @@ def export_session_transcript(session_id, **kwargs):
     dims = _session_dims(session_id)
     latest = _latest_runs(session_id)
     names = negotiation_coding._session_names(database.get_sessions(id=session_id))
+    labels = _session_labels(session_id)
     devices = database.get_session_devices(session_id=session_id)
     devices.sort(key=lambda d: (negotiation_coding.group_sort_key(getattr(d, 'negotiation_group', None)),
                                 str(getattr(d, 'negotiation_side', None) or ''), d.id))
@@ -254,6 +256,7 @@ def export_session_transcript(session_id, **kwargs):
         fate = fates.get(run.id) if run is not None else None
         sides = negotiation_coding.run_sides(run, names) if run is not None else {}
         side = getattr(device, 'negotiation_side', None) or ''
+        label_of = labels.get(getattr(device, 'negotiation_group', None) or '', {})
         for t in database.get_transcripts(session_device_id=device.id):
             conf = negotiation_coding._attribution_confidence(t) or {}
             status, kept_as, code = (fate.get(t.id) if fate is not None else None) or ('uncoded', None, None)
@@ -262,7 +265,7 @@ def export_session_transcript(session_id, **kwargs):
             values = [';'.join(code[d]) if isinstance(code.get(d), list) else (code.get(d) or '') for d in dims] \
                 if code else [''] * len(dims)
             writer.writerow([getattr(device, 'negotiation_group', None) or '', device.name or 'Pod %s' % device.id,
-                             side, team, t.speaker_tag or '', 'yes' if t.speaker_tag else 'no',
+                             side, team, label_of.get(t.speaker_tag or '', t.speaker_tag or ''), 'yes' if t.speaker_tag else 'no',
                              'yes' if conf.get('far_side') else '', 'yes' if conf.get('closed_world') else '',
                              '' if conf.get('sim') is None else conf.get('sim'), t.id, t.start_time,
                              negotiation_coding.clock_text(t.start_time), t.length, t.transcript or '', status,
@@ -300,7 +303,29 @@ def list_session_groups(session_id, **kwargs):
     names = negotiation_coding._session_names(database.get_sessions(id=session_id))
     devices = database.get_session_devices(session_id=session_id)
     groups = negotiation_coding.session_groups(devices, names, database.session_device_transcript_count)
+    for g in groups:
+        g['speakers'] = negotiation_coding.speaker_labels(_group_rosters(g['pods']), names)
     return json_response({'teams': list(names), 'groups': groups})
+
+
+def _session_labels(session_id):
+    """{group: {alias: "Pat 2"}} for every breakout group of the session:
+    the exports name speakers by team label, never by what they typed."""
+    names = negotiation_coding._session_names(database.get_sessions(id=session_id))
+    devices = database.get_session_devices(session_id=session_id)
+    out = {}
+    for g in negotiation_coding.session_groups(devices, names):
+        out[g['group']] = {s['alias']: s['label']
+                           for s in negotiation_coding.speaker_labels(_group_rosters(g['pods']), names)}
+    return out
+
+
+def _group_rosters(pods):
+    # [{session_device_id, side, aliases}] per laptop of a group: what
+    # speaker_labels numbers into "Pat 1", "Sandy 2".
+    return [{'session_device_id': p['id'], 'side': p['side'],
+             'aliases': [s.alias for s in database.get_speakers(session_device_id=p['id']) if s.alias]}
+            for p in pods]
 
 
 def _group_merge(session_id, group):
@@ -320,7 +345,10 @@ def _group_merge(session_id, group):
                                                   rows_by_device, names)
     for pod in pods:
         pod['has_video'], pod['has_audio'] = _pod_media(pod['id'])
-    payload.update({'group': group, 'teams': list(names), 'pods': pods})
+    # Display names: "Pat 1", "Sandy 2" from each laptop's roster and side,
+    # the one list the transcript, the speaker cards and the dynamics share.
+    payload.update({'group': group, 'teams': list(names), 'pods': pods,
+                    'speakers': negotiation_coding.speaker_labels(_group_rosters(pods), names, payload['lines'])})
     return payload, devices
 
 
@@ -363,4 +391,6 @@ def get_group_dynamics(session_id, group, **kwargs):
     enrolled = []
     for d in devices:
         enrolled += [s.alias for s in database.get_speakers(session_device_id=d.id) if s.alias]
-    return json_response(negotiation_coding.group_dynamics(payload['lines'], enrolled=sorted(set(enrolled))))
+    return json_response(negotiation_coding.group_dynamics(
+        payload['lines'], enrolled=sorted(set(enrolled)),
+        speakers=payload['speakers'], names=tuple(payload['teams'])))

@@ -13,7 +13,10 @@ const MENU_MAX_H = 280
 // viewport rect. It used to be absolutely positioned inside the row, where the
 // transcript list's own scroll container (overflow-y-auto) clipped it — z-index
 // cannot escape an ancestor's overflow, so most of the menu was cut off.
-export function SpeakerReassign({ tag, roster, count, onReassign, disabled, color }) {
+// labelOf: what the page calls a name (a team label such as "Sandy 2");
+// the roster's stored names stay the values that are saved.
+export function SpeakerReassign({ tag, roster, count, onReassign, disabled, color, labelOf }) {
+    const shown = (name) => (labelOf ? labelOf(name) : name)
     const [open, setOpen] = useState(false)
     const [busy, setBusy] = useState(false)
     const [guestMode, setGuestMode] = useState(false)
@@ -79,7 +82,7 @@ export function SpeakerReassign({ tag, roster, count, onReassign, disabled, colo
         }
     }
 
-    const label = tag || "Unlabeled"
+    const label = tag ? shown(tag) : "Unlabeled"
     return (
         <span className="relative inline-block" ref={ref}>
             <button
@@ -131,9 +134,9 @@ export function SpeakerReassign({ tag, roster, count, onReassign, disabled, colo
                                     disabled={busy}
                                     onClick={() => pick(alias, false)}
                                     className="flex-1 truncate rounded px-2 py-1 text-left text-sm text-tiilt-ink"
-                                    title="Reassign only this line"
+                                    title={shown(alias) !== alias ? `${alias} — reassign only this line` : "Reassign only this line"}
                                 >
-                                    {alias}
+                                    {shown(alias)}
                                     {alias === tag ? (
                                         <span className="ml-1 text-tiilt-muted">
                                             (current)
@@ -145,7 +148,7 @@ export function SpeakerReassign({ tag, roster, count, onReassign, disabled, colo
                                         type="button"
                                         disabled={busy}
                                         onClick={() => pick(alias, true)}
-                                        title={`Apply to all ${count} segments currently labeled "${tag}"`}
+                                        title={`Apply to all ${count} segments currently labeled "${shown(tag)}"`}
                                         className="flex-none rounded px-1.5 py-1 text-[11px] font-semibold text-tiilt-muted transition hover:bg-tiilt-soft hover:text-tiilt"
                                     >
                                         all {count}

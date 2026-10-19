@@ -4,6 +4,7 @@ import { StatusPill } from "../status-pill"
 import { InlineSpinner } from "../inline-spinner"
 import { btnPrimarySm, btnSecondarySm, dlgError } from "../dialog-styles"
 import { NegotiationCodingService } from "../../services/negotiation-coding-service"
+import { speakerLabel } from "../../globals"
 import {
     UNASSIGNED,
     TIMELINE_FIELDS,
@@ -72,7 +73,9 @@ const selectCls =
 
 const sectionTitle = "font-ahamono text-[11px] tracking-wider text-tiilt-muted uppercase"
 
-function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCounts }) {
+// speakerInfo: the group's display names (globals.indexSpeakerInfo), so the
+// coded lines name speakers as the transcript does ("Pat 1").
+function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCounts, speakerInfo }) {
     const sessionId = session ? session.id : null
     const optedIn = !!(session && session.negotiation_coding)
     const paired = !!(session && session.negotiation_paired)
@@ -667,7 +670,7 @@ function NegotiationCodingPanel({ session, sessionDevice, sessionDeviceId, tagCo
                                                         className="font-semibold text-tiilt-ink"
                                                         title={mode === "paired" ? podName(row.session_device_id) || undefined : undefined}
                                                     >
-                                                        {row.speaker_tag || "Unknown"}
+                                                        {row.speaker_tag ? speakerLabel(row.speaker_tag, speakerInfo) : "Unknown"}
                                                     </span>
                                                     <StatusPill
                                                         tone={toneFor(team, names)}

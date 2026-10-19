@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { formatHMS as formatSeconds, buildSpeakerColors, filterSortByDevice } from "../globals";
+import { formatHMS as formatSeconds, buildSpeakerColors, filterSortByDevice, indexSpeakerInfo, speakerLabel, wallClockLabel } from "../globals";
 import { useNavigate, useOutletContext,useParams, useSearchParams } from 'react-router-dom';
 import {TranscriptComponentPage} from './html-pages'
 import { decorateTranscripts } from './transcript-utils'
@@ -32,6 +32,17 @@ function TranscriptsComponent(){
   const [trigger, setTrigger] = useState(0)
   const [showDoA] = useState(false);
   const [roster, setRoster] = useState([])
+  // The breakout group's display names and team colours ("Pat 1"), from
+  // the session's groups listing; empty for a pod outside a group.
+  const [speakerInfo, setSpeakerInfo] = useState({})
+  // Elapsed from the first line (default) or the time of day.
+  const [clock, setClock] = useState(() => {
+    try {
+      return window.localStorage.getItem("blinc.transcriptClock") === "wall" ? "wall" : "elapsed"
+    } catch {
+      return "elapsed"
+    }
+  })
   const [activeSessionService] = useOutletContext();
   const { sessionDeviceId } = useParams();
   const [searchParam] = useSearchParams();
@@ -111,6 +122,19 @@ const createDisplayTranscripts = ()=> {
       .catch(() => {})
   }, [sessionDeviceId])
 
+  useEffect(() => {
+    if (!session || !session.id || sessionDeviceId === undefined) return
+    const id = parseInt(sessionDeviceId, 10)
+    new ApiService()
+      .httpRequestCall(`api/v1/sessions/${session.id}/groups`, "GET", {})
+      .then((r) => (r.status === 200 ? r.json() : null))
+      .then((d) => {
+        const g = ((d && d.groups) || []).find((x) => (x.pods || []).some((p) => p.id === id))
+        setSpeakerInfo(indexSpeakerInfo(g ? g.speakers : null))
+      })
+      .catch(() => {})
+  }, [session, sessionDeviceId])
+
   // How many segments currently carry each tag (drives the "all N" bulk fix).
   const tagCounts = transcripts.reduce((m, t) => {
     if (t.speaker_tag) m[t.speaker_tag] = (m[t.speaker_tag] || 0) + 1
@@ -120,7 +144,22 @@ const createDisplayTranscripts = ()=> {
   // One distinct, stable color per speaker — the same shared palette the
   // pod page's transcript panel uses, so a speaker keeps one color across
   // both views.
-  const speakerColors = buildSpeakerColors(transcripts)
+  const speakerColors = buildSpeakerColors(transcripts, speakerInfo)
+  const labelOf = (name) => speakerLabel(name, speakerInfo)
+  const chooseClock = (mode) => {
+    setClock(mode)
+    try {
+      window.localStorage.setItem("blinc.transcriptClock", mode)
+    } catch {
+      /* a private window: the choice lasts the page */
+    }
+  }
+  const clockBase = session && session.creation_date instanceof Date && !isNaN(session.creation_date.getTime())
+    ? session.creation_date : null
+  const wall = clock === "wall" && !!clockBase
+  let clockOrigin = null
+  for (const t of transcripts) if (t.start_time != null && (clockOrigin == null || t.start_time < clockOrigin)) clockOrigin = t.start_time
+  const timeLabel = (s) => (wall ? wallClockLabel(clockBase, s) : formatSeconds(Math.max(0, s - (clockOrigin || 0))))
 
   // Persist a human correction, then reflect it locally without a reload.
   // guest=true attributes to someone outside the roster (they get added as a
@@ -260,6 +299,11 @@ const createDisplayTranscripts = ()=> {
       roster = {roster}
       tagCounts = {tagCounts}
       speakerColors = {speakerColors}
+      labelOf = {labelOf}
+      timeLabel = {timeLabel}
+      clock = {clock}
+      chooseClock = {clockBase ? chooseClock : null}
+      wallClock = {wall}
       reassignSpeaker = {reassignSpeaker}
       editingId = {editingId}
       editDraft = {editDraft}

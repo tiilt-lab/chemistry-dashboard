@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { formatSeconds, buildSpeakerColors } from "../../globals"
+import { formatSeconds, buildSpeakerColors, speakerLabel, wallClockLabel } from "../../globals"
 import { SpeakerReassign } from "../speaker-reassign"
 import { sessionToVideo } from "../video-player/video-time"
 import { downloadBlob } from "../../utilities/download"
@@ -86,15 +86,15 @@ function csvField(value) {
 }
 
 // The visible rows as CSV — the same four columns as the panel (time, speaker,
-// confidence, text). Timestamps use whatever clock the panel is showing.
-function transcriptsToCsv(rows, displayTime) {
-    const header = ["Time", "Speaker", "Confidence", "Transcript"]
+// confidence, text). Timestamps and speaker names are what the panel shows.
+function transcriptsToCsv(rows, timeLabel, timeHeader, labelOf) {
+    const header = [timeHeader || "Time", "Speaker", "Confidence", "Transcript"]
     const lines = [header.join(",")]
     for (const t of rows) {
         lines.push(
             [
-                formatSeconds(displayTime(t.start_time)),
-                t.speaker_tag || "",
+                timeLabel(t.start_time),
+                t.speaker_tag ? labelOf(t.speaker_tag) : "",
                 t.speaker_confidence != null ? t.speaker_confidence + "%" : "",
                 t.transcript || "",
             ]
@@ -126,12 +126,45 @@ function TranscriptPanel({
     // relative) so they match the player, instead of session time. The click
     // target stays in session time — that is what drives the video seek.
     videoSegments,
+    // The session-clock second the elapsed clock counts from (the first
+    // line of the conversation) when no player clock applies: a stored
+    // stamp is seconds since the session was created, hours before a class
+    // that was set up ahead of time.
+    clockOrigin,
+    // The session clock's zero as a Date (session creation): with it the
+    // panel can show each line's time of day instead.
+    sessionClockBase,
+    // Group display names and team colours ({alias: {label, teamIndex,
+    // slot}}, globals.indexSpeakerInfo); absent on a pod outside a group.
+    speakerInfo,
 }) {
+    // Elapsed (default) or time of day; the choice follows the viewer across
+    // pages when the browser keeps it.
+    const wallBase = sessionClockBase instanceof Date && !isNaN(sessionClockBase.getTime()) ? sessionClockBase : null
+    const [clock, setClock] = useState(() => {
+        try {
+            return window.localStorage.getItem("blinc.transcriptClock") === "wall" ? "wall" : "elapsed"
+        } catch {
+            return "elapsed"
+        }
+    })
+    const chooseClock = (mode) => {
+        setClock(mode)
+        try {
+            window.localStorage.setItem("blinc.transcriptClock", mode)
+        } catch {
+            /* a private window: the choice lasts the page */
+        }
+    }
+    const wall = clock === "wall" && !!wallBase
     const displayTime = (s) =>
-        videoSegments ? sessionToVideo(s, videoSegments) : s
+        videoSegments ? sessionToVideo(s, videoSegments) : Math.max(0, s - (clockOrigin || 0))
+    const timeLabel = (s) => (wall ? wallClockLabel(wallBase, s) : formatSeconds(displayTime(s)))
+    const timeHeader = wall ? "Time of day" : videoSegments ? "Time (recording)" : "Time (elapsed)"
+    const labelOf = (tag) => speakerLabel(tag, speakerInfo)
 
     const downloadCsv = () => {
-        const csv = transcriptsToCsv(list, displayTime)
+        const csv = transcriptsToCsv(list, timeLabel, timeHeader, labelOf)
         // BOM so Excel reads UTF-8 (accented names, smart quotes) correctly.
         downloadBlob(
             new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }),
@@ -164,8 +197,13 @@ function TranscriptPanel({
     // muted and marked, hidden on request, and never in the legend.
     const [hideFarSide, setHideFarSide] = useState(false)
     const farSideCount = (transcripts || []).filter((t) => t.far_side).length
-    const speakerColors = buildSpeakerColors((transcripts || []).filter((t) => !t.far_side))
-    const speakers = Object.keys(speakerColors)
+    const speakerColors = buildSpeakerColors((transcripts || []).filter((t) => !t.far_side), speakerInfo)
+    // Legend in team order when the group knows one, else as stored.
+    const speakers = Object.keys(speakerColors).sort((a, b) => {
+        const oa = speakerInfo && speakerInfo[a] ? speakerInfo[a].order : Infinity
+        const ob = speakerInfo && speakerInfo[b] ? speakerInfo[b].order : Infinity
+        return oa === ob ? a.localeCompare(b) : oa - ob
+    })
 
     const list = (transcripts || []).filter((t) => {
         if (hideFarSide && t.far_side) return false
@@ -222,8 +260,32 @@ function TranscriptPanel({
                 ) : (
                     <span />
                 )}
-                {speakers.length > 0 || farSideCount > 0 ? (
+                {speakers.length > 0 || farSideCount > 0 || wallBase ? (
                     <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        {wallBase ? (
+                            <span
+                                className="flex items-center gap-0.5 rounded-md border border-tiilt-line bg-white p-0.5"
+                                title={
+                                    videoSegments
+                                        ? "Elapsed: the recording's clock, as the player counts it. Time of day: when the line was spoken, in your time zone."
+                                        : "Elapsed: counted from the first line of the conversation. Time of day: when the line was spoken, in your time zone."
+                                }
+                            >
+                                {[["elapsed", "Elapsed"], ["wall", "Time of day"]].map(([value, label]) => (
+                                    <button
+                                        key={value}
+                                        type="button"
+                                        onClick={() => chooseClock(value)}
+                                        className={
+                                            "rounded px-1.5 py-0.5 text-[11px] font-semibold transition " +
+                                            (clock === value ? "bg-tiilt text-white" : "text-tiilt hover:bg-tiilt-soft")
+                                        }
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </span>
+                        ) : null}
                         {farSideCount > 0 ? (
                             <label className="flex cursor-pointer items-center gap-1.5" title="Lines this laptop heard from the other side of the table. They are named from the partner pod's roster and counted for that team.">
                                 <input
@@ -246,8 +308,8 @@ function TranscriptPanel({
                                         backgroundColor: speakerColors[tag],
                                     }}
                                 />
-                                <span className="font-semibold text-tiilt-ink">
-                                    {tag}
+                                <span className="font-semibold text-tiilt-ink" title={labelOf(tag) !== tag ? tag : undefined}>
+                                    {labelOf(tag)}
                                 </span>
                             </span>
                         ))}
@@ -326,9 +388,12 @@ function TranscriptPanel({
                                                     ? "Jump the video here"
                                                     : "Show expression & thinking metrics for this utterance"
                                             }
-                                            className="font-ahamono w-14 flex-none cursor-pointer pt-0.5 text-left text-xs text-tiilt-muted tabular-nums underline decoration-dotted underline-offset-2 hover:text-tiilt"
+                                            className={
+                                                "font-ahamono flex-none cursor-pointer pt-0.5 text-left text-xs text-tiilt-muted tabular-nums underline decoration-dotted underline-offset-2 hover:text-tiilt " +
+                                                (wall ? "w-20" : "w-14")
+                                            }
                                         >
-                                            {formatSeconds(displayTime(t.start_time))}
+                                            {timeLabel(t.start_time)}
                                         </button>
 
                                         {/* Column 2 — speaker (click to reassign) + confidence */}
@@ -340,6 +405,7 @@ function TranscriptPanel({
                                                 <span className="flex flex-wrap items-center gap-x-1">
                                                     <SpeakerReassign
                                                         tag={t.speaker_tag}
+                                                        labelOf={labelOf}
                                                         color={t.speaker_tag ? color : undefined}
                                                         roster={roster || []}
                                                         count={(tagCounts || {})[t.speaker_tag] || 0}
@@ -362,8 +428,9 @@ function TranscriptPanel({
                                                     <span
                                                         className="truncate font-semibold"
                                                         style={{ color }}
+                                                        title={labelOf(t.speaker_tag) !== t.speaker_tag ? t.speaker_tag : undefined}
                                                     >
-                                                        {t.speaker_tag}
+                                                        {labelOf(t.speaker_tag)}
                                                     </span>
                                                     <ConfidenceTag
                                                         percent={t.speaker_confidence}
@@ -411,8 +478,8 @@ function TranscriptPanel({
                                     </div>
                                     {isSelected ? (
                                         // Indent to align under the text column:
-                                        // timestamp 3.5rem + gap + speaker 7rem + gap.
-                                        <div className="mt-2 ml-[12rem] flex flex-wrap gap-1.5">
+                                        // timestamp 3.5rem (5rem on the day's clock) + gap + speaker 7rem + gap.
+                                        <div className={"mt-2 flex flex-wrap gap-1.5 " + (wall ? "ml-[13.5rem]" : "ml-[12rem]")}>
                                             {FEATURE_FIELDS.map(
                                                 ([label, field]) => (
                                                     <span

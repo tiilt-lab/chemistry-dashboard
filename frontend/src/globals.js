@@ -132,20 +132,72 @@ export function isDarkTheme() {
         document.documentElement.classList.contains("dark")
     )
 }
-export function speakerColorFor(name, allNames) {
+// A negotiation's two teams: cool shades for the first team, warm for the
+// second, so a glance tells the side and the shade tells the person. A
+// speaker's shade is their place on the team (the server's speaker_labels
+// order: Pat 1 is the first cool shade, Sandy 2 the second warm one).
+export const TEAM_PALETTES = [
+    ["#312e81", "#6d28d9", "#2563eb", "#0e7490", "#4338ca"],
+    ["#9a3412", "#b91c1c", "#b45309", "#be185d", "#c2410c"],
+]
+export const TEAM_PALETTES_DARK = [
+    ["#a5b4fc", "#c4b5fd", "#93c5fd", "#67e8f9", "#818cf8"],
+    ["#fdba74", "#fca5a5", "#fcd34d", "#f9a8d4", "#fb923c"],
+]
+// The group payload's speakers (speaker_labels: [{alias, label, team,
+// team_index, index}]) as a lookup by alias: {label, team, teamIndex, slot,
+// order}, slot being the speaker's place on their team.
+export function indexSpeakerInfo(speakers) {
+    const info = {}
+    const perTeam = {}
+    ;(speakers || []).forEach((s, order) => {
+        if (!s || !s.alias) return
+        const t = s.team_index == null ? null : s.team_index
+        const slot = t == null ? null : (perTeam[t] = (perTeam[t] || 0) + 1) - 1
+        info[s.alias] = { label: s.label || s.alias, team: s.team || null, teamIndex: t, slot, order }
+    })
+    return info
+}
+// What the page calls a speaker: their team label ("Sandy 2") when the
+// group knows one, else the tag as stored.
+export function speakerLabel(name, info) {
+    const e = info && name != null ? info[name] : null
+    return e && e.label ? e.label : name
+}
+export function teamColorFor(teamIndex) {
+    const palettes = isDarkTheme() ? TEAM_PALETTES_DARK : TEAM_PALETTES
+    return palettes[Math.max(0, teamIndex || 0) % palettes.length][0]
+}
+export function speakerColorFor(name, allNames, info) {
+    const e = info && name != null ? info[name] : null
+    if (e && e.teamIndex != null) {
+        const palettes = isDarkTheme() ? TEAM_PALETTES_DARK : TEAM_PALETTES
+        const pal = palettes[e.teamIndex % palettes.length]
+        return pal[(e.slot || 0) % pal.length]
+    }
     const palette = isDarkTheme() ? SPEAKER_PALETTE_DARK : SPEAKER_PALETTE
     const sorted = [...new Set(allNames || [])].sort()
     const i = Math.max(0, sorted.indexOf(name))
     return palette[i % palette.length]
 }
+// The time of day a second on the session clock fell on, in the viewer's
+// zone ("2:11:53 PM"); base is the session clock's zero (creation_date).
+// timeZone pins the zone (tests); the page leaves it to the browser.
+export function wallClockLabel(base, seconds, timeZone) {
+    if (!(base instanceof Date) || isNaN(base.getTime()) || seconds == null || isNaN(seconds)) return ""
+    const d = new Date(base.getTime() + Math.floor(seconds) * 1000)
+    const opts = { hour: "numeric", minute: "2-digit", second: "2-digit" }
+    if (timeZone) opts.timeZone = timeZone
+    return d.toLocaleTimeString("en-US", opts)
+}
 
 // One stable color per speaker across a set of transcripts, so a speaker keeps
 // the same color in every view. Was built two ways (a reduce in
 // transcripts-component, a loop in transcript-panel).
-export function buildSpeakerColors(transcripts) {
+export function buildSpeakerColors(transcripts, info) {
     const tags = [...new Set((transcripts || []).map((t) => t.speaker_tag).filter(Boolean))]
     const map = {}
-    for (const tag of tags) map[tag] = speakerColorFor(tag, tags)
+    for (const tag of tags) map[tag] = speakerColorFor(tag, tags, info)
     return map
 }
 

@@ -6,7 +6,7 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
-const { formatSeconds, formatHMS, filterSortByDevice, buildSpeakerColors, speakerColorFor } = await import("./globals")
+const { formatSeconds, formatHMS, filterSortByDevice, buildSpeakerColors, speakerColorFor, indexSpeakerInfo, speakerLabel, wallClockLabel, TEAM_PALETTES } = await import("./globals")
 
 describe("buildSpeakerColors", () => {
     it("maps each unique speaker tag to its palette color, ignoring blanks", () => {
@@ -78,5 +78,45 @@ describe("formatHMS", () => {
     it("is always HH:MM:SS", () => {
         expect(formatHMS(5)).toBe("00:00:05")
         expect(formatHMS(3665)).toBe("01:01:05")
+    })
+})
+
+describe("team speaker labels and colours", () => {
+    const speakers = [
+        { alias: "Pat1G1S32", label: "Pat 1", team: "Pat", team_index: 0, index: 1 },
+        { alias: "Pat3G1S32", label: "Pat 3", team: "Pat", team_index: 0, index: 3 },
+        { alias: "Bo Example", label: "Sandy 2", team: "Sandy", team_index: 1, index: 2 },
+        { alias: "Guest", label: "Guest", team: null, team_index: null, index: null },
+    ]
+    const info = indexSpeakerInfo(speakers)
+    it("labels a known speaker by team and leaves the rest as stored", () => {
+        expect(speakerLabel("Bo Example", info)).toBe("Sandy 2")
+        expect(speakerLabel("Guest", info)).toBe("Guest")
+        expect(speakerLabel("Nobody", info)).toBe("Nobody")
+        expect(speakerLabel(null, info)).toBe(null)
+    })
+    it("colours teammates from one palette, shade by place on the team", () => {
+        expect(speakerColorFor("Pat1G1S32", [], info)).toBe(TEAM_PALETTES[0][0])
+        expect(speakerColorFor("Pat3G1S32", [], info)).toBe(TEAM_PALETTES[0][1])
+        expect(speakerColorFor("Bo Example", [], info)).toBe(TEAM_PALETTES[1][0])
+        expect(TEAM_PALETTES[0]).not.toContain(speakerColorFor("Bo Example", [], info))
+    })
+    it("falls back to the shared palette for a speaker without a team", () => {
+        expect(speakerColorFor("Guest", ["Guest", "Zed"], info)).toBe(speakerColorFor("Guest", ["Guest", "Zed"]))
+        const colors = buildSpeakerColors([{ speaker_tag: "Pat1G1S32" }, { speaker_tag: "Guest" }], info)
+        expect(colors["Pat1G1S32"]).toBe(TEAM_PALETTES[0][0])
+    })
+})
+
+describe("wallClockLabel", () => {
+    it("places a session-clock second on the day's clock", () => {
+        const base = new Date("2026-10-15T20:31:26Z")
+        expect(wallClockLabel(base, 81627, "UTC")).toBe("7:11:53 PM")
+        expect(wallClockLabel(base, 81627, "America/Chicago")).toBe("2:11:53 PM")
+    })
+    it("is blank without a usable base", () => {
+        expect(wallClockLabel(null, 10)).toBe("")
+        expect(wallClockLabel(new Date("nope"), 10)).toBe("")
+        expect(wallClockLabel(new Date(), null)).toBe("")
     })
 })

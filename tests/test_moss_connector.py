@@ -49,7 +49,7 @@ def test_wrapper_without_the_venv_raises_before_spawning(monkeypatch):
 
 # --- the connector ------------------------------------------------------------
 
-def _connector(monkeypatch, turns, roster=("Pat3G1S32",), partner=("Jing Yuan",), audio=None, prints=None, rows=None):
+def _connector(monkeypatch, turns, roster=("Pat3G1S32",), partner=("Bo Example",), audio=None, prints=None, rows=None):
     """A connector whose recording is synthetic (a speaker = a constant sample
     value, the embedder a one-hot of it) and whose naming rows come in by
     hand, so the ported rules run end to end without the model or the API."""
@@ -98,24 +98,24 @@ def _onehot(k):
 
 
 def test_connector_names_speakers_from_both_rosters_prints_and_emits_one_result_per_turn(monkeypatch):
-    # Pat3 (own) has an enrolment print; Jing (far) none, but the live rows named
+    # Pat3 (own) has an enrolment print; Bo (far) none, but the live rows named
     # her confidently for 30 s on this recording, so she gets a session print.
     turns = [{"start": 0.0, "end": 50.0, "speaker": "S01", "text": "we hold the debt"},
              {"start": 50.0, "end": 100.0, "speaker": "S02", "text": "the market is bad"},
              {"start": 100.0, "end": 100.5, "speaker": "S03", "text": "okay"},
              {"start": 101.0, "end": 102.0, "speaker": "S01", "text": "   "}]
     audio = _audio([(0, 50, 1), (50, 100, 2), (100, 100.5, 3)])
-    rows = [{"device": 1447, "start_time": 50, "length": 30, "speaker_tag": "Jing Yuan", "sim": 0.8, "far_side": False}]
+    rows = [{"device": 1447, "start_time": 50, "length": 30, "speaker_tag": "Bo Example", "sim": 0.8, "far_side": False}]
     asr = _connector(monkeypatch, turns, audio=audio, prints={"Pat3G1S32": _onehot(1)}, rows=rows)
     asr._transcribe_file()
     out = _drain(asr.transcript_queue)
     assert out[-1] is None and len(out) == 4               # blank-text turn skipped
     tags = [(r.speaker_tag, r.alternatives[0].transcript) for r in out[:-1]]
-    assert tags == [("Pat3G1S32", "we hold the debt"), ("Jing Yuan", "the market is bad"), (None, "okay")]
+    assert tags == [("Pat3G1S32", "we hold the debt"), ("Bo Example", "the market is bad"), (None, "okay")]
     first, second, third = out[:3]
     assert first.named_by_asr and first.speaker_confidence["named_by"] == "prints" and first.speaker_confidence["cluster"] == "S01"
     assert first.speaker_confidence["percent"] >= 0 and "far_side" not in first.speaker_confidence
-    assert second.speaker_confidence["far_side"] is True            # Jing sits across the table
+    assert second.speaker_confidence["far_side"] is True            # Bo sits across the table
     assert third.speaker_confidence == {"cluster": "S03"}          # half a second of voice: not scored
     assert asr.diarizer_used == "moss"
 

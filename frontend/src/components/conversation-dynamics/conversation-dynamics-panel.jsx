@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { ApiService } from "../../services/api-service"
-import { speakerColorFor } from "../../globals"
+import { speakerColorFor, speakerLabel, teamColorFor } from "../../globals"
 import { useIsDark } from "../../myhooks/custom-hooks"
 import { fmtClock } from "../../lib/utils"
 
@@ -9,7 +9,8 @@ import { fmtClock } from "../../lib/utils"
 // Directed response network: speakers on a circle, curved arrows weighted by
 // how often the source speaker follows the target. Pure SVG; colors resolve
 // from the theme-aware speaker palette and CSS vars.
-function ResponseGraph({ transitions, colorOf, sharesByName }) {
+function ResponseGraph({ transitions, colorOf, sharesByName, labelOf }) {
+    const shown_label = (n) => (labelOf ? labelOf(n) : n)
     const shown = transitions
         .filter((t) => t.from !== t.to)
         .slice(0, 12)
@@ -133,8 +134,8 @@ function ResponseGraph({ transitions, colorOf, sharesByName }) {
                 <g key={n}>
                     <title>
                         {sharesByName && sharesByName[n] != null
-                            ? `${n} \u2014 ${Math.round(sharesByName[n] * 100)}% of speaking time`
-                            : n}
+                            ? `${shown_label(n)} \u2014 ${Math.round(sharesByName[n] * 100)}% of speaking time`
+                            : shown_label(n)}
                     </title>
                     <circle
                         cx={pos[n].x}
@@ -159,7 +160,7 @@ function ResponseGraph({ transitions, colorOf, sharesByName }) {
                         fontWeight="600"
                         style={{ fill: "var(--color-tiilt-ink)" }}
                     >
-                        {n.length > 14 ? n.slice(0, 13) + "\u2026" : n}
+                        {shown_label(n).length > 14 ? shown_label(n).slice(0, 13) + "\u2026" : shown_label(n)}
                     </text>
                 )
             })}
@@ -182,7 +183,8 @@ function Stat({ label, value, title }) {
 
 // Stacked columns: one per time bucket, colored by speaker; unfilled column
 // height is silence — so quiet stretches are visible at a glance.
-function EquityTimeline({ timeline, colorOf }) {
+function EquityTimeline({ timeline, colorOf, labelOf }) {
+    const nameOf = (n) => (labelOf ? labelOf(n) : n)
     const { buckets, bucket_seconds } = timeline
     if (!buckets || !buckets.length) return null
     return (
@@ -207,7 +209,7 @@ function EquityTimeline({ timeline, colorOf }) {
                                             height: `${(sec / bucket_seconds) * 100}%`,
                                             backgroundColor: colorOf(name),
                                         }}
-                                        title={`${name}: ${Math.round(sec)}s`}
+                                        title={`${nameOf(name)}: ${Math.round(sec)}s`}
                                     />
                                 ))}
                         </div>
@@ -225,6 +227,94 @@ function EquityTimeline({ timeline, colorOf }) {
     )
 }
 
+// The two teams as voices of their own (the server's group_team_dynamics):
+// each team's share of the talk and how often it took the floor, who hands
+// the floor to whom across and within the teams, and each team's questions
+// and interruptions. Team colours are the palettes their members wear.
+function TeamDynamics({ teams }) {
+    const names = teams.names || []
+    const colorOf = (team) => teamColorFor(Math.max(0, names.indexOf(team)))
+    const row = (team) => (teams.speakers || []).find((s) => s.name === team)
+    const talk = teams.talk && !teams.talk.empty ? teams.talk : null
+    const perTeam = (team) => ((talk && talk.per_speaker) || []).find((s) => s.name === team)
+    const handoff = (from, to) => {
+        const h = (teams.handoffs || []).find((x) => x.from === from && x.to === to)
+        return h ? h.count : 0
+    }
+    const members = teams.members || {}
+    return (
+        <div>
+            <div className="font-ahamono mb-1 text-[11px] tracking-wider text-tiilt-muted uppercase">
+                By team
+            </div>
+            <div className="mb-3 text-xs text-tiilt-muted">
+                Each team as one voice: a turn is the team holding the floor until the other side speaks.
+                {teams.gini != null ? ` Balance between the teams: Gini ${teams.gini}.` : ""}
+            </div>
+            <div className="flex flex-col gap-1.5">
+                {names.map((team) => {
+                    const r = row(team)
+                    const share = r ? r.share : 0
+                    return (
+                        <div key={team} className="flex items-center gap-2 text-xs">
+                            <span
+                                className="w-24 flex-none truncate font-semibold text-tiilt-ink"
+                                title={(members[team] || []).join(", ") || team}
+                            >
+                                {team}
+                            </span>
+                            <div className="h-3 grow overflow-hidden rounded bg-tiilt-ground">
+                                <div
+                                    className="h-full rounded"
+                                    style={{ width: `${Math.max(2, share * 100)}%`, backgroundColor: colorOf(team) }}
+                                />
+                            </div>
+                            <span className="w-28 flex-none text-right font-ahamono tabular-nums text-tiilt-muted">
+                                {Math.round(share * 100)}% · {r ? r.turns : 0} turns
+                            </span>
+                        </div>
+                    )
+                })}
+            </div>
+            {names.length === 2 ? (
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <Stat
+                        label={`${names[0]} → ${names[1]}`}
+                        value={handoff(names[0], names[1])}
+                        title={`Times ${names[1]} took the floor after ${names[0]}`}
+                    />
+                    <Stat
+                        label={`${names[1]} → ${names[0]}`}
+                        value={handoff(names[1], names[0])}
+                        title={`Times ${names[0]} took the floor after ${names[1]}`}
+                    />
+                    <Stat
+                        label={`within ${names[0]}`}
+                        value={handoff(names[0], names[0])}
+                        title={`Hand-offs between ${names[0]} teammates`}
+                    />
+                    <Stat
+                        label={`within ${names[1]}`}
+                        value={handoff(names[1], names[1])}
+                        title={`Hand-offs between ${names[1]} teammates`}
+                    />
+                </div>
+            ) : null}
+            {talk ? (
+                <div className="mt-2 text-[11px] text-tiilt-muted">
+                    {names
+                        .map((team) => {
+                            const t = perTeam(team)
+                            if (!t) return `${team}: no attributed speech`
+                            return `${team}: ${t.questions} question${t.questions === 1 ? "" : "s"} (${t.open_questions} open) · ${t.interruptions} interruption${t.interruptions === 1 ? "" : "s"}`
+                        })
+                        .join(" · ")}
+                </div>
+            ) : null}
+        </div>
+    )
+}
+
 // Per-speaker speaking-time equity + a who-follows-whom response network,
 // derived from the pod's diarized transcript.
 // group: a breakout group's name -> the dynamics of its merged transcript
@@ -232,7 +322,10 @@ function EquityTimeline({ timeline, colorOf }) {
 // refreshKey: anything that changes when the rows did (the pod's analysed
 // date, or the group merge's version), so a finished post-hoc run shows
 // without a reload.
-export function ConversationDynamicsPanel({ sessionId, sessionDeviceId, group, refreshKey }) {
+// speakerInfo: the group's display names and team colours (globals.
+// indexSpeakerInfo); with it the panel reads "Pat 1" and, when the server
+// sent team dynamics, adds the two teams as voices of their own.
+export function ConversationDynamicsPanel({ sessionId, sessionDeviceId, group, refreshKey, speakerInfo }) {
     useIsDark() // re-render on theme toggle: speaker colors resolve per-theme
     const [data, setData] = useState(null)
     const [error, setError] = useState(false)
@@ -283,7 +376,9 @@ export function ConversationDynamicsPanel({ sessionId, sessionDeviceId, group, r
                 : []),
         ]),
     ]
-    const colorOf = (name) => speakerColorFor(name, allNames)
+    const colorOf = (name) => speakerColorFor(name, allNames, speakerInfo)
+    const labelOf = (name) => speakerLabel(name, speakerInfo)
+    const teams = data.teams && data.teams.speakers && data.teams.speakers.length ? data.teams : null
     const balance =
         data.gini <= 0.2
             ? "well balanced"
@@ -311,7 +406,7 @@ export function ConversationDynamicsPanel({ sessionId, sessionDeviceId, group, r
                                 className="w-24 flex-none truncate text-tiilt-ink"
                                 title={s.name}
                             >
-                                {s.name}
+                                {labelOf(s.name)}
                             </span>
                             <div className="h-3 grow overflow-hidden rounded bg-tiilt-ground">
                                 <div
@@ -335,7 +430,7 @@ export function ConversationDynamicsPanel({ sessionId, sessionDeviceId, group, r
                     {talk.never_spoke && talk.never_spoke.length > 0 && (
                         <div className="rounded-md bg-tiilt-orange/15 px-3 py-2 text-xs leading-relaxed text-tiilt-orange-text">
                             Never spoke (or no utterance was attributed to
-                            them): {talk.never_spoke.join(", ")}
+                            them): {talk.never_spoke.map(labelOf).join(", ")}
                         </div>
                     )}
 
@@ -346,6 +441,7 @@ export function ConversationDynamicsPanel({ sessionId, sessionDeviceId, group, r
                         <EquityTimeline
                             timeline={talk.timeline}
                             colorOf={colorOf}
+                            labelOf={labelOf}
                         />
                     </div>
 
@@ -417,7 +513,7 @@ export function ConversationDynamicsPanel({ sessionId, sessionDeviceId, group, r
                                     .filter((s) => s.questions > 0)
                                     .map(
                                         (s) =>
-                                            `${s.name}: ${s.questions} (${s.open_questions} open)`,
+                                            `${labelOf(s.name)}: ${s.questions} (${s.open_questions} open)`,
                                     )
                                     .join(" · ")}
                             </div>
@@ -425,6 +521,8 @@ export function ConversationDynamicsPanel({ sessionId, sessionDeviceId, group, r
                     </div>
                 </>
             )}
+
+            {teams ? <TeamDynamics teams={teams} /> : null}
 
             <div>
                 <div className="font-ahamono mb-2 text-[11px] tracking-wider text-tiilt-muted uppercase">
@@ -435,6 +533,7 @@ export function ConversationDynamicsPanel({ sessionId, sessionDeviceId, group, r
                         <ResponseGraph
                             transitions={data.transitions}
                             colorOf={colorOf}
+                            labelOf={labelOf}
                             sharesByName={Object.fromEntries(
                                 data.speakers.map((s) => [s.name, s.share]),
                             )}
