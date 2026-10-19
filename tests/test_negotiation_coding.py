@@ -2826,3 +2826,62 @@ def test_group_merge_is_cached_by_what_it_was_merged_from(env, monkeypatch):
     monkeypatch.setattr(env.routes, "_merge_store", lambda: None)
     env.routes._group_merge(session.id, "Table C")
     assert len(merges) == 3
+
+
+def test_two_moss_laptops_keep_their_turns_whole_and_their_clocks(monkeypatch):
+    # Group 7, 2026-10-19, measured against the other diarizers: on two MOSS
+    # laptops the composite trim cut the right speaker's words, the covered
+    # pass dropped echoes three seconds apart, the word union garbled the
+    # three lines it touched, and the text alignment put 18 % of one
+    # laptop's rows over 5 s off. A MOSS turn is cut by speaker and stamped
+    # on its recording's clock, so each is left as heard.
+    long_line = "So what do you we have we have to pay eighty percent of the mortgage so the house still does not save us"
+    pat = [_crow(1, 1, 100, long_line, "Pat 3", "S08", sim=0.8, length=8),
+           _crow(2, 1, 120, "Payment days are the real problem here", "Pat 3", "S08", sim=0.8, length=3)]
+    sandy = [_crow(11, 2, 100.5, "we have to pay eighty percent of the mortgage", "Sandy 3", "S02", sim=0.8, length=4),
+             _crow(12, 2, 120.4, "Payment days are the real problem today", "Sandy 3", "S02", sim=0.8, length=3)]
+    spy = []
+    monkeypatch.setattr(nc, "estimate_clock_offset", lambda *a, **k: spy.append(1) or None)
+    diagnostics = {}
+    kept, dropped = nc.merge_paired({1: pat, 2: sandy}, SIDES, diagnostics)
+    # the long line and its shorter copy are one voice: one copy kept, the
+    # fuller one, whole (no composite, so no trim); the second pair keeps
+    # the fuller copy's own words, nothing spliced in from the other
+    assert [(u["transcript_id"], u["text"]) for u in kept] == [(1, long_line), (2, "Payment days are the real problem here")]
+    assert not any(u.get("trimmed") for u in kept)
+    assert sorted((d["transcript_id"], d["reason"]) for d in dropped) == [(11, "duplicate"), (12, "duplicate")]
+    # no text alignment for two MOSS laptops, and the start tolerance stays
+    assert spy == [] and diagnostics["alignment"] is None and diagnostics["tolerance"] == nc.PAIR_START_TOLERANCE
+    # a live pair of the same rows still asks the text for the clocks
+    live = {1: [_row(1, 1, 100, long_line, "Pat 3", sim=0.8, length=8)],
+            2: [_row(11, 2, 100.5, "we have to pay eighty percent of the mortgage", "Sandy 3", sim=0.8, length=4)]}
+    nc.merge_paired(live, SIDES)
+    assert spy == [1]
+    # with the recordings aligned acoustically, clocks under a second apart
+    # widen the tolerance by that much, not to the live pair's five seconds
+    monkeypatch.setattr(nc, "acoustic_anchors", lambda a, b: [(100.0, 0.4), (110.0, 0.3), (120.0, 0.4)])
+    diagnostics = {}
+    nc.merge_paired({1: pat, 2: sandy}, SIDES, diagnostics, recordings={1: "a.wav", 2: "b.wav"})
+    assert diagnostics["alignment"]["method"] == "acoustic" and diagnostics["tolerance"] == pytest.approx(1.9)
+    diagnostics = {}
+    nc.merge_paired(live, SIDES, diagnostics, recordings={1: "a.wav", 2: "b.wav"})
+    assert diagnostics["tolerance"] == nc.PAIR_ALIGNED_TOLERANCE
+
+
+def test_a_short_unnamed_moss_turn_is_not_adopted_by_its_neighbour_but_one_between_a_speakers_pieces_is():
+    def piece(i, start, text, tag, cluster=None, length=1.0):
+        u = dict(transcript_id=i, session_device_id=1, start_time=start, length=length, speaker_tag=tag, team="Pat", text=text)
+        if cluster:
+            u["confidence"] = {"cluster": cluster}
+        return u
+    # (4) a short unnamed piece after a named one: adopted when live, left when MOSS
+    live = [piece(1, 0.0, "Tell me what is bothering you.", "Pat 1", length=2.0), piece(2, 2.5, "Okay.", None)]
+    assert [u.get("speaker_tag") for u in nc.stitch_sentences(live)] == ["Pat 1"]          # adopted and stitched in
+    moss = [piece(1, 0.0, "Tell me what is bothering you.", "Pat 1", "S01", length=2.0), piece(2, 2.5, "Okay.", None, "S09")]
+    out = nc.stitch_sentences(moss)
+    assert [(u.get("speaker_tag"), u.get("adopted", False)) for u in out] == [("Pat 1", False), (None, False)]
+    # (3) between two pieces of one speaker, a MOSS piece is still that speaker's
+    moss3 = [piece(1, 0.0, "And frankly,", "Pat 1", "S01"), piece(2, 1.5, "if you had read", None, "S09", length=1.0),
+             piece(3, 3.0, "the emails you would know.", "Pat 1", "S01", length=2.0)]
+    out = nc.stitch_sentences(moss3)
+    assert len(out) == 1 and out[0]["speaker_tag"] == "Pat 1" and sorted(out[0]["stitched_from"]) == [2, 3]
