@@ -546,6 +546,40 @@ def _audio_done(device_id):
         return database.audio_posthoc_done(device_id)
 
 
+def _audio_completed_at(device_id):
+    import app as A
+    with A.app.app_context():
+        import database
+        return database.audio_posthoc_completed_at(device_id)
+
+
+def _finished_while_away(job, device_id):
+    # The runner restarted (a coordinator deploy) and the service finished
+    # the audio leg it had been given before the runner came back: the
+    # pod's completion stamp is newer than the job's first start.
+    first = job.get("first_started_at")
+    try:
+        done_at = _audio_completed_at(device_id)
+    except Exception as e:  # noqa: BLE001 - a lookup problem means "run it"
+        logging.info("posthoc queue: completion stamp of pod %s unreadable (%s)", device_id, e)
+        return False
+    return bool(first and done_at and done_at > float(first))
+
+
+def _adopt_leg(device_id, scope, deadline):
+    # The runner restarted mid-leg: the service is still on the pod, so the
+    # leg is waited for by its state rather than started again (a second
+    # trigger is refused as "already running", and the first run's minutes
+    # were lost). True once the state clears; False on the deadline.
+    logging.info("posthoc queue: pod %s %s is running on the service; waiting for it rather than starting it again",
+                 device_id, scope)
+    while time.time() < deadline:
+        if not _scope_running(device_id, scope):
+            return True
+        time.sleep(_POLL_SECONDS)
+    return False
+
+
 def _audio_prerequisites(job, jobs=None):
     """(waiting, failed) over the pods a coding job is gated on
     (``after_audio``): those whose post-hoc audio analysis is still to come
@@ -625,33 +659,44 @@ def _run_job(job):
             done.append(scope)
             _save(job)
             continue
-        if base is None:
-            base = _job_base(job)
         url = _leg_url(scope)
-        if scope == "audio":
-            init = dict(base, type="Initialize_audio_processing_analytics",
-                        asr=models.get("asr", "moss"),
-                        scorer=models.get("scorer"),
-                        diarizer=models.get("diarizer", "moss" if models.get("asr", "moss") == "moss" else "diarizen"),
-                        embedder=models.get("embedder"))
-            start = "start_posthoc_audio_processing"
-        elif scope == "rename":
-            # The stored MOSS turns named again on the recording, without
-            # transcribing (server_posthoc _RenameRun): the audio service,
-            # scope "rename" in posthoc_state.
-            init = dict(base, type="Initialize_audio_renaming")
-            start = "start_posthoc_renaming"
+        if _scope_running(device_id, scope):
+            # A restart mid-leg (coordinator deploy): the service is still on
+            # the pod. Wait for it; a second trigger would be refused.
+            if not _adopt_leg(device_id, scope, deadline):
+                _cancel(url, device_id)
+                raise RuntimeError("timed out waiting for pod %s %s to finish" % (device_id, scope))
+            err = None
+        elif scope == "audio" and _finished_while_away(job, device_id):
+            logging.info("posthoc queue: pod %s audio finished while the runner was away; not run again", device_id)
+            err = None
         else:
-            init = dict(base, type="Initialize_video_processing_analytics")
-            start = "start_posthoc_video_processing"
-        init["ticket"] = _mint(device_id)
-        try:
-            # _GpuBusy propagates: the worker loop defers the whole job.
-            err = _run_leg(url, init, start, device_id, scope, deadline)
-        except _LegTimeout:
-            # Audit C.1: a leg we give up on must not keep the GPU.
-            _cancel(url, device_id)
-            raise RuntimeError("timed out waiting for pod %s %s to finish" % (device_id, scope))
+            if base is None:
+                base = _job_base(job)
+            if scope == "audio":
+                init = dict(base, type="Initialize_audio_processing_analytics",
+                            asr=models.get("asr", "moss"),
+                            scorer=models.get("scorer"),
+                            diarizer=models.get("diarizer", "moss" if models.get("asr", "moss") == "moss" else "diarizen"),
+                            embedder=models.get("embedder"))
+                start = "start_posthoc_audio_processing"
+            elif scope == "rename":
+                # The stored MOSS turns named again on the recording, without
+                # transcribing (server_posthoc _RenameRun): the audio service,
+                # scope "rename" in posthoc_state.
+                init = dict(base, type="Initialize_audio_renaming")
+                start = "start_posthoc_renaming"
+            else:
+                init = dict(base, type="Initialize_video_processing_analytics")
+                start = "start_posthoc_video_processing"
+            init["ticket"] = _mint(device_id)
+            try:
+                # _GpuBusy propagates: the worker loop defers the whole job.
+                err = _run_leg(url, init, start, device_id, scope, deadline)
+            except _LegTimeout:
+                # Audit C.1: a leg we give up on must not keep the GPU.
+                _cancel(url, device_id)
+                raise RuntimeError("timed out waiting for pod %s %s to finish" % (device_id, scope))
         if err:
             logging.warning("posthoc queue: pod %s %s trigger: %s", device_id, scope, err)
             errors[scope] = err
@@ -742,6 +787,7 @@ def _worker_loop(lane="all"):
                 return
             job["state"] = "running"
             job["started_at"] = time.time()
+            job.setdefault("first_started_at", job["started_at"])   # survives a restart's re-queue
             _save(job)
         try:
             if _needs_gpu(job):

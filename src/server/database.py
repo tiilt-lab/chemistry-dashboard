@@ -2204,6 +2204,18 @@ def audio_posthoc_done(session_device_id):
     return audio_posthoc_status(session_device_id) == 'done'
 
 
+def audio_posthoc_completed_at(session_device_id):
+    """Epoch seconds of the pod's completed audio analysis (the stamp, when
+    audio_posthoc_status says done), else None: the queue compares it with
+    when it first started a job to tell a run that finished while the
+    runner was away from one that still has to run."""
+    if audio_posthoc_status(session_device_id) != 'done':
+        return None
+    device = get_session_devices(id=session_device_id)
+    stamp = device.posthoc_analyzed_date if device is not None else None
+    return stamp.replace(tzinfo=timezone.utc).timestamp() if stamp else None
+
+
 # -------------------------
 # Negotiation coding (negotiation_coding.py)
 # -------------------------
