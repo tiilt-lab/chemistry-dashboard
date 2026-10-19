@@ -987,9 +987,13 @@ def _prune_settled():
 
 
 def status(session_id=None):
+    # Queue order. legs/run_id/queued_at let a page say what each job is
+    # (transcription, naming, video, coding) and which lane it waits on.
     _prune_settled()
-    return [{"session_id": j["session_id"], "device_id": j["device_id"],
+    return [{"id": j.get("id"), "session_id": j["session_id"], "device_id": j["device_id"],
              "state": j["state"], "error": j["error"],
+             "legs": list(_job_legs(j)), "run_id": j.get("run_id"),
+             "queued_at": j.get("queued_at"),
              "started_at": j.get("started_at"),
              "finished_at": j.get("finished_at")}
             for j in _all_jobs()

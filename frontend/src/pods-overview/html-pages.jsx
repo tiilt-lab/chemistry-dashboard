@@ -14,6 +14,7 @@ import { ToastStack } from "../components/toast"
 import { QrCode } from "../components/qr-code"
 import { slotLinks, slotLinksText } from "./slot-links"
 import { devicesByGroup, hasGroups } from "./group-rows"
+import { AnalysisQueuePanel } from "../components/analysis-queue/analysis-queue-panel"
 
 
 // null (hide) for missing durations, else SessionModel's shared H:MM:SS.
@@ -192,7 +193,7 @@ function PodRow({ device, enrich, alerts, onOpen, checked, onToggle, queue, inde
                                     : "neutral"
                             }
                             className="text-[11px]"
-                            title="Negotiation table and side this laptop records"
+                            title="Negotiation table and side this device records"
                         >
                             {[device.negotiation_group, device.negotiation_side].filter(Boolean).join(" · ")}
                         </StatusPill>
@@ -284,7 +285,7 @@ function GroupHeaderRow({ group, count, onOpen }) {
                         {group}
                     </span>
                     <span className="text-xs text-tiilt-muted">
-                        {count === 1 ? "1 laptop" : `${count} laptops`}
+                        {count === 1 ? "1 device" : `${count} devices`}
                     </span>
                     {onOpen ? (
                         <button
@@ -293,7 +294,7 @@ function GroupHeaderRow({ group, count, onOpen }) {
                                 ev.stopPropagation()
                                 onOpen()
                             }}
-                            title="The group's analysis: every laptop's view and the merged, coded transcript"
+                            title="The group's analysis: every device's view and the merged, coded transcript"
                             className="ml-auto cursor-pointer rounded-md border border-tiilt-line bg-white px-2 py-0.5 text-xs font-semibold text-tiilt transition hover:bg-tiilt-soft"
                         >
                             Open group
@@ -668,6 +669,9 @@ function PodsOverviewPages(props) {
                             ) : (
                                 <SkeletonRows rows={6} className="mt-2" />
                             )}
+                            {props.session && props.session.id ? (
+                                <AnalysisQueuePanel jobs={props.queueJobs} sessionId={props.session.id} />
+                            ) : null}
                             <div className="mb-4 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
                                 <div>
                                     <h2 className="text-lg font-semibold text-tiilt-ink">
