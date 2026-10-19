@@ -110,8 +110,10 @@ def _gold_codes():
 
 
 def _code_indices(messages):
-    # The indices the prompt asks to code, read off its CODE section.
-    user = messages[-1]["content"]
+    # The indices the prompt asks to code, read off its CODE section (the
+    # last user message that has one: a nudge after an unparseable answer
+    # follows it).
+    user = next(m["content"] for m in reversed(messages) if m["role"] == "user" and "CODE (" in m["content"])
     code_part = user[user.index("CODE ("):]
     return [int(m) for m in re.findall(r"^\[(\d+)\]", code_part, re.M)]
 
@@ -337,8 +339,44 @@ def test_index_key_variants_and_foreign_indices():
 
 
 def test_code_utterances_fails_loudly_on_an_unparseable_chunk():
+    calls = []
     with pytest.raises(RuntimeError, match="no parseable codes for utterances 0-13"):
-        nc.code_utterances(CODEBOOK, _utterances(), lambda m: "I cannot do that.")
+        nc.code_utterances(CODEBOOK, _utterances(), lambda m: calls.append(m) or "I cannot do that.")
+    # asked again with the lapse pointed out, then the left half, then its
+    # left half; the first quarter that still fails ends the run
+    assert len(calls) == 6
+    assert calls[1][-1]["role"] == "user" and "only the JSON array" in calls[1][-1]["content"]
+    assert calls[1][-2] == {"role": "assistant", "content": "I cannot do that."}
+
+
+def test_an_unparseable_answer_is_asked_for_again_before_anything_else():
+    # The model talks once; the nudge gets the array. No halving, nothing lost.
+    us = _utterances()
+    calls = []
+    def talkative(messages):
+        calls.append(messages)
+        if len(calls) == 1:
+            return "Here are my thoughts on the negotiation so far."
+        return gold_llm(messages)
+    coded, invalid = nc.code_utterances(CODEBOOK, us, talkative)
+    assert len(calls) == 2 and [c["index"] for c in coded] == list(range(14)) and invalid == 0
+    assert coded[3]["emotion"] == VIKING[3][2]["emotion"]
+
+
+def test_a_chunk_the_model_cannot_finish_is_coded_in_halves():
+    # Anything over 7 utterances comes back empty (a tight context); the
+    # halves code, with the right half shown its predecessors.
+    us = _utterances()
+    seen = []
+    def small_only(messages):
+        idx = _code_indices(messages)
+        seen.append(idx)
+        return "" if len(idx) > 7 else gold_llm(messages)
+    coded, invalid = nc.code_utterances(CODEBOOK, us, small_only, context=2)
+    assert [c["index"] for c in coded] == list(range(14)) and invalid == 0
+    assert seen[:2] == [list(range(14)), list(range(14))]          # the chunk, then the nudge
+    assert seen[2] == list(range(0, 7)) and seen[3] == list(range(7, 14))
+    assert coded[9]["emotion"] == VIKING[9][2]["emotion"]
 
 
 # --------------------------------------------------- rollup and timeline
