@@ -2785,3 +2785,44 @@ def test_stitching_leaves_the_first_words_of_a_turn_the_recognizer_cut_by_speake
         ("Pat 1", "Tell me what's bothering you most about"), ("Sandy 1", "it. What's bothering me most?")]
     assert "stitched_from" not in moss[0]
 
+
+class _Store(dict):
+    """A Redis stand-in for the merge cache: get / setex on a dict."""
+    def __init__(self):
+        super().__init__(); self.reads = self.writes = 0
+
+    def get(self, key):
+        self.reads += 1
+        return dict.get(self, key)
+
+    def setex(self, key, ttl, value):
+        self.writes += 1
+        self[key] = value
+
+
+def test_group_merge_is_cached_by_what_it_was_merged_from(env, monkeypatch):
+    session, (pat, sandy) = _paired_session(env, group="Table C")
+    _add(env, pat, 10, "You went on vacation and left Alex in charge", "Pat", sim=0.85)
+    _add(env, sandy, 25, "That is ridiculous you signed off on the change order", "Sandy", sim=0.85)
+    store = _Store()
+    monkeypatch.setattr(env.routes, "_merge_store", lambda: store)
+    merges = []
+    real = env.routes.negotiation_coding.group_transcript
+    monkeypatch.setattr(env.routes.negotiation_coding, "group_transcript",
+                        lambda *a, **k: merges.append(1) or real(*a, **k))
+    first, _ = env.routes._group_merge(session.id, "Table C")
+    second, _ = env.routes._group_merge(session.id, "Table C")
+    assert len(merges) == 1 and store.writes == 1 and store.reads == 2
+    assert second["lines"] == json.loads(json.dumps(first["lines"], default=str)) and len(second["lines"]) == 2
+    assert second["speakers"] == first["speakers"] and second["pods"] == first["pods"]
+    # a renamed row (same count, same ids) is a different merge
+    row = env.database.get_transcripts(session_device_id=pat.id)[0]
+    row.speaker_tag = "Pat 2"
+    env.db.session.commit()
+    third, _ = env.routes._group_merge(session.id, "Table C")
+    assert len(merges) == 2 and store.writes == 2
+    assert "Pat 2" in json.dumps(third["lines"], default=str) and "Pat 2" not in json.dumps(second["lines"], default=str)
+    # with no store every load merges afresh
+    monkeypatch.setattr(env.routes, "_merge_store", lambda: None)
+    env.routes._group_merge(session.id, "Table C")
+    assert len(merges) == 3
