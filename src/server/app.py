@@ -26,7 +26,10 @@ logging.getLogger('werkzeug').setLevel(logging.WARNING)
 logging.getLogger('socketio.server').setLevel(logging.WARNING)
 logging.getLogger('engineio.server').setLevel(logging.WARNING)
 dir_path = os.path.dirname(os.path.realpath(__file__))
-log_file = logging.FileHandler(os.path.join(dir_path, 'discussion_capture_server.log'))
+# DC_SERVER_LOG redirects the file log; the test suite points it at a temp
+# file (tests/conftest.py), since importing this module used to append test
+# runs' log lines to the production server log.
+log_file = logging.FileHandler(os.environ.get('DC_SERVER_LOG') or os.path.join(dir_path, 'discussion_capture_server.log'))
 log_file.setFormatter(log_format)
 logger.addHandler(log_file)
 log_console = logging.StreamHandler()
