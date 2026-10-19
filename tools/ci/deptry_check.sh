@@ -21,7 +21,7 @@ def names(path):
     for line in open(path):
         line = line.strip()
         if line and not line.startswith(("#", "-")):
-            out.add(re.split(r"[=<>!@ ;\[]", line, 1)[0].lower().replace("_", "-"))
+            out.add(re.split(r"[=<>!@ ;\[]", line, maxsplit=1)[0].lower().replace("_", "-"))
     return out
 direct = names("src/requirements-direct.txt")
 lock = names("src/requirements-unified.txt")
