@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { formatHMS as formatSeconds, buildSpeakerColors, filterSortByDevice, indexSpeakerInfo, speakerLabel, wallClockLabel } from "../globals";
 import { useNavigate, useOutletContext,useParams, useSearchParams } from 'react-router-dom';
 import {TranscriptComponentPage} from './html-pages'
 import { decorateTranscripts } from './transcript-utils'
 import { useD3 } from '../myhooks/custom-hooks';
 import { ApiService } from '../services/api-service';
+import { SessionService } from '../services/session-service';
+import { decorateLines, lineAt, seekFor, toMergedClock } from '../pod-details/group-time';
 import { sessionToVideo } from '../components/video-player/video-time';
 import * as d3 from 'd3';
 
@@ -33,9 +35,14 @@ function TranscriptsComponent(){
   const [trigger, setTrigger] = useState(0)
   const [showDoA] = useState(false);
   const [roster, setRoster] = useState([])
-  // The breakout group's display names and team colours ("Pat 1"), from
-  // the session's groups listing; empty for a pod outside a group.
-  const [speakerInfo, setSpeakerInfo] = useState({})
+  // The pod's breakout group: its merged transcript (both laptops, each
+  // line once, on the reference laptop's clock), its laptops and the clock
+  // alignment between them. The page shows the merge by default and can
+  // fall back to this laptop's own rows; the audio can come from any
+  // laptop of the group, seeks and the playhead crossing the alignment.
+  const [group, setGroup] = useState(null)
+  const [scope, setScope] = useState("group")
+  const [viewDeviceId, setViewDeviceId] = useState(() => parseInt(sessionDeviceId, 10))
   // The pod's recording plays above the list: a click on a line's time
   // seeks it, and the line under the playhead is highlighted and kept in
   // view. segments is the recording's layout on the session clock
@@ -107,7 +114,7 @@ function TranscriptsComponent(){
 useEffect(()=>{
   createDisplayTranscripts();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-},[transcripts])
+},[transcripts, group, scope])
 
 useEffect(()=>{
   if(trigger > 0){
@@ -116,7 +123,7 @@ useEffect(()=>{
 },[trigger])
 
 const createDisplayTranscripts = ()=> {
-    setDisplayTranscripts(decorateTranscripts(transcripts, showKeywords, showDoA, angleToColor))
+    setDisplayTranscripts(decorateTranscripts(sourceRows, showKeywords, showDoA, angleToColor))
   }
 
   // Roster of this pod, for the "this section is from…" speaker picker.
@@ -130,29 +137,66 @@ const createDisplayTranscripts = ()=> {
       .catch(() => {})
   }, [sessionDeviceId])
 
-  useEffect(() => {
-    if (!session || !session.id || sessionDeviceId === undefined) return
-    const id = parseInt(sessionDeviceId, 10)
-    new ApiService()
-      .httpRequestCall(`api/v1/sessions/${session.id}/groups`, "GET", {})
+  const groupName = (sessionDevice && sessionDevice.negotiation_group) || null
+  const loadGroup = () => {
+    if (!session || !session.id || !groupName) return
+    new SessionService()
+      .getGroupTranscript(session.id, groupName)
       .then((r) => (r.status === 200 ? r.json() : null))
-      .then((d) => {
-        const g = ((d && d.groups) || []).find((x) => (x.pods || []).some((p) => p.id === id))
-        setSpeakerInfo(indexSpeakerInfo(g ? g.speakers : null))
-      })
+      .then((d) => d && setGroup(d))
       .catch(() => {})
-  }, [session, sessionDeviceId])
+  }
+  useEffect(() => {
+    setGroup(null)
+    loadGroup()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session && session.id, groupName])
+  // A finished post-hoc run on any laptop of the group reaches the page as
+  // a device update with a new analysed date: rebuild the merge.
+  useEffect(() => {
+    let key = ""
+    const sub = activeSessionService.sessionDeviceSource.subscribe((devices) => {
+      const list = devices || []
+      const next = list
+        .filter((d) => groupName && d.negotiation_group === groupName)
+        .map((d) => d.id + ":" + (d.posthoc_analyzed_date || ""))
+        .join("|")
+      if (key && next !== key) loadGroup()
+      key = next
+    })
+    return () => sub.unsubscribe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupName, session && session.id])
+  // The group's display names and team colours ("Pat 1"); empty for a pod
+  // outside a group.
+  const speakerInfo = useMemo(() => indexSpeakerInfo(group ? group.speakers : null), [group])
+  const groupScope = !!group && scope === "group"
+  const alignment = group ? group.alignment : null
+  // Merged lines in the shape the row decoration expects (keywords and
+  // direction are per-laptop analyses the merge does not carry).
+  const groupLines = useMemo(
+    () => (group ? decorateLines(group.lines, group.pods) : []).map((l) => ({
+      keywords: [], direction: -1, topic_id: -1, ...l,
+    })),
+    [group],
+  )
+  const sourceRows = groupScope ? groupLines : transcripts
 
   // How many segments currently carry each tag (drives the "all N" bulk fix).
-  const tagCounts = transcripts.reduce((m, t) => {
+  const tagCounts = sourceRows.reduce((m, t) => {
     if (t.speaker_tag) m[t.speaker_tag] = (m[t.speaker_tag] || 0) + 1
     return m
   }, {})
+  // In group scope the picker also offers every name the merge carries, so
+  // a line the other laptop heard can be given to one of its students.
+  const pickerRoster = groupScope
+    ? [...new Set(roster.concat(groupLines.map((l) => l.speaker_tag).filter(Boolean)))].sort()
+    : roster
 
   // One distinct, stable color per speaker — the same shared palette the
   // pod page's transcript panel uses, so a speaker keeps one color across
   // both views.
-  const speakerColors = buildSpeakerColors(transcripts, speakerInfo)
+  const speakerColors = buildSpeakerColors(sourceRows, speakerInfo)
   const labelOf = (name) => speakerLabel(name, speakerInfo)
   const chooseClock = (mode) => {
     setClock(mode)
@@ -166,10 +210,30 @@ const createDisplayTranscripts = ()=> {
     ? session.creation_date : null
   const wall = clock === "wall" && !!clockBase
   let clockOrigin = null
-  for (const t of transcripts) if (t.start_time != null && (clockOrigin == null || t.start_time < clockOrigin)) clockOrigin = t.start_time
+  for (const t of sourceRows) if (t.start_time != null && (clockOrigin == null || t.start_time < clockOrigin)) clockOrigin = t.start_time
+  // The merge sits on the reference laptop's clock, the player on its own
+  // laptop's: in group scope the elapsed clock counts from the first line.
   const timeLabel = (s) => (wall
     ? wallClockLabel(clockBase, s)
-    : formatSeconds(segments ? sessionToVideo(s, segments) : Math.max(0, s - (clockOrigin || 0))))
+    : formatSeconds(!groupScope && segments ? sessionToVideo(s, segments) : Math.max(0, s - (clockOrigin || 0))))
+  // The laptop whose recording plays: any of the group's in group scope,
+  // this one otherwise. A click on a line seeks that laptop's recording
+  // to where the line plays on its clock; the playhead comes back onto the
+  // merged clock to highlight the line.
+  const playerDeviceId = groupScope ? viewDeviceId : parseInt(sessionDeviceId, 10)
+  const playerSeek = (() => {
+    if (selectedTime == null || !groupScope) return selectedTime
+    const line = sourceRows.find((l) => l.start_time === selectedTime)
+    return line ? seekFor(line, playerDeviceId, alignment) : selectedTime
+  })()
+  const onPlaybackTime = (deviceSeconds) =>
+    setPlaybackTime(groupScope ? toMergedClock(deviceSeconds, playerDeviceId, alignment) : deviceSeconds)
+  const switchView = (deviceId) => {
+    // Land the new recording on the moment playing now.
+    const line = lineAt(displayTranscripts || [], playbackTime)
+    if (line) setSelectedTime(line.start_time)
+    setViewDeviceId(deviceId)
+  }
 
   // Persist a human correction, then reflect it locally without a reload.
   // guest=true attributes to someone outside the roster (they get added as a
@@ -191,7 +255,12 @@ const createDisplayTranscripts = ()=> {
       return hit ? { ...t, speaker_tag: alias } : t
     })
     setTranscripts(next)
-    setDisplayTranscripts(decorateTranscripts(next, showKeywords, showDoA, angleToColor))
+    if (groupScope) {
+      setGroup((g) => (g ? { ...g, lines: g.lines.map((l) => ((applyToTag && oldTag ? l.speaker_tag === oldTag : l.id === transcriptId) ? { ...l, speaker_tag: alias } : l)) } : g))
+      loadGroup()
+    } else {
+      setDisplayTranscripts(decorateTranscripts(next, showKeywords, showDoA, angleToColor))
+    }
   }
 
   // Click-to-edit the transcript text of one row. The server preserves the
@@ -208,7 +277,7 @@ const createDisplayTranscripts = ()=> {
     if (editingId == null) return
     // Blur commits like the title-rename pattern, so a click-in click-out
     // with no change (or an emptied box) must not post an edit.
-    const orig = transcripts.find((t) => t.id === editingId)
+    const orig = sourceRows.find((t) => t.id === editingId)
     if (!text || (orig && orig.transcript === text)) {
       setEditingId(null)
       return
@@ -219,7 +288,12 @@ const createDisplayTranscripts = ()=> {
     const next = transcripts.map((t) =>
       t.id === editingId ? { ...t, transcript: text } : t)
     setTranscripts(next)
-    setDisplayTranscripts(decorateTranscripts(next, showKeywords, showDoA, angleToColor))
+    if (groupScope) {
+      setGroup((g) => (g ? { ...g, lines: g.lines.map((l) => (l.id === editingId ? { ...l, transcript: text } : l)) } : g))
+      loadGroup()
+    } else {
+      setDisplayTranscripts(decorateTranscripts(next, showKeywords, showDoA, angleToColor))
+    }
     setEditingId(null)
   }
 
@@ -306,15 +380,22 @@ const createDisplayTranscripts = ()=> {
       legendRef = {legendRef}
       showKeywords = {showKeywords}
       toggleKeywords = {toggleKeywords}
-      roster = {roster}
+      roster = {pickerRoster}
       tagCounts = {tagCounts}
       speakerColors = {speakerColors}
       sessionId = {session.id}
       selectedTime = {selectedTime}
+      playerSeek = {playerSeek}
       onSelectTime = {setSelectedTime}
       playbackTime = {playbackTime}
-      onPlaybackTime = {setPlaybackTime}
+      onPlaybackTime = {onPlaybackTime}
       onSegments = {setSegments}
+      group = {group}
+      groupScope = {groupScope}
+      scope = {scope}
+      onSelectScope = {setScope}
+      playerDeviceId = {playerDeviceId}
+      onSelectView = {switchView}
       labelOf = {labelOf}
       timeLabel = {timeLabel}
       clock = {clock}
