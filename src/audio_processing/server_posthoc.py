@@ -424,7 +424,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                             'server_start': self.server_start, 'keywords': self.keywords, 'transcribe': False,
                             'features': False, 'doa': False, 'topic_model': None, 'owner': 1, 'off_set_date': off_set_date}
                 conf_val.update(self._clock_fields())
-                valid, result = ProcessingConfig.from_json(conf_val, source="posthoc renaming")
+                valid, result = ProcessingConfig.from_json(conf_val, source="posthoc processing")   # the post-hoc parse path
                 if not valid:
                     running_audio_processes.pop(key, None)
                     self.send_json({'type': 'error', 'message': 'Configuration failed for renaming.'})
