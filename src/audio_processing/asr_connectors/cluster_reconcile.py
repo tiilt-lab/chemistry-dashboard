@@ -1,10 +1,9 @@
-"""Map pyannote diarization clusters to a pod's enrolled voice prints.
-
-When a pod's participants are known (enrolled fingerprints), we can collapse
-generic SPEAKER_NN clusters onto real people: for each cluster, embed its audio
-with the same ECAPA model used for fingerprinting and match it to the nearest
-enrolled voice. Used only when [processing] diarization_constrain_to_enrolled is
-on. Best-effort — any failure leaves the original cluster label untouched.
+"""Float-domain ECAPA embedding (`_embed_float`), which MOSS naming uses, and
+the cluster-to-enrolled-print mapping that the WhisperX engine's
+constrain-to-enrolled option used until it was removed on 2026-10-19:
+for each diarization cluster, embed its audio with the fingerprinting ECAPA
+model and match it to the nearest enrolled voice. Best-effort — any failure
+leaves the original cluster label untouched.
 """
 
 import logging

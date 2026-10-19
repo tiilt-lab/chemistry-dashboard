@@ -550,8 +550,8 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         self._run_active = False
         _M_RUNS.labels(_run_outcome(success, reason)).inc()
         # Per-pod CUDA cleanup: batch runs grew this process ~1.5 GiB per pod
-        # until whisperx in the AUDIO service could no longer load (shared
-        # card) - same class of leak fixed in whisperx_asr. Runs BEFORE the
+        # until the AUDIO service's engine could no longer load (shared
+        # card) - the same class of leak the audio connectors fixed. Runs BEFORE the
         # optional ASD subprocess so that pass gets the freed headroom.
         try:
             import gc

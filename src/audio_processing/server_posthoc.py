@@ -178,7 +178,7 @@ def install_metrics():
 
 
 # Memory policy (2026-10-18): this process holds GPU memory only while a run
-# is on. WhisperX, the aligner and pyannote are per-run objects already, yet
+# is on. The engine objects are per-run already, yet
 # the long-lived process kept ~9 GB of CUDA allocations after a run (observed
 # while the diarization bake-off and llama-server fought over the card). A
 # service with no run for IDLE_RECYCLE_SECONDS exits; systemd restarts it
@@ -287,8 +287,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
             self.diarizer_choice = data.get('diarizer') or 'fingerprint'
             if self.asr_choice == 'moss':
                 # MOSS diarizes as it transcribes: no diarizer choice applies,
-                # and the provenance says so from the start rather than being
-                # corrected from 'diarizen' to 'moss' after every run.
+                # and the provenance says so from the start.
                 self.diarizer_choice = 'moss'
             self.embedder_choice = data.get('embedder') or None
             # Optional per-analysis toggles — default to running everything, so
@@ -305,7 +304,6 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                 'diarizer': self.diarizer_choice,
                 'embedder': self.embedder_choice or 'bge-large-en-v1.5',
                 'keyword_backend': cf.keyword_backend(),
-                'diarization_fallback': cf.diarization_fallback(),
             }
             self.speakers = dict()
             self.stream_data = "audio"
@@ -716,15 +714,6 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         # Every engine consumes the same PCM queue and runs fully offline;
         # each is imported lazily so one never needs the others' dependencies.
         _enrolled = getattr(self, 'speakers', None) or None
-
-        def _constrained():
-            # WhisperX only: cap the speaker count and remap
-            # clusters to the enrolled voices when the config asks for it
-            # (diarization_constrain_to_enrolled). MOSS takes the enrolled
-            # set for naming instead. Off -> None args -> unchanged behaviour.
-            if cf.diarization_constrain_to_enrolled() and _enrolled:
-                return len(_enrolled), _enrolled, diarization_model
-            return None, None, None
         if getattr(self, 'asr_choice', None) == 'moss':
             # MOSS end to end (the default): transcript + speakers in one pass over the
             # whole recording; its anonymous labels are named against the enrolled
@@ -734,18 +723,9 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                                audio_file=self.audio_file, hotwords=list(getattr(self, 'keywords', None) or []),
                                enrolled=_enrolled, speaker_model=diarization_model,
                                roster=list(getattr(self, 'roster_aliases', None) or []))
-        elif getattr(self, 'asr_choice', None) == 'whisperx':
-            from asr_connectors.whisperx_asr import WhisperXASR
-            _max_spk, _enr, _spk_model = _constrained()
-            self.asr = WhisperXASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval,
-                                   audio_file=self.audio_file, model_size=cf.whisper_model_size(),
-                                   diarize=(getattr(self, 'diarizer_choice', None) == 'pyannote'),
-                                   diarizer=(getattr(self, 'diarizer_choice', None)
-                                             if getattr(self, 'diarizer_choice', None) in ('nemotron3', 'diarizen') else None),
-                                   max_speakers=_max_spk, enrolled=_enr, speaker_model=_spk_model)
         else:
-            # CrisperWhisper 2.0: the default, and what any unknown key
-            # runs (an unknown key is logged by the trigger route).
+            # CrisperWhisper 2.0: what any other key runs (an unknown key is
+            # logged by the trigger route); speakers come from the voice prints.
             from asr_connectors.crisperwhisper_asr import CrisperWhisperPosthocASR
             self.asr = CrisperWhisperPosthocASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval,
                                                 audio_file=self.audio_file, model_id=cf.crisperwhisper_model(),
@@ -861,15 +841,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
             if self.config:
                 running_audio_processes.pop(self.config.auth_key, None)
                 if success:
-                    # Provenance names the diarizer that actually ran: the
-                    # WhisperX connector drops to pyannote when DiariZen fails.
-                    ran = getattr(self.asr, 'diarizer_used', None)
-                    choices = getattr(self, 'model_choices', None)
-                    if ran and choices and choices.get('diarizer') != ran:
-                        logging.info("Diarizer provenance: requested %s, ran %s",
-                                     choices.get('diarizer'), ran)
-                        choices['diarizer'] = ran
-                    callbacks.post_posthoc_completed(self.config.auth_key, choices)
+                    callbacks.post_posthoc_completed(self.config.auth_key, getattr(self, 'model_choices', None))
                 cm.remove(self, self.config.session_key, self.config.auth_key)
         except Exception as e:
             logging.warning("on_run_complete cleanup failed: %s", e)

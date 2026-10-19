@@ -2,7 +2,7 @@
 recording gives timestamped, speaker-labelled, punctuated turns. Runs inside
 src/venv-granite (transformers 5.x, the OpenMOSS package, Triton, and on a
 Turing GPU the flash-attention-turing extension). The audio service invokes
-this as a subprocess and reads JSON, like nemotron_cli.py / diarizen_cli.py.
+this as a subprocess and reads JSON.
 
 Usage:
     venv-granite/bin/python moss_cli.py input.wav --out turns.json

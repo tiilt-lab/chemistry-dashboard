@@ -37,11 +37,6 @@ pillow
 prometheus_client
 protobuf
 psutil
-pyannote-audio
-pyannote-core
-pyannote-database
-pyannote-metrics
-pyannote-pipeline
 PyPDF2
 python-dotenv
 PyYAML
@@ -69,4 +64,3 @@ ultralytics-thop
 websockets
 Werkzeug
 wget
-whisperx

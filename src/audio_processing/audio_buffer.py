@@ -11,7 +11,7 @@ class AudioBuffer:
         self.sample_rate = 16000
         self.channels = self.config.channels
         self.depth = 2
-        # Batch ASRs (WhisperX post-hoc) emit results only after the whole
+        # Batch ASRs (post-hoc) emit results only after the whole
         # file is transcribed, so the buffer must hold the full recording —
         # the default 180s window is only right for streaming recognizers.
         self.max_seconds = max_seconds or AudioBuffer.BUFFER_SIZE

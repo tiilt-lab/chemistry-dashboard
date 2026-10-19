@@ -406,7 +406,7 @@ def test_audio_leg_defaults_to_moss_which_is_its_own_diarizer_unless_the_job_nam
     q.enqueue(1, [11], models={"diarizer": "nemotron3"})
     q._worker_loop()
     audio = [i for i in seen if i["type"] == "Initialize_audio_processing_analytics"]
-    # MOSS diarizes as it transcribes, so the provenance names it; a job may still name a WhisperX diarizer.
+    # MOSS diarizes as it transcribes, so the provenance names it; a job that names one is passed through.
     assert [(i["sessiondeviceid"], i["diarizer"]) for i in audio] == [(10, "moss"), (11, "nemotron3")]
     # MOSS is the post-hoc engine since #244; a job may still name another.
     assert all(i["asr"] == "moss" for i in audio)
