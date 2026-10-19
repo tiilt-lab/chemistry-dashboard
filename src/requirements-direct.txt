@@ -1,0 +1,72 @@
+# The packages src/ imports directly, one per line, unpinned. The lock,
+# src/requirements-unified.txt, pins these and everything they pull in; CI
+# (tools/ci/deptry_check.sh, via deptry) fails when the code imports something
+# not listed here, lists something the code no longer imports, or the lock
+# does not pin a name below. An unused package was found this way on
+# 2026-10-19 (mcp had sat in the lock for months with nothing importing it).
+alembic
+APScheduler
+autobahn
+dlib
+face-recognition
+Flask
+Flask-Limiter
+Flask-Migrate
+Flask-SocketIO
+Flask-SQLAlchemy
+gensim
+google-api-core
+google-auth
+google-genai
+googleapis-common-protos
+hsemotion-onnx
+insightface
+joblib
+librosa
+MarkupSafe
+matplotlib
+moviepy
+nltk
+numpy
+onnx
+onnxruntime-gpu
+opencv-python
+opencv-python-headless
+pandas
+pillow
+prometheus_client
+protobuf
+psutil
+pyannote-audio
+pyannote-core
+pyannote-database
+pyannote-metrics
+pyannote-pipeline
+PyPDF2
+python-dotenv
+PyYAML
+redis
+requests
+scikit-image
+scikit-learn
+scipy
+sentence-transformers
+setuptools
+silero-vad
+soundfile
+spacy
+speechbrain
+SQLAlchemy
+supervision
+torch
+torchvision
+tqdm
+transformers
+triton
+Twisted
+ultralytics
+ultralytics-thop
+websockets
+Werkzeug
+wget
+whisperx

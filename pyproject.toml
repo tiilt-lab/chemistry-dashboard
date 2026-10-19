@@ -30,3 +30,50 @@ extend-exclude = [
 #   B023 = function/lambda in a loop not binding the loop variable (late-binding
 #          closure bug). Both B-classes are currently at zero — keep them there.
 select = ["F", "E9", "E722", "B006", "B023"]
+
+# deptry (CI job "deptry", tools/ci/deptry_check.sh): the packages src/
+# imports must be the ones src/requirements-direct.txt lists; the lock pins
+# those and everything they pull in. The excludes are ruff's vendored set.
+[tool.deptry]
+requirements_files = ["src/requirements-direct.txt"]
+# The vendored model code (yolo_head, asd, video_cartoonizer/model, ...) is
+# scanned too: it runs in production and its imports (ultralytics, skimage,
+# onnx, ...) must stay pinned. Its optional and tooling imports are ignored
+# below instead.
+exclude = ["src/venv-"]
+
+# Distribution name -> module name where deptry's normalisation does not
+# reach (CI has none of these installed to read their metadata).
+[tool.deptry.package_module_name_map]
+opencv-python = "cv2"
+opencv-python-headless = "cv2"
+pillow = "PIL"
+scikit-learn = "sklearn"
+scikit-image = "skimage"
+PyYAML = "yaml"
+python-dotenv = "dotenv"
+ultralytics-thop = "thop"
+onnxruntime-gpu = "onnxruntime"
+setuptools = ["setuptools", "pkg_resources"]
+google-api-core = "google"
+google-auth = "google"
+google-genai = "google"
+googleapis-common-protos = "google"
+protobuf = "google"
+pyannote-audio = "pyannote"
+pyannote-core = "pyannote"
+pyannote-database = "pyannote"
+pyannote-metrics = "pyannote"
+pyannote-pipeline = "pyannote"
+PyPDF2 = "PyPDF2"
+
+[tool.deptry.per_rule_ignores]
+# Imported only inside workers that run in another venv (CrisperWhisper,
+# MOSS, the WhisperX diarizers, Qwen3), or by vendored model code for its
+# training, export and notebook paths, which production never takes.
+DEP001 = [
+  "crisperwhisper", "diarizen", "moss_transcribe_diarize", "nemo", "flash_attention_interface", "vllm", "qwen_asr",
+  "IPython", "alt_cuda_corr", "coremltools", "lmdb", "pycocotools", "raft", "resampy", "seaborn", "torchsummary",
+  "torchvggish", "wandb", "wandb_utils", "test", "datasets", "evaluate",
+]
+
