@@ -1100,13 +1100,41 @@ def code_utterances(codebook, utterances, llm=None, size=CHUNK_SIZE, context=CON
     llm = llm or call_llm
     parts = list(chunks(utterances, size, context))
 
+    def code_chunk(ctx, chunk, depth):
+        # An answer with no JSON array (the model talked instead, or ran out
+        # of room mid-list) is asked for again with the lapse pointed out;
+        # still nothing, and the chunk is coded in two halves, twice over,
+        # before the run gives up. Group 2 of session 434 lost a whole run
+        # to one such answer on utterances 40-79.
+        prompt = build_prompt(codebook, chunk, ctx, names)
+        lo, hi = chunk[0]["index"], chunk[-1]["index"]
+        answer = llm(prompt)
+        items = extract_array(answer)
+        if not items:
+            logging.warning("negotiation coding: no parseable codes for utterances %d-%d (answer began %r); asking again",
+                            lo, hi, (answer or "")[:160])
+            nudge = prompt + [
+                {"role": "assistant", "content": (answer or "")[:400]},
+                {"role": "user", "content": "That answer held no JSON array. Reply with only the JSON array of "
+                                            "codes, one object per utterance, i from %d to %d." % (lo, hi)}]
+            items = extract_array(llm(nudge))
+        if items:
+            return validate_codes(items, codebook, [u["index"] for u in chunk])
+        if len(chunk) > 1 and depth < 2:
+            mid = len(chunk) // 2
+            left = code_chunk(ctx, chunk[:mid], depth + 1)
+            right_ctx = (list(ctx) + chunk[:mid])[-context:] if context else []
+            right = code_chunk(right_ctx, chunk[mid:], depth + 1)
+            return {**left[0], **right[0]}, left[1] + right[1]
+        raise RuntimeError("LLM returned no parseable codes for utterances %d-%d" % (lo, hi))
+
     def one(part):
         ctx, chunk = part
-        items = extract_array(llm(build_prompt(codebook, chunk, ctx, names)))
-        if not items:
-            raise RuntimeError("LLM returned no parseable codes for utterances %d-%d"
-                               % (chunk[0]["index"], chunk[-1]["index"]))
-        return validate_codes(items, codebook, [u["index"] for u in chunk])
+        try:
+            return code_chunk(ctx, chunk, 0)
+        except RuntimeError as e:
+            raise RuntimeError("LLM returned no parseable codes for utterances %d-%d (%s)"
+                               % (chunk[0]["index"], chunk[-1]["index"], e)) from e
 
     workers = max(1, int(parallel if parallel is not None else llm_parallel()))
     if workers > 1 and len(parts) > 1:
