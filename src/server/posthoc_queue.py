@@ -340,11 +340,21 @@ async def _run_phase(ws, device_id, scope, deadline):
                     attached = False
                     break
                 try:
-                    _busy_from(json.loads(raw))
+                    msg = json.loads(raw)
+                    _busy_from(msg)
                 except _GpuBusy:
                     raise
                 except Exception:
-                    pass  # progress / status traffic
+                    msg = None  # progress / status traffic
+                if scope == "rename" and isinstance(msg, dict):
+                    # A renaming pass takes seconds: it can start and finish
+                    # between two state polls, so the state is never seen
+                    # running and the leg would wait out the pod timeout.
+                    # The service says on the socket how it ended.
+                    if msg.get("type") == "audio renaming completed":
+                        return True
+                    if msg.get("type") == "error":
+                        raise RuntimeError(str(msg.get("message") or "the audio service reported an error"))
             if attached:
                 try:
                     await ws.send(json.dumps({"type": "heartbeat_from_posthoc_processing"}))

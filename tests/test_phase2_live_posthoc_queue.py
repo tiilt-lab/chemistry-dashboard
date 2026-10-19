@@ -408,3 +408,31 @@ def test_audio_leg_defaults_to_moss_and_diarizen_unless_the_job_names_them(q, mo
     assert [(i["sessiondeviceid"], i["diarizer"]) for i in audio] == [(10, "diarizen"), (11, "nemotron3")]
     # MOSS is the post-hoc engine since #244; a job may still name another.
     assert all(i["asr"] == "moss" for i in audio)
+
+
+def test_a_rename_leg_finishes_on_the_services_word_without_a_state_poll(q, monkeypatch):
+    # The pass took 4 s: the state was running and cleared again between
+    # two 10 s polls, so the state never shows it. The socket does.
+    ws = _socket(q, monkeypatch, [ACK, {"type": "audio renaming started"},
+                                  {"type": "audio renaming completed", "renamed": 465}])
+    _scopes(q, monkeypatch, [False, False, False])
+    assert q._run_leg("ws://x", {"type": "Initialize_audio_renaming"},
+                      "start_posthoc_renaming", 10, "rename", time.time() + 60) is None
+    assert ws.sent[:2] == [{"type": "Initialize_audio_renaming"}, {"type": "start_posthoc_renaming"}]
+
+
+def test_a_rename_leg_fails_at_once_on_the_services_error(q, monkeypatch):
+    _socket(q, monkeypatch, [ACK, {"type": "audio renaming started"},
+                             {"type": "error", "message": "Renaming failed: the API gave no renaming plan"}])
+    _scopes(q, monkeypatch, [False, False])
+    with pytest.raises(RuntimeError, match="no renaming plan"):
+        q._run_leg("ws://x", {"type": "Initialize_audio_renaming"}, "start_posthoc_renaming", 10, "rename", time.time() + 60)
+
+
+def test_an_audio_leg_still_waits_for_the_state_not_the_socket(q, monkeypatch):
+    # The full run's own completion message is not the end: the leg ends on
+    # the state, as before (the publish follows the message).
+    _socket(q, monkeypatch, [ACK, {"type": "process_completed", "message": "Audio posthoc analytics completed"}])
+    _scopes(q, monkeypatch, [True, True, False])
+    assert q._run_leg("ws://x", {"type": "Initialize_audio_processing_analytics"},
+                      "start_posthoc_audio_processing", 10, "audio", time.time() + 60) is None
