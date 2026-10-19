@@ -434,7 +434,7 @@ def reconcile_clusters(pool, dropped, diagnostics=None):
                 u["team"] = theirs["team"]
         changes.append({"session_device_id": key[0], "cluster": key[1], "from": mine["name"],
                         "to": theirs["name"], "lines": len(members[key]), "pairs": n})
-        logging.info("paired merge: cluster %s of pod %s (%s, %d lines) is %s: %d duplicate copies agree",
+        logging.debug("paired merge: cluster %s of pod %s (%s, %d lines) is %s: %d duplicate copies agree",
                      key[1], key[0], mine["name"], len(members[key]), theirs["name"], n)
     if diagnostics is not None:
         diagnostics["reconciled"] = changes
@@ -977,7 +977,7 @@ def _drop_covered(kept, dropped, tolerance):
             u["text"] = " ".join(w for w, _ in pairs[start:end])
             u["trimmed"] = True
             u.pop("_tokens", None)
-            logging.info("paired merge: trimmed transcript %s to its own %d words", u["transcript_id"], end - start)
+            logging.debug("paired merge: trimmed transcript %s to its own %d words", u["transcript_id"], end - start)
             continue
         share, _n, u, _mask, _pairs, others, _s, _e = max(covered, key=lambda c: c[0])
         kept.pop(u["transcript_id"])
