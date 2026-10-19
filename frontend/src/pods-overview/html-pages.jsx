@@ -193,7 +193,7 @@ function PodRow({ device, enrich, alerts, onOpen, checked, onToggle, queue, inde
                                     : "neutral"
                             }
                             className="text-[11px]"
-                            title="Negotiation table and side this laptop records"
+                            title="Negotiation table and side this device records"
                         >
                             {[device.negotiation_group, device.negotiation_side].filter(Boolean).join(" · ")}
                         </StatusPill>
@@ -285,7 +285,7 @@ function GroupHeaderRow({ group, count, onOpen }) {
                         {group}
                     </span>
                     <span className="text-xs text-tiilt-muted">
-                        {count === 1 ? "1 laptop" : `${count} laptops`}
+                        {count === 1 ? "1 device" : `${count} devices`}
                     </span>
                     {onOpen ? (
                         <button
@@ -294,7 +294,7 @@ function GroupHeaderRow({ group, count, onOpen }) {
                                 ev.stopPropagation()
                                 onOpen()
                             }}
-                            title="The group's analysis: every laptop's view and the merged, coded transcript"
+                            title="The group's analysis: every device's view and the merged, coded transcript"
                             className="ml-auto cursor-pointer rounded-md border border-tiilt-line bg-white px-2 py-0.5 text-xs font-semibold text-tiilt transition hover:bg-tiilt-soft"
                         >
                             Open group
