@@ -57,6 +57,13 @@ CALM_WINDOW = 120       # s: no escalation this long = sustained de-escalation
 PAIR_START_TOLERANCE = 1.5   # s: starts this close are the same moment ...
 PAIR_OVERLAP_MIN = 0.5       # ... or the two overlap this share of the shorter one
 PAIR_TEXT_SIMILARITY = 0.5   # token ratio from which two copies are one utterance
+# An unnamed row overlapping a named line from the other laptop is that line
+# bleeding into the far microphone only when it says some of the same words.
+# Overlap alone was enough until 2026-10-19, and across sessions 432-437 most
+# such drops (936 of 986 under 0.3) were different speech: the room talking
+# over itself, with the line then lost from the group transcript.
+PAIR_BLEED_SIMILARITY = 0.3
+PAIR_BLEED_CONTAINED = 0.5    # ... or this share of the unnamed row's words is in the named line
 # Tuned on the real rows of 2026-10-16 (Group 1: 853 rows, clocks 18 then
 # 6 s apart; Group 3: 1200 rows, one laptop reconnecting, offsets wandering
 # 1 to 8 s). With 0.7/8 words/3 s, 7 clear duplicates survived in Group 3
@@ -948,23 +955,29 @@ def merge_paired(rows_by_device, sides, diagnostics=None, recordings=None):
                 winner["text"] = merge_texts(winner["text"], loser["text"])
                 winner.pop("_tokens", None)
             winner.setdefault("merged_from", []).append(loser["transcript_id"])
-        elif best is not None and bool(u.get("speaker_tag")) != bool(best.get("speaker_tag")):
+        elif best is not None and bool(u.get("speaker_tag")) != bool(best.get("speaker_tag")) \
+                and _is_bleed(u, best, best_sim):
             winner, loser = (u, best) if u.get("speaker_tag") else (best, u)
             reason = "bleed"
         else:
             kept.setdefault(u["transcript_id"], u)
             continue
-        if kept.pop(loser["transcript_id"], None) is not None:
-            # The loser stood for earlier pieces of this utterance; they
-            # follow the winner.
-            for d in dropped:
-                if d["kept_transcript_id"] == loser["transcript_id"]:
-                    d["kept_transcript_id"] = winner["transcript_id"]
+        kept.pop(loser["transcript_id"], None)
+        # The loser stood for copies dropped in its favour (earlier pieces of
+        # this utterance, or the other laptop's far-side copy); they follow
+        # the winner. Only following those the loser had already been KEPT
+        # for left a far-side copy pointing at a row that was itself dropped
+        # moments later: both copies gone, the line missing from the group
+        # transcript (session 434, Group 7, 2026-10-19).
+        for d in dropped:
+            if d["kept_transcript_id"] == loser["transcript_id"]:
+                d["kept_transcript_id"] = winner["transcript_id"]
         dropped_ids.add(loser["transcript_id"])
         kept.setdefault(winner["transcript_id"], winner)
         dropped.append({"transcript_id": loser["transcript_id"], "kept_transcript_id": winner["transcript_id"],
                         "reason": reason, "similarity": round(best_sim, 2)})
     if len(by_device) == 2:
+        _name_from_far_copy(pool, kept, dropped)
         reconcile_clusters(pool, dropped, diagnostics, placed=placed)
     kept = _drop_covered(kept, dropped, tolerance)
     kept = sorted(kept.values(), key=lambda u: (u["start_time"], u["transcript_id"]))
@@ -972,6 +985,44 @@ def merge_paired(rows_by_device, sides, diagnostics=None, recordings=None):
         u["index"] = i
         u.pop("_tokens", None)
     return kept, dropped
+
+
+def _is_bleed(u, v, sim):
+    """Whether the unnamed one of ``u``/``v`` is the named one's words heard
+    faintly by the far microphone: the two texts are similar, or most of the
+    unnamed row's words are in the named line (a garbled fragment of a
+    longer line scores low on plain similarity). Overlapping in time with
+    different words is the room talking over itself, not bleed."""
+    if sim >= PAIR_BLEED_SIMILARITY:
+        return True
+    unnamed, named = (v, u) if u.get("speaker_tag") else (u, v)
+    mine = [t for _, t in _words_and_tokens(unnamed.get("text"))]
+    if not mine:
+        return True                      # no words at all: nothing to lose
+    theirs = {t for _, t in _words_and_tokens(named.get("text"))}
+    return sum(1 for t in mine if t in theirs) / float(len(mine)) >= PAIR_BLEED_CONTAINED
+
+
+def _name_from_far_copy(pool, kept, dropped):
+    """A kept row its own laptop left unnamed takes the name the other
+    laptop gave the same line, when that copy was dropped in its favour
+    (far_side: the speaker's own laptop is preferred) and named a student of
+    the same team. Otherwise the line kept no name, and the stitcher handed
+    it to whoever spoke just before, possibly across the table (session 434,
+    Group 7: a line the partner laptop named at 0.96 was shown under a
+    student of the other team)."""
+    by_id = {u["transcript_id"]: u for u in pool}
+    for d in dropped:
+        if d["reason"] != "far_side":
+            continue
+        keep, copy = kept.get(d["kept_transcript_id"]), by_id.get(d["transcript_id"])
+        if keep is None or copy is None or keep.get("speaker_tag") or not copy.get("speaker_tag"):
+            continue
+        if keep.get("team") and copy.get("team") and keep["team"] != copy["team"]:
+            continue
+        keep["speaker_tag"] = copy["speaker_tag"]
+        keep["speaker_id"] = copy.get("speaker_id")
+        keep["named_from_partner"] = copy["transcript_id"]
 
 
 def _words_and_tokens(text):

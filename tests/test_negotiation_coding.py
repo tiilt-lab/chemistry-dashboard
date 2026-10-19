@@ -1549,9 +1549,12 @@ def test_merge_paired_fragment_cannot_shield_the_real_duplicate():
              _row(3, 2, 374, "So, one million this week, four hundred against spring work, rent deferred. Did I get that right?",
                   "Sandy", sim=0.36, closed_world=True, length=8)]
     kept, dropped = nc.merge_paired({1: pat, 2: sandy}, SIDES)
-    assert [u["transcript_id"] for u in kept] == [3]
+    # The line is shown once, under the better attribution. The fragment
+    # shares no words with it, so since 2026-10-19 it is not "bleed" (that
+    # needs the same words) and stays: real speech, the previous line's tail.
+    assert [u["transcript_id"] for u in kept] == [2, 3]
     assert {d["transcript_id"]: (d["kept_transcript_id"], d["reason"]) for d in dropped} == {
-        2: (3, "bleed"), 1: (3, "duplicate")}
+        1: (3, "duplicate")}
 
 
 def _long(i, device, start, text, tag, sim=0.8):
@@ -2947,3 +2950,41 @@ def test_a_laptop_that_named_none_of_its_own_side_cannot_rename_the_partners_voi
     diag = {}
     kept, dropped = nc.merge_paired({1: pat, 2: sandy}, SIDES, diag)
     assert [c["to"] for c in diag["reconciled"]] == ["Sandy 2"]
+
+
+def test_a_line_both_laptops_heard_is_never_dropped_from_both():
+    # Session 434, Group 7 (2026-10-19). Pat 1 speaks over the end of a
+    # Sandy 1 line. The Sandy laptop names Pat 1 confidently (across the
+    # table); the Pat laptop hears the same words but names nobody. The far
+    # copy yields to the own laptop's copy, and the "bleed" rule then dropped
+    # that copy too, on time overlap alone (similarity 0.08 to Sandy 1's
+    # line): the line was in neither laptop's share of the group transcript.
+    pat = [
+        _crow(1, 1, 274, "It was just out out of pure uh, how do you say it?", "Sand1", "S02", sim=0.9, length=6, far_side=True),
+        _crow(2, 1, 279, "So maybe, maybe you guys can give us some color on.", None, "S03", length=2),
+        _crow(3, 1, 282, "Intention.", "Sand1", "S02", sim=0.9, length=1, far_side=True),
+    ]
+    sandy = [
+        _crow(11, 2, 274, "It was just out out of pure, uh, how do you say it?", "Sand1", "S01", sim=0.95, length=6),
+        _crow(12, 2, 280, "So maybe maybe you guys can give us some color on.", "Pat1", "S07", sim=0.963, length=3, far_side=True),
+        _crow(13, 2, 280, "In in English, out of pure good intentions.", "Sand1", "S01", sim=0.95, length=3),
+    ]
+    kept, dropped = nc.merge_paired({1: pat, 2: sandy}, SIDES)
+    line = [u for u in kept if "give us some color" in u["text"]]
+    assert len(line) == 1, [u["text"] for u in kept]
+    assert (line[0]["speaker_tag"], line[0]["team"]) == ("Pat1", "Pat")
+    assert not any(d["reason"] == "bleed" and d["transcript_id"] in (2, 12) for d in dropped)
+    # every drop points at a row that is still kept: no copy is orphaned
+    kept_ids = {u["transcript_id"] for u in kept}
+    dropped_ids = {d["transcript_id"] for d in dropped}
+    assert not any(d["kept_transcript_id"] in dropped_ids for d in dropped)
+    assert all(d["kept_transcript_id"] in kept_ids for d in dropped if d["reason"] in ("far_side", "bleed"))
+
+
+def test_bleed_still_drops_an_unnamed_echo_that_shares_the_words():
+    # The far microphone faintly hearing a named line: same words, no name.
+    pat = [_row(1, 1, 100, "So you would get significantly less than what we owe you, so it's in your interest", "Pat1", sim=0.9)]
+    sandy = [_row(2, 2, 100.5, "So you would get significantly less than what we owe you.", None)]
+    kept, dropped = nc.merge_paired({1: pat, 2: sandy}, SIDES)
+    assert [u["transcript_id"] for u in kept] == [1]
+    assert dropped and dropped[0]["transcript_id"] == 2

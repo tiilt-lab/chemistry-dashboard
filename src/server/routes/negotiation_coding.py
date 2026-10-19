@@ -334,6 +334,9 @@ def _group_rosters(pods):
 
 
 MERGE_CACHE_TTL = 12 * 3600    # s a merged group transcript stays cached, keyed by what it was merged from
+# Bumped whenever the merge rules change, so cached merges made by the old
+# rules are not served for up to MERGE_CACHE_TTL after a deploy.
+MERGE_ENGINE_VERSION = 2       # 2: bleed needs shared words; no orphaned copies (2026-10-19)
 
 
 def _merge_store():
@@ -353,6 +356,7 @@ def _merge_fingerprint(rows_by_device, rosters, names):
     confidence (a rename or a re-run changes these without changing the
     count), the rosters the labels come from, and the team names."""
     h = hashlib.sha1()
+    h.update(('v%s' % MERGE_ENGINE_VERSION).encode())
     for device_id in sorted(rows_by_device):
         h.update(('d%s' % device_id).encode())
         for r in rows_by_device[device_id]:
