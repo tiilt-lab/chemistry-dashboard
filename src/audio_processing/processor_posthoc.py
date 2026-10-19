@@ -82,6 +82,14 @@ def progress_of(stage, worker_progress=None, done=0, total=None, published=0, pu
 
 PUBLISH_BATCH = 250     # rows per publish request: one commit each on the API
 
+# Per-utterance work (keywords, features, topic; the print check and
+# prosody for a recognizer that did not name its turns) runs on a bounded
+# pool per run. One thread per utterance meant a thousand threads at once
+# for a MOSS run, whose turns all arrive together, for work a named turn
+# barely has. The live service's shared segment pool is not used: its
+# backlog policy sheds a segment's extras, which a post-hoc run must keep.
+POSTHOC_WORKERS = 4     # DC_POSTHOC_WORKERS overrides
+
 
 class AudioProcessorPosthoc:
     def __init__(self, audio_buffer, transcript_queue, diarization_model,
@@ -473,19 +481,30 @@ class AudioProcessorPosthoc:
                 else:
                     transcript_audio_data = self.audio_buffer.extract(
                         start_time, end_time)
-                # Start processing thread for DoA, keywords, feature, etc.
+                # DoA, keywords, features etc. on the run's bounded pool; the
+                # latch brackets every utterance (exactly-once completion).
                 self._latch.task_started()
-                transcript_thread = threading.Thread(target=self.process_transcript, args=(
-                    transcript_data, transcript_audio_data, start_time, end_time))
-                transcript_thread.daemon = True
-                transcript_thread.start()
+                self._pool().submit(self.process_transcript,
+                                    transcript_data, transcript_audio_data, start_time, end_time)
                 # Live progress to the trigger UI (the scoring stage's count).
                 self.utterances_seen = getattr(self, 'utterances_seen', 0) + 1
                 if self.utterances_seen % 5 == 0:
                     self.report_progress()
         self._latch.mark_asr_complete()
+        pool = getattr(self, '_executor', None)
+        if pool is not None:
+            pool.shutdown(wait=False)    # queued utterances still run; the latch completes the run
         logging.info('Processing thread stopped for {0}.'.format(
             self.config.auth_key))
+
+    def _pool(self):
+        pool = getattr(self, '_executor', None)
+        if pool is None:
+            from concurrent.futures import ThreadPoolExecutor
+            workers = int(os.environ.get('DC_POSTHOC_WORKERS', POSTHOC_WORKERS) or POSTHOC_WORKERS)
+            pool = self._executor = ThreadPoolExecutor(max_workers=max(1, workers),
+                                                       thread_name_prefix='posthoc-utterance')
+        return pool
 
     # Processes a transcript and its related audio data.
     def process_transcript(self, transcript_data, audio_data, start_time, end_time):

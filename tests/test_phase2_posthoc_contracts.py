@@ -305,3 +305,14 @@ def test_moss_runs_skip_the_audio_buffer_the_spectral_tagging_and_the_dead_diari
     assert "self.diarizer_choice = 'moss'" in AUDIO
     assert '"moss" if models.get("asr", "moss") == "moss" else "diarizen"' in _read("server", "posthoc_queue.py")
 
+
+# ---- 9. per-utterance work on a bounded pool ---------------------------------
+
+def test_posthoc_processor_runs_utterances_on_a_bounded_pool_not_a_thread_each():
+    assert "threading.Thread(target=self.process_transcript" not in PROC, "the thread-per-utterance spawn is back"
+    process = _def(PROC, "process")
+    _before(process, "self._latch.task_started()", "self._pool().submit(self.process_transcript,")
+    _before(process, "self._latch.mark_asr_complete()", "pool.shutdown(wait=False)")
+    assert "ThreadPoolExecutor(max_workers=max(1, workers)" in _def(PROC, "_pool")
+    assert "segment_pool" not in PROC          # its backlog policy sheds extras a post-hoc run must keep
+    assert "self._latch.task_done()" in _def(PROC, "process_transcript")
