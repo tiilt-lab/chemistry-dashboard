@@ -9,10 +9,15 @@ import json
 import wrappers
 import config as cf
 import requests
+import importlib
 from handlers import callback_handlers
 import posthoc_state
 import redis_sync
 from datetime import datetime, timezone
+
+# The coding engine, src/server/negotiation_coding.py, loaded by name: routes/
+# has a module of the same name, so a bare import would be ambiguous.
+negotiation_coding = importlib.import_module('negotiation_coding')
 
 api_routes = Blueprint('callback', __name__)
 
@@ -188,6 +193,45 @@ def naming_rows(key, **kwargs):
                          'speaker_tag': t.speaker_tag, 'sim': conf.get('sim'), 'far_side': bool(conf.get('far_side'))})
     return json_response({'device': device.id, 'partner': partner.id if partner is not None else None,
                           'partner_speakers': database.partner_speaker_aliases(device), 'rows': rows})
+
+
+@api_routes.route('/api/v1/callback/rename_plan/<path:key>', methods=['GET'])
+@wrappers.verify_local
+def rename_plan(key, **kwargs):
+    """What the renaming pass (asr_connectors/moss_rename.py) names: this
+    pod's stored clusters cut into pieces where the partner pod's clusters
+    split them, and the rows a session print may be cut from
+    (negotiation_coding.rename_plan), with both rosters."""
+    device = database.get_session_devices(processing_key=key)
+    if device is None:
+        return json_response({'message': 'Unknown pod.'}, 404)
+    partner = database.get_negotiation_partner(device)
+    names = negotiation_coding._session_names(database.get_sessions(id=device.session_id))
+    sides = {device.id: negotiation_coding._side_of(device, names)}
+    if partner is not None:
+        sides[partner.id] = negotiation_coding._side_of(partner, names)
+    plan = negotiation_coding.rename_plan(
+        database.get_transcripts(session_device_id=device.id),
+        database.get_transcripts(session_device_id=partner.id) if partner is not None else [],
+        device.id, partner.id if partner is not None else None, sides)
+    plan.update({'device': device.id, 'partner': partner.id if partner is not None else None,
+                 'own_speakers': [s.alias for s in database.get_speakers(session_device_id=device.id) if s.alias],
+                 'partner_speakers': database.partner_speaker_aliases(device)})
+    return json_response(plan)
+
+
+@api_routes.route('/api/v1/callback/rename/<path:key>', methods=['POST'])
+@wrappers.verify_local
+def rename_rows(key, **kwargs):
+    """The renaming pass's result: a new name and confidence for each of
+    the pod's rows, stored in place (no wipe, the metrics untouched)."""
+    content = request.get_json() or {}
+    device = database.get_session_devices(processing_key=key)
+    if device is None:
+        return json_response({'message': 'Unknown pod.'}, 404)
+    n = database.rename_transcripts(device.id, content.get('rows') or [])
+    logging.info('renaming: %d rows of device %d renamed', n, device.id)
+    return json_response({'renamed': n})
 
 
 @api_routes.route('/api/v1/callback/posthoc_reset', methods=['POST'])

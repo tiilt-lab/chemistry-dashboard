@@ -112,7 +112,9 @@ def test_video_processor_has_the_same_hook():
 # ---- 2. old results survive a failed run (audit C.3) --------------------------
 
 def test_audio_marks_running_at_start_without_wiping_and_wipes_only_at_publish():
-    assert AUDIO.count("callbacks.post_posthoc_reset(") == 1
+    # one at the start of a full run, one at the start of a renaming pass; neither wipes
+    assert AUDIO.count("callbacks.post_posthoc_reset(") == 2
+    assert "callbacks.post_posthoc_reset(key, 'rename', wipe=False)" in AUDIO
     assert "callbacks.post_posthoc_reset(self.config.auth_key, 'audio', wipe=False)" in _def(AUDIO, "signal_start")
     assert PROC.count("callbacks.post_posthoc_reset(") == 1
     publish = _def(PROC, "_publish")
@@ -236,7 +238,7 @@ def test_audio_lookup_takes_the_timeline_or_stitches_fragments_on_the_session_cl
     assert "recording_fragments.select_recording(files)" in body        # the fallback when the chooser fails
     assert "self.clock_info = clock" in body
     assert "file_path = files[0]" not in AUDIO
-    assert AUDIO.count("conf_val.update(self._clock_fields())") == 3
+    assert AUDIO.count("conf_val.update(self._clock_fields())") == 4     # the renaming pass stamps through the clock too
 
 
 # ---- 6. connection leak + dead sweep (audit C.6) -------------------------------

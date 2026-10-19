@@ -165,6 +165,31 @@ def get_naming_rows(source):
     return body if isinstance(body, dict) and isinstance(body.get('rows'), list) else None
 
 
+def get_rename_plan(source):
+    """The pieces a pod's stored clusters divide into and the rows to cut
+    prints from (callback rename_plan), or None when the API could not be
+    asked."""
+    url = _callback_base() + '/rename_plan/' + urllib.parse.quote(str(source), safe='')
+    try:
+        response = requests.get(url, timeout=callbacks_common.CALLBACK_TIMEOUT * 8)
+    except Exception as e:
+        logging.info('rename plan lookup failed for %s: %s', source, e)
+        return None
+    if response.status_code != 200:
+        return None
+    try:
+        body = response.json()
+    except ValueError:
+        return None
+    return body if isinstance(body, dict) and isinstance(body.get('pieces'), list) else None
+
+
+def post_rename(source, rows):
+    """The new names for a pod's rows (callback rename); True when stored."""
+    url = _callback_base() + '/rename/' + urllib.parse.quote(str(source), safe='')
+    return callbacks_common.post_json_ok(url, {'source': source, 'rows': rows}, 'rename')
+
+
 def get_partner_speakers(source):
     """The partner pod's speaker aliases right now, or None when the API
     could not be asked (the roster then keeps what it has)."""
