@@ -4,6 +4,7 @@ import config
 import requests
 import urllib.parse
 import logging
+import time
 from datetime import datetime, timezone
 
 # Shared payloads + retry policy live in src/common/callbacks_common.py
@@ -65,7 +66,9 @@ def _post_with_retry(kind, url, payload, source, start_time):
     return response
 
 
-def post_transcripts(source, start_time, end_time, transcript, doa, questions, keywords, features, topic_id, speaker_tag, speaker_id, voice_features=None):
+def transcript_payload(source, start_time, end_time, transcript, doa, questions, keywords, features, topic_id, speaker_tag, speaker_id, voice_features=None):
+    """The transcript callback's payload for one utterance (what
+    post_transcripts sends; a batched publish sends many at once)."""
     result = {
         'source': source,
         'start_time': start_time,
@@ -88,6 +91,12 @@ def post_transcripts(source, start_time, end_time, transcript, doa, questions, k
         result['speaker_tag'] = speaker_tag
     if speaker_id:
         result['speaker_id'] = speaker_id
+    return result
+
+
+def post_transcripts(source, start_time, end_time, transcript, doa, questions, keywords, features, topic_id, speaker_tag, speaker_id, voice_features=None):
+    result = transcript_payload(source, start_time, end_time, transcript, doa, questions, keywords, features, topic_id,
+                                speaker_tag, speaker_id, voice_features)
     response = _post_with_retry('transcript', config.processing_callback(), result, source, start_time)
     if response is None or response.status_code != 200:
         return False, -1
@@ -221,8 +230,10 @@ def post_disconnect(source):
 
 
 #Post speaker metrics with transcript data
-def post_speaker_transcript_metrics(transcript_data, speakers, participation_scores, internal_cohesion, responsivity, social_impact, newness, communication_density):
-    result = {
+def speaker_metrics_payload(transcript_data, speakers, participation_scores, internal_cohesion, responsivity, social_impact, newness, communication_density):
+    """The speaker-metrics callback's payload for one utterance (what
+    post_speaker_transcript_metrics sends; a batched publish sends many)."""
+    return {
         'source': transcript_data['source'],
         'start_time': transcript_data['start_time'],
         'end_time': transcript_data['end_time'],
@@ -244,6 +255,43 @@ def post_speaker_transcript_metrics(transcript_data, speakers, participation_sco
         'newness': newness,
         'communication_density': communication_density
     }
+
+
+def post_speaker_transcript_metrics(transcript_data, speakers, participation_scores, internal_cohesion, responsivity, social_impact, newness, communication_density):
+    result = speaker_metrics_payload(transcript_data, speakers, participation_scores, internal_cohesion, responsivity,
+                                     social_impact, newness, communication_density)
     response = _post_with_retry('metrics', config.speaker_metrics_callback(), result,
                                 result['source'], result['start_time'])
     return response is not None and response.status_code == 200
+
+
+PUBLISH_ATTEMPTS = 3        # inline tries for one batch of a publish
+PUBLISH_BACKOFF_S = 2.0     # ... this long apart, growing
+
+
+def post_transcripts_batch(source, rows, attempts=PUBLISH_ATTEMPTS, backoff=PUBLISH_BACKOFF_S):
+    """A post-hoc publish: ``rows`` (transcript_payload and
+    speaker_metrics_payload dicts in discussion order) stored by the API in
+    one commit (callback/transcripts_batch). A retryable failure is tried
+    again inline a few times rather than through the background queue,
+    whose replay would land after the run was already counted short.
+    Returns the stored transcript ids, or None when the batch did not land.
+    One request per row took 100 s for a thousand-row pod (2026-10-19)."""
+    if not rows:
+        return []
+    url = _callback_base() + '/transcripts_batch'
+    payload = {'source': source, 'rows': rows}
+    headers = {callback_retry.IDEMPOTENCY_HEADER: callback_retry.idempotency_key(source, 'batch', rows[0]['start_time'])}
+    for attempt in range(max(1, attempts)):
+        response, retryable = _post_once(url, payload, headers, 'Transcript batch')
+        if response is not None and response.status_code == 200:
+            try:
+                return list(response.json().get('transcript_ids') or [])
+            except Exception as e:
+                logging.warning('Transcript batch callback: unreadable reply (%s)', e)
+                return []
+        if not retryable:
+            return None
+        if attempt + 1 < attempts:
+            time.sleep(backoff * (attempt + 1))
+    return None

@@ -287,3 +287,32 @@ def test_event_time_accepts_processor_stamp_and_epoch(env):
     assert et({"time": "2026-09-30 10:00:00.250000"}) == datetime(2026, 9, 30, 10, 0, 0, 250000)
     assert et({"time": 0}) == datetime(1970, 1, 1)
     assert et({"time": "garbage"}) is None and et({}) is None and et(None) is None
+
+
+def test_transcripts_batch_stores_rows_and_metrics_in_one_commit_and_replays_safely(env, pod, monkeypatch):
+    d = env.database
+    commits = _Recorder()
+    real_commit = d.db.session.commit
+    monkeypatch.setattr(d.db.session, "commit", lambda: (commits(), real_commit())[1])
+    base = {"direction": 0, "questions": [], "keywords": [], "features": {}, "topic_id": -1}
+    rows = [dict(base, start_time=100, end_time=103, transcript="first line", speaker_tag="A", speaker_id=1,
+                 speakers=[1, 2], participation_scores=[0.5, 0.3, 0.2], internal_cohesion=[1, 1, 1],
+                 responsivity=[1, 1, 1], social_impact=[1, 1, 1], newness=[1, 1, 1], communication_density=[1, 1, 1]),
+            dict(base, start_time=104, end_time=106, transcript="second line", speaker_tag="B", speaker_id=2,
+                 keywords=[{"word": "moles", "keyword": "mole", "similarity": 0.9}]),
+            dict(base, start_time=107, end_time=109, transcript="a question?", questions=["a question?"],
+                 speaker_tag="", speaker_id=-1)]
+    before = len(env.emits)
+    r1 = _post(env, env.callback.add_transcripts_batch, {"source": pod.processing_key, "rows": rows})
+    body = r1.get_json()
+    assert body["created"] == 3 and len(body["transcript_ids"]) == 3 and len(commits.calls) == 1
+    t1, t2, t3 = [d.get_transcript(i) for i in body["transcript_ids"]]
+    assert (t1.start_time, t1.length, t1.speaker_tag) == (100, 3, "A")
+    assert len(d.get_speaker_transcript_metrics(transcript_id=t1.id)) == 3
+    assert t2.json()["keywords"][0]["keyword"] == "mole" and bool(t3.question) is True
+    assert [e[0][0] for e in env.emits[before:]] == ["transcript_metrics_update", "transcript_update", "transcript_update"]
+    # a replay stores nothing twice and tells the browsers nothing
+    r2 = _post(env, env.callback.add_transcripts_batch, {"source": pod.processing_key, "rows": rows})
+    assert r2.get_json() == {"transcript_ids": body["transcript_ids"], "created": 0}
+    assert len(d.get_speaker_transcript_metrics(transcript_id=t1.id)) == 3 and len(env.emits) == before + 3
+    assert _post(env, env.callback.add_transcripts_batch, {"source": "nope", "rows": rows}).status_code == 400

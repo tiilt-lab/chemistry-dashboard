@@ -13,6 +13,13 @@ CANCELLED = 'cancelled'
 PREEMPTED = 'preempted'
 
 
+def batches(rows, size):
+    """``rows`` in consecutive slices of at most ``size``: the publish posts
+    a run's rows a few hundred at a time, one commit each on the API."""
+    size = max(1, int(size))
+    return [rows[i:i + size] for i in range(0, len(rows), size)]
+
+
 class RunStaging:
     def __init__(self):
         self._lock = threading.Lock()

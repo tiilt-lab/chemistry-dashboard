@@ -56,7 +56,9 @@ def test_a_refused_post_is_reported_as_false(monkeypatch):
 def test_the_publish_counts_only_landed_posts_and_fails_short():
     src = open(os.path.join(ROOT, "src", "audio_processing", "processor_posthoc.py")).read()
     body = src[src.index("    def _publish(self):"):src.index("    def _abandon(")]
-    assert 'if self.speaker_metrics_process.process_transcript(payload, action="posthoc_processing"):' in body
+    # rows are built in discussion order (the metrics are cumulative), then posted in batches
+    assert 'self.speaker_metrics_process.metrics_payload(payload, action="posthoc_processing")' in body
+    assert "callbacks.post_transcripts_batch(self.config.auth_key, batch) is None" in body
     assert "raise RuntimeError('posted %d of %d utterances'" in body
 
 
@@ -65,3 +67,25 @@ def test_a_roster_member_without_a_print_is_kept_for_the_metrics():
     i = src.index("except (FileNotFoundError, wave.Error) as e:")
     block = src[i:i + 900]
     assert "byte_audio_data = b''" in block and "continue" not in block.split("self.speakers[speaker")[0]
+
+
+def test_metrics_payload_is_what_the_post_would_send_without_posting(monkeypatch):
+    from speaker_metrics import speaker_metrics as sm
+    import importlib.util
+    # the audio tree's callbacks by path: the video tree binds the same name
+    spec = importlib.util.spec_from_file_location(
+        "audio_callbacks_for_test", os.path.join(ROOT, "src", "audio_processing", "callbacks.py"))
+    audio_callbacks = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(audio_callbacks)
+    posted = []
+    monkeypatch.setattr(sm, "callbacks", types.SimpleNamespace(
+        speaker_metrics_payload=audio_callbacks.speaker_metrics_payload,
+        post_speaker_transcript_metrics=lambda data, *metrics: posted.append(metrics) or True))
+    proc = sm.SpeakerProcessor(types.SimpleNamespace(auth_key="k"), _Model())
+    proc.setSpeakers({7: {"alias": "Ann", "data": b""}})
+    rows = [proc.metrics_payload(_payload(10 * i, "line %d" % i, speaker_id=7)) for i in range(3)]
+    assert posted == [] and [r["start_time"] for r in rows] == [0, 10, 20]
+    assert rows[-1]["speakers"] == [7] and len(rows[-1]["participation_scores"]) == 2
+    json.dumps(rows, allow_nan=False)
+    # the live path still computes the same arrays and posts them itself
+    assert proc.process_transcript(_payload(30, "line 3", speaker_id=7)) is True and len(posted) == 1

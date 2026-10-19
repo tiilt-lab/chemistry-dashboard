@@ -51,3 +51,9 @@ def test_cancel_and_preempt_precedence():
     assert s.failure() == CANCELLED and not s.accepting
     s.preempt()
     assert s.failure() == PREEMPTED and s.cancelled
+
+
+def test_batches_slices_rows_in_order():
+    from posthoc_staging import batches
+    assert batches(list(range(7)), 3) == [[0, 1, 2], [3, 4, 5], [6]]
+    assert batches([], 3) == [] and batches([1, 2], 0) == [[1], [2]]

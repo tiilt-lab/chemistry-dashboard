@@ -411,6 +411,62 @@ def add_transcript(**kwargs):
     return json_response(payload=res)
 
 
+def _metric_rows(content):
+    # The per-speaker metric arrays of a speaker-metrics payload as
+    # SpeakerTranscriptMetrics rows; index 0 is the group-level row.
+    speakers = content.get('speakers', [])
+    arrays = {k: content.get(k, []) for k in ('participation_scores', 'internal_cohesion', 'responsivity',
+                                              'social_impact', 'newness', 'communication_density')}
+    return [{'speaker_id': speakers[i - 1] if i != 0 else None,
+             'participation_score': arrays['participation_scores'][i],
+             'internal_cohesion': arrays['internal_cohesion'][i],
+             'responsivity': arrays['responsivity'][i],
+             'social_impact': arrays['social_impact'][i],
+             'newness': arrays['newness'][i],
+             'communication_density': arrays['communication_density'][i]}
+            for i in range(0, len(arrays['participation_scores']))]
+
+
+@api_routes.route('/api/v1/callback/transcripts_batch', methods=['POST'])
+@wrappers.verify_local
+def add_transcripts_batch(**kwargs):
+    """A post-hoc run's rows, hundreds at a time, stored in one commit
+    (database.publish_transcripts_batch). Each row is a transcript callback
+    payload; one that carries the metric arrays is a speaker-metrics row.
+    Replays are safe: a row already stored on its natural key comes back
+    with its id and no second insert, and the browsers hear only of rows
+    stored now."""
+    content = request.get_json(silent=True) or {}
+    key = content.get('source', '')
+    session_device = database.get_session_devices(processing_key=key)
+    if not session_device:
+        return json_response({'message': 'Unknown processing key.'}, 400)
+    rows, with_metrics = [], []
+    for item in content.get('rows') or []:
+        p = _parse_transcript_payload(dict(item, source=key))
+        row = dict(p, length=p['end_time'] - p['start_time'], question=len(p['questions']) > 0)
+        row.pop('key', None)
+        if 'participation_scores' in item:
+            row['metrics'] = _metric_rows(item)
+        rows.append(row)
+        with_metrics.append('participation_scores' in item)
+    stored = database.publish_transcripts_batch(session_device.id, rows)
+    room_name = str(session_device.session_id)
+    created = 0
+    for s, metrics_row in zip(stored, with_metrics):
+        created += bool(s['created'])
+        if metrics_row:
+            if s['metrics'] is not None:
+                socketio.emit('transcript_metrics_update',
+                              json.dumps({'transcript': s['transcript'].json(), 'speaker_metrics': s['metrics']}),
+                              room=room_name, namespace="/session")
+        elif s['created']:
+            socketio.emit('transcript_update', json.dumps(s['transcript'].json()), room=room_name, namespace="/session")
+    logging.info('Batch of %d rows for session device %d on session %d: %d stored, %d already there.',
+                 len(stored), session_device.id, session_device.session_id, created, len(stored) - created)
+    return json_response(payload={'transcript_ids': [s['transcript'].id for s in stored], 'created': created})
+
+
 @api_routes.route('/api/v1/callback/speaker_transcript_metrics', methods=['POST'])
 @wrappers.verify_local
 def add_speaker_transcript_metrics(**kwargs):
@@ -420,14 +476,6 @@ def add_speaker_transcript_metrics(**kwargs):
     # 'communication_density': [float] — index 0 is the group-level row.
     content = request.get_json()
     p = _parse_transcript_payload(content)
-    speakers = content.get('speakers', [])
-    participation_scores = content.get('participation_scores', [])
-    internal_cohesion = content.get('internal_cohesion', [])
-    responsivity = content.get('responsivity', [])
-    social_impact = content.get('social_impact', [])
-    newness = content.get('newness', [])
-    communication_density = content.get('communication_density', [])
-
     res = {}
     session_device = database.get_session_devices(processing_key=p['key'])
     if session_device:
@@ -439,15 +487,7 @@ def add_speaker_transcript_metrics(**kwargs):
         # the metrics commit still needs its metrics; one that already has
         # them is a pure duplicate.
         if created or not database.get_speaker_transcript_metrics(transcript_id=transcript.id):
-            rows = [{'speaker_id': speakers[i-1] if i != 0 else None,
-                     'participation_score': participation_scores[i],
-                     'internal_cohesion': internal_cohesion[i],
-                     'responsivity': responsivity[i],
-                     'social_impact': social_impact[i],
-                     'newness': newness[i],
-                     'communication_density': communication_density[i]}
-                    for i in range(0, len(participation_scores))]
-            metrics = database.add_speaker_transcript_metrics_batch(transcript.id, rows)
+            metrics = database.add_speaker_transcript_metrics_batch(transcript.id, _metric_rows(content))
             socketio.emit('transcript_metrics_update', json.dumps({'transcript':transcript.json(), 'speaker_metrics':metrics}), room=room_name, namespace="/session")
         else:
             logging.info('Duplicate speaker-metrics callback for session device %d (transcript %d).',
