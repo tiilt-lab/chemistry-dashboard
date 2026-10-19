@@ -104,24 +104,27 @@ export function dimensionLabel(dim, dims = DIMENSIONS) {
 }
 
 // The de-escalation timeline, in display order, with what each time means.
+// The keys are the server's (negotiation_coding.timeline()): seconds on the
+// session clock, no unit suffix. A "_s" suffix here once left every card
+// reading "—" for every run (2026-10-19 sweep).
 export const TIMELINE_FIELDS = [
     {
-        key: "first_escalating_s",
+        key: "first_escalating",
         label: "First escalation",
         desc: "The first utterance coded as escalating.",
     },
     {
-        key: "peak_escalation_window_start_s",
+        key: "peak_escalation_window_start",
         label: "Peak escalation",
         desc: "Start of the window with the densest run of escalating utterances.",
     },
     {
-        key: "first_sustained_deescalation_s",
+        key: "first_sustained_deescalation",
         label: "Sustained de-escalation",
         desc: "First point after the peak where the talk stays defusing or neutral.",
     },
     {
-        key: "first_future_move_s",
+        key: "first_future_move",
         label: "First future move",
         desc: "The first utterance framed as future problem-solving rather than past blame.",
     },

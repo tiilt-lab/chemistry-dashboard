@@ -2328,7 +2328,16 @@ def add_negotiation_codes(run_id, codes, dimensions=None):
         # The sentence the model saw, when it was stitched or trimmed from
         # the stored fragments (negotiation_coding.stitch_sentences).
         keys += [k for k in ('_text', '_stitched', '_speaker') if k in c and k not in keys]
-        rows.append(NegotiationCode(run_id, c['transcript_id'], {k: c.get(k) for k in keys}))
+        values = {k: c.get(k) for k in keys}
+        # The attribution the model saw. The paired merge may have renamed
+        # the speaker (reconcile_clusters), re-teamed the line or moved its
+        # clock onto the partner's; the raw transcript row knows none of it,
+        # so the read-back, the exports and the re-roll take these
+        # (negotiation_coding.code_row) instead of the row's own fields.
+        values.update({'_speaker_tag': c.get('speaker_tag'), '_team': c.get('team'),
+                       '_start': c.get('start_time'), '_length': c.get('length'),
+                       '_device': c.get('session_device_id'), '_text': c.get('text')})
+        rows.append(NegotiationCode(run_id, c['transcript_id'], values))
     db.session.add_all(rows)
     db.session.commit()
     return len(codes)

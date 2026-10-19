@@ -150,3 +150,7 @@ def test_stop_posthoc_queue_sends_a_pod_ticket():
     block = _block_after(src, "def stop_posthoc_queue", lines=22)
     assert "RedisPosthocTicket.mint(did)" in block
     assert "'ticket': ticket" in block
+    # Scoped to the session: its own pods' queued jobs and running pods only
+    # (one session's Stop once wiped every tenant's queue).
+    assert "clear_pending(device_ids=mine)" in block
+    assert "if d in mine" in block

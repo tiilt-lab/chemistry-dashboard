@@ -34,7 +34,7 @@ import base64
 import time
 import wave
 
-# Below this much free disk, new sessions are refused (see create_session).
+# Below this much free disk, create_session logs a warning (it used to refuse).
 MIN_FREE_DISK_FRACTION = 0.10
 
 api_routes = Blueprint('session', __name__)
@@ -211,13 +211,12 @@ def delete_session(session_id, **kwargs):
 @api_routes.route('/api/v1/sessions', methods=['POST'])
 @wrappers.verify_login(public=True)
 def create_session(user, **kwargs):
-    # The recorders swallow write errors, so a full disk would otherwise give a
-    # session that looks live but records nothing. Refuse to start one instead.
+    # Low disk is logged, not refused: the 10% rule blocked a class on a 1 TB
+    # disk with 68 GB free (2026-10-19). The recorders swallow write errors,
+    # so watch this warning and the disk alert instead.
     free = utility.disk_free_fraction(os.path.dirname(os.path.abspath(__file__)))
     if free < MIN_FREE_DISK_FRACTION:
-        logging.error('Refusing to start a session: %.1f%% disk free', free * 100)
-        return json_response({'message': 'The server disk is almost full ({0:.0f}% free). '
-                                         'Free up space before starting a session.'.format(free * 100)}, 507)
+        logging.warning('Starting a session with only %.1f%% disk free', free * 100)
     name = request.json.get('name', 'Session')
     valid, message = Session.verify_fields(name=name)
     if not valid:
@@ -1426,9 +1425,12 @@ def enqueue_posthoc(session_id, **kwargs):
 @wrappers.verify_login(public=True)
 @wrappers.verify_session_access
 def stop_posthoc_queue(session_id, **kwargs):
-    # Cancel: drop queued jobs and tell the services to stop this session's
-    # running pods (best-effort; services also apply on their next restart).
-    cleared = posthoc_queue.clear_pending()
+    # Cancel THIS session's work only: drop its queued jobs and tell the
+    # services to stop its running pods (best-effort; services also apply on
+    # their next restart). Unscoped, the Stop button cleared every tenant's
+    # queue and marked every running pod on the host done (2026-10-19 sweep).
+    mine = {d.id for d in database.get_session_devices(session_id=session_id)}
+    cleared = posthoc_queue.clear_pending(device_ids=mine)
     cancelled = 0
     try:
         import asyncio, websockets
@@ -1436,16 +1438,19 @@ def stop_posthoc_queue(session_id, **kwargs):
             async with websockets.connect('ws://127.0.0.1:%s' % port, open_timeout=5) as ws:
                 await ws.send(json.dumps({'type': 'cancel_posthoc', 'sessiondeviceid': did, 'ticket': ticket}))
                 await asyncio.wait_for(ws.recv(), timeout=5)
-        for did in list(posthoc_state.running_device_ids()):
-            # The post-hoc sockets now refuse cancel_posthoc without a pod
-            # ticket ("Not authorised for this pod."); one ticket per device.
+        for did in [d for d in posthoc_state.running_device_ids() if d in mine]:
+            # The post-hoc sockets refuse cancel_posthoc without a pod ticket.
             ticket = RedisPosthocTicket.mint(did)
+            acked = False
             for port in (os.getenv('DC_AUDIO_POSTHOC_WS_PORT', '9015'), os.getenv('DC_VIDEO_POSTHOC_WS_PORT', '9014')):
                 try:
-                    asyncio.run(_cancel(port, did, ticket)); cancelled += 1
+                    asyncio.run(_cancel(port, did, ticket)); cancelled += 1; acked = True
                 except Exception:
                     pass
-            posthoc_state.mark_done(did)
+            # Done only once a service took the cancel; otherwise the run is
+            # still going and its own completion callback ends it.
+            if acked:
+                posthoc_state.mark_done(did)
     except Exception as e:
         logging.warning('stop_posthoc_queue cancel pass failed: %s', e)
     return json_response({'cleared': cleared, 'cancel_signals': cancelled})

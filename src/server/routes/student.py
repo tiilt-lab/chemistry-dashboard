@@ -174,7 +174,12 @@ def student_activity(student_id, **kwargs):
 def get_students(user_name, **kwargs):
     student = database.get_students(username=user_name)
     if student:
-        return json_response(student.json())
+        # voice_enrolled is the truth on disk (a print on file); the join
+        # page attaches a saved print only when it is true. biometric_captured
+        # alone lagged behind: it stays 'no' for a print made from a join take.
+        data = student.json()
+        data.update(_enrollment_fields(student.username))
+        return json_response(data)
     else:
         return json_response({'message': 'Student  not found.'}, 404)
       

@@ -34,8 +34,10 @@ def test_embeddings_loaded_with_allow_pickle():
     common = _read("audio_processing", "processing_common.py")
     assert "allow_pickle=True" in common, "shared loader must allow_pickle"
     for mod in ("processor.py", "processor_posthoc.py"):
-        assert "load_embeddings(" in _read("audio_processing", mod), \
-            f"{mod}: must use the shared load_embeddings"
+        # Loaded once per run via the shared prepare_embeddings (which calls
+        # load_embeddings), never inline on a worker thread.
+        assert "prepare_embeddings(" in _read("audio_processing", mod), \
+            f"{mod}: must use the shared prepare_embeddings"
 
 
 def test_topic_selection_tracks_best_probability():

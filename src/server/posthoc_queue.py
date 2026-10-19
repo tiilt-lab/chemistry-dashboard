@@ -894,15 +894,19 @@ def _coding_run_dropped(job):
         logging.warning("posthoc queue: could not mark coding run %s cancelled: %s", job.get("run_id"), e)
 
 
-def clear_pending():
-    # Drop all queued jobs (running job finishes unless cancelled at the
-    # service). Cancelled jobs are REMOVED, not marked error: a stop+requeue
-    # cycle used to leave hundreds of phantom "cancelled" errors inflating
-    # the queue panel's counts forever.
+def clear_pending(device_ids=None):
+    # Drop queued jobs: every session's, or with ``device_ids`` only those
+    # pods' (the session stop route passes its own pods; unscoped, one
+    # session's Stop button wiped every tenant's queue, 2026-10-19 sweep).
+    # A running job finishes unless cancelled at the service. Cancelled jobs
+    # are REMOVED, not marked error: a stop+requeue cycle used to leave
+    # hundreds of phantom "cancelled" errors inflating the queue panel's
+    # counts forever.
+    pods = None if device_ids is None else {int(d) for d in device_ids}
     with _mutation():
         n = 0
         for job in _all_jobs():
-            if job["state"] == "queued":
+            if job["state"] == "queued" and (pods is None or job["device_id"] in pods):
                 _remove(job)
                 if job.get("run_id") is not None:
                     _coding_run_dropped(job)

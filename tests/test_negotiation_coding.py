@@ -2479,7 +2479,10 @@ def test_a_session_codes_with_the_scheme_it_chose(env):
     # a stored row carries its codes as JSON; the Viking columns stay empty
     from tables.negotiation_code import NegotiationCode
     row = env.db.session.query(NegotiationCode).filter(NegotiationCode.run_id == run_id).first()
-    assert row.values() == {"move": "proposes", "tone": ["playful"]} and row.emotion is None
+    # the dimension values; the underscore keys beside them are the
+    # attribution the model saw (speaker, team, aligned start, text)
+    assert {k: v for k, v in row.values().items() if not k.startswith("_")} == {"move": "proposes", "tone": ["playful"]}
+    assert row.values()["_speaker_tag"] == "Pat" and row.emotion is None
 
     # Library routes: list (built-in first), get by ref or id, update, delete; others' schemes are invisible
     listing = _call(env, sr.list_coding_schemes, "GET", user=user).get_json()

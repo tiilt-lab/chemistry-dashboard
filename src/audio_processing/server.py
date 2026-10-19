@@ -46,6 +46,9 @@ from speechbrain.inference import SpeakerRecognition
 from sentence_transformers import SentenceTransformer
 
 cm = ConnectionManager()
+# Serialises join-page enrollments (enroll_take) across connections: two pods
+# naming the same student at once must not both write the print.
+_quick_enroll_lock = threading.Lock()
 # Sentence embedder for participation/cohesion metrics, selectable via
 # [processing] semantic_embedder (config.py). Default 'all-mpnet-base-v2' keeps
 # the light, low-latency model on the live path and preserves comparability with
@@ -198,11 +201,13 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                     self.send_json({'type':'registeredfingerprintadded'})
                 else:
                     logging.info("currentSpeaker and CurrentAlias are {0} {1}".format(currSpeaker,currAlias))
-                    self.send_json({'type': 'registeredfingerprintfailed',
+                    self.send_json({'type': 'registeredfingerprintfailed', 'id': currSpeaker,
                                     'message': 'Missing speaker or username.'})
             except Exception as e:
                 logging.warning('add-saved-fingerprint failed for alias %s: %s', currAlias, e)
-                self.send_json({'type': 'registeredfingerprintfailed',
+                # The id lets the join page un-check that card instead of
+                # leaving a check mark on a print that does not exist.
+                self.send_json({'type': 'registeredfingerprintfailed', 'id': currSpeaker,
                                 'message': 'No saved voice fingerprint found for this username.'})
 
         if data['type'] == 'heartbeat':
@@ -318,7 +323,23 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
             log('%s: pod clock moved %+.2f s to the frame stamps', self.config.auth_key, delta)
 
     def process_binary(self, data):
-        if self.stream_data == 'audio' and self.config is not None and not (self.running and self.awaitingSpeakers and self.currSpeaker):
+        if self.stream_data == 'audio' and self.running and self.currSpeaker:
+            # A speaker's fingerprint take, announced by the 'speaker' message
+            # just before it: before the first 'done', or mid-session for a
+            # late arrival ("Add a participant"). It used to be stored only
+            # while awaitingSpeakers, so a late take fell through to the live
+            # branch below and was transcribed as speech (2026-10-19 sweep).
+            if self.speakers is None:
+                self.speakers = dict()
+            new_data = self.reformat_data(data)
+            speaker_id, alias = self.currSpeaker, self.currAlias
+            self.speakers[speaker_id] = {"alias": alias, "data": new_data}
+            logging.info("storing speaker {}'s fingerprint with alias {}".format(speaker_id, alias))
+            self.currSpeaker = None
+            self.currAlias = None
+            self._maybe_enroll_from_take(speaker_id, alias, new_data)
+            return
+        if self.stream_data == 'audio' and self.config is not None:
             stamp, payload = self._split_stamp(data)
             if not self.running or self.awaitingSpeakers:
                 # Audio arriving before the stream is ready (the speaker
@@ -337,14 +358,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                 return
             self._process_audio_frame(payload, stamp)
             return
-        if self.running and self.awaitingSpeakers:
-            if self.currSpeaker:
-                new_data = self.reformat_data(data)
-                self.speakers[self.currSpeaker] = {"alias": self.currAlias, "data": new_data}
-                logging.info("storing speaker {}'s fingerprint with alias {}".format(self.currSpeaker, self.currAlias))
-                self.currSpeaker = None
-                self.currAlias = None
-        elif self.stream_data == 'audio-video-fingerprint':
+        if self.stream_data == 'audio-video-fingerprint':
             # Deferred off the reactor: this decodes up to 60s of video
             # (moviepy/ffmpeg), embeds it (ECAPA), and cross-matches against
             # every enrollment on disk — done inline it stalled captions and
@@ -364,6 +378,41 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
             reactor_safety.defer_blocking(_work).addErrback(_fail)
         else:
             self.send_json({'type': 'error', 'message': 'Binary audio data sent before start message.'})
+
+    # Expedited enrollment from the join page: the take just stored for a
+    # speaker card is also kept as the student's voice print when the card's
+    # name is a registered username with no print yet. The sign-up gate
+    # decides (enrollment_check.enroll_take, join speech floor); an existing
+    # print is never replaced from a pod, and a card name that is not a
+    # registered student enrolls nobody. Off the reactor: ECAPA + the API
+    # lookup. The live roster is unaffected either way.
+    def _maybe_enroll_from_take(self, speaker_id, alias, pcm16):
+        sample_rate = int(getattr(self.config, 'sample_rate', 16000) or 16000)
+
+        def _work():
+            try:
+                safe = safe_names.safe_name(alias)
+            except safe_names.UnsafeName:
+                return None
+            folder = cf.biometric_folder()
+            if enrollment_check.has_print(folder, safe) or callbacks.get_student(alias) is None:
+                return None
+            with _quick_enroll_lock:
+                return enrollment_check.enroll_take(safe, pcm16, sample_rate, folder, diarization_model)
+
+        def _done(result):
+            if result is None:
+                return
+            logging.info('join-page enrollment for %s: %s', alias,
+                         'voice print saved' if result['saved'] else result.get('reason'))
+            self.send_json({'type': 'quick_enrollment', 'id': speaker_id, 'alias': alias,
+                            'saved': bool(result['saved']),
+                            'message': (result.get('verdict') or {}).get('message', '')})
+
+        def _fail(f):
+            logging.warning('join-page enrollment for %s failed: %s', alias, f.getErrorMessage())
+
+        reactor_safety.defer_blocking(_work).addCallback(_done).addErrback(_fail)
 
     # A continuation take within this window is APPENDED to the student's
     # kept partial audio instead of starting the speech count from scratch.

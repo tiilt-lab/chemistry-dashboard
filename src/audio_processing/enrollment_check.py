@@ -24,6 +24,13 @@ files directly; a legacy WAV without a print is embedded on the fly.
 
 Run `python enrollment_check.py --warm` (from this directory, service venv) to
 pre-compute the cache for existing enrollments.
+
+Expedited enrollment (enroll_take, 2026-10-19): a take recorded on a speaker
+card of the BYOD join page is kept as the student's voice print when the
+card's name is a registered username with no print yet. The same gate
+decides, with a lower speech floor (JOIN_MIN_NET_SPEECH_SECONDS: the join
+page asks for a 10 s take, the sign-up page for a coached 15 s); the sidecar
+says ``"source": "join"``. An existing print is never replaced this way.
 """
 
 import json
@@ -35,6 +42,7 @@ import numpy as np
 import torch
 
 MIN_NET_SPEECH_SECONDS = 15.0
+JOIN_MIN_NET_SPEECH_SECONDS = 8.0
 MIN_SELF_SIMILARITY = 0.45
 # Similarity to another enrolled voice no longer BLOCKS enrollment — voices
 # genuinely can sound alike. At >= this cosine similarity the other student
@@ -108,15 +116,18 @@ def _cached_embedding(wav_path, model):
 
 
 def evaluate_enrollment(speech_seconds, self_sim, similar_to, duration_seconds,
-                        nearest_sim=None):
+                        nearest_sim=None, min_speech_seconds=None):
     """Pure verdict logic: given measured quantities, decide ok/reasons and
     build the sidecar dict. Kept separate from all I/O and the ECAPA model so
     the thresholds are unit-testable. `similar_to` is the already-computed
     list of {username, similarity} above SIMILAR_VOICE_THRESHOLD;
-    `nearest_sim` is the closest other voice (may be below threshold)."""
+    `nearest_sim` is the closest other voice (may be below threshold).
+    `min_speech_seconds` overrides the net-speech floor (the join page's
+    expedited enrollment uses JOIN_MIN_NET_SPEECH_SECONDS)."""
+    floor = MIN_NET_SPEECH_SECONDS if min_speech_seconds is None else float(min_speech_seconds)
     reasons = []
-    still_needed = max(0.0, MIN_NET_SPEECH_SECONDS - speech_seconds)
-    if speech_seconds < MIN_NET_SPEECH_SECONDS:
+    still_needed = max(0.0, floor - speech_seconds)
+    if speech_seconds < floor:
         reasons.append(
             "So far {0:.0f} seconds of clear speech were captured — about "
             "{1:.0f} more are needed. Keep going: what you already recorded "
@@ -232,10 +243,12 @@ def drop_wavs(folder, model=None, partial_max_age_seconds=3600):
     return {"deleted": deleted, "kept": kept, "partials_deleted": partials, "kept_aliases": kept_aliases}
 
 
-def check_enrollment(wav_path, alias, model, biometric_dir=None):
+def check_enrollment(wav_path, alias, model, biometric_dir=None, min_speech_seconds=None, source=None):
     """Verdict dict for a just-saved enrollment WAV. 'ok' False means the
     recording should be discarded and re-captured; 'reasons' explains why in
-    student-facing language (other students' identities stay in the log)."""
+    student-facing language (other students' identities stay in the log).
+    ``min_speech_seconds`` lowers the speech floor (join-page takes);
+    ``source`` is recorded in the sidecar ("join" for those)."""
     if biometric_dir is None:
         biometric_dir = os.path.dirname(os.path.abspath(wav_path))
 
@@ -284,7 +297,10 @@ def check_enrollment(wav_path, alias, model, biometric_dir=None):
 
     verdict = evaluate_enrollment(
         speech_seconds, self_sim, similar_to,
-        duration_seconds=len(x) / float(sr), nearest_sim=nearest_sim)
+        duration_seconds=len(x) / float(sr), nearest_sim=nearest_sim,
+        min_speech_seconds=min_speech_seconds)
+    if source:
+        verdict["source"] = source
     # Sidecar verdict so the web app can show enrollment quality without
     # loading ECAPA (the Students page reads these).
     try:
@@ -294,6 +310,53 @@ def check_enrollment(wav_path, alias, model, biometric_dir=None):
         logging.warning("enrollment check: could not write sidecar for %s: %s", alias, e)
     logging.info("enrollment check for %s: %s", alias, verdict)
     return verdict
+
+
+def has_print(folder, alias):
+    """Whether ``alias`` is enrolled: a voice print (<alias>.emb.npy) or a
+    legacy recording (<alias>.wav) in ``folder``."""
+    base = os.path.join(folder, alias)
+    return os.path.isfile(base + _CACHE_SUFFIX) or os.path.isfile(base + ".wav")
+
+
+def write_take_wav(path, pcm16, sample_rate):
+    """A 16-bit mono WAV of raw int16 bytes (the join socket's fingerprint
+    take after reformat_data)."""
+    with wave.open(path, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(int(sample_rate))
+        w.writeframes(bytes(pcm16))
+
+
+def enroll_take(alias, pcm16, sample_rate, folder, model, min_speech_seconds=JOIN_MIN_NET_SPEECH_SECONDS):
+    """Expedited enrollment: keep a join-page take as ``alias``'s voice print
+    when there is none. Returns {saved, reason?, verdict?}: ``exists`` when a
+    print or recording is already on file (never replaced from a pod),
+    ``quality`` when the gate rejected the take (nothing is left on disk),
+    or saved=True with the print cached and the sidecar written, the WAV
+    dropped like a sign-up enrollment's."""
+    base = os.path.join(folder, alias)
+    if has_print(folder, alias):
+        return {"saved": False, "reason": "exists"}
+    wav = base + ".wav"
+    artefacts = (wav, base + _CACHE_SUFFIX, base + ".check.json")
+    write_take_wav(wav, pcm16, sample_rate)
+    try:
+        verdict = check_enrollment(wav, alias, model, folder,
+                                   min_speech_seconds=min_speech_seconds, source="join")
+    except Exception:
+        for p in artefacts:
+            if os.path.isfile(p):
+                os.remove(p)
+        raise
+    if verdict["ok"]:
+        drop_wav_after_embedding(wav, model)
+        return {"saved": True, "verdict": verdict}
+    for p in artefacts:
+        if os.path.isfile(p):
+            os.remove(p)
+    return {"saved": False, "reason": "quality", "verdict": verdict}
 
 
 if __name__ == "__main__":
