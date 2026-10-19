@@ -11,7 +11,7 @@
 
 # Web framework + extensions
 Flask==3.1.3
-Werkzeug==3.1.8
+Werkzeug==3.1.9
 MarkupSafe==3.0.3
 Flask-SQLAlchemy==3.1.1
 Flask-Migrate==4.1.0
