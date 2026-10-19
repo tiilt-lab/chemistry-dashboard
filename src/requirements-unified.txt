@@ -247,7 +247,7 @@ pyannote-database==6.1.1
 pyannote-metrics==4.1
 pyannote-pipeline==4.0.0
 pyannoteai-sdk==0.4.0
-pyasn1==0.6.3
+pyasn1==0.6.4
 pyasn1_modules==0.4.2
 pybase64==1.4.3
 pycountry==26.2.16
