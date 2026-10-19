@@ -47,7 +47,7 @@ COMMON_CB = _read("common", "callbacks_common.py")
 
 def test_audio_takes_the_lease_in_signal_start_before_any_model():
     body = _def(AUDIO, "signal_start")
-    for model in ("AudioBuffer(", "WhisperXASR(", "CrisperWhisperPosthocASR(",
+    for model in ("AudioBuffer(", "CrisperWhisperPosthocASR(",
                   "AudioProcessorPosthoc("):
         _before(body, "self._gpu_lease = acquire_for_run(", model)
     assert "return False" in body and body.rstrip().endswith("return True")
@@ -147,10 +147,8 @@ def test_audio_processor_abandons_with_posthoc_failed_and_never_marks_complete()
 
 
 def test_connectors_report_failures_instead_of_swallowing_them():
-    for name in ("whisperx_asr.py", "crisperwhisper_asr.py"):
-        s = _read("audio_processing", "asr_connectors", name)
-        assert "self.fail(e)" in s, name
     s = _read("audio_processing", "asr_connectors", "crisperwhisper_asr.py")
+    assert "self.fail(e)" in s
     assert "handle=getattr(self, 'worker', None)" in s
     assert "class AsrFailed" in BASE
     assert "self.transcript_queue.put(AsrFailed(self.error))" in _def(BASE, "fail")
@@ -259,30 +257,6 @@ def test_ticket_gate_still_precedes_every_handler():
         _before(body, "if data['type'] in _TICKETED_TYPES and not self._authorised(data):", "if data['type'] ==")
 
 
-# ---- 7. DiariZen as a WhisperX diarizer choice --------------------------------
-
-def test_new_runs_choose_between_the_two_posthoc_diarizers_and_provenance_names_what_ran():
-    start = _def(AUDIO, "signal_start")
-    assert "in ('nemotron3', 'diarizen') else None" in start
-    assert "'pyannote', 'sortformer'" not in start
-    assert "'diarizer': self.diarizer_choice," in AUDIO
-    # The connector runs the other diarizer when the chosen one fails; the
-    # completion payload must then name the one that ran, not the request.
-    done = _def(AUDIO, "on_run_complete")
-    assert "ran = getattr(self.asr, 'diarizer_used', None)" in done
-    _before(done, "choices['diarizer'] = ran",
-            "callbacks.post_posthoc_completed(self.config.auth_key, choices)")
-    wx = _read("audio_processing", "asr_connectors", "whisperx_asr.py")
-    assert 'POSTHOC_DIARIZERS = ("diarizen", "nemotron3")' in wx
-    assert "if self.diarizer in POSTHOC_DIARIZERS:" in wx
-    assert "self.diarizer_used = ran" in wx
-    assert "falling back to pyannote" not in wx
-    # The browser's own summary must not overwrite that with the request.
-    trigger = _read("..", "frontend", "src", "components", "posthoc", "posthoc-trigger.jsx")
-    summary = trigger[trigger.index("const modelChoices = {"):trigger.index(".markPosthocCompleted(")]
-    assert "diarizer" not in summary.split("{", 1)[1]
-
-
 # ---- 8. MOSS runs skip the CrisperWhisper-era audio plumbing -----------------
 
 def test_moss_runs_skip_the_audio_buffer_the_spectral_tagging_and_the_dead_diarizer_knobs():
@@ -296,13 +270,12 @@ def test_moss_runs_skip_the_audio_buffer_the_spectral_tagging_and_the_dead_diari
     _before(_def(PROC, "process"), "if getattr(transcript_data, 'named_by_asr', False):", "self.audio_buffer.extract(")
     # ... and clusters nothing when no embedding was gathered
     _before(_def(PROC, "_publish"), "if self.config.diarization and not self.embeddings:", "self.send_speaker_taggings()")
-    # the constrain-to-enrolled knobs exist only for the engines that take them
-    assert start.count("_max_spk, _enr, _spk_model = _constrained()") == 1
-    _before(start, "from asr_connectors.whisperx_asr import WhisperXASR", "_max_spk, _enr, _spk_model = _constrained()")
+    # the constrain-to-enrolled knob left with the WhisperX engine
+    assert "_constrained" not in start
     assert "MossASR(" in start and "max_speakers" not in start.split("MossASR(")[1].split("elif")[0]
     # provenance names MOSS as its own diarizer from the start, queue and trigger alike
     assert "self.diarizer_choice = 'moss'" in AUDIO
-    assert '"moss" if models.get("asr", "moss") == "moss" else "diarizen"' in _read("server", "posthoc_queue.py")
+    assert '"moss" if models.get("asr", "moss") == "moss" else "fingerprint"' in _read("server", "posthoc_queue.py")
 
 
 # ---- 9. per-utterance work on a bounded pool ---------------------------------

@@ -18,7 +18,7 @@ class AudioStreamReader:
     def __init__(self, audio_buffer, asr_audio_queue,audio_file,queue_put_timeout, config,STOP_SIGNAL,running_audio_processes, realtime=True,
                  fill=True):
         # realtime=True paces the file at 1x speed — required only by the
-        # streaming Google ASR. Batch ASRs (WhisperX) read the whole
+        # streaming Google ASR. Batch ASRs read the whole
         # buffer up front, so pacing just adds the recording's full duration
         # to every re-run for no benefit.
         self.realtime = realtime

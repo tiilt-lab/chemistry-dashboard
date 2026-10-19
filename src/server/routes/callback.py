@@ -623,7 +623,7 @@ _ASR_LABELS = {
     # Retired engines keep a label so old runs' provenance still reads.
     "google-cloud-speech": "Google Cloud Speech-to-Text (retired 2026-10-13)",
     "whisper": "Whisper (open, offline; retired)",
-    "whisperx": "WhisperX (open; batched + word-level alignment)",
+    "whisperx": "WhisperX (open; retired 2026-10-19)",
     "qwen3": "Qwen3-ASR 1.7B + ForcedAligner (retired 2026-10-19)",
     "qwen3-0.6b": "Qwen3-ASR 0.6B + ForcedAligner (retired 2026-10-19)",
     "crisperwhisper": "CrisperWhisper 2.0 (verbatim: fillers, stutters, pause-true timing)",
@@ -670,7 +670,7 @@ def _read_audio_models():
 _STATIC_MODELS = {
     "diarization": {
         "id": "spkrec-ecapa-voxceleb",
-        "label": "MOSS turns named from SpeechBrain ECAPA-TDNN voice prints; DiariZen or Nemotron clustering applies to WhisperX and Qwen3 re-runs only",
+        "label": "MOSS turns named from SpeechBrain ECAPA-TDNN voice prints; a CrisperWhisper re-run matches each utterance against the prints",
     },
 }
 

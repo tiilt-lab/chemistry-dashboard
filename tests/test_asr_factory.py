@@ -83,6 +83,6 @@ def test_frontend_offers_no_google_engine():
     assert 'value: "crisperwhisper"' not in create
     assert "google" not in create.lower()
     trigger = _read("frontend", "src", "components", "posthoc", "posthoc-trigger.jsx")
-    options = trigger[trigger.index("const ASR_OPTIONS"):trigger.index("const DIARIZER_OPTIONS")]
+    options = trigger[trigger.index("const ASR_OPTIONS"):trigger.index("const EMBEDDER_OPTIONS")]
     assert "google" not in options.lower()
     assert re.search(r'id: "crisperwhisper"', options)

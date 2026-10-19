@@ -80,34 +80,6 @@ def vocal_emotion_model():
     return str(config.get('processing', 'vocal_emotion_model',
                           fallback='superb/wav2vec2-base-superb-er'))
 
-def diarization_constrain_to_enrolled():
-    # When true and a pod's enrolled participants are known, cap pyannote at the
-    # enrolled count (max_speakers) and remap each diarization cluster to its
-    # nearest enrolled voice print, so utterances resolve to real people instead
-    # of leftover SPEAKER_NN clusters. Only affects the WhisperX paths.
-    return as_bool(config.get('processing', 'diarization_constrain_to_enrolled',
-                          fallback='false'))
-
-def diarization_fallback():
-    # How the post-hoc fallback (no-fingerprint) path assigns speaker clusters.
-    # Distinct from the per-run payload 'diarizer' (fingerprint|pyannote), which
-    # decides whether the ASR *runs* pyannote; this decides what the fallback
-    # clustering *does with* any labels the ASR produced:
-    #   'spectral' (default) -- the original ECAPA + spectral clustering.
-    #   'pyannote'           -- reuse pyannote 3.1 cluster labels already
-    #                           attached by batch ASR (WhisperX); falls
-    #                           back to spectral when labels are absent.
-    return str(config.get('processing', 'diarization_fallback', fallback='spectral'))
-
-def whisper_model_size():
-    return str(config.get('whisper', 'model_size', fallback='small.en'))
-
-def whisper_device():
-    return str(config.get('whisper', 'device', fallback='auto'))
-
-def whisper_compute_type():
-    return str(config.get('whisper', 'compute_type', fallback='int8'))
-
 def crisperwhisper_model():
     return str(config.get('crisperwhisper', 'model', fallback='nyralabs/CrisperWhisper2.0_large'))
 

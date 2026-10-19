@@ -171,14 +171,7 @@ def test_moss_is_the_post_hoc_default_everywhere():
     assert 'models.get("asr", "moss")' in _read("src", "server", "posthoc_queue.py")
     ui = _read("frontend", "src", "components", "posthoc", "posthoc-trigger.jsx")
     assert 'podModels.asr || "moss"' in ui and '{ id: "moss"' in ui
-    assert 'disabled={running || asr === "moss"}' in ui      # the diarizer picker is moot for MOSS
-
-
-def test_the_word_timing_helper_matches_the_other_engines():
-    # whisperx_asr falls back to the segment span as a single word when alignment
-    # skips tokens; MOSS always emits that shape, so downstream timing is unchanged.
-    wx = _read("src", "audio_processing", "asr_connectors", "whisperx_asr.py")
-    assert 'words = [(text, segment.get("start", 0.0), segment.get("end", 0.0))]' in wx
+    assert 'const diarizer = asr === "moss" ? "moss" : "fingerprint"' in ui   # no diarizer picker: the engine decides
 
 
 def test_audio_seconds_reads_the_pods_float_wav(tmp_path, monkeypatch):

@@ -292,8 +292,7 @@ class AudioProcessorPosthoc:
                 logging.info(ex)
             _rd = os.path.join(os.path.dirname(os.path.abspath(__file__)), "speaker_diarization", "results")
             os.makedirs(_rd, exist_ok=True)
-            # self.speakers may be numeric cluster ids (spectral) or string
-            # labels (carried pyannote), so serialize as strings either way.
+            # self.speakers are numeric cluster ids; serialize as strings.
             np.savetxt(os.path.join(_rd, "{}.txt".format(time.strftime("%Y%m%d-%H%M%S"))),
                        np.array(self.speakers, dtype=str), fmt='%s')
             # Debug artifacts: prune to the newest 200 — one file per
@@ -393,40 +392,16 @@ class AudioProcessorPosthoc:
                 logging.warning('could not save embeddings file %s: %s',
                                 self.embeddings_file, e)
 
-        # Fallback clustering selection (config.py diarization_fallback(),
-        # default 'spectral'). Not to be confused with the per-run payload
-        # 'diarizer' (fingerprint|pyannote) that decides whether the ASR runs
-        # pyannote in the first place.
-        #   'pyannote' -> reuse the pyannote 3.1 cluster labels the batch ASR
-        #                 (WhisperX) already attached to each utterance,
-        #                 skipping the 2020-era spectral clustering entirely.
-        #                 Falls back to spectral if labels are absent (e.g. the
-        #                 google/live ASR path, which carries no diarization).
-        #   'spectral' -> the original hand-rolled ECAPA + spectral clustering.
-        use_pyannote = (cf.diarization_fallback() == 'pyannote'
-                        and self.embeddings
-                        and all(e.get('speaker_tag') for e in self.embeddings))
-
-        if use_pyannote:
-            logging.info("Diarization: using carried pyannote 3.1 labels for %d utterances",
-                         len(self.embeddings))
-            self.speakers = [e['speaker_tag'] for e in self.embeddings]
-            for i in range(0, len(self.speakers)):
-                results.append({
-                    'speaker': str(self.speakers[i]),
-                    'start': self.embeddings[i]['start'],
-                    'end': self.embeddings[i]['end']
-                })
-        else:
-            spectralEmbeddings, n_speakers = getSpectralEmbeddings(self.embeddings)
-            self.speakers, speaker_class_names, cls_ctrs = clusterSpectralEmbeddings(
-                spectralEmbeddings, n_speakers, raw_list=self.embeddings)
-            for i in range(0, len(self.speakers)):
-                results.append({
-                    'speaker': 'Speaker {0}'.format(self.speakers[i]),
-                    'start': self.embeddings[i]['start'],
-                    'end': self.embeddings[i]['end']
-                })
+        # No-fingerprint fallback: the original ECAPA + spectral clustering.
+        spectralEmbeddings, n_speakers = getSpectralEmbeddings(self.embeddings)
+        self.speakers, speaker_class_names, cls_ctrs = clusterSpectralEmbeddings(
+            spectralEmbeddings, n_speakers, raw_list=self.embeddings)
+        for i in range(0, len(self.speakers)):
+            results.append({
+                'speaker': 'Speaker {0}'.format(self.speakers[i]),
+                'start': self.embeddings[i]['start'],
+                'end': self.embeddings[i]['end']
+            })
 
         # Convert results into expected JSON format.
         taggings = {}
@@ -582,14 +557,6 @@ class AudioProcessorPosthoc:
                 else:
                     speaker_tag, speaker_id, confidence = checkFingerprints(
                             audio_data, self.fingerprints, self.diarization_model)
-                    if not speaker_tag:
-                        # Batch ASRs (WhisperX + pyannote) can carry a diarization
-                        # cluster label; better than leaving the utterance untagged
-                        # when fingerprint matching fails.
-                        speaker_tag = getattr(transcript_data, 'speaker_tag', None)
-                        # That label is a cluster, not a fingerprint match, so the
-                        # print confidence does not describe it.
-                        confidence = None
 
                 # Staged (a named turn too: on 2026-10-18 the named branch
                 # skipped this and a run of 1,129 turns published nothing);
@@ -638,10 +605,6 @@ class AudioProcessorPosthoc:
                             'embedding': embedding,
                             'start': start_time,
                             'end': end_time,
-                            # Carried pyannote 3.1 cluster label from batch ASR
-                            # (WhisperX), if any — used by send_speaker_taggings
-                            # when diarization_fallback='pyannote' to skip clustering.
-                            'speaker_tag': getattr(transcript_data, 'speaker_tag', None),
                         })
                 
                 # Per-utterance voice features: prosody (#6) and/or vocal

@@ -60,25 +60,15 @@ google-auth = "google"
 google-genai = "google"
 googleapis-common-protos = "google"
 protobuf = "google"
-pyannote-audio = "pyannote"
-pyannote-core = "pyannote"
-pyannote-database = "pyannote"
-pyannote-metrics = "pyannote"
-pyannote-pipeline = "pyannote"
 PyPDF2 = "PyPDF2"
 
 [tool.deptry.per_rule_ignores]
 # Imported only inside workers that run in another venv (CrisperWhisper,
-# MOSS, the WhisperX diarizers), or by vendored model code for its
-# training, export and notebook paths, which production never takes.
+# MOSS), or by vendored model code for its training, export and notebook
+# paths, which production never takes.
 DEP001 = [
-  "crisperwhisper", "diarizen", "moss_transcribe_diarize", "nemo", "flash_attention_interface", "vllm",
+  "crisperwhisper", "moss_transcribe_diarize", "flash_attention_interface", "vllm",
   "IPython", "alt_cuda_corr", "coremltools", "lmdb", "pycocotools", "raft", "resampy", "seaborn", "torchsummary",
   "torchvggish", "wandb", "wandb_utils", "test", "datasets", "evaluate",
 ]
-# Pinned for whisperx, which requirements-unified-nodeps.txt installs with
-# --no-deps: whisperx.diarize imports pyannote, so the pins must stay even
-# though nothing in src/ imports pyannote itself (the last direct importers,
-# the Qwen3 connector and the reattribution pilot, left on 2026-10-19).
-DEP002 = ["pyannote-audio", "pyannote-core", "pyannote-database", "pyannote-metrics", "pyannote-pipeline"]
 

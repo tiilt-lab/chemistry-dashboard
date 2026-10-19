@@ -50,9 +50,9 @@ the discussion is happening and dig into afterwards.
    they arrive, with session-level rollups across pods.
 
 6. **Post-hoc analysis.** After a session ends, heavier reprocessing can be
-   triggered from the UI: batch ASR (WhisperX large-v3 or
-   CrisperWhisper verbatim mode) with pyannote diarization reconciled against
-   enrolled voices, and a deeper video pass (head tracking with identity
+   triggered from the UI: MOSS end to end (transcript and speakers in one
+   pass, named from the enrolled voice prints) or CrisperWhisper verbatim
+   mode with voice-print matching, and a deeper video pass (head tracking with identity
    persistence, gaze overlays, configurable fps). Post-hoc runs are handled
    by two dedicated services; state and queueing live in
    `src/server/posthoc_state.py` / `posthoc_queue.py`.
@@ -189,7 +189,7 @@ Then edit:
 
 ### 6. Model assets
 
-Most models (ECAPA speaker ID, sentence embedders, Whisper/WhisperX, YOLO11,
+Most models (ECAPA speaker ID, sentence embedders, MOSS, CrisperWhisper, YOLO11,
 hsemotion, Gaze-LLE/DINOv2) download themselves from Hugging Face / torch.hub
 on first use. Two things need manual setup:
 
@@ -342,14 +342,11 @@ insecure origins. Add your server's address at
 - **CrisperWhisper** post-hoc ASR runs in its own venv (its CTranslate2 fork
   would shadow the real one): build `src/venv-crisper` from
   `src/requirements-crisper.txt`.
-- **Sortformer diarization** uses a separate NeMo venv (`src/venv-nemo`).
-- **Post-hoc speaker diarization** offers two models, each in its own venv:
-
 ### MOSS end to end (the default post-hoc engine)
 
-The default post-hoc run is [MOSS-Transcribe-Diarize](https://huggingface.co/OpenMOSS-Team/MOSS-Transcribe-Diarize) (OpenMOSS 0.9B, Apache-2.0): one model listens to the whole recording and writes timestamped, speaker-labelled, punctuated turns, so there is no separate diarizer, aligner or word-assignment step. Its labels (S01, S02, ...) are named against the enrolled voice prints by `asr_connectors/moss_naming.py` (Naming, below). The diarizer choice in the trigger applies to the WhisperX and Qwen3 recognizers only.
+The default post-hoc run is [MOSS-Transcribe-Diarize](https://huggingface.co/OpenMOSS-Team/MOSS-Transcribe-Diarize) (OpenMOSS 0.9B, Apache-2.0): one model listens to the whole recording and writes timestamped, speaker-labelled, punctuated turns, so there is no separate diarizer, aligner or word-assignment step. Its labels (S01, S02, ...) are named against the enrolled voice prints by `asr_connectors/moss_naming.py` (Naming, below).
 
-- Engine: `src/audio_processing/asr_connectors/moss_asr.py` runs `moss_cli.py` in `src/venv-granite` (transformers 5.x, the OpenMOSS package from `~/src/MOSS-Transcribe-Diarize`, Triton) through `moss_run.py`, like the Nemotron and DiariZen wrappers.
+- Engine: `src/audio_processing/asr_connectors/moss_asr.py` runs `moss_cli.py` in `src/venv-granite` (transformers 5.x, the OpenMOSS package from `~/src/MOSS-Transcribe-Diarize`, Triton) through `moss_run.py`.
 - The decode loop is our own (`moss_cli.py`): the model in bf16 (Qwen3's MLP overflows fp16 on an hour of audio and emits only "!"), a pre-allocated fp16 KV cache, a Triton split-key kernel for the single-query step (`triton_decode.py`), the step replayed as a CUDA graph, and the vocabulary projection in fp32. On the Quadro RTX 8000 (Turing) it does about 42 tokens/s, an hour of audio in 16 minutes; HF generate managed 2 to 3.
 - Turing GPUs have no PyTorch flash attention; `flash_turing_attn.py` registers the [flash-attention-turing](https://github.com/ssiu/flash-attention-turing) port as the `turing_fa` backend for the encoder and prefill. Build it once into the venv: clone to `~/src/flash-attention-turing` (or set `FLASH_ATTENTION_TURING_DIR`), then `MAX_JOBS=4 src/venv-granite/bin/pip install -v . --no-build-isolation` (about 6 minutes). On an Ampere-or-newer GPU the loop runs on PyTorch's own kernels without it.
 - Budget: the cache is sized at launch for `--max-new-tokens` (default 40,000, about 10 tokens per audio second); a recording past 70 minutes needs a larger value. Progress is written to `<out>.progress` while a pass runs.

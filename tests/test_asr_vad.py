@@ -11,7 +11,7 @@ Two detectors: EnergyGate (RMS per frame against an adaptive noise floor,
 with hysteresis; fails open above -38 dBFS) and SileroDetector (Silero VAD,
 ONNX on the CPU). Synthetic audio covers silence, a tone, white noise at
 -40 dBFS and a speech-like AM burst; the Silero positive case uses the real
-speech sample shipped with pyannote.audio (a whisperx dependency).
+speech sample shipped with pyannote.audio when that package is installed.
 """
 import logging
 import os

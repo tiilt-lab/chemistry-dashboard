@@ -10,10 +10,9 @@
 # the DC_AUDIO_WS_PORT env var at launch (default 9000).
 
 [processing]
-# Speech-to-text backend:
-#   google-cloud-speech  (default; PROPRIETARY paid API; needs google-cloud-key.json)
-#   whisper              (faster-whisper; MIT, open, offline; pip install faster-whisper)
-asr=google-cloud-speech
+# Live speech-to-text backend: CrisperWhisper 2.0 is the only engine (legacy
+# keys map to it); the post-hoc default is MOSS, chosen per run in the UI.
+asr=crisperwhisper
 
 # Expression & Thinking Style scorer:
 #   liwc  (default; uses the PROPRIETARY LIWC2007 dictionary + Harvard GI)
@@ -21,7 +20,7 @@ asr=google-cloud-speech
 #   llm   (Google Gemini; PROPRIETARY paid API; needs GOOGLE_API_KEY)
 #
 # For a fully open-source, zero-license, offline pipeline use:
-#   asr=whisper  and  scorer=open
+#   scorer=open
 scorer=liwc
 
 keyword_model_limit=20000
@@ -36,20 +35,6 @@ keyword_embedding_model=BAAI/bge-small-en-v1.5
 # than the word2vec 0.6 because sentence-embedding distances sit in a higher band.
 keyword_embedding_threshold=0.28
 
-# Fallback clustering for the post-hoc no-fingerprint path. NOTE: distinct from
-# the per-run 'diarizer' field the trigger UI sends (fingerprint|pyannote),
-# which decides whether the ASR runs pyannote at all. This decides what the
-# fallback clustering does with any labels produced:
-#   spectral  (2020 ECAPA + spectral clustering)
-#   pyannote  (default; reuse pyannote 3.1 labels carried by the WhisperX
-#             batch ASR — falls back to spectral when none are present, e.g.
-#             the google/live ASR path)
-diarization_fallback=pyannote
-# When a pod's enrolled participants are known, cap pyannote diarization at the
-# enrolled count (max_speakers) and remap each cluster onto its nearest enrolled
-# voice print, so utterances resolve to real people instead of leftover
-# SPEAKER_NN clusters. WhisperX (batch ASR) paths only.
-diarization_constrain_to_enrolled=false
 # Prosody (#6): per-utterance pitch/energy/voicing via librosa (prosody.py).
 prosody=false
 # Vocal (speech) emotion (#5): per-utterance wav2vec2 SER (vocal_emotion.py);
@@ -61,17 +46,6 @@ vocal_emotion_model=superb/wav2vec2-base-superb-er
 #   all-mpnet-base-v2  (default; light, comparable with historical metrics)
 #   bge-large-en-v1.5  (open SOTA; matches the post-hoc default)
 semantic_embedder=all-mpnet-base-v2
-
-# Whisper settings (used by the whisper / whisperx ASR backends).
-# Post-hoc is latency-tolerant, so a large model is worthwhile:
-#   model_size=large-v3         (most accurate)
-#   model_size=distil-large-v3  (~2x faster, near-large accuracy)
-#   model_size=small.en         (fastest, lowest accuracy — old default)
-# compute_type=float16 on ample-VRAM GPUs; int8 to save memory.
-[whisper]
-model_size=large-v3
-device=auto
-compute_type=float16
 
 [crisperwhisper]
 # CrisperWhisper 2.0 (nyra health): verbatim transcription — keeps fillers,

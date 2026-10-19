@@ -40,20 +40,13 @@ const STARTED_ACKS = new Set([
 // locked) so it is explicit what computes each result.
 const ASR_OPTIONS = [
     { id: "moss", label: "MOSS-Transcribe-Diarize (default: transcript + speakers in one pass, punctuated)" },
-    { id: "whisperx", label: "WhisperX (open SOTA: batched + word-aligned)" },
     { id: "crisperwhisper", label: "CrisperWhisper 2.0 (verbatim: fillers, stutters, pause-true timing)" },
 ]
-// Exactly two post-hoc diarizers; each runs in its own venv and the audio
-// service falls back to the other when one fails. Older runs were produced
-// by pyannote / Sortformer / voice prints, which are display-only now
-// (shortName below) and no longer selectable.
-const DIARIZER_OPTIONS = [
-    { id: "diarizen", label: "DiariZen Large-s80-v2 (WavLM, overlap-aware; research licence)" },
-    { id: "nemotron3", label: "Nemotron-3 Diarization (NVIDIA, 8 speakers, streaming-capable; OpenMDW licence)" },
-]
-// Flip to "nemotron3" to change the default (the queue's own default is the
-// one-liner in src/server/posthoc_queue.py).
-const DIARIZER_DEFAULT = "diarizen"
+// Speaker identification is not a choice: MOSS labels the speakers in the
+// same pass and names them from the voice prints; a CrisperWhisper re-run
+// matches each utterance against the prints. Older runs were produced by
+// WhisperX with pyannote, DiariZen, Nemotron-3 or Sortformer, display-only
+// now (shortName below). The audio service records what ran.
 const EMBEDDER_OPTIONS = [
     { id: "bge-large-en-v1.5", label: "BGE large v1.5 (open SOTA embedder)" },
     { id: "all-mpnet-base-v2", label: "all-mpnet-base-v2 (matches historical metrics)" },
@@ -117,10 +110,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     const podModels = (sessionDevice && sessionDevice.posthoc_models) || {}
     const asr = asrChoice || podModels.asr || "moss"
     const scorer = scorerChoice || podModels.scorer || (models && models.scoring && models.scoring.id) || "liwc"
-    const [diarizerChoice, setDiarizerChoice] = useState(null)
-    // Prefill from provenance only while that diarizer is still offered.
-    const storedDiarizer = DIARIZER_OPTIONS.some((o) => o.id === podModels.diarizer) ? podModels.diarizer : null
-    const diarizer = diarizerChoice || storedDiarizer || DIARIZER_DEFAULT
+    const diarizer = asr === "moss" ? "moss" : "fingerprint"
     const [embedderChoice, setEmbedderChoice] = useState(null)
     const embedder = embedderChoice || podModels.embedder || "bge-large-en-v1.5"
     // Optional video active-speaker detection (TalkNCE trained on UniTalk):
@@ -359,9 +349,8 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
         if (allSettled && !marked.current && active.some((s) => s === "done")) {
             marked.current = true
             // Record which models produced this re-analysis (provenance).
-            // No `diarizer` here: the audio service reports the one that
-            // actually ran (it falls back to the other model on failure),
-            // and this summary is merged over its callback.
+            // No `diarizer` here: the audio service records what ran (moss,
+            // or the voice prints), and this summary is merged over its callback.
             const modelChoices = {
                 asr,
                 scorer,
@@ -518,7 +507,6 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                     type: "Initialize_audio_processing_analytics",
                     asr,
                     scorer,
-                    diarizer,
                     embedder,
                 },
             },
@@ -591,9 +579,9 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     }
 
     // Wall-clock estimate for a full re-run, measured on this instance:
-    // a 5.5-min recording took ~6.3 min end-to-end (WhisperX transcribes in
-    // seconds; the per-utterance semantic/diarization/keyword processing
-    // dominates), so estimate ~1.2x the recording length. The pod's recording
+    // a 5.5-min recording took ~6.3 min end-to-end (the per-utterance
+    // semantic/diarization/keyword processing dominates), so estimate ~1.2x
+    // the recording length. The pod's recording
     // is often much shorter than the session, so use the transcript extent as
     // the recording-length proxy and fall back to the session length.
     let recordingSeconds = (session && session.length) || 0
@@ -654,7 +642,7 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
     const shortName = (id) =>
         ({
             "google-cloud-speech": "Google STT (retired)",
-            whisperx: "WhisperX",
+            whisperx: "WhisperX (retired)",
             whisper: "Whisper",
             qwen3: "Qwen3-ASR (retired)",
             "qwen3-0.6b": "Qwen3-ASR 0.6B (retired)",
@@ -749,24 +737,10 @@ function PosthocTrigger({ session, sessionDeviceId, speakers, transcripts, model
                     </select>
                 </SelectorRow>
                 <SelectorRow name="Speaker identification" field="diarizer" value={diarizer}>
-                    <select
-                        title={asr === "moss" ? "MOSS labels the speakers itself; the diarizer is not used" : undefined}
-                        value={diarizer}
-                        onChange={(e) => setDiarizerChoice(e.target.value)}
-                        disabled={running || asr === "moss"}
-                        className={selectCls}
-                    >
-                        {DIARIZER_OPTIONS.map((o) => (
-                            <option key={o.id} value={o.id}>
-                                {o.label}
-                            </option>
-                        ))}
+                    <select value={diarizer} disabled className={selectCls} title="Set by the transcription engine">
+                        <option value="moss">MOSS labels the speakers in the same pass, named from the voice prints</option>
+                        <option value="fingerprint">Voice prints (ECAPA-TDNN), matched per utterance</option>
                     </select>
-                    {asr === "moss" ? (
-                        <p className="mt-1 text-xs text-tiilt-muted">
-                            MOSS names its own speakers from the voice prints; the diarizer above is not used.
-                        </p>
-                    ) : null}
                 </SelectorRow>
                 <SelectorRow name="Active speaker detection" field={null} value={asd}>
                     <select

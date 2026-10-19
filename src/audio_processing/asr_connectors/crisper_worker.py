@@ -1,10 +1,9 @@
 """CrisperWhisper 2.0 worker — runs inside src/venv-crisper.
 
 The crisperwhisper package ships its own CTranslate2 fork
-(ctranslate2-crisperwhisper) whose import would shadow the real ctranslate2
-that faster-whisper/WhisperX depend on, so it lives in a dedicated venv and
-this worker is the only thing that imports it (same isolation pattern as
-the diarizer CLIs).
+(ctranslate2-crisperwhisper) that replaces the stock ctranslate2 package, so
+it lives in a dedicated venv and this worker is the only thing that imports
+it (the same isolation pattern as the MOSS CLI in src/venv-granite).
 
 Two modes:
   --oneshot AUDIO OUT.json   transcribe one file, write JSON, exit (post-hoc)

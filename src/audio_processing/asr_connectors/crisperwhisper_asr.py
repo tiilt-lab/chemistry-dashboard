@@ -31,7 +31,7 @@ and all inference goes through crisper_worker.py subprocesses:
   - CrisperWhisperPosthocASR: --oneshot on the whole recording in its own
     process (so a long file can never head-of-line-block live captions),
     then emits gap-segmented Google-shaped AsrResults (same contract as
-    WhisperXASR; speaker attribution happens downstream via fingerprints).
+    the live worker; speaker attribution happens downstream via fingerprints).
 """
 import functools
 import json

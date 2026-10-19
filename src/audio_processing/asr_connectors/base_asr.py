@@ -258,7 +258,7 @@ class BaseASR:
 
 class PosthocFileASR:
     """Base for post-hoc connectors that read the WHOLE recording file directly
-    (WhisperX / CrisperWhisper-posthoc).
+    (CrisperWhisper-posthoc).
 
     These do not consume PCM from the audio queue — the post-hoc stream reader
     fills the AudioBuffer that downstream diarization/DoA need, and this

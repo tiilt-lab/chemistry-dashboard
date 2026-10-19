@@ -1,10 +1,10 @@
 """Shared scaffolding for the post-hoc file ASR connectors.
 
-WhisperX and CrisperWhisper (post-hoc) each hand-copied: a _drain_queue
+The post-hoc file connectors each hand-copied: a _drain_queue
 loop (byte-identical), a _worker_python() venv resolver (differing only in the
 venv name/depth), a temp-json subprocess runner (with an undocumented
 3600-vs-7200 timeout DRIFT), and a torch.load permissive monkeypatch. Those
-live once in base_asr now. The connectors themselves import torch/whisperx and
+live once in base_asr now. The connectors themselves import torch and
 can't load in CI, but base_asr is import-light, so the extracted helpers are
 tested directly here.
 """

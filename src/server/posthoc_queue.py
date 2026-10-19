@@ -644,7 +644,7 @@ def _run_job(job):
                 init = dict(base, type="Initialize_audio_processing_analytics",
                             asr=models.get("asr", "moss"),
                             scorer=models.get("scorer"),
-                            diarizer=models.get("diarizer", "moss" if models.get("asr", "moss") == "moss" else "diarizen"),
+                            diarizer=models.get("diarizer", "moss" if models.get("asr", "moss") == "moss" else "fingerprint"),
                             embedder=models.get("embedder"))
                 start = "start_posthoc_audio_processing"
             elif scope == "rename":
