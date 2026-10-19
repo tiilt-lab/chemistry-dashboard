@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { ApiService } from "../../services/api-service"
-import { speakerColorFor } from "../../globals"
+import { speakerColorFor, speakerLabel } from "../../globals"
 
 // "Who did what" — one card per speaker on the pod Group view: talk share and
 // turns (from the dynamics endpoint) plus average GCA scores (from the
@@ -39,6 +39,8 @@ function piAverages(transcripts, speakerId) {
 // group: a breakout group's name -> the talk shares come from the group's
 // merged transcript (both laptops) and the cards cover both teams; refreshKey
 // changes when the rows did (a finished post-hoc run), so the cards refetch.
+// speakerInfo: the group's display names and team colours (globals.
+// indexSpeakerInfo); the cards then read "Pat 1", "Sandy 2" in team order.
 function SpeakerCardsPanel({
     sessionId,
     sessionDeviceId,
@@ -47,6 +49,7 @@ function SpeakerCardsPanel({
     onOpenSpeaker,
     group,
     refreshKey,
+    speakerInfo,
 }) {
     const [dynamics, setDynamics] = useState(null)
 
@@ -76,11 +79,19 @@ function SpeakerCardsPanel({
     const allAliases = speakers.map((s) => s.alias)
     const talkOf = (alias) =>
         ((dynamics && dynamics.speakers) || []).find((d) => d.name === alias)
+    const orderOf = (alias) =>
+        speakerInfo && speakerInfo[alias] ? speakerInfo[alias].order : Infinity
+    const ordered = [...speakers].sort((a, b) => {
+        const oa = orderOf(a.alias)
+        const ob = orderOf(b.alias)
+        return oa === ob ? String(a.alias).localeCompare(String(b.alias)) : oa - ob
+    })
 
     return (
         <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
-            {speakers.map((speaker) => {
-                const color = speakerColorFor(speaker.alias, allAliases)
+            {ordered.map((speaker) => {
+                const color = speakerColorFor(speaker.alias, allAliases, speakerInfo)
+                const label = speakerLabel(speaker.alias, speakerInfo)
                 const talk = talkOf(speaker.alias)
                 const averages = piAverages(transcripts, speaker.id)
                 const card = (
@@ -91,8 +102,11 @@ function SpeakerCardsPanel({
                                     className="h-2.5 w-2.5 flex-none rounded-full"
                                     style={{ backgroundColor: color }}
                                 />
-                                <span className="truncate text-sm font-semibold text-tiilt-ink">
-                                    {speaker.alias}
+                                <span
+                                    className="truncate text-sm font-semibold text-tiilt-ink"
+                                    title={label !== speaker.alias ? speaker.alias : undefined}
+                                >
+                                    {label}
                                 </span>
                             </span>
                             {onOpenSpeaker && (

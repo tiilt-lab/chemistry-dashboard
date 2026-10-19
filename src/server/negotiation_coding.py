@@ -1327,14 +1327,17 @@ def group_sort_key(group):
     return (group in (None, ""), _natural(group))
 
 
-def export_row(code, pods, dims, run_id=None):
+def export_row(code, pods, dims, run_id=None, labels=None):
     """One CSV row (EXPORT_COLUMNS then the scheme's dimensions) for a
-    code_row dict; ``pods`` maps device id -> {name, group, side}."""
+    code_row dict; ``pods`` maps device id -> {name, group, side}. With
+    ``labels`` (alias -> "<team> 2", speaker_labels) the speaker column
+    carries the team label, so an export names nobody."""
     pod = pods.get(code.get("session_device_id")) or {}
     named = "adopted" if code.get("adopted") else ("yes" if code.get("speaker_tag") else "no")
     values = [";".join(code[d]) if isinstance(code.get(d), list) else (code.get(d) or "") for d in dims]
+    tag = code.get("speaker_tag") or ""
     return [pod.get("group") or "", pod.get("name") or "", pod.get("side") or "", code.get("team") or "",
-            code.get("speaker_tag") or "", named, "yes" if code.get("far_side") else "",
+            (labels or {}).get(tag, tag), named, "yes" if code.get("far_side") else "",
             "yes" if code.get("closed_world") else "", "" if code.get("match_sim") is None else code["match_sim"],
             "" if run_id is None else run_id, code.get("transcript_id"), code.get("start_time"),
             clock_text(code.get("start_time")), code.get("length"), code.get("text") or "",
@@ -1730,12 +1733,132 @@ def group_transcript(devices, rows_by_device, names=TEAMS, recordings=None):
             "alignment": diagnostics.get("alignment")}
 
 
-def group_dynamics(lines, enrolled=None):
+def _alias_number(alias, team):
+    """The number a class's own username carries for its team: with teams
+    named Alpha and Beta, "Alp2G1S32" is Alpha 2 (the team's first three
+    letters, then at most two more letters, then the digits). "AlphaG4S31"
+    carries none: its 4 is the group."""
+    stem = re.escape((team or "")[:3])
+    if not stem:
+        return None
+    m = re.match(r"^%s[a-z]{0,2}(\d+)" % stem, alias or "", re.I)
+    return int(m.group(1)) if m else None
+
+
+def speaker_labels(rosters, names=TEAMS, lines=None):
+    """Display names for a group's speakers: "<team> <n>" for each student
+    on a laptop's roster, numbered within the team. A username that carries
+    its own number keeps it (_alias_number); the rest, a real name or a
+    nickname, take the lowest free numbers in alphabetical order, so a
+    laptop whose three students signed up with their names reads
+    "<team> 1", 2 and 3 and no name leaves the roster. A name the merge
+    carries that no roster lists (a guest, a student of a laptop outside the
+    group) keeps its tag. ``rosters`` is [{session_device_id, side,
+    aliases}] per laptop; the result is a list of {alias, label, team,
+    team_index, index, session_device_id} in team order, then number."""
+    teams = list(names)
+    seen = {}
+    per_team = {t: [] for t in teams}
+    for roster in rosters or []:
+        side = roster.get("side")
+        for alias in roster.get("aliases") or []:
+            alias = (alias or "").strip()
+            if not alias or alias in seen:
+                continue
+            entry = {"alias": alias, "team": side if side in teams else None,
+                     "session_device_id": roster.get("session_device_id")}
+            seen[alias] = entry
+            if entry["team"]:
+                per_team[entry["team"]].append(entry)
+    for team, entries in per_team.items():
+        taken, unnumbered = set(), []
+        for e in sorted(entries, key=lambda e: e["alias"].lower()):
+            n = _alias_number(e["alias"], team)
+            if n is not None and n not in taken:
+                taken.add(n)
+                e["index"] = n
+            else:
+                unnumbered.append(e)
+        free = 1
+        for e in unnumbered:
+            while free in taken:
+                free += 1
+            taken.add(free)
+            e["index"] = free
+        for e in entries:
+            e["label"] = "%s %d" % (team, e["index"])
+            e["team_index"] = teams.index(team)
+    for l in lines or []:
+        tag = l.get("speaker_tag")
+        if tag and tag not in seen:
+            team = l.get("team") if l.get("team") in teams else None
+            seen[tag] = {"alias": tag, "team": team, "session_device_id": l.get("session_device_id")}
+    for e in seen.values():
+        e.setdefault("label", e["alias"])
+        e.setdefault("index", None)
+        e.setdefault("team_index", teams.index(e["team"]) if e.get("team") in teams else None)
+    return sorted(seen.values(), key=lambda e: (
+        e["team_index"] if e["team_index"] is not None else len(teams),
+        e["index"] if e["index"] is not None else 10 ** 6, e["alias"].lower()))
+
+
+def _line_team_for(line, team_of, names):
+    # The team a merged line counts for in the team view: the roster team of
+    # the speaker it was named as (the one place a person is on one team),
+    # else the team the merge gave the line (a guest named on one side),
+    # else none: an unnamed line is nobody's floor time.
+    if not line.get("speaker_tag"):
+        return None
+    team = team_of.get(line["speaker_tag"])
+    if team in names:
+        return team
+    return line.get("team") if line.get("team") in names else None
+
+
+def group_team_dynamics(lines, speakers, names=TEAMS):
+    """The group's dynamics with each team as one voice: each team's
+    speaking share and floor-takes (turns), who hands the floor to whom
+    across and within the teams, each team's questions and
+    interruptions. ``speakers`` is speaker_labels' list, which says whose
+    team each name is on. Unnamed lines are 'Unattributed' in the talk
+    metrics, as in the per-speaker view, and left out of the networks."""
+    from analytics import compute_conversation_dynamics, compute_talk_metrics
+    teams = list(names)
+    team_of = {s["alias"]: s.get("team") for s in speakers or []}
+    ordered = sorted(lines, key=lambda l: (float(l.get("start_time") or 0), l.get("id") or 0))
+    tagged = [(l, _line_team_for(l, team_of, teams)) for l in ordered]
+    result = compute_conversation_dynamics(
+        [(team, l["start_time"], l.get("length")) for l, team in tagged if team])
+    result["talk"] = compute_talk_metrics(
+        [(team, l["start_time"], l.get("length"), l.get("question"), l.get("transcript")) for l, team in tagged],
+        enrolled=teams)
+    # Hand-offs by team pair from the speaker changes: within a team the
+    # floor passes between teammates, across it the other side answers.
+    handoffs = {}
+    prev = None
+    for l, team in tagged:
+        if not team:
+            continue
+        tag = l["speaker_tag"]
+        if prev is not None and tag != prev[0]:
+            key = (prev[1], team)
+            handoffs[key] = handoffs.get(key, 0) + 1
+        prev = (tag, team)
+    result["handoffs"] = [{"from": f, "to": t, "count": handoffs.get((f, t), 0)}
+                          for f in teams for t in teams]
+    result["names"] = teams
+    result["members"] = {t: [s["label"] for s in speakers or [] if s.get("team") == t] for t in teams}
+    return result
+
+
+def group_dynamics(lines, enrolled=None, speakers=None, names=TEAMS):
     """The conversation dynamics of a group's merged transcript: the same
     per-speaker equity, response network and talk metrics a single pod
     gets (analytics.compute_conversation_dynamics / compute_talk_metrics),
     over the merged lines (group_line dicts) of both laptops, so a line is
-    counted once and under the laptop that heard its speaker best."""
+    counted once and under the laptop that heard its speaker best. With
+    ``speakers`` (speaker_labels) the result also carries ``teams``: the
+    same analyses with each team as one voice (group_team_dynamics)."""
     from analytics import compute_conversation_dynamics, compute_talk_metrics
     ordered = sorted(lines, key=lambda l: (float(l.get("start_time") or 0), l.get("id") or 0))
     named = [(l["speaker_tag"], l["start_time"], l.get("length")) for l in ordered if l.get("speaker_tag")]
@@ -1743,4 +1866,6 @@ def group_dynamics(lines, enrolled=None):
     result["talk"] = compute_talk_metrics(
         [(l.get("speaker_tag"), l["start_time"], l.get("length"), l.get("question"), l.get("transcript")) for l in ordered],
         enrolled=list(enrolled or []))
+    if speakers is not None:
+        result["teams"] = group_team_dynamics(ordered, speakers, names)
     return result

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useOutletContext, useParams, useSearchParams } from "react-router-dom";
 import { ApiService } from "../services/api-service";
 import { PodComponentPages } from "./html-pages";
-import { filterSortByDevice } from "../globals";
+import { filterSortByDevice, indexSpeakerInfo } from "../globals";
 import { decorateLines } from "./group-time";
 
 // The dashboard views live in the URL (?view=...&speaker=...) so they are
@@ -240,8 +240,18 @@ function PodComponent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, timeRange, transcripts, videoMetrics]);
   const groupLines = useMemo(() => (group ? decorateLines(group.lines, group.pods) : []), [group]);
+  // The group's display names and team colours ("Pat 1", "Sandy 2"): the
+  // server labels every roster of the group, so both scopes read the same.
+  const speakerInfo = useMemo(() => indexSpeakerInfo(group ? group.speakers : null), [group]);
   const groupScope = !!group && scope === "group";
   const sourceTranscripts = groupScope ? groupLines : transcripts;
+  // The elapsed clock's zero: the first line of what the page shows (a
+  // stored stamp counts from the session's creation, hours before class).
+  const clockOrigin = useMemo(() => {
+    let first = null;
+    for (const t of sourceTranscripts) if (t.start_time != null && (first == null || t.start_time < first)) first = t.start_time;
+    return first == null ? 0 : first;
+  }, [sourceTranscripts]);
   const displayTranscripts = useMemo(
     () => sourceTranscripts.filter((t) => t.start_time >= startTime && t.start_time <= endTime),
     [sourceTranscripts, startTime, endTime],
@@ -759,6 +769,8 @@ function PodComponent() {
       currentTranscript={currentTranscript}
       roster={roster}
       tagCounts={tagCounts}
+      speakerInfo={speakerInfo}
+      clockOrigin={clockOrigin}
       editDraft={editDraft}
       setEditDraft={setEditDraft}
       podEditing={podEditing}

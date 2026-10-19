@@ -19,6 +19,28 @@ function TranscriptComponentPage(props) {
 
                 <div className="relative min-h-0 w-full grow overflow-y-auto">
                     <div className="mx-auto w-full max-w-3xl px-4 py-6">
+                        {props.chooseClock ? (
+                            <div className="mb-3 flex justify-end">
+                                <span
+                                    className="flex items-center gap-0.5 rounded-md border border-tiilt-line bg-white p-0.5"
+                                    title="Elapsed: counted from the first line. Time of day: when the line was spoken, in your time zone."
+                                >
+                                    {[["elapsed", "Elapsed"], ["wall", "Time of day"]].map(([value, label]) => (
+                                        <button
+                                            key={value}
+                                            type="button"
+                                            onClick={() => props.chooseClock(value)}
+                                            className={
+                                                "rounded px-1.5 py-0.5 text-[11px] font-semibold transition " +
+                                                (props.clock === value ? "bg-tiilt text-white" : "text-tiilt hover:bg-tiilt-soft")
+                                            }
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </span>
+                            </div>
+                        ) : null}
                         <ul className="flex flex-col divide-y divide-tiilt-line">
                             {props.displayTranscripts.map(
                                 (transcript, index) => (
@@ -50,16 +72,17 @@ function TranscriptComponentPage(props) {
                                                     {`Speaker direction ${Math.round(transcript.direction)} degrees.`}
                                                 </span>
                                             ) : null}
-                                            <span className="w-14 font-ahamono text-xs text-tiilt-muted tabular-nums">
-                                                {props.formatSeconds(
-                                                    transcript.start_time,
-                                                )}
+                                            <span className={(props.wallClock ? "w-20" : "w-14") + " font-ahamono text-xs text-tiilt-muted tabular-nums"}>
+                                                {props.timeLabel
+                                                    ? props.timeLabel(transcript.start_time)
+                                                    : props.formatSeconds(transcript.start_time)}
                                             </span>
                                         </div>
                                         <div className="group min-w-0 grow text-[15px] leading-relaxed text-tiilt-ink">
                                             {props.reassignSpeaker ? (
                                                 <SpeakerReassign
                                                     tag={transcript.speaker_tag}
+                                                    labelOf={props.labelOf}
                                                     color={(props.speakerColors || {})[transcript.speaker_tag]}
                                                     roster={props.roster || []}
                                                     count={
@@ -83,7 +106,7 @@ function TranscriptComponentPage(props) {
                                                         ? { color: props.speakerColors[transcript.speaker_tag] }
                                                         : undefined}
                                                 >
-                                                    {transcript.speaker_tag}:{" "}
+                                                    {props.labelOf ? props.labelOf(transcript.speaker_tag) : transcript.speaker_tag}:{" "}
                                                 </span>
                                             ) : (
                                                 <></>

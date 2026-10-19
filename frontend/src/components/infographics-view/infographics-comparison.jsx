@@ -379,6 +379,9 @@ function AppInfographicsComparison(props) {
                                   onReassignSpeaker={props.reassignTranscriptRow}
                                   roster={props.roster}
                                   tagCounts={props.tagCounts}
+                                  clockOrigin={props.clockOrigin}
+                                  sessionClockBase={props.session && props.session.creation_date}
+                                  speakerInfo={props.speakerInfo}
                               />
                           </div>
                       </AppSectionBoxComponent>
@@ -398,6 +401,7 @@ function AppInfographicsComparison(props) {
                                     sessionDevice={props.sessionDevice}
                                     sessionDeviceId={props.sessionDevice.id}
                                     tagCounts={props.tagCounts}
+                                    speakerInfo={props.speakerInfo}
                                 />
                             ),
                         },
@@ -418,6 +422,7 @@ function AppInfographicsComparison(props) {
                               sessionDeviceId={props.sessionDevice.id}
                               group={groupScope ? props.groupName : null}
                               refreshKey={groupScope ? props.groupVersion : props.sessionDevice.posthoc_analyzed_date}
+                              speakerInfo={props.speakerInfo}
                           />
                       </AppSectionBoxComponent>
                   ),
@@ -528,6 +533,7 @@ function AppInfographicsComparison(props) {
                               onOpenSpeaker={props.loadSpeakerMetrics}
                               group={groupScope ? props.groupName : null}
                               refreshKey={groupScope ? props.groupVersion : props.sessionDevice.posthoc_analyzed_date}
+                              speakerInfo={props.speakerInfo}
                           />
                       </AppSectionBoxComponent>
                   ),
@@ -729,6 +735,9 @@ function AppInfographicsComparison(props) {
                                 onReassignSpeaker={props.reassignTranscriptRow}
                                 roster={props.roster}
                                 tagCounts={props.tagCounts}
+                                clockOrigin={props.clockOrigin}
+                                sessionClockBase={props.session && props.session.creation_date}
+                                speakerInfo={props.speakerInfo}
                             />
                         </AppSectionBoxComponent>
                     )}

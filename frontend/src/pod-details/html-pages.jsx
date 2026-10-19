@@ -6,6 +6,7 @@ import { AppSessionToolbar } from "../session-toolbar/session-toolbar-component"
 import { Appheader } from "../header/header-component"
 import style from "./pod.module.css"
 import React from "react"
+import { speakerLabel } from "../globals"
 import { AppInfographicsComparison } from "../components/infographics-view/infographics-comparison"
 import { CollaborationFeedbackDashboard } from "../components/reflection-dashboard-view/reflection-interactive-dashboard"
 
@@ -26,7 +27,7 @@ function PodComponentPages(props) {
                                       ? " · " + props.viewDevice.name
                                       : "")
                                 : props.sessionDevice.name
-                            : props.selectedSpkralias)
+                            : speakerLabel(props.selectedSpkralias, props.speakerInfo))
                     }
                     leftText={false}
                     rightText={"Options"}
@@ -119,6 +120,8 @@ function PodComponentPages(props) {
                                 reassignTranscriptRow={props.reassignTranscriptRow}
                                 roster={props.roster}
                                 tagCounts={props.tagCounts}
+                                speakerInfo={props.speakerInfo}
+                                clockOrigin={props.clockOrigin}
                                 seeAllTranscripts={props.seeAllTranscripts}
                                 loadSpeakerMetrics={props.loadSpeakerMetrics}
                             ></AppInfographicsComparison>
@@ -144,6 +147,7 @@ function PodComponentPages(props) {
                         <div className="text-sm">
                             <SpeakerReassign
                                 tag={props.currentTranscript.speaker_tag}
+                                labelOf={(name) => speakerLabel(name, props.speakerInfo)}
                                 roster={props.roster || []}
                                 count={
                                     (props.tagCounts || {})[
