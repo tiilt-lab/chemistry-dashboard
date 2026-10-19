@@ -2918,3 +2918,28 @@ def test_a_laptop_that_named_none_of_its_own_side_keeps_its_unnamed_rows_as_its_
     assert by_id[1]["team"] == "Pat" and by_id[2]["team"] == "Pat"            # the laptop's own side
     assert 11 not in by_id and 3 not in by_id                                 # the faint copy and the far-named row yield
     assert [u["transcript_id"] for u in kept] == [1, 2, 12]
+
+
+def test_a_laptop_that_named_none_of_its_own_side_cannot_rename_the_partners_voice():
+    # Group 6, 2026-10-16: the Pat laptop named only Sandy students, so its
+    # every name was a far hearing; the Sandy laptop named one Pat student
+    # (far side, from an enrolment print) on 237 lines. The Pat laptop's
+    # claim, a higher session-print similarity, renamed them all to a Sandy
+    # student and the Pat team was left with no lines. No standing: a laptop
+    # that cannot place its own side does not rename the partner's voice.
+    pat = [_crow(i, 1, 10 * i, "line %d of the long exchange about the building and the loan" % i, "Sandy 2", "S01", sim=0.8, length=5, far_side=True)
+           for i in range(1, 7)]
+    sandy = [_crow(10 + i, 2, 10 * i + 0.4, "line %d of the long exchange about the building and the loan" % i, "Pat 2", "S02", sim=0.5, length=5, far_side=True)
+             for i in range(1, 7)]
+    # the Sandy laptop placed its own side elsewhere in the session
+    sandy += [_crow(20, 2, 200, "Our side can live with the spring deadline", "Sandy 1", "S05", sim=0.8, length=3),
+              _crow(21, 2, 210, "but not with the rent going up as well", "Sandy 1", "S05", sim=0.8, length=3)]
+    diag = {}
+    kept, dropped = nc.merge_paired({1: pat, 2: sandy}, SIDES, diag)
+    assert [c["to"] for c in diag["reconciled"]] == ["Pat 2"]
+    assert all(u["speaker_tag"] == "Pat 2" for u in kept if u["transcript_id"] < 20)
+    # a laptop that placed its own side keeps its standing: the same claim renames
+    pat[0] = _crow(1, 1, 10, "line 1 of the long exchange about the building and the loan", "Pat 1", "S03", sim=0.9, length=5)
+    diag = {}
+    kept, dropped = nc.merge_paired({1: pat, 2: sandy}, SIDES, diag)
+    assert [c["to"] for c in diag["reconciled"]] == ["Sandy 2"]

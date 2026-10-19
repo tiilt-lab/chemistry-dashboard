@@ -369,7 +369,7 @@ def _claim_score(rec):
     return score
 
 
-def reconcile_clusters(pool, dropped, diagnostics=None):
+def reconcile_clusters(pool, dropped, diagnostics=None, placed=None):
     """One voice, one name, across both laptops. The duplicate copies the
     merge matched pair this laptop's diarizer clusters with the other's;
     a cluster whose copies mostly fall on one cluster of the other laptop
@@ -378,9 +378,17 @@ def reconcile_clusters(pool, dropped, diagnostics=None):
     of both clusters, lone fragments the other laptop never transcribed
     included. Without this the kept copy's name flipped with the kept
     laptop, mid-sentence: Group 1 of session 434 showed 41 such flips.
-    Relabelled lines carry confidence.reconciled_from."""
+    Relabelled lines carry confidence.reconciled_from. ``placed``: device
+    -> whether the laptop named a student of its own team (merge_paired
+    knows the sides); without it, a name that is not a far hearing."""
     by_id = {u["transcript_id"]: u for u in pool}
     members, pairs = {}, {}
+    if placed is None:
+        placed = {}
+        for u in pool:
+            dev = u.get("session_device_id")
+            placed[dev] = placed.get(dev, False) or (bool(u.get("speaker_tag"))
+                                                     and not (u.get("confidence") or {}).get("far_side"))
     for u in pool:
         key = _cluster_key(u)
         if key:
@@ -421,7 +429,20 @@ def reconcile_clusters(pool, dropped, diagnostics=None):
         mine, theirs = record(key), record(partner)
         if not theirs["name"] or theirs["name"] == mine["name"]:
             continue
-        if _claim_score(theirs) - _claim_score(mine) < RECONCILE_MARGIN:
+        my_standing, their_standing = placed.get(key[0], False), placed.get(partner[0], False)
+        if mine["name"] and my_standing and not their_standing:
+            # A laptop that named none of its own side heard only the other
+            # team's voices: every claim it makes is a far hearing, and it
+            # has no standing to rename a voice a laptop that can place its
+            # own side named. (Group 6, 2026-10-16: one laptop named only
+            # the other team's students, and its claims renamed the
+            # partner's 237 lines of one of its own students to the other
+            # team, leaving that team no lines at all.)
+            continue
+        if not (their_standing and not my_standing) \
+                and _claim_score(theirs) - _claim_score(mine) < RECONCILE_MARGIN:
+            # ... and the other way round the placing laptop's name wins
+            # whatever the similarities say, so the voice reads as one.
             continue
         decided[key] = (mine, theirs, n)
     for key, (mine, theirs, n) in decided.items():
@@ -453,7 +474,32 @@ def _prefer(a, b):
     return (a, b) if a["transcript_id"] <= b["transcript_id"] else (b, a)
 
 
-def _unflag_unplaceable(by_device, sides):
+def _names_team(alias, names):
+    """The team an alias's prefix names ("Bet2G4S31" is the second team of
+    ("Alpha", "Beta")), else None: a username that is a real name says
+    nothing."""
+    low = (alias or "").lower()
+    for team in names:
+        if team and low.startswith(team.lower()[:3]):
+            return team
+    return None
+
+
+def _places_own_side(u, side, names):
+    """Whether this row shows its laptop can place its own side: a name of
+    a student of the laptop's own team by its prefix, or, for a username
+    that is a real name, a name that is not a far hearing. (The flag alone
+    does not do: a student enrolled on the wrong laptop is "own" there.)"""
+    tag = u.get("speaker_tag")
+    if not tag or side is None:
+        return False
+    team = _names_team(tag, names)
+    if team is not None:
+        return team == side
+    return not (u.get("confidence") or {}).get("far_side")
+
+
+def _unflag_unplaceable(by_device, sides, placed):
     """A laptop that named none of its own side cannot place an unnamed
     voice either: the far flag on its unnamed rows came from the only
     prints it had, the other team's. Those rows are its own side's unnamed
@@ -461,7 +507,7 @@ def _unflag_unplaceable(by_device, sides):
     (Group 2, 2026-10-16: the Pat students never enrolled, so the Pat
     laptop's every row was far-side and the merge kept 3 of its 743.)"""
     for dev, units in by_device.items():
-        if any(u.get("speaker_tag") and not (u.get("confidence") or {}).get("far_side") for u in units):
+        if placed.get(dev):
             continue
         for u in units:
             conf = u.get("confidence") or {}
@@ -864,7 +910,8 @@ def merge_paired(rows_by_device, sides, diagnostics=None, recordings=None):
     if diagnostics is not None:
         diagnostics["alignment"] = alignment.summary() if alignment is not None else None
         diagnostics["tolerance"] = tolerance
-    _unflag_unplaceable(by_device, sides)
+    placed = {dev: any(_places_own_side(u, sides.get(dev), names) for u in units) for dev, units in by_device.items()}
+    _unflag_unplaceable(by_device, sides, placed)
     pool = [u for units in by_device.values() for u in units]
     pool.sort(key=lambda u: (u["start_time"], u["transcript_id"]))
     reach = max((_span(u)[1] - _span(u)[0] for u in pool), default=0.0) + tolerance
@@ -918,7 +965,7 @@ def merge_paired(rows_by_device, sides, diagnostics=None, recordings=None):
         dropped.append({"transcript_id": loser["transcript_id"], "kept_transcript_id": winner["transcript_id"],
                         "reason": reason, "similarity": round(best_sim, 2)})
     if len(by_device) == 2:
-        reconcile_clusters(pool, dropped, diagnostics)
+        reconcile_clusters(pool, dropped, diagnostics, placed=placed)
     kept = _drop_covered(kept, dropped, tolerance)
     kept = sorted(kept.values(), key=lambda u: (u["start_time"], u["transcript_id"]))
     for i, u in enumerate(kept):
