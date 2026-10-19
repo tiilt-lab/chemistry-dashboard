@@ -328,8 +328,128 @@ def match_strength(u):
         return 0.5
     # A far-side match (the other team's voice, named from the partner pod's
     # roster) is this microphone hearing across the table: real, but the
-    # weaker copy whenever the near laptop has one.
-    return strength - (0.3 if conf.get("closed_world") else 0.0) - (0.3 if conf.get("far_side") else 0.0)
+    # weaker copy whenever the near laptop has one. A name the laptop gave
+    # to two clusters (duplicate_name) is a print matching two voices: a
+    # claim, not a hearing.
+    return strength - (0.3 if conf.get("closed_world") else 0.0) - (0.3 if conf.get("far_side") else 0.0) \
+        - (0.3 if conf.get("duplicate_name") else 0.0)
+
+
+RECONCILE_MIN_PAIRS = 3     # duplicate copies two clusters must share to be one voice...
+RECONCILE_MIN_LINES = 0.10  # ...covering this share of the cluster's lines (2 of 76 proves nothing)
+RECONCILE_SHARE = 0.6       # ...and that pairing's share of the cluster's duplicates
+RECONCILE_MARGIN = 0.02     # the other laptop's claim must beat this one's by this much
+
+
+def _cluster_key(u):
+    conf = u.get("confidence") or {}
+    c = conf.get("cluster")
+    return (u.get("session_device_id"), c) if c else None
+
+
+def flag_duplicate_names(units):
+    """Mark the rows of every name a laptop gave to two or more diarizer
+    clusters (confidence.duplicate_name): one print matching two voices,
+    which is how a session print cut from misnamed live rows shows itself
+    (Group 1, 2026-10-16: one laptop's print for its second student was a
+    voice from across the table, and two clusters took the name). Returns
+    {name: clusters}."""
+    clusters = {}
+    for u in units:
+        key = _cluster_key(u)
+        if key and u.get("speaker_tag"):
+            clusters.setdefault(u["speaker_tag"], set()).add(key[1])
+    dup = {n: cs for n, cs in clusters.items() if len(cs) > 1}
+    for u in units:
+        if u.get("speaker_tag") in dup and _cluster_key(u):
+            u["confidence"] = dict(u.get("confidence") or {}, duplicate_name=True)
+    return dup
+
+
+def _claim_score(rec):
+    # How much a laptop's name for a cluster is worth against the other
+    # laptop's: the print similarity, less the demotions match_strength
+    # applies; nothing for an unnamed cluster.
+    if not rec["name"]:
+        return 0.0
+    conf = rec["conf"]
+    score = float(conf.get("sim") or 0.5)
+    for flag in ("closed_world", "far_side", "duplicate_name"):
+        if conf.get(flag):
+            score -= 0.3
+    return score
+
+
+def reconcile_clusters(pool, dropped, diagnostics=None):
+    """One voice, one name, across both laptops. The duplicate copies the
+    merge matched pair this laptop's diarizer clusters with the other's;
+    a cluster whose copies mostly fall on one cluster of the other laptop
+    is that voice, and when the two laptops named it differently the
+    stronger claim (print similarity, less the demotions) names every line
+    of both clusters, lone fragments the other laptop never transcribed
+    included. Without this the kept copy's name flipped with the kept
+    laptop, mid-sentence: Group 1 of session 434 showed 41 such flips.
+    Relabelled lines carry confidence.reconciled_from."""
+    by_id = {u["transcript_id"]: u for u in pool}
+    members, pairs = {}, {}
+    for u in pool:
+        key = _cluster_key(u)
+        if key:
+            members.setdefault(key, []).append(u)
+    for d in dropped:
+        if d.get("reason") != "duplicate":
+            continue
+        a, b = by_id.get(d["transcript_id"]), by_id.get(d["kept_transcript_id"])
+        ka, kb = (_cluster_key(a) if a else None), (_cluster_key(b) if b else None)
+        if not ka or not kb or ka[0] == kb[0]:
+            continue
+        pairs.setdefault(ka, {}).setdefault(kb, 0)
+        pairs[ka][kb] += 1
+        pairs.setdefault(kb, {}).setdefault(ka, 0)
+        pairs[kb][ka] += 1
+
+    def record(key):
+        us = members[key]
+        names = {}
+        for u in us:
+            names[u.get("speaker_tag")] = names.get(u.get("speaker_tag"), 0) + 1
+        name = max(names, key=lambda n: (names[n], n is not None)) if names else None
+        named = [u for u in us if u.get("speaker_tag") == name] or us
+        teams = {}
+        for u in named:
+            teams[u.get("team")] = teams.get(u.get("team"), 0) + 1
+        return {"name": name, "conf": named[0].get("confidence") or {},
+                "team": max(teams, key=teams.get) if teams else None}
+
+    changes = []
+    decided = {}
+    for key, partners in pairs.items():
+        total = sum(partners.values())
+        partner, n = max(partners.items(), key=lambda kv: kv[1])
+        if n < RECONCILE_MIN_PAIRS or n / float(total) < RECONCILE_SHARE \
+                or n < RECONCILE_MIN_LINES * len(members[key]):
+            continue
+        mine, theirs = record(key), record(partner)
+        if not theirs["name"] or theirs["name"] == mine["name"]:
+            continue
+        if _claim_score(theirs) - _claim_score(mine) < RECONCILE_MARGIN:
+            continue
+        decided[key] = (mine, theirs, n)
+    for key, (mine, theirs, n) in decided.items():
+        for u in members[key]:
+            if u.get("speaker_tag") == theirs["name"]:
+                continue
+            u["confidence"] = dict(u.get("confidence") or {}, reconciled_from=u.get("speaker_tag"))
+            u["speaker_tag"] = theirs["name"]
+            if theirs["team"]:
+                u["team"] = theirs["team"]
+        changes.append({"session_device_id": key[0], "cluster": key[1], "from": mine["name"],
+                        "to": theirs["name"], "lines": len(members[key]), "pairs": n})
+        logging.info("paired merge: cluster %s of pod %s (%s, %d lines) is %s: %d duplicate copies agree",
+                     key[1], key[0], mine["name"], len(members[key]), theirs["name"], n)
+    if diagnostics is not None:
+        diagnostics["reconciled"] = changes
+    return changes
 
 
 def _prefer(a, b):
@@ -658,6 +778,7 @@ def merge_paired(rows_by_device, sides, diagnostics=None, recordings=None):
                 # from the partner's roster belongs to the other side.
                 team = line_team(r, sides, None, names)
             units.append(_utterance(r, team))
+        flag_duplicate_names(units)
         by_device[device_id] = units
     tolerance = PAIR_START_TOLERANCE
     alignment = None
@@ -726,6 +847,8 @@ def merge_paired(rows_by_device, sides, diagnostics=None, recordings=None):
         kept.setdefault(winner["transcript_id"], winner)
         dropped.append({"transcript_id": loser["transcript_id"], "kept_transcript_id": winner["transcript_id"],
                         "reason": reason, "similarity": round(best_sim, 2)})
+    if len(by_device) == 2:
+        reconcile_clusters(pool, dropped, diagnostics)
     kept = _drop_covered(kept, dropped, tolerance)
     kept = sorted(kept.values(), key=lambda u: (u["start_time"], u["transcript_id"]))
     for i, u in enumerate(kept):
@@ -1738,6 +1861,7 @@ def group_line(u):
             "speaker_id": u.get("speaker_id"), "question": bool(u.get("question")),
             "team": u.get("team"), "far_side": bool(conf.get("far_side")),
             "speaker_confidence": conf.get("percent"), "adopted": bool(u.get("adopted")),
+            "reconciled_from": conf.get("reconciled_from"),
             "stitched_from": list(u.get("stitched_from") or []),
             "merged_from": list(u.get("merged_from") or [])}
     if u.get("device_start_time") is not None:
