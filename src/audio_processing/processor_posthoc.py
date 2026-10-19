@@ -15,7 +15,6 @@ import reactor_safety  # reactor/thread boundary; src/common bootstrapped above
 import time
 import glob
 import os
-import uuid
 import logging
 import threading
 import callbacks
@@ -31,7 +30,7 @@ import numpy as np
 from joblib import load
 from topic_modeling.topic_modeling import preprocess_transcript
 import config as cf
-from processing_common import select_topic_id, save_embeddings, load_embeddings
+from processing_common import select_topic_id, save_embeddings, prepare_embeddings
 from completion_latch import CompletionLatch
 from posthoc_staging import RunStaging, PREEMPTED, CANCELLED, batches  # src/common
 from asr_connectors.base_asr import AsrFailed
@@ -425,10 +424,22 @@ class AudioProcessorPosthoc:
         milliseconds = int((t % 1) * 1000)
         return '{0}:{1}:{2}:{3}'.format(str(hours).zfill(2), str(minutes).zfill(2), str(seconds).zfill(2), str(milliseconds).zfill(4))
 
+    def _prepare_embeddings(self):
+        # The run's embeddings list and file, settled here on the processing
+        # thread before the pool sees an utterance (processing_common
+        # .prepare_embeddings explains the race this replaces).
+        if not self.config.diarization:
+            return
+        emb_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'embeddings')
+        with self._embeddings_lock:
+            self.embeddings, self.embeddings_file = prepare_embeddings(
+                self.embeddings_file, self.config.auth_key, emb_dir)
+
     def process(self):
         logging.info('Processing thread started for {0}.'.format(
             self.config.auth_key))
         self.embeddings_file = self.config.embeddings_file
+        self._prepare_embeddings()
         while not self.asr_complete:
             transcript_data = self.transcript_queue.get()
             if transcript_data is None:
@@ -579,27 +590,12 @@ class AudioProcessorPosthoc:
                     })
             else:
                 if self.config.diarization:
-                    if len(self.embeddings) == 0 and self.embeddings_file is not None:
-                        try:
-                            # Shared loader (processing_common): object array,
-                            # allow_pickle required, or resume restarts from [].
-                            self.embeddings = load_embeddings(self.embeddings_file)
-                        except Exception as e:
-                            logging.error(
-                                "Unable to load embeddings file: %s", e)
-                            self.embeddings = []
-                    elif self.embeddings_file is None:
-                        # Absolute path + auth_key + random suffix: the old
-                        # CWD-relative second-granular name collided when two
-                        # pods started the same second.
-                        emb_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'embeddings')
-                        os.makedirs(emb_dir, exist_ok=True)
-                        self.embeddings_file = os.path.join(
-                            emb_dir, '{0}-{1}.npy'.format(self.config.auth_key, uuid.uuid4().hex[:8]))
+                    # The list and its file were settled once in process()
+                    # (_prepare_embeddings); workers only append, under the
+                    # lock. Saved once at completion (send_speaker_taggings):
+                    # the old per-utterance re-save of the whole array was
+                    # O(n²) disk writes.
                     embedding = embedSignal(audio_data, self.diarization_model)
-                    # Saved once at completion (send_speaker_taggings) — the
-                    # old per-utterance re-save of the whole array was O(n²)
-                    # disk writes.
                     with self._embeddings_lock:
                         self.embeddings.append({
                             'embedding': embedding,

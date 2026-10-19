@@ -197,8 +197,11 @@ def test_server_handles_stamped_frames_and_the_timeline():
     assert "delta = self.clock.stamped_frame(stamped, counted)" in src
     assert "self.timeline.write(asr_data, self.config.capture_origin + stamp)" in src
     assert "self.timeline.finalize()" in src and "'timeline': True" in src
-    # fingerprint blobs are never mistaken for stamped frames
-    assert "not (self.running and self.awaitingSpeakers and self.currSpeaker)" in src
+    # fingerprint blobs are never mistaken for stamped frames: the take that
+    # follows a 'speaker' message is stored before the live branch reads a
+    # stamp, before the first 'done' and for a late arrival alike
+    take = "if self.stream_data == 'audio' and self.running and self.currSpeaker:"
+    assert take in src and src.index(take) < src.index("stamp, payload = self._split_stamp(data)")
     with open(os.path.join(here, "..", "src", "audio_processing", "processing_config.py")) as f:
         cfg = f.read()
     assert "config.frame_timestamps = res['frame_timestamps']" in cfg

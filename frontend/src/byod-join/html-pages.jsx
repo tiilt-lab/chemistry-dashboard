@@ -394,12 +394,10 @@ function ByodJoinPage(props) {
                             title={props.pageTitle}
                             leftText={false}
                             rightText={"Options"}
-                            rightTextClick={() =>
-                                props.joinwith === "Video" ||
-                                    props.joinwith === "Videocartoonify"
-                                    ? props.openDialog("Options")
-                                    : props.openDialog("")
-                            }
+                            // Every join mode: "Add a participant" lives in
+                            // this dialog, and audio joins (the default) used
+                            // to get an empty dialog instead (2026-10-19).
+                            rightTextClick={() => props.openDialog("Options")}
                             nav={() => props.navigateToLogin()}
                         />
                         {props.joinPhase === "form" && (
@@ -703,6 +701,11 @@ function ByodJoinPage(props) {
                                                                 speaker={speaker}
                                                                 onCommit={props.inlineRenameSpeaker}
                                                             />
+                                                            {speaker.printSaved && (
+                                                                <span className="text-xs text-tiilt-muted">
+                                                                    Voice print saved to this profile
+                                                                </span>
+                                                            )}
                                                             <PolarStrapControl
                                                                 speaker={speaker}
                                                                 supported={props.bluetoothSupported}
@@ -1056,12 +1059,15 @@ function ByodJoinPage(props) {
                             <div className={style2["dialog-heading"]}>
                                 Session Options
                             </div>
-                            <button
-                                className={style2["basic-button"]}
-                                onClick={props.togglePreview}
-                            >
-                                {props.previewLabel}
-                            </button>
+                            {(props.joinwith === "Video" ||
+                                props.joinwith === "Videocartoonify") && (
+                                <button
+                                    className={style2["basic-button"]}
+                                    onClick={props.togglePreview}
+                                >
+                                    {props.previewLabel}
+                                </button>
+                            )}
                             <button
                                 className={style2["basic-button"]}
                                 title="Someone joined your group late? Add a card and record their voice; they are picked up from now on."
@@ -1086,12 +1092,16 @@ function ByodJoinPage(props) {
                                     : ""}
                             </div>
                             <div className="px-2 text-left text-xs leading-relaxed text-tiilt-muted">
-                                Talk naturally for at least 15 seconds — say
+                                Talk naturally for at least 10 seconds — say
                                 your name, what you&apos;re working on, or how
                                 your day is going, in your normal speaking
                                 voice. Don&apos;t read from a script: natural
                                 talking matches discussion speech best, and
-                                pauses and &quot;um&quot;s are fine.
+                                pauses and &quot;um&quot;s are fine. If this
+                                card carries your registered username and you
+                                have no voice print yet, the take is saved as
+                                your print too, so next time typing your name
+                                is enough.
                             </div>
                             <VoiceRecorder
                                 onAudioDownload={props.saveAudioFingerprint}
@@ -1178,7 +1188,7 @@ function ByodJoinPage(props) {
 
             <DialogBox
                 itsclass={"add-dialog"}
-                heading={"Session ended"}
+                heading={props.closedHeading || "Session ended"}
                 message={props.displayText || "You have left the session."}
                 show={props.currentForm === "ClosedSession"}
                 closedialog={props.closeDialog}

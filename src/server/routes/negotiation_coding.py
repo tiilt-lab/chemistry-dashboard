@@ -261,8 +261,12 @@ def export_session_transcript(session_id, **kwargs):
         for t in database.get_transcripts(session_device_id=device.id):
             conf = negotiation_coding._attribution_confidence(t) or {}
             status, kept_as, code = (fate.get(t.id) if fate is not None else None) or ('uncoded', None, None)
-            team = negotiation_coding.line_team(t, sides, run.teams_dict() if run is not None else None, names) \
-                if run is not None else ''
+            if code is not None:
+                team = code.get('team') or ''       # the team the run coded it under
+            elif run is not None:
+                team = negotiation_coding.line_team(t, sides, run.teams_dict(), names)
+            else:
+                team = ''
             values = [';'.join(code[d]) if isinstance(code.get(d), list) else (code.get(d) or '') for d in dims] \
                 if code else [''] * len(dims)
             writer.writerow([getattr(device, 'negotiation_group', None) or '', device.name or 'Pod %s' % device.id,

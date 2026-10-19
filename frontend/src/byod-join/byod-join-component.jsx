@@ -166,6 +166,9 @@ function JoinPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentForm])
     const [displayText, setDisplayText] = useState("")
+    // Heading of the "ClosedSession" dialog: "Session concluded" when the
+    // recording ended cleanly and was sent, "Session ended" for the error paths.
+    const [closedHeading, setClosedHeading] = useState("Session ended")
     const [pageTitle, setPageTitle] = useState("Join Session")
     const [prevSessionId, setPrevSessionId] = useState(-1)
     const [pcode, setPcode] = useState("")
@@ -1176,8 +1179,13 @@ function JoinPage() {
             if ((name || "").trim()) {
                 await attachIdentity(speaker, name)
             }
+            // addLateParticipant opens the recorder for the returned slot;
+            // without this return it always took its "nothing added" branch
+            // and the late speaker was never enrolled (2026-10-19 sweep).
+            return speaker
         } catch (apierror) {
             console.error("byod-join-component func: addSpeakerSlot ", apierror)
+            return null
         }
     }
 
@@ -1203,7 +1211,17 @@ function JoinPage() {
             // shouldn't fail because the lookup was unreachable.
             if (requireEnrolled) return "lookup-failed"
         }
-        const enrolled = !!(profile && profile.biometric_captured)
+        // voice_enrolled is the API's "a print is on file" (also true for a
+        // print saved from a join-page take); biometric_captured is the
+        // string "yes" / "no" (tables/student.py). The old truthiness test
+        // took every registered name for an enrolled one, and the server's
+        // "no such print" reply was only logged.
+        const captured = profile ? profile.biometric_captured : null
+        const enrolled = profile
+            ? typeof profile.voice_enrolled === "boolean"
+                ? profile.voice_enrolled
+                : captured === true || captured === "yes"
+            : false
         if (requireEnrolled && !enrolled) {
             return profile ? "not-enrolled" : "unknown"
         }
@@ -1592,7 +1610,36 @@ function JoinPage() {
     // dialog to reopen anymore). The speaker still exists; their utterances
     // are matched posthoc instead.
     const onSavedFingerprintFailed = (message) => {
-        console.warn("saved fingerprint failed:", message)
+        const text = typeof message === "string" ? message : message?.message
+        console.warn("saved fingerprint failed:", text)
+        const id = message && typeof message === "object" ? message.id : undefined
+        if (id === undefined || id === null) return
+        // The card showed a check mark for a print the server could not
+        // find; show the truth so someone records one for this speaker.
+        setSpeakers(
+            (speakers.current || []).map((s) =>
+                String(s.id) === String(id) ? { ...s, fingerprinted: false } : s,
+            ),
+        )
+        pendingFingerprints.current = pendingFingerprints.current.filter(
+            (f) => String(f.id) !== String(id),
+        )
+    }
+
+    // The audio service kept a join-page take as the student's voice print
+    // (the card's name was a registered username without one): say so on
+    // the card. A take it did not keep changes nothing here; the live
+    // session still uses it.
+    const onQuickEnrollment = (message) => {
+        if (!message || !message.saved) {
+            console.warn("join-page take not saved as a voice print:", message?.message || "")
+            return
+        }
+        setSpeakers(
+            (speakers.current || []).map((s) =>
+                String(s.id) === String(message.id) ? { ...s, printSaved: true } : s,
+            ),
+        )
     }
 
     // Delivered shape of the camera track feeding the recorder ({w, h},
@@ -1965,18 +2012,15 @@ function JoinPage() {
     const endRecording = async () => {
         setArmed(false)
         await flushAndDrainVideo()
-        // Go straight to this pod's overview page instead of the dead-end
-        // "recording ended" screen (which rendered as a mostly blank page).
-        // Capture the ids before disconnect clears the session state; if
-        // they're somehow gone, fall back to the old closed screen.
-        const sid = session && session.id
-        const did = sessionDevice && sessionDevice.id
         disconnect(true)
-        if (sid && did) {
-            return navigate(`/sessions/${sid}/pods/${did}`)
-        }
+        // Say so, in place. This used to navigate to the pod's overview page,
+        // which is an instructor page: a student with no account landed on
+        // the login screen with no word on whether the recording made it
+        // (2026-10-19). Dismissing returns to the join form, identity kept.
+        setClosedHeading("Session concluded")
         setDisplayText(
-            "This pod's recording has ended. You can close this page, or join again to record more.",
+            "This pod's recording has been sent to the server and the session is closed on this device. " +
+                "You can close this page now, or join again to record more.",
         )
         setCurrentForm("ClosedSession")
     }
@@ -2195,7 +2239,9 @@ function JoinPage() {
                 // already marked ready when the attach was queued.
             } else if (message['type'] === 'registeredfingerprintfailed') {
                 console.error("saved fingerprint failed (audio): " + message["message"])
-                onSavedFingerprintFailed(message["message"])
+                onSavedFingerprintFailed(message)
+            } else if (message['type'] === 'quick_enrollment') {
+                onQuickEnrollment(message)
             } else if (message["type"] === "asr_status") {
                 // Server-side transcription health. Degraded = the live
                 // transcript will lag; the recording itself is unaffected.
@@ -2217,7 +2263,11 @@ function JoinPage() {
                 // ending must not discard footage already recorded.
                 flushAndDrainVideo().finally(() => {
                     disconnect(true)
-                    setDisplayText("The session has been closed by the owner.")
+                    setClosedHeading("Session concluded")
+                    setDisplayText(
+                        "The instructor has ended the session. This pod's recording has been sent to the server. " +
+                            "You can close this page now.",
+                    )
                     setCurrentForm("ClosedSession")
                 })
             }
@@ -2259,7 +2309,7 @@ function JoinPage() {
                     // update — the card was marked ready at queue time.
                 } else if (message['type'] === 'registeredfingerprintfailed') {
                     console.error("saved fingerprint failed (video): " + message["message"])
-                    onSavedFingerprintFailed(message["message"])
+                    onSavedFingerprintFailed(message)
                 } else if (message['type'] === 'error') {
                     disconnect(true);
                     setDisplayText(message["message"]);
@@ -2268,7 +2318,11 @@ function JoinPage() {
                 } else if (message['type'] === 'end') {
                     flushAndDrainVideo().finally(() => {
                         disconnect(true);
-                        setDisplayText('The session has been closed by the owner.');
+                        setClosedHeading("Session concluded")
+                        setDisplayText(
+                            "The instructor has ended the session. This pod's recording has been sent to the server. " +
+                                "You can close this page now.",
+                        )
                         setCurrentForm('ClosedSession');
                     });
                 } else if (message['type'] === 'no_video_data' ||
@@ -2707,6 +2761,7 @@ function JoinPage() {
             setPrevSessionId(-1)
             ending.current = false
             constraintObjRefReset()
+            setClosedHeading("Session ended")
         }
         setCurrentForm("")
     }
@@ -2815,6 +2870,7 @@ function JoinPage() {
             closeDialog={closeDialog}
             currentForm={currentForm}
             displayText={displayText}
+            closedHeading={closedHeading}
             navigateToLogin={navigateToLogin}
             pageTitle={pageTitle}
             requestHelp={requestHelp}

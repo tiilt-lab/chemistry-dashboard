@@ -188,6 +188,17 @@ def test_enqueue_status_clear_use_the_redis_list_and_hashes(q, fake):
     assert fake.exists("posthoc_queue:job:1") == 0
 
 
+def test_clear_pending_scoped_to_device_ids_leaves_other_sessions_alone(q, fake):
+    # The session stop route passes its own pods; another session's queue
+    # must survive (one Stop button used to clear every tenant's jobs).
+    q.enqueue(1, [10, 11])
+    q.enqueue(2, [20])
+    assert q.clear_pending(device_ids={10, 11}) == 2
+    assert [(j["session_id"], j["device_id"]) for j in q.status()] == [(2, 20)]
+    assert q.clear_pending(device_ids=[99]) == 0
+    assert q.clear_pending() == 1
+
+
 def test_running_job_survives_clear_and_is_requeued_after_a_restart(q):
     q.enqueue(1, [10])
     job = q._all_jobs()[0]
@@ -384,6 +395,28 @@ def test_coordinator_unit_mirrors_the_api_unit():
         assert execstart.endswith("/src/venv-unified/bin/python src/server/coordinator.py"), execstart
         assert "DC_ROLE=coordinator" not in api
         assert "DC_DEVICE_WS_PORT" not in api or "coordinator" in api  # the API no longer binds 9011
+
+
+def test_nginx_configs_set_host_once_per_location():
+    # proxy_params already sets Host; a location that includes it and sets
+    # Host again makes nginx send two Host headers, which gunicorn rejects:
+    # 400 on every /socket.io upgrade, no dashboard page ever loads (the
+    # 2026-09-30 outage; Socket.IO has no polling fallback). Every committed
+    # nginx file, location block by location block.
+    confs = []
+    for root, _dirs, files in os.walk(os.path.join(REPO, "deploy")):
+        confs += [os.path.join(root, f) for f in files if f.endswith(".conf") and "nginx" in f]
+    assert confs
+    for path in confs:
+        text = _read(os.path.relpath(path, REPO))
+        for m in re.finditer(r"location\s+[^{]+\{", text):
+            depth, i = 1, m.end()
+            while depth and i < len(text):
+                depth += {"{": 1, "}": -1}.get(text[i], 0)
+                i += 1
+            block = re.sub(r"#[^\n]*", "", text[m.end():i])
+            if re.search(r"^\s*include\s+proxy_params;", block, re.M):
+                assert not re.search(r"^\s*proxy_set_header\s+Host\b", block, re.M), (path, m.group(0))
 
 
 def test_socketio_is_websocket_only_on_both_ends():

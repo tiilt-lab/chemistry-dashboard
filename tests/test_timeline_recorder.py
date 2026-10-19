@@ -1,4 +1,5 @@
 """src/audio_processing/timeline_recorder.py: one track per pod, gaps as silence."""
+import json
 import os
 import sys
 import wave
@@ -45,14 +46,48 @@ def test_a_reconnect_appends_to_the_same_track_and_the_wav_is_refreshed(tmp_path
     first.write(tone(2.0, 7), 50.0)
     first.finalize()
     assert len(read(base + ".wav")) == 2 * SR
-    # the next connection: a new recorder object on the same files
+    # the first write recorded where the track begins, beside the .dat
+    assert json.load(open(base + ".start"))["start"] == 50.0
+    # the next connection in a NEW process (a service restart mid-session):
+    # a new recorder object on the same files recovers the start, so the
+    # reconnect's frames land after the existing audio, not over it
     second = tr.TimelineRecorder(base)
-    assert second.samples == 2 * SR and second.start is None
-    second.start = first.start                 # the registry keeps the object alive in practice
+    assert second.samples == 2 * SR and second.start == 50.0
     second.write(tone(1.0, 8), 53.0)           # 1 s gap after 52
     second.finalize()
     x = read(base + ".wav")
     assert len(x) == 4 * SR and x[2 * SR] == 0 and x[3 * SR] == 8
+    assert abs(second.end - 54.0) < 1e-6
+
+
+def test_a_track_whose_start_is_unknown_is_set_aside_not_appended_to(tmp_path):
+    # A .dat from a process that crashed before writing .start or a clock
+    # sidecar: appending would stamp its first sample at the reconnect time
+    # and drop the next frames as overlap (2026-10-19 sweep P1 #5).
+    base = str(tmp_path / "k_timeline_redu")
+    with open(base + ".dat", "wb") as f:
+        f.write(tone(2.0, 7))
+    rec = tr.TimelineRecorder(base)
+    assert rec.samples == 0 and rec.start is None
+    assert not os.path.exists(base + ".dat")
+    assert any(".orphan-" in name for name in os.listdir(str(tmp_path)))
+    rec.write(tone(1.0, 8), 200.0)
+    rec.finalize()
+    assert rec.start == 200.0 and len(read(base + ".wav")) == SR
+
+
+def test_the_clock_sidecar_recovers_a_start_without_a_start_file(tmp_path):
+    # Tracks written before the .start file existed ended cleanly with a
+    # recording_sidecar beside them; its start_offset is the same number.
+    base = str(tmp_path / "k_timeline_redu")
+    with open(base + ".dat", "wb") as f:
+        f.write(tone(2.0, 7))
+    with open(base + ".clock.json", "w") as f:
+        json.dump({"start_offset": 50.0, "moves": []}, f)
+    rec = tr.TimelineRecorder(base)
+    assert rec.start == 50.0 and rec.samples == 2 * SR
+    rec.write(tone(1.0, 8), 53.0)
+    assert abs(rec.end - 54.0) < 1e-6 and rec.samples == 4 * SR
 
 
 def test_registry_returns_one_recorder_per_pod(tmp_path):

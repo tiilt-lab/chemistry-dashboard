@@ -1654,8 +1654,8 @@ def line_team(transcript, sides=None, teams=None, names=TEAMS):
 
 def code_row(code, transcript, teams=None, sides=None, names=TEAMS):
     # One entry of the API's "codes" list: the utterance, its codes (one key
-    # per dimension of the run's scheme), its team (line_team) and whether
-    # the device heard it from across the table.
+    # per dimension of the run's scheme), its team and whether the device
+    # heard it from across the table.
     device_id = transcript.session_device_id
     conf = _attribution_confidence(transcript)
     values = dict(code.values())
@@ -1666,18 +1666,48 @@ def code_row(code, transcript, teams=None, sides=None, names=TEAMS):
     # An unnamed fragment the stitcher gave to the speaker around it was
     # coded, and is shown, under that name.
     adopted = values.pop("_speaker", None)
+    # Runs since 2026-10-19 store the attribution the model saw: the speaker
+    # after reconcile_clusters, the team the merge settled on, the start on
+    # the aligned clock. The raw transcript row knows none of that, so the
+    # read-back used to disagree with the summary (and a re-roll rewrote the
+    # summary to match the raw rows). Older runs fall back to the row.
+    stored = "_speaker_tag" in values
+    tag = values.pop("_speaker_tag", None)
+    coded_team = values.pop("_team", None)
+    start = values.pop("_start", None)
+    length = values.pop("_length", None)
+    values.pop("_device", None)
+    speaker_tag = tag if stored else (transcript.speaker_tag or adopted)
+    side = (sides or {}).get(device_id)
+    if stored and coded_team is not None and side in names:
+        team = coded_team                            # paired: the side the run coded it under
+    elif stored:
+        team = team_of(speaker_tag or "", teams, names)   # single pod: the assignment, at read time
+    else:
+        team = line_team(transcript, sides, teams, names)
     row = {"transcript_id": transcript.id, "session_device_id": device_id,
-           "start_time": transcript.start_time, "length": transcript.length,
-           "speaker_tag": transcript.speaker_tag or adopted,
+           "start_time": start if (stored and start is not None) else transcript.start_time,
+           "length": length if (stored and length is not None) else transcript.length,
+           "speaker_tag": speaker_tag,
            "adopted": bool(adopted and not transcript.speaker_tag),
            "text": presented if presented else transcript.transcript,
-           "team": line_team(transcript, sides, teams, names),
+           "team": team,
            "far_side": bool(conf and conf.get("far_side")),
            "closed_world": bool(conf and conf.get("closed_world")),
            "match_sim": conf.get("sim") if conf else None,
            "stitched_from": stitched}
     row.update(values)
     return row
+
+
+def coded_rows(run_id, teams=None, sides=None, names=TEAMS):
+    """The run's code_row dicts in the order the model saw them: by the
+    stored aligned start (older runs: the row's own clock), then transcript
+    id. One list for the panel, the exports and the re-roll."""
+    import database
+    rows = [code_row(c, t, teams, sides, names) for c, t in database.get_negotiation_codes(run_id)]
+    rows.sort(key=lambda r: (float(r.get("start_time") or 0.0), r["transcript_id"]))
+    return rows
 
 
 def _side_of(device, names=TEAMS):
@@ -1868,7 +1898,7 @@ def recompute_summary(run, teams, codebook=None):
         names = run_names(run)
         sides = run_sides(run, names)
         codebook = codebook or codebook_for_device(run.session_device_id)
-        codes = [code_row(c, t, teams, sides, names) for c, t in database.get_negotiation_codes(run.id)]
+        codes = coded_rows(run.id, teams, sides, names)
         previous = run.summary_dict() or {}
         extra = {"pods": run_pods(run, sides), "cross_talk": previous.get("cross_talk")}
         fields["summary"] = summarize(codes, teams, codebook, extra, names)
@@ -1894,8 +1924,7 @@ def run_payload(run, with_codes=True):
                "team_names": list(names), "pods": pods, "waiting_for": audio_gate(waiting),
                "teams": run.teams_dict(), "summary": run.summary_dict()}
     if with_codes:
-        teams = payload["teams"]
-        payload["codes"] = [code_row(c, t, teams, sides, names) for c, t in database.get_negotiation_codes(run.id)]
+        payload["codes"] = coded_rows(run.id, payload["teams"], sides, names)
     return payload
 
 

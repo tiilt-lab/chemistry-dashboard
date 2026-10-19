@@ -13,9 +13,19 @@ and the .wav is refreshed at every disconnect.
 
 Pure file I/O, no Twisted; the registry keeps one recorder per processing
 key for the life of the process.
+
+The session time of sample 0 is written beside the .dat (``<base>.start``)
+at the first write, and read back when a later process finds the .dat: a
+service restart mid-session used to pick the track up with ``start`` unset,
+stamp the reconnect's time on a track that began minutes earlier, drop the
+next frames as "overlap" and hand the post-hoc run a sidecar minutes off
+(2026-10-19 sweep P1 #5). A .dat whose start cannot be recovered (no .start,
+no clock sidecar) is set aside and a new track begun.
 """
+import json
 import logging
 import os
+import time
 
 import numpy as np
 from scipy.io import wavfile
@@ -30,11 +40,58 @@ class TimelineRecorder(object):
         self.base = base
         self.dat = base + '.dat'
         self.wav = base + '.wav'
+        self.start_file = base + '.start'
         self.sample_rate = int(sample_rate)
         self.start = None        # session seconds of sample 0
         self.samples = 0         # samples written so far
         if os.path.exists(self.dat):
             self.samples = os.path.getsize(self.dat) // 2
+            if self.samples:
+                self.start = self._recover_start()
+                if self.start is None:
+                    self._set_aside()
+
+    def _recover_start(self):
+        """The session time of sample 0 of an existing track: the .start
+        written at its first write, else the clock sidecar the service wrote
+        at its last clean disconnect (recording_sidecar: <base>.clock.json)."""
+        for path, key in ((self.start_file, 'start'), (self.base + '.clock.json', 'start_offset')):
+            try:
+                with open(path) as f:
+                    value = json.load(f)
+            except (OSError, ValueError):
+                continue
+            if isinstance(value, dict):
+                value = value.get(key)
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                continue
+        return None
+
+    def _set_aside(self):
+        """Rename a track whose start is unknown out of the way and begin a
+        new one: appending to it would misplace every later sample."""
+        stamp = time.strftime('%Y%m%d-%H%M%S')
+        for path in (self.dat, self.wav):
+            if os.path.exists(path):
+                root, ext = os.path.splitext(path)
+                try:
+                    os.replace(path, '%s.orphan-%s%s' % (root, stamp, ext))
+                except OSError:
+                    logging.exception('timeline %s: could not set aside %s', self.base, path)
+        logging.warning('timeline %s: existing track had no recoverable start; set aside, starting a new one',
+                        self.base)
+        self.samples = 0
+
+    def _write_start(self):
+        tmp = self.start_file + '.tmp'
+        try:
+            with open(tmp, 'w') as f:
+                json.dump({'start': self.start, 'sample_rate': self.sample_rate}, f)
+            os.replace(tmp, self.start_file)
+        except OSError:
+            logging.exception('timeline %s: could not write the start file', self.base)
 
     @property
     def end(self):
@@ -47,6 +104,7 @@ class TimelineRecorder(object):
         n = len(pcm16) // 2
         if self.start is None:
             self.start = float(session_time)
+            self._write_start()
         gap = float(session_time) - self.end
         if gap > MAX_GAP_SECONDS:
             logging.warning('timeline %s: %.0f s gap looks like a clock fault; skipping the padding', self.base, gap)

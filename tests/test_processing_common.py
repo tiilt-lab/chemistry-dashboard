@@ -14,7 +14,34 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src", "audio_processing"))
 
-from processing_common import select_topic_id, save_embeddings, load_embeddings  # noqa: E402
+from processing_common import select_topic_id, save_embeddings, load_embeddings, prepare_embeddings  # noqa: E402
+
+
+def test_prepare_embeddings_mints_one_absolute_file_for_a_fresh_run(tmp_path):
+    # No resume file: an empty list and a new name under the embeddings dir,
+    # unique per call (two pods starting the same second used to collide).
+    emb, path = prepare_embeddings(None, "12-abcd", str(tmp_path / "embeddings"))
+    assert emb == [] and os.path.isabs(path) and path.startswith(str(tmp_path / "embeddings"))
+    assert os.path.basename(path).startswith("12-abcd-") and path.endswith(".npy")
+    assert not os.path.exists(path)                        # saved once, at completion
+    assert prepare_embeddings(None, "12-abcd", str(tmp_path / "embeddings"))[1] != path
+
+
+def test_prepare_embeddings_loads_a_resume_file_and_keeps_its_name(tmp_path):
+    path = str(tmp_path / "resume.npy")
+    save_embeddings(path, [{"embedding": np.zeros(3), "start": 1.0, "end": 2.0}])
+    emb, kept = prepare_embeddings(path, "12-abcd", str(tmp_path))
+    assert kept == path and len(emb) == 1 and emb[0]["start"] == 1.0
+    emb.append({"start": 3.0})                              # a list the workers can append to
+
+
+def test_prepare_embeddings_starts_empty_when_the_resume_file_is_missing_or_bad(tmp_path):
+    missing = str(tmp_path / "gone.npy")
+    assert prepare_embeddings(missing, "k", str(tmp_path)) == ([], missing)
+    bad = str(tmp_path / "bad.npy")
+    with open(bad, "wb") as f:
+        f.write(b"not an npy file")
+    assert prepare_embeddings(bad, "k", str(tmp_path)) == ([], bad)
 
 
 def test_select_topic_id_picks_argmax_not_last_positive():
@@ -72,7 +99,9 @@ def test_both_processors_use_the_shared_helpers_not_inline_copies():
         assert "from processing_common import" in text, f"{mod}: must import shared helpers"
         assert "select_topic_id(" in text, f"{mod}: must use shared topic argmax"
         assert "save_embeddings(" in text, f"{mod}: must use shared embeddings save"
-        assert "load_embeddings(" in text, f"{mod}: must use shared embeddings load"
+        # The load runs once per run through prepare_embeddings (which calls
+        # load_embeddings); the processors no longer load inline.
+        assert "prepare_embeddings(" in text, f"{mod}: must use shared embeddings preparation"
         # The inline copies (drift sources) must be gone.
         assert "dtype=object" not in text, f"{mod}: inline object-array save re-appeared"
         assert "allow_pickle" not in text.replace(

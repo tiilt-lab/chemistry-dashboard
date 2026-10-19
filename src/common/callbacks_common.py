@@ -32,6 +32,13 @@ def callback_base(url):
     return url.rsplit('/', 1)[0]
 
 
+def api_root(callback_base_url):
+    """The /api/v1 root above a callback base: for the few non-callback
+    routes a service reads (the student lookup behind the join page's
+    expedited enrollment)."""
+    return callback_base_url.rsplit('/', 1)[0]
+
+
 def post_json_ok(url, payload, name):
     """POST json and return whether the server answered 200; log-and-return
     False on any error. This is the try/post/status==200/except idiom that was

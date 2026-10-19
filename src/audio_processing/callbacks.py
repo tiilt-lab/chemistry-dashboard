@@ -155,6 +155,27 @@ def post_connect(source):
     return body if isinstance(body, dict) else {}
 
 
+def get_student(alias):
+    """The registered student record for ``alias`` (GET
+    /api/v1/student/getstudentbyid, the lookup the join page itself makes),
+    or None when there is none or the API could not be reached. Decides
+    whether a join-page take may become that student's voice print."""
+    url = callbacks_common.api_root(_callback_base()) + '/student/getstudentbyid/' \
+        + urllib.parse.quote(str(alias), safe='')
+    try:
+        response = requests.get(url, timeout=callbacks_common.CALLBACK_TIMEOUT)
+    except requests.RequestException as e:
+        logging.warning('student lookup for the join-page take failed: %s', e)
+        return None
+    if response.status_code != 200:
+        return None
+    try:
+        data = response.json()
+    except ValueError:
+        return None
+    return data if isinstance(data, dict) and data.get('username') else None
+
+
 def get_naming_rows(source):
     """This pod's and its partner's transcript rows with the live names and
     confidences (callback naming_rows), or None when the API could not be

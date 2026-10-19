@@ -22,6 +22,19 @@ export function clientProcessingKey() {
     }
 }
 
+// A query string for a GET/DELETE's parameters: fetch sends no body on
+// those verbs, so filters passed as "data" (log_type, the device filters)
+// used to be dropped on the floor and the server saw none of them.
+export function queryString(params) {
+    if (!params || typeof params !== "object" || params instanceof FormData) return ""
+    const q = new URLSearchParams()
+    for (const [key, value] of Object.entries(params)) {
+        if (value === undefined || value === null) continue
+        q.append(key, typeof value === "object" ? JSON.stringify(value) : String(value))
+    }
+    return q.toString()
+}
+
 // Append the key to a media URL when present: "url" -> "url?key=..."
 export function withClientKey(url) {
     const key = clientProcessingKey()
@@ -108,10 +121,14 @@ export class ApiService {
             headers: this._generateHeaders(headers || {}, data),
             redirect: "follow",
         }
-        if (data !== undefined && method !== "GET" && method !== "DELETE") {
+        let path = apipath
+        if (method === "GET" || method === "DELETE") {
+            const query = queryString(data)
+            if (query) path += (path.includes("?") ? "&" : "?") + query
+        } else if (data !== undefined) {
             options.body = data instanceof FormData ? data : JSON.stringify(data)
         }
-        return fetch(this.getEndpoint() + apipath, options)
+        return fetch(this.getEndpoint() + path, options)
     }
 
     get(apipath, headers) {
@@ -139,10 +156,8 @@ export class ApiService {
     }
 
     httpRequestCallWithHeader(apipath, type, data, headers) {
-        if (type === "GET" || type === "DELETE") {
-            return this._request(type, apipath, undefined, headers)
-        }
-        if (type === "POST" || type === "PUT") {
+        if (type === "GET" || type === "DELETE" || type === "POST" || type === "PUT") {
+            // GET/DELETE: data becomes the query string (see _request).
             return this._request(type, apipath, data, headers)
         }
         return undefined
