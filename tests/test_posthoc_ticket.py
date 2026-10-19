@@ -234,7 +234,7 @@ def test_queue_trigger_messages_carry_a_ticket_for_the_pod(monkeypatch):
     fake_db = types.SimpleNamespace(
         get_sessions=lambda id: _Session(),
         get_speakers=lambda session_device_id: [],
-        get_pod_duration=lambda did: 12.0)
+        get_pod_duration=lambda did: 12.0, audio_posthoc_completed_at=lambda did: 9e9)
     minted = []
 
     class _Ticket:

@@ -247,6 +247,15 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         lease, self._gpu_lease = self._gpu_lease, None
         if lease is not None:
             lease.release()
+        # Hand the caching allocator's blocks back to the device: the MOSS
+        # worker of the next run is a separate process and cannot use what
+        # this one keeps reserved (2026-10-19: 10 GiB after 22 renames).
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:  # noqa: BLE001 - never let a release step fail the run
+            pass
 
     def _authorised(self, data):
         if ticket_allows(redis_client._redis(), data.get('ticket'), data.get('sessiondeviceid')):
