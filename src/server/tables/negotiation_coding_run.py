@@ -1,4 +1,5 @@
 from app import db
+from sqlalchemy.dialects.mysql import MEDIUMTEXT
 from datetime import datetime, timezone
 import json
 
@@ -27,7 +28,9 @@ class NegotiationCodingRun(db.Model):
     model = db.Column(db.String(128))
     codebook_version = db.Column(db.String(32))
     teams = db.Column(db.Text)      # JSON {speaker_tag: <team name from the pod setup>}
-    summary = db.Column(db.Text)    # JSON, negotiation_coding.summarize()
+    # JSON, negotiation_coding.summarize(); MEDIUMTEXT on MySQL: a paired run's
+    # fold records alone pass TEXT's 64 KB (migration d4e5f6a7b8c9).
+    summary = db.Column(db.Text().with_variant(MEDIUMTEXT(), 'mysql'))
     error = db.Column(db.Text)
     created_at = db.Column(db.DateTime, nullable=False)
     started_at = db.Column(db.DateTime)

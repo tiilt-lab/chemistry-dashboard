@@ -27,6 +27,7 @@ LIVE_ANALYSES = "809102132435"  # session.live_video_analyses
 STUDENT_GROUP_TEAM = "9a1b2c3d4e5f"  # student.group_name/team_name; first and last name optional
 STUDENT_USERNAME_20 = "ba756b7c0126"  # student.username widened to 20 characters
 SESSION_JOIN_MODE = "c1d2e3f4a5b6"  # session.join_mode: what "Join with" opens on
+RUN_SUMMARY_MEDIUMTEXT = "d4e5f6a7b8c9"  # negotiation_coding_run.summary: MEDIUMTEXT
 
 
 def _read(*parts):
@@ -77,7 +78,7 @@ def test_single_root_and_single_head():
     assert roots == ["d7cd8fa96963"], "expected one root, got %s" % roots
     referenced = {d for downs, _ in revs.values() for d in downs}
     heads = sorted(set(revs) - referenced)
-    assert heads == [SESSION_JOIN_MODE], "chain must have exactly one head: %s" % heads
+    assert heads == [RUN_SUMMARY_MEDIUMTEXT], "chain must have exactly one head: %s" % heads
 
 
 def test_phase2_migrations_are_chained_after_phase1():
@@ -93,6 +94,7 @@ def test_phase2_migrations_are_chained_after_phase1():
     assert revs[STUDENT_GROUP_TEAM][0] == (LIVE_ANALYSES,)
     assert revs[STUDENT_USERNAME_20][0] == (STUDENT_GROUP_TEAM,)
     assert revs[SESSION_JOIN_MODE][0] == (STUDENT_USERNAME_20,)
+    assert revs[RUN_SUMMARY_MEDIUMTEXT][0] == (SESSION_JOIN_MODE,)
     assert revs[NEGOTIATION][0] == (LIVE_VIDEO,)
 
 
