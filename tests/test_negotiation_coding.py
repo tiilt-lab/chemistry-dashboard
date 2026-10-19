@@ -1622,6 +1622,47 @@ def test_merge_paired_finds_clocks_minutes_apart_despite_repeated_phrases():
     assert [round(u["start_time"]) for u in kept] == [100 + 20 * k for k in range(len(lines))]
 
 
+STRETCH = [
+    "we agreed on one point four million before anyone went on vacation",
+    "the carpentry upgrade to oak was never put in writing for us",
+    "your margins are not our problem when the contract names a price",
+    "we can talk about the rent once the invoice is paid in thirty days",
+    "calling the loan now pushes us straight into bankruptcy and you know it",
+    "the premium units should sell for far more than the pine ones would",
+    "nobody at your company told us the change order was not approved",
+    "let us take a short break and come back with numbers we both trust",
+    "the lumber supplier gave us a single day to accept the discount",
+    "a two year lease at eleven thousand a month is what we can offer",
+    "we have another tenant ready to move in at twelve thousand a month",
+    "the interest stays at ten percent for the health of the relationship",
+    "we will repay the principal on a schedule once the cash flow recovers",
+    "that is not how the conversation with your project manager went",
+    "please tell us what number would make this work for your side today",
+    "we cannot pay one point nine for materials we did not sign off on",
+]
+
+
+def test_merge_paired_follows_a_clock_that_moves_mid_session():
+    # Group 2, 2026-10-16: one laptop reconnected, and its clock went from
+    # 257 s behind the other's to 8 s behind. A single session-wide offset
+    # matched nothing from before the reconnect, and those lines showed
+    # twice. The alignment now votes per stretch of the clock.
+    sides = {1: "Sandy", 2: "Pat"}
+    sandy, pat = [], []
+    for k, text in enumerate(STRETCH):
+        t = 100 + 90 * k                       # 16 lines over 24 minutes
+        shift = 257.0 if t < 800 else 8.0      # the reconnect at ~13 minutes in
+        sandy.append(_long(1 + k, 1, t, text, "Sandy", sim=0.6))
+        pat.append(_long(101 + k, 2, t + shift, text, "Pat", sim=0.85))
+    diagnostics = {}
+    kept, dropped = nc.merge_paired({1: sandy, 2: pat}, sides, diagnostics)
+    assert len(kept) == len(STRETCH) and {d["reason"] for d in dropped} == {"duplicate"}
+    assert [round(u["start_time"]) for u in kept] == [100 + 90 * k for k in range(len(STRETCH))]
+    summary = diagnostics["alignment"]
+    assert summary["anchors"] == len(STRETCH)
+    assert summary["offset_min"] == 8.0 and summary["offset_max"] == 257.0
+
+
 def test_merge_paired_drops_a_straddler_covered_by_the_other_laptops_pieces():
     # Group 5, 2026-10-16 17:49: Pat's laptop cut one stretch of speech into
     # two utterances; Sandy's laptop made one that straddles the tail of the
