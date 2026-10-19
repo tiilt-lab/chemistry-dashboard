@@ -1170,7 +1170,7 @@ def test_queue_leg_source_contracts():
         assert forbidden not in leg
     assert "negotiation_coding.run_coding(job[\"device_id\"], run_id=job.get(\"run_id\"))" in leg
     loop = _func_source(s, "_worker_loop")
-    assert "beside_class = _needs_idle(job) and not _wait_for_class_to_end()" in loop
+    assert "beside_class = _needs_idle(job) and not _wait_for_class_to_end(lane)" in loop
     assert "if _needs_gpu(job):" in loop and "_maybe_recycle_audio_service()" in loop
     assert "and _needs_gpu(j)}" in _func_source(s, "enqueue")
     assert "NEGOTIATION_CODING_WAIT_FOR_IDLE" in _func_source(s, "_needs_idle")
