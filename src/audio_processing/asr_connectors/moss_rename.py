@@ -9,7 +9,8 @@ Each piece is one voice. This module names the pieces the way moss_naming
 names clusters, from the student prints (the enrolment print where there
 is one, else a session print cut from rows both laptops agree on), with
 one name per laptop and elimination for a single printless student on a
-side, and hands back a new name and confidence for every row.
+side, and hands back a new name and confidence for every row of a piece it
+named; the rows of a piece it could not name keep their earlier name.
 
 Pure functions over numpy audio and an ``embed(signal) -> unit vector``
 callable, like moss_naming; ``rename_pod`` is the glue the service calls.
@@ -64,13 +65,18 @@ def name_pieces(audio, sr, pieces, roster, prints, kinds, to_rec, embed):
 
 
 def rows_from_records(pieces, records, roster, percent=None):
-    """[{id, speaker_tag, confidence}] for every row of every piece: the
-    piece's name (None when unnamed) and its naming confidence, the piece
-    as the cluster, flagged renamed."""
+    """[{id, speaker_tag, confidence}] for every row of every piece the pass
+    named: the piece's name and its naming confidence, the piece as the
+    cluster, flagged renamed. A piece the pass could not name is left out:
+    its rows keep the name the first run gave them. (Until 2026-10-19 the
+    pass cleared them, and with less evidence than the first run had, a
+    third of several laptops' rows lost their names.)"""
     rows = []
     for p in pieces:
         rec = records.get(p["id"]) or {}
         name, conf = moss_naming.turn_attribution(rec, roster)
+        if not name:
+            continue
         conf["cluster"] = p["id"]
         conf["renamed"] = True
         if p.get("source_cluster"):

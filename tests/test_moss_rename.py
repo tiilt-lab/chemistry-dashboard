@@ -55,8 +55,9 @@ def test_pieces_are_named_from_the_prints_each_as_one_voice():
     assert by_id[1]["confidence"]["renamed"] is True and by_id[1]["confidence"]["percent"] == 99
     assert by_id[3]["speaker_tag"] == "Bob" and by_id[3]["confidence"]["far_side"] is True
     # voice 3 matches no print: unnamed, and Cy (the one printless own
-    # student) takes it only when it is long enough to be a person (60 s)
-    assert by_id[4]["speaker_tag"] is None and by_id[4]["confidence"]["cluster"] == "S05"
+    # student) takes it only when it is long enough to be a person (60 s).
+    # Nothing is posted for it: its row keeps the name the first run gave it.
+    assert 4 not in by_id and records["S05"]["name"] is None
     assert records["S03b"]["side"] == "far"
 
 
