@@ -1,6 +1,7 @@
 import { SessionService } from "../services/session-service";
 import { DeviceService } from "../services/device-service";
 import { startPolling } from "../globals";
+import { QUEUE_POLL_MS } from "../components/analysis-queue/analysis-queue-panel";
 import { DeviceModel } from "../models/device";
 import { SpeakerModel } from "../models/speaker";
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -12,7 +13,6 @@ import { PodsOverviewPages } from "./html-pages";
 // abort on unmount (audit G.2). Triage went 8 s -> 10 s: its alerts are
 // 30 s-scale signals, so the audit's 5-10 s band is safe there.
 const TRIAGE_POLL_MS = 10000;
-const QUEUE_POLL_MS = 15000;
 const DEVICES_POLL_MS = 15000;
 
 function PodsOverviewComponent(props) {
@@ -28,6 +28,9 @@ function PodsOverviewComponent(props) {
   const [enriched, setEnriched] = useState({});
   const [selected, setSelected] = useState({});
   const [queueState, setQueueState] = useState({});
+  // The whole post-hoc queue in queue order; the overview's panel shows this
+  // session's jobs and what other sessions have ahead of them.
+  const [queueJobs, setQueueJobs] = useState(null);
   const toggleSelect = (id) =>
     setSelected((cur) => ({ ...cur, [id]: !cur[id] }));
   const toggleSelectAll = (ids) =>
@@ -39,13 +42,14 @@ function PodsOverviewComponent(props) {
     });
   // Resolves false on any failure so the poll loop can back off.
   const loadQueue = (sid, signal) =>
-    new SessionService().getPosthocQueue(sid, { signal }).then(
+    new SessionService().getGlobalPosthocQueue({ signal }).then(
       async (r) => {
         if (r.status !== 200) return false;
         const list = await r.json();
         const m = {};
-        for (const j of list) m[j.device_id] = j.state;
+        for (const j of list) if (j.session_id === sid) m[j.device_id] = j.state;
         setQueueState(m);
+        setQueueJobs(list);
         return true;
       },
       () => false,
@@ -522,6 +526,7 @@ function PodsOverviewComponent(props) {
       runSelected={runSelected}
       stopRuns={stopRuns}
       queueState={queueState}
+      queueJobs={queueJobs}
       toasts={toasts}
       dismissToast={dismissToast}
       lastActivity={lastActivity}

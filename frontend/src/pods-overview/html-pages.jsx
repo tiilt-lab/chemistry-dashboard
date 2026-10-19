@@ -14,6 +14,7 @@ import { ToastStack } from "../components/toast"
 import { QrCode } from "../components/qr-code"
 import { slotLinks, slotLinksText } from "./slot-links"
 import { devicesByGroup, hasGroups } from "./group-rows"
+import { AnalysisQueuePanel } from "../components/analysis-queue/analysis-queue-panel"
 
 
 // null (hide) for missing durations, else SessionModel's shared H:MM:SS.
@@ -668,6 +669,9 @@ function PodsOverviewPages(props) {
                             ) : (
                                 <SkeletonRows rows={6} className="mt-2" />
                             )}
+                            {props.session && props.session.id ? (
+                                <AnalysisQueuePanel jobs={props.queueJobs} sessionId={props.session.id} />
+                            ) : null}
                             <div className="mb-4 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
                                 <div>
                                     <h2 className="text-lg font-semibold text-tiilt-ink">

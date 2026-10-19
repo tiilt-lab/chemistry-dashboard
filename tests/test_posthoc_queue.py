@@ -51,8 +51,11 @@ def test_restart_requeues_a_job_the_runner_was_on(monkeypatch):
     job["state"] = "running"
     q._save(job)
     assert q._requeue_running() == 1
-    assert q.status() == [{"session_id": 1, "device_id": 12, "state": "queued",
-                           "error": None, "started_at": None, "finished_at": None}]
+    (row,) = q.status()
+    assert row["id"] == job["id"] and row["queued_at"] == job["queued_at"]
+    assert {k: v for k, v in row.items() if k not in ("id", "queued_at")} == {
+        "session_id": 1, "device_id": 12, "state": "queued", "error": None,
+        "legs": ["audio", "video"], "run_id": None, "started_at": None, "finished_at": None}
 
 
 def test_coding_jobs_audio_gate_persists_and_a_job_without_one_is_never_gated(monkeypatch):
@@ -64,10 +67,8 @@ def test_coding_jobs_audio_gate_persists_and_a_job_without_one_is_never_gated(mo
     assert gated["after_audio"] == [11, 12] and q._load(gated["id"])["after_audio"] == [11, 12]
     assert q._requeue_running() == 0
     assert q._load(gated["id"])["after_audio"] == [11, 12]        # a restart keeps the gate
-    assert q.status(1) == [{"session_id": 1, "device_id": 13, "state": "queued",
-                            "error": None, "started_at": None, "finished_at": None},
-                           {"session_id": 1, "device_id": 11, "state": "queued",
-                            "error": None, "started_at": None, "finished_at": None}]
+    assert [(r["device_id"], r["state"], r["legs"], r["run_id"]) for r in q.status(1)] == [
+        (13, "queued", ["coding"], 6), (11, "queued", ["coding"], 5)]
     monkeypatch.setattr(q, "_audio_done", lambda d: pytest.fail("a job without the field consults nothing"))
     assert q._audio_prerequisites(plain) == ([], [])
     assert q._next_queued()["id"] == plain["id"]
