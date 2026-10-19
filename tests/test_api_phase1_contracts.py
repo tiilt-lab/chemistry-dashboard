@@ -148,9 +148,28 @@ def test_stop_posthoc_queue_sends_a_pod_ticket():
     src = _read("routes", "session.py")
     assert "from redis_helper import RedisSessions, RedisPosthocTicket" in src
     block = _block_after(src, "def stop_posthoc_queue", lines=22)
-    assert "RedisPosthocTicket.mint(did)" in block
-    assert "'ticket': ticket" in block
+    assert "_cancel_pod_runs(did)" in block
+    helper = _block_after(src, "def _cancel_pod_runs", lines=20)
+    assert "RedisPosthocTicket.mint(did)" in helper
+    assert "'ticket': ticket" in helper
     # Scoped to the session: its own pods' queued jobs and running pods only
     # (one session's Stop once wiped every tenant's queue).
     assert "clear_pending(device_ids=mine)" in block
     assert "if d in mine" in block
+
+
+def test_deleting_a_pod_takes_its_posthoc_work_with_it():
+    # A pod deleted mid-run once left the queue waiting the whole pod
+    # timeout: the completion callback found no row to stamp and never
+    # cleared the running flag (2026-10-19).
+    src = _read("routes", "session.py")
+    delete = _block_after(src, "def remove_device_from_session", lines=26)
+    assert "_abandon_pod_analysis(session_device_id)" in delete
+    assert delete.index("_abandon_pod_analysis(") < delete.index("database.delete_session_device(")
+    abandon = _block_after(src, "def _abandon_pod_analysis", lines=18)
+    assert "posthoc_queue.drop_device(did)" in abandon and "posthoc_state.mark_done(did)" in abandon
+    callbacks = _read("routes", "callback.py")
+    for marker in ("def posthoc_failed", "def posthoc_completed"):
+        assert "_clear_flag_for_gone_pod(" in _block_after(callbacks, marker, lines=40), marker
+    gone = _block_after(callbacks, "def _clear_flag_for_gone_pod", lines=16)
+    assert "device_id_from_key(" in gone and "mark_done(did, scope)" in gone

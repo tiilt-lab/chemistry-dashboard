@@ -12,7 +12,6 @@ import json
 import os
 import re
 import sys
-import threading
 import time
 import types
 
@@ -197,6 +196,22 @@ def test_clear_pending_scoped_to_device_ids_leaves_other_sessions_alone(q, fake)
     assert [(j["session_id"], j["device_id"]) for j in q.status()] == [(2, 20)]
     assert q.clear_pending(device_ids=[99]) == 0
     assert q.clear_pending() == 1
+
+
+def test_drop_device_removes_its_queued_jobs_and_flags_the_pod_for_the_runner(q, fake):
+    q.enqueue(1, [10, 11])
+    assert q.drop_device(10) == 1
+    assert [j["device_id"] for j in q.status()] == [11]
+    assert q._dropped(10) and not q._dropped(11)
+    assert q.drop_device(10) == 0                 # idempotent; the flag stays
+
+
+def test_a_job_whose_pod_was_dropped_never_triggers_a_service(q, fake, monkeypatch):
+    monkeypatch.setattr(q, "_run_leg", lambda *a, **k: pytest.fail("the service must not be triggered"))
+    monkeypatch.setattr(q, "_scope_running", lambda d, s: False)
+    q.drop_device(10)
+    with pytest.raises(q._PodDropped):
+        q._run_job({"id": None, "session_id": 1, "device_id": 10, "models": None, "legs": ["video"]})
 
 
 def test_running_job_survives_clear_and_is_requeued_after_a_restart(q):

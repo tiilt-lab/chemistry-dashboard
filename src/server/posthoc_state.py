@@ -67,6 +67,15 @@ def _entries():
             return dict(_mem_running)
 
 
+def device_id_from_key(processing_key):
+    """The session_device id a processing key names ("<id>-<uuid>"), or
+    None. Lets a completion or failure callback clear a pod's running flag
+    after the pod row itself was deleted mid-run (2026-10-19: the queue
+    waited 150 minutes on a flag whose pod no longer existed)."""
+    head = str(processing_key or '').split('-', 1)[0]
+    return int(head) if head.isdigit() else None
+
+
 def mark_running(device_id, scope):
     scope = scope or 'audio'
     try:
