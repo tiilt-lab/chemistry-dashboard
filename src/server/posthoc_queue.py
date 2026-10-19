@@ -55,6 +55,11 @@ class _LegTimeout(Exception):
     """A leg was never seen running, or never finished, before the deadline."""
 
 
+class _PodDropped(Exception):
+    """The pod was deleted while its job ran (drop_device): the job goes
+    with it, no phantom error row for a pod nobody can see any more."""
+
+
 class _GpuBusy(Exception):
     """The service declined the trigger for now (GPU lease held or live pods
     present). Carries the capped wait before the next attempt."""
@@ -109,6 +114,7 @@ _KEY_SEQ = "posthoc_queue:seq"
 _KEY_LOCK = "posthoc_queue:lock"
 _KEY_WAKE = "posthoc_queue:wake"
 _KEY_WAKE_CODING = "posthoc_queue:wake:coding"   # the coding lane's own wake list
+_KEY_DROPPED = "posthoc_queue:dropped:%s"        # a pod deleted mid-run (drop_device); TTL _POD_TIMEOUT
 _LOCK_TTL = 10
 _IDLE_WAIT = 30  # the runner re-scans this often even if a wake was lost
 
@@ -338,6 +344,13 @@ async def _run_phase(ws, device_id, scope, deadline):
                     attached = False
         else:
             await asyncio.sleep(_POLL_SECONDS)
+        # A pod deleted mid-run (drop_device): nothing will ever match its
+        # completion to a row, so stop waiting for one. (The callbacks also
+        # clear the flag of a pod whose row is gone, which ends the wait the
+        # ordinary way.)
+        if _dropped(device_id):
+            logging.info("posthoc queue: pod %s was deleted mid-run; %s leg abandoned", device_id, scope)
+            return True
         # The reset callback marks the scope running; the completed callback
         # clears it. Require it to have been seen running first.
         if _scope_running(device_id, scope):
@@ -543,6 +556,10 @@ def _adopt_leg(device_id, scope, deadline):
     while time.time() < deadline:
         if not _scope_running(device_id, scope):
             return True
+        if _dropped(device_id):
+            # The pod was deleted while the runner was away.
+            logging.info("posthoc queue: pod %s was deleted; %s leg abandoned", device_id, scope)
+            return True
         time.sleep(_POLL_SECONDS)
     return False
 
@@ -619,6 +636,8 @@ def _run_job(job):
     for scope in LEGS:
         if scope in done or scope not in wanted:
             continue
+        if _dropped(device_id):
+            raise _PodDropped(device_id)
         attempted.append(scope)
         if scope == "coding":
             _require_audio(job)
@@ -776,6 +795,12 @@ def _worker_loop(lane="all"):
                              job["device_id"], busy)
             time.sleep(busy.retry_after)
             continue
+        except _PodDropped:
+            # The pod was deleted while its job ran: the job goes with it.
+            with _mutation():
+                _remove(job)
+            logging.info("posthoc queue: pod %s deleted mid-run; job %s dropped", job["device_id"], job.get("id"))
+            continue
         except Exception as e:
             logging.warning("posthoc queue: pod %s failed: %s", job["device_id"], e)
             outcome, err = "error", str(e)
@@ -892,6 +917,38 @@ def _coding_run_dropped(job):
             negotiation_coding.cancel_run(job["run_id"], "queue cleared")
     except Exception as e:
         logging.warning("posthoc queue: could not mark coding run %s cancelled: %s", job.get("run_id"), e)
+
+
+def _dropped(device_id):
+    # The flag drop_device set (Redis only, so the fake-Redis tests see it).
+    try:
+        return bool(_r().exists(_KEY_DROPPED % int(device_id)))
+    except Exception:
+        return False
+
+
+def drop_device(device_id):
+    """A pod is being deleted: remove its queued jobs (a coding job's run is
+    marked cancelled) and flag the pod so a leg the runner is on stops
+    waiting for a completion that can never be matched to a row, and the
+    job is dropped rather than erroring. Returns the queued jobs removed.
+    (2026-10-19: a pod deleted mid-video-run left the queue waiting the full
+    150-minute pod timeout behind it.)"""
+    device_id = int(device_id)
+    with _mutation():
+        n = 0
+        for job in _all_jobs():
+            if job["device_id"] == device_id and job["state"] == "queued":
+                _remove(job)
+                if job.get("run_id") is not None:
+                    _coding_run_dropped(job)
+                n += 1
+        try:
+            _r().set(_KEY_DROPPED % device_id, str(time.time()), ex=int(_POD_TIMEOUT))
+        except Exception as e:
+            logging.warning("posthoc queue: could not flag deleted pod %s: %s", device_id, e)
+    _wake()
+    return n
 
 
 def clear_pending(device_ids=None):

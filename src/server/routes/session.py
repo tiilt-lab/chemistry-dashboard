@@ -1433,20 +1433,9 @@ def stop_posthoc_queue(session_id, **kwargs):
     cleared = posthoc_queue.clear_pending(device_ids=mine)
     cancelled = 0
     try:
-        import asyncio, websockets
-        async def _cancel(port, did, ticket):
-            async with websockets.connect('ws://127.0.0.1:%s' % port, open_timeout=5) as ws:
-                await ws.send(json.dumps({'type': 'cancel_posthoc', 'sessiondeviceid': did, 'ticket': ticket}))
-                await asyncio.wait_for(ws.recv(), timeout=5)
         for did in [d for d in posthoc_state.running_device_ids() if d in mine]:
-            # The post-hoc sockets refuse cancel_posthoc without a pod ticket.
-            ticket = RedisPosthocTicket.mint(did)
-            acked = False
-            for port in (os.getenv('DC_AUDIO_POSTHOC_WS_PORT', '9015'), os.getenv('DC_VIDEO_POSTHOC_WS_PORT', '9014')):
-                try:
-                    asyncio.run(_cancel(port, did, ticket)); cancelled += 1; acked = True
-                except Exception:
-                    pass
+            acked, signals = _cancel_pod_runs(did)
+            cancelled += signals
             # Done only once a service took the cancel; otherwise the run is
             # still going and its own completion callback ends it.
             if acked:
@@ -1454,6 +1443,47 @@ def stop_posthoc_queue(session_id, **kwargs):
     except Exception as e:
         logging.warning('stop_posthoc_queue cancel pass failed: %s', e)
     return json_response({'cleared': cleared, 'cancel_signals': cancelled})
+
+
+def _cancel_pod_runs(did):
+    """Tell both post-hoc services to stop the pod's runs (cancel_posthoc;
+    the sockets refuse it without a pod ticket). Returns (a service took
+    it, signals delivered)."""
+    import asyncio, websockets
+
+    async def _cancel(port, ticket):
+        async with websockets.connect('ws://127.0.0.1:%s' % port, open_timeout=5) as ws:
+            await ws.send(json.dumps({'type': 'cancel_posthoc', 'sessiondeviceid': did, 'ticket': ticket}))
+            await asyncio.wait_for(ws.recv(), timeout=5)
+
+    ticket = RedisPosthocTicket.mint(did)
+    acked, signals = False, 0
+    for port in (os.getenv('DC_AUDIO_POSTHOC_WS_PORT', '9015'), os.getenv('DC_VIDEO_POSTHOC_WS_PORT', '9014')):
+        try:
+            asyncio.run(_cancel(port, ticket))
+            signals += 1
+            acked = True
+        except Exception:
+            pass
+    return acked, signals
+
+
+def _abandon_pod_analysis(did):
+    """A pod deleted mid-analysis: its queued jobs go, a running leg is
+    cancelled at the services and its running flag cleared. Left alone, the
+    queue waited on a completion the callbacks could no longer match to a
+    row (pod 1451, 2026-10-19: the 150-minute pod timeout for a run that
+    finished in 13)."""
+    try:
+        posthoc_queue.drop_device(did)
+    except Exception as e:
+        logging.warning('drop_device(%s) failed: %s', did, e)
+    try:
+        if posthoc_state.is_running(did):
+            _cancel_pod_runs(did)
+        posthoc_state.mark_done(did)
+    except Exception as e:
+        logging.warning('cancelling the runs of deleted pod %s failed: %s', did, e)
 
 
 @api_routes.route('/api/v1/sessions/<int:session_id>/posthoc_queue', methods=['GET'])
@@ -1586,6 +1616,10 @@ def remove_device_from_session(session_id, session_device_id, **kwargs):
             return json_response({'message': 'This pod has recorded data — only an admin can delete it.'}, 403)
     session_handler.remove_session_device(session_device_id)
     if delete:
+        # Before the row goes: its post-hoc work must go with it, or the
+        # queue waits out the pod timeout on a run whose completion can no
+        # longer be matched to a pod (2026-10-19).
+        _abandon_pod_analysis(session_device_id)
         database.delete_session_device(session_device_id)
         socketio_helper.remove_session_device(session_id, session_device_id)
     return json_response()

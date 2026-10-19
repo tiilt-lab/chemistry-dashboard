@@ -263,6 +263,24 @@ def posthoc_reset(**kwargs):
     return json_response()
 
 
+def _clear_flag_for_gone_pod(key, scope, outcome):
+    # The pod row is gone (deleted mid-run): nothing to stamp, but the
+    # running flag the reset set is keyed by device id, and the queue waits
+    # on it until the pod timeout unless it is cleared here (pod 1451,
+    # 2026-10-19: 150 minutes for a video run that finished in 13).
+    did = posthoc_state.device_id_from_key(key)
+    if did is None:
+        return
+    posthoc_state.mark_done(did, scope)
+    logging.warning('Post-hoc %s run %s for deleted device %d: running flag cleared.',
+                    scope or 'audio', outcome, did)
+    try:
+        import posthoc_queue
+        posthoc_queue.wake()
+    except Exception as e:
+        logging.info('posthoc_%s: wake failed: %s', outcome, e)
+
+
 @api_routes.route('/api/v1/callback/posthoc_failed', methods=['POST'])
 @wrappers.verify_local
 def posthoc_failed(**kwargs):
@@ -286,6 +304,8 @@ def posthoc_failed(**kwargs):
             _r.setex('posthoc_failed:{0}:{1}'.format(device.id, scope), 3600, reason)
         except Exception as e:
             logging.info('posthoc_failed: could not record reason in Redis: %s', e)
+    else:
+        _clear_flag_for_gone_pod(content.get('source', ''), scope, 'failed')
     return json_response()
 
 
@@ -335,6 +355,8 @@ def posthoc_completed(**kwargs):
             # have the runner re-scan now, not at its next idle wake.
             import posthoc_queue
             posthoc_queue.wake()
+    else:
+        _clear_flag_for_gone_pod(key, scope, 'completed')
     return json_response()
 
 
