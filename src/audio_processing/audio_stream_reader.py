@@ -15,12 +15,17 @@ import time
 from queue import Full
 
 class AudioStreamReader:
-    def __init__(self, audio_buffer, asr_audio_queue,audio_file,queue_put_timeout, config,STOP_SIGNAL,running_audio_processes, realtime=True):
+    def __init__(self, audio_buffer, asr_audio_queue,audio_file,queue_put_timeout, config,STOP_SIGNAL,running_audio_processes, realtime=True,
+                 fill=True):
         # realtime=True paces the file at 1x speed — required only by the
         # streaming Google ASR. Batch ASRs (WhisperX/Qwen3) read the whole
         # buffer up front, so pacing just adds the recording's full duration
         # to every re-run for no benefit.
         self.realtime = realtime
+        # fill=False: the recognizer reads the recording itself and names its
+        # own turns (MOSS), so neither the buffer nor the ASR queue needs the
+        # file; the reader only signals the end of the stream.
+        self.fill = fill
         self.audio_buffer = audio_buffer
         self.asr_audio_queue = asr_audio_queue
         self.config = config
@@ -48,6 +53,10 @@ class AudioStreamReader:
 
     def _run(self, extra_lag=0.0):
         try:
+            if not self.fill:
+                logging.info('Audio Stream Reader: nothing to feed for %s (the recognizer reads the file itself)',
+                             self.config.auth_key)
+                return
             audio, sample_rate = sf.read(self.audio_file, dtype="float32")
             # # Convert stereo to mono if needed
             # if audio.ndim > 1:

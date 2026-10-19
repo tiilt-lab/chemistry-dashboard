@@ -276,6 +276,11 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                 self.asr_choice = 'crisperwhisper'
             self.scorer_choice = data.get('scorer') or None
             self.diarizer_choice = data.get('diarizer') or 'fingerprint'
+            if self.asr_choice == 'moss':
+                # MOSS diarizes as it transcribes: no diarizer choice applies,
+                # and the provenance says so from the start rather than being
+                # corrected from 'diarizen' to 'moss' after every run.
+                self.diarizer_choice = 'moss'
             self.embedder_choice = data.get('embedder') or None
             # Optional per-analysis toggles — default to running everything, so
             # omitting them reproduces the previous behaviour. Lets a re-run skip
@@ -692,21 +697,28 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         # retention is gone.)
         buffer_seconds = 7200
         self.audio_buffer = AudioBuffer(self.config, max_seconds=buffer_seconds)
+        # MOSS reads the recording itself and names its own turns, so the
+        # buffer and the PCM queue have no consumer: the reader leaves them
+        # empty rather than holding the whole recording (1-2 GiB per pod).
+        reads_itself = getattr(self, 'asr_choice', None) == 'moss'
         self.asr_audio_queue = Queue()
         self.asr_transcript_queue = Queue()
         # Per-run ASR choice from the trigger UI (falls back to config.ini).
         # Every engine consumes the same PCM queue and runs fully offline;
         # each is imported lazily so one never needs the others' dependencies.
-        # Constrain diarization to the pod's known enrolled participants
-        # (cap speaker count + remap clusters to enrolled voices), when enabled
-        # and the enrolled set is known. Off -> None args -> unchanged behaviour.
         _enrolled = getattr(self, 'speakers', None) or None
-        if cf.diarization_constrain_to_enrolled() and _enrolled:
-            _max_spk, _enr, _spk_model = len(_enrolled), _enrolled, diarization_model
-        else:
-            _max_spk, _enr, _spk_model = None, None, None
+
+        def _constrained():
+            # WhisperX and Qwen3 only: cap the speaker count and remap
+            # clusters to the enrolled voices when the config asks for it
+            # (diarization_constrain_to_enrolled). MOSS takes the enrolled
+            # set for naming instead. Off -> None args -> unchanged behaviour.
+            if cf.diarization_constrain_to_enrolled() and _enrolled:
+                return len(_enrolled), _enrolled, diarization_model
+            return None, None, None
         if getattr(self, 'asr_choice', None) in ('qwen3', 'qwen3-0.6b'):
             from asr_connectors.qwen3_asr import Qwen3ASR
+            _max_spk, _enr, _spk_model = _constrained()
             qwen_model = 'Qwen/Qwen3-ASR-0.6B' if self.asr_choice == 'qwen3-0.6b' else 'Qwen/Qwen3-ASR-1.7B'
             self.asr = Qwen3ASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval,
                                 audio_file=self.audio_file, model_id=qwen_model,
@@ -723,6 +735,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                                roster=list(getattr(self, 'roster_aliases', None) or []))
         elif getattr(self, 'asr_choice', None) == 'whisperx':
             from asr_connectors.whisperx_asr import WhisperXASR
+            _max_spk, _enr, _spk_model = _constrained()
             self.asr = WhisperXASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval,
                                    audio_file=self.audio_file, model_size=cf.whisper_model_size(),
                                    diarize=(getattr(self, 'diarizer_choice', None) == 'pyannote'),
@@ -745,7 +758,7 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         # All engines are batch: the reader feeds the file as fast as it can
         # rather than pacing it like the retired streaming connector needed.
         batch_asr = True
-        self.audioreader = AudioStreamReader(self.audio_buffer, self.asr_audio_queue, self.audio_file, self.queue_put_timeout,self.config,STOP_SIGNAL,running_audio_processes, realtime=not batch_asr)
+        self.audioreader = AudioStreamReader(self.audio_buffer, self.asr_audio_queue, self.audio_file, self.queue_put_timeout,self.config,STOP_SIGNAL,running_audio_processes, realtime=not batch_asr, fill=not reads_itself)
         # Bound BEFORE the processor starts: an ASR that fails instantly
         # completes at once, and its cleanup must find the hook + registry
         # entry. Cancel / pre-emption from any socket reaches every worker;

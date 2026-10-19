@@ -89,7 +89,7 @@ FAR_SIDE_PAD = 0.5           # ... with the near row's span padded by this (the 
 # sentences, so one speaker's sentence arrives in pieces and a piece often
 # starts with the tail word of the previous speaker's sentence ("it. What's
 # bothering me most?"). Pieces are stitched back into sentences before coding.
-STITCH_LEAD_WORDS = 3        # a sentence end within this many words of the start is a tail of the previous line
+STITCH_LEAD_WORDS = 3        # a sentence end within this many words of the start is a tail of the previous line (live rows; MOSS cuts by speaker)
 STITCH_GAP = 1.5             # s between a speaker's pieces for them to be one sentence
 STITCH_MAX_SECONDS = 30.0    # a stitched sentence never spans more than this
 STITCH_MAX_WORDS = 70
@@ -242,19 +242,8 @@ def chunks(utterances, size=CHUNK_SIZE, context=CONTEXT_SIZE):
 
 def _utterance(r, team=None):
     conf = _attribution_confidence(r)
-    speaker_tag = r.speaker_tag
-    # A far-side name given by the closed-world rule is a guess on a faint
-    # match (rows from before 2026-10-16 18:07, when the service stopped
-    # making them): shinbrooke's own laptop handed "the bank doesn't wait"
-    # to jacob at 0.13. Unnamed is truer, and the stitcher then gives the
-    # piece to the speaker talking on either side of it.
-    if conf and conf.get("far_side") and conf.get("closed_world"):
-        speaker_tag = None
-        conf = dict(conf)
-        conf["guessed"] = True
-        conf.pop("far_side", None)
     u = {"transcript_id": r.id, "start_time": r.start_time, "length": r.length,
-         "speaker_tag": speaker_tag, "text": r.transcript,
+         "speaker_tag": r.speaker_tag, "text": r.transcript,
          "session_device_id": getattr(r, "session_device_id", None),
          "speaker_id": getattr(r, "speaker_id", None),
          "question": bool(getattr(r, "question", False))}
@@ -992,6 +981,13 @@ def lexical_words(text):
     return _LEXICAL_WORD.findall(_TAG.sub(" ", text or ""))
 
 
+def _speaker_bounded(u):
+    """True for a row the recognizer cut by speaker: a MOSS turn, which
+    carries its diarizer cluster. Its first words are its speaker's own,
+    never the tail of whoever spoke before, so step (1) leaves it alone."""
+    return bool((u.get("confidence") or {}).get("cluster"))
+
+
 def _leading_tail(text):
     """(tail, rest) when a sentence ends within the first STITCH_LEAD_WORDS
     words of ``text`` and more words follow: the tail is the end of the
@@ -1007,7 +1003,9 @@ def stitch_sentences(utterances, dropped=None):
     """Post: the kept utterances in time order, stitched back into sentences.
     (1) A leading sentence tail ("it." in "it. What's bothering me most?")
     moves to the previous utterance when that one does not end a sentence
-    and started within STITCH_GAP seconds of this one ending its tail.
+    and started within STITCH_GAP seconds of this one ending its tail; rows
+    the recognizer cut by speaker (MOSS turns, which carry their cluster)
+    keep their first words.
     (2) Consecutive utterances of one speaker on one device within
     STITCH_GAP become one turn, sentence ends or not: a turn is the unit a
     negotiation move is coded on, and the recognizer's cuts fall at pauses.
@@ -1039,6 +1037,7 @@ def stitch_sentences(utterances, dropped=None):
         tail, rest = _leading_tail(u.get("text"))
         prev = out[-1] if out else None
         if tail and prev is not None and not _ends_sentence(prev.get("text")) \
+                and not _speaker_bounded(u) and not _speaker_bounded(prev) \
                 and float(u["start_time"]) - _span(prev)[1] <= STITCH_GAP:
             prev["text"] = ((prev.get("text") or "").rstrip() + " " + tail).strip()
             prev["length"] = max(float(prev.get("length") or 0), float(u["start_time"]) - float(prev["start_time"]) + 0.5)

@@ -282,3 +282,26 @@ def test_new_runs_choose_between_the_two_posthoc_diarizers_and_provenance_names_
     trigger = _read("..", "frontend", "src", "components", "posthoc", "posthoc-trigger.jsx")
     summary = trigger[trigger.index("const modelChoices = {"):trigger.index(".markPosthocCompleted(")]
     assert "diarizer" not in summary.split("{", 1)[1]
+
+
+# ---- 8. MOSS runs skip the CrisperWhisper-era audio plumbing -----------------
+
+def test_moss_runs_skip_the_audio_buffer_the_spectral_tagging_and_the_dead_diarizer_knobs():
+    start = _def(AUDIO, "signal_start")
+    # the reader feeds nothing when the recognizer reads the file itself
+    assert "reads_itself = getattr(self, 'asr_choice', None) == 'moss'" in start
+    assert "fill=not reads_itself)" in start
+    reader = _read("audio_processing", "audio_stream_reader.py")
+    _before(_def(reader, "_run"), "if not self.fill:", "sf.read(self.audio_file")
+    # the processor extracts no audio for a turn the recognizer named ...
+    _before(_def(PROC, "process"), "if getattr(transcript_data, 'named_by_asr', False):", "self.audio_buffer.extract(")
+    # ... and clusters nothing when no embedding was gathered
+    _before(_def(PROC, "_publish"), "if self.config.diarization and not self.embeddings:", "self.send_speaker_taggings()")
+    # the constrain-to-enrolled knobs exist only for the engines that take them
+    assert start.count("_max_spk, _enr, _spk_model = _constrained()") == 2
+    _before(start, "from asr_connectors.qwen3_asr import Qwen3ASR", "_max_spk, _enr, _spk_model = _constrained()")
+    assert "MossASR(" in start and "max_speakers" not in start.split("MossASR(")[1].split("elif")[0]
+    # provenance names MOSS as its own diarizer from the start, queue and trigger alike
+    assert "self.diarizer_choice = 'moss'" in AUDIO
+    assert '"moss" if models.get("asr", "moss") == "moss" else "diarizen"' in _read("server", "posthoc_queue.py")
+
