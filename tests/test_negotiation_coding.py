@@ -2841,7 +2841,9 @@ def test_two_moss_laptops_keep_their_turns_whole_and_their_clocks(monkeypatch):
     sandy = [_crow(11, 2, 100.5, "we have to pay eighty percent of the mortgage", "Sandy 3", "S02", sim=0.8, length=4),
              _crow(12, 2, 120.4, "Payment days are the real problem today", "Sandy 3", "S02", sim=0.8, length=3)]
     spy = []
-    monkeypatch.setattr(nc, "estimate_clock_offset", lambda *a, **k: spy.append(1) or None)
+    # the text finds the clocks under a second apart, as two MOSS recordings usually are
+    jitter = nc.ClockAlignment([(100.0, 0.4), (110.0, -0.3), (120.0, 0.6)], 1, 2)
+    monkeypatch.setattr(nc, "estimate_clock_offset", lambda *a, **k: spy.append(1) or jitter)
     diagnostics = {}
     kept, dropped = nc.merge_paired({1: pat, 2: sandy}, SIDES, diagnostics)
     # the long line and its shorter copy are one voice: one copy kept, the
@@ -2850,13 +2852,23 @@ def test_two_moss_laptops_keep_their_turns_whole_and_their_clocks(monkeypatch):
     assert [(u["transcript_id"], u["text"]) for u in kept] == [(1, long_line), (2, "Payment days are the real problem here")]
     assert not any(u.get("trimmed") for u in kept)
     assert sorted((d["transcript_id"], d["reason"]) for d in dropped) == [(11, "duplicate"), (12, "duplicate")]
-    # no text alignment for two MOSS laptops, and the start tolerance stays
-    assert spy == [] and diagnostics["alignment"] is None and diagnostics["tolerance"] == nc.PAIR_START_TOLERANCE
-    # a live pair of the same rows still asks the text for the clocks
+    # an indecisive text alignment is not applied to two MOSS laptops, and the start tolerance stays
+    assert spy == [1] and diagnostics["alignment"] is None and diagnostics["tolerance"] == nc.PAIR_START_TOLERANCE
+    # a live pair of the same rows takes it as before
     live = {1: [_row(1, 1, 100, long_line, "Pat 3", sim=0.8, length=8)],
             2: [_row(11, 2, 100.5, "we have to pay eighty percent of the mortgage", "Sandy 3", sim=0.8, length=4)]}
-    nc.merge_paired(live, SIDES)
-    assert spy == [1]
+    diagnostics = {}
+    nc.merge_paired(live, SIDES, diagnostics)
+    assert spy == [1, 1] and diagnostics["alignment"]["method"] == "text"
+    # clocks really apart (a live clock move left one recording 117 s off,
+    # Group 10, 2026-10-19) are corrected for two MOSS laptops too
+    apart = nc.ClockAlignment([(100.0, 117.0), (110.0, 117.4), (120.0, 116.8), (130.0, 123.0)], 1, 2)
+    assert apart.decisive() and not jitter.decisive() and apart.median_offset() == 117.4
+    monkeypatch.setattr(nc, "estimate_clock_offset", lambda *a, **k: apart)
+    diagnostics = {}
+    nc.merge_paired({1: pat, 2: sandy}, SIDES, diagnostics)
+    assert diagnostics["alignment"]["method"] == "text" and diagnostics["alignment"]["anchors"] == 4
+    assert diagnostics["tolerance"] == nc.PAIR_ALIGNED_TOLERANCE
     # with the recordings aligned acoustically, clocks under a second apart
     # widen the tolerance by that much, not to the live pair's five seconds
     monkeypatch.setattr(nc, "acoustic_anchors", lambda a, b: [(100.0, 0.4), (110.0, 0.3), (120.0, 0.4)])
@@ -2885,3 +2897,24 @@ def test_a_short_unnamed_moss_turn_is_not_adopted_by_its_neighbour_but_one_betwe
              piece(3, 3.0, "the emails you would know.", "Pat 1", "S01", length=2.0)]
     out = nc.stitch_sentences(moss3)
     assert len(out) == 1 and out[0]["speaker_tag"] == "Pat 1" and sorted(out[0]["stitched_from"]) == [2, 3]
+
+
+def test_a_laptop_that_named_none_of_its_own_side_keeps_its_unnamed_rows_as_its_own():
+    # Group 2, 2026-10-16: the Pat students never enrolled. The Pat laptop
+    # named only Sandy voices, so every one of its rows was far-side, the
+    # unnamed ones included, and the merge yielded them all to the Sandy
+    # laptop: 3 of 743 kept, the Pat students' own-mic speech gone and their
+    # lines teamed Sandy from the Sandy laptop's faint hearing.
+    pat = [_crow(1, 1, 0, "We need the money by Friday or the deal is off", None, "S01", length=4),
+           _crow(2, 1, 20, "That is not what the contract says at all", None, "S01", length=4),
+           _crow(3, 1, 40, "Fine, we can slow this down for a minute", "Sandy 1", "S02", sim=0.7, length=4, far_side=True)]
+    for u in pat[:2]:
+        u._voice_features_json = (lambda c: (lambda: {"confidence": c}))(dict(cluster="S01", far_side=True))
+    sandy = [_crow(11, 2, 0.5, "We need the money by Friday", None, "S05", length=3),
+             _crow(12, 2, 40.2, "Fine, we can slow this down for a minute", "Sandy 1", "S02", sim=0.9, length=4)]
+    kept, dropped = nc.merge_paired({1: pat, 2: sandy}, SIDES)
+    by_id = {u["transcript_id"]: u for u in kept}
+    assert 1 in by_id and 2 in by_id and by_id[1]["confidence"]["side_unknown"] is True
+    assert by_id[1]["team"] == "Pat" and by_id[2]["team"] == "Pat"            # the laptop's own side
+    assert 11 not in by_id and 3 not in by_id                                 # the faint copy and the far-named row yield
+    assert [u["transcript_id"] for u in kept] == [1, 2, 12]

@@ -453,6 +453,24 @@ def _prefer(a, b):
     return (a, b) if a["transcript_id"] <= b["transcript_id"] else (b, a)
 
 
+def _unflag_unplaceable(by_device, sides):
+    """A laptop that named none of its own side cannot place an unnamed
+    voice either: the far flag on its unnamed rows came from the only
+    prints it had, the other team's. Those rows are its own side's unnamed
+    speech, kept and teamed with the laptop, not yielded to the partner.
+    (Group 2, 2026-10-16: the Pat students never enrolled, so the Pat
+    laptop's every row was far-side and the merge kept 3 of its 743.)"""
+    for dev, units in by_device.items():
+        if any(u.get("speaker_tag") and not (u.get("confidence") or {}).get("far_side") for u in units):
+            continue
+        for u in units:
+            conf = u.get("confidence") or {}
+            if not u.get("speaker_tag") and conf.get("far_side"):
+                u["confidence"] = dict(conf, far_side=False, side_unknown=True)
+                if sides.get(dev):
+                    u["team"] = sides[dev]
+
+
 def _far_side_yields(pool, dropped, dropped_ids):
     """A far-side row (named from the partner's roster) goes wherever the
     near laptop has a row of its own overlapping FAR_SIDE_OVERLAP of its
@@ -556,6 +574,17 @@ class ClockAlignment(object):
     def largest(self):
         """How far apart the clocks were found at most, in seconds."""
         return max((abs(float(a[1])) for a in self.anchors), default=0.0)
+
+    def median_offset(self):
+        """The offset most anchors agree on, in seconds (signed)."""
+        offsets = sorted(float(a[1]) for a in self.anchors)
+        return offsets[len(offsets) // 2] if offsets else 0.0
+
+    def decisive(self):
+        """Whether the anchors say the clocks are really apart: the median
+        offset beyond the start tolerance. A few far anchors (repeated
+        phrases) move the largest offset but not this."""
+        return abs(self.median_offset()) > PAIR_START_TOLERANCE
 
     def summary(self):
         offsets = [a[1] for a in self.anchors]
@@ -812,13 +841,17 @@ def merge_paired(rows_by_device, sides, diagnostics=None, recordings=None):
                 anchors = []
             if len(anchors) >= PAIR_MIN_ANCHORS:
                 alignment = ClockAlignment(anchors, reference_device, other_device, method="acoustic")
-        if alignment is None and not moss_pair:
-            # MOSS rows are stamped on their recording's own clock, so the
-            # text fallback has nothing to correct and misleads: on Group 7
-            # (2026-10-19) it put 18 % of one laptop's rows more than 5 s
-            # off against a true offset of 0.3 s.
-            alignment = estimate_clock_offset(by_device[reference_device], by_device[other_device],
-                                              reference_device, other_device)
+        if alignment is None:
+            found = estimate_clock_offset(by_device[reference_device], by_device[other_device],
+                                          reference_device, other_device)
+            # MOSS rows are stamped on their recording's own clock, and two
+            # of those usually agree (Group 7, 2026-10-19: 0.3 s apart, where
+            # the text put 18 % of one laptop's rows more than 5 s off). But
+            # a live clock move or a reconnect can leave the two recordings
+            # minutes apart (Group 10: 117 s, 417 anchors agreeing), so for
+            # two MOSS laptops the text decides only when it is decisive.
+            if found is not None and (not moss_pair or found.decisive()):
+                alignment = found
         if alignment is not None:
             tolerance = PAIR_ALIGNED_TOLERANCE
             if moss_pair:
@@ -831,6 +864,7 @@ def merge_paired(rows_by_device, sides, diagnostics=None, recordings=None):
     if diagnostics is not None:
         diagnostics["alignment"] = alignment.summary() if alignment is not None else None
         diagnostics["tolerance"] = tolerance
+    _unflag_unplaceable(by_device, sides)
     pool = [u for units in by_device.values() for u in units]
     pool.sort(key=lambda u: (u["start_time"], u["transcript_id"]))
     reach = max((_span(u)[1] - _span(u)[0] for u in pool), default=0.0) + tolerance
