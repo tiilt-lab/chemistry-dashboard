@@ -1,0 +1,6 @@
+# Installed after requirements-unified.txt with `pip install --no-deps -r`.
+# The package's declared dependencies are stale (whisperx 3.8.6, the latest
+# release, still pins torch 2.8 and huggingface-hub < 1) and would make pip
+# refuse the stack above, while what it actually imports (faster-whisper,
+# ctranslate2, pyannote-audio, torch) is pinned there.
+whisperx==3.8.6
