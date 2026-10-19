@@ -630,7 +630,7 @@ def _read_audio_models():
 _STATIC_MODELS = {
     "diarization": {
         "id": "spkrec-ecapa-voxceleb",
-        "label": "SpeechBrain ECAPA-TDNN fingerprints; pyannote 3.1 clustering selectable per re-run",
+        "label": "MOSS turns named from SpeechBrain ECAPA-TDNN voice prints; DiariZen or Nemotron clustering applies to WhisperX and Qwen3 re-runs only",
     },
 }
 

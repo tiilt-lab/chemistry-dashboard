@@ -264,7 +264,13 @@ class AudioProcessorPosthoc:
         # correct even when the reader finishes in seconds (unpaced batch ASR).
         if self.web_socket_connection is not None:
             self.send_json({'type': 'process_completed', 'message': 'Audio posthoc analytics completed'})
-        if self.config.diarization:
+        if self.config.diarization and not self.embeddings:
+            # Nothing to cluster: the recognizer named its own turns (MOSS,
+            # named_by_asr), so no per-utterance embedding was gathered. The
+            # spectral fallback ran anyway until 2026-10-19, failed on zero
+            # samples and wrote an empty results file after every publish.
+            logging.info('Speaker tagging skipped for %s: the recognizer named its turns', self.config.auth_key)
+        elif self.config.diarization:
             try:
                 self.send_speaker_taggings()
             except Exception as ex:
@@ -452,8 +458,14 @@ class AudioProcessorPosthoc:
                     (words[0].start_time.nanos / NANO)
                 end_time = words[-1].end_time.seconds + \
                     (words[-1].end_time.nanos / NANO)
-                transcript_audio_data = self.audio_buffer.extract(
-                    start_time, end_time)
+                # A recognizer that named its own turns (MOSS) needs none of
+                # the turn's audio downstream: no print check, no prosody, no
+                # DoA (post-hoc audio is one channel); its buffer stays empty.
+                if getattr(transcript_data, 'named_by_asr', False):
+                    transcript_audio_data = None
+                else:
+                    transcript_audio_data = self.audio_buffer.extract(
+                        start_time, end_time)
                 # Start processing thread for DoA, keywords, feature, etc.
                 self._latch.task_started()
                 transcript_thread = threading.Thread(target=self.process_transcript, args=(
@@ -511,7 +523,7 @@ class AudioProcessorPosthoc:
 
             # Get DoA (Direction of Arrival)
             doa = None
-            if self.config.doa and self.config.channels == 6:
+            if self.config.doa and self.config.channels == 6 and audio_data is not None:
                 word_timings = [(word.start_time.seconds + (word.start_time.nanos / NANO),
                                  word.end_time.seconds + (word.end_time.nanos / NANO)) for word in words]
                 doa = calculateDOA(start_time, audio_data, word_timings,
