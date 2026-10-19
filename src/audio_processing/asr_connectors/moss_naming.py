@@ -40,6 +40,15 @@ def unit(v):
     return v / (np.linalg.norm(v) + 1e-9)
 
 
+def cut(audio, sr, start, end):
+    """``audio[start:end]`` in seconds, clipped to the recording; None when
+    none of the stretch lies inside it. A stored stamp rounded below the
+    recording's first sample must not hand the embedder an empty slice
+    (ECAPA fails on under a frame of audio)."""
+    i0, i1 = max(0, int(float(start) * sr)), min(len(audio), int(float(end) * sr))
+    return audio[i0:i1] if i1 > i0 else None
+
+
 def session_prints(audio, sr, to_rec, rows, embed, wanted):
     """{alias: (unit vector, seconds used)} for the students in ``wanted``
     from their confidently named live rows. ``rows``: dicts with
@@ -47,7 +56,6 @@ def session_prints(audio, sr, to_rec, rows, embed, wanted):
     either laptop of the group; only the stretches inside this recording
     (``to_rec`` maps the session clock to seconds into ``audio``) are cut."""
     out = {}
-    n = len(audio)
     by_alias = {}
     for r in rows:
         tag = r.get("speaker_tag")
@@ -59,11 +67,11 @@ def session_prints(audio, sr, to_rec, rows, embed, wanted):
     for alias, rs in by_alias.items():
         sig, total = [], 0.0
         for r in sorted(rs, key=lambda r: -float(r.get("sim") or 0.0)):
-            s = to_rec(float(r["start_time"])); e = s + float(r["length"])
-            i0, i1 = int(s * sr), int(e * sr)
-            if i0 < 0 or i1 > n or i1 <= i0:
+            s = to_rec(float(r["start_time"]))
+            piece = cut(audio, sr, s, s + float(r["length"]))
+            if piece is None:
                 continue
-            sig.append(audio[i0:i1]); total += e - s
+            sig.append(piece); total += len(piece) / sr
             if total >= PRINT_MAX_S:
                 break
         if total >= PRINT_MIN_S:
@@ -127,10 +135,10 @@ def name_clusters(audio, sr, turns, roster, prints, kinds, live_rows_own, to_ses
                          key=lambda t: -(float(t["end"]) - float(t["start"])))
         sig, total = [], 0.0
         for t in longest:
-            i0, i1 = int(float(t["start"]) * sr), int(float(t["end"]) * sr)
-            if i1 <= i0 or i1 > len(audio):
+            piece = cut(audio, sr, t["start"], t["end"])
+            if piece is None:
                 continue
-            sig.append(audio[i0:i1]); total += float(t["end"]) - float(t["start"])
+            sig.append(piece); total += len(piece) / sr
             if total >= MAX_CLUSTER_S:
                 break
         if total < MIN_TURN or not prints:

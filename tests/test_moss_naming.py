@@ -136,3 +136,25 @@ def test_one_name_per_laptop_the_closest_cluster_keeps_it():
     assert out["S03"]["name"] == "Bob"
     name, conf = M.turn_attribution(out["S02"], roster)
     assert name is None and conf["guess"] == "Ann" and conf["duplicate_of"] == "S01"
+
+
+def test_a_turn_stamped_before_the_recording_starts_is_cut_at_its_first_sample():
+    # The renaming pass maps stored stamps back onto the recording; a stamp
+    # rounded below the recording's start handed the embedder an empty slice
+    # (Group 7, 2026-10-19: "Padding size should be less than the
+    # corresponding input dimension"). The in-range part names the cluster;
+    # a turn wholly outside the recording carries no voice.
+    audio = audio_of([(0, 50, 1), (50, 90, 2), (90, 100, 3)])
+    turns = [{"start": -0.131, "end": 1.4, "speaker": "S01"}, {"start": -5, "end": -2, "speaker": "S02"},
+             {"start": 60, "end": 85, "speaker": "S03"}, {"start": 92, "end": 130, "speaker": "S04"}]
+    roster = {"Ann": "own", "Bob": "own"}
+    prints = {"Ann": onehot(1), "Bob": onehot(2)}
+    kinds = {"Ann": "enrolment", "Bob": "enrolment"}
+    out = M.name_clusters(audio, SR, turns, roster, prints, kinds, [], ident, embed)
+    assert out["S01"]["name"] == "Ann" and out["S01"]["named_from"] == 1.4
+    assert out["S02"]["name"] is None and out["S02"]["named_from"] == 0.0
+    assert out["S03"]["name"] == "Bob"
+    assert out["S04"]["name"] is None and out["S04"]["named_from"] == 9.0   # the recording ends at 101 s
+    rows = [{"speaker_tag": "Ann", "start_time": -3, "length": 30, "sim": 0.9, "far_side": False}]
+    vec, seconds = M.session_prints(audio, SR, ident, rows, embed, wanted={"Ann"})["Ann"]
+    assert seconds == 27.0 and np.argmax(vec) == 1
