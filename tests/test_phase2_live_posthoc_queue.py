@@ -55,6 +55,7 @@ def q(tmp_path, monkeypatch):
     tickets = []
     monkeypatch.setattr(mod, "_mint", lambda d: tickets.append(d) or "t%d" % len(tickets))
     monkeypatch.setattr(mod, "_audio_produced_output", lambda d: True)
+    monkeypatch.setattr(mod, "_audio_completed_at", lambda d: None)
     monkeypatch.setattr(mod, "_live_pods", lambda: 0)
     monkeypatch.setattr(mod, "_POLL_SECONDS", 0.01)
     sleeps = []
@@ -506,3 +507,47 @@ def test_a_wake_reaches_both_lanes_and_the_runner_starts_one_thread_per_lane(q, 
     monkeypatch.setenv("NEGOTIATION_CODING_LANE", "0")
     q.start_runner()
     assert started == [("posthoc-queue", ("all",))]
+
+
+# ---- a restart mid-leg ----------------------------------------------------
+
+def test_a_leg_still_running_on_the_service_after_a_restart_is_waited_for_not_started_again(q, monkeypatch, caplog):
+    caplog.set_level(logging.INFO)
+    svc = Services(q).install(monkeypatch)
+    polls = {"n": 0}
+
+    def running(device_id, scope):
+        polls["n"] += 1
+        return scope == "audio" and polls["n"] <= 3
+    monkeypatch.setattr(q, "_scope_running", running)
+    q.enqueue(1, [10])
+    q._worker_loop()
+    job = q._all_jobs()[0]
+    assert job["state"] == "done" and job["done_legs"] == ["audio", "video"]
+    assert [e for e in svc.log if e[0] == "trigger"] == [("trigger", "video", 10, "t1")]
+    assert any("waiting for it rather than starting it again" in r.getMessage() for r in caplog.records)
+
+
+def test_an_audio_leg_that_finished_while_the_runner_was_away_is_not_run_again(q, monkeypatch, caplog):
+    caplog.set_level(logging.INFO)
+    svc = Services(q).install(monkeypatch)
+    q.enqueue(1, [10])
+    job = q._all_jobs()[0]
+    job["state"], job["started_at"], job["first_started_at"] = "running", 100.0, 100.0
+    q._save(job)
+    assert q._requeue_running() == 1 and q._load(job["id"])["first_started_at"] == 100.0
+    monkeypatch.setattr(q, "_audio_completed_at", lambda d: 160.0 if d == 10 else None)
+    q._worker_loop()
+    job = q._all_jobs()[0]
+    assert job["state"] == "done" and job["done_legs"] == ["audio", "video"]
+    assert job["first_started_at"] == 100.0 and job["started_at"] > 100.0
+    assert [e for e in svc.log if e[0] == "trigger"] == [("trigger", "video", 10, "t1")]
+    assert any("finished while the runner was away" in r.getMessage() for r in caplog.records)
+    # a stamp older than the job's first start is a previous run: the leg runs
+    q.enqueue(1, [11])
+    job = q._all_jobs()[1]
+    job["first_started_at"] = 200.0
+    q._save(job)
+    monkeypatch.setattr(q, "_audio_completed_at", lambda d: 160.0)
+    q._worker_loop()
+    assert [e for e in svc.log if e[0] == "trigger"][-2:] == [("trigger", "audio", 11, "t2"), ("trigger", "video", 11, "t3")]
