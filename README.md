@@ -131,8 +131,9 @@ frontend (via [nvm](https://github.com/nvm-sh/nvm): `nvm install 24`).
 git clone https://github.com/tiilt-lab/chemistry-dashboard.git
 cd chemistry-dashboard
 python3.13 -m venv src/venv-unified
-src/venv-unified/bin/pip install -r src/requirements-unified.txt
-src/venv-unified/bin/pip install <local clone of github.com/fkryan/gazelle>
+src/venv-unified/bin/pip install -r src/requirements-unified.txt --extra-index-url https://download.pytorch.org/whl/cu128
+src/venv-unified/bin/pip install --no-deps -r src/requirements-unified-nodeps.txt   # whisperx: its metadata lags the stack
+src/venv-unified/bin/pip install git+https://github.com/fkryan/gazelle
 src/venv-unified/bin/python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
 ```
 
