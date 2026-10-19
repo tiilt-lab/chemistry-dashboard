@@ -42,7 +42,10 @@ function TranscriptsComponent(){
   // laptop of the group, seeks and the playhead crossing the alignment.
   const [group, setGroup] = useState(null)
   const [scope, setScope] = useState("group")
-  const [viewDeviceId, setViewDeviceId] = useState(() => parseInt(sessionDeviceId, 10))
+  // The laptop whose recording plays in group scope; null until a switch
+  // (this pod's own). Declared before the route params are read, so it
+  // must not read them here.
+  const [viewDeviceId, setViewDeviceId] = useState(null)
   // The pod's recording plays above the list: a click on a line's time
   // seeks it, and the line under the playhead is highlighted and kept in
   // view. segments is the recording's layout on the session clock
@@ -220,7 +223,8 @@ const createDisplayTranscripts = ()=> {
   // this one otherwise. A click on a line seeks that laptop's recording
   // to where the line plays on its clock; the playhead comes back onto the
   // merged clock to highlight the line.
-  const playerDeviceId = groupScope ? viewDeviceId : parseInt(sessionDeviceId, 10)
+  const ownDeviceId = parseInt(sessionDeviceId, 10)
+  const playerDeviceId = groupScope && viewDeviceId != null ? viewDeviceId : ownDeviceId
   const playerSeek = (() => {
     if (selectedTime == null || !groupScope) return selectedTime
     const line = sourceRows.find((l) => l.start_time === selectedTime)
