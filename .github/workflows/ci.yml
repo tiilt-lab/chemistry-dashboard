@@ -44,6 +44,19 @@ jobs:
           echo "ruff violations: $COUNT (cap: $CAP)"
           test "$COUNT" -le "$CAP"
 
+  deptry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - run: pip install deptry==0.25.1
+      # Dependency hygiene: what src/ imports must be what
+      # src/requirements-direct.txt lists (nothing unused, missing or only
+      # transitive), and the lock must pin every direct dependency.
+      - run: bash tools/ci/deptry_check.sh
+
   frontend:
     runs-on: ubuntu-latest
     defaults:

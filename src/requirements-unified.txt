@@ -113,6 +113,7 @@ ImageIO==2.37.3
 imageio-ffmpeg==0.6.0
 imutils==0.5.4
 Incremental==24.11.0
+insightface==1.0.1
 interegular==0.3.3
 itsdangerous==2.2.0
 Jinja2==3.1.6
