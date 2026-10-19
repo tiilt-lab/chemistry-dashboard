@@ -105,10 +105,11 @@ def test_job_without_legs_still_runs_audio_then_video(monkeypatch, fake):
     assert [r[0] for r in _run(monkeypatch, job)] == ["audio", "video"]
 
 
-def test_status_shape_is_unchanged_by_legs(fake):
+def test_status_names_the_legs(fake):
     q.enqueue(1, [5], legs=("video",))
-    assert q.status(1) == [{"session_id": 1, "device_id": 5, "state": "queued",
-                            "error": None, "started_at": None, "finished_at": None}]
+    (row,) = q.status(1)
+    assert (row["session_id"], row["device_id"], row["state"], row["legs"], row["run_id"]) == (1, 5, "queued", ["video"], None)
+    assert (row["error"], row["started_at"], row["finished_at"]) == (None, None, None)
 
 
 # ---- end of session: which pods get a video leg -------------------------------
