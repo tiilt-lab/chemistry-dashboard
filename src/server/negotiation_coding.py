@@ -610,12 +610,38 @@ def estimate_clock_offset(reference, other, reference_device=None, other_device=
             anchors.append((other_start, other_start - t))
     if len(anchors) < PAIR_MIN_ANCHORS:
         return None
-    votes = {}
-    for _, offset in anchors:
-        b = round(offset / PAIR_VOTE_BIN)
-        votes[b] = votes.get(b, 0) + 1
-    dominant = max(votes, key=lambda b: (votes[b], -abs(b))) * PAIR_VOTE_BIN
-    anchors = [a for a in anchors if abs(a[1] - dominant) <= PAIR_ANCHOR_SPREAD]
+
+    def dominant_of(cands):
+        votes = {}
+        for _, offset in cands:
+            b = round(offset / PAIR_VOTE_BIN)
+            votes[b] = votes.get(b, 0) + 1
+        return max(votes, key=lambda b: (votes[b], -abs(b))) * PAIR_VOTE_BIN
+    # The offset is not one number for the session: a laptop that
+    # reconnected (Group 2, 2026-10-16: 257 s apart in the first minutes,
+    # 8 s after the reconnect) moves it, and to a single session-wide vote
+    # the anchors from before the move looked like repeats, so the copies
+    # there were never matched and the lines showed twice. The candidates
+    # settle into levels, the dominant offset first; a further level is the
+    # clock too when, over the stretch its anchors span, it outnumbers the
+    # dominant one (a phrase said again two minutes later never does).
+    levels, pool = [], list(anchors)
+    while len(pool) >= PAIR_MIN_ANCHORS:
+        d = dominant_of(pool)
+        level = [a for a in pool if abs(a[1] - d) <= PAIR_ANCHOR_SPREAD]
+        if len(level) < PAIR_MIN_ANCHORS:
+            break
+        pool = [a for a in pool if abs(a[1] - d) > PAIR_ANCHOR_SPREAD]
+        levels.append(level)
+    if not levels:
+        return None
+    primary = levels[0]
+    anchors = list(primary)
+    for level in levels[1:]:
+        lo, hi = min(a[0] for a in level), max(a[0] for a in level)
+        rivals = sum(1 for a in primary if lo <= a[0] <= hi)
+        if len(level) > rivals:
+            anchors.extend(level)
     if len(anchors) < PAIR_MIN_ANCHORS:
         return None
     # Two recognizers cut the same speech a second or so apart either way;
