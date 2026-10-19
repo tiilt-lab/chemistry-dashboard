@@ -146,5 +146,5 @@ def test_the_processor_and_the_naming_stamp_through_the_clock_moves():
     moss = open(os.path.join(ROOT, "src", "audio_processing", "asr_connectors", "moss_asr.py")).read()
     assert "recording_sidecar.recording_time(clock, session_t)" in moss
     server = open(os.path.join(ROOT, "src", "audio_processing", "server_posthoc.py")).read()
-    assert server.count("conf_val.update(self._clock_fields())") == 3
+    assert server.count("conf_val.update(self._clock_fields())") == 4     # full run, P&I, E&T, renaming
     assert "recording_fragments.choose_recording(files, server_start)" in server

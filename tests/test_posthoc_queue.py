@@ -76,3 +76,16 @@ def test_coding_jobs_audio_gate_persists_and_a_job_without_one_is_never_gated(mo
     assert q._audio_prerequisites(gated) == ([], [12])             # 12: nothing will analyse it
     q.enqueue(1, [12], legs=("audio",))
     assert q._audio_prerequisites(gated) == ([12], [])             # now its audio leg is ahead
+
+
+def test_a_rename_leg_goes_to_the_audio_service_and_gates_coding_like_audio(monkeypatch):
+    monkeypatch.setattr(redis_sync, "_client", FakeRedis())
+    assert "rename" in q.LEGS and q.LEGS.index("rename") < q.LEGS.index("coding")
+    assert q._leg_url("rename") == q.AUDIO_WS and q._leg_url("audio") == q.AUDIO_WS
+    assert q.enqueue(1, [21], legs=("rename",)) == [21]
+    assert q.enqueue_coding(1, 21, 7, after_audio=[21]) is True
+    coding = next(j for j in q._all_jobs() if j.get("run_id") == 7)
+    monkeypatch.setattr(q, "_audio_done", lambda d: False)
+    monkeypatch.setattr(q, "_scope_running", lambda d, s: False)
+    waiting, failed = q._audio_prerequisites(coding)
+    assert waiting == [21] and failed == []

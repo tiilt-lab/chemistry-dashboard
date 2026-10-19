@@ -78,6 +78,7 @@ running_audio_processes = PodRegistry(redis_factory=redis_client._redis,
 from posthoc_ticket import ticket_allows
 _TICKETED_TYPES = frozenset((
     'Initialize_audio_processing_analytics',
+    'Initialize_audio_renaming',
     'Initialize_participation_and_impact_style_computation',
     'Initialize_expressing_and_thinking_style_computation',
     'cancel_posthoc',
@@ -101,6 +102,62 @@ def _claim(key):
     ok = running_audio_processes.try_claim(key)
     _M_CLAIMS.labels('ok' if ok else 'busy').inc()
     return ok
+
+
+class _RenameRun:
+    """One renaming pass (asr_connectors/moss_rename.py) in a worker thread:
+    the API's plan of pieces, the prints on this recording, the new names
+    posted back. Registered under the pod key so cancel_posthoc reaches it;
+    cancel() stops it between steps. Releases the claim and the GPU lease
+    when done, like a full run."""
+
+    def __init__(self, protocol):
+        self.protocol = protocol
+        self.cancelled = False
+
+    def cancel(self):
+        self.cancelled = True
+
+    def stop(self):
+        self.cancelled = True
+
+    def run(self):
+        p = self.protocol
+        key = p.config.auth_key
+        ok = False
+        try:
+            callbacks.post_posthoc_reset(key, 'rename', wipe=False)
+            plan = callbacks.get_rename_plan(key)
+            if plan is None:
+                raise RuntimeError('the API gave no renaming plan')
+            if self.cancelled:
+                raise RuntimeError('cancelled')
+            from asr_connectors import moss_asr, moss_rename
+            audio, sr = moss_asr._read_audio(p.audio_file)
+            clock = {'start_offset': float(getattr(p.config, 'start_offset', 0.0) or 0.0),
+                     'moves': list(getattr(p.config, 'clock_moves', None) or [])}
+            rows, _records = moss_rename.rename_pod(
+                audio, sr, clock, plan, moss_asr._embedder(diarization_model),
+                lambda alias: moss_asr._enrolment_print(alias, diarization_model), percent=moss_asr._percent)
+            if self.cancelled:
+                raise RuntimeError('cancelled')
+            if rows and not callbacks.post_rename(key, rows):
+                raise RuntimeError('the API refused the new names')
+            callbacks.post_posthoc_completed(key, {'naming': 'moss-rename'}, scope='rename')
+            ok = True
+            logging.info('renaming done for %s: %d rows', key, len(rows))
+            p.send_json({'type': 'audio renaming completed', 'renamed': len(rows)})
+        except Exception as e:  # noqa: BLE001 - every failure must release the pod
+            logging.error('renaming failed for %s: %s', key, e, exc_info=True)
+            callbacks.post_posthoc_failed(key, 'rename', e)
+            try:
+                p.send_json({'type': 'error', 'message': 'Renaming failed: %s' % e})
+            except Exception:
+                pass
+        finally:
+            running_audio_processes.pop(key, None)
+            p._release_gpu()
+        _M_RUNS.labels('ok' if ok else 'failed').inc()
 
 
 def _run_outcome(success, watch):
@@ -341,6 +398,63 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
                     self._release_gpu()
                     logging.exception('posthoc init failed after claiming %s; claim released', key)
                     self.send_json({'type': 'error', 'message': 'Post-hoc initialization failed; see the audio service log.'})
+
+        if data['type'] == 'Initialize_audio_renaming':
+            # Rename the pod's stored MOSS turns without transcribing again
+            # (_RenameRun): same admission as a full run (pod claim, GPU lease
+            # for the embedder), nothing wiped, the recording's clock as a
+            # full run would stamp it.
+            self.sessionid = data['sessionid']
+            self.session_device_id = data['sessiondeviceid']
+            self.server_start = data['server_start']
+            self.keywords = data.get('keywords') or []
+            self.audio_file = self.get_audio_file_path(self.session_device_id)
+            if not self.audio_file:
+                self.send_json({'type': 'error', 'message': 'No audio captured for this group.'})
+                return
+            self.audio_file = str(self.audio_file)
+            key = recording_fragments.pod_key(self.audio_file)
+            off_set_date = parse_recording_filename(self.audio_file)[1]
+            if not _claim(key):
+                self.send_json({'type': 'error', 'message': 'Audio posthoc analytics for this group is already running'})
+                return
+            try:
+                conf_val = {'key': key, 'encoding': "pcm_f32le", 'sample_rate': 16000, 'channels': 1,
+                            'sessionid': self.sessionid, 'deviceid': self.session_device_id, 'tag': False,
+                            'server_start': self.server_start, 'keywords': self.keywords, 'transcribe': False,
+                            'features': False, 'doa': False, 'topic_model': None, 'owner': 1, 'off_set_date': off_set_date}
+                conf_val.update(self._clock_fields())
+                valid, result = ProcessingConfig.from_json(conf_val, source="posthoc renaming")
+                if not valid:
+                    running_audio_processes.pop(key, None)
+                    self.send_json({'type': 'error', 'message': 'Configuration failed for renaming.'})
+                    return
+                self.config = result
+                self.roster_aliases = [str(sp.get("alias")) for sp in (data.get('speakers') or []) if sp.get("alias")]
+                self._gpu_lease = acquire_for_run(
+                    redis_client._redis(), owner='audio-rename:%d:%s' % (os.getpid(), key), min_free_mib=_MIN_FREE_MIB)
+                if self._gpu_lease is None:
+                    _M_GPU_BUSY.inc()
+                    running_audio_processes.pop(key, None)
+                    self.send_json(dict(GPU_BUSY_REPLY))
+                    return
+                self.rename_only = True
+                self.send_json({'type': 'init posthoc analytics completed', 'message': "Starting renaming"})
+                logging.info('Audio renaming initiated for %s', key)
+            except Exception:
+                running_audio_processes.pop(key, None)
+                self._release_gpu()
+                logging.exception('renaming init failed after claiming %s; claim released', key)
+                self.send_json({'type': 'error', 'message': 'Renaming initialization failed; see the audio service log.'})
+
+        if data['type'] == 'start_posthoc_renaming':
+            if not getattr(self, 'rename_only', False) or not getattr(self, 'config', None):
+                self.send_json({'type': 'error', 'message': 'Renaming was not initialized.'})
+                return
+            self.send_json({'type': 'audio renaming started', 'message': "Renaming the stored turns"})
+            run = _RenameRun(self)
+            running_audio_processes[self.config.auth_key] = run
+            threading.Thread(target=run.run, name='moss-rename-%s' % self.config.auth_key, daemon=True).start()
 
         if data['type'] == 'Initialize_participation_and_impact_style_computation':
             self.sessionid = data['sessionid']

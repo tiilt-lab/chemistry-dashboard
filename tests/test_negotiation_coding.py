@@ -1164,7 +1164,7 @@ def test_wake_nudges_the_runner(fake):
 
 def test_queue_leg_source_contracts():
     s = _read("src", "server", "posthoc_queue.py")
-    assert 'LEGS = ("audio", "video", "coding")' in s and 'DEFAULT_LEGS = ("audio", "video")' in s
+    assert 'LEGS = ("audio", "rename", "video", "coding")' in s and 'DEFAULT_LEGS = ("audio", "video")' in s
     leg = _func_source(s, "_run_coding_leg")
     for forbidden in ("_mint(", "websockets", "gpu_lease", "_run_leg(", "RedisPosthocTicket"):
         assert forbidden not in leg
@@ -1478,6 +1478,43 @@ def test_merge_paired_leaves_clusters_alone_without_a_steady_pairing_or_a_clear_
     kept, _ = nc.merge_paired({1: pat, 2: sandy}, SIDES, diag)
     assert diag["reconciled"] == []          # three copies agree, but 0.905 is not 0.02 over 0.90
     assert {u["transcript_id"]: u["speaker_tag"] for u in kept}[2] == "Pat2"
+
+
+def test_rename_plan_cuts_a_cluster_where_the_partner_splits_it():
+    # Own cluster S03 holds two voices; the partner hears them as S03 and
+    # S04. Rows paired with each become a piece; the unpaired rows join the
+    # nearest paired row's piece; S02 is one piece as it stands.
+    own = [_crow(i, 1, 10 * i, "line number %d of the talk" % i, "Pat2", "S03", sim=0.9) for i in range(1, 9)]
+    own.append(_crow(20, 1, 200, "an aside by the first student", "Pat1", "S02", sim=0.95))
+    partner = [_crow(100 + i, 2, 10 * i + 0.3, "line number %d of the talk" % i, "Sand1", "S03", sim=0.93) for i in (1, 2, 3)]
+    partner += [_crow(100 + i, 2, 10 * i + 0.2, "line number %d of the talk" % i, "Sand1", "S04", sim=0.93) for i in (5, 6, 7)]
+    partner.append(_crow(130, 2, 300, "something only the partner heard", "Sand3", "S01", sim=0.97))
+    plan = nc.rename_plan(own, partner, 1, 2, SIDES)
+    pieces = {p["id"]: p for p in plan["pieces"]}
+    assert set(pieces) == {"S02", "S03a", "S03b"}
+    assert pieces["S03a"]["rows"] == [1, 2, 3, 4] and pieces["S03a"]["partner_cluster"] == "S03"
+    assert pieces["S03b"]["rows"] == [5, 6, 7, 8] and pieces["S03b"]["partner_cluster"] == "S04"
+    assert pieces["S03a"]["spans"][0] == [10.0, 15.0] and pieces["S03a"]["source_cluster"] == "S03"
+    assert pieces["S02"]["rows"] == [20] and pieces["S02"]["source_cluster"] is None
+    assert plan["split"] == {"S03": ["S03", "S04"]}
+    # prints: the split cluster's rows are out; the partner's unsplit, uncontested row is in
+    tags = sorted((r["speaker_tag"], r["device"]) for r in plan["print_rows"])
+    assert ("Pat1", 1) in tags and ("Sand3", 2) in tags
+    # both laptops claim the voice as their own student under different
+    # names: contested, so neither name seeds a print and the partner's
+    # claim is no hint; this laptop's own hearing (Pat2, own) is
+    assert plan["contested"] == ["Pat2", "Sand1"]
+    assert ("Sand1", 2) not in tags and ("Pat2", 1) not in tags
+    assert pieces["S03a"]["side_hint"] == "own" and pieces["S03b"]["side_hint"] == "own"
+    assert pieces["S02"]["side_hint"] == "own"
+
+
+def test_rename_plan_without_a_partner_is_one_piece_per_cluster():
+    own = [_crow(1, 1, 10, "a", "Pat2", "S03", sim=0.9), _crow(2, 1, 20, "b", "Pat2", "S03", sim=0.9),
+           _crow(3, 1, 30, "c", "Pat1", "S02", sim=0.9)]
+    plan = nc.rename_plan(own, [], 1, None, {1: "Pat"})
+    assert [(p["id"], p["rows"]) for p in plan["pieces"]] == [("S02", [3]), ("S03", [1, 2])]
+    assert plan["split"] == {} and len(plan["print_rows"]) == 3
 
 
 def test_merge_paired_ties_go_to_the_fuller_text_then_the_earlier_row():
@@ -2699,3 +2736,14 @@ def test_session_exports_cover_every_group_and_every_row(env):
     rows = list(csv.reader(io.StringIO(_call(env, r.export_session_transcript, "GET", session_id=session.id).data.decode("utf-8"))))
     assert sum(1 for row in rows[1:] if row[1] == stray.name and row[14] == "uncoded") == 14
     assert [row[0] for row in rows[1:]][-14:] == [""] * 14      # unnamed groups last
+
+
+def test_rename_plan_trusts_an_uncontested_partner_claim_for_the_side():
+    # The partner heard this cluster's voice as its own student and this
+    # laptop had no name for it: the voice sits across this laptop's table.
+    own = [_crow(i, 1, 10 * i, "words number %d" % i, None, "S07") for i in range(1, 5)]
+    partner = [_crow(100 + i, 2, 10 * i + 0.2, "words number %d" % i, "Sand3", "S01", sim=0.95) for i in range(1, 5)]
+    plan = nc.rename_plan(own, partner, 1, 2, SIDES)
+    piece = plan["pieces"][0]
+    assert piece["id"] == "S07" and piece["partner_cluster"] == "S01" and piece["side_hint"] == "far"
+    assert plan["contested"] == []

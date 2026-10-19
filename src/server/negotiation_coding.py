@@ -2003,6 +2003,191 @@ def group_team_dynamics(lines, speakers, names=TEAMS):
     return result
 
 
+PIECE_MIN_PAIRS = 3        # duplicate copies a partner cluster must share to cut a piece...
+PIECE_MIN_SHARE = 0.10     # ...and that share of the cluster's rows
+PIECE_NEAR_S = 90.0        # an unpaired row joins the piece of the nearest paired row this close
+PRINT_ROW_MIN_SIM = 0.8    # rows that may be cut into a session print for the renaming
+
+
+def _partner_on_own_clock(alignment, own_device):
+    # A partner row's session time as this laptop's clock reads it: the
+    # merge's alignment maps the other device onto the reference.
+    if not alignment:
+        return lambda t: t
+    offsets = alignment.get("offsets") or []
+    if not offsets:
+        return lambda t: t
+
+    def off(t):
+        return float(min(offsets, key=lambda o: abs(float(o["at"]) - t))["offset"] or 0.0)
+    if alignment.get("reference_device") == own_device:
+        return lambda t: t - off(t)
+    return lambda t: t + off(t)
+
+
+def rename_plan(own_rows, partner_rows, own_device, partner_device, sides):
+    """What a renaming pass (asr_connectors/moss_rename.py) names: this
+    laptop's diarizer clusters cut into pieces where the partner laptop's
+    clusters split them. The duplicate copies the merge matches pair each
+    own row with a partner cluster; a cluster paired with two or more
+    partner clusters (PIECE_MIN_PAIRS copies each, PIECE_MIN_SHARE of its
+    rows) holds that many voices, one piece per partner cluster; its other
+    rows join the piece of the nearest paired row within PIECE_NEAR_S, the
+    rest a remainder piece. A cluster the partner does not split is one
+    piece. ``print_rows``: rows of either laptop that a session print may
+    be cut from, named from prints at PRINT_ROW_MIN_SIM or better, not in
+    a split cluster and not a contested name (a voice both laptops claim as
+    their own student under different names), partner rows moved onto this
+    laptop's clock. Each piece carries a ``side_hint``: the partner's claim
+    on the voice when uncontested, else this laptop's earlier hearing.
+    Returns {pieces: [{id, cluster, source_cluster, partner_cluster, rows,
+    spans}], print_rows: [...], alignment}."""
+    rows_by_device = {own_device: list(own_rows)}
+    if partner_device is not None and partner_rows:
+        rows_by_device[partner_device] = list(partner_rows)
+    diagnostics = {}
+    _kept, dropped = merge_paired(rows_by_device, sides, diagnostics)
+    by_id, cluster_of = {}, {}
+    for device_id, rows in rows_by_device.items():
+        for r in rows:
+            u = _utterance(r, sides.get(device_id))
+            by_id[r.id] = (device_id, r, u)
+            c = (u.get("confidence") or {}).get("cluster")
+            if c:
+                cluster_of[r.id] = (device_id, c)
+    pairs = {}                              # (own cluster, partner cluster) -> count
+    partner_of = {}                         # own row id -> partner cluster
+    for d in dropped:
+        if d.get("reason") != "duplicate":
+            continue
+        a, b = cluster_of.get(d["transcript_id"]), cluster_of.get(d["kept_transcript_id"])
+        if not a or not b or a[0] == b[0]:
+            continue
+        own, far = (a, b) if a[0] == own_device else (b, a)
+        own_row = d["transcript_id"] if a[0] == own_device else d["kept_transcript_id"]
+        pairs[(own[1], far[1])] = pairs.get((own[1], far[1]), 0) + 1
+        partner_of[own_row] = far[1]
+    members = {}
+    for rid, (device_id, r, _u) in by_id.items():
+        if device_id == own_device and rid in cluster_of:
+            members.setdefault(cluster_of[rid][1], []).append(r)
+    # Which side a partner cluster's voice is on, by the partner's own
+    # claim: a cluster it named as its student sits across this laptop's
+    # table; one it heard from across its table is this laptop's own.
+    partner_claim, partner_name = {}, {}
+    for rid, (device_id, r, u) in by_id.items():
+        if device_id == own_device or rid not in cluster_of:
+            continue
+        conf = u.get("confidence") or {}
+        if u.get("speaker_tag") and conf.get("named_by") in ("prints", "elimination"):
+            votes = partner_claim.setdefault(cluster_of[rid][1], {"far": 0, "own": 0})
+            votes["own" if conf.get("far_side") else "far"] += 1
+            names = partner_name.setdefault(cluster_of[rid][1], {})
+            names[u["speaker_tag"]] = names.get(u["speaker_tag"], 0) + 1
+    # A voice both laptops claim as their own student under different
+    # names is contested: one of them is wrong, and neither name may seed
+    # a session print from it (that is how a print comes to be another
+    # student's voice), nor is the partner's side claim worth a hint.
+    own_name = {}
+    for cluster, rows in members.items():
+        names = {}
+        for r in rows:
+            u = by_id[r.id][2]
+            conf = u.get("confidence") or {}
+            if u.get("speaker_tag") and conf.get("named_by") == "prints" and not conf.get("far_side"):
+                names[u["speaker_tag"]] = names.get(u["speaker_tag"], 0) + 1
+        if names:
+            own_name[cluster] = max(names, key=names.get)
+    contested_pairs, contested_names = set(), set()
+    for (c, far), n in pairs.items():
+        rows = members.get(c) or []
+        if n < PIECE_MIN_PAIRS or n < PIECE_MIN_SHARE * len(rows):
+            continue
+        mine, theirs = own_name.get(c), partner_name.get(far)
+        claim = partner_claim.get(far)
+        if mine and theirs and claim and claim["far"] > claim["own"]:
+            their_name = max(theirs, key=theirs.get)
+            if their_name != mine:
+                contested_pairs.add((c, far))
+                contested_names.update((mine, their_name))
+
+    def side_hint(partner_cluster, own_rows):
+        cluster = cluster_of[own_rows[0].id][1] if own_rows and own_rows[0].id in cluster_of else None
+        votes = partner_claim.get(partner_cluster) if partner_cluster else None
+        if votes and votes["far"] != votes["own"] and (cluster, partner_cluster) not in contested_pairs:
+            return "far" if votes["far"] > votes["own"] else "own"
+        own_votes = {"far": 0, "own": 0}
+        for r in own_rows:
+            u = by_id[r.id][2]
+            conf = u.get("confidence") or {}
+            if u.get("speaker_tag") and conf.get("named_by") == "prints":
+                own_votes["far" if conf.get("far_side") else "own"] += 1
+        if own_votes["far"] != own_votes["own"]:
+            return "far" if own_votes["far"] > own_votes["own"] else "own"
+        return None
+    split = {}
+    pieces = []
+    for cluster, rows in sorted(members.items()):
+        rows = sorted(rows, key=lambda r: float(r.start_time or 0))
+        strong = sorted(((n, far) for (c, far), n in pairs.items()
+                         if c == cluster and n >= PIECE_MIN_PAIRS and n >= PIECE_MIN_SHARE * len(rows)),
+                        key=lambda nf: (-nf[0], nf[1]))
+        if len(strong) < 2:
+            pieces.append({"id": cluster, "cluster": cluster, "source_cluster": None,
+                           "partner_cluster": strong[0][1] if strong else None,
+                           "side_hint": side_hint(strong[0][1] if strong else None, rows),
+                           "rows": [r.id for r in rows], "spans": [[float(r.start_time), float(r.start_time) + float(r.length or 0)] for r in rows]})
+            continue
+        split[cluster] = [far for _n, far in strong]
+        groups = {far: [] for _n, far in strong}
+        loose = []
+        for r in rows:
+            far = partner_of.get(r.id)
+            (groups[far] if far in groups else loose).append(r)
+        anchors = [(float(r.start_time), far) for far, rs in groups.items() for r in rs]
+        remainder = []
+        for r in loose:
+            t = float(r.start_time or 0)
+            near = min(anchors, key=lambda a: abs(a[0] - t)) if anchors else None
+            if near and abs(near[0] - t) <= PIECE_NEAR_S:
+                groups[near[1]].append(r)
+            else:
+                remainder.append(r)
+        parts = [(far, sorted(rs, key=lambda r: float(r.start_time or 0))) for far, rs in groups.items()]
+        if remainder:
+            parts.append((None, remainder))
+        for i, (far, rs) in enumerate(parts):
+            pieces.append({"id": "%s%s" % (cluster, chr(ord("a") + i)), "cluster": cluster, "source_cluster": cluster,
+                           "partner_cluster": far, "side_hint": side_hint(far, rs), "rows": [r.id for r in rs],
+                           "spans": [[float(r.start_time), float(r.start_time) + float(r.length or 0)] for r in rs]})
+    # Which partner clusters this laptop's clusters split, symmetrically.
+    partner_members = {}
+    for rid, (device_id, r, _u) in by_id.items():
+        if device_id != own_device and rid in cluster_of:
+            partner_members.setdefault(cluster_of[rid][1], []).append(r)
+    partner_split = set()
+    for pc, rs in partner_members.items():
+        strong = [c for (c, far), n in pairs.items() if far == pc and n >= PIECE_MIN_PAIRS and n >= PIECE_MIN_SHARE * len(rs)]
+        if len(strong) >= 2:
+            partner_split.add(pc)
+    shift = _partner_on_own_clock(diagnostics.get("alignment"), own_device)
+    print_rows = []
+    for rid, (device_id, r, u) in by_id.items():
+        conf = u.get("confidence") or {}
+        if not u.get("speaker_tag") or conf.get("named_by") != "prints" or float(conf.get("sim") or 0) < PRINT_ROW_MIN_SIM:
+            continue
+        if u["speaker_tag"] in contested_names:
+            continue
+        c = cluster_of.get(rid)
+        if not c or (device_id == own_device and c[1] in split) or (device_id != own_device and c[1] in partner_split):
+            continue
+        start = float(r.start_time) if device_id == own_device else shift(float(r.start_time))
+        print_rows.append({"speaker_tag": u["speaker_tag"], "start_time": start, "length": float(r.length or 0),
+                           "sim": conf.get("sim"), "far_side": bool(conf.get("far_side")), "device": device_id})
+    return {"pieces": pieces, "print_rows": print_rows, "split": {c: f for c, f in split.items()},
+            "contested": sorted(contested_names), "alignment": diagnostics.get("alignment")}
+
+
 def group_dynamics(lines, enrolled=None, speakers=None, names=TEAMS):
     """The conversation dynamics of a group's merged transcript: the same
     per-speaker equity, response network and talk metrics a single pod

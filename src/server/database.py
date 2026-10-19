@@ -116,6 +116,33 @@ def reassign_transcript_speaker(transcript_id, alias, apply_to_tag=False):
     db.session.commit()
     return n, did
 
+def rename_transcripts(session_device_id, rows):
+    """The renaming pass's names for a pod's rows: each {id, speaker_tag,
+    confidence} sets the row's tag (and speaker slot, when the pod has one
+    for the alias) and merges the confidence into voice_features. Rows of
+    other pods are ignored. Returns the rows changed."""
+    import json as _json
+    ids = [int(r["id"]) for r in rows if r.get("id") is not None]
+    if not ids:
+        return 0
+    wanted = {int(r["id"]): r for r in rows if r.get("id") is not None}
+    slots = {s.alias: s.id for s in db.session.query(Speaker).filter(Speaker.session_device_id == session_device_id).all() if s.alias}
+    n = 0
+    for t in db.session.query(Transcript).filter(Transcript.id.in_(ids), Transcript.session_device_id == session_device_id).all():
+        r = wanted[t.id]
+        tag = r.get("speaker_tag") or None
+        t.speaker_tag = tag
+        t.speaker_id = slots.get(tag) if tag else None
+        vf = t._voice_features_json() or {}
+        conf = dict(vf.get("confidence") or {})
+        conf.update(r.get("confidence") or {})
+        vf["confidence"] = conf
+        t.voice_features = _json.dumps(vf)
+        n += 1
+    db.session.commit()
+    return n
+
+
 def update_speaker(speaker_id, alias = None):
     speaker = get_speakers(id = speaker_id)
     if speaker:

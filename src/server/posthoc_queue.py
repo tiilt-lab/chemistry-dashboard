@@ -444,7 +444,7 @@ def _audio_produced_output(device_id):
 
 
 def _leg_url(scope):
-    return AUDIO_WS if scope == "audio" else VIDEO_WS
+    return AUDIO_WS if scope in ("audio", "rename") else VIDEO_WS
 
 
 def _scope_running(device_id, scope):
@@ -523,7 +523,7 @@ def _audio_prerequisites(job, jobs=None):
         return [], []
     jobs = _all_jobs() if jobs is None else jobs
     in_flight = {j["device_id"] for j in jobs
-                 if j["state"] in ("queued", "running") and "audio" in _job_legs(j)}
+                 if j["state"] in ("queued", "running") and ("audio" in _job_legs(j) or "rename" in _job_legs(j))}
     waiting, failed = [], []
     for d in pods:
         if _audio_done(d):
@@ -600,6 +600,12 @@ def _run_job(job):
                         diarizer=models.get("diarizer", "diarizen"),
                         embedder=models.get("embedder"))
             start = "start_posthoc_audio_processing"
+        elif scope == "rename":
+            # The stored MOSS turns named again on the recording, without
+            # transcribing (server_posthoc _RenameRun): the audio service,
+            # scope "rename" in posthoc_state.
+            init = dict(base, type="Initialize_audio_renaming")
+            start = "start_posthoc_renaming"
         else:
             init = dict(base, type="Initialize_video_processing_analytics")
             start = "start_posthoc_video_processing"
@@ -765,7 +771,7 @@ def start_runner():
     return _worker
 
 
-LEGS = ("audio", "video", "coding")   # run order within a job
+LEGS = ("audio", "rename", "video", "coding")   # run order within a job
 DEFAULT_LEGS = ("audio", "video")     # a job without legs: the historic run
 
 
