@@ -117,3 +117,22 @@ def test_elimination_gives_the_one_unprinted_student_the_largest_unnamed_cluster
     assert out["S04"]["name"] is None                      # 30 s, and the side is unknown
     name, conf = M.turn_attribution(out["S03"], roster)
     assert name == "Cy" and conf["named_by"] == "elimination"
+
+
+def test_one_name_per_laptop_the_closest_cluster_keeps_it():
+    # Two clusters match Ann's print, which happens when a session print was
+    # cut from live rows that named another voice Ann: only the closest
+    # (here, on a tie, the longer) keeps the name, the other carries it as a
+    # guess that the merge can overrule with the other laptop's name.
+    audio = audio_of([(0, 60, 1), (60, 90, 1), (90, 130, 2)])
+    turns = [{"start": 0, "end": 60, "speaker": "S01"}, {"start": 60, "end": 90, "speaker": "S02"},
+             {"start": 90, "end": 130, "speaker": "S03"}]
+    roster = {"Ann": "own", "Bob": "far"}
+    prints = {"Ann": onehot(1), "Bob": onehot(2)}
+    kinds = {"Ann": "session", "Bob": "enrolment"}
+    out = M.name_clusters(audio, SR, turns, roster, prints, kinds, [], ident, embed)
+    assert out["S01"]["name"] == "Ann"
+    assert out["S02"]["name"] is None and out["S02"]["guess"] == "Ann" and out["S02"]["duplicate_of"] == "S01"
+    assert out["S03"]["name"] == "Bob"
+    name, conf = M.turn_attribution(out["S02"], roster)
+    assert name is None and conf["guess"] == "Ann" and conf["duplicate_of"] == "S01"

@@ -1413,6 +1413,73 @@ def test_merge_paired_keeps_one_copy_of_each_utterance_on_its_own_side():
     assert kept[0]["confidence"]["sim"] == 0.82
 
 
+def _crow(i, device, start, text, tag, cluster, sim=None, length=5, far_side=False):
+    # A MOSS row: the diarizer cluster the name came from rides in the confidence.
+    conf = {"cluster": cluster}
+    if sim is not None:
+        conf.update(sim=sim, margin=0.2, percent=100, named_by="prints")
+    if far_side:
+        conf["far_side"] = True
+    return types.SimpleNamespace(id=i, session_device_id=device, start_time=start, length=length, speaker_tag=tag,
+                                 transcript=text, _voice_features_json=lambda: {"confidence": conf})
+
+
+def test_merge_paired_names_a_voice_once_across_both_laptops():
+    # Group 1, 2026-10-16: the Pat laptop's "Pat 2" print was Sandy 1's voice
+    # (two clusters took the name, one at 0.90); the Sandy laptop knew its own
+    # student at 0.94. The kept copy's name flipped with the kept laptop.
+    pat = [
+        _crow(1, 1, 0, "you went on vacation and left alex in charge", "Pat1", "S02", sim=0.968),
+        _crow(2, 1, 10, "we were just talking to alex under confidence", "Pat2", "S03", sim=0.904),
+        _crow(3, 1, 16, "but kinda wanna take the middleman out of this", "Pat2", "S03", sim=0.904),
+        _crow(4, 1, 22, "get to some terms that are mutually beneficial", "Pat2", "S03", sim=0.904),
+        _crow(6, 1, 28, "because this relationship is really important to us", "Pat2", "S03", sim=0.904),  # the Sandy laptop missed this piece
+        _crow(5, 1, 100, "yes we can agree to that", "Pat2", "S04", sim=0.80),                         # the real Pat 2
+    ]
+    sandy = [
+        _crow(12, 2, 10.3, "we were just talking to alex under confidence", "Sand1", "S03", sim=0.943),
+        _crow(13, 2, 16.2, "but kinda wanna take the middleman out of this", "Sand1", "S03", sim=0.943),
+        _crow(14, 2, 22.1, "get to some terms that are mutually beneficial", "Sand1", "S03", sim=0.943),
+        _crow(15, 2, 100.4, "yes we can agree to that", None, "S05"),
+    ]
+    diag = {}
+    kept, dropped = nc.merge_paired({1: pat, 2: sandy}, SIDES, diag)
+    by_id = {u["transcript_id"]: u for u in kept}
+    assert [u["transcript_id"] for u in kept] == [1, 12, 13, 14, 6, 5]
+    # the lone fragment follows its voice, team and all
+    assert by_id[6]["speaker_tag"] == "Sand1" and by_id[6]["team"] == "Sandy"
+    assert by_id[6]["confidence"]["reconciled_from"] == "Pat2" and by_id[6]["confidence"]["duplicate_name"] is True
+    # the other cluster keeps the name it was given; the rest are untouched
+    assert by_id[5]["speaker_tag"] == "Pat2" and by_id[5]["team"] == "Pat"
+    assert by_id[12]["speaker_tag"] == "Sand1" and by_id[1]["speaker_tag"] == "Pat1"
+    assert diag["reconciled"] == [{"session_device_id": 1, "cluster": "S03", "from": "Pat2", "to": "Sand1",
+                                   "lines": 4, "pairs": 3}]
+    lines = [nc.group_line(u) for u in nc.stitch_sentences(kept)]
+    turn = [l for l in lines if any(w in l["transcript"] for w in ("alex under", "middleman", "mutually", "relationship"))]
+    assert {l["speaker_tag"] for l in turn} == {"Sand1"}
+    assert [l["reconciled_from"] for l in lines if l["id"] == 6] == ["Pat2"]
+
+
+def test_merge_paired_leaves_clusters_alone_without_a_steady_pairing_or_a_clear_winner():
+    # One shared copy is not a pairing; and a claim no stronger than this
+    # laptop's own does not take its lines.
+    pat = [_crow(1, 1, 10, "we were just talking to alex under confidence", "Pat2", "S03", sim=0.90),
+           _crow(2, 1, 40, "get to some terms that are mutually beneficial", "Pat2", "S03", sim=0.90)]
+    sandy = [_crow(12, 2, 10.3, "we were just talking to alex under confidence", "Sand1", "S03", sim=0.91)]
+    diag = {}
+    kept, _ = nc.merge_paired({1: pat, 2: sandy}, SIDES, diag)
+    # 0.90 against 0.91 is a tie for the copy, so the earlier row is kept
+    assert {u["transcript_id"]: u["speaker_tag"] for u in kept} == {1: "Pat2", 2: "Pat2"}
+    assert diag["reconciled"] == []
+    pat.append(_crow(3, 1, 70, "and we would like to keep renting", "Pat2", "S03", sim=0.90))
+    pat.append(_crow(4, 1, 90, "the market is cooling a bit", "Pat2", "S03", sim=0.90))
+    sandy.append(_crow(13, 2, 70.2, "and we would like to keep renting", "Sand1", "S03", sim=0.905))
+    sandy.append(_crow(14, 2, 90.1, "the market is cooling a bit", "Sand1", "S03", sim=0.905))
+    kept, _ = nc.merge_paired({1: pat, 2: sandy}, SIDES, diag)
+    assert diag["reconciled"] == []          # three copies agree, but 0.905 is not 0.02 over 0.90
+    assert {u["transcript_id"]: u["speaker_tag"] for u in kept}[2] == "Pat2"
+
+
 def test_merge_paired_ties_go_to_the_fuller_text_then_the_earlier_row():
     a = _row(1, 1, 0, "we both let that slide", "Pat", sim=0.7)
     b = _row(2, 2, 0.5, "the contract says changes must be in writing but we both let that slide", "Sandy", sim=0.72)

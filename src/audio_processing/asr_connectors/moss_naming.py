@@ -154,6 +154,20 @@ def name_clusters(audio, sr, turns, roster, prints, kinds, live_rows_own, to_ses
             side, side_from = roster.get(n), "name"
         out[c] = dict(name=n, guess=guess, sim=round(sim, 3), margin=round(margin, 3), side=side, side_from=side_from,
                       seconds=seconds, named_from=round(total, 1), by_elimination=False, live=lm_shares)
+    # One name per laptop: a print two clusters match is matching two voices
+    # (a session print cut from misnamed live rows, or one voice the
+    # diarizer split). The closest cluster keeps the name; the others carry
+    # it as a guess, so the merge can give them the other laptop's name.
+    by_name = {}
+    for c, v in out.items():
+        if v["name"]:
+            by_name.setdefault(v["name"], []).append(c)
+    for name, cs in by_name.items():
+        if len(cs) < 2:
+            continue
+        cs.sort(key=lambda c: (-(out[c]["sim"] or 0.0), -out[c]["seconds"]))
+        for c in cs[1:]:
+            out[c].update(name=None, guess=name, side_from="duplicate", duplicate_of=cs[0])
     for side in ("own", "far"):
         unprinted = [al for al, sd in roster.items() if sd == side and al not in prints]
         if len(unprinted) != 1:
@@ -181,4 +195,6 @@ def turn_attribution(cluster, roster):
         conf["named_by"] = "elimination" if cluster.get("by_elimination") else "prints"
     elif cluster.get("guess"):
         conf["guess"] = cluster["guess"]
+        if cluster.get("duplicate_of"):
+            conf["duplicate_of"] = cluster["duplicate_of"]
     return name, conf
