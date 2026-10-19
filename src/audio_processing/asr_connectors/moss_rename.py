@@ -16,7 +16,6 @@ callable, like moss_naming; ``rename_pod`` is the glue the service calls.
 """
 import logging
 
-import numpy as np
 
 from . import moss_naming
 
