@@ -12,6 +12,7 @@ function TranscriptComponentPage(props) {
     // inside the list's own scroll box, never by scrolling the page, when
     // it changes (so a reader scrolling elsewhere is not fought every tick).
     const scrollRef = useRef(null)
+    const stickyRef = useRef(null)
     const playingRef = useRef(null)
     const playing = props.playbackTime != null ? lineAt(props.displayTranscripts || [], props.playbackTime) : null
     const playingId = playing ? playing.id : null
@@ -21,18 +22,22 @@ function TranscriptComponentPage(props) {
         if (!el || !box) return
         const er = el.getBoundingClientRect()
         const cr = box.getBoundingClientRect()
-        const top = cr.top + (props.sessionId ? 72 : 0) // under the sticky player
+        const sticky = stickyRef.current ? stickyRef.current.getBoundingClientRect().height : 0
+        const top = cr.top + sticky // under the sticky player
         let delta = 0
         if (er.top < top) delta = er.top - top - 8
         else if (er.bottom > cr.bottom) delta = er.bottom - cr.bottom + 8
         if (delta !== 0) box.scrollTo({ top: box.scrollTop + delta, behavior: "smooth" })
     }, [playingId, props.sessionId])
     const hasPlayer = !!props.sessionId && !!(props.sessionDevice && props.sessionDevice.id)
+    const pods = (props.group && props.group.pods) || []
+    const playerId = props.groupScope && props.playerDeviceId ? props.playerDeviceId : props.sessionDevice && props.sessionDevice.id
+    const groupTitle = props.group && props.sessionDevice && props.sessionDevice.negotiation_group
     return (
         <>
             <div role="main" className="main-container">
                 <Appheader
-                    title={"Transcripts · " + props.sessionDevice.name}
+                    title={"Transcripts · " + (props.groupScope && groupTitle ? groupTitle + " · both laptops" : props.sessionDevice.name)}
                     leftText={false}
                     rightText={"Options"}
                     rightTextClick={props.openOptionsDialog}
@@ -42,13 +47,63 @@ function TranscriptComponentPage(props) {
 
                 <div ref={scrollRef} className="relative min-h-0 w-full grow overflow-y-auto">
                     {hasPlayer ? (
-                        <div className="sticky top-0 z-10 border-b border-tiilt-line bg-white/95 backdrop-blur">
-                            <div className="mx-auto w-full max-w-3xl px-4 py-2">
+                        <div ref={stickyRef} className="sticky top-0 z-10 border-b border-tiilt-line bg-white/95 backdrop-blur">
+                            <div className="mx-auto flex w-full max-w-3xl flex-col gap-2 px-4 py-2">
+                                {props.group ? (
+                                    <div className="flex flex-wrap items-center gap-3 text-xs">
+                                        <span className="font-semibold text-tiilt-muted">Transcript</span>
+                                        <span className="flex items-center gap-1 rounded-md border border-tiilt-line bg-white p-0.5" title="Whose transcript the page shows">
+                                            {[["group", "Whole group"], ["device", "This laptop"]].map(([value, label]) => (
+                                                <button
+                                                    key={value}
+                                                    type="button"
+                                                    onClick={() => props.onSelectScope && props.onSelectScope(value)}
+                                                    className={
+                                                        "cursor-pointer rounded px-2.5 py-1 text-xs font-semibold transition " +
+                                                        (props.scope === value ? "bg-tiilt text-white" : "text-tiilt hover:bg-tiilt-soft")
+                                                    }
+                                                >
+                                                    {label}
+                                                </button>
+                                            ))}
+                                        </span>
+                                        {props.groupScope ? (
+                                            <>
+                                                <span className="ml-1 font-semibold text-tiilt-muted">Audio</span>
+                                                <span className="flex flex-wrap items-center gap-1">
+                                                    {pods.map((p) => {
+                                                        const audio = p.has_audio !== false
+                                                        const active = playerId === p.id
+                                                        return (
+                                                            <button
+                                                                key={p.id}
+                                                                type="button"
+                                                                disabled={!audio}
+                                                                onClick={() => audio && props.onSelectView && props.onSelectView(p.id)}
+                                                                title={audio ? `Play ${p.name}'s recording` : `${p.name} has no recording`}
+                                                                className={
+                                                                    "rounded-md px-2.5 py-1 text-xs font-semibold transition " +
+                                                                    (active
+                                                                        ? "bg-tiilt text-white shadow-sm"
+                                                                        : audio
+                                                                          ? "cursor-pointer bg-tiilt-ground text-tiilt hover:bg-tiilt-soft"
+                                                                          : "cursor-default bg-tiilt-ground text-tiilt-muted opacity-60")
+                                                                }
+                                                            >
+                                                                {p.side ? p.side + " · " : ""}{p.name}
+                                                            </button>
+                                                        )
+                                                    })}
+                                                </span>
+                                            </>
+                                        ) : null}
+                                    </div>
+                                ) : null}
                                 <AudioPlayer
-                                    key={"a" + props.sessionDevice.id}
+                                    key={"a" + playerId}
                                     sessionId={props.sessionId}
-                                    sessionDeviceId={props.sessionDevice.id}
-                                    selectedTime={props.selectedTime}
+                                    sessionDeviceId={playerId}
+                                    selectedTime={props.playerSeek != null ? props.playerSeek : props.selectedTime}
                                     onPlaybackTime={props.onPlaybackTime}
                                     onSegments={props.onSegments}
                                 />
@@ -164,6 +219,14 @@ function TranscriptComponentPage(props) {
                                             ) : (
                                                 <></>
                                             )}{" "}
+                                            {props.groupScope && transcript.pod_label ? (
+                                                <span
+                                                    title={transcript.far_side ? "Heard from across the table, named from the partner laptop's roster" : "The laptop that heard this line"}
+                                                    className="mr-1 rounded bg-tiilt-ground px-1 align-middle text-[10px] font-medium text-tiilt-muted"
+                                                >
+                                                    {transcript.pod_label}
+                                                </span>
+                                            ) : null}
                                             {props.editingId === transcript.id ? (
                                                 <textarea
                                                     autoFocus
