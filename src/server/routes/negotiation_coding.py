@@ -15,6 +15,7 @@ did with it (transcript.csv: coded, stitched into another line, dropped
 and why, or never coded).
 """
 import csv
+import hashlib
 import importlib
 import io
 import json
@@ -328,11 +329,44 @@ def _group_rosters(pods):
             for p in pods]
 
 
+MERGE_CACHE_TTL = 12 * 3600    # s a merged group transcript stays cached, keyed by what it was merged from
+
+
+def _merge_store():
+    """Where merged group transcripts are kept between page loads: the
+    API's Redis (shared by the gunicorn workers), or None when it is not
+    reachable, in which case every load merges afresh."""
+    try:
+        import redis_helper
+        return redis_helper.r
+    except Exception as e:  # noqa: BLE001 - the cache is a convenience, never a dependency
+        logging.info('merge cache unavailable: %s', e)
+        return None
+
+
+def _merge_fingerprint(rows_by_device, rosters, names):
+    """What the merge is a function of: every row's id, place, name and
+    confidence (a rename or a re-run changes these without changing the
+    count), the rosters the labels come from, and the team names."""
+    h = hashlib.sha1()
+    for device_id in sorted(rows_by_device):
+        h.update(('d%s' % device_id).encode())
+        for r in rows_by_device[device_id]:
+            h.update(('%s|%s|%s|%s|%s\n' % (r.id, r.start_time, r.length, r.speaker_tag or '',
+                                            getattr(r, 'voice_features', None) or '')).encode())
+    h.update(json.dumps([rosters, list(names)], sort_keys=True, default=str).encode())
+    return h.hexdigest()
+
+
 def _group_merge(session_id, group):
     """(payload, devices) of one group's merged transcript, or (None, None)
     when the session has no such group. The clocks are aligned from the
     text (the acoustic alignment the coder uses reads both recordings end
-    to end, too slow for a page load)."""
+    to end, too slow for a page load). The merge itself took 1-5 s a load
+    on the 2026-10-16 groups and was recomputed on every load; it is kept
+    in Redis under a fingerprint of the rows it was merged from, so a page
+    load after a re-run or a rename merges once and the next loads are
+    instant."""
     names = negotiation_coding._session_names(database.get_sessions(id=session_id))
     devices = [d for d in database.get_session_devices(session_id=session_id)
                if (getattr(d, 'negotiation_group', None) or '') == group]
@@ -341,14 +375,30 @@ def _group_merge(session_id, group):
     pods = negotiation_coding.group_pods(devices, names, database.session_device_transcript_count)
     primary_ids = [p['id'] for p in pods if p['primary']]
     rows_by_device = {d: database.get_transcripts(session_device_id=d) for d in primary_ids}
-    payload = negotiation_coding.group_transcript([d for d in devices if d.id in primary_ids],
-                                                  rows_by_device, names)
-    for pod in pods:
-        pod['has_video'], pod['has_audio'] = _pod_media(pod['id'])
     # Display names: "Pat 1", "Sandy 2" from each laptop's roster and side,
     # the one list the transcript, the speaker cards and the dynamics share.
-    payload.update({'group': group, 'teams': list(names), 'pods': pods,
-                    'speakers': negotiation_coding.speaker_labels(_group_rosters(pods), names, payload['lines'])})
+    rosters = _group_rosters(pods)
+    store = _merge_store()
+    key = 'group_merge:%s:%s:%s' % (session_id, group, _merge_fingerprint(rows_by_device, rosters, names))
+    payload = None
+    if store is not None:
+        try:
+            cached = store.get(key)
+            payload = json.loads(cached) if cached else None
+        except Exception as e:  # noqa: BLE001
+            logging.info('merge cache read failed: %s', e)
+    if payload is None:
+        payload = negotiation_coding.group_transcript([d for d in devices if d.id in primary_ids],
+                                                      rows_by_device, names)
+        payload['speakers'] = negotiation_coding.speaker_labels(rosters, names, payload['lines'])
+        if store is not None:
+            try:
+                store.setex(key, MERGE_CACHE_TTL, json.dumps(payload, default=str))
+            except Exception as e:  # noqa: BLE001
+                logging.info('merge cache write failed: %s', e)
+    for pod in pods:
+        pod['has_video'], pod['has_audio'] = _pod_media(pod['id'])
+    payload.update({'group': group, 'teams': list(names), 'pods': pods})
     return payload, devices
 
 
