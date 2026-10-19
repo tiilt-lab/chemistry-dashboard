@@ -198,23 +198,6 @@ def test_running_job_survives_clear_and_is_requeued_after_a_restart(q):
     assert q.status()[0]["state"] == "queued"
 
 
-def test_migration_moves_pending_jobs_from_the_json_file_once(q, tmp_path, monkeypatch):
-    state = tmp_path / "posthoc_queue.json"
-    state.write_text(json.dumps([
-        {"session_id": 1, "device_id": 10, "state": "done", "models": None, "error": None},
-        {"session_id": 1, "device_id": 11, "state": "running", "models": {"asr": "whisperx"},
-         "error": None, "done_legs": ["audio"]},
-        {"session_id": 2, "device_id": 12, "state": "queued", "models": None, "error": None},
-    ]))
-    monkeypatch.setattr(q, "_state_file", lambda: str(state))
-    assert q.migrate_state_file() == 2
-    assert {j["device_id"]: j["state"] for j in q.status()} == {11: "queued", 12: "queued"}
-    jobs = q._all_jobs()
-    assert jobs[0]["done_legs"] == ["audio"] and jobs[0]["models"] == {"asr": "whisperx"}
-    assert not state.exists() and (tmp_path / "posthoc_queue.json.migrated").exists()
-    assert q.migrate_state_file() == 0                       # never replayed
-
-
 def test_mutations_take_and_release_the_cross_process_lock(q, fake, monkeypatch):
     seen = []
     real_set = fake.set
@@ -362,7 +345,7 @@ def test_api_role_starts_no_scheduler_device_server_or_queue_runner():
     # every singleton lives in that one function
     singles = ast.unparse(funcs["_start_background_services"])
     for call in ("scheduler.add_job", "device_websockets.run_server()",
-                 "device_commands.CommandSubscriber", "posthoc_queue.migrate_state_file()",
+                 "device_commands.CommandSubscriber",
                  "posthoc_queue.start_runner()", "prewarm_video_cache()"):
         assert call in singles, call
         others = [ast.unparse(f) for n, f in funcs.items() if n != "_start_background_services"]

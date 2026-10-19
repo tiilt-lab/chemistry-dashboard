@@ -103,8 +103,6 @@ async def _connect(url):
 #   posthoc_queue:seq       INCR source of job ids
 #   posthoc_queue:lock      SET NX EX mutation lock across processes
 #   posthoc_queue:wake      list the runner BRPOPs on while idle; enqueue pushes
-# The JSON snapshot the single-process server kept is read once by
-# migrate_state_file() at coordinator start and then renamed .migrated.
 _KEY_JOBS = "posthoc_queue:jobs"
 _KEY_JOB = "posthoc_queue:job:%s"
 _KEY_SEQ = "posthoc_queue:seq"
@@ -250,52 +248,6 @@ def wake():
     audio analysis completed, routes/callback.posthoc_completed) — have the
     runner re-scan now rather than at its next idle wake."""
     _wake()
-
-
-def _state_file():
-    try:
-        import config as cf
-        if not hasattr(cf, "config"):
-            cf.initialize()  # idempotent re-read of config.ini
-        base = cf.root_dir()
-        if base and os.path.isdir(base):
-            return os.path.join(base, "posthoc_queue.json")
-    except Exception:
-        pass
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        "posthoc_queue.json")
-
-
-def migrate_state_file():
-    """Coordinator start, once: pending jobs from the pre-Redis JSON snapshot
-    (a job caught mid-run is re-queued — runs are idempotent) go into Redis,
-    then the file is renamed .migrated so it is never replayed."""
-    path = _state_file()
-    try:
-        with open(path) as f:
-            jobs = json.load(f)
-    except FileNotFoundError:
-        return 0
-    except Exception as e:
-        logging.warning("posthoc queue: could not read %s for migration: %s", path, e)
-        return 0
-    n = 0
-    with _mutation():
-        present = {j["device_id"] for j in _all_jobs() if j["state"] in ("queued", "running")}
-        for j in jobs:
-            if j.get("state") in ("queued", "running") and int(j["device_id"]) not in present:
-                _append(j["session_id"], j["device_id"], j.get("models"),
-                        {"done_legs": j.get("done_legs") or []})
-                present.add(int(j["device_id"]))
-                n += 1
-    try:
-        os.replace(path, path + ".migrated")
-    except Exception as e:
-        logging.warning("posthoc queue: could not rename %s: %s", path, e)
-    if n:
-        _wake()
-        logging.info("posthoc queue: migrated %d pending job(s) from %s", n, path)
-    return n
 
 
 def _requeue_running():

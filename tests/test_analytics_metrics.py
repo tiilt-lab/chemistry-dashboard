@@ -1,11 +1,10 @@
-"""Unit tests for the pure analytics computations (no DB / Flask needed).
-
-Run from src/server:  ../venv-unified/bin/python -m pytest tests/ -q
-"""
+"""Unit tests for the pure analytics computations (no DB, no Flask): turn
+dynamics, Gini concentration, joint attention and on-task share. The talk
+metrics and question classifier are in test_analytics.py."""
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src", "server"))
 
 from analytics import (  # noqa: E402
     compute_conversation_dynamics,
