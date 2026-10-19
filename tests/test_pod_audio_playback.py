@@ -23,6 +23,7 @@ def _load_helper(name):
 
 
 _audio_segments = _load_helper("_audio_segments")
+_stamp_clock = _load_helper("_stamp_clock")
 
 
 def test_no_sidecar_is_one_segment_from_zero():
@@ -60,3 +61,23 @@ def test_moves_agree_with_the_sidecar_clock():
 def test_unknown_duration_leaves_the_last_segment_open():
     segs = _audio_segments({"start_offset": 5.0, "moves": []}, None)
     assert segs == [{"start": 5.0, "video_start": 0.0, "duration": None}]
+
+
+def test_a_recording_without_a_sidecar_starts_at_its_filename_stamp():
+    # Pod 1427 of session 434: created 2026-10-15 20:31:26, recording stamped
+    # Fri Oct 16 14:12:13 2026 -> its post-hoc rows begin at 63647 s.
+    import datetime
+    import types
+    session = types.SimpleNamespace(creation_date=datetime.datetime(2026, 10, 15, 20, 31, 26))
+    path = "/recordings/1427-9df08676-165f-4391-89e5-ef32d6bc0320 (Fri Oct 16 14:12:13 2026)_redu.wav"
+    assert _stamp_clock(path, session) == {"start_offset": 63647.0, "moves": []}
+    segs = _audio_segments(_stamp_clock(path, session), 2638.3)
+    assert segs == [{"start": 63647.0, "video_start": 0.0, "duration": 2638.3}]
+
+
+def test_no_stamp_or_session_leaves_the_clock_unknown():
+    import datetime
+    import types
+    session = types.SimpleNamespace(creation_date=datetime.datetime(2026, 10, 15, 20, 31, 26))
+    assert _stamp_clock("/recordings/1427-abc_redu.wav", session) is None
+    assert _stamp_clock("/recordings/1427-abc (Fri Oct 16 14:12:13 2026)_redu.wav", None) is None

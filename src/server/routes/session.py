@@ -700,8 +700,28 @@ def _audio_duration(path):
         with wave.open(path) as w:
             return w.getnframes() / float(w.getframerate())
     except Exception as e:
-        logging.warning('audio duration failed for %s: %s', path, e)
+        # A float recording (WAVE_FORMAT_EXTENSIBLE) is beyond the wave
+        # module; soundfile reads its header.
+        try:
+            import soundfile
+            return float(soundfile.info(path).duration)
+        except Exception:
+            logging.warning('audio duration failed for %s: %s', path, e)
+            return None
+
+
+def _stamp_clock(path, session_model):
+    """The clock of a recording without a sidecar: its filename stamp on the
+    session clock (session creation is second 0), the origin its post-hoc
+    stamps were counted from (recording_fragments.stamp_offset). Without it
+    the player took the recording to start at second 0, and a click on a
+    line stamped 63,000 s in seeked past the end of a 44-minute file. None
+    when the name carries no stamp."""
+    if session_model is None or not path:
         return None
+    import recording_fragments
+    offset = recording_fragments.stamp_offset(path, session_model.creation_date)
+    return None if offset is None else {'start_offset': offset, 'moves': []}
 
 
 def _audio_segments(info, duration):
@@ -821,7 +841,7 @@ def get_session_device_audio_info(session_id, session_device_id, **kwargs):
     if path is None:
         return json_response({'message': 'No recording.'}, 404)
     duration = _audio_duration(path)
-    info = _audio_clock(path)
+    info = _audio_clock(path) or _stamp_clock(path, database.get_sessions(id=session_id, first=True))
     return json_response({
         'duration': duration,
         'offset': float(info.get('start_offset') or 0.0) if info else 0.0,

@@ -1,10 +1,33 @@
+import { useEffect, useRef } from "react"
 import { GenericDialogBox } from "../dialog/dialog-component"
 import { Appheader } from "../header/header-component"
 import { SpeakerReassign } from "../components/speaker-reassign"
+import { AudioPlayer } from "../components/audio-player/audio-player"
+import { lineAt } from "../pod-details/group-time"
 
 import { dlgHeading, dlgBody, dlgCancel } from "../components/dialog-styles"
 
 function TranscriptComponentPage(props) {
+    // The line under the playhead: the last one started by then. Revealed
+    // inside the list's own scroll box, never by scrolling the page, when
+    // it changes (so a reader scrolling elsewhere is not fought every tick).
+    const scrollRef = useRef(null)
+    const playingRef = useRef(null)
+    const playing = props.playbackTime != null ? lineAt(props.displayTranscripts || [], props.playbackTime) : null
+    const playingId = playing ? playing.id : null
+    useEffect(() => {
+        const el = playingRef.current
+        const box = scrollRef.current
+        if (!el || !box) return
+        const er = el.getBoundingClientRect()
+        const cr = box.getBoundingClientRect()
+        const top = cr.top + (props.sessionId ? 72 : 0) // under the sticky player
+        let delta = 0
+        if (er.top < top) delta = er.top - top - 8
+        else if (er.bottom > cr.bottom) delta = er.bottom - cr.bottom + 8
+        if (delta !== 0) box.scrollTo({ top: box.scrollTop + delta, behavior: "smooth" })
+    }, [playingId, props.sessionId])
+    const hasPlayer = !!props.sessionId && !!(props.sessionDevice && props.sessionDevice.id)
     return (
         <>
             <div role="main" className="main-container">
@@ -17,7 +40,21 @@ function TranscriptComponentPage(props) {
                     escToBack={true}
                 />
 
-                <div className="relative min-h-0 w-full grow overflow-y-auto">
+                <div ref={scrollRef} className="relative min-h-0 w-full grow overflow-y-auto">
+                    {hasPlayer ? (
+                        <div className="sticky top-0 z-10 border-b border-tiilt-line bg-white/95 backdrop-blur">
+                            <div className="mx-auto w-full max-w-3xl px-4 py-2">
+                                <AudioPlayer
+                                    key={"a" + props.sessionDevice.id}
+                                    sessionId={props.sessionId}
+                                    sessionDeviceId={props.sessionDevice.id}
+                                    selectedTime={props.selectedTime}
+                                    onPlaybackTime={props.onPlaybackTime}
+                                    onSegments={props.onSegments}
+                                />
+                            </div>
+                        </div>
+                    ) : null}
                     <div className="mx-auto w-full max-w-3xl px-4 py-6">
                         {props.chooseClock ? (
                             <div className="mb-3 flex justify-end">
@@ -47,12 +84,15 @@ function TranscriptComponentPage(props) {
                                     <li
                                         key={index}
                                         id={`${transcript.id}`}
+                                        ref={playingId != null && transcript.id === playingId ? playingRef : null}
                                         className={
                                             "flex gap-4 py-3 transition " +
                                             (transcript.id ===
                                             props.transcriptIndex
                                                 ? "rounded-lg bg-tiilt-soft"
-                                                : "")
+                                                : playingId != null && transcript.id === playingId
+                                                  ? "rounded-lg bg-tiilt-ground ring-1 ring-tiilt-line ring-inset"
+                                                  : "")
                                         }
                                     >
                                         <div className="flex flex-none items-start gap-2 pt-0.5">
@@ -72,11 +112,24 @@ function TranscriptComponentPage(props) {
                                                     {`Speaker direction ${Math.round(transcript.direction)} degrees.`}
                                                 </span>
                                             ) : null}
-                                            <span className={(props.wallClock ? "w-20" : "w-14") + " font-ahamono text-xs text-tiilt-muted tabular-nums"}>
-                                                {props.timeLabel
-                                                    ? props.timeLabel(transcript.start_time)
-                                                    : props.formatSeconds(transcript.start_time)}
-                                            </span>
+                                            {hasPlayer && props.onSelectTime ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => props.onSelectTime(transcript.start_time)}
+                                                    title="Play the recording from here"
+                                                    className={(props.wallClock ? "w-20" : "w-14") + " font-ahamono cursor-pointer text-left text-xs text-tiilt-muted tabular-nums underline decoration-dotted underline-offset-2 hover:text-tiilt"}
+                                                >
+                                                    {props.timeLabel
+                                                        ? props.timeLabel(transcript.start_time)
+                                                        : props.formatSeconds(transcript.start_time)}
+                                                </button>
+                                            ) : (
+                                                <span className={(props.wallClock ? "w-20" : "w-14") + " font-ahamono text-xs text-tiilt-muted tabular-nums"}>
+                                                    {props.timeLabel
+                                                        ? props.timeLabel(transcript.start_time)
+                                                        : props.formatSeconds(transcript.start_time)}
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="group min-w-0 grow text-[15px] leading-relaxed text-tiilt-ink">
                                             {props.reassignSpeaker ? (

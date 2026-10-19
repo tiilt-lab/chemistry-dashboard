@@ -5,6 +5,7 @@ import {TranscriptComponentPage} from './html-pages'
 import { decorateTranscripts } from './transcript-utils'
 import { useD3 } from '../myhooks/custom-hooks';
 import { ApiService } from '../services/api-service';
+import { sessionToVideo } from '../components/video-player/video-time';
 import * as d3 from 'd3';
 
 function TranscriptsComponent(){
@@ -35,6 +36,13 @@ function TranscriptsComponent(){
   // The breakout group's display names and team colours ("Pat 1"), from
   // the session's groups listing; empty for a pod outside a group.
   const [speakerInfo, setSpeakerInfo] = useState({})
+  // The pod's recording plays above the list: a click on a line's time
+  // seeks it, and the line under the playhead is highlighted and kept in
+  // view. segments is the recording's layout on the session clock
+  // (audio-player.jsx), so elapsed times match the player's own counter.
+  const [selectedTime, setSelectedTime] = useState(null)
+  const [playbackTime, setPlaybackTime] = useState(null)
+  const [segments, setSegments] = useState(null)
   // Elapsed from the first line (default) or the time of day.
   const [clock, setClock] = useState(() => {
     try {
@@ -159,7 +167,9 @@ const createDisplayTranscripts = ()=> {
   const wall = clock === "wall" && !!clockBase
   let clockOrigin = null
   for (const t of transcripts) if (t.start_time != null && (clockOrigin == null || t.start_time < clockOrigin)) clockOrigin = t.start_time
-  const timeLabel = (s) => (wall ? wallClockLabel(clockBase, s) : formatSeconds(Math.max(0, s - (clockOrigin || 0))))
+  const timeLabel = (s) => (wall
+    ? wallClockLabel(clockBase, s)
+    : formatSeconds(segments ? sessionToVideo(s, segments) : Math.max(0, s - (clockOrigin || 0))))
 
   // Persist a human correction, then reflect it locally without a reload.
   // guest=true attributes to someone outside the roster (they get added as a
@@ -299,6 +309,12 @@ const createDisplayTranscripts = ()=> {
       roster = {roster}
       tagCounts = {tagCounts}
       speakerColors = {speakerColors}
+      sessionId = {session.id}
+      selectedTime = {selectedTime}
+      onSelectTime = {setSelectedTime}
+      playbackTime = {playbackTime}
+      onPlaybackTime = {setPlaybackTime}
+      onSegments = {setSegments}
       labelOf = {labelOf}
       timeLabel = {timeLabel}
       clock = {clock}
