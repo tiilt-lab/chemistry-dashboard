@@ -718,22 +718,14 @@ class ServerProtocol(WsMessageMixin, WebSocketServerProtocol):
         _enrolled = getattr(self, 'speakers', None) or None
 
         def _constrained():
-            # WhisperX and Qwen3 only: cap the speaker count and remap
+            # WhisperX only: cap the speaker count and remap
             # clusters to the enrolled voices when the config asks for it
             # (diarization_constrain_to_enrolled). MOSS takes the enrolled
             # set for naming instead. Off -> None args -> unchanged behaviour.
             if cf.diarization_constrain_to_enrolled() and _enrolled:
                 return len(_enrolled), _enrolled, diarization_model
             return None, None, None
-        if getattr(self, 'asr_choice', None) in ('qwen3', 'qwen3-0.6b'):
-            from asr_connectors.qwen3_asr import Qwen3ASR
-            _max_spk, _enr, _spk_model = _constrained()
-            qwen_model = 'Qwen/Qwen3-ASR-0.6B' if self.asr_choice == 'qwen3-0.6b' else 'Qwen/Qwen3-ASR-1.7B'
-            self.asr = Qwen3ASR(self.asr_audio_queue, self.asr_transcript_queue, self.config, self.stream_data, self.interval,
-                                audio_file=self.audio_file, model_id=qwen_model,
-                                diarize=(getattr(self, 'diarizer_choice', None) == 'pyannote'),
-                                max_speakers=_max_spk, enrolled=_enr, speaker_model=_spk_model)
-        elif getattr(self, 'asr_choice', None) == 'moss':
+        if getattr(self, 'asr_choice', None) == 'moss':
             # MOSS end to end (the default): transcript + speakers in one pass over the
             # whole recording; its anonymous labels are named against the enrolled
             # voice prints whenever the pod has any, so no diarizer choice applies.

@@ -1,7 +1,7 @@
 """The two post-hoc diarizers, DiariZen and Nemotron-3: the subprocess
 wrappers (run_diarizen / run_nemotron3 — success, non-zero exit, timeout,
 missing venv), the WhisperX connector's choice + mutual fallback (same word
-attachment and enrolled reconciliation as Sortformer; the OTHER diarizer runs
+attachment and enrolled reconciliation; the OTHER diarizer runs
 when the chosen one fails; both failing fails the run, never pyannote), the
 ``diarizer_used`` provenance server_posthoc records, and the trigger panel's
 two-option contract. The services import torch/twisted, so the GPU pipeline
@@ -262,7 +262,7 @@ def test_the_connector_offers_exactly_the_two_diarizers():
     assert POSTHOC_DIARIZERS == ("diarizen", "nemotron3")
 
 
-def test_chosen_diarizen_is_attached_like_sortformer_and_reconciled(monkeypatch, caplog):
+def test_chosen_diarizen_is_attached_and_reconciled(monkeypatch, caplog):
     pipe = _Pipeline(monkeypatch)
     calls = _stub_diarizers(monkeypatch, diarizen=DZ_TURNS, nemotron3=N3_TURNS)
     asr = _connector(diarizer="diarizen", enrolled={"ann": object()}, speaker_model="ecapa")
@@ -349,21 +349,6 @@ def test_both_failing_fails_the_run_naming_both_and_never_runs_pyannote(monkeypa
     assert out.get_nowait() is None   # the end-of-stream sentinel still follows
     warnings = [r.message for r in caplog.records if r.levelname == "WARNING"]
     assert len(warnings) == 1 and "falling back to nemotron3" in warnings[0]
-
-
-def test_legacy_sortformer_choice_still_raises_rather_than_falling_back(monkeypatch):
-    pipe = _Pipeline(monkeypatch)
-    calls = _stub_diarizers(monkeypatch, diarizen=DZ_TURNS, nemotron3=N3_TURNS)
-    from asr_connectors import sortformer_diar
-
-    def boom(path):
-        raise RuntimeError("NeMo venv missing")
-
-    monkeypatch.setattr(sortformer_diar, "run_sortformer", boom)
-    asr = _connector(diarizer="sortformer")
-    with pytest.raises(RuntimeError, match="NeMo venv missing"):
-        asr._run_gpu_pipeline(pipe.torch)
-    assert calls == [] and pipe.pyannote_calls == [] and asr.diarizer_used is None
 
 
 def test_no_diarizer_leaves_provenance_untouched(monkeypatch):

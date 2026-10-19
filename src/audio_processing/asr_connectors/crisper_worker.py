@@ -4,7 +4,7 @@ The crisperwhisper package ships its own CTranslate2 fork
 (ctranslate2-crisperwhisper) whose import would shadow the real ctranslate2
 that faster-whisper/WhisperX depend on, so it lives in a dedicated venv and
 this worker is the only thing that imports it (same isolation pattern as
-sortformer_cli / qwen3_worker).
+the diarizer CLIs).
 
 Two modes:
   --oneshot AUDIO OUT.json   transcribe one file, write JSON, exit (post-hoc)

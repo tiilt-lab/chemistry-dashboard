@@ -624,8 +624,8 @@ _ASR_LABELS = {
     "google-cloud-speech": "Google Cloud Speech-to-Text (retired 2026-10-13)",
     "whisper": "Whisper (open, offline; retired)",
     "whisperx": "WhisperX (open; batched + word-level alignment)",
-    "qwen3": "Qwen3-ASR 1.7B + ForcedAligner (open)",
-    "qwen3-0.6b": "Qwen3-ASR 0.6B + ForcedAligner (open, fast)",
+    "qwen3": "Qwen3-ASR 1.7B + ForcedAligner (retired 2026-10-19)",
+    "qwen3-0.6b": "Qwen3-ASR 0.6B + ForcedAligner (retired 2026-10-19)",
     "crisperwhisper": "CrisperWhisper 2.0 (verbatim: fillers, stutters, pause-true timing)",
 }
 _EMOTION_LABELS = {

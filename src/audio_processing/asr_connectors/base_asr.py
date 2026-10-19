@@ -91,7 +91,7 @@ class WorkerHandle:
 
 # One documented budget for the post-hoc one-shot workers. Whole-recording
 # transcription of a long session can run several times slower than real time
-# (Qwen3-ASR ~2.2x), so an hour of audio needs well over an hour of wall clock.
+# (batch engines ran at ~2x), so an hour of audio needs well over an hour of wall clock.
 # The two connectors previously hardcoded 3600 and 7200 with no rationale — a
 # silent drift where the shorter one could time out a long recording.
 POSTHOC_WORKER_TIMEOUT = 2 * 60 * 60  # 2 hours
@@ -258,7 +258,7 @@ class BaseASR:
 
 class PosthocFileASR:
     """Base for post-hoc connectors that read the WHOLE recording file directly
-    (WhisperX / Qwen3 / CrisperWhisper-posthoc).
+    (WhisperX / CrisperWhisper-posthoc).
 
     These do not consume PCM from the audio queue — the post-hoc stream reader
     fills the AudioBuffer that downstream diarization/DoA need, and this

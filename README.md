@@ -50,7 +50,7 @@ the discussion is happening and dig into afterwards.
    they arrive, with session-level rollups across pods.
 
 6. **Post-hoc analysis.** After a session ends, heavier reprocessing can be
-   triggered from the UI: batch ASR (WhisperX large-v3, Qwen3-ASR, or
+   triggered from the UI: batch ASR (WhisperX large-v3 or
    CrisperWhisper verbatim mode) with pyannote diarization reconciled against
    enrolled voices, and a deeper video pass (head tracking with identity
    persistence, gaze overlays, configurable fps). Post-hoc runs are handled

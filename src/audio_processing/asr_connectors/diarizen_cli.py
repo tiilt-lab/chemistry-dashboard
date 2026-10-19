@@ -3,7 +3,7 @@
 Runs inside the dedicated DiariZen venv (src/venv-diarizen: Python 3.10,
 torch 2.1.1+cu121, the DiariZen toolkit and its pyannote.audio 3.1.1 fork) —
 those pins cannot share an environment with whisperx, so the audio service
-invokes this as a subprocess and reads JSON, exactly like sortformer_cli.py.
+invokes this as a subprocess and reads JSON, exactly like nemotron_cli.py.
 
 Usage:
     venv-diarizen/bin/python diarizen_cli.py input.wav --out turns.json \

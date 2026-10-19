@@ -41,9 +41,8 @@ class WhisperXASR(PosthocFileASR):
         # post-hoc diarizers in POSTHOC_DIARIZERS ('diarizen': WavLM-based,
         # overlap-aware; 'nemotron3': NVIDIA Nemotron-3 streaming Sortformer),
         # each a subprocess in its own venv, the other one as fallback.
-        # 'pyannote' (gated weights need HUGGING_FACE_HUB_TOKEN) and
-        # 'sortformer' (4-spk, src/venv-nemo) remain only for legacy stored
-        # choices. Segments get cluster labels attached as .speaker_tag on
+        # 'pyannote' (gated weights need HUGGING_FACE_HUB_TOKEN) remains only
+        # for legacy stored choices. Segments get cluster labels attached as .speaker_tag on
         # each AsrResult. The bare `diarize` bool is the legacy pyannote switch.
         self.diarizer = diarizer or ("pyannote" if diarize else None)
         self.diarize = self.diarizer is not None
@@ -180,10 +179,6 @@ class WhisperXASR(PosthocFileASR):
             ext_turns = ran = None
             if self.diarizer in POSTHOC_DIARIZERS:
                 ext_turns, ran = self._diarize_with_fallback()
-            elif self.diarizer == "sortformer":
-                from asr_connectors.sortformer_diar import run_sortformer
-                logging.info("WhisperX: running Sortformer diarization (NeMo venv)")
-                ext_turns, ran = run_sortformer(self.audio_file), "sortformer"
             if ext_turns is not None:
                 import pandas as pd
                 from whisperx.diarize import assign_word_speakers

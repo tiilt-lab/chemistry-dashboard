@@ -1,6 +1,6 @@
 """Shared scaffolding for the post-hoc file ASR connectors.
 
-WhisperX, Qwen3 and CrisperWhisper (post-hoc) each hand-copied: a _drain_queue
+WhisperX and CrisperWhisper (post-hoc) each hand-copied: a _drain_queue
 loop (byte-identical), a _worker_python() venv resolver (differing only in the
 venv name/depth), a temp-json subprocess runner (with an undocumented
 3600-vs-7200 timeout DRIFT), and a torch.load permissive monkeypatch. Those
@@ -83,13 +83,13 @@ def test_drain_queue_stops_on_sentinel():
 
 
 def test_posthoc_timeout_is_a_single_documented_constant():
-    # The 3600-vs-7200 drift is gone: both connectors use the shared constant.
+    # The 3600-vs-7200 drift is gone: the worker connector uses the shared constant.
     src_dir = os.path.join(os.path.dirname(__file__), "..", "src",
                            "audio_processing", "asr_connectors")
     assert base_asr.POSTHOC_WORKER_TIMEOUT >= 7200
-    for name in ("qwen3_asr.py", "crisperwhisper_asr.py"):
-        with open(os.path.join(src_dir, name)) as f:
-            s = f.read()
-        assert "run_json_worker(" in s, f"{name}: must use the shared subprocess runner"
-        assert "timeout=3600" not in s and "timeout=7200" not in s, \
-            f"{name}: must not hardcode a drifting timeout"
+    name = "crisperwhisper_asr.py"
+    with open(os.path.join(src_dir, name)) as f:
+        s = f.read()
+    assert "run_json_worker(" in s, f"{name}: must use the shared subprocess runner"
+    assert "timeout=3600" not in s and "timeout=7200" not in s, \
+        f"{name}: must not hardcode a drifting timeout"
