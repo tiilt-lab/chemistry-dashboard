@@ -553,6 +553,10 @@ class ClockAlignment(object):
             return near[0][1]
         return offsets[len(offsets) // 2]
 
+    def largest(self):
+        """How far apart the clocks were found at most, in seconds."""
+        return max((abs(float(a[1])) for a in self.anchors), default=0.0)
+
     def summary(self):
         offsets = [a[1] for a in self.anchors]
         # The offset every ten minutes of the other device's clock, for the
@@ -797,6 +801,7 @@ def merge_paired(rows_by_device, sides, diagnostics=None, recordings=None):
         by_device[device_id] = units
     tolerance = PAIR_START_TOLERANCE
     alignment = None
+    moss_pair = _speaker_bounded_pair(by_device)
     if len(by_device) == 2:
         reference_device, other_device = sorted(by_device)
         if recordings:
@@ -807,16 +812,25 @@ def merge_paired(rows_by_device, sides, diagnostics=None, recordings=None):
                 anchors = []
             if len(anchors) >= PAIR_MIN_ANCHORS:
                 alignment = ClockAlignment(anchors, reference_device, other_device, method="acoustic")
-        if alignment is None:
+        if alignment is None and not moss_pair:
+            # MOSS rows are stamped on their recording's own clock, so the
+            # text fallback has nothing to correct and misleads: on Group 7
+            # (2026-10-19) it put 18 % of one laptop's rows more than 5 s
+            # off against a true offset of 0.3 s.
             alignment = estimate_clock_offset(by_device[reference_device], by_device[other_device],
                                               reference_device, other_device)
         if alignment is not None:
             tolerance = PAIR_ALIGNED_TOLERANCE
+            if moss_pair:
+                # Clocks found under a second apart need no 5 s window,
+                # which reached the echo of a line three seconds earlier.
+                tolerance = min(PAIR_ALIGNED_TOLERANCE, PAIR_START_TOLERANCE + alignment.largest())
             for u in by_device[other_device]:
                 u["device_start_time"] = u["start_time"]
                 u["start_time"] = float(u["start_time"]) - alignment.at(float(u["start_time"]))
     if diagnostics is not None:
         diagnostics["alignment"] = alignment.summary() if alignment is not None else None
+        diagnostics["tolerance"] = tolerance
     pool = [u for units in by_device.values() for u in units]
     pool.sort(key=lambda u: (u["start_time"], u["transcript_id"]))
     reach = max((_span(u)[1] - _span(u)[0] for u in pool), default=0.0) + tolerance
@@ -835,16 +849,23 @@ def merge_paired(rows_by_device, sides, diagnostics=None, recordings=None):
             sim = text_similarity(u["text"], v["text"])
             if sim > best_sim:
                 best, best_sim = v, sim
-        if best is not None and best_sim >= PAIR_TEXT_SIMILARITY and _composite(u, best):
+        if best is not None and best_sim >= PAIR_TEXT_SIMILARITY \
+                and not (_speaker_bounded(u) and _speaker_bounded(best)) and _composite(u, best):
+            # (Two MOSS turns are each one speaker's: what looked composite
+            # was one voice the laptops named differently, 4 of 5 on
+            # Group 7, 2026-10-19; they are resolved as duplicates.)
             # Not two copies of one line: the longer one also holds the
             # other laptop's own speaker. Both stay; _drop_covered trims.
             kept.setdefault(u["transcript_id"], u)
             continue
         if best is not None and best_sim >= PAIR_TEXT_SIMILARITY:
             winner, loser, reason = _prefer(u, best) + ("duplicate",)
-            # The kept copy says what both recognizers heard.
-            winner["text"] = merge_texts(winner["text"], loser["text"])
-            winner.pop("_tokens", None)
+            if not (_speaker_bounded(winner) and _speaker_bounded(loser)):
+                # The kept copy says what both recognizers heard. (Two MOSS
+                # turns are punctuated sentences; splicing the other copy's
+                # words in garbled the three lines it touched on Group 7.)
+                winner["text"] = merge_texts(winner["text"], loser["text"])
+                winner.pop("_tokens", None)
             winner.setdefault("merged_from", []).append(loser["transcript_id"])
         elif best is not None and bool(u.get("speaker_tag")) != bool(best.get("speaker_tag")):
             winner, loser = (u, best) if u.get("speaker_tag") else (best, u)
@@ -933,7 +954,10 @@ def _drop_covered(kept, dropped, tolerance):
         rows = sorted(kept.values(), key=lambda u: (u["start_time"], u["transcript_id"]))
         covered = []       # (share, remainder length, u, mask, pairs, others)
         for u in rows:
-            if u.get("trimmed") or len(_utterance_tokens(u)) < 2:
+            # A MOSS turn is its speaker's words as heard: never trimmed or
+            # dropped as covered (on Group 7, 2026-10-19, the one trim cut
+            # the right speaker's words and half the drops were echoes).
+            if u.get("trimmed") or len(_utterance_tokens(u)) < 2 or _speaker_bounded(u):
                 continue
             u0, u1 = _span(u)
             others = [v for v in rows
@@ -979,6 +1003,12 @@ def is_non_speech(text):
 def lexical_words(text):
     """The words of a text, event tags left out."""
     return _LEXICAL_WORD.findall(_TAG.sub(" ", text or ""))
+
+
+def _speaker_bounded_pair(by_device):
+    """True when every row of both laptops carries a diarizer cluster: two
+    MOSS runs, each cut by speaker and stamped on its recording's clock."""
+    return len(by_device) == 2 and all(_speaker_bounded(u) for units in by_device.values() for u in units)
 
 
 def _speaker_bounded(u):
@@ -1059,9 +1089,12 @@ def stitch_sentences(utterances, dropped=None):
             u["speaker_tag"] = prev["speaker_tag"]
             u["team"] = prev.get("team", u.get("team"))
             u["adopted"] = True
-    # (4) short unnamed pieces beside a named piece on the same device
+    # (4) short unnamed pieces beside a named piece on the same device; not
+    # a MOSS turn, whose cluster naming could not place: adoption by its
+    # neighbour was a coin flip on Group 7 (2026-10-19) and moved rows
+    # across teams. (3) still applies: between two pieces of one speaker.
     for i, u in enumerate(out):
-        if u.get("speaker_tag") or len(lexical_words(u.get("text"))) > STITCH_SHORT_WORDS:
+        if u.get("speaker_tag") or len(lexical_words(u.get("text"))) > STITCH_SHORT_WORDS or _speaker_bounded(u):
             continue
         owners = []
         if i > 0:
