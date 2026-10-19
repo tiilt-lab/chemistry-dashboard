@@ -169,9 +169,8 @@ def _start_background_services():
     device_commands.CommandSubscriber(device_websockets.ConnectionManager.instance).start()
 
     if _env_flag('DC_DISABLE_POSTHOC_QUEUE'):
-        logging.warning('DC_DISABLE_POSTHOC_QUEUE set: post-hoc queue not migrated or run')
+        logging.warning('DC_DISABLE_POSTHOC_QUEUE set: post-hoc queue not run')
     else:
-        posthoc_queue.migrate_state_file()
         posthoc_queue.start_runner()
 
 
