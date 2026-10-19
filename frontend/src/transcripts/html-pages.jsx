@@ -219,6 +219,17 @@ function TranscriptComponentPage(props) {
                                             ) : (
                                                 <></>
                                             )}{" "}
+                                            {transcript.speakingOver && transcript.speakingOver.length ? (
+                                                <span
+                                                    title="Started while the other speaker was still talking"
+                                                    className="mr-1 rounded bg-tiilt-soft px-1 align-middle text-[10px] font-semibold text-tiilt"
+                                                >
+                                                    {"over " +
+                                                        transcript.speakingOver
+                                                            .map((t) => (props.labelOf ? props.labelOf(t) : t))
+                                                            .join(", ")}
+                                                </span>
+                                            ) : null}
                                             {props.groupScope && transcript.pod_label ? (
                                                 <span
                                                     title={transcript.far_side ? "Heard from across the table, named from the partner laptop's roster" : "The laptop that heard this line"}
