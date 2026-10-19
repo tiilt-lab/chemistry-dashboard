@@ -1055,7 +1055,7 @@ def _audio_service(monkeypatch, state, log, outcome=None):
     # completion callback would, records the pod analysed; or refuses.
     monkeypatch.setattr(q, "_job_base", lambda job: {"sessiondeviceid": job["device_id"]})
     monkeypatch.setattr(q, "_mint", lambda d: "t")
-    monkeypatch.setattr(q, "_audio_produced_output", lambda d: True)
+    monkeypatch.setattr(q, "_audio_produced_output", lambda d, since=None: True)
     monkeypatch.setattr(q, "_maybe_recycle_audio_service", lambda: None)
     monkeypatch.setattr(q, "_live_pods", lambda: 0)
 

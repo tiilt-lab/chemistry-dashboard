@@ -23,12 +23,18 @@ def _embed_int16(pcm_bytes, speaker_model):
     # of a float32-wav degraded to noise (verified: sim -0.08 vs 0.39 float),
     # so all reconciliation embedding happens in ECAPA's native float domain.
     sig = torch.tensor(np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0)
-    emb = speaker_model.encode_batch(sig)
+    with torch.inference_mode():
+        emb = speaker_model.encode_batch(sig)
     return emb[0, 0].detach().cpu().numpy()
 
 
 def _embed_float(audio_f32, speaker_model):
-    emb = speaker_model.encode_batch(torch.tensor(np.ascontiguousarray(audio_f32)))
+    # inference_mode: no autograd graph behind the embedding. The naming
+    # and renaming passes embed minutes of audio per cluster; with the graph
+    # kept, the service held 10 GiB of GPU memory after a run of renames and
+    # the next MOSS worker ran out (2026-10-19 08:48).
+    with torch.inference_mode():
+        emb = speaker_model.encode_batch(torch.tensor(np.ascontiguousarray(audio_f32)))
     return emb[0, 0].detach().cpu().numpy()
 
 

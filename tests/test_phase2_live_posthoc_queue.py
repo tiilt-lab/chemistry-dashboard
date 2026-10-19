@@ -54,7 +54,7 @@ def q(tmp_path, monkeypatch):
                                                         "sessiondeviceid": job["device_id"]})
     tickets = []
     monkeypatch.setattr(mod, "_mint", lambda d: tickets.append(d) or "t%d" % len(tickets))
-    monkeypatch.setattr(mod, "_audio_produced_output", lambda d: True)
+    monkeypatch.setattr(mod, "_audio_produced_output", lambda d, since=None: True)
     monkeypatch.setattr(mod, "_audio_completed_at", lambda d: None)
     monkeypatch.setattr(mod, "_live_pods", lambda: 0)
     monkeypatch.setattr(mod, "_POLL_SECONDS", 0.01)
@@ -274,7 +274,7 @@ def test_one_errored_leg_is_a_warning_both_is_a_failure(q, monkeypatch):
 
 def test_empty_audio_output_is_an_error_even_when_video_would_follow(q, monkeypatch):
     svc = Services(q).install(monkeypatch)
-    monkeypatch.setattr(q, "_audio_produced_output", lambda d: False)
+    monkeypatch.setattr(q, "_audio_produced_output", lambda d, since=None: False)
     q.enqueue(1, [10])
     q._worker_loop()
     assert q._all_jobs()[0]["state"] == "error" and "no transcripts" in q._all_jobs()[0]["error"]
@@ -551,3 +551,11 @@ def test_an_audio_leg_that_finished_while_the_runner_was_away_is_not_run_again(q
     monkeypatch.setattr(q, "_audio_completed_at", lambda d: 160.0)
     q._worker_loop()
     assert [e for e in svc.log if e[0] == "trigger"][-2:] == [("trigger", "audio", 11, "t2"), ("trigger", "video", 11, "t3")]
+
+
+def test_an_audio_run_counts_as_output_only_when_its_completion_stamp_follows_the_jobs_start(q):
+    assert q._completed_since(None, None) is False
+    assert q._completed_since(160.0, None) is True
+    assert q._completed_since(160.0, 100.0) is True
+    assert q._completed_since(160.0, 200.0) is False           # a previous run's stamp: the pod's live rows prove nothing
+    assert q._completed_since(160.0, 160.0) is False

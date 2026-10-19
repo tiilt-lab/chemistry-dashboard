@@ -463,12 +463,27 @@ def _job_base(job):
         }
 
 
-def _audio_produced_output(device_id):
-    # A silent failure (OOM, empty recording) completes with zero transcripts
-    # and must surface as an error, not "Analyzed".
+def _completed_since(done_at, since):
+    """Whether a completion stamp belongs to this job's run: set, and newer
+    than the job's first start when that is known."""
+    if done_at is None:
+        return False
+    return since is None or float(done_at) > float(since)
+
+
+def _audio_produced_output(device_id, since=None):
+    # The run completed server-side: the completion callback stamped the pod
+    # with its provenance, after this job first started. The pod's rows say
+    # nothing: an abandoned run leaves the class's live rows (or the previous
+    # run's) in place, and on 2026-10-19 a MOSS worker that ran out of GPU
+    # memory was recorded as done because the pod had its live rows. A pod
+    # stamped without output (empty recording) is un-stamped so the failure
+    # stays visible and retries don't skip it.
     import app as A
     with A.app.app_context():
         import database as db
+        if not _completed_since(db.audio_posthoc_completed_at(device_id), since):
+            return False
         if db.get_pod_duration(device_id) is None:
             # The completion callback already stamped the pod analyzed; undo
             # that so the failure stays visible and retries don't skip it.
@@ -701,8 +716,8 @@ def _run_job(job):
             logging.warning("posthoc queue: pod %s %s trigger: %s", device_id, scope, err)
             errors[scope] = err
             continue
-        if scope == "audio" and not _audio_produced_output(device_id):
-            raise RuntimeError("audio produced no transcripts (empty recording or transcription failure)")
+        if scope == "audio" and not _audio_produced_output(device_id, job.get("first_started_at")):
+            raise RuntimeError("audio run did not complete (abandoned by the service, or no transcripts)")
         done.append(scope)
         _save(job)
     if attempted and len(errors) == len(attempted):

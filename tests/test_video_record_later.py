@@ -85,7 +85,7 @@ def _run(monkeypatch, job):
     ran = []
     monkeypatch.setattr(q, "_job_base", lambda j: {"sessionid": j["session_id"], "sessiondeviceid": j["device_id"]})
     monkeypatch.setattr(q, "_mint", lambda d: "ticket")
-    monkeypatch.setattr(q, "_audio_produced_output", lambda d: True)
+    monkeypatch.setattr(q, "_audio_produced_output", lambda d, since=None: True)
     monkeypatch.setattr(q, "_run_leg",
                         lambda url, init, start, device_id, scope, deadline:
                         ran.append((scope, init["type"], start)) or None)
