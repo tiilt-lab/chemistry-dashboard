@@ -437,3 +437,72 @@ def test_an_audio_leg_still_waits_for_the_state_not_the_socket(q, monkeypatch):
     _scopes(q, monkeypatch, [True, True, False])
     assert q._run_leg("ws://x", {"type": "Initialize_audio_processing_analytics"},
                       "start_posthoc_audio_processing", 10, "audio", time.time() + 60) is None
+
+
+# ---- two lanes: coding beside the GPU legs ---------------------------------
+
+def _lanes_setup(q, monkeypatch):
+    # An audio job for pod 10 ahead of a coding job for the finished pods 20
+    # and 21; the coding leg itself is a stub that records its run.
+    coded = []
+    monkeypatch.setattr(q, "_audio_done", lambda d: d in (20, 21))
+    monkeypatch.setattr(q, "_scope_running", lambda d, s: False)
+    monkeypatch.setattr(q, "_run_coding_leg", lambda job: coded.append(job["device_id"]))
+    q.enqueue(1, [10], legs=("audio",))
+    assert q.enqueue_coding(1, 20, 5, after_audio=[20, 21]) is True
+    return coded
+
+
+def test_the_coding_lane_runs_coding_jobs_past_queued_audio_and_the_gpu_lane_leaves_them(q, monkeypatch):
+    svc = Services(q).install(monkeypatch)
+    coded = _lanes_setup(q, monkeypatch)
+    q._worker_loop(lane="coding")
+    audio, coding = q._all_jobs()
+    assert coded == [20] and coding["state"] == "done" and audio["state"] == "queued" and svc.log == []
+    q._worker_loop(lane="gpu")
+    audio, coding = q._all_jobs()
+    assert audio["state"] == "done" and [e for e in svc.log if e[0] == "done"] == [("done", "audio", 10)]
+
+
+def test_the_gpu_lane_never_picks_a_coding_job_even_when_it_is_first(q, monkeypatch):
+    svc = Services(q).install(monkeypatch)
+    coded = []
+    monkeypatch.setattr(q, "_run_coding_leg", lambda job: coded.append(job["device_id"]))
+    assert q.enqueue_coding(1, 20, 5) is True
+    q.enqueue(1, [10], legs=("audio",))
+    q._worker_loop(lane="gpu")
+    coding, audio = q._all_jobs()
+    assert coded == [] and coding["state"] == "queued" and audio["state"] == "done"
+    q._worker_loop(lane="coding")
+    assert coded == [20] and q._all_jobs()[0]["state"] == "done"
+    # the single lane (the tests' default) still runs both in queue order
+    assert q.enqueue_coding(1, 30, 6) is True
+    q.enqueue(1, [11], legs=("audio",))
+    q._worker_loop()
+    assert coded == [20, 30] and [j["state"] for j in q._all_jobs()] == ["done"] * 4
+    assert svc.log.count(("done", "audio", 11)) == 1
+
+
+def test_a_wake_reaches_both_lanes_and_the_runner_starts_one_thread_per_lane(q, monkeypatch):
+    q._wake()
+    fake = q._test.fake
+    assert fake.lrange(q._KEY_WAKE, 0, -1) == ["1"] and fake.lrange(q._KEY_WAKE_CODING, 0, -1) == ["1"]
+    started = []
+
+    class _Thread:
+        def __init__(self, target=None, args=(), name=None, daemon=None):
+            started.append((name, args)); self.name = name
+        def start(self):
+            pass
+        def is_alive(self):
+            return True
+    monkeypatch.setattr(q.threading, "Thread", _Thread)
+    q._worker = q._coding_worker = None
+    monkeypatch.delenv("NEGOTIATION_CODING_LANE", raising=False)
+    q.start_runner()
+    assert started == [("posthoc-queue", ("gpu",)), ("posthoc-queue-coding", ("coding",))]
+    started.clear()
+    q._worker = q._coding_worker = None
+    monkeypatch.setenv("NEGOTIATION_CODING_LANE", "0")
+    q.start_runner()
+    assert started == [("posthoc-queue", ("all",))]

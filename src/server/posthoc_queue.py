@@ -110,11 +110,33 @@ _KEY_JOB = "posthoc_queue:job:%s"
 _KEY_SEQ = "posthoc_queue:seq"
 _KEY_LOCK = "posthoc_queue:lock"
 _KEY_WAKE = "posthoc_queue:wake"
+_KEY_WAKE_CODING = "posthoc_queue:wake:coding"   # the coding lane's own wake list
 _LOCK_TTL = 10
 _IDLE_WAIT = 30  # the runner re-scans this often even if a wake was lost
 
 _lock = threading.Lock()
 _worker = None
+_coding_worker = None
+
+# Two lanes: the GPU lane runs the audio/rename/video legs one at a time as
+# before; the coding lane runs coding-only jobs (HTTP to the resident
+# llama-server, no GPU lease) beside them. Serial, each coding leg (8-10
+# min a group on 2026-10-19) held up the next laptop's transcription, about
+# two hours over a twelve-group session. NEGOTIATION_CODING_LANE=0 keeps
+# the single lane; the tests drive _worker_loop() on one thread either way.
+LANES = ("all", "gpu", "coding")
+
+
+def _lane_takes(lane, job):
+    if lane == "gpu":
+        return _needs_gpu(job)
+    if lane == "coding":
+        return not _needs_gpu(job)
+    return True
+
+
+def _coding_lane_enabled():
+    return os.environ.get("NEGOTIATION_CODING_LANE", "1").strip().lower() not in ("0", "false", "no", "off")
 
 
 def _r():
@@ -177,14 +199,15 @@ def _all_jobs():
     return jobs
 
 
-def _next_queued(beside_class=False):
+def _next_queued(beside_class=False, lane="all"):
     # beside_class: only a job that may run while pods are live (_needs_idle).
-    # A coding job gated on post-hoc audio (after_audio) stays queued while
-    # a pod's analysis is still to come; one whose analysis failed is picked
-    # so it fails with that reason (_require_audio) rather than waits forever.
+    # lane: only the jobs that lane runs (_lane_takes). A coding job gated on
+    # post-hoc audio (after_audio) stays queued while a pod's analysis is
+    # still to come; one whose analysis failed is picked so it fails with
+    # that reason (_require_audio) rather than waits forever.
     jobs = _all_jobs()
     for j in jobs:
-        if j["state"] != "queued" or (beside_class and _needs_idle(j)):
+        if j["state"] != "queued" or (beside_class and _needs_idle(j)) or not _lane_takes(lane, j):
             continue
         waiting, failed = _audio_prerequisites(j, jobs)
         if waiting and not failed:
@@ -214,8 +237,9 @@ def _append(session_id, device_id, models, extra=None):
 def _wake():
     try:
         pipe = _r().pipeline()
-        pipe.rpush(_KEY_WAKE, "1")
-        pipe.ltrim(_KEY_WAKE, -10, -1)  # tokens pile up only while no runner drains them
+        for key in (_KEY_WAKE, _KEY_WAKE_CODING):
+            pipe.rpush(key, "1")
+            pipe.ltrim(key, -10, -1)  # tokens pile up only while no runner drains them
         pipe.execute()
     except Exception as e:
         logging.warning("posthoc queue: wake failed (%s); the runner re-scans within %ss", e, _IDLE_WAIT)
@@ -478,17 +502,18 @@ def _live_pods():
         return 0
 
 
-def _wait_for_class_to_end():
+def _wait_for_class_to_end(lane="all"):
     # Idle gating: with a class on, don't even start the next GPU job. One
     # log line per wait, then one when it ends. Returns True once no pod is
     # live; False when it stopped early because a job that may run beside
     # the class (a coding leg) is queued — the caller runs that one first.
+    # With a coding lane of its own, the GPU lane simply waits.
     n = _live_pods()
     if not n:
         return True
     logging.info("posthoc queue: %d live pod(s) streaming; holding queued jobs until the class ends", n)
     while n:
-        if _next_queued(beside_class=True) is not None:
+        if lane == "all" and _next_queued(beside_class=True) is not None:
             return False
         time.sleep(_LIVE_POLL_SECONDS)
         n = _live_pods()
@@ -697,21 +722,22 @@ def _maybe_recycle_audio_service():
                     "continuing anyway")
 
 
-def _worker_loop():
-    """Run queued jobs until none is left, then return (coordinator only;
-    _run_forever wraps this and sleeps on the wake list)."""
+def _worker_loop(lane="all"):
+    """Run the lane's queued jobs until none is left, then return
+    (coordinator only; _run_forever wraps this and sleeps on the lane's
+    wake list). ``lane``: "all" (one runner, the tests), "gpu" or "coding"."""
     while True:
         with _mutation():
-            job = _next_queued()
+            job = _next_queued(lane=lane)
         if job is None:
             return
         # A live class is on: hold here rather than have the service refuse
         # us every retry_after — unless a coding job (no GPU) is queued
         # behind, which runs beside the class meanwhile. Re-pick under the
         # lock afterwards — the queue may have been cleared while we waited.
-        beside_class = _needs_idle(job) and not _wait_for_class_to_end()
+        beside_class = _needs_idle(job) and not _wait_for_class_to_end(lane)
         with _mutation():
-            job = _next_queued(beside_class=beside_class)
+            job = _next_queued(beside_class=beside_class, lane=lane)
             if job is None:
                 return
             job["state"] = "running"
@@ -752,32 +778,41 @@ def _worker_loop():
             _save(job)
 
 
-def _run_forever():
+def _run_forever(lane="all"):
+    wake_key = _KEY_WAKE_CODING if lane == "coding" else _KEY_WAKE
     while True:
         try:
-            _worker_loop()
+            _worker_loop(lane)
         except Exception:
-            logging.exception("posthoc queue: runner failed; retrying in 10 s")
+            logging.exception("posthoc queue: %s runner failed; retrying in 10 s", lane)
             time.sleep(10)
             continue
         try:
-            _r().brpop(_KEY_WAKE, timeout=_IDLE_WAIT)
+            _r().brpop(wake_key, timeout=_IDLE_WAIT)
         except Exception as e:
             logging.warning("posthoc queue: idle wait failed (%s); sleeping %ss", e, _IDLE_WAIT)
             time.sleep(_IDLE_WAIT)
 
 
 def start_runner():
-    """Coordinator only: the single runner thread. API workers never call
-    this; they enqueue, read status and clear."""
-    global _worker
+    """Coordinator only: the runner threads, the GPU lane and (unless
+    NEGOTIATION_CODING_LANE=0) the coding lane beside it. API workers never
+    call this; they enqueue, read status and clear. Returns the GPU lane's
+    thread."""
+    global _worker, _coding_worker
     with _lock:
         if _worker is not None and _worker.is_alive():
             return _worker
     _requeue_running()
+    two_lanes = _coding_lane_enabled()
     with _lock:
-        _worker = threading.Thread(target=_run_forever, name="posthoc-queue", daemon=True)
+        _worker = threading.Thread(target=_run_forever, args=("gpu" if two_lanes else "all",),
+                                   name="posthoc-queue", daemon=True)
         _worker.start()
+        if two_lanes:
+            _coding_worker = threading.Thread(target=_run_forever, args=("coding",),
+                                              name="posthoc-queue-coding", daemon=True)
+            _coding_worker.start()
     return _worker
 
 
