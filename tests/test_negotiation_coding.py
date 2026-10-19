@@ -947,8 +947,9 @@ def test_enqueue_coding_carries_the_run_id_and_queues_beside_analysis_jobs(fake)
     jobs = q._all_jobs()
     assert [(j["device_id"], j.get("legs"), j.get("run_id")) for j in jobs] == \
         [(5, ["coding"], 77), (5, None, None), (5, ["coding"], 78)]
-    assert q.status(1)[0] == {"session_id": 1, "device_id": 5, "state": "queued",
-                              "error": None, "started_at": None, "finished_at": None}
+    row = q.status(1)[0]
+    assert (row["session_id"], row["device_id"], row["state"], row["legs"], row["run_id"]) == (1, 5, "queued", ["coding"], 77)
+    assert (row["error"], row["started_at"], row["finished_at"]) == (None, None, None)
     assert q._legs_extra(("coding",)) == {"legs": ["coding"]}
     assert q._legs_extra(("coding", "audio")) == {"legs": ["audio", "coding"]}
 
