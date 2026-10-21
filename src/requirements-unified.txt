@@ -226,7 +226,7 @@ outlines_core==0.2.14
 packaging==26.2
 pandas==3.0.3
 partial-json-parser==0.2.1.1.post7
-pillow==12.3.0
+pillow==13.0.0
 platformdirs==4.10.0
 polars-runtime-32==1.42.1
 pooch==1.9.0
