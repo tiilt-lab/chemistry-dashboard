@@ -68,7 +68,7 @@ fastapi-cloud-cli==0.22.1
 fastar==0.11.0
 fastsafetensors==0.3.2
 ffmpeg-python==0.2.0
-filelock==3.29.5
+filelock==4.2.1
 filetype==1.2.0
 flashinfer-cubin==0.6.12
 flashinfer-python==0.6.12
